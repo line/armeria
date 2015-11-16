@@ -30,7 +30,7 @@
   <packaging>jar</packaging>
   <name>Armeria</name>
   <description>
-    Thrift-over-HTTP1/2 and other bells and whistles for build API clients and servers
+    Asynchronous RPC/API client/server library built on top of Java 8, Netty 4.1, HTTP/2, and Thrift
   </description>
   <url>https://github.com/line/armeria</url>
 
