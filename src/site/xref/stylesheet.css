@@ -1,0 +1,149 @@
+@import url(https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css);
+@import url(https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,400italic,700,700italic);
+@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro:500,700);
+
+body {
+  font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
+  font-weight: normal;
+  font-size: 15px;
+  margin: 0 0 10px 0;
+}
+
+/* Left-top and left-bottom frame styles */
+
+body > h3:first-child,
+body > h3:first-child + h3,
+body > h3:first-child + h3 + ul,
+body > h3:first-child + ul {
+  font-size: inherit;
+  margin-left: 10px;
+}
+
+body > h3:first-child,
+body > h3:first-child + h3 {
+  margin-top: 10px;
+}
+
+/* Main frame styles */
+
+pre, code, kbd, var, samp, tt {
+  font-family: 'Source Code Pro', 'Consolas', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
+               'DejaVu Sans Mono', monospace;
+  font-weight: 500;
+  font-size: inherit;
+  background: inherit;
+  color: inherit;
+}
+
+pre {
+  font-size: 13px;
+}
+
+body > pre {
+  border-width: 0;
+  background: inherit;
+}
+
+code, kbd, var, samp, tt {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+body > .overview + .framenoframe + h2 {
+  margin-left: 20px;
+}
+
+ul, li {
+  list-style-type:none;
+  margin:0;
+  padding:0;
+}
+
+table {
+  margin-left: 22px;
+}
+
+table.summary {
+  margin-bottom: 20px;
+}
+
+th {
+  font-weight: bold;
+}
+
+th, td {
+  border-width: 0;
+  padding: 0 0 3px 0;
+}
+
+div.overview {
+  background-color:#ddd;
+  padding: 4px 4px 4px 14px;
+}
+
+div.overview li, div.framenoframe li {
+  display: inline;
+}
+
+div.framenoframe {
+  text-align: center;
+}
+
+div.framenoframe li {
+  margin: 0 3px 0 3px;
+}
+
+div.overview li {
+  margin: 0 5px;
+  padding: 5px 6px;
+}
+
+li.selected {
+  background-color:#888;
+  color: #fff;
+  font-weight: bold;
+}
+
+em {
+  color: #A00;
+}
+
+em.comment {
+  color: #390;
+}
+
+.string {
+  color: #009;
+}
+
+#overview {
+  padding:2px;
+}
+
+hr {
+  height: 1px;
+  color: #000;
+  margin: 3px 0;
+}
+
+/* JXR style sheet */
+.jxr_comment {
+  color: #390;
+}
+
+.jxr_javadoccomment {
+  color: #A00;
+}
+
+.jxr_string {
+  color: #009;
+}
+
+.jxr_keyword {
+  color: #000;
+}
+
+#footer {
+  text-align: center;
+  font-size: small;
+}

@@ -1,0 +1,603 @@
+@import url(https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css);
+@import url(https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,400italic,700,700italic);
+@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro:500,700);
+
+body {
+  font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
+  font-weight: normal;
+  font-size: 15px;
+  margin: 0;
+}
+
+pre, code, kbd, var, samp, tt,
+.serializedFormContainer dl dd,
+.details .blockList h4 {
+  font-family: 'Source Code Pro', 'Consolas', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
+               'DejaVu Sans Mono', monospace;
+  font-weight: 500;
+  font-size: inherit;
+  background: inherit;
+  color: inherit;
+}
+
+code, kbd, var, samp, tt {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+p {
+  text-align: justify;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+pre:first-of-type + div.block > p:first-of-type {
+  margin-top: 10px;
+}
+
+/* Document title and copyright */
+.clear {
+  clear: both;
+  height: 0;
+  overflow: hidden;
+}
+
+.aboutLanguage {
+  float: right;
+  padding: 0 21px;
+  font-size: 11px;
+  z-index: 200;
+  margin-top: -9px;
+}
+
+.legalCopy {
+  text-align: center;
+}
+
+.bar a, .bar a:link, .bar a:visited, .bar a:active {
+  color: white;
+  text-decoration: none;
+}
+
+.bar a:hover, .bar a:focus {
+  color:#bb7a2a;
+}
+
+.tab {
+  background-color: #0066FF;
+  color: white;
+  padding: 8px;
+  width: 5em;
+  font-weight: bold;
+}
+
+/* Navigation bar */
+.bar {
+  background-color: #4D7A97;
+  color: white;
+  padding: .4em .5em .4em .8em;
+  height: auto;
+  margin: 0;
+}
+
+body > .bar {
+  font-size: inherit;
+}
+
+.topNav {
+  background-color: #4D7A97;
+  color: white;
+  float: left;
+  padding: 0 14px;
+  width: 100%;
+  clear: right;
+  overflow: hidden;
+}
+
+.bottomNav {
+  margin-top: 10px;
+  background-color: #4D7A97;
+  color: white;
+  float: left;
+  padding: 0 14px;
+  width: 100%;
+  clear: right;
+  overflow: hidden;
+}
+
+.subNav {
+  background-color: #dee3e9;
+  float: left;
+  width: 100%;
+  overflow: hidden;
+  padding: 0 14px;
+}
+
+.subNav div {
+  clear: left;
+  float: left;
+  text-transform: uppercase;
+  padding-left: 6px;
+}
+
+.subNav .typeNameLink {
+  font-weight: inherit;
+}
+
+.subNav ul.subNavList {
+  padding-bottom: 6px;
+}
+
+ul.navList, ul.subNavList {
+  float: left;
+  margin: 0 25px 0 0;
+  padding: 0;
+}
+
+ul.navList li {
+  list-style: none;
+  float: left;
+  padding: 5px 6px;
+  text-transform: uppercase;
+}
+
+ul.subNavList li {
+  list-style: none;
+  float: left;
+}
+
+.topNav a:link, .topNav a:active, .topNav a:visited,
+.bottomNav a:link, .bottomNav a:active, .bottomNav a:visited {
+  color: white;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.topNav a:hover, .bottomNav a:hover {
+  text-decoration: none;
+  color: #bb7a2a;
+  text-transform: uppercase;
+}
+
+.navBarCell1Rev {
+  background-color: #F8981D;
+  color: #253441;
+  margin: auto 5px;
+}
+
+.skipNav {
+  position: absolute;
+  top: auto;
+  left: -9999px;
+  overflow: hidden;
+}
+
+/* Page header and footer */
+.header, .footer {
+  clear: both;
+  margin: 0 20px;
+  padding: 5px 0 0 0;
+}
+
+.indexHeader {
+  margin: 10px;
+  position: relative;
+}
+
+.indexHeader span {
+  margin-right: 15px;
+}
+
+.indexHeader h1 {
+  font-size: inherit;
+}
+
+.title {
+  color: #2c4557;
+  margin: 10px 0;
+}
+
+.subTitle {
+  margin: 5px 0 0 0;
+}
+
+.header ul {
+  margin: 0 0 15px 0;
+  padding: 0;
+}
+
+.footer ul {
+  margin: 20px 0 5px 0;
+}
+
+.header ul li, .footer ul li {
+  list-style: none;
+}
+
+/* Headings */
+div.details ul.blockList ul.blockList ul.blockList li.blockList h4,
+ div.details ul.blockList ul.blockList ul.blockListLast li.blockList h4 {
+  background-color: #dee3e9;
+  border: 1px solid #d0d9e0;
+  margin: 0 0 6px -8px;
+  padding: 7px 5px;
+}
+
+ul.blockList ul.blockList ul.blockList li.blockList h3 {
+  background-color: #dee3e9;
+  border: 1px solid #d0d9e0;
+  margin: 0 0 6px -8px;
+  padding: 7px 5px;
+}
+
+ul.blockList ul.blockList li.blockList h3 {
+  padding: 0;
+  margin: 15px 0;
+}
+
+ul.blockList li.blockList h2 {
+  padding: 0 0 20px 0;
+}
+
+/* Page layout */
+.contentContainer, .sourceContainer, .classUseContainer, .serializedFormContainer, .constantValuesContainer {
+  clear: both;
+  padding: 10px 20px;
+  position: relative;
+}
+
+.indexContainer {
+  margin: 10px;
+  position: relative;
+}
+
+.indexContainer h2 {
+  font-size: inherit;
+  padding: 0 0 3px 0;
+}
+
+.indexContainer ul {
+  margin: 0;
+  padding: 0;
+}
+
+.indexContainer ul li {
+  list-style: none;
+  padding-top: 2px;
+}
+
+.contentContainer .description dl dt, .contentContainer .details dl dt, .serializedFormContainer dl dt {
+  font-weight: bold;
+  margin: 10px 0 0 0;
+  color: #4E4E4E;
+}
+.contentContainer .description dl dd, .contentContainer .details dl dd, .serializedFormContainer dl dd {
+  margin: 5px 0 10px 0;
+}
+
+.serializedFormContainer dl.nameValue dt {
+  margin-left: 1px;
+  font-size: 1.1em;
+  display: inline;
+  font-weight: bold;
+}
+
+.serializedFormContainer dl.nameValue dd {
+  margin: 0 0 0 1px;
+  font-size: 1.1em;
+  display: inline;
+}
+
+.contentContainer .description hr:first-of-type,
+.contentContainer .description hr + br {
+  display: none;
+}
+
+.contentContainer .description hr + br + pre {
+  margin-bottom: 18px;
+}
+
+.contentContainer .details li.blockList > pre:first-of-type {
+  padding: 0;
+  border: none;
+}
+
+/* Lists */
+ul.horizontal li {
+  display: inline;
+}
+
+ul.inheritance {
+  margin: 0;
+  padding: 0;
+}
+
+ul.inheritance li {
+  display: inline;
+  list-style: none;
+}
+
+ul.inheritance li ul.inheritance {
+  margin-left: 15px;
+  padding-left: 15px;
+  padding-top: 1px;
+}
+
+ul.blockList, ul.blockListLast {
+  margin: 10px 0 10px 0;
+  padding: 0;
+}
+
+ul.blockList li.blockList, ul.blockListLast li.blockList {
+  list-style: none;
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+ul.blockList ul.blockList li.blockList, ul.blockList ul.blockListLast li.blockList {
+  padding: 0;
+}
+
+ul.blockList ul.blockList ul.blockList li.blockList, ul.blockList ul.blockList ul.blockListLast li.blockList {
+  padding: 0 0 5px 8px;
+  background-color: white;
+  border: none;
+}
+
+ul.blockList ul.blockList ul.blockList ul.blockList li.blockList {
+  margin-left: 0;
+  padding-left: 0;
+  padding-bottom: 15px;
+  border: none;
+}
+
+ul.blockList ul.blockList ul.blockList ul.blockList li.blockListLast {
+  list-style: none;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+table tr td dl, table tr td dl dt, table tr td dl dd {
+  margin-top: 0;
+  margin-bottom: 1px;
+}
+
+/* Table */
+.overviewSummary, .memberSummary, .typeSummary, .useSummary, .constantsSummary, .deprecatedSummary {
+  width: 100%;
+}
+
+.overviewSummary, .memberSummary  {
+  padding: 0;
+}
+
+.overviewSummary caption, .memberSummary caption, .typeSummary caption,
+.useSummary caption, .constantsSummary caption, .deprecatedSummary caption {
+  position: relative;
+  text-align: left;
+  background-repeat: no-repeat;
+  color: #253441;
+  font-weight: bold;
+  clear: none;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  white-space: pre;
+}
+
+.overviewSummary caption a:link, .memberSummary caption a:link, .typeSummary caption a:link,
+.useSummary caption a:link, .constantsSummary caption a:link, .deprecatedSummary caption a:link,
+.overviewSummary caption a:hover, .memberSummary caption a:hover, .typeSummary caption a:hover,
+.useSummary caption a:hover, .constantsSummary caption a:hover, .deprecatedSummary caption a:hover,
+.overviewSummary caption a:active, .memberSummary caption a:active, .typeSummary caption a:active,
+.useSummary caption a:active, .constantsSummary caption a:active, .deprecatedSummary caption a:active,
+.overviewSummary caption a:visited, .memberSummary caption a:visited, .typeSummary caption a:visited,
+.useSummary caption a:visited, .constantsSummary caption a:visited, .deprecatedSummary caption a:visited {
+  color: white;
+}
+
+.overviewSummary caption span, .memberSummary caption span, .typeSummary caption span,
+.useSummary caption span, .constantsSummary caption span, .deprecatedSummary caption span {
+  white-space: nowrap;
+  padding: 5px 10px;
+  display: inline-block;
+  float: left;
+  background-color: #F8981D;
+  border: none;
+}
+
+.memberSummary caption span.activeTableTab span {
+  white-space: nowrap;
+  padding-top: 5px;
+  padding-left: 12px;
+  padding-right: 12px;
+  margin-right: 3px;
+  display: inline-block;
+  float: left;
+  background-color: #F8981D;
+}
+
+.memberSummary caption span.tableTab span {
+  white-space: nowrap;
+  padding-top: 5px;
+  padding-left: 12px;
+  padding-right: 12px;
+  margin-right: 3px;
+  display: inline-block;
+  float: left;
+  background-color: #4D7A97;
+}
+.memberSummary caption span.tableTab, .memberSummary caption span.activeTableTab {
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+  background-image: none;
+  float: none;
+  display: inline;
+}
+
+.overviewSummary .tabEnd, .memberSummary .tabEnd, .typeSummary .tabEnd,
+.useSummary .tabEnd, .constantsSummary .tabEnd, .deprecatedSummary .tabEnd {
+  display: none;
+  width: 5px;
+  position: relative;
+  float: left;
+  background-color: #F8981D;
+}
+
+.memberSummary .activeTableTab .tabEnd {
+  display: none;
+  width: 5px;
+  margin-right: 3px;
+  position: relative;
+  float: left;
+  background-color: #F8981D;
+}
+
+.memberSummary .tableTab .tabEnd {
+  display: none;
+  width: 5px;
+  margin-right: 3px;
+  position: relative;
+  background-color: #4D7A97;
+  float: left;
+}
+
+.overviewSummary td, .memberSummary td, .typeSummary td,
+.useSummary td, .constantsSummary td, .deprecatedSummary td {
+  text-align: left;
+  padding: 0 0 12px 10px;
+  width: 100%;
+}
+
+th.colOne, th.colFirst, th.colLast, .useSummary th, .constantsSummary th,
+td.colOne, td.colFirst, td.colLast, .useSummary td, .constantsSummary td {
+  vertical-align: top;
+  padding-right: 0;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+th.colFirst, th.colLast, th.colOne, .constantsSummary th {
+  background: #dee3e9;
+  text-align: left;
+  padding: 5px 3px 5px 10px;
+}
+
+td.colFirst, th.colFirst {
+  white-space: normal;
+  word-wrap: break-word;
+  word-break: break-all;
+  hyphens: auto;
+}
+
+td.colFirst a, th.colFirst a {
+  word-wrap: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.overviewSummary td.colFirst, .overviewSummary th.colFirst,
+.overviewSummary td.colOne, .overviewSummary th.colOne,
+.memberSummary td.colFirst, .memberSummary th.colFirst,
+.memberSummary td.colOne, .memberSummary th.colOne,
+.typeSummary td.colFirst {
+  width: 25%;
+  vertical-align:top;
+}
+
+.memberSummary th.colFirst, .memberSummary td.colFirst {
+  white-space: wrap;
+}
+
+.tableSubHeadingColor {
+  background-color: #EEEEFF;
+}
+
+.altColor {
+  background-color: white;
+}
+
+.rowColor {
+  background-color: #EEEEEF;
+}
+
+/* Content  */
+.description pre {
+  margin-top: 0;
+}
+.deprecatedContent {
+  margin: 0;
+  padding: 10px 0;
+}
+.docSummary {
+  padding: 0;
+}
+
+ul.blockList ul.blockList ul.blockList li.blockList h3 {
+  font-style: normal;
+}
+
+td.colLast div {
+  padding-top: 0;
+}
+
+
+td.colLast a {
+  padding-bottom: 3px;
+}
+
+/* Formatting effect */
+.sourceLineNo {
+  color: green;
+  padding: 0 30px 0 0;
+}
+
+h1.hidden {
+  visibility: hidden;
+  overflow: hidden;
+  font-size: 10px;
+}
+
+.block {
+  display: block;
+  margin: 0 10px 2px 0;
+  color: #474747;
+}
+
+.deprecatedLabel, .descfrmTypeLabel, .memberNameLabel, .memberNameLink,
+.overrideSpecifyLabel, .packageHierarchyLabel, .paramLabel, .returnLabel,
+.seeLabel, .simpleTagLabel, .throwsLabel, .typeNameLabel, .typeNameLink {
+  font-weight: bold;
+}
+
+.deprecationComment, .emphasizedPhrase, .interfaceName {
+  font-style: italic;
+  font-weight: normal;
+}
+
+div.block div.block span.deprecationComment, div.block div.block span.emphasizedPhrase,
+div.block div.block span.interfaceName {
+  font-style: normal;
+}
+
+div.contentContainer ul.blockList li.blockList h2 {
+  padding-bottom: 0;
+}
+
+div.contentContainer ul.blockList li.blockList h3:first-of-type {
+  margin-top: 1em;
+}
+
+div.contentContainer .summary > ul.blockList > li.blockList > ul.blockList > li.blockList > ul.blockList h3 {
+  font-size: inherit;
+}
+
+h4 + pre + div.block ul,
+h4 + pre + div.block pre,
+.description pre + div.block ul,
+.description pre + div.block pre {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}

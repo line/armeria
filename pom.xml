@@ -1,0 +1,670 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2015 LINE Corporation
+  ~
+  ~ LINE Corporation licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.sonatype.oss</groupId>
+    <artifactId>oss-parent</artifactId>
+    <version>9</version>
+  </parent>
+
+  <groupId>com.linecorp.armeria</groupId>
+  <artifactId>armeria</artifactId>
+  <version>0.4.0.Final-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>Armeria</name>
+  <description>
+    Thrift-over-HTTP1/2 and other bells and whistles for build API clients and servers
+  </description>
+  <url>https://github.com/line/armeria</url>
+
+  <scm>
+    <url>${project.url}</url>
+    <connection>scm:git:https://github.com/line/armeria.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/line/armeria.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <!-- Project options -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Compiler options -->
+    <maven.compiler.compilerVersion>1.8</maven.compiler.compilerVersion>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.fork>true</maven.compiler.fork>
+    <maven.compiler.debug>true</maven.compiler.debug>
+    <maven.compiler.optimize>true</maven.compiler.optimize>
+    <maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>
+    <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
+
+    <!-- Dependency versions -->
+    <jackson.version>2.6.3</jackson.version>
+    <netty.version>4.1.0.Beta7</netty.version>
+    <slf4j.version>1.7.13</slf4j.version>
+    <tomcat.version>8.0.28</tomcat.version>
+    <jetty.alpn.version.latest>8.1.3.v20150130</jetty.alpn.version.latest>
+    <jetty.alpn.version>${jetty.alpn.version.latest}</jetty.alpn.version>
+    <jetty.alpn.path>${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar</jetty.alpn.path>
+    <argLine.bootcp>-Xbootclasspath/p:${jetty.alpn.path}</argLine.bootcp>
+    <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+    <thrift.executable>${project.basedir}/src/build/thrift.${os.detected.classifier}</thrift.executable>
+    <thrift.source.main>${project.basedir}/src/main/thrift</thrift.source.main>
+    <thrift.source.test>${project.basedir}/src/test/thrift</thrift.source.test>
+    <thrift.generated.main>${project.build.directory}/generated-sources</thrift.generated.main>
+    <thrift.generated.test>${project.build.directory}/generated-test-sources</thrift.generated.test>
+  </properties>
+
+  <dependencies>
+    <!-- Netty -->
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http2</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-resolver-dns</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <!-- Required by Netty for bytecode generation -->
+    <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+      <version>3.20.0-GA</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- ALPN -->
+    <dependency>
+      <groupId>org.eclipse.jetty.alpn</groupId>
+      <artifactId>alpn-api</artifactId>
+      <version>1.1.2.v20150522</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mortbay.jetty.alpn</groupId>
+      <artifactId>alpn-boot</artifactId>
+      <version>${jetty.alpn.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Thrift -->
+    <dependency>
+      <groupId>org.apache.thrift</groupId>
+      <artifactId>libthrift</artifactId>
+      <version>0.9.3</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpclient</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpcore</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <!-- Embedded Tomcat (optional)
+         Pull tomcat-embed-* and log4j-over-slf4j to use TomcatService. -->
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-core</artifactId>
+      <version>${tomcat.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-jasper</artifactId>
+      <version>${tomcat.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-el</artifactId>
+      <version>${tomcat.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-logging-log4j</artifactId>
+      <version>${tomcat.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>log4j-over-slf4j</artifactId>
+      <version>${slf4j.version}</version>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- Jackson -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+
+    <!-- Logging libraries -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.1.3</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Test-time dependencies -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <version>1.3</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <version>3.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymockclassextension</artifactId>
+      <version>3.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jmock</groupId>
+      <artifactId>jmock-junit4</artifactId>
+      <version>2.8.1</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>junit</groupId>
+          <artifactId>junit-dep</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>1.10.19</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.1</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.4.1.Final</version>
+      </extension>
+    </extensions>
+    <plugins>
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.4.1</version>
+        <executions>
+          <execution>
+            <id>enforce-tools</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[1.8.0,)</version>
+                </requireJavaVersion>
+                <requireMavenVersion>
+                  <version>[3.2.5,)</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.10</version>
+        <executions>
+          <execution>
+            <id>get-alpn-boot</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>get</goal>
+            </goals>
+            <configuration>
+              <groupId>org.mortbay.jetty.alpn</groupId>
+              <artifactId>alpn-boot</artifactId>
+              <version>${jetty.alpn.version}</version>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <id>generate-thrift-main-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${thrift.generated.main}" />
+                <delete includeemptydirs="true" quiet="true">
+                  <fileset dir="${thrift.generated.main}" includes="**/*" />
+                </delete>
+                <exec executable="${thrift.executable}" failonerror="true">
+                  <arg value="-gen" />
+                  <arg value="java" />
+                  <arg value="-out" />
+                  <arg value="${thrift.generated.main}" />
+                  <arg value="-I" />
+                  <arg value="${thrift.source.main}/v1" />
+                  <arg value="${thrift.source.main}/v1/main.thrift" />
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>generate-thrift-test-sources</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${thrift.generated.test}" />
+                <delete includeemptydirs="true" quiet="true">
+                  <fileset dir="${thrift.generated.test}" includes="**/*" />
+                </delete>
+                <exec executable="${thrift.executable}" failonerror="true">
+                  <arg value="-gen" />
+                  <arg value="java" />
+                  <arg value="-out" />
+                  <arg value="${thrift.generated.test}" />
+                  <arg value="-I" />
+                  <arg value="${thrift.source.test}" />
+                  <arg value="${thrift.source.test}/main.thrift" />
+                </exec>
+                <exec executable="${thrift.executable}" failonerror="true">
+                  <arg value="-gen" />
+                  <arg value="java" />
+                  <arg value="-out" />
+                  <arg value="${thrift.generated.test}" />
+                  <arg value="-I" />
+                  <arg value="${thrift.source.test}" />
+                  <arg value="${thrift.source.test}/cassandra.thrift" />
+                </exec>
+                <exec executable="${thrift.executable}" failonerror="true">
+                  <arg value="-gen" />
+                  <arg value="java" />
+                  <arg value="-out" />
+                  <arg value="${thrift.generated.test}" />
+                  <arg value="-I" />
+                  <arg value="${thrift.source.test}" />
+                  <arg value="${thrift.source.test}/hbase.thrift" />
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.9.1</version>
+        <executions>
+          <execution>
+            <id>add-thrift-main-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources</source>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>add-thrift-test-sources</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-test-sources</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.3</version>
+        <configuration>
+          <excludes>
+            <exclude>**/package-info.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.19</version>
+        <configuration>
+          <includes>
+            <include>**/*Test*.java</include>
+            <include>**/*Benchmark*.java</include>
+          </includes>
+          <excludes>
+            <exclude>**/Abstract*</exclude>
+            <exclude>**/TestUtil*</exclude>
+          </excludes>
+          <runOrder>random</runOrder>
+          <argLine>${argLine.bootcp} ${argLine.leak}</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>2.6</version>
+      </plugin>
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.4</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals> 
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>3.4</version>
+      </plugin>
+    </plugins>
+  </build>
+
+  <reporting>
+    <plugins>
+      <!-- Skip generating the site using maven-project-info-reports-plugin; sphinx-maven-plugin will do. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.8.1</version>
+        <reportSets>
+          <reportSet>
+            <reports/>
+          </reportSet>
+        </reportSets>
+      </plugin>
+      <!-- Generate the API documentation -->
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.3</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>javadoc</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+        <configuration>
+          <detectOfflineLinks>false</detectOfflineLinks>
+          <breakiterator>true</breakiterator>
+          <version>false</version>
+          <author>false</author>
+          <keywords>true</keywords>
+          <quiet>true</quiet>
+          <stylesheetfile>${project.basedir}/src/site/apidocs/stylesheet.css</stylesheetfile>
+
+          <!-- Enable all lints except the missing tag warnings -->
+          <additionalparam>-Xdoclint:all -Xdoclint:-missing</additionalparam>
+
+          <!-- Exclude the machine-generate code -->
+          <excludePackageNames>*.thrift.v1</excludePackageNames>
+
+          <groups>
+            <group>
+              <title>Server</title>
+              <packages>com.linecorp.armeria.server*</packages>
+            </group>
+            <group>
+              <title>Client</title>
+              <packages>com.linecorp.armeria.client*</packages>
+            </group>
+            <group>
+              <title>Common</title>
+              <packages>com.linecorp.armeria.common*</packages>
+            </group>
+          </groups>
+
+          <links>
+            <link>http://netty.io/4.1/api</link>
+          </links>
+        </configuration>
+      </plugin>
+      <!-- Generate the Xref -->
+      <plugin>
+        <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.5</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>jxr</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+        <configuration>
+          <stylesheet>${project.basedir}/src/site/xref/stylesheet.css</stylesheet>
+          <!-- JXR plugin generates links to non-existent pages; better turning off. -->
+          <linkJavadoc>false</linkJavadoc>
+          <!-- Exclude the machine-generate code -->
+          <excludes>
+            <exclude>**/thrift/v1/**</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <!-- Generate the web site using Sphinx -->
+      <plugin>
+        <groupId>org.tomdz.maven</groupId>
+        <artifactId>sphinx-maven-plugin</artifactId>
+        <version>1.0.3</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>generate</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
+
+  <profiles>
+    <profile>
+      <id>leak</id>
+      <properties>
+        <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid</argLine.leak>
+      </properties>
+    </profile>
+
+    <!--
+      Profiles that assign proper Jetty npn-boot and alpn-boot version.
+      See: http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-versions
+    -->
+    <profile>
+      <id>alpn-8u05</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_05</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u11</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_11</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u20</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_20</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u25</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_25</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.2.v20141202</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u31</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_31</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u40</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_40</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u45</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_45</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u51</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_51</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.4.v20150727</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u60</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_60</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.4.v20150727</jetty.alpn.version>
+      </properties>
+    </profile>
+  </profiles>
+</project>
