@@ -15,6 +15,10 @@ body {
   font-size: 17px;
 }
 
+.wy-nav-top {
+  line-height: 30px;
+}
+
 .wy-nav-content {
   max-width: 100%;
 }
@@ -23,7 +27,8 @@ body {
   font-size: inherit;
 }
 
-.wy-side-nav-search > a, .wy-side-nav-search .wy-dropdown > a {
+.wy-side-nav-search > a, .wy-side-nav-search .wy-dropdown > a,
+.wy-nav-top > a {
   font-weight: inherit;
 }
 
