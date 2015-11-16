@@ -34,12 +34,36 @@
   </description>
   <url>https://github.com/line/armeria</url>
 
+  <organization>
+    <name>LINE Corporation</name>
+    <url>http://linecorp.com/en/</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+  <inceptionYear>2015</inceptionYear>
+
   <scm>
     <url>${project.url}</url>
     <connection>scm:git:https://github.com/line/armeria.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/line/armeria.git</developerConnection>
     <tag>HEAD</tag>
   </scm>
+
+  <developers>
+    <developer>
+      <id>linecorp.com</id>
+      <name>LINE Corporation</name>
+      <email>trustin@linecorp.com</email>
+      <url>http://linecorp.com/en/</url>
+      <organization>LINE Corporation</organization>
+      <organizationUrl>http://linecorp.com/en/</organizationUrl>
+    </developer>
+  </developers>
 
   <properties>
     <!-- Project options -->
