@@ -271,8 +271,6 @@ final class HttpRemoteInvoker implements RemoteInvoker {
 
     @Override
     public void close() {
-        for (KeyedChannelPool<PoolKey> p : map.values()) {
-            p.close();
-        }
+        map.values().forEach(KeyedChannelPool<PoolKey>::close);
     }
 }

@@ -37,7 +37,7 @@ final class ImmutableHttpHeaders extends HttpHeaders {
 
     @Override
     public String get(String name) {
-        return delegate.get(name);
+        return delegate.getAsString(name);
     }
 
     @Override
@@ -73,7 +73,7 @@ final class ImmutableHttpHeaders extends HttpHeaders {
     @Override
     @Deprecated
     public List<String> getAll(String name) {
-        return delegate.getAll(name);
+        return delegate.getAllAsString(name);
     }
 
     @Override
