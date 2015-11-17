@@ -34,6 +34,7 @@ body {
 
 .wy-side-nav-search > a {
   margin: 0;
+  display: block;
 }
 
 .wy-side-nav-search > a img.logo {
