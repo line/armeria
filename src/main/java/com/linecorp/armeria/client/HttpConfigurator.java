@@ -16,53 +16,21 @@
 
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.EnumSet;
-import java.util.Set;
-
-import javax.net.ssl.SSLException;
-
+import com.linecorp.armeria.common.SessionProtocol;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.*;
+import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http2.*;
+import io.netty.handler.codec.http2.Http2Stream.State;
+import io.netty.handler.ssl.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.SessionProtocol;
+import javax.net.ssl.SSLException;
+import java.util.EnumSet;
+import java.util.Set;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpClientUpgradeHandler;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
-import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2ConnectionDecoder;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
-import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2SecurityUtil;
-import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.handler.codec.http2.Http2StreamVisitor;
-import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
-import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import static java.util.Objects.requireNonNull;
 
 class HttpConfigurator extends ChannelInitializer<Channel> {
 
@@ -237,7 +205,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
                 .propagateSettings(true).validateHttpHeaders(false)
                 .maxContentLength(options.maxFrameLength()).build();
 
-        return new ExtenedHttpToHttp2ConnectionHandler.Builder().frameListener(listener)
+        return new ExtendedHttpToHttp2ConnectionHandler.Builder().frameListener(listener)
                                                                 .sessionListener(sessionListener).build(conn);
     }
 
@@ -254,7 +222,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
         return true;
     };
 
-    private static final class ExtenedHttpToHttp2ConnectionHandler extends HttpToHttp2ConnectionHandler {
+    private static final class ExtendedHttpToHttp2ConnectionHandler extends HttpToHttp2ConnectionHandler {
 
         private final SessionListener sessionListener;
 
@@ -269,14 +237,14 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
             @Override
             protected HttpToHttp2ConnectionHandler build0(Http2ConnectionDecoder decoder,
                                                           Http2ConnectionEncoder encoder) {
-                return new ExtenedHttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(),
+                return new ExtendedHttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(),
                                                                isValidateHeaders(), sessionListener);
             }
         }
 
-        ExtenedHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-                                            Http2Settings initialSettings, boolean validateHeaders,
-                                            SessionListener sessionListener) {
+        ExtendedHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                             Http2Settings initialSettings, boolean validateHeaders,
+                                             SessionListener sessionListener) {
             super(decoder, encoder, initialSettings, validateHeaders);
             this.sessionListener = sessionListener;
         }
