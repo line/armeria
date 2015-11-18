@@ -55,7 +55,7 @@ public class HttpClientIdleTimeoutHandlerTest {
     }
 
     @Test
-    public void testIdleTimeoutWhitoutRequest() throws Exception {
+    public void testIdleTimeoutWithoutRequest() throws Exception {
         Thread.sleep(idleTimeoutMillis * 3 / 2);
         ch.runPendingTasks();
         assertFalse(ch.isOpen());

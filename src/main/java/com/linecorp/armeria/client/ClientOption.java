@@ -43,7 +43,7 @@ public final class ClientOption<T> extends AbstractOption<T> {
     /**
      * The {@link TimeoutPolicy} for a socket write
      */
-    public static final ClientOption<TimeoutPolicy> WRITE_TIMEOUT_POLICY = valueOf("WRITE_TIMEOUT_POLICYS");
+    public static final ClientOption<TimeoutPolicy> WRITE_TIMEOUT_POLICY = valueOf("WRITE_TIMEOUT_POLICY");
 
     /**
      * The {@link TimeoutPolicy} for a server reply to a client call.

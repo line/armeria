@@ -109,6 +109,5 @@ public class ThriftClientCodecTest {
         assertThat(result.isSuccess(), is(false));
         assertThat(result.cause(), is(notNullValue()));
         result.invocationContext();
-        fail("should exception ocuured when getting invocation Context");
     }
 }

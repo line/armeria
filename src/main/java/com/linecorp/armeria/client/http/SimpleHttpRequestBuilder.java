@@ -44,7 +44,7 @@ public class SimpleHttpRequestBuilder {
      * for setting additional HTTP parameters as needed.
      */
     public static SimpleHttpRequestBuilder forGet(String uri) {
-        return createRequestBuidler(uri, HttpMethod.GET);
+        return createRequestBuilder(uri, HttpMethod.GET);
     }
 
     /**
@@ -52,7 +52,7 @@ public class SimpleHttpRequestBuilder {
      * for setting additional HTTP parameters as needed.
      */
     public static SimpleHttpRequestBuilder forPost(String uri) {
-        return createRequestBuidler(uri, HttpMethod.POST);
+        return createRequestBuilder(uri, HttpMethod.POST);
     }
 
     /**
@@ -60,7 +60,7 @@ public class SimpleHttpRequestBuilder {
      * for setting additional HTTP parameters as needed.
      */
     public static SimpleHttpRequestBuilder forPut(String uri) {
-        return createRequestBuidler(uri, HttpMethod.PUT);
+        return createRequestBuilder(uri, HttpMethod.PUT);
     }
 
     /**
@@ -68,7 +68,7 @@ public class SimpleHttpRequestBuilder {
      * for setting additional HTTP parameters as needed.
      */
     public static SimpleHttpRequestBuilder forPatch(String uri) {
-        return createRequestBuidler(uri, HttpMethod.PATCH);
+        return createRequestBuilder(uri, HttpMethod.PATCH);
     }
 
     /**
@@ -76,7 +76,7 @@ public class SimpleHttpRequestBuilder {
      * for setting additional HTTP parameters as needed.
      */
     public static SimpleHttpRequestBuilder forDelete(String uri) {
-        return createRequestBuidler(uri, HttpMethod.DELETE);
+        return createRequestBuilder(uri, HttpMethod.DELETE);
     }
 
     /**
@@ -84,7 +84,7 @@ public class SimpleHttpRequestBuilder {
      * for setting additional HTTP parameters as needed.
      */
     public static SimpleHttpRequestBuilder forHead(String uri) {
-        return createRequestBuidler(uri, HttpMethod.HEAD);
+        return createRequestBuilder(uri, HttpMethod.HEAD);
     }
 
     /**
@@ -92,10 +92,10 @@ public class SimpleHttpRequestBuilder {
      * for setting additional HTTP parameters as needed.
      */
     public static SimpleHttpRequestBuilder forOptions(String uri) {
-        return createRequestBuidler(uri, HttpMethod.OPTIONS);
+        return createRequestBuilder(uri, HttpMethod.OPTIONS);
     }
 
-    private static SimpleHttpRequestBuilder createRequestBuidler(String uri, HttpMethod method) {
+    private static SimpleHttpRequestBuilder createRequestBuilder(String uri, HttpMethod method) {
         requireNonNull(uri);
         try {
             return new SimpleHttpRequestBuilder(new URI(uri), method);
