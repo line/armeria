@@ -136,7 +136,7 @@ public final class ServiceCallbackInvoker {
             requireNonNull(key, "key");
             requireNonNull(value, "value");
 
-            return map.put(new KeyRef<K>(key, refQueue), value);
+            return map.put(new KeyRef<>(key, refQueue), value);
         }
 
         private void expunge() {

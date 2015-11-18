@@ -221,7 +221,7 @@ public class ThriftServiceTest {
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
         ThriftService service = new ThriftService(
-                (OnewayHelloService.Iface) name -> actualName.set(name), protoFactory);
+                (OnewayHelloService.Iface) actualName::set, protoFactory);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -259,7 +259,7 @@ public class ThriftServiceTest {
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
         ThriftService service = new ThriftService(
-                (DevNullService.Iface) value -> consumed.set(value), protoFactory);
+                (DevNullService.Iface) consumed::set, protoFactory);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -560,13 +560,13 @@ public class ThriftServiceTest {
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
         ThriftService syncService = new ThriftService((NameSortService.Iface) names -> {
-            ArrayList<Name> sorted = new ArrayList<Name>(names);
+            ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             return sorted;
         }, protoFactory);
 
         ThriftService asyncService = new ThriftService((NameSortService.AsyncIface) (names, resultHandler) -> {
-            ArrayList<Name> sorted = new ArrayList<Name>(names);
+            ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             resultHandler.onComplete(sorted);
         }, protoFactory);
@@ -634,14 +634,11 @@ public class ThriftServiceTest {
         case SUCCESS:
             final ServiceInvocationContext ctx = result.invocationContext();
             service.handler().invoke(ctx, GlobalEventExecutor.INSTANCE, objPromise);
-            objPromise.addListener(new FutureListener<Object>() {
-                @Override
-                public void operationComplete(Future<Object> future) throws Exception {
-                    if (future.isSuccess()) {
-                        promise.setSuccess(codec.encodeResponse(ctx, future.getNow()));
-                    } else {
-                        promise.setSuccess(codec.encodeFailureResponse(ctx, future.cause()));
-                    }
+            objPromise.addListener((Future<Object> future) -> {
+                if (future.isSuccess()) {
+                    promise.setSuccess(codec.encodeResponse(ctx, future.getNow()));
+                } else {
+                    promise.setSuccess(codec.encodeFailureResponse(ctx, future.cause()));
                 }
             });
             break;
