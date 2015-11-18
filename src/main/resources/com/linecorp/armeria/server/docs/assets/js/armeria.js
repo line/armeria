@@ -46,6 +46,7 @@ $(function () {
   function resetClasses() {
     $('li.active').removeClass('active');
     $('.main .content').addClass('hidden');
+    $('.collapse.in').collapse('hide');
   }
 
   function renderNav() {

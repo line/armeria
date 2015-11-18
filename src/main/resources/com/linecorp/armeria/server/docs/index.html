@@ -51,7 +51,9 @@
         <h2><code title="{{name}}">{{simpleName}}</code></h2>
         <ul class="nav nav-sidebar">
           {{#each functions}}
-          <li id="nav-{{../name}}.{{name}}"><a href="#function/{{../name}}/{{name}}"><code>{{name}}()</code></a></li>
+          <li id="nav-{{../name}}.{{name}}">
+            <a href="#function/{{../name}}/{{name}}"><code>{{name}}()</code></a>
+          </li>
           {{/each}}
         </ul>
         {{/each}}
