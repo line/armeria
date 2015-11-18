@@ -69,9 +69,9 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
     private static final Logger logger = LoggerFactory.getLogger(HttpConfigurator.class);
 
     private static final Set<SessionProtocol> http2preferredProtocols = EnumSet.of(SessionProtocol.H2,
-            SessionProtocol.H2C,
-            SessionProtocol.HTTP,
-            SessionProtocol.HTTPS);
+                                                                                  SessionProtocol.H2C,
+                                                                                  SessionProtocol.HTTP,
+                                                                                  SessionProtocol.HTTPS);
     private final SslContext sslCtx;
     private final boolean isHttp2Preferred;
     private final RemoteInvokerOptions options;
@@ -90,15 +90,15 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
 
                 if (isHttp2Preferred) {
                     builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
-                            .applicationProtocolConfig(new ApplicationProtocolConfig(
-                                    ApplicationProtocolConfig.Protocol.ALPN,
-                                    // NO_ADVERTISE is currently the only mode supported by both OpenSsl and
-                                    // JDK providers.
-                                    ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
-                                    // ACCEPT is currently the only mode supported by both OpenSsl and JDK
-                                    // providers.
-                                    ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
-                                    ApplicationProtocolNames.HTTP_2));
+                           .applicationProtocolConfig(new ApplicationProtocolConfig(
+                                   ApplicationProtocolConfig.Protocol.ALPN,
+                                   // NO_ADVERTISE is currently the only mode supported by both OpenSsl and
+                                   // JDK providers.
+                                   ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
+                                   // ACCEPT is currently the only mode supported by both OpenSsl and JDK
+                                   // providers.
+                                   ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
+                                   ApplicationProtocolNames.HTTP_2));
                 }
                 sslCtx = builder.build();
             } catch (SSLException e) {
@@ -189,12 +189,12 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
                     if (evt instanceof HttpClientUpgradeHandler.UpgradeEvent) {
                         SessionProtocol protocol = SessionProtocol.H1C;
                         switch ((HttpClientUpgradeHandler.UpgradeEvent) evt) {
-                            case UPGRADE_SUCCESSFUL:
-                                protocol = SessionProtocol.H2C;
-                            case UPGRADE_REJECTED:
-                                markHttpConnectionFinished(ctx, protocol);
-                                pipeline.remove(this);
-                                break;
+                        case UPGRADE_SUCCESSFUL:
+                            protocol = SessionProtocol.H2C;
+                        case UPGRADE_REJECTED:
+                            markHttpConnectionFinished(ctx, protocol);
+                            pipeline.remove(this);
+                            break;
                         }
                     }
                     ctx.fireUserEventTriggered(evt);
@@ -238,7 +238,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
                 .maxContentLength(options.maxFrameLength()).build();
 
         return new ExtendedHttpToHttp2ConnectionHandler.Builder().frameListener(listener)
-                .sessionListener(sessionListener).build(conn);
+                                                                .sessionListener(sessionListener).build(conn);
     }
 
     /**
@@ -270,13 +270,13 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
             protected HttpToHttp2ConnectionHandler build0(Http2ConnectionDecoder decoder,
                                                           Http2ConnectionEncoder encoder) {
                 return new ExtendedHttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(),
-                        isValidateHeaders(), sessionListener);
+                                                               isValidateHeaders(), sessionListener);
             }
         }
 
         ExtendedHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-                                             Http2Settings initialSettings, boolean validateHeaders,
-                                             SessionListener sessionListener) {
+                                            Http2Settings initialSettings, boolean validateHeaders,
+                                            SessionListener sessionListener) {
             super(decoder, encoder, initialSettings, validateHeaders);
             this.sessionListener = sessionListener;
         }
