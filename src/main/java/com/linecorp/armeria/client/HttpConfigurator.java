@@ -36,7 +36,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpConfigurator.class);
 
-    private static final Set<SessionProtocol> http2preferedProtocols = EnumSet.of(SessionProtocol.H2,
+    private static final Set<SessionProtocol> http2preferredProtocols = EnumSet.of(SessionProtocol.H2,
                                                                                   SessionProtocol.H2C,
                                                                                   SessionProtocol.HTTP,
                                                                                   SessionProtocol.HTTPS);
@@ -47,7 +47,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
 
     HttpConfigurator(SessionProtocol sessionProtocol,
                      RemoteInvokerOptions options, SessionListener sessionListener) {
-        isHttp2Preferred = http2preferedProtocols.contains(sessionProtocol);
+        isHttp2Preferred = http2preferredProtocols.contains(sessionProtocol);
         this.options = requireNonNull(options, "options");
         this.sessionListener = requireNonNull(sessionListener, "sessionListener");
 
