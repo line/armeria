@@ -112,7 +112,8 @@ public class ServiceMapping implements Function<String, MappedService> {
         // Cache miss or disabled cache
         MappedService result = MappedService.empty();
         final int size = patterns.size();
-        for (final Entry<PathMapping, Service> e : patterns) {
+        for (int i = 0; i < size; i ++) {
+            final Entry<PathMapping, Service> e = patterns.get(i);
             final String mappedPath = e.getKey().apply(path);
             if (mappedPath != null) {
                 result = MappedService.of(mappedPath, e.getValue());
