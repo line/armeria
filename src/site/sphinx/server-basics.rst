@@ -64,7 +64,7 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
     HelloService.AsyncIface helloHandler = new MyHelloService();
 
     ServerBuilder sb = new ServerBuilder();
-    sb.port(8080, SessionProtocol.HTTP)
+    sb.port(8080, SessionProtocol.HTTP);
 
     VirtualHost vh = new VirtualHostBuilder().serviceAt(
             "/hello",
