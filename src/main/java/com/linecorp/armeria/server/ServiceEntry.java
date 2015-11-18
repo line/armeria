@@ -62,6 +62,6 @@ public final class ServiceEntry {
 
     @Override
     public String toString() {
-        return "{ " + virtualHost + ", " + pathMapping + ", " + service + " }";
+        return "{ " + virtualHost.hostnamePattern() + ", " + pathMapping + ", " + service + " }";
     }
 }
