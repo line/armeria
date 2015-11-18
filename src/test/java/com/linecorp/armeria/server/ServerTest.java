@@ -17,7 +17,7 @@ package com.linecorp.armeria.server;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.core.IsNot.not;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
@@ -26,6 +26,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -79,11 +80,16 @@ public class ServerTest extends AbstractServerTest {
                     processDelayMillis, TimeUnit.MILLISECONDS);
         }).decorate(LoggingService::new);
 
+        final Service buggy = new ByteBufService((ctx, exec, promise) -> {
+            throw new Exception("bug!");
+        }).decorate(LoggingService::new);
+
         final VirtualHost defaultVirtualHost =
                 new VirtualHostBuilder().serviceAt("/", immediateResponseOnIoThread)
                                         .serviceAt("/delayed", delayedResponseOnIoThread)
                                         .serviceAt("/timeout", lazyResponseNotOnIoThread)
-                                        .serviceAt("/timeout-not", lazyResponseNotOnIoThread).build();
+                                        .serviceAt("/timeout-not", lazyResponseNotOnIoThread)
+                                        .serviceAt("/buggy", buggy).build();
 
         sb.defaultVirtualHost(defaultVirtualHost);
         // Disable request timeout for '/timeout-not' only.
@@ -131,8 +137,8 @@ public class ServerTest extends AbstractServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()), not(
-                        is(HttpStatusClass.SUCCESS)));
+                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()),
+                           is(not(HttpStatusClass.SUCCESS)));
             }
         }
     }
@@ -144,8 +150,8 @@ public class ServerTest extends AbstractServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()), is(
-                        is(HttpStatusClass.SUCCESS)));
+                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()),
+                           is(HttpStatusClass.SUCCESS));
             }
         }
     }
@@ -168,13 +174,47 @@ public class ServerTest extends AbstractServerTest {
 
     @Test(timeout = idleTimeoutMillis * 5)
     public void testIdleTimeoutByContentSent() throws Exception {
-        HttpPost req = new HttpPost(uri("/"));
-        req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
-
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
             socket.connect(server().activePort().get().localAddress());
             PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
+            outWriter.print("POST / HTTP/1.1\r\n");
+            outWriter.print("Connection: Keep-Alive\r\n");
+            outWriter.print("\r\n");
+            outWriter.flush();
+
+            long lastWriteNanos = System.nanoTime();
+            //read until EOF
+            while (socket.getInputStream().read() != -1) {
+                continue;
+            }
+
+            long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
+                    System.nanoTime() - lastWriteNanos, TimeUnit.NANOSECONDS);
+            assertThat(elapsedTimeMillis, is(greaterThanOrEqualTo(idleTimeoutMillis)));
+        }
+    }
+
+    /**
+     * Ensure that the connection is not broken even if
+     * {@link ServiceInvocationHandler#invoke(ServiceInvocationContext, Executor, Promise)} raised an
+     * exception.
+     */
+    @Test(timeout = idleTimeoutMillis * 5)
+    public void testBuggyService() throws Exception {
+        try (Socket socket = new Socket()) {
+            socket.setSoTimeout((int) (idleTimeoutMillis * 4));
+            socket.connect(server().activePort().get().localAddress());
+            PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
+
+            // Send a request to a buggy service whose invoke() raises an exception.
+            // If the server handled the exception correctly (i.e. responded with 500 Internal Server Error and
+            // recovered from the exception successfully), then the connection should not be closed immediately
+            // but on the idle timeout of the second request.
+            outWriter.print("POST /buggy HTTP/1.1\r\n");
+            outWriter.print("Connection: Keep-Alive\r\n");
+            outWriter.print("Content-Length: 0\r\n");
+            outWriter.print("\r\n");
             outWriter.print("POST / HTTP/1.1\r\n");
             outWriter.print("Connection: Keep-Alive\r\n");
             outWriter.print("\r\n");
