@@ -69,7 +69,7 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
     VirtualHost vh = new VirtualHostBuilder().serviceAt(
             "/hello",
             new ThriftService(helloHandler, ThriftProtocolFactories.BINARY)
-                    .decorate(LoggingHandler::new)).build();
+                    .decorate(LoggingService::new)).build();
 
     sb.defaultVirtualHost(vh);
 
@@ -79,7 +79,7 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
 In the example above, we created a default ``VirtualHost`` and added a new ``ThriftService`` to it.
 The ``ThriftService`` is bound at the path ``/hello`` and will use the TBinary format.
 
-We also decorated the ``ThriftService`` using ``LoggingHandler``, which logs all Thrift calls and replies.
+We also decorated the ``ThriftService`` using ``LoggingService``, which logs all Thrift calls and replies.
 You might be interested in decorating a service using other decorators, to gather metrics for example.
 
 Note that you can add more than one ``VirtualHost`` to a ``Server`` and more than one ``ThriftService``
