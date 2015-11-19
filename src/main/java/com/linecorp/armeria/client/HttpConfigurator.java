@@ -237,7 +237,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
                 .propagateSettings(true).validateHttpHeaders(false)
                 .maxContentLength(options.maxFrameLength()).build();
 
-        return new ExtenedHttpToHttp2ConnectionHandler.Builder().frameListener(listener)
+        return new ExtendedHttpToHttp2ConnectionHandler.Builder().frameListener(listener)
                                                                 .sessionListener(sessionListener).build(conn);
     }
 
@@ -254,7 +254,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
         return true;
     };
 
-    private static final class ExtenedHttpToHttp2ConnectionHandler extends HttpToHttp2ConnectionHandler {
+    private static final class ExtendedHttpToHttp2ConnectionHandler extends HttpToHttp2ConnectionHandler {
 
         private final SessionListener sessionListener;
 
@@ -269,12 +269,12 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
             @Override
             protected HttpToHttp2ConnectionHandler build0(Http2ConnectionDecoder decoder,
                                                           Http2ConnectionEncoder encoder) {
-                return new ExtenedHttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(),
+                return new ExtendedHttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(),
                                                                isValidateHeaders(), sessionListener);
             }
         }
 
-        ExtenedHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+        ExtendedHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                             Http2Settings initialSettings, boolean validateHeaders,
                                             SessionListener sessionListener) {
             super(decoder, encoder, initialSettings, validateHeaders);
