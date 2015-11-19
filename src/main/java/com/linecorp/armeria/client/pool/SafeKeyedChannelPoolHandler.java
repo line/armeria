@@ -21,8 +21,8 @@ import org.slf4j.LoggerFactory;
 import io.netty.channel.Channel;
 
 /**
- * Halper Handler deledate event to decoreated  {@link KeyedChannelPoolHandler}.
- * Ignore Exception when coreated {@link KeyedChannelPoolHandler} throw Exception.s
+ * Helper Handler delegate event to decorated  {@link KeyedChannelPoolHandler}.
+ * Ignore Exception when created {@link KeyedChannelPoolHandler} throw Exception.s
  */
 class SafeKeyedChannelPoolHandler<K> implements KeyedChannelPoolHandler<K> {
     private static final Logger logger = LoggerFactory.getLogger(SafeKeyedChannelPoolHandler.class);

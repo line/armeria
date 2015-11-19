@@ -60,10 +60,9 @@ public class ClientOptionsTest {
         ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
     }
 
-    @Test(expected = RuntimeException.class)
-    public void testInvalideOption() {
+    @Test(expected = NullPointerException.class)
+    public void testInvalidOption() {
         ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_POLICY.newValue(null));
-        fail("exception should ocurred");
     }
 
 }

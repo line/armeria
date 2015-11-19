@@ -21,7 +21,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 /**
- * An asynchronous {@link Channel} pool that provides key-based acqusition and release.
+ * An asynchronous {@link Channel} pool that provides key-based acquisition and release.
  *
  * @param <K> the type of the key, usually {@link PoolKey}
  */

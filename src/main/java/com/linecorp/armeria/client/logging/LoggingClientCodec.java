@@ -119,13 +119,13 @@ public class LoggingClientCodec implements ClientCodec {
         }
     }
 
-    private <T> T logAndDecodeResponse(ServiceInvocationContext ctx, Logger logger, Object originalReponse,
+    private <T> T logAndDecodeResponse(ServiceInvocationContext ctx, Logger logger, Object originalResponse,
                                        ByteBuf content) throws Exception {
         final long endTimeNanos = ticker.read();
         final long startTimeNanos = ctx.attr(START_TIME_NANOS).get();
 
         try {
-            T result = c.decodeResponse(ctx, content, originalReponse);
+            T result = c.decodeResponse(ctx, content, originalResponse);
             logger.info("Response: {} ({})", result, elapsed(startTimeNanos, endTimeNanos));
             return result;
         } catch (Throwable cause) {

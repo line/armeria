@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.pool.DecoratingKeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
-import com.linecorp.armeria.client.pool.KeyedChannelPoolHandlerAdapter;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.common.util.UnitFormatter;
@@ -48,15 +47,15 @@ public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHa
         RELEASED("Released from"),
         CLOSED("Closed on");
 
-        private final String actionDescrption;
+        private final String actionDescription;
 
-        EventType(String actionDescrption) {
+        EventType(String actionDescription) {
 
-            this.actionDescrption = actionDescrption;
+            this.actionDescription = actionDescription;
         }
 
-        String actionDescrption() {
-            return actionDescrption;
+        String actionDescription() {
+            return actionDescription;
         }
     }
 
@@ -176,7 +175,7 @@ public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHa
 
     private void logInfo(PoolKey key, Channel ch, EventType eventType) {
         if (logger.isInfoEnabled()) {
-            logger.info("{} {} {} ({})", ch, eventType.actionDescrption(), key, status(ch, eventType));
+            logger.info("{} {} {} ({})", ch, eventType.actionDescription(), key, status(ch, eventType));
         }
     }
 

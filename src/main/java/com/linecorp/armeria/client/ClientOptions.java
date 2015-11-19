@@ -27,11 +27,10 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.InvocationHandler;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.TimeoutPolicy;
@@ -62,8 +61,8 @@ public final class ClientOptions extends AbstractOptions {
     public static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
 
     @SuppressWarnings("deprecation")
-    private static final Set<CharSequence> BLACKLISTED_HEADER_NAMES = Collections.unmodifiableSet(
-            new HashSet<>(Arrays.<CharSequence>asList(HttpHeaderNames.HOST,
+    private static final Collection<CharSequence> BLACKLISTED_HEADER_NAMES = Collections.unmodifiableCollection(
+                                        Arrays.asList(HttpHeaderNames.HOST,
                                                       HttpHeaderNames.USER_AGENT,
                                                       HttpHeaderNames.CONNECTION,
                                                       HttpHeaderNames.CONTENT_TYPE,
@@ -74,7 +73,7 @@ public final class ClientOptions extends AbstractOptions {
                                                       HttpHeaderNames.UPGRADE,
                                                       ExtensionHeaderNames.SCHEME.text(),
                                                       ExtensionHeaderNames.PATH.text(),
-                                                      ExtensionHeaderNames.STREAM_ID.text())));
+                                                      ExtensionHeaderNames.STREAM_ID.text()));
 
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.

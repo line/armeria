@@ -82,8 +82,8 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.channelFactory = requireNonNull(channelFactory, "channelFactory");
         this.healthCheck = requireNonNull(healthCheck, "healthCheck");
-        this.channelPoolHandler = new SafeKeyedChannelPoolHandler<K>(requireNonNull(channelPoolHandler,
-                                                                                    "channelPoolHandler"));
+        this.channelPoolHandler = new SafeKeyedChannelPoolHandler<>(requireNonNull(channelPoolHandler,
+                                                                                   "channelPoolHandler"));
         this.releaseHealthCheck = releaseHealthCheck;
 
         pool = PlatformDependent.newConcurrentHashMap();

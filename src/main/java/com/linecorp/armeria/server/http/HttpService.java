@@ -23,7 +23,6 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCodec;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
-import com.linecorp.armeria.server.SimpleService;
 
 /**
  * A {@link Service} that handles an HTTP request. This {@link Service} must run on a {@link ServerPort}

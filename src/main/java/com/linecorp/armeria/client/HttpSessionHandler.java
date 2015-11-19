@@ -95,21 +95,21 @@ class HttpSessionHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        markAllPaddingReponseFailed(CLOSED_SESSION_EXCEPTION);
+        markAllPaddingResponseFailed(CLOSED_SESSION_EXCEPTION);
         ctx.fireChannelInactive();
     }
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         //handler removed when session closed (refer HttpSession.close())
-        markAllPaddingReponseFailed(CLOSED_SESSION_EXCEPTION);
+        markAllPaddingResponseFailed(CLOSED_SESSION_EXCEPTION);
     }
 
     public void deactivateSession() {
-        markAllPaddingReponseFailed(CLOSED_SESSION_EXCEPTION);
+        markAllPaddingResponseFailed(CLOSED_SESSION_EXCEPTION);
     }
 
-    void markAllPaddingReponseFailed(Throwable e) {
+    void markAllPaddingResponseFailed(Throwable e) {
         final Collection<Promise<FullHttpResponse>> resultPromises = waitsHolder.getAll();
         waitsHolder.clear();
         if (!resultPromises.isEmpty()) {

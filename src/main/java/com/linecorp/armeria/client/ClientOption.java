@@ -36,14 +36,14 @@ public final class ClientOption<T> extends AbstractOption<T> {
     private static final ConstantPool pool = new ConstantPool() {
         @Override
         protected ClientOption<Object> newConstant(int id, String name) {
-            return new ClientOption<Object>(id, name);
+            return new ClientOption<>(id, name);
         }
     };
 
     /**
      * The {@link TimeoutPolicy} for a socket write
      */
-    public static final ClientOption<TimeoutPolicy> WRITE_TIMEOUT_POLICY = valueOf("WRITE_TIMEOUT_POLICYS");
+    public static final ClientOption<TimeoutPolicy> WRITE_TIMEOUT_POLICY = valueOf("WRITE_TIMEOUT_POLICY");
 
     /**
      * The {@link TimeoutPolicy} for a server reply to a client call.
@@ -95,6 +95,6 @@ public final class ClientOption<T> extends AbstractOption<T> {
      */
     public ClientOptionValue<T> newValue(T value) {
         requireNonNull(value, "value");
-        return new ClientOptionValue<T>(this, value);
+        return new ClientOptionValue<>(this, value);
     }
 }

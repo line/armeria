@@ -19,7 +19,7 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.TimeoutException;
 
 /**
- * A {@link TimeoutException} raised when a received request has not beed processed within timeout.
+ * A {@link TimeoutException} raised when a received request has not been processed within timeout.
  */
 public class RequestTimeoutException extends TimeoutException {
 

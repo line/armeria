@@ -86,7 +86,7 @@ public class ThriftOverHttpClientTest {
         assertTrue(serverReceivedNames.add(name));
     };
 
-    private static final DevNullService.AsyncIface devNullHanlder = (value, resultHandler) -> {
+    private static final DevNullService.AsyncIface devNullHandler = (value, resultHandler) -> {
         resultHandler.onComplete(null);
         assertTrue(serverReceivedNames.add(value));
     };
@@ -100,7 +100,7 @@ public class ThriftOverHttpClientTest {
     private enum Handlers {
         HELLO(helloHandler, HelloService.Iface.class, HelloService.AsyncIface.class),
         ONEWAYHELLO(onewayHelloHandler, OnewayHelloService.Iface.class, OnewayHelloService.AsyncIface.class),
-        DEVNULL(devNullHanlder, DevNullService.Iface.class, DevNullService.AsyncIface.class),
+        DEVNULL(devNullHandler, DevNullService.Iface.class, DevNullService.AsyncIface.class),
         TIME(timeServiceHandler, TimeService.Iface.class, TimeService.AsyncIface.class),
         FILE(fileServiceHandler, FileService.Iface.class, FileService.AsyncIface.class);
 
@@ -290,7 +290,7 @@ public class ThriftOverHttpClientTest {
 
         String[] names = { "kukuman", "kukuman2" };
         for (String name : names) {
-            client.hello(name, new RequestQueingCallback(resQueue));
+            client.hello(name, new RequestQueuingCallback(resQueue));
         }
 
         for (String ignored : names) {
@@ -319,7 +319,7 @@ public class ThriftOverHttpClientTest {
 
         String[] names = { "kukuman", "kukuman2" };
         for (String name : names) {
-            client.consume(name, new RequestQueingCallback(resQueue));
+            client.consume(name, new RequestQueuingCallback(resQueue));
         }
 
         for (String ignored : names) {
@@ -345,7 +345,7 @@ public class ThriftOverHttpClientTest {
                                   clientOptions);
 
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
-        client.getServerTime(new RequestQueingCallback(resQueue));
+        client.getServerTime(new RequestQueuingCallback(resQueue));
 
         assertThat((Long) resQueue.take(), lessThanOrEqualTo(System.currentTimeMillis()));
     }
@@ -366,7 +366,7 @@ public class ThriftOverHttpClientTest {
                                   clientOptions);
 
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
-        client.create("test", new RequestQueingCallback(resQueue));
+        client.create("test", new RequestQueuingCallback(resQueue));
 
         assertThat(resQueue.take(), instanceOf(FileServiceException.class));
     }
@@ -378,11 +378,11 @@ public class ThriftOverHttpClientTest {
     }
 
     @SuppressWarnings("rawtypes")
-    private static class RequestQueingCallback implements AsyncMethodCallback {
+    private static class RequestQueuingCallback implements AsyncMethodCallback {
 
         private final BlockingQueue<Object> resQueue;
 
-        RequestQueingCallback(BlockingQueue<Object> resQueue) {
+        RequestQueuingCallback(BlockingQueue<Object> resQueue) {
             this.resQueue = resQueue;
         }
 

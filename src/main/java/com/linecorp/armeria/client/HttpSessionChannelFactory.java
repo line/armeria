@@ -73,15 +73,15 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         final Promise<Channel> channelPromise = channelFuture.channel().eventLoop().newPromise();
 
         if (channelFuture.isDone()) {
-            notifyConnnect(channelFuture, ch, channelPromise);
+            notifyConnect(channelFuture, ch, channelPromise);
         } else {
-            channelFuture.addListener((Future<Void> future) -> notifyConnnect(future, ch, channelPromise));
+            channelFuture.addListener((Future<Void> future) -> notifyConnect(future, ch, channelPromise));
         }
 
         return channelPromise;
     }
 
-    private void notifyConnnect(Future<Void> fut, Channel ch, Promise<Channel> channelPromise) {
+    private void notifyConnect(Future<Void> fut, Channel ch, Promise<Channel> channelPromise) {
         assert fut.isDone();
         if (fut.isSuccess()) {
             watchSessionActive(ch, channelPromise);

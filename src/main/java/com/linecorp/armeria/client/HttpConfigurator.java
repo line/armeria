@@ -69,9 +69,9 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
     private static final Logger logger = LoggerFactory.getLogger(HttpConfigurator.class);
 
     private static final Set<SessionProtocol> http2preferredProtocols = EnumSet.of(SessionProtocol.H2,
-                                                                                  SessionProtocol.H2C,
-                                                                                  SessionProtocol.HTTP,
-                                                                                  SessionProtocol.HTTPS);
+                                                                                   SessionProtocol.H2C,
+                                                                                   SessionProtocol.HTTP,
+                                                                                   SessionProtocol.HTTPS);
     private final SslContext sslCtx;
     private final boolean isHttp2Preferred;
     private final RemoteInvokerOptions options;
@@ -237,14 +237,14 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
                 .propagateSettings(true).validateHttpHeaders(false)
                 .maxContentLength(options.maxFrameLength()).build();
 
-        return new ExtenedHttpToHttp2ConnectionHandler.Builder().frameListener(listener)
-                                                                .sessionListener(sessionListener).build(conn);
+        return new ExtendedHttpToHttp2ConnectionHandler.Builder().frameListener(listener)
+                                                                 .sessionListener(sessionListener).build(conn);
     }
 
     /**
      * CD-116 : HttpToHttp2ConnectionHandler does not close channel after send GOWAY. I found stream 1
      * (upgrade request) always remained as HALF_CLOSE status. It cause channel cannot be inactive even sent
-     * GOWAY. Bacause Server doesn't send response about stream 1. We workaround this problem by extend
+     * GOWAY. Because Server doesn't send response about stream 1. We workaround this problem by extending
      * HttpToHttp2ConnectionHandler.
      */
     private static final Http2StreamVisitor closeAllStreams = stream -> {
@@ -254,7 +254,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
         return true;
     };
 
-    private static final class ExtenedHttpToHttp2ConnectionHandler extends HttpToHttp2ConnectionHandler {
+    private static final class ExtendedHttpToHttp2ConnectionHandler extends HttpToHttp2ConnectionHandler {
 
         private final SessionListener sessionListener;
 
@@ -269,14 +269,14 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
             @Override
             protected HttpToHttp2ConnectionHandler build0(Http2ConnectionDecoder decoder,
                                                           Http2ConnectionEncoder encoder) {
-                return new ExtenedHttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(),
+                return new ExtendedHttpToHttp2ConnectionHandler(decoder, encoder, initialSettings(),
                                                                isValidateHeaders(), sessionListener);
             }
         }
 
-        ExtenedHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-                                            Http2Settings initialSettings, boolean validateHeaders,
-                                            SessionListener sessionListener) {
+        ExtendedHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                             Http2Settings initialSettings, boolean validateHeaders,
+                                             SessionListener sessionListener) {
             super(decoder, encoder, initialSettings, validateHeaders);
             this.sessionListener = sessionListener;
         }
