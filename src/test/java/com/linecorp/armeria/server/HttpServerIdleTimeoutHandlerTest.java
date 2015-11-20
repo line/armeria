@@ -13,14 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.server;
 
 import static junit.framework.TestCase.assertFalse;
+import static junit.framework.TestCase.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertTrue;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,7 +34,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
-public class HttpClientIdleTimeoutHandlerTest {
+public class HttpServerIdleTimeoutHandlerTest {
     private static final long idleTimeoutMillis = 100;
 
     private static final FullHttpRequest httpRequest =
@@ -45,7 +46,7 @@ public class HttpClientIdleTimeoutHandlerTest {
 
     @Before
     public void before() {
-        ch = new EmbeddedChannel(new HttpClientIdleTimeoutHandler(idleTimeoutMillis));
+        ch = new EmbeddedChannel(new HttpServerIdleTimeoutHandler(idleTimeoutMillis));
         assertTrue(ch.isOpen());
     }
 
@@ -62,31 +63,32 @@ public class HttpClientIdleTimeoutHandlerTest {
 
     @Test
     public void testIdleTimeout() throws Exception {
-        writeRequest();
-        readResponse();
+        readRequest();
+        writeResponse();
         waitUntilTimeout();
         assertFalse(ch.isOpen());
     }
 
     @Test
     public void testPendingRequestExists() throws Exception {
-        writeRequest();
+        readRequest();
         Thread.sleep(idleTimeoutMillis);
         ch.runPendingTasks();
-        assertTrue(ch.isOpen());
+        Assert.assertTrue(ch.isOpen());
     }
 
     @Test
     public void testIdleTimeoutOccuredTwice() throws Exception {
-        writeRequest();
+        readRequest();
         waitUntilTimeout();
-        //padding request count is 1
-        assertTrue(ch.isOpen());
+        //padding request count is 2
+        Assert.assertTrue(ch.isOpen());
 
-        readResponse();
-        waitUntilTimeout();
+        writeResponse();
         //padding request count turns to 0
+        waitUntilTimeout();
         assertFalse(ch.isOpen());
+
     }
 
     private void waitUntilTimeout() throws InterruptedException {
@@ -94,13 +96,13 @@ public class HttpClientIdleTimeoutHandlerTest {
         ch.runPendingTasks();
     }
 
-    private void readResponse() {
-        ch.writeInbound(httpResponse);
+    private void readRequest() {
+        ch.writeInbound(httpRequest);
         assertThat(ch.readInbound(), equalTo(httpRequest));
     }
 
-    private void writeRequest() {
-        ch.writeOutbound(httpRequest);
-        assertThat(ch.readOutbound(), equalTo(httpRequest));
+    private void writeResponse() {
+        ch.writeOutbound(httpResponse);
+        assertThat(ch.readOutbound(), equalTo(httpResponse));
     }
 }
