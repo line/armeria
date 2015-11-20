@@ -1,0 +1,19 @@
+---
+language: java
+sudo: false
+
+jdk:
+  - oraclejdk8
+
+os:
+  - linux
+
+branches:
+  only:
+    - master
+
+notifications:
+  email: false
+
+script: mvn -B clean install site
+
