@@ -15,5 +15,5 @@ branches:
 notifications:
   email: false
 
-script: mvn -B clean install site
+script: mvn -B test site
 
