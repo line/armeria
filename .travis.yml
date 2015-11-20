@@ -15,5 +15,9 @@ branches:
 notifications:
   email: false
 
+cache:
+  directories:
+    - $HOME/.m2
+
 script: mvn -B test site
 
