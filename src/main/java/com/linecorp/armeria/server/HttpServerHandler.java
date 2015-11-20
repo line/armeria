@@ -194,13 +194,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 final long timeoutMillis = config.requestTimeoutPolicy().timeout(iCtx);
 
                 // Perform the actual invocation.
-                ServiceInvocationContext.setCurrent(iCtx);
-                try {
-                    service.handler().invoke(iCtx, config.blockingTaskExecutor(), promise);
-                    invoked = true;
-                } finally {
-                    ServiceInvocationContext.removeCurrent();
-                }
+                invoke(service, iCtx, promise);
+                invoked = true;
 
                 if (promise.isDone()) {
                     // If the invocation has been finished immediately,
@@ -254,6 +249,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
             if (!invoked) {
                 ReferenceCountUtil.safeRelease(req);
             }
+        }
+    }
+
+    private void invoke(Service service, ServiceInvocationContext iCtx, Promise<Object> promise) {
+        ServiceInvocationContext.setCurrent(iCtx);
+        try {
+            service.handler().invoke(iCtx, config.blockingTaskExecutor(), promise);
+        } catch (Throwable t) {
+            if (!promise.tryFailure(t)) {
+                logger.warn("{} invoke() failed with a finished promise: {}", iCtx, promise, t);
+            }
+        } finally {
+            ServiceInvocationContext.removeCurrent();
         }
     }
 
