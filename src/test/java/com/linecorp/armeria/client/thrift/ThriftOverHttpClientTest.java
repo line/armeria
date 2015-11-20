@@ -299,7 +299,7 @@ public class ThriftOverHttpClientTest {
         }
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 10000)
     public void testDevNullServiceSync() throws Exception {
         DevNullService.Iface client =
                 Clients.newClient(remoteInvokerFactory, getURI(Handlers.DEVNULL), Handlers.DEVNULL.Iface(),
@@ -310,7 +310,7 @@ public class ThriftOverHttpClientTest {
         assertEquals("kukuman2", serverReceivedNames.take());
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 10000)
     public void testODevNullServiceAsync() throws Exception {
         DevNullService.AsyncIface client =
                 Clients.newClient(remoteInvokerFactory, getURI(Handlers.DEVNULL),
@@ -328,7 +328,7 @@ public class ThriftOverHttpClientTest {
         }
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 10000)
     public void testTimeServiceSync() throws Exception {
         TimeService.Iface client =
                 Clients.newClient(remoteInvokerFactory, getURI(Handlers.TIME), Handlers.TIME.Iface(),
@@ -338,7 +338,7 @@ public class ThriftOverHttpClientTest {
         assertThat(serverTime, lessThanOrEqualTo(System.currentTimeMillis()));
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 10000)
     public void testTimeServiceAsync() throws Exception {
         TimeService.AsyncIface client =
                 Clients.newClient(remoteInvokerFactory, getURI(Handlers.TIME), Handlers.TIME.AsyncIface(),
@@ -359,7 +359,7 @@ public class ThriftOverHttpClientTest {
         client.create("test");
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 10000)
     public void testFileServiceAsync() throws Exception {
         FileService.AsyncIface client =
                 Clients.newClient(remoteInvokerFactory, getURI(Handlers.FILE), Handlers.FILE.AsyncIface(),
