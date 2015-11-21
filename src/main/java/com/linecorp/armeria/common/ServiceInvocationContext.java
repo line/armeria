@@ -32,6 +32,10 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ProgressivePromise;
+import io.netty.util.concurrent.Promise;
 
 /**
  * Provides information about an invocation and related utilities. Every remote invocation, regardless of if
@@ -101,7 +105,7 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
         this.originalRequest = originalRequest;
     }
 
-    Channel channel() {
+    final Channel channel() {
         return ch;
     }
 
@@ -209,6 +213,42 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
     @SuppressWarnings("unchecked")
     public <T> T originalRequest() {
         return (T) originalRequest;
+    }
+
+    /**
+     * Returns a new {@link Promise} whose {@link FutureListener}s will be notified by the same
+     * {@link #eventLoop()}.
+     */
+    public final <V> Promise<V> newPromise() {
+        return eventLoop().newPromise();
+    }
+
+    /**
+     * Returns a new {@link ProgressivePromise} whose {@link FutureListener}s will be notified by the same
+     * {@link #eventLoop()}.
+     */
+    public final <V> ProgressivePromise<V> newProgressivePromise() {
+        return eventLoop().newProgressivePromise();
+    }
+
+    /**
+     * Returns a new {@link Future} which is marked as succeeded already and whose {@link FutureListener}s will
+     * be notified by the same {@link #eventLoop()}. {@link Future#isSuccess()} will always return
+     * {@code true}. All {@link FutureListener}s added to it will be notified immediately. The blocking
+     * operations of the returned {@link Future} will return immediately without blocking as well.
+     */
+    public final <V> Future<V> newSucceededFuture(V result) {
+        return eventLoop().newSucceededFuture(result);
+    }
+
+    /**
+     * Returns a new {@link Future} which is marked as failed already and whose {@link FutureListener}s will
+     * be notified by the same {@link #eventLoop()}. {@link Future#isSuccess()} will always return
+     * {@code false}. All {@link FutureListener}s added to it will be notified immediately. The blocking
+     * operations of the returned {@link Future} will return immediately without blocking as well.
+     */
+    public final <V> Future<V> newFailedFuture(Throwable cause) {
+        return eventLoop().newFailedFuture(cause);
     }
 
     @Override
