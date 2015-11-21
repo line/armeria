@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.http.tomcat;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
 
 import java.util.regex.Pattern;
@@ -31,6 +32,8 @@ import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
+
+import io.netty.handler.codec.http.HttpHeaderNames;
 
 public class TomcatServiceTest extends AbstractServerTest {
 
@@ -52,7 +55,10 @@ public class TomcatServiceTest extends AbstractServerTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/tc/")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity())).replaceAll("");
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("text/html"));
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
                 assertThat(actualContent, is(
                         "<html><body>" +
                         "<p>Hello, Armerian World!</p>" +

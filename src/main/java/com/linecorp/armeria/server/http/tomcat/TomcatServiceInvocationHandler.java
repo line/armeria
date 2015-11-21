@@ -51,6 +51,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
@@ -260,6 +261,12 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
                 HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(coyoteRes.getStatus()), content);
 
         final HttpHeaders headers = res.headers();
+
+        final String contentType = coyoteRes.getContentType();
+        if (contentType != null && !contentType.isEmpty()) {
+            headers.set(HttpHeaderNames.CONTENT_TYPE, contentType);
+        }
+
         final MimeHeaders cheaders = coyoteRes.getMimeHeaders();
         final int numHeaders = cheaders.size();
         for (int i = 0; i < numHeaders; i ++) {
