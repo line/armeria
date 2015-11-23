@@ -98,7 +98,7 @@ and lets you browse the available service operations and structs:
 
     VirtualHostBuilder vhb= new VirtualHostBuilder();
     vhb.serviceAt("/foo/", new ThriftService(...))
-       .serviceAt("/bar/", new ThriftService(...));
+       .serviceAt("/bar/", new ThriftService(...))
        .serviceUnder("/docs/", new DocService());
 
 Note that we used ``serviceUnder()`` for ``DocService`` unlike the other services. ``serviceUnder()`` binds
