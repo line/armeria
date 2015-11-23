@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -29,11 +30,14 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
+import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
+import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
+import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
+import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
@@ -41,11 +45,10 @@ import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameListener;
+import io.netty.handler.codec.http2.Http2FrameReader;
+import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.codec.http2.Http2Stream.State;
-import io.netty.handler.codec.http2.Http2StreamVisitor;
-import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
@@ -112,14 +115,8 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
                         return null;
                     }
 
-                    final Http2Connection conn = new DefaultHttp2Connection(true);
-                    final Http2FrameListener listener = new InboundHttp2ToHttpAdapter.Builder(conn)
-                            .propagateSettings(true).validateHttpHeaders(false)
-                            .maxContentLength(config.maxFrameLength()).build();
-
                     return new Http2ServerUpgradeCodec(
-                            new ExtendedHttpToHttp2ConnectionHandler.Builder(p, http1aggregator)
-                                    .frameListener(listener).build(conn));
+                            createHttp2ConnectionHandler(p, http1aggregator));
                 },
                 config.maxFrameLength()));
 
@@ -142,44 +139,36 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
         p.addLast(new Http2OrHttpHandler());
     }
 
-    private static final class ExtendedHttpToHttp2ConnectionHandler extends HttpToHttp2ConnectionHandler {
+    private Http2ConnectionHandler createHttp2ConnectionHandler(ChannelPipeline pipeline, ChannelHandler... toRemove) {
+        final boolean validateHeaders = true;
+        final Http2Connection conn = new DefaultHttp2Connection(true);
+        final Http2FrameListener listener = new InboundHttp2ToHttpAdapter.Builder(conn)
+                .propagateSettings(true).validateHttpHeaders(validateHeaders)
+                .maxContentLength(config.maxFrameLength()).build();
 
-        static final class Builder extends BuilderBase<HttpToHttp2ConnectionHandler, Builder> {
+        Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
+        Http2FrameWriter writer = new DefaultHttp2FrameWriter();
 
-            private final ChannelPipeline pipeline;
-            private final ChannelHandler[] toRemove;
+        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
+        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
-            Builder(ChannelPipeline pipeline, ChannelHandler... toRemove) {
-                this.pipeline = pipeline;
-                this.toRemove = toRemove;
+        final HttpToHttp2ServerConnectionHandler handler =
+                new HttpToHttp2ServerConnectionHandler(pipeline,
+                                                       decoder, encoder, new Http2Settings(), validateHeaders, toRemove);
 
-                // TODO(trustin): Enable max concurrent streams again if the related Netty bug is fixed.
-                // https://github.com/netty/netty/commit/455682cae0d7bec0f260c36147702d0fca37f072#commitcomment-13655595
-                encoderEnforceMaxConcurrentStreams(false);
-            }
+        // Setup post build options
+        handler.gracefulShutdownTimeoutMillis(config.idleTimeoutMillis());
+        handler.decoder().frameListener(listener);
 
-            @Override
-            protected HttpToHttp2ConnectionHandler build0(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder) {
-                return new ExtendedHttpToHttp2ConnectionHandler(
-                        pipeline, decoder, encoder, initialSettings(), isValidateHeaders(), toRemove);
-            }
-        }
+        return handler;
+    }
 
-        /**
-         * XXX(trustin): Don't know why, but {@link Http2ConnectionHandler} does not close the last stream
-         *               on a cleartext connection, so we make sure all streams are closed.
-         */
-        private static final Http2StreamVisitor closeAllStreams = stream -> {
-            if (stream.state() != State.CLOSED) {
-                stream.close();
-            }
-            return true;
-        };
+    private static final class HttpToHttp2ServerConnectionHandler extends AbstractHttpToHttp2ConnectionHandler {
 
         private final ChannelPipeline pipeline;
         private final ChannelHandler[] toRemove;
 
-        ExtendedHttpToHttp2ConnectionHandler(
+        HttpToHttp2ServerConnectionHandler(
                 ChannelPipeline pipeline,
                 Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                 Http2Settings initialSettings, boolean validateHeaders, ChannelHandler... toRemove) {
@@ -199,10 +188,7 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            encoder().connection().forEachActiveStream(closeAllStreams);
-            super.close(ctx, promise);
-        }
+        protected void onCloseRequest(ChannelHandlerContext ctx) throws Exception {}
     }
 
     private final class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
@@ -229,12 +215,7 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
 
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            final Http2Connection conn = new DefaultHttp2Connection(true);
-            final Http2FrameListener listener = new InboundHttp2ToHttpAdapter.Builder(conn)
-                    .propagateSettings(true).validateHttpHeaders(false)
-                    .maxContentLength(config.maxFrameLength()).build();
-
-            p.addLast(new ExtendedHttpToHttp2ConnectionHandler.Builder(p).frameListener(listener).build(conn));
+            p.addLast(createHttp2ConnectionHandler(p));
             configureRequestCountingHandlers(p);
             p.addLast(new HttpServerHandler(config, SessionProtocol.H2));
         }

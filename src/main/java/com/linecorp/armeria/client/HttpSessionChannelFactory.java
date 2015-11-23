@@ -37,20 +37,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelHealthChecker;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.OneTimeTask;
 
 class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
-    static final AttributeKey<Void> SESSION_ACTIVE =
-            AttributeKey.valueOf(HttpSessionChannelFactory.class, "SESSION_ACTIVE");
-    static final ChannelHealthChecker HEALTH_CHECKER = channel -> {
-        EventLoop eventLoop = channel.eventLoop();
-        return channel.isActive() && channel.hasAttr(SESSION_ACTIVE) ?
-               eventLoop.newSucceededFuture(Boolean.TRUE) : eventLoop.newSucceededFuture(Boolean.FALSE);
-    };
+    static final ChannelHealthChecker HEALTH_CHECKER =
+            ch -> ch.eventLoop().newSucceededFuture(HttpSessionHandler.isActive(ch));
 
     private final Bootstrap baseBootstrap;
     private final Map<SessionProtocol, Bootstrap> bootstrapMap;
@@ -67,35 +61,38 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         final InetSocketAddress remoteAddress = key.remoteAddress();
         final SessionProtocol sessionProtocol = key.sessionProtocol();
 
-        final Bootstrap bootstrap = bootstrap(sessionProtocol);
-        ChannelFuture channelFuture = bootstrap.connect(remoteAddress);
-        final Channel ch = channelFuture.channel();
-        final Promise<Channel> channelPromise = channelFuture.channel().eventLoop().newPromise();
+        final String host = remoteAddress.getHostString() + ':' + remoteAddress.getPort();
+        final Bootstrap bootstrap = bootstrap(sessionProtocol, host);
+        final ChannelFuture connectFuture = bootstrap.connect(remoteAddress);
+        final Channel ch = connectFuture.channel();
+        final Promise<Channel> sessionPromise = connectFuture.channel().eventLoop().newPromise();
 
-        if (channelFuture.isDone()) {
-            notifyConnect(channelFuture, ch, channelPromise);
+        if (connectFuture.isDone()) {
+            notifySessionPromise(ch, connectFuture, sessionPromise);
         } else {
-            channelFuture.addListener((Future<Void> future) -> notifyConnect(future, ch, channelPromise));
+            connectFuture.addListener(
+                    (Future<Void> future) -> notifySessionPromise(ch, future, sessionPromise));
         }
 
-        return channelPromise;
+        return sessionPromise;
     }
 
-    private void notifyConnect(Future<Void> fut, Channel ch, Promise<Channel> channelPromise) {
-        assert fut.isDone();
-        if (fut.isSuccess()) {
-            watchSessionActive(ch, channelPromise);
-        } else {
-            channelPromise.setFailure(fut.cause());
-        }
-    }
-
-    private Bootstrap bootstrap(SessionProtocol sessionProtocol) {
+    private Bootstrap bootstrap(SessionProtocol sessionProtocol, String host) {
         return bootstrapMap.computeIfAbsent(sessionProtocol, sp -> {
             Bootstrap bs = baseBootstrap.clone();
-            bs.handler(new HttpConfigurator(sp, options, new DefaultSessionListener()));
+            bs.handler(new HttpConfigurator(sp, host, options));
             return bs;
         });
+    }
+
+    private void notifySessionPromise(Channel ch, Future<Void> connectFuture,
+                                      Promise<Channel> sessionPromise) {
+        assert connectFuture.isDone();
+        if (connectFuture.isSuccess()) {
+            watchSessionActive(ch, sessionPromise);
+        } else {
+            sessionPromise.setFailure(connectFuture.cause());
+        }
     }
 
     private Future<Channel> watchSessionActive(Channel ch, Promise<Channel> promise) {
@@ -117,8 +114,9 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
     private void watchSessionActive0(final Channel ch, Promise<Channel> result) {
         assert ch.eventLoop().inEventLoop();
 
-        if (ch.hasAttr(SESSION_ACTIVE)) {
+        if (HttpSessionHandler.isActive(ch)) {
             result.setSuccess(ch);
+            return;
         }
 
         ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(new OneTimeTask() {
@@ -140,24 +138,5 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
                 ctx.fireUserEventTriggered(evt);
             }
         });
-    }
-
-    private static class DefaultSessionListener implements SessionListener {
-        private HttpSessionHandler sessionHandler;
-
-        @Override
-        public void sessionActivated(ChannelHandlerContext ctx, SessionProtocol sessionProtocol) {
-            ctx.pipeline().addLast(sessionHandler = new HttpSessionHandler(sessionProtocol));
-            ctx.channel().attr(SESSION_ACTIVE).set(null);
-            ctx.fireUserEventTriggered(sessionProtocol);
-        }
-
-        @Override
-        public void sessionDeactivated(ChannelHandlerContext ctx) {
-            ctx.channel().attr(SESSION_ACTIVE).remove();
-            if (sessionHandler != null) {
-                sessionHandler.deactivateSession();
-            }
-        }
     }
 }

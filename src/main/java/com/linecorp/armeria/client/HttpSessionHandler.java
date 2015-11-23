@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -37,25 +38,49 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.EmptyArrays;
 
 class HttpSessionHandler extends ChannelDuplexHandler {
     private static final String ARMERIA_USER_AGENT = "armeria client";
 
-    private static final Exception CLOSED_SESSION_EXCEPTION = new ClosedSessionException();
+    static boolean isActive(Channel ch) {
+        final boolean active;
+        if (!ch.isActive()) {
+            active = false;
+        } else {
+            final HttpSessionHandler sessionHandler = ch.pipeline().get(HttpSessionHandler.class);
+            active = sessionHandler != null ? sessionHandler.active : false;
+        }
+        return active;
+    }
 
-    static {
-        CLOSED_SESSION_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+    static void deactivate(Channel ch) {
+        final HttpSessionHandler sessionHandler = ch.pipeline().get(HttpSessionHandler.class);
+        if (sessionHandler == null) {
+            // Protocol has not been determined yet.
+        } else {
+            sessionHandler.deactivateSession();
+        }
+    }
+
+    static SessionProtocol protocol(Channel ch) {
+        final HttpSessionHandler sessionHandler = ch.pipeline().get(HttpSessionHandler.class);
+        if (sessionHandler == null || !sessionHandler.active) {
+            return null;
+        } else {
+            return sessionHandler.sessionProtocol;
+        }
     }
 
     private final SessionProtocol sessionProtocol;
     private final boolean isMultiplex;
     private final WaitsHolder waitsHolder;
+    private volatile boolean active = true;
 
     HttpSessionHandler(SessionProtocol sessionProtocol) {
         this.sessionProtocol = requireNonNull(sessionProtocol);
@@ -65,7 +90,9 @@ class HttpSessionHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof FullHttpResponse) {
+        if (msg instanceof Http2Settings) {
+            // Expected
+        } else if (msg instanceof FullHttpResponse) {
             FullHttpResponse response = (FullHttpResponse) msg;
 
             final Promise<FullHttpResponse> promise = waitsHolder.poll(response);
@@ -90,26 +117,27 @@ class HttpSessionHandler extends ChannelDuplexHandler {
                     response.headers().get(HttpHeaderNames.CONNECTION))) {
                 ctx.close();
             }
+        } else {
+            try {
+                throw new IllegalStateException("unexpected message type: " + msg);
+            } finally {
+                ReferenceCountUtil.release(msg);
+            }
         }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        markAllPaddingResponseFailed(CLOSED_SESSION_EXCEPTION);
+        failPendingResponses(ClosedSessionException.INSTANCE);
         ctx.fireChannelInactive();
     }
 
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        //handler removed when session closed (refer HttpSession.close())
-        markAllPaddingResponseFailed(CLOSED_SESSION_EXCEPTION);
+    void deactivateSession() {
+        failPendingResponses(ClosedSessionException.INSTANCE);
     }
 
-    public void deactivateSession() {
-        markAllPaddingResponseFailed(CLOSED_SESSION_EXCEPTION);
-    }
-
-    void markAllPaddingResponseFailed(Throwable e) {
+    private void failPendingResponses(Throwable e) {
+        active = false;
         final Collection<Promise<FullHttpResponse>> resultPromises = waitsHolder.getAll();
         waitsHolder.clear();
         if (!resultPromises.isEmpty()) {
@@ -129,7 +157,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         }
     }
 
-    private static interface WaitsHolder {
+    private interface WaitsHolder {
         Promise<FullHttpResponse> poll(FullHttpResponse response);
 
         void put(Invocation invocation, FullHttpRequest request);

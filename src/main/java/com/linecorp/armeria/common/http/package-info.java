@@ -14,14 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
-
-import com.linecorp.armeria.common.SessionProtocol;
-
-import io.netty.channel.ChannelHandlerContext;
-
-interface SessionListener {
-    void sessionActivated(ChannelHandlerContext ctx, SessionProtocol sessionProtocol);
-
-    void sessionDeactivated(ChannelHandlerContext ctx);
-}
+/**
+ * HTTP1/2-related classes used internally.
+ */
+package com.linecorp.armeria.common.http;

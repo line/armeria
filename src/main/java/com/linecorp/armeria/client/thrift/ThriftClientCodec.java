@@ -41,6 +41,8 @@ import org.apache.thrift.transport.TTransportException;
 import com.linecorp.armeria.client.ClientCodec;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -57,7 +59,6 @@ public class ThriftClientCodec implements ClientCodec {
     private static final String ASYNC_IFACE = "AsyncIface";
 
     private final URI uri;
-    private final Scheme scheme;
     private final boolean isAsyncClient;
     private final Map<String, ThriftMethod> methodMap;
     private final TProtocolFactory protocolFactory;
@@ -68,13 +69,11 @@ public class ThriftClientCodec implements ClientCodec {
     /**
      * Creates a new instance.
      */
-    public ThriftClientCodec(URI uri, Scheme scheme, Class<?> interfaceClass,
-                             TProtocolFactory protocolFactory) {
+    public ThriftClientCodec(URI uri, Class<?> interfaceClass, TProtocolFactory protocolFactory) {
 
         requireNonNull(interfaceClass, "interfaceClass");
 
         this.uri = requireNonNull(uri, "uri");
-        this.scheme = requireNonNull(scheme, "scheme");
         this.protocolFactory = requireNonNull(protocolFactory, "protocolFactory");
 
         final String interfaceName = interfaceClass.getName();
@@ -153,13 +152,21 @@ public class ThriftClientCodec implements ClientCodec {
 
     @Override
     @SuppressWarnings("rawtypes")
-    public EncodeResult encodeRequest(Channel channel, Method method, Object[] args) {
+    public EncodeResult encodeRequest(
+            Channel channel, SessionProtocol sessionProtocol, Method method, Object[] args) {
+
         requireNonNull(channel, "channel");
+        requireNonNull(sessionProtocol, "sessionProtocol");
         requireNonNull(method, "method");
+
         final ThriftMethod thriftMethod = methodMap.get(method.getName());
         if (thriftMethod == null) {
             throw new IllegalStateException("Thrift method not found: " + method.getName());
         }
+
+        final Scheme scheme = Scheme.of(ThriftProtocolFactories.toSerializationFormat(protocolFactory),
+                                        sessionProtocol);
+
         try {
             final ByteBuf outByteBuf = channel.alloc().buffer();
             final TByteBufOutputTransport outTransport = new TByteBufOutputTransport(outByteBuf);

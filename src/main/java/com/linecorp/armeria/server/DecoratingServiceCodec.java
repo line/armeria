@@ -39,13 +39,13 @@ import io.netty.util.concurrent.Promise;
  */
 public abstract class DecoratingServiceCodec implements ServiceCodec {
 
-    private final ServiceCodec codec;
+    private final ServiceCodec delegate;
 
     /**
      * Creates a new instance that decorates the specified {@link ServiceCodec}.
      */
-    protected DecoratingServiceCodec(ServiceCodec codec) {
-        this.codec = requireNonNull(codec, "codec");
+    protected DecoratingServiceCodec(ServiceCodec delegate) {
+        this.delegate = requireNonNull(delegate, "delegate");
     }
 
     /**
@@ -53,7 +53,7 @@ public abstract class DecoratingServiceCodec implements ServiceCodec {
      */
     @SuppressWarnings("unchecked")
     protected final <T extends ServiceCodec> T delegate() {
-        return (T) codec;
+        return (T) delegate;
     }
 
     @Override

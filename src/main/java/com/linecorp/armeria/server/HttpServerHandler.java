@@ -43,8 +43,10 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
@@ -135,9 +137,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 break;
             case H1C:
                 sessionProtocol = SessionProtocol.H2C;
-                break;
-            default:
-                logger.warn("{} Duplicate upgrade? {}", ctx.channel(), sessionProtocol);
                 break;
             }
             return;
@@ -433,6 +432,25 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         isReading = false;
         ctx.flush();
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        // Continue handling the upgrade request after the upgrade is complete.
+        if (evt instanceof UpgradeEvent) {
+            assert !isReading;
+
+            final FullHttpRequest req = ((UpgradeEvent) evt).upgradeRequest();
+            req.headers().set(STREAM_ID, "1");
+
+            // Remove the headers related with the upgrade.
+            req.headers().remove(HttpHeaderNames.CONNECTION);
+            req.headers().remove(HttpHeaderNames.UPGRADE);
+            req.headers().remove(Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER);
+
+            channelRead(ctx, req);
+            channelReadComplete(ctx);
+        }
     }
 
     @Override

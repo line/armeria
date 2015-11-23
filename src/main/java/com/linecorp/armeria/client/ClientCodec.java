@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -38,7 +39,7 @@ public interface ClientCodec {
     /**
      * Encodes a Java method invocation into a {@link ServiceInvocationContext}.
      */
-    EncodeResult encodeRequest(Channel channel, Method method, Object[] args);
+    EncodeResult encodeRequest(Channel channel, SessionProtocol sessionProtocol, Method method, Object[] args);
 
     /**
      * Decodes the response bytes into a Java object.
@@ -52,7 +53,7 @@ public interface ClientCodec {
     boolean isAsyncClient();
 
     /**
-     * The result of {@link #encodeRequest(Channel, Method, Object[]) ClientCodec.encodeRequest()}.
+     * The result of {@link #encodeRequest(Channel, SessionProtocol, Method, Object[]) ClientCodec.encodeRequest()}.
      */
     interface EncodeResult {
         /**

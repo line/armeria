@@ -25,6 +25,8 @@ import javax.net.ssl.SSLException;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
+import com.linecorp.armeria.common.http.Http1ClientCodec;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -42,7 +44,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
@@ -260,7 +261,7 @@ final class THttp2Client extends TTransport {
                 p.addLast(connHandler);
                 configureEndOfPipeline(p);
             } else {
-                HttpClientCodec sourceCodec = new HttpClientCodec();
+                Http1ClientCodec sourceCodec = new Http1ClientCodec();
                 HttpClientUpgradeHandler upgradeHandler =
                         new HttpClientUpgradeHandler(sourceCodec, new Http2ClientUpgradeCodec(connHandler), 65536);
 
@@ -279,7 +280,7 @@ final class THttp2Client extends TTransport {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 DefaultFullHttpRequest upgradeRequest =
-                        new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
+                        new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/");
                 ctx.writeAndFlush(upgradeRequest);
 
                 ctx.fireChannelActive();
@@ -309,19 +310,30 @@ final class THttp2Client extends TTransport {
                 return;
             }
 
-            FullHttpResponse res = (FullHttpResponse) msg;
-            Integer streamId = res.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
-            if (streamId == null) {
-                responsePromise.tryFailure(new AssertionError("message without stream ID: " + msg));
+            if (msg instanceof FullHttpResponse) {
+                FullHttpResponse res = (FullHttpResponse) msg;
+                Integer streamId = res.headers().getInt(
+                        HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
+                if (streamId == null) {
+                    responsePromise.tryFailure(new AssertionError("message without stream ID: " + msg));
+                    return;
+                }
+
+                if (streamId == 1) {
+                    // Response to the upgrade request, which is OK to ignore.
+                    return;
+                }
+
+                if (streamId != 3) {
+                    responsePromise.tryFailure(new AssertionError("unexpected stream ID: " + msg));
+                    return;
+                }
+
+                responsePromise.setSuccess(res.content().retain());
                 return;
             }
 
-            if (streamId != 3) {
-                responsePromise.tryFailure(new AssertionError("unexpected stream ID: " + msg));
-                return;
-            }
-
-            responsePromise.setSuccess(res.content().retain());
+            throw new IllegalStateException("unexpected message type: " + msg.getClass().getName());
         }
 
         @Override

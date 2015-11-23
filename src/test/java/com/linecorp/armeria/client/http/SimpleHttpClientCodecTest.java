@@ -72,7 +72,7 @@ public class SimpleHttpClientCodecTest {
 
     @Before
     public void setUp() {
-        codec = new SimpleHttpClientCodec(SCHEME, "www.github.com");
+        codec = new SimpleHttpClientCodec("www.github.com");
         when(channel.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
     }
 
@@ -81,7 +81,7 @@ public class SimpleHttpClientCodecTest {
         SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/foo")
                 .header(HttpHeaderNames.ORIGIN, "localhost")
                 .build();
-        EncodeResult result = codec.encodeRequest(channel, EXECUTE_METHOD, new Object[]{ request });
+        EncodeResult result = codec.encodeRequest(channel, SCHEME.sessionProtocol(), EXECUTE_METHOD, new Object[]{ request });
         assertTrue(result.isSuccess());
         assertEquals(SCHEME, result.encodedScheme().get());
         assertEquals("/foo", result.encodedPath().get());
@@ -99,7 +99,7 @@ public class SimpleHttpClientCodecTest {
                 .content("lorem ipsum foo bar", StandardCharsets.UTF_8)
                 .header(HttpHeaderNames.ORIGIN, "localhost")
                 .build();
-        EncodeResult result = codec.encodeRequest(channel, EXECUTE_METHOD, new Object[]{ request });
+        EncodeResult result = codec.encodeRequest(channel, SCHEME.sessionProtocol(), EXECUTE_METHOD, new Object[]{ request });
         assertTrue(result.isSuccess());
         assertEquals(SCHEME, result.encodedScheme().get());
         assertEquals("/foo", result.encodedPath().get());
