@@ -21,6 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,9 +47,38 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
 
     /**
      * Returns the context of the invocation that is being handled in the current thread.
+     *
+     * @throws IllegalStateException if the context is unavailable in the current thread
      */
-    public static Optional<ServiceInvocationContext> current() {
-        return Optional.ofNullable(context.get());
+    public static ServiceInvocationContext current() {
+        final ServiceInvocationContext ctx = context.get();
+        if (ctx == null) {
+            throw new IllegalStateException(ServiceInvocationContext.class.getSimpleName() + " unavailable");
+        }
+        return ctx;
+    }
+
+    /**
+     * Maps the context of the invocation that is being handled in the current thread.
+     *
+     * @param mapper the {@link Function} that maps the invocation
+     * @param defaultValueSupplier the {@link Supplier} that provides the value when the context is unavailable
+     *                             in the current thread. If {@code null}, the {@code null} will be returned
+     *                             when the context is unavailable in the current thread.
+     */
+    public static <T> T mapCurrent(
+            Function<? super ServiceInvocationContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
+
+        final ServiceInvocationContext ctx = context.get();
+        if (ctx != null) {
+            return mapper.apply(ctx);
+        }
+
+        if (defaultValueSupplier != null) {
+            return defaultValueSupplier.get();
+        }
+
+        return null;
     }
 
     /**
