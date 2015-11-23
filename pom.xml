@@ -85,7 +85,7 @@
     <netty.version>4.1.0.Beta7</netty.version>
     <slf4j.version>1.7.13</slf4j.version>
     <tomcat.version>8.0.28</tomcat.version>
-    <jetty.alpn.version.latest>8.1.3.v20150130</jetty.alpn.version.latest>
+    <jetty.alpn.version.latest>8.1.6.v20151105</jetty.alpn.version.latest>
     <jetty.alpn.version>${jetty.alpn.version.latest}</jetty.alpn.version>
     <jetty.alpn.path>${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar</jetty.alpn.path>
     <argLine.bootcp>-Xbootclasspath/p:${jetty.alpn.path}</argLine.bootcp>
@@ -132,6 +132,7 @@
       <groupId>org.eclipse.jetty.alpn</groupId>
       <artifactId>alpn-api</artifactId>
       <version>1.1.2.v20150522</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.mortbay.jetty.alpn</groupId>
@@ -717,7 +718,31 @@
         </property>
       </activation>
       <properties>
-        <jetty.alpn.version>8.1.4.v20150727</jetty.alpn.version>
+        <jetty.alpn.version>8.1.5.v20150921</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u65</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_65</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.6.v20151105</jetty.alpn.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>alpn-8u66</id>
+      <activation>
+        <property>
+          <name>java.version</name>
+          <value>1.8.0_66</value>
+        </property>
+      </activation>
+      <properties>
+        <jetty.alpn.version>8.1.6.v20151105</jetty.alpn.version>
       </properties>
     </profile>
   </profiles>
