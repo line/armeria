@@ -96,7 +96,7 @@ public class HttpClientIdleTimeoutHandlerTest {
 
     private void readResponse() {
         ch.writeInbound(httpResponse);
-        assertThat(ch.readInbound(), equalTo(httpRequest));
+        assertThat(ch.readInbound(), equalTo(httpResponse));
     }
 
     private void writeRequest() {
