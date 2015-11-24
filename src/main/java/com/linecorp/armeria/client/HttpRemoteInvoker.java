@@ -143,13 +143,7 @@ final class HttpRemoteInvoker implements RemoteInvoker {
     }
 
     private EventLoop eventLoop() {
-        final ServiceInvocationContext currentServerContext = ServiceInvocationContext.current().orElse(null);
-        if (currentServerContext != null) {
-            // Use the current server-side event loop if possible.
-            return currentServerContext.eventLoop();
-        } else {
-            return eventLoopGroup.next();
-        }
+        return ServiceInvocationContext.mapCurrent(ServiceInvocationContext::eventLoop, eventLoopGroup::next);
     }
 
     static <T> void invoke0(SessionProtocol sessionProtocol, ClientCodec codec, Channel channel,

@@ -43,7 +43,7 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
 
         defaultVirtualHost.serviceAt("/sleep", new ThriftService(
                 (AsyncIface) (milliseconds, resultHandler) ->
-                        ServiceInvocationContext.current().get().eventLoop().schedule(
+                        ServiceInvocationContext.current().eventLoop().schedule(
                                 () -> resultHandler.onComplete(milliseconds),
                                 milliseconds, TimeUnit.MILLISECONDS)).decorate(LoggingService::new));
 
