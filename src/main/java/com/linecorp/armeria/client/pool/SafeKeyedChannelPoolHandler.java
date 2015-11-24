@@ -67,7 +67,7 @@ class SafeKeyedChannelPoolHandler<K> implements KeyedChannelPoolHandler<K> {
     @Override
     public void channelClosed(K key, Channel ch) {
         try {
-            handler.channelCreated(key, ch);
+            handler.channelClosed(key, ch);
         } catch (Exception e) {
             logFailure("channelClosed", e);
         }
