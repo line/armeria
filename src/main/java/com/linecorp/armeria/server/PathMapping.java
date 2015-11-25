@@ -17,6 +17,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -124,6 +125,16 @@ public interface PathMapping extends Function<String, String> {
      */
     @Override
     String apply(String path);
+
+    /**
+     * Returns the exact path of this path mapping if it is an exact path mapping, or {@link Optional#empty}
+     * otherwise. This can be useful for services which provide logic after scanning the server's mapped
+     * services, e.g., {@link com.linecorp.armeria.server.docs.DocService}.
+     */
+    @Deprecated  // TODO(#35): Remove this after switching to header-based detection of thrift formats.
+    default Optional<String> exactPath() {
+        return Optional.empty();
+    }
 
     /**
      * Creates a new {@link PathMapping} that removes the specified {@code pathPrefix} from the matched path

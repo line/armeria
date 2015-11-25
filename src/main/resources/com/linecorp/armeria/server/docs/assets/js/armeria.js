@@ -74,8 +74,26 @@ $(function () {
     functionContainer.html(functionTemplate({
       'serviceName': serviceName,
       'serviceSimpleName': serviceInfo.simpleName,
+      'serviceDebugPath': serviceInfo.debugPath,
       'function': functionInfo}
     ));
+
+    var debugText = functionContainer.find('.debug-textarea');
+    var debugResponse = functionContainer.find('.debug-response code');
+
+    functionContainer.find('.debug-submit').on('click', function () {
+      var args = JSON.parse(debugText.val());
+      var request = {
+        method: functionInfo.name,
+        type: 'CALL',
+        args: args
+      };
+      $.post(serviceInfo.debugPath, JSON.stringify(request), function (response) {
+        debugResponse.text(response);
+        hljs.highlightBlock(debugResponse.get(0));
+      });
+      return false;
+    });
 
     functionContainer.removeClass('hidden');
   }

@@ -24,6 +24,7 @@ import org.apache.thrift.protocol.TJSONProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.text.TTextProtocol;
 
 /**
  * Provides a set of the known {@link TProtocolFactory} instances.
@@ -67,6 +68,18 @@ public final class ThriftProtocolFactories {
     };
 
     /**
+     * {@link TProtocolFactory} for the Thrift TText protocol
+     */
+    public static final TProtocolFactory TEXT = new TTextProtocol.Factory() {
+        private static final long serialVersionUID = 4430306676070073610L;
+
+        @Override
+        public String toString() {
+            return "TProtocolFactory(TTEXT)";
+        }
+    };
+
+    /**
      * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
      *
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not for Thrift
@@ -79,6 +92,8 @@ public final class ThriftProtocolFactories {
             return COMPACT;
         case THRIFT_JSON:
             return JSON;
+        case THRIFT_TEXT:
+            return TEXT;
         default:
             throw new IllegalArgumentException("non-Thrift serializationFormat: " + serializationFormat);
         }
@@ -98,6 +113,8 @@ public final class ThriftProtocolFactories {
             return SerializationFormat.THRIFT_COMPACT;
         } else if (protoFactory instanceof TJSONProtocol.Factory) {
             return SerializationFormat.THRIFT_JSON;
+        } else if (protoFactory instanceof TTextProtocol.Factory) {
+            return SerializationFormat.THRIFT_TEXT;
         } else {
             throw new IllegalArgumentException(
                     "unsupported TProtocolFactory: " + protoFactory.getClass().getName());

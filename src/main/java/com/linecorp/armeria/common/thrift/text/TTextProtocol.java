@@ -610,31 +610,18 @@ public class TTextProtocol extends TProtocol {
         if (root != null) {
             return;
         }
-        root = OBJECT_MAPPER.readTree(new InputStream() {
-            private final byte[] buffer = new byte[READ_BUFFER_SIZE];
-            private int index;
-            private int max;
-
-            @Override
-            public int read() throws IOException {
-                if (max == -1) {
-                    return -1;
-                }
-                if (max > 0 && index < max) {
-                    return buffer[index++];
-                }
-                try {
-                    max = trans_.read(buffer, 0, READ_BUFFER_SIZE);
-                    index = 0;
-                } catch (TTransportException e) {
-                    if (TTransportException.END_OF_FILE != e.getType()) {
-                        throw new IOException(e);
-                    }
-                    max = -1;
-                }
-                return read();
+        ByteArrayOutputStream content = new ByteArrayOutputStream();
+        byte[] buffer = new byte[READ_BUFFER_SIZE];
+        try {
+            while (trans_.read(buffer, 0, READ_BUFFER_SIZE) != 0) {
+                content.write(buffer);
             }
-        });
+        } catch (TTransportException e) {
+            if (TTransportException.END_OF_FILE != e.getType()) {
+                throw new IOException(e);
+            }
+        }
+        root = OBJECT_MAPPER.readTree(content.toByteArray());
     }
 
     /**

@@ -20,6 +20,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.thrift.meta_data.StructMetaData;
 import org.apache.thrift.protocol.TType;
@@ -32,7 +33,9 @@ public class ServiceInfoTest {
 
     @Test
     public void fooServiceTest() throws Exception {
-        final ServiceInfo service = ServiceInfo.of(FooService.class);
+        final ServiceInfo service = ServiceInfo.of(FooService.class, Optional.of("/debug/foo"));
+
+        assertThat(service.debugPath(), is("/debug/foo"));
 
         final Map<String, FunctionInfo> functions = service.functions();
         assertThat(functions.size(), is(5));

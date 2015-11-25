@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.thrift;
 
 import org.apache.thrift.protocol.TProtocolFactory;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.SimpleService;
@@ -57,5 +58,12 @@ public class ThriftService extends SimpleService {
      */
     public Object thriftService() {
         return ((ThriftServiceCodec) codec()).thriftService();
+    }
+
+    /**
+     * Returns the serialization format used when registering this Thrift service.
+     */
+    public SerializationFormat serializationFormat() {
+        return ((ThriftServiceCodec) codec()).serializationFormat();
     }
 }

@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceEntry;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
@@ -65,12 +64,12 @@ public class DocService extends AbstractCompositeService {
                 final ServerConfig config = server.config();
                 final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
 
-                final List<Service> services = config.services().stream()
+                final List<ServiceEntry> services = config.services().stream()
                                                      .filter(se -> virtualHosts.contains(se.virtualHost()))
-                                                     .map(ServiceEntry::service).collect(Collectors.toList());
+                                                     .collect(Collectors.toList());
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
-                                             .writeValueAsBytes(Specification.fromServices(services)));
+                                             .writeValueAsBytes(Specification.forServiceEntries(services)));
             }
         });
     }

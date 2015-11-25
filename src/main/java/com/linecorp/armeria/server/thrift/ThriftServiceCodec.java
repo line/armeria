@@ -211,6 +211,10 @@ final class ThriftServiceCodec implements ServiceCodec {
         return service;
     }
 
+    SerializationFormat serializationFormat() {
+        return serializationFormat;
+    }
+
     @Override
     public DecodeResult decodeRequest(
             Channel ch, SessionProtocol sessionProtocol, String hostname, String path, String mappedPath,
