@@ -273,6 +273,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>18.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <version>4.5.1</version>
@@ -396,6 +402,24 @@
                   <arg value="-I" />
                   <arg value="${thrift.source.test}" />
                   <arg value="${thrift.source.test}/hbase.thrift" />
+                </exec>
+                <exec executable="${thrift.executable}" failonerror="true">
+                  <arg value="-gen" />
+                  <arg value="java" />
+                  <arg value="-out" />
+                  <arg value="${thrift.generated.test}" />
+                  <arg value="-I" />
+                  <arg value="${thrift.source.test}" />
+                  <arg value="${thrift.source.test}/RpcDebugTest.thrift" />
+                </exec>
+                <exec executable="${thrift.executable}" failonerror="true">
+                  <arg value="-gen" />
+                  <arg value="java" />
+                  <arg value="-out" />
+                  <arg value="${thrift.generated.test}" />
+                  <arg value="-I" />
+                  <arg value="${thrift.source.test}" />
+                  <arg value="${thrift.source.test}/TTextProtocolTest.thrift" />
                 </exec>
               </target>
             </configuration>

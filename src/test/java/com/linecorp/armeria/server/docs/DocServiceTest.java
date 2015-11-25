@@ -68,6 +68,10 @@ public class DocServiceTest extends AbstractServerTest {
                 Specification.fromServiceClasses(Arrays.asList(
                         HelloService.class, FooService.class, Cassandra.class, Hbase.class)));
 
+        for (int i = 0; i < 100000000; i++) {
+            Thread.sleep(1000000000);
+        }
+
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpGet req = new HttpGet(specificationUri());
 

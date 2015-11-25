@@ -14,12 +14,11 @@
 // limitations under the License.
 // =================================================================================================
 
-package com.twitter.common.thrift.text;
+package com.linecorp.armeria.common.thrift.text;
 
 import java.util.Iterator;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * A parsing context used for Sequences (lists & sets). Maintains its
@@ -29,33 +28,33 @@ import com.google.gson.JsonElement;
  */
 class SequenceContext extends BaseContext {
 
-  private final Iterator<JsonElement> children;
-  private JsonElement currentChild;
+    private final Iterator<JsonNode> children;
+    private JsonNode currentChild;
 
-  /**
-   * Create an iterator over the children. May be constructed with a null
-   * JsonArray if we only use it for writing.
-   */
-  protected SequenceContext(JsonArray json) {
-    children = (null != json) ? json.iterator() : null;
-  }
-
-  @Override
-  protected void read() {
-    if (!children.hasNext()) {
-      throw new RuntimeException(
-          "Called SequenceContext.read() too many times!");
+    /**
+     * Create an iterator over the children. May be constructed with a null
+     * JsonArray if we only use it for writing.
+     */
+    protected SequenceContext(JsonNode json) {
+        children = null != json ? json.elements() : null;
     }
-    currentChild = children.next();
-  }
 
-  @Override
-  protected JsonElement getCurrentChild() {
-    return currentChild;
-  }
+    @Override
+    protected void read() {
+        if (!children.hasNext()) {
+            throw new RuntimeException(
+                    "Called SequenceContext.read() too many times!");
+        }
+        currentChild = children.next();
+    }
 
-  @Override
-  protected boolean hasMoreChildren() {
-    return children.hasNext();
-  }
+    @Override
+    protected JsonNode getCurrentChild() {
+        return currentChild;
+    }
+
+    @Override
+    protected boolean hasMoreChildren() {
+        return children.hasNext();
+    }
 }

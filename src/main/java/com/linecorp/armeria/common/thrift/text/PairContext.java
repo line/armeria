@@ -14,14 +14,13 @@
 // limitations under the License.
 // =================================================================================================
 
-package com.twitter.common.thrift.text;
+package com.linecorp.armeria.common.thrift.text;
 
 import java.util.Iterator;
 import java.util.Map;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 /**
  * A map parsing context that tracks if we are parsing a key, which
@@ -29,8 +28,8 @@ import com.google.gson.JsonPrimitive;
  * Json mandates that keys are strings
  * e.g.
  * {
- *   "1" : 1,
- *   "2" : 2,
+ * "1" : 1,
+ * "2" : 2,
  * }
  * Note the required quotes on the lhs.
  * We maintain an iterator over all of our child name/value pairs, and
@@ -40,50 +39,50 @@ import com.google.gson.JsonPrimitive;
  */
 class PairContext extends BaseContext {
 
-  private boolean lhs;
-  private final Iterator<Map.Entry<String, JsonElement>> children;
-  private Map.Entry<String, JsonElement> currentChild;
+    private final Iterator<Map.Entry<String, JsonNode>> children;
+    private boolean lhs;
+    private Map.Entry<String, JsonNode> currentChild;
 
-  /**
-   * Create an iterator over this object's children
-   */
-  protected PairContext(JsonObject json) {
-    children = (null != json) ? json.entrySet().iterator() : null;
-  }
-
-  @Override
-  protected void write() {
-    lhs = !lhs;
-  }
-
-  @Override
-  protected void read() {
-    lhs = !lhs;
-    // every other time, do a read, since the read gets the name & value
-    // at once.
-    if (isLhs()) {
-      if (!children.hasNext()) {
-        throw new RuntimeException(
-            "Called PairContext.read() too many times!");
-      }
-      currentChild = children.next();
+    /**
+     * Create an iterator over this object's children
+     */
+    protected PairContext(JsonNode json) {
+        children = null != json ? json.fields() : null;
     }
-  }
 
-  @Override
-  protected JsonElement getCurrentChild() {
-    if (lhs) {
-      return new JsonPrimitive(currentChild.getKey());
+    @Override
+    protected void write() {
+        lhs = !lhs;
     }
-    return currentChild.getValue();
-  }
 
-  @Override
-  protected boolean hasMoreChildren() {
-    return children.hasNext();
-  }
+    @Override
+    protected void read() {
+        lhs = !lhs;
+        // every other time, do a read, since the read gets the name & value
+        // at once.
+        if (isLhs()) {
+            if (!children.hasNext()) {
+                throw new RuntimeException(
+                        "Called PairContext.read() too many times!");
+            }
+            currentChild = children.next();
+        }
+    }
 
-  protected boolean isLhs() {
-    return lhs;
-  }
+    @Override
+    protected JsonNode getCurrentChild() {
+        if (lhs) {
+            return new TextNode(currentChild.getKey());
+        }
+        return currentChild.getValue();
+    }
+
+    @Override
+    protected boolean hasMoreChildren() {
+        return children.hasNext();
+    }
+
+    protected boolean isLhs() {
+        return lhs;
+    }
 }

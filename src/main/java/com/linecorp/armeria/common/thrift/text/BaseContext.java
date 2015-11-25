@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.common.thrift.text;
 
-import com.google.gson.JsonElement;
-
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TField;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * A base parsing context. Used as a root level parsing context for
@@ -29,52 +29,53 @@ import org.apache.thrift.protocol.TField;
  */
 class BaseContext {
 
-  /**
-   * Called before we write an item
-   */
-  protected void write() {
-  }
+    /**
+     * Complain about a method called on a BaseContext that shouldn't have been.
+     */
+    private static <T> T unsupportedOperation() {
+        throw new UnsupportedOperationException("Not supported by BaseContext.");
+    }
 
-  /** Called before we read an item.
-   */
-  protected void read() {
-  }
+    /**
+     * Called before we write an item
+     */
+    protected void write() {
+    }
 
-  /**
-   * Thrift maps are made up of name value pairs, are we parsing a
-   * thrift map name (e.g. left hand side of a map entry) here?
-   */
-  protected boolean isMapKey() {
-    return false;
-  }
+    /**
+     * Called before we read an item.
+     */
+    protected void read() {
+    }
 
-  /**
-   * Return the TField struct describing a Thrift struct item with
-   * the given name.
-   */
-  protected TField getTFieldByName(String name) throws TException {
-    return unsupportedOperation();
-  }
+    /**
+     * Thrift maps are made up of name value pairs, are we parsing a
+     * thrift map name (e.g. left hand side of a map entry) here?
+     */
+    protected boolean isMapKey() {
+        return false;
+    }
 
-  /**
-   * Return the json element that should be processed next. Used for
-   * Contexts that have child JsonElements, e.g. Sequences, Maps, etc.
-   */
-  protected JsonElement getCurrentChild() {
-    return unsupportedOperation();
-  }
+    /**
+     * Return the TField struct describing a Thrift struct item with
+     * the given name.
+     */
+    protected TField getTFieldByName(String name) throws TException {
+        return unsupportedOperation();
+    }
 
-  /**
-   * Are there more child elements to process?
-   */
-  protected boolean hasMoreChildren() {
-    return (Boolean) unsupportedOperation();
-  }
+    /**
+     * Return the json element that should be processed next. Used for
+     * Contexts that have child JsonElements, e.g. Sequences, Maps, etc.
+     */
+    protected JsonNode getCurrentChild() {
+        return unsupportedOperation();
+    }
 
-  /**
-   * Complain about a method called on a BaseContext that shouldn't have been.
-   */
-  private static <T> T unsupportedOperation() {
-    throw new UnsupportedOperationException("Not supported by BaseContext.");
-  }
+    /**
+     * Are there more child elements to process?
+     */
+    protected boolean hasMoreChildren() {
+        return (Boolean) unsupportedOperation();
+    }
 }

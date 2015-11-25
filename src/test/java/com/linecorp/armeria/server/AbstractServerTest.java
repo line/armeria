@@ -40,7 +40,7 @@ public abstract class AbstractServerTest {
             }
 
             final ServerBuilder sb = new ServerBuilder();
-            sb.port(0, SessionProtocol.HTTP);
+            sb.port(9000, SessionProtocol.HTTP);
             configureServer(sb);
             server = sb.build();
 
