@@ -32,10 +32,15 @@ import javax.annotation.Nullable;
 public enum SerializationFormat {
 
     /**
-     * No serialization format. Used when no serialization/deserialization is desired or when the server
-     * failed to determine the serialization format.
+     * No serialization format. Used when no serialization/deserialization is desired.
      */
-    NONE("none", "none/none"),
+    NONE("none", "application/x-none"),
+
+    /**
+     * Unknown serialization format. Used when some serialization format is desired but the server
+     * failed to understand/recognize it.
+     */
+    UNKNOWN("unknown", "application/x-unknown"),
 
     /**
      * Thrift TBinary serialization format

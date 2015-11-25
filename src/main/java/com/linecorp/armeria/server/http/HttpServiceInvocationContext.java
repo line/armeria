@@ -102,8 +102,8 @@ final class HttpServiceInvocationContext extends ServiceInvocationContext implem
     }
 
     @Override
-    public Optional<SerializationFormat> decodedSerializationFormat() {
-        return Optional.of(scheme().serializationFormat());
+    public SerializationFormat decodedSerializationFormat() {
+        return scheme().serializationFormat();
     }
 
     @Override

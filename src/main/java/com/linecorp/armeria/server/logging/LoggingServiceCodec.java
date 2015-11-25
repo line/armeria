@@ -69,11 +69,11 @@ final class LoggingServiceCodec extends DecoratingServiceCodec {
         }
         case FAILURE:
             // Failed decode
-            final Optional<SerializationFormat> serFmt = result.decodedSerializationFormat();
+            final SerializationFormat serFmt = result.decodedSerializationFormat();
 
             logger.warn("{}[{}+{}://{}{}#{}][{}] Rejected due to protocol violation:",
                         ch,
-                        serFmt.isPresent() ? serFmt.get().uriText() : "unknown",
+                        serFmt.uriText(),
                         sessionProtocol.uriText(),
                         hostname,
                         path,

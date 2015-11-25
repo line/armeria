@@ -511,8 +511,8 @@ final class ThriftServiceCodec implements ServiceCodec {
         }
 
         @Override
-        public Optional<SerializationFormat> decodedSerializationFormat() {
-            return Optional.of(serializationFormat);
+        public SerializationFormat decodedSerializationFormat() {
+            return serializationFormat;
         }
 
         @Override

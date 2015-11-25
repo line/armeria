@@ -161,7 +161,7 @@ public interface ServiceCodec {
         /**
          * Returns the serialization format of the invocation.
          */
-        Optional<SerializationFormat> decodedSerializationFormat();
+        SerializationFormat decodedSerializationFormat();
 
         /**
          * Returns the ID of the invocation.
@@ -246,8 +246,8 @@ public interface ServiceCodec {
         }
 
         @Override
-        public Optional<SerializationFormat> decodedSerializationFormat() {
-            return Optional.empty();
+        public SerializationFormat decodedSerializationFormat() {
+            return SerializationFormat.UNKNOWN;
         }
 
         @Override
