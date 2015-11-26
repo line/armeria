@@ -284,6 +284,12 @@
       <version>4.5.1</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>net.javacrumbs.json-unit</groupId>
+      <artifactId>json-unit</artifactId>
+      <version>1.7.0</version>
+      <scope>test</scope>
+    </dependency>
 
     <!-- Jetty, for verifying integration with official thrift library's TServlet -->
     <dependency>

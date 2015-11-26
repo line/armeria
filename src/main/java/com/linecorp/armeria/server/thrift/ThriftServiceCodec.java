@@ -19,12 +19,15 @@ package com.linecorp.armeria.server.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Constructor;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
@@ -53,6 +56,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -65,6 +69,16 @@ final class ThriftServiceCodec implements ServiceCodec {
     @SuppressWarnings("ThrowableInstanceNeverThrown")
     private static final Exception HTTP_METHOD_NOT_ALLOWED_EXCEPTION =
             new IllegalArgumentException("HTTP method not allowed");
+    @SuppressWarnings("ThrowableInstanceNeverThrown")
+    private static final Exception MIME_TYPE_MUST_BE_THRIFT =
+            new IllegalArgumentException("MIME type must be application/x-thrift");
+    @SuppressWarnings("ThrowableInstanceNeverThrown")
+    private static final Exception THRIFT_PROTOCOL_NOT_SUPPORTED =
+            new IllegalArgumentException("Specified Thrift protocol not supported");
+    @SuppressWarnings("ThrowableInstanceNeverThrown")
+    private static final Exception ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE =
+            new IllegalArgumentException("Thrift protocol specified in Accept header must match the one " +
+                                         "specified in Content-Type header");
 
     static {
         HTTP_METHOD_NOT_ALLOWED_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
@@ -72,9 +86,10 @@ final class ThriftServiceCodec implements ServiceCodec {
 
     private static final Logger logger = LoggerFactory.getLogger(ThriftServiceCodec.class);
 
-    private final SerializationFormat serializationFormat;
+    private final SerializationFormat defaultSerializationFormat;
+
+    private final Set<SerializationFormat> allowedSerializationFormats;
     private final Object service;
-    private final TProtocolFactory protoFactory;
     private final String serviceLoggerName;
 
     /**
@@ -82,13 +97,18 @@ final class ThriftServiceCodec implements ServiceCodec {
      */
     private final Map<String, ThriftFunction> functions = new HashMap<>();
 
-    private final ThreadLocalTProtocol inProto = new ThreadLocalTProtocol();
-    private final ThreadLocalTProtocol outProto = new ThreadLocalTProtocol();
+    private static final Map<SerializationFormat, ThreadLocalTProtocol> FORMAT_TO_THREAD_LOCAL_IN_PROTOCOL =
+            createFormatToThreadLocalTProtocolMap();
+    private static final Map<SerializationFormat, ThreadLocalTProtocol> FORMAT_TO_THREAD_LOCAL_OUT_PROTOCOL =
+            createFormatToThreadLocalTProtocolMap();
 
-    ThriftServiceCodec(Object service, TProtocolFactory protoFactory) {
+    ThriftServiceCodec(Object service, SerializationFormat defaultSerializationFormat,
+                       Set<SerializationFormat> allowedSerializationFormats) {
+        requireNonNull(allowedSerializationFormats, "allowedSerializationFormats");
         this.service = requireNonNull(service, "service");
-        this.protoFactory = requireNonNull(protoFactory, "protoFactory");
-        serializationFormat = ThriftProtocolFactories.toSerializationFormat(protoFactory);
+        this.defaultSerializationFormat =
+                requireNonNull(defaultSerializationFormat, "defaultSerializationFormat");
+        this.allowedSerializationFormats = Collections.unmodifiableSet(allowedSerializationFormats);
 
         // Build the map of method names and their corresponding process functions.
         final Set<String> methodNames = new HashSet<>();
@@ -211,8 +231,12 @@ final class ThriftServiceCodec implements ServiceCodec {
         return service;
     }
 
-    SerializationFormat serializationFormat() {
-        return serializationFormat;
+    Set<SerializationFormat> allowedSerializationFormats() {
+        return allowedSerializationFormats;
+    }
+
+    SerializationFormat defaultSerializationFormat() {
+        return defaultSerializationFormat;
     }
 
     @Override
@@ -220,15 +244,18 @@ final class ThriftServiceCodec implements ServiceCodec {
             Channel ch, SessionProtocol sessionProtocol, String hostname, String path, String mappedPath,
             ByteBuf in, Object originalRequest, Promise<Object> promise) throws Exception {
 
-        if (originalRequest instanceof HttpRequest) {
-            if (((HttpRequest) originalRequest).method() != HttpMethod.POST) {
-                return new DefaultDecodeResult(
-                        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.METHOD_NOT_ALLOWED),
-                        HTTP_METHOD_NOT_ALLOWED_EXCEPTION);
-            }
+        final SerializationFormat serializationFormat;
+        try {
+            serializationFormat = validateRequestAndDetermineSerializationFormat(originalRequest);
+        } catch (InvalidHttpRequestException e) {
+            return new DefaultDecodeResult(
+                    new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                                                e.httpResponseStatus),
+                    e.getCause());
         }
 
-        final TProtocol inProto = this.inProto.get();
+        final TProtocol inProto = FORMAT_TO_THREAD_LOCAL_IN_PROTOCOL.get(serializationFormat).get();
+        inProto.reset();
         final TByteBufTransport inTransport = (TByteBufTransport) inProto.getTransport();
         inTransport.reset(in);
 
@@ -242,11 +269,11 @@ final class ThriftServiceCodec implements ServiceCodec {
             if (typeValue != TMessageType.CALL && typeValue != TMessageType.ONEWAY) {
                 final TApplicationException cause = new TApplicationException(
                         TApplicationException.INVALID_MESSAGE_TYPE,
-                        "unexpected " + "TMessageType: " + typeString(typeValue));
+                        "unexpected TMessageType: " + typeString(typeValue));
 
                 return new ThriftDecodeFailureResult(
                         serializationFormat,
-                        encodeException(ch.alloc(), methodName, seqId, cause),
+                        encodeException(ch.alloc(), serializationFormat, methodName, seqId, cause),
                         cause, seqId, methodName, null);
             }
 
@@ -259,7 +286,7 @@ final class ThriftServiceCodec implements ServiceCodec {
 
                 return new ThriftDecodeFailureResult(
                         serializationFormat,
-                        encodeException(ch.alloc(), methodName, seqId, cause),
+                        encodeException(ch.alloc(), serializationFormat, methodName, seqId, cause),
                         cause, seqId, methodName, null);
             }
 
@@ -286,7 +313,7 @@ final class ThriftServiceCodec implements ServiceCodec {
 
                 return new ThriftDecodeFailureResult(
                         serializationFormat,
-                        encodeException(ch.alloc(), methodName, seqId, cause),
+                        encodeException(ch.alloc(), serializationFormat, methodName, seqId, cause),
                         cause, seqId, methodName, null);
             }
 
@@ -345,7 +372,9 @@ final class ThriftServiceCodec implements ServiceCodec {
 
     private ByteBuf encodeSuccess(ThriftServiceInvocationContext ctx, TBase<TBase<?, ?>, TFieldIdEnum> result) {
 
-        final TProtocol outProto = this.outProto.get();
+        final TProtocol outProto = FORMAT_TO_THREAD_LOCAL_OUT_PROTOCOL.get(ctx.scheme().serializationFormat())
+                .get();
+        outProto.reset();
         final TByteBufTransport outTransport = (TByteBufTransport) outProto.getTransport();
         final ByteBuf out = ctx.alloc().buffer();
         outTransport.reset(out);
@@ -365,17 +394,23 @@ final class ThriftServiceCodec implements ServiceCodec {
     private ByteBuf encodeException(ThriftServiceInvocationContext ctx, Throwable t) {
 
         if (t instanceof TApplicationException) {
-            return encodeException(ctx.alloc(), ctx.method(), ctx.seqId, (TApplicationException) t);
+            return encodeException(ctx.alloc(), ctx.scheme().serializationFormat(),
+                                   ctx.method(), ctx.seqId, (TApplicationException) t);
         } else {
-            return encodeException(ctx.alloc(), ctx.method(), ctx.seqId,
-                                   new TApplicationException(TApplicationException.INTERNAL_ERROR, t.toString()));
+            return encodeException(ctx.alloc(), ctx.scheme().serializationFormat(),
+                                   ctx.method(), ctx.seqId,
+                                   new TApplicationException(
+                                           TApplicationException.INTERNAL_ERROR, t.toString()));
         }
     }
 
     private ByteBuf encodeException(
-            ByteBufAllocator alloc, String methodName, int seqId, TApplicationException cause) {
+            ByteBufAllocator alloc, SerializationFormat serializationFormat,
+            String methodName, int seqId,
+            TApplicationException cause) {
 
-        final TProtocol outProto = this.outProto.get();
+        final TProtocol outProto = FORMAT_TO_THREAD_LOCAL_OUT_PROTOCOL.get(serializationFormat).get();
+        outProto.reset();
         final TByteBufTransport outTransport = (TByteBufTransport) outProto.getTransport();
         final ByteBuf out = alloc.buffer();
 
@@ -393,6 +428,51 @@ final class ThriftServiceCodec implements ServiceCodec {
         return out;
     }
 
+    private SerializationFormat validateRequestAndDetermineSerializationFormat(Object originalRequest)
+            throws InvalidHttpRequestException {
+        if (!(originalRequest instanceof HttpRequest)) {
+            return defaultSerializationFormat;
+        }
+        final SerializationFormat serializationFormat;
+        HttpRequest httpRequest = (HttpRequest) originalRequest;
+        if (httpRequest.method() != HttpMethod.POST) {
+            throw new InvalidHttpRequestException(HttpResponseStatus.METHOD_NOT_ALLOWED,
+                                                  HTTP_METHOD_NOT_ALLOWED_EXCEPTION);
+        }
+        String contentTypeHeader = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        if (contentTypeHeader != null) {
+            validateMimeType(contentTypeHeader);
+            serializationFormat = SerializationFormat.fromMimeType(contentTypeHeader)
+                    .orElse(defaultSerializationFormat);
+            if (!allowedSerializationFormats.contains(serializationFormat)) {
+                throw new InvalidHttpRequestException(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
+                                                      THRIFT_PROTOCOL_NOT_SUPPORTED);
+            }
+        } else {
+            serializationFormat = defaultSerializationFormat;
+        }
+        String acceptHeader = httpRequest.headers().get(HttpHeaderNames.ACCEPT);
+        if (acceptHeader != null) {
+            validateMimeType(acceptHeader);
+            // If accept header is present, make sure it is sane. Currently, we do not support accept
+            // headers with a different format than the content type header.
+            SerializationFormat outputSerializationFormat = SerializationFormat.fromMimeType(acceptHeader)
+                    .orElse(defaultSerializationFormat);
+            if (outputSerializationFormat != serializationFormat) {
+                throw new InvalidHttpRequestException(HttpResponseStatus.NOT_ACCEPTABLE,
+                                                      ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
+            }
+        }
+        return serializationFormat;
+    }
+
+    private static void validateMimeType(String mimeTYpe) throws InvalidHttpRequestException {
+        if (!mimeTYpe.contains("application/x-thrift")) {
+            throw new InvalidHttpRequestException(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
+                                                  MIME_TYPE_MUST_BE_THRIFT);
+        }
+    }
+
     private static String typeString(byte typeValue) {
         switch (typeValue) {
         case TMessageType.CALL:
@@ -405,6 +485,17 @@ final class ThriftServiceCodec implements ServiceCodec {
             return "ONEWAY";
         default:
             return "UNKNOWN(" + (typeValue & 0xFF) + ')';
+        }
+    }
+
+    private static final class InvalidHttpRequestException extends Exception {
+        private static final long serialVersionUID = -8742741687997488293L;
+
+        private final HttpResponseStatus httpResponseStatus;
+
+        private InvalidHttpRequestException(HttpResponseStatus httpResponseStatus, Exception cause) {
+            super(cause);
+            this.httpResponseStatus = httpResponseStatus;
         }
     }
 
@@ -462,7 +553,21 @@ final class ThriftServiceCodec implements ServiceCodec {
         }
     }
 
-    private final class ThreadLocalTProtocol extends ThreadLocal<TProtocol> {
+    private static Map<SerializationFormat, ThreadLocalTProtocol> createFormatToThreadLocalTProtocolMap() {
+        return Collections.unmodifiableMap(
+                SerializationFormat.ofThrift().stream().collect(
+                        Collectors.toMap(Function.identity(),
+                                         f -> new ThreadLocalTProtocol(ThriftProtocolFactories.get(f)))));
+    }
+
+    private static final class ThreadLocalTProtocol extends ThreadLocal<TProtocol> {
+
+        private final TProtocolFactory protoFactory;
+
+        private ThreadLocalTProtocol(TProtocolFactory protoFactory) {
+            this.protoFactory = protoFactory;
+        }
+
         @Override
         protected TProtocol initialValue() {
             return protoFactory.getProtocol(new TByteBufTransport());

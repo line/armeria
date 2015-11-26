@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.protocol.TProtocolFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -41,6 +40,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
@@ -61,7 +61,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -116,24 +115,24 @@ public class ThriftServiceTest {
     public static Collection<Object[]> parameters() throws Exception {
         List<Object[]> parameters = new ArrayList<>();
 
-        parameters.add(new Object[] { ThriftProtocolFactories.BINARY });
-        parameters.add(new Object[] { ThriftProtocolFactories.COMPACT });
-        parameters.add(new Object[] { ThriftProtocolFactories.JSON });
+        parameters.add(new Object[] { SerializationFormat.THRIFT_BINARY });
+        parameters.add(new Object[] { SerializationFormat.THRIFT_COMPACT });
+        parameters.add(new Object[] { SerializationFormat.THRIFT_JSON });
 
         return parameters;
     }
 
-    private final TProtocolFactory protoFactory;
+    private final SerializationFormat defaultSerializationFormat;
     private final TProtocol inProto;
     private final TProtocol outProto;
 
     private Promise<ByteBuf> promise;
     private Promise<ByteBuf> promise2;
 
-    public ThriftServiceTest(TProtocolFactory protoFactory) {
-        this.protoFactory = protoFactory;
-        inProto = protoFactory.getProtocol(inTransport);
-        outProto = protoFactory.getProtocol(outTransport);
+    public ThriftServiceTest(SerializationFormat defaultSerializationFormat) {
+        this.defaultSerializationFormat = defaultSerializationFormat;
+        inProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(inTransport);
+        outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(outTransport);
     }
 
     @BeforeClass
@@ -162,8 +161,8 @@ public class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService(
-                (HelloService.Iface) name -> "Hello, " + name + '!', protoFactory);
+        ThriftService service = ThriftService.of(
+                (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -179,9 +178,9 @@ public class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService(
+        ThriftService service = ThriftService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
-                        resultHandler.onComplete("Hello, " + name + '!'), protoFactory);
+                        resultHandler.onComplete("Hello, " + name + '!'), defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -197,12 +196,12 @@ public class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService syncService = new ThriftService(
-                (HelloService.Iface) name -> "Hello, " + name + '!', protoFactory);
+        ThriftService syncService = ThriftService.of(
+                (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
-        ThriftService asyncService = new ThriftService(
+        ThriftService asyncService = ThriftService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
-                        resultHandler.onComplete("Hello, " + name + '!'), protoFactory);
+                        resultHandler.onComplete("Hello, " + name + '!'), defaultSerializationFormat);
 
         invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
         invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
@@ -220,8 +219,8 @@ public class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService(
-                (OnewayHelloService.Iface) actualName::set, protoFactory);
+        ThriftService service = ThriftService.of(
+                (OnewayHelloService.Iface) actualName::set, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -238,10 +237,10 @@ public class ThriftServiceTest {
         client.send_hello(FOO);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
+        ThriftService service = ThriftService.of((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
             actualName.set(name);
             resultHandler.onComplete(null);
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -258,8 +257,8 @@ public class ThriftServiceTest {
         client.send_consume(FOO);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService(
-                (DevNullService.Iface) consumed::set, protoFactory);
+        ThriftService service = ThriftService.of(
+                (DevNullService.Iface) consumed::set, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -279,10 +278,10 @@ public class ThriftServiceTest {
         client.send_consume("bar");
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService((DevNullService.AsyncIface) (value, resultHandler) -> {
+        ThriftService service = ThriftService.of((DevNullService.AsyncIface) (value, resultHandler) -> {
             consumed.set(value);
             resultHandler.onComplete(null);
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -300,13 +299,13 @@ public class ThriftServiceTest {
         client.send_consume(FOO);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService syncService = new ThriftService((DevNullService.Iface) value -> {
+        ThriftService syncService = ThriftService.of((DevNullService.Iface) value -> {
             // NOOP
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
-        ThriftService asyncService = new ThriftService(
+        ThriftService asyncService = ThriftService.of(
                 (DevNullService.AsyncIface) (value, resultHandler) ->
-                        resultHandler.onComplete(null), protoFactory);
+                        resultHandler.onComplete(null), defaultSerializationFormat);
 
         invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
         invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
@@ -322,9 +321,9 @@ public class ThriftServiceTest {
         client.send_create(BAR);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService((FileService.Iface) path -> {
+        ThriftService service = ThriftService.of((FileService.Iface) path -> {
             throw new FileServiceException();
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -345,9 +344,9 @@ public class ThriftServiceTest {
         client.send_create(BAR);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService(
+        ThriftService service = ThriftService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
-                        resultHandler.onError(new FileServiceException()), protoFactory);
+                        resultHandler.onError(new FileServiceException()), defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -368,13 +367,13 @@ public class ThriftServiceTest {
         client.send_create(BAR);
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService syncService = new ThriftService((FileService.Iface) path -> {
+        ThriftService syncService = ThriftService.of((FileService.Iface) path -> {
             throw new FileServiceException();
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
-        ThriftService asyncService = new ThriftService(
+        ThriftService asyncService = ThriftService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
-                        resultHandler.onError(new FileServiceException()), protoFactory);
+                        resultHandler.onError(new FileServiceException()), defaultSerializationFormat);
 
         invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
         invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
@@ -391,9 +390,9 @@ public class ThriftServiceTest {
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
         RuntimeException exception = new RuntimeException();
-        ThriftService service = new ThriftService((FileService.Iface) path -> {
+        ThriftService service = ThriftService.of((FileService.Iface) path -> {
             throw exception;
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -416,9 +415,9 @@ public class ThriftServiceTest {
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
         RuntimeException exception = new RuntimeException();
-        ThriftService service = new ThriftService(
+        ThriftService service = ThriftService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
-                        resultHandler.onError(exception), protoFactory);
+                        resultHandler.onError(exception), defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -441,13 +440,13 @@ public class ThriftServiceTest {
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
         RuntimeException exception = new RuntimeException();
-        ThriftService syncService = new ThriftService((FileService.Iface) path -> {
+        ThriftService syncService = ThriftService.of((FileService.Iface) path -> {
             throw exception;
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
-        ThriftService asyncService = new ThriftService(
+        ThriftService asyncService = ThriftService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
-                        resultHandler.onError(exception), protoFactory);
+                        resultHandler.onError(exception), defaultSerializationFormat);
 
         invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
         invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
@@ -463,8 +462,8 @@ public class ThriftServiceTest {
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService(
-                (NameService.Iface) name -> new Name(name.first, null, name.last), protoFactory);
+        ThriftService service = ThriftService.of(
+                (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -480,9 +479,10 @@ public class ThriftServiceTest {
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService(
+        ThriftService service = ThriftService.of(
                 (NameService.AsyncIface) (name, resultHandler) ->
-                        resultHandler.onComplete(new Name(name.first, null, name.last)), protoFactory);
+                        resultHandler.onComplete(new Name(name.first, null, name.last)),
+                defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -498,12 +498,13 @@ public class ThriftServiceTest {
         client.send_removeMiddle(new Name(FOO, BAZ, BAR));
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService syncService = new ThriftService(
-                (NameService.Iface) name -> new Name(name.first, null, name.last), protoFactory);
+        ThriftService syncService = ThriftService.of(
+                (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
-        ThriftService asyncService = new ThriftService(
+        ThriftService asyncService = ThriftService.of(
                 (NameService.AsyncIface) (name, resultHandler) ->
-                        resultHandler.onComplete(new Name(name.first, null, name.last)), protoFactory);
+                        resultHandler.onComplete(new Name(name.first, null, name.last)),
+                defaultSerializationFormat);
 
         invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
         invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
@@ -519,11 +520,11 @@ public class ThriftServiceTest {
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService((NameSortService.Iface) names -> {
+        ThriftService service = ThriftService.of((NameSortService.Iface) names -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             return sorted;
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -539,11 +540,11 @@ public class ThriftServiceTest {
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService service = new ThriftService((NameSortService.AsyncIface) (names, resultHandler) -> {
+        ThriftService service = ThriftService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             resultHandler.onComplete(sorted);
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -559,17 +560,17 @@ public class ThriftServiceTest {
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
-        ThriftService syncService = new ThriftService((NameSortService.Iface) names -> {
+        ThriftService syncService = ThriftService.of((NameSortService.Iface) names -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             return sorted;
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
-        ThriftService asyncService = new ThriftService((NameSortService.AsyncIface) (names, resultHandler) -> {
+        ThriftService asyncService = ThriftService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             resultHandler.onComplete(sorted);
-        }, protoFactory);
+        }, defaultSerializationFormat);
 
         invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
         invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
@@ -593,7 +594,7 @@ public class ThriftServiceTest {
         ByteBuf out2 = out.copy();
         out.clear();
 
-        ThriftService service = new ThriftService(new UberNameService(), protoFactory);
+        ThriftService service = ThriftService.of(new UberNameService(), defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out1, promise);
         invoke(service, CH, PROTO, HOST, PATH, out2, promise2);

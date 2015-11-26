@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.thrift.text;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Stack;
 
@@ -134,6 +133,7 @@ public class TTextProtocol extends TProtocol {
 
     @Override
     public final void reset() {
+        root = null;
     }
 
     /**
@@ -613,7 +613,7 @@ public class TTextProtocol extends TProtocol {
         ByteArrayOutputStream content = new ByteArrayOutputStream();
         byte[] buffer = new byte[READ_BUFFER_SIZE];
         try {
-            while (trans_.read(buffer, 0, READ_BUFFER_SIZE) != 0) {
+            while (trans_.read(buffer, 0, READ_BUFFER_SIZE) > 0) {
                 content.write(buffer);
             }
         } catch (TTransportException e) {

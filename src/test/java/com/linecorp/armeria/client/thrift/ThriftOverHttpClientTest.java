@@ -32,7 +32,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.thrift.async.AsyncMethodCallback;
-import org.apache.thrift.protocol.TProtocolFactory;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -48,8 +47,8 @@ import com.linecorp.armeria.client.RemoteInvokerOption;
 import com.linecorp.armeria.client.RemoteInvokerOptions;
 import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
 import com.linecorp.armeria.client.logging.LoggingClientCodec;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -126,23 +125,8 @@ public class ThriftOverHttpClientTest {
             return (Class<T>) asyncIface;
         }
 
-        String getPath(ThriftProtocol thriftProtocol) {
-            return '/' + name() + '/' + thriftProtocol.name();
-        }
-    }
-
-    private enum ThriftProtocol {
-        TBINARY(ThriftProtocolFactories.BINARY),
-        TCOMPACT(ThriftProtocolFactories.COMPACT),
-        TJSON(ThriftProtocolFactories.JSON);
-        private final TProtocolFactory protocolFactory;
-
-        ThriftProtocol(TProtocolFactory protocolFactory) {
-            this.protocolFactory = protocolFactory;
-        }
-
-        TProtocolFactory protocolFactory() {
-            return protocolFactory;
+        String getPath(SerializationFormat serializationFormat) {
+            return '/' + name() + '/' + serializationFormat.name();
         }
     }
 
@@ -159,10 +143,11 @@ public class ThriftOverHttpClientTest {
             VirtualHostBuilder vhBuilder = new VirtualHostBuilder();
 
             for (Handlers h : Handlers.values()) {
-                for (ThriftProtocol p : ThriftProtocol.values()) {
+                for (SerializationFormat defaultSerializationFormat : SerializationFormat.ofThrift()) {
                     vhBuilder.serviceAt(
-                            h.getPath(p),
-                            new ThriftService(h.handler(), p.protocolFactory()).decorate(LoggingService::new));
+                            h.getPath(defaultSerializationFormat),
+                            ThriftService.of(h.handler(), defaultSerializationFormat).decorate(
+                                    LoggingService::new));
                 }
             }
 
@@ -177,23 +162,24 @@ public class ThriftOverHttpClientTest {
     @Parameterized.Parameters(name = "thrift:{0}, http:{1}")
     public static Collection<Object[]> parameters() throws Exception {
         List<Object[]> parameters = new ArrayList<>();
-        for (ThriftProtocol thriftProtocol : ThriftProtocol.values()) {
-            parameters.add(new Object[] { thriftProtocol, "http", false });
-            parameters.add(new Object[] { thriftProtocol, "https", true });
-            parameters.add(new Object[] { thriftProtocol, "h1", true }); //force http/1 with ssl
-            parameters.add(new Object[] { thriftProtocol, "h1c", false }); //force http/1 with clear text
-            parameters.add(new Object[] { thriftProtocol, "h2", true }); //enable http2 with ssl
-            parameters.add(new Object[] { thriftProtocol, "h2c", false }); // enable http2 with clear text
+        for (SerializationFormat serializationFormat : SerializationFormat.ofThrift()) {
+            parameters.add(new Object[] { serializationFormat, "http", false });
+            parameters.add(new Object[] { serializationFormat, "https", true });
+            parameters.add(new Object[] { serializationFormat, "h1", true }); //force http/1 with ssl
+            parameters.add(new Object[] { serializationFormat, "h1c", false }); //force http/1 with clear text
+            parameters.add(new Object[] { serializationFormat, "h2", true }); //enable http2 with ssl
+            parameters.add(new Object[] { serializationFormat, "h2c", false }); // enable http2 with clear text
         }
         return parameters;
     }
 
-    private final ThriftProtocol thriftProtocol;
+    private final SerializationFormat serializationFormat;
     private final String httpProtocol;
     private final boolean useTls;
 
-    public ThriftOverHttpClientTest(ThriftProtocol thriftProtocol, String httpProtocol, boolean useTls) {
-        this.thriftProtocol = thriftProtocol;
+    public ThriftOverHttpClientTest(SerializationFormat serializationFormat, String httpProtocol,
+                                    boolean useTls) {
+        this.serializationFormat = serializationFormat;
         this.httpProtocol = httpProtocol;
         this.useTls = useTls;
     }
@@ -373,8 +359,8 @@ public class ThriftOverHttpClientTest {
 
     private String getURI(Handlers handler) {
         int port = useTls ? httpsPort : httpPort;
-        return thriftProtocol.name() + '+' + httpProtocol + "://127.0.0.1:" + port + handler.getPath(
-                thriftProtocol);
+        return serializationFormat.uriText() + '+' + httpProtocol + "://127.0.0.1:" + port + handler.getPath(
+                serializationFormat);
     }
 
     @SuppressWarnings("rawtypes")

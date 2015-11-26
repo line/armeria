@@ -88,9 +88,15 @@ $(function () {
         type: 'CALL',
         args: args
       };
-      $.post(serviceInfo.debugPath, JSON.stringify(request), function (response) {
-        debugResponse.text(response);
-        hljs.highlightBlock(debugResponse.get(0));
+      $.ajax({
+        type: 'POST',
+        url: serviceInfo.debugPath,
+        data: JSON.stringify(request),
+        success: function (response) {
+          debugResponse.text(response);
+          hljs.highlightBlock(debugResponse.get(0));
+        },
+        contentType: 'application/x-thrift; protocol=TTEXT'
       });
       return false;
     });

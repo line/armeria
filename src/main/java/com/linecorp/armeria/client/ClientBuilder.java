@@ -152,7 +152,6 @@ public final class ClientBuilder {
         if (SerializationFormat.ofThrift().contains(serializationFormat)) {
             TProtocolFactory protocolFactory = ThriftProtocolFactories.get(serializationFormat);
             return new ThriftClientCodec(uri, interfaceClass, protocolFactory);
-
         }
 
         if (SessionProtocol.ofHttp().contains(sessionProtocol) &&
