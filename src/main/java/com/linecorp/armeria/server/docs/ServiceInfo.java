@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -33,7 +34,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 class ServiceInfo {
 
-    static ServiceInfo of(Class<?> serviceClass) throws ClassNotFoundException {
+    static ServiceInfo of(Class<?> serviceClass, Optional<String> debugPath) throws ClassNotFoundException {
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -55,7 +56,7 @@ class ServiceInfo {
             });
         }
 
-        return new ServiceInfo(name, functions, classes);
+        return new ServiceInfo(name, functions, classes, debugPath);
     }
 
     private static void addClassIfPossible(Set<ClassInfo> classes, TypeInfo typeInfo) {
@@ -75,9 +76,12 @@ class ServiceInfo {
     private final String name;
     private final Map<String, FunctionInfo> functions;
     private final Map<String, ClassInfo> classes;
+    private final Optional<String> debugPath;
 
-    private ServiceInfo(String name, List<FunctionInfo> functions, Collection<ClassInfo> classes) {
+    private ServiceInfo(String name, List<FunctionInfo> functions, Collection<ClassInfo> classes,
+                        Optional<String> debugPath) {
         this.name = requireNonNull(name, "name");
+        this.debugPath = requireNonNull(debugPath, "debugPath");
 
         requireNonNull(functions, "functions");
         requireNonNull(classes, "classes");
@@ -115,6 +119,11 @@ class ServiceInfo {
         return classes;
     }
 
+    @JsonProperty
+    public String debugPath() {
+        return debugPath.orElse(null);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) { return true; }
@@ -122,7 +131,8 @@ class ServiceInfo {
         ServiceInfo that = (ServiceInfo) o;
         return Objects.equals(name, that.name) &&
                Objects.equals(functions, that.functions) &&
-               Objects.equals(classes, that.classes);
+               Objects.equals(classes, that.classes) &&
+               Objects.equals(debugPath, that.debugPath);
     }
 
     @Override
@@ -136,6 +146,7 @@ class ServiceInfo {
                "name='" + name + '\'' +
                ", functions=" + functions +
                ", classes=" + classes +
+               ", debugPath=" + debugPath +
                '}';
     }
 }

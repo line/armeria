@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.docs;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -25,6 +26,10 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.ServiceEntry;
+import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.thrift.ThriftService;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -33,12 +38,26 @@ public class SpecificationTest {
     @Test
     public void servicesTest() throws Exception {
         final Specification specification =
-                Specification.fromServices(Arrays.asList(new ThriftService(mock(HelloService.AsyncIface.class)),
-                                                         new ThriftService(mock(FooService.AsyncIface.class))));
+                Specification.forServiceEntries(Arrays.asList(
+                        new ServiceEntry(
+                                new VirtualHostBuilder().build(),
+                                PathMapping.ofExact("/hello"),
+                                new ThriftService(mock(HelloService.AsyncIface.class))),
+                        new ServiceEntry(
+                                new VirtualHostBuilder().build(),
+                                PathMapping.ofExact("/debug/hello"),
+                                new ThriftService(mock(HelloService.AsyncIface.class),
+                                                  ThriftProtocolFactories.TEXT)),
+                        new ServiceEntry(
+                                new VirtualHostBuilder().build(),
+                                PathMapping.ofExact("/foo"),
+                                new ThriftService(mock(FooService.AsyncIface.class)))));
 
         final Map<String, ServiceInfo> services = specification.services();
         assertThat(services.size(), is(2));
         assertThat(services.containsKey(HelloService.class.getName()), is(true));
+        assertThat(services.get(HelloService.class.getName()).debugPath(), is("/debug/hello"));
         assertThat(services.containsKey(FooService.class.getName()), is(true));
+        assertThat(services.get(FooService.class.getName()).debugPath(), nullValue());
     }
 }

@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
+
 final class ExactPathMapping extends AbstractPathMapping {
 
     private final String exactPath;
@@ -54,5 +56,10 @@ final class ExactPathMapping extends AbstractPathMapping {
     @Override
     public String toString() {
         return strVal;
+    }
+
+    @Override
+    public Optional<String> exactPath() {
+        return Optional.of(exactPath);
     }
 }

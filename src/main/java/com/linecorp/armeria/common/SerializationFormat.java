@@ -43,10 +43,16 @@ public enum SerializationFormat {
     /**
      * Thrift TJSON serialization format
      */
-    THRIFT_JSON("tjson", "application/x-thrift; protocol=TJSON");
+    THRIFT_JSON("tjson", "application/x-thrift; protocol=TJSON"),
+
+    /**
+     * Thrift TText serialization format. This format is not optimized for performance or backwards
+     * compatibility and should only be used in non-production use cases like debugging.
+     */
+    THRIFT_TEXT("ttext", "application/x-thrift; protocol=TTEXT");
 
     private static final Set<SerializationFormat> THRIFT_FORMAT = Collections.unmodifiableSet(
-            EnumSet.of(THRIFT_BINARY, THRIFT_COMPACT, THRIFT_JSON));
+            EnumSet.of(THRIFT_BINARY, THRIFT_COMPACT, THRIFT_JSON, THRIFT_TEXT));
 
     /**
      * Returns the set of all known Thrift serialization formats. This method is useful when determining if a

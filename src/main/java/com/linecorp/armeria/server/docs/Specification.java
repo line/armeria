@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,47 +31,60 @@ import java.util.TreeMap;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceEntry;
 import com.linecorp.armeria.server.thrift.ThriftService;
 
 class Specification {
 
-    static Specification fromServices(List<Service> services) {
-        final List<Class<?>> serviceClasses = new ArrayList<>();
+    static Specification forServiceEntries(List<ServiceEntry> services) {
+        final Map<Class<?>, Optional<String>> serviceClassesWithDebugPath = new LinkedHashMap<>();
 
-        for (Service service : services) {
+        for (ServiceEntry serviceEntry : services) {
+            Service service = serviceEntry.service();
             final Optional<ThriftService> thriftServiceOptional = service.as(ThriftService.class);
             if (!thriftServiceOptional.isPresent()) {
                 continue;
             }
 
-            final Class<?>[] ifaces = thriftServiceOptional.get().thriftService().getClass().getInterfaces();
+            final ThriftService thriftService = thriftServiceOptional.get();
+            final Optional<String> debugPath =
+                    thriftService.serializationFormat() == SerializationFormat.THRIFT_TEXT ?
+                    serviceEntry.pathMapping().exactPath() : Optional.empty();
+
+            final Class<?>[] ifaces = thriftService.thriftService().getClass().getInterfaces();
             for (Class<?> iface : ifaces) {
                 if (!iface.getName().endsWith("$AsyncIface") && !iface.getName().endsWith("$Iface")) {
                     continue;
                 }
 
-                serviceClasses.add(iface.getEnclosingClass());
+                Class<?> serviceClass = iface.getEnclosingClass();
+                if (serviceClassesWithDebugPath.getOrDefault(serviceClass, Optional.empty()).isPresent()) {
+                    // Class already registered with a debug path, don't overwrite it.
+                    continue;
+                }
+                serviceClassesWithDebugPath.put(iface.getEnclosingClass(), debugPath);
             }
         }
 
-        return Specification.fromServiceClasses(serviceClasses);
+        return Specification.forServiceClasses(serviceClassesWithDebugPath);
     }
 
-    static Specification fromServiceClasses(List<Class<?>> serviceClasses) {
-        requireNonNull(serviceClasses, "serviceClasses");
+    static Specification forServiceClasses(Map<Class<?>, Optional<String>> serviceClassesWithDebugPath) {
+        requireNonNull(serviceClassesWithDebugPath, "serviceClassesWithDebugPath");
 
-        final List<ServiceInfo> services = new ArrayList<>(serviceClasses.size());
+        final List<ServiceInfo> services = new ArrayList<>(serviceClassesWithDebugPath.size());
         final Set<ClassInfo> classes = new HashSet<>();
-        for (Class<?> serviceClass : serviceClasses) {
+        serviceClassesWithDebugPath.forEach((serviceClass, debugPath) -> {
             try {
-                final ServiceInfo service = ServiceInfo.of(serviceClass);
+                final ServiceInfo service = ServiceInfo.of(serviceClass, debugPath);
                 services.add(service);
                 classes.addAll(service.classes().values());
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException("unable to initialize Specification", e);
             }
-        }
+        });
 
         return new Specification(services, classes);
     }

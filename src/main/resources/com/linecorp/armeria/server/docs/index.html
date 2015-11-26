@@ -22,6 +22,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Armeria documentation service</title>
   <link href="assets/css/vendor/bootstrap-3.3.5.min.css" rel="stylesheet">
+  <link href="assets/css/vendor/highlight-jsononly-github-8.9.1.min.css" rel="stylesheet">
   <link href="assets/css/armeria.css" rel="stylesheet">
 </head>
 
@@ -126,6 +127,18 @@
             </table>
           </div>
           {{/if}}
+
+          {{#if serviceDebugPath}}
+          <div class="row">
+            <div class="col-sm-6">
+              <div><textarea class="debug-textarea" rows="20"></textarea></div>
+              <div><button class="debug-submit btn btn-primary">Submit</button></div>
+            </div>
+            <div class="col-sm-6">
+              <pre class="debug-response json"><code></code></pre>
+            </div>
+          </div>
+          {{/if}}
         </script>
       </div>
 
@@ -182,6 +195,7 @@
 <script src="assets/js/vendor/jquery-2.1.4.min.js"></script>
 <script src="assets/js/vendor/bootstrap-3.3.5.min.js"></script>
 <script src="assets/js/vendor/handlebars-4.0.4.min.js"></script>
+<script src="assets/js/vendor/highlight-jsononly-8.9.1.pack.js"></script>
 <script src="assets/js/armeria.js"></script>
 </body>
 </html>

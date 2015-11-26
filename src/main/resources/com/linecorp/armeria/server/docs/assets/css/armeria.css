@@ -145,3 +145,7 @@ h2 {
   display: inline-block;
   border-radius: 50%;
 }
+
+.debug-textarea {
+  width: 100%;
+}
