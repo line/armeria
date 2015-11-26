@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 /**
@@ -23,8 +25,150 @@ import java.util.function.Function;
  */
 public final class Functions {
 
+    /**
+     * Returns a {@link Function} that composes the specified {@link Function}s with chained
+     * {@link Function#andThen(Function)}. It is useful when you need to compose method handles, which is
+     * impossible with {@link Function#andThen(Function)}:
+     * <pre>{@code
+     * Function<A, B> f = Functions.compose(TypeA::new, TypeB::new);
+     * }</pre>
+     */
     public static <A, B, C> Function<A, C> compose(Function<A, B> f1, Function<B, C> f2) {
-        return f1.andThen(f2);
+        return requireNonNull(f1, "f1").andThen(requireNonNull(f2, "f2"));
+    }
+
+    /**
+     * Returns a {@link Function} that composes the specified {@link Function}s with chained
+     * {@link Function#andThen(Function)}. It is useful when you need to compose method handles, which is
+     * impossible with {@link Function#andThen(Function)}:
+     * <pre>{@code
+     * Function<A, B> f = Functions.compose(TypeA::new, TypeB::new);
+     * }</pre>
+     */
+    public static <A, B, C, D> Function<A, D> compose(Function<A, B> f1, Function<B, C> f2,
+                                                      Function<C, D> f3) {
+
+        return requireNonNull(f1, "f1").andThen(requireNonNull(f2, "f2"))
+                                       .andThen(requireNonNull(f3, "f3"));
+    }
+
+    /**
+     * Returns a {@link Function} that composes the specified {@link Function}s with chained
+     * {@link Function#andThen(Function)}. It is useful when you need to compose method handles, which is
+     * impossible with {@link Function#andThen(Function)}:
+     * <pre>{@code
+     * Function<A, B> f = Functions.compose(TypeA::new, TypeB::new);
+     * }</pre>
+     */
+    public static <A, B, C, D, E> Function<A, E> compose(Function<A, B> f1, Function<B, C> f2,
+                                                         Function<C, D> f3, Function<D, E> f4) {
+
+        return requireNonNull(f1, "f1").andThen(requireNonNull(f2, "f2"))
+                                       .andThen(requireNonNull(f3, "f3"))
+                                       .andThen(requireNonNull(f4, "f4"));
+    }
+
+    /**
+     * Returns a {@link Function} that composes the specified {@link Function}s with chained
+     * {@link Function#andThen(Function)}. It is useful when you need to compose method handles, which is
+     * impossible with {@link Function#andThen(Function)}:
+     * <pre>{@code
+     * Function<A, B> f = Functions.compose(TypeA::new, TypeB::new);
+     * }</pre>
+     */
+    public static <A, B, C, D, E, F> Function<A, F> compose(Function<A, B> f1, Function<B, C> f2,
+                                                            Function<C, D> f3, Function<D, E> f4,
+                                                            Function<E, F> f5) {
+
+        return requireNonNull(f1, "f1").andThen(requireNonNull(f2, "f2"))
+                                       .andThen(requireNonNull(f3, "f3"))
+                                       .andThen(requireNonNull(f4, "f4"))
+                                       .andThen(requireNonNull(f5, "f5"));
+    }
+
+    /**
+     * Returns a {@link Function} that composes the specified {@link Function}s with chained
+     * {@link Function#andThen(Function)}. It is useful when you need to compose method handles, which is
+     * impossible with {@link Function#andThen(Function)}:
+     * <pre>{@code
+     * Function<A, B> f = Functions.compose(TypeA::new, TypeB::new);
+     * }</pre>
+     */
+    public static <A, B, C, D, E, F, G> Function<A, G> compose(Function<A, B> f1, Function<B, C> f2,
+                                                               Function<C, D> f3, Function<D, E> f4,
+                                                               Function<E, F> f5, Function<F, G> f6) {
+        return requireNonNull(f1, "f1").andThen(requireNonNull(f2, "f2"))
+                                       .andThen(requireNonNull(f3, "f3"))
+                                       .andThen(requireNonNull(f4, "f4"))
+                                       .andThen(requireNonNull(f5, "f5"))
+                                       .andThen(requireNonNull(f6, "f6"));
+    }
+
+    /**
+     * Returns a {@link Function} that composes the specified {@link Function}s with chained
+     * {@link Function#andThen(Function)}. It is useful when you need to compose method handles, which is
+     * impossible with {@link Function#andThen(Function)}:
+     * <pre>{@code
+     * Function<A, B> f = Functions.compose(TypeA::new, TypeB::new);
+     * }</pre>
+     */
+    public static <A, B, C, D, E, F, G, H> Function<A, H> compose(Function<A, B> f1, Function<B, C> f2,
+                                                                  Function<C, D> f3, Function<D, E> f4,
+                                                                  Function<E, F> f5, Function<F, G> f6,
+                                                                  Function<G, H> f7) {
+
+        return requireNonNull(f1, "f1").andThen(requireNonNull(f2, "f2"))
+                                       .andThen(requireNonNull(f3, "f3"))
+                                       .andThen(requireNonNull(f4, "f4"))
+                                       .andThen(requireNonNull(f5, "f5"))
+                                       .andThen(requireNonNull(f6, "f6"))
+                                       .andThen(requireNonNull(f7, "f7"));
+    }
+
+    /**
+     * Returns a {@link Function} that composes the specified {@link Function}s with chained
+     * {@link Function#andThen(Function)}. It is useful when you need to compose method handles, which is
+     * impossible with {@link Function#andThen(Function)}:
+     * <pre>{@code
+     * Function<A, B> f = Functions.compose(TypeA::new, TypeB::new);
+     * }</pre>
+     */
+    public static <A, B, C, D, E, F, G, H, I> Function<A, I> compose(Function<A, B> f1, Function<B, C> f2,
+                                                                     Function<C, D> f3, Function<D, E> f4,
+                                                                     Function<E, F> f5, Function<F, G> f6,
+                                                                     Function<G, H> f7, Function<H, I> f8) {
+
+        return requireNonNull(f1, "f1").andThen(requireNonNull(f2, "f2"))
+                                       .andThen(requireNonNull(f3, "f3"))
+                                       .andThen(requireNonNull(f4, "f4"))
+                                       .andThen(requireNonNull(f5, "f5"))
+                                       .andThen(requireNonNull(f6, "f6"))
+                                       .andThen(requireNonNull(f7, "f7"))
+                                       .andThen(requireNonNull(f8, "f8"));
+    }
+
+    /**
+     * Returns a {@link Function} that composes the specified {@link Function}s with chained
+     * {@link Function#andThen(Function)}. It is useful when you need to compose method handles, which is
+     * impossible with {@link Function#andThen(Function)}:
+     * <pre>{@code
+     * Function<A, B> f = Functions.compose(TypeA::new, TypeB::new);
+     * }</pre>
+     */
+    public static <A, B, C, D, E, F, G, H, I, J> Function<A, J> compose(Function<A, B> f1, Function<B, C> f2,
+                                                                        Function<C, D> f3, Function<D, E> f4,
+                                                                        Function<E, F> f5, Function<F, G> f6,
+                                                                        Function<G, H> f7, Function<H, I> f8,
+                                                                        Function<I, J> f9) {
+
+        return requireNonNull(f1, "f1").andThen(requireNonNull(f2, "f2"))
+                                       .andThen(requireNonNull(f3, "f3"))
+                                       .andThen(requireNonNull(f4, "f4"))
+                                       .andThen(requireNonNull(f5, "f5"))
+                                       .andThen(requireNonNull(f6, "f6"))
+                                       .andThen(requireNonNull(f7, "f7"))
+                                       .andThen(requireNonNull(f8, "f8"))
+                                       .andThen(requireNonNull(f9, "f9"));
     }
 
     private Functions() {}
