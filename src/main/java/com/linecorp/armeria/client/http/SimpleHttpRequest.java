@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.http;
 
 import java.net.URI;
 
+import com.linecorp.armeria.common.http.ImmutableHttpHeaders;
+
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;

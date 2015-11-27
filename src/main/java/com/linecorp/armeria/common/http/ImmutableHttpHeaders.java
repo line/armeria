@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.http;
+package com.linecorp.armeria.common.http;
 
 import java.util.Iterator;
 import java.util.List;
@@ -24,14 +24,14 @@ import java.util.Set;
 import io.netty.handler.codec.http.HttpHeaders;
 
 /**
- * A container for HTTP headers that cannot be mutated. Just delegates read
- * operations to an underlying {@link HttpHeaders} object.
+ * A container for HTTP headers that cannot be mutated. Just delegates read operations to an underlying
+ * {@link HttpHeaders} object.
  */
-final class ImmutableHttpHeaders extends HttpHeaders {
+public final class ImmutableHttpHeaders extends HttpHeaders {
 
     private final HttpHeaders delegate;
 
-    ImmutableHttpHeaders(HttpHeaders delegate) {
+    public ImmutableHttpHeaders(HttpHeaders delegate) {
         this.delegate = delegate;
     }
 
@@ -165,6 +165,7 @@ final class ImmutableHttpHeaders extends HttpHeaders {
     }
 
     @Override
+    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     public boolean equals(Object other) {
         return delegate.equals(other);
     }
