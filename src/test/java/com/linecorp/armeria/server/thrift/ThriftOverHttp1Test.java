@@ -50,11 +50,12 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
             SSLContext sslCtx =
                     SSLContextBuilder.create().loadTrustMaterial(TrustSelfSignedStrategy.INSTANCE).build();
 
-            httpClient = HttpClientBuilder.create().setSslcontext(sslCtx).build();
+            httpClient = HttpClientBuilder.create().setSSLContext(sslCtx).build();
         } catch (Exception e) {
             throw new Error(e);
         }
     }
+
     @Override
     protected TTransport newTransport(String uri) throws TTransportException {
         return new THttpClient(uri, httpClient);

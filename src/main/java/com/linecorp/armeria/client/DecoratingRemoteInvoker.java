@@ -32,6 +32,9 @@ public abstract class DecoratingRemoteInvoker implements RemoteInvoker {
 
     private final RemoteInvoker delegate;
 
+    /**
+     * Creates a new instance that decorates the specified {@link RemoteInvoker}.
+     */
     protected DecoratingRemoteInvoker(RemoteInvoker delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }

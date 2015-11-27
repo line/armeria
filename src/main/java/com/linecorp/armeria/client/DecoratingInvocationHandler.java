@@ -28,9 +28,12 @@ import java.lang.reflect.Method;
  */
 public abstract class DecoratingInvocationHandler implements InvocationHandler {
 
-    private final RemoteInvoker delegate;
+    private final InvocationHandler delegate;
 
-    protected DecoratingInvocationHandler(RemoteInvoker delegate) {
+    /**
+     * Creates a new instance that decorates the specified {@link InvocationHandler}.
+     */
+    protected DecoratingInvocationHandler(InvocationHandler delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 

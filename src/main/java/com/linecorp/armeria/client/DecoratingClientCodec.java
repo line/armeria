@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.Method;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -35,6 +36,9 @@ public abstract class DecoratingClientCodec implements ClientCodec {
 
     private final ClientCodec delegate;
 
+    /**
+     * Creates a new instance that decorates the specified {@link ClientCodec}.
+     */
     protected DecoratingClientCodec(ClientCodec delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
@@ -54,9 +58,9 @@ public abstract class DecoratingClientCodec implements ClientCodec {
     }
 
     @Override
-    public EncodeResult encodeRequest(Channel channel, Method method,
+    public EncodeResult encodeRequest(Channel channel, SessionProtocol sessionProtocol, Method method,
                                       Object[] args) {
-        return delegate().encodeRequest(channel, method, args);
+        return delegate().encodeRequest(channel, sessionProtocol, method, args);
     }
 
     @Override

@@ -82,7 +82,7 @@
 
     <!-- Dependency versions -->
     <jackson.version>2.6.3</jackson.version>
-    <netty.version>4.1.0.Beta7</netty.version>
+    <netty.version>4.1.0.Beta8</netty.version>
     <slf4j.version>1.7.13</slf4j.version>
     <tomcat.version>8.0.28</tomcat.version>
     <jetty.alpn.version.latest>8.1.6.v20151105</jetty.alpn.version.latest>
@@ -282,6 +282,20 @@
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <version>4.5.1</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Jetty, for verifying integration with official thrift library's TServlet -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <version>9.3.6.v20151106</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty.http2</groupId>
+      <artifactId>http2-server</artifactId>
+      <version>9.3.6.v20151106</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -573,8 +587,8 @@
           <!-- Enable all lints except the missing tag warnings -->
           <additionalparam>-Xdoclint:all -Xdoclint:-missing</additionalparam>
 
-          <!-- Exclude the machine-generate code -->
-          <excludePackageNames>*.thrift.v1</excludePackageNames>
+          <!-- Exclude the machine-generate code and the internal-only classes -->
+          <excludePackageNames>*.thrift.v1,*.common.http</excludePackageNames>
 
           <groups>
             <group>

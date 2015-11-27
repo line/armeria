@@ -23,8 +23,11 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 
@@ -49,6 +52,10 @@ class HttpServerIdleTimeoutHandler extends IdleStateHandler {
     }
 
     boolean isResponseEnd(Object msg) {
+        if (msg instanceof FullHttpResponse) {
+            return !"1".equals(((HttpMessage) msg).headers().get(ExtensionHeaderNames.STREAM_ID.text()));
+        }
+
         return msg instanceof LastHttpContent;
     }
 

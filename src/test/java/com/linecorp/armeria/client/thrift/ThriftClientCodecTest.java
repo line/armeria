@@ -30,7 +30,9 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientCodec.EncodeResult;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
@@ -67,9 +69,9 @@ public class ThriftClientCodecTest {
     public ThriftClientCodecTest() throws Exception {
         uri = new URI("tbinary+http://localhost/hello");
         scheme = Scheme.parse(uri.getScheme());
-        syncClient = new ThriftClientCodec(uri, scheme, HelloService.Iface.class,
+        syncClient = new ThriftClientCodec(uri, HelloService.Iface.class,
                                            ThriftProtocolFactories.BINARY);
-        asyncClient = new ThriftClientCodec(uri, scheme, HelloService.AsyncIface.class,
+        asyncClient = new ThriftClientCodec(uri, HelloService.AsyncIface.class,
                                             ThriftProtocolFactories.BINARY);
         channel = new EmbeddedChannel();
         helloMethod = HelloService.Iface.class.getMethod("hello", String.class);
@@ -80,14 +82,14 @@ public class ThriftClientCodecTest {
     @Test
     public void testEncodeRequest() throws NoSuchMethodException {
         Object[] args = { "world" };
-        EncodeResult result = syncClient.encodeRequest(channel, helloMethod, args);
+        EncodeResult result = syncClient.encodeRequest(channel, scheme.sessionProtocol(), helloMethod, args);
         verifySuccessResult(result);
     }
 
     @Test
     public void testEncodeRequestAsync() throws NoSuchMethodException {
         Object[] args = { "world", dummyCallback() };
-        EncodeResult result = asyncClient.encodeRequest(channel, helloMethod, args);
+        EncodeResult result = asyncClient.encodeRequest(channel, scheme.sessionProtocol(), helloMethod, args);
         verifySuccessResult(result);
     }
 
@@ -105,7 +107,7 @@ public class ThriftClientCodecTest {
     @Test(expected = IllegalStateException.class)
     public void testEncodeRequestFailed() throws NoSuchMethodException {
         Object[] args = { "world" };
-        EncodeResult result = asyncClient.encodeRequest(channel, asyncHelloMethod, args);
+        EncodeResult result = asyncClient.encodeRequest(channel, scheme.sessionProtocol(), asyncHelloMethod, args);
         assertThat(result.isSuccess(), is(false));
         assertThat(result.cause(), is(notNullValue()));
         result.invocationContext();

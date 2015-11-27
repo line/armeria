@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientCodec;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.common.util.UnitFormatter;
 
@@ -72,8 +73,10 @@ public class LoggingClientCodec implements ClientCodec {
     }
 
     @Override
-    public EncodeResult encodeRequest(Channel channel, Method method, Object[] args) {
-        final EncodeResult result = c.encodeRequest(channel, method, args);
+    public EncodeResult encodeRequest(
+            Channel channel, SessionProtocol sessionProtocol, Method method, Object[] args) {
+
+        final EncodeResult result = c.encodeRequest(channel, sessionProtocol, method, args);
         if (result.isSuccess()) {
             final ServiceInvocationContext ctx = result.invocationContext();
             final Logger logger = ctx.logger();

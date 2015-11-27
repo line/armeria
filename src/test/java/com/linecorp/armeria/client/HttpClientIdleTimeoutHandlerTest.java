@@ -80,12 +80,12 @@ public class HttpClientIdleTimeoutHandlerTest {
     public void testIdleTimeoutOccuredTwice() throws Exception {
         writeRequest();
         waitUntilTimeout();
-        //padding request count is 1
+        //pending request count is 1
         assertTrue(ch.isOpen());
 
         readResponse();
         waitUntilTimeout();
-        //padding request count turns to 0
+        //pending request count turns to 0
         assertFalse(ch.isOpen());
     }
 

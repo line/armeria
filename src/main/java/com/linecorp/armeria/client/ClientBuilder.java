@@ -21,6 +21,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -126,11 +127,18 @@ public final class ClientBuilder {
                     return resultFuture.sync().getNow();
                 }
             } catch (Throwable cause) {
-                final boolean isDeclaredException = cause instanceof Error ||
-                                                    cause instanceof RuntimeException ||
-                                                    Stream.of(method.getExceptionTypes())
-                                                          .anyMatch(v -> v.isInstance(cause));
-                throw isDeclaredException ? cause : new UndeclaredThrowableException(cause);
+                final Throwable finalCause;
+                if (cause instanceof ClosedChannelException) {
+                    finalCause = ClosedSessionException.INSTANCE;
+                } else if (cause instanceof Error ||
+                           cause instanceof RuntimeException ||
+                           Stream.of(method.getExceptionTypes()).anyMatch(v -> v.isInstance(cause))) {
+                    finalCause = cause;
+                } else {
+                    finalCause = new UndeclaredThrowableException(cause);
+                }
+
+                throw finalCause;
             }
         };
         final InvocationHandler handler = options.invocationHandlerDecorator().apply(defaultHandler);
@@ -143,13 +151,13 @@ public final class ClientBuilder {
         SerializationFormat serializationFormat = scheme.serializationFormat();
         if (SerializationFormat.ofThrift().contains(serializationFormat)) {
             TProtocolFactory protocolFactory = ThriftProtocolFactories.get(serializationFormat);
-            return new ThriftClientCodec(uri, scheme, interfaceClass, protocolFactory);
+            return new ThriftClientCodec(uri, interfaceClass, protocolFactory);
 
         }
 
         if (SessionProtocol.ofHttp().contains(sessionProtocol) &&
                    serializationFormat == SerializationFormat.NONE) {
-            return new SimpleHttpClientCodec(scheme, uri.getHost());
+            return new SimpleHttpClientCodec(uri.getHost());
         }
 
         throw new IllegalArgumentException("unsupported scheme:" + scheme);

@@ -20,7 +20,9 @@ import java.lang.reflect.Method;
 
 import com.linecorp.armeria.client.ClientCodec;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -39,14 +41,12 @@ public class SimpleHttpClientCodec implements ClientCodec {
     private static final byte[] EMPTY = new byte[0];
 
     private final String host;
-    private final Scheme scheme;
 
     /**
      * Creates a new codec with the specified {@link Scheme} and {@code host}.
      */
-    public SimpleHttpClientCodec(Scheme scheme, String host) {
+    public SimpleHttpClientCodec(String host) {
         this.host = host;
-        this.scheme = scheme;
     }
 
     @Override
@@ -55,10 +55,12 @@ public class SimpleHttpClientCodec implements ClientCodec {
     }
 
     @Override
-    public EncodeResult encodeRequest(Channel channel, Method method, Object[] args) {
+    public EncodeResult encodeRequest(
+            Channel channel, SessionProtocol sessionProtocol, Method method, Object[] args) {
         @SuppressWarnings("unchecked")  // Guaranteed by SimpleHttpClient interface.
         SimpleHttpRequest request = (SimpleHttpRequest) args[0];
         FullHttpRequest fullHttpRequest = convertToFullHttpRequest(request, channel);
+        Scheme scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
         return new SimpleHttpInvocation(channel, scheme, host, request.uri().getPath(),
                                         fullHttpRequest, request);
     }

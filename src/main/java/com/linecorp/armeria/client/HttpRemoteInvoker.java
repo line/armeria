@@ -127,12 +127,12 @@ final class HttpRemoteInvoker implements RemoteInvoker {
         codec.prepareRequest(method, args, resultPromise);
         if (channelFuture.isSuccess()) {
             Channel ch = channelFuture.getNow();
-            invoke0(sessionProtocol, codec, ch, method, args, options, resultPromise, poolKey);
+            invoke0(codec, ch, method, args, options, resultPromise, poolKey);
         } else {
             channelFuture.addListener((Future<Channel> future) -> {
                 if (future.isSuccess()) {
                     Channel ch = future.getNow();
-                    invoke0(sessionProtocol, codec, ch, method, args, options, resultPromise, poolKey);
+                    invoke0(codec, ch, method, args, options, resultPromise, poolKey);
                 } else {
                     resultPromise.setFailure(channelFuture.cause());
                 }
@@ -146,11 +146,17 @@ final class HttpRemoteInvoker implements RemoteInvoker {
         return ServiceInvocationContext.mapCurrent(ServiceInvocationContext::eventLoop, eventLoopGroup::next);
     }
 
-    static <T> void invoke0(SessionProtocol sessionProtocol, ClientCodec codec, Channel channel,
+    static <T> void invoke0(ClientCodec codec, Channel channel,
                             Method method, Object[] args, ClientOptions options,
                             Promise<T> resultPromise, PoolKey poolKey) {
 
-        EncodeResult encodeResult = codec.encodeRequest(channel, method, args);
+        final SessionProtocol sessionProtocol = HttpSessionHandler.protocol(channel);
+        if (sessionProtocol == null) {
+            resultPromise.setFailure(ClosedSessionException.INSTANCE);
+            return;
+        }
+
+        final EncodeResult encodeResult = codec.encodeRequest(channel, sessionProtocol, method, args);
         if (encodeResult.isSuccess()) {
             ServiceInvocationContext ctx = encodeResult.invocationContext();
             Promise<FullHttpResponse> responsePromise = channel.eventLoop().newPromise();
