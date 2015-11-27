@@ -1,13 +1,36 @@
 # -*- coding: utf-8 -*-
-import sys, os
+import sys, os, re
+import xml.etree.ElementTree as etree
 from datetime import date
 
-project = 'Armeria'
-project_short = 'Armeria'
-project_basename = 'armeria'
-copyright = str(date.today().year) + ', LINE Corporation'
-version = '0.4'
-release = '0.4.0.Final'
+# Parse the Maven pom.xml.
+ns = { 'mvn': 'http://maven.apache.org/POM/4.0.0' }
+pom = etree.parse('../../../pom.xml')
+pom.artifactId = pom.find('mvn:artifactId', ns).text
+pom.version = pom.find('mvn:version', ns).text
+pom.name = pom.find('mvn:name', ns).text
+pom.organization = lambda: None
+pom.organization.name = pom.find('mvn:organization/mvn:name', ns).text
+pom.organization.url = pom.find('mvn:organization/mvn:url', ns).text
+
+# Set the basic project information.
+project = pom.name
+project_short = pom.name
+copyright = str(date.today().year) + ', ' + pom.organization.name
+
+# Set the project version and release.
+# Use the last known stable release if the current version ends with '-SNAPSHOT'.
+if re.match(r'^.*-SNAPSHOT$', pom.version):
+    release = '0.4.0.Final'
+    version = '0.4'
+else:
+    release = pom.version
+    version = re.match(r'^[0-9]+\.[0-9]+', pom.version).group(0)
+
+# Define some useful global substitutions.
+rst_epilog = '\n'
+rst_epilog += '.. |baseurl| replace:: http://line.github.io/armeria/\n'
+rst_epilog += '\n'
 
 needs_sphinx = '1.0'
 extensions = ['sphinx.ext.autodoc']
@@ -28,4 +51,4 @@ html_static_path = ['_static']
 html_use_smartypants = True
 html_use_index = True
 html_show_sourcelink = False
-htmlhelp_basename = project_basename
+htmlhelp_basename = pom.artifactId
