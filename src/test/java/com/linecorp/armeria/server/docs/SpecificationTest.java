@@ -16,12 +16,15 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Map;
 
 import org.junit.Test;
@@ -47,13 +50,19 @@ public class SpecificationTest {
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/foo"),
                                 ThriftService.ofFormats(mock(FooService.AsyncIface.class),
-                                                  SerializationFormat.THRIFT_BINARY))));
+                                                  SerializationFormat.THRIFT_COMPACT))));
 
         final Map<String, ServiceInfo> services = specification.services();
         assertThat(services.size(), is(2));
+
         assertThat(services.containsKey(HelloService.class.getName()), is(true));
-        assertThat(services.get(HelloService.class.getName()).debugPath(), is("/hello"));
+        assertThat(services.get(HelloService.class.getName()).endpoints(),
+                   contains(EndpointInfo.of("*", "/hello", SerializationFormat.THRIFT_BINARY,
+                                            SerializationFormat.ofThrift())));
+
         assertThat(services.containsKey(FooService.class.getName()), is(true));
-        assertThat(services.get(FooService.class.getName()).debugPath(), nullValue());
+        assertThat(services.get(FooService.class.getName()).endpoints(),
+                   contains(EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_COMPACT,
+                                            EnumSet.of(SerializationFormat.THRIFT_COMPACT))));
     }
 }

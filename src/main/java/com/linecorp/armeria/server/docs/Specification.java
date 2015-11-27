@@ -31,15 +31,14 @@ import java.util.TreeMap;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceEntry;
 import com.linecorp.armeria.server.thrift.ThriftService;
 
 class Specification {
 
-    static Specification forServiceEntries(List<ServiceEntry> services) {
-        final Map<Class<?>, Optional<String>> serviceClassesWithDebugPath = new LinkedHashMap<>();
+    static Specification forServiceEntries(Iterable<ServiceEntry> services) {
+        final Map<Class<?>, Iterable<EndpointInfo>> map = new LinkedHashMap<>();
 
         for (ServiceEntry serviceEntry : services) {
             Service service = serviceEntry.service();
@@ -49,36 +48,35 @@ class Specification {
             }
 
             final ThriftService thriftService = thriftServiceOptional.get();
-            final Optional<String> debugPath =
-                    thriftService.allowedSerializationFormats().contains(SerializationFormat.THRIFT_TEXT) ?
-                    serviceEntry.pathMapping().exactPath() : Optional.empty();
-
             final Class<?>[] ifaces = thriftService.thriftService().getClass().getInterfaces();
             for (Class<?> iface : ifaces) {
                 if (!iface.getName().endsWith("$AsyncIface") && !iface.getName().endsWith("$Iface")) {
                     continue;
                 }
 
-                Class<?> serviceClass = iface.getEnclosingClass();
-                if (serviceClassesWithDebugPath.getOrDefault(serviceClass, Optional.empty()).isPresent()) {
-                    // Class already registered with a debug path, don't overwrite it.
-                    continue;
-                }
-                serviceClassesWithDebugPath.put(iface.getEnclosingClass(), debugPath);
+                final Class<?> serviceClass = iface.getEnclosingClass();
+                final List<EndpointInfo> endpoints =
+                        (List<EndpointInfo>) map.computeIfAbsent(serviceClass, c -> new ArrayList<>());
+
+                serviceEntry.pathMapping().exactPath().ifPresent(
+                        p -> endpoints.add(EndpointInfo.of(
+                                serviceEntry.virtualHost().hostnamePattern(),
+                                p, thriftService.defaultSerializationFormat(),
+                                thriftService.allowedSerializationFormats())));
             }
         }
 
-        return Specification.forServiceClasses(serviceClassesWithDebugPath);
+        return forServiceClasses(map);
     }
 
-    static Specification forServiceClasses(Map<Class<?>, Optional<String>> serviceClassesWithDebugPath) {
-        requireNonNull(serviceClassesWithDebugPath, "serviceClassesWithDebugPath");
+    static Specification forServiceClasses(Map<Class<?>, Iterable<EndpointInfo>> map) {
+        requireNonNull(map, "map");
 
-        final List<ServiceInfo> services = new ArrayList<>(serviceClassesWithDebugPath.size());
+        final List<ServiceInfo> services = new ArrayList<>(map.size());
         final Set<ClassInfo> classes = new HashSet<>();
-        serviceClassesWithDebugPath.forEach((serviceClass, debugPath) -> {
+        map.forEach((serviceClass, endpoints) -> {
             try {
-                final ServiceInfo service = ServiceInfo.of(serviceClass, debugPath);
+                final ServiceInfo service = ServiceInfo.of(serviceClass, endpoints);
                 services.add(service);
                 classes.addAll(service.classes().values());
             } catch (ClassNotFoundException e) {

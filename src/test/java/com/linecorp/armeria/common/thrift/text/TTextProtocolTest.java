@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
@@ -350,6 +351,41 @@ public class TTextProtocolTest {
         prot = new TTextProtocol(new TIOStreamTransport(outputStream));
         prot.writeMessageBegin(header);
         result.write(prot);
+        prot.writeMessageEnd();
+
+        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void rpcTApplicationException() throws Exception {
+        String request =
+                "{\n" +
+                "  \"method\" : \"doDebug\",\n" +
+                "  \"type\" : \"EXCEPTION\",\n" +
+                "  \"seqid\" : 101,\n" +
+                "  \"args\" : {\n" +
+                "    \"type\" : 4,\n" +
+                "    \"message\" : \"bad_seq_id\"\n" +
+                "    }\n" +
+                "  }\n" +
+                '}';
+
+        TTextProtocol prot = new TTextProtocol(
+                new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
+        TMessage header = prot.readMessageBegin();
+        TApplicationException result = TApplicationException.read(prot);
+        prot.readMessageEnd();
+
+        assertEquals("doDebug", header.name);
+        assertEquals(TMessageType.EXCEPTION, header.type);
+        assertEquals(101, header.seqid);
+
+        assertEquals(TApplicationException.BAD_SEQUENCE_ID, result.getType());
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        prot = new TTextProtocol(new TIOStreamTransport(outputStream));
+        prot.writeMessageBegin(header);
+        new TApplicationException(TApplicationException.BAD_SEQUENCE_ID, "bad_seq_id").write(prot);
         prot.writeMessageEnd();
 
         assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));

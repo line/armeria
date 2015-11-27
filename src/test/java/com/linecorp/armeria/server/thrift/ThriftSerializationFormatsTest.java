@@ -86,7 +86,7 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
                                   HelloService.Iface.class,
                                   ClientOption.HTTP_HEADERS.newValue(headers));
         thrown.expect(InvalidResponseException.class);
-        thrown.expectMessage("HTTP Response code: 415 Unsupported Media Type");
+        thrown.expectMessage("HTTP Response code: 406 Not Acceptable");
         client.hello("Trustin");
     }
 

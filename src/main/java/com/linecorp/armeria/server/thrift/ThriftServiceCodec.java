@@ -370,7 +370,8 @@ final class ThriftServiceCodec implements ServiceCodec {
         }
     }
 
-    private ByteBuf encodeSuccess(ThriftServiceInvocationContext ctx, TBase<TBase<?, ?>, TFieldIdEnum> result) {
+    private static ByteBuf encodeSuccess(ThriftServiceInvocationContext ctx,
+                                         TBase<TBase<?, ?>, TFieldIdEnum> result) {
 
         final TProtocol outProto = FORMAT_TO_THREAD_LOCAL_OUT_PROTOCOL.get(ctx.scheme().serializationFormat())
                 .get();
@@ -391,7 +392,7 @@ final class ThriftServiceCodec implements ServiceCodec {
         return out;
     }
 
-    private ByteBuf encodeException(ThriftServiceInvocationContext ctx, Throwable t) {
+    private static ByteBuf encodeException(ThriftServiceInvocationContext ctx, Throwable t) {
 
         if (t instanceof TApplicationException) {
             return encodeException(ctx.alloc(), ctx.scheme().serializationFormat(),
@@ -404,7 +405,7 @@ final class ThriftServiceCodec implements ServiceCodec {
         }
     }
 
-    private ByteBuf encodeException(
+    private static ByteBuf encodeException(
             ByteBufAllocator alloc, SerializationFormat serializationFormat,
             String methodName, int seqId,
             TApplicationException cause) {
@@ -439,9 +440,10 @@ final class ThriftServiceCodec implements ServiceCodec {
             throw new InvalidHttpRequestException(HttpResponseStatus.METHOD_NOT_ALLOWED,
                                                   HTTP_METHOD_NOT_ALLOWED_EXCEPTION);
         }
-        String contentTypeHeader = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
+
+        final String contentTypeHeader = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeHeader != null) {
-            validateMimeType(contentTypeHeader);
+            validateContentType(contentTypeHeader);
             serializationFormat = SerializationFormat.fromMimeType(contentTypeHeader)
                     .orElse(defaultSerializationFormat);
             if (!allowedSerializationFormats.contains(serializationFormat)) {
@@ -451,13 +453,14 @@ final class ThriftServiceCodec implements ServiceCodec {
         } else {
             serializationFormat = defaultSerializationFormat;
         }
-        String acceptHeader = httpRequest.headers().get(HttpHeaderNames.ACCEPT);
+
+        final String acceptHeader = httpRequest.headers().get(HttpHeaderNames.ACCEPT);
         if (acceptHeader != null) {
-            validateMimeType(acceptHeader);
+            validateAccept(acceptHeader);
             // If accept header is present, make sure it is sane. Currently, we do not support accept
             // headers with a different format than the content type header.
-            SerializationFormat outputSerializationFormat = SerializationFormat.fromMimeType(acceptHeader)
-                    .orElse(defaultSerializationFormat);
+            SerializationFormat outputSerializationFormat =
+                    SerializationFormat.fromMimeType(acceptHeader).orElse(serializationFormat);
             if (outputSerializationFormat != serializationFormat) {
                 throw new InvalidHttpRequestException(HttpResponseStatus.NOT_ACCEPTABLE,
                                                       ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
@@ -466,11 +469,22 @@ final class ThriftServiceCodec implements ServiceCodec {
         return serializationFormat;
     }
 
-    private static void validateMimeType(String mimeTYpe) throws InvalidHttpRequestException {
-        if (!mimeTYpe.contains("application/x-thrift")) {
+    private static void validateContentType(String contentType) throws InvalidHttpRequestException {
+        if (!contentType.contains("application/x-thrift")) {
             throw new InvalidHttpRequestException(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
                                                   MIME_TYPE_MUST_BE_THRIFT);
         }
+    }
+
+    private static void validateAccept(String accept) throws InvalidHttpRequestException {
+        if (accept.contains("application/x-thrift") ||
+            accept.contains("*/*") ||
+            accept.contains("application/*")) {
+            return;
+        }
+
+        throw new InvalidHttpRequestException(HttpResponseStatus.NOT_ACCEPTABLE,
+                                              MIME_TYPE_MUST_BE_THRIFT);
     }
 
     private static String typeString(byte typeValue) {

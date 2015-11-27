@@ -105,7 +105,7 @@ body {
                'Helvetica', 'Arial', sans-serif;
 }
 
-pre, code, kbd, var, samp, tt {
+pre, code, kbd, var, samp, tt, .code {
   font-family: 'Source Code Pro', 'Consolas', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
                'DejaVu Sans Mono', monospace;
 }

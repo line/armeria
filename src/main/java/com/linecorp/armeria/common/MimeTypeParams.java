@@ -16,124 +16,31 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 final class MimeTypeParams {
 
+    private static final Pattern PARAM_PATTERN = Pattern.compile(
+            "\\s*;\\s*([^=\\s]+)\\s*=\\s*(?:([^\"][^;]*)|\"((?:[^\\\\\"]|\\\\.)*)\")");
+
     static String find(String params, String name) {
+        assert name != null;
         if (params == null) {
             return null;
         }
 
-        final int length = params.length();
-        if (length - 2 < name.length()) {
-            return null;
-        }
-
-        int i = 0;
-        for (;;) {
-            // Skip whitespace characters.
-            i = skipWhitespace(params, i);
-            if (i >= length) {
-                return null;
-            }
-
-            // Expect a semicolon.
-            if (params.charAt(i) != ';') {
-                return null;
-            }
-
-            // Skip whitespace characters.
-            i = skipWhitespace(params, i + 1);
-            if (i >= length) {
-                return null;
-            }
-
-            // Find the last index of the name part.
-            int lastIndex;
-            for (lastIndex = i; i < length && isTokenChar(params.charAt(i)); i ++) {
-                continue;
-            }
-
-            // Get the name part.
-            final boolean found = params.substring(lastIndex, i).equals(name);
-
-            // Skip whitespace characters.
-            i = skipWhitespace(params, i);
-            if (i >= length) {
-                return null;
-            }
-
-            // Expect an equal sign.
-            if (params.charAt(i) != '=') {
-                return null;
-            }
-
-            // Skip whitespace characters.
-            i = skipWhitespace(params, i + 1);
-            if(i >= length) {
-                return null;
-            }
-
-            // Parse a value (unquoted or quoted)
-            char c = params.charAt(i);
-            if (c != '"') { // Parse a unquoted value.
-                if (!isTokenChar(c)) {
-                    // Not a token character
-                    return null;
-                }
-
-                for (lastIndex = i; i < length && isTokenChar(params.charAt(i)); i++) {
-                    continue;
-                }
-
-                if (found) {
-                    return params.substring(lastIndex, i);
-                }
-            } else { // Parse a quoted value.
-                // Skip the opening quote.
-                i ++;
-                if (i >= length) {
-                    // Met the end of string right after the opening quote.
-                    return null;
-                }
-
-                // Find the closing quote.
-                for (lastIndex = i; i < length; i++) {
-                    c = params.charAt(i);
-                    if (c == '"') {
-                        break;
-                    }
-
-                    if (c == '\\') {
-                        i++;
-                    }
-                }
-
-                if (c != '"') {
-                    // Couldn't find the closing quote.
-                    return null;
-                }
-
-                if (found) {
-                    return unquote(params.substring(lastIndex, i));
-                }
-
-                // Skip the closing quote.
-                i++;
+        final Matcher m = PARAM_PATTERN.matcher(params);
+        while (m.find()) {
+            final String matchedName = m.group(1);
+            final String unquotedValue = m.group(2);
+            final String quotedValue = m.group(3);
+            if (name.equals(matchedName)) {
+                return unquotedValue != null ? unquotedValue : unquote(quotedValue);
             }
         }
-    }
 
-    private static int skipWhitespace(String str, int i) {
-        final int length = str.length();
-        for (; i < length && Character.isWhitespace(str.charAt(i)); i ++) {
-            continue;
-        }
-
-        return i;
-    }
-
-    private static boolean isTokenChar(char c) {
-        return c > 32 && c < 127 && "()<>@,;:/[]?=\\\"".indexOf(c) < 0;
+        return null;
     }
 
     private static String unquote(String value) {

@@ -100,7 +100,7 @@ public class ThriftService extends SimpleService {
      */
     public static ThriftService ofFormats(Object thriftService, SerializationFormat defaultSerializationFormat,
                                           Iterable<SerializationFormat> otherAllowedSerializationFormats) {
-        requireNonNull(otherAllowedSerializationFormats, "allowedSerializationFormats");
+        requireNonNull(otherAllowedSerializationFormats, "otherAllowedSerializationFormats");
         EnumSet<SerializationFormat> allowedSerializationFormatsSet = EnumSet.of(defaultSerializationFormat);
         otherAllowedSerializationFormats.forEach(allowedSerializationFormatsSet::add);
         return new ThriftService(

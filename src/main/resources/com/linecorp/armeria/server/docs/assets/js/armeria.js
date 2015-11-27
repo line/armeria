@@ -1,6 +1,8 @@
 'use strict';
 
 $(function () {
+  var TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
+
   var specification = {};
   var navTemplate = Handlebars.compile($('#nav-template').html());
   var functionTemplate = Handlebars.compile($('#function-template').html());
@@ -67,6 +69,7 @@ $(function () {
       return;
     }
 
+    processService(serviceInfo);
     processFunction(functionInfo);
 
     makeActive('li#nav-' + serviceName + '.' + functionName);
@@ -74,15 +77,21 @@ $(function () {
     functionContainer.html(functionTemplate({
       'serviceName': serviceName,
       'serviceSimpleName': serviceInfo.simpleName,
+      'serviceEndpoints': serviceInfo.endpoints,
       'serviceDebugPath': serviceInfo.debugPath,
-      'function': functionInfo}
-    ));
+      'function': functionInfo
+    }));
 
     var debugText = functionContainer.find('.debug-textarea');
     var debugResponse = functionContainer.find('.debug-response code');
 
     functionContainer.find('.debug-submit').on('click', function () {
-      var args = JSON.parse(debugText.val());
+      var args;
+      try {
+        args = JSON.parse(debugText.val());
+      } catch (e) {
+        debugResponse.text("Failed to parse a JSON object:\n" + e);
+      }
       var request = {
         method: functionInfo.name,
         type: 'CALL',
@@ -92,16 +101,39 @@ $(function () {
         type: 'POST',
         url: serviceInfo.debugPath,
         data: JSON.stringify(request),
+        contentType: TTEXT_MIME_TYPE,
         success: function (response) {
           debugResponse.text(response);
           hljs.highlightBlock(debugResponse.get(0));
         },
-        contentType: 'application/x-thrift; protocol=TTEXT'
+        error: function (jqXHR, textStatus, errorThrown) {
+          debugResponse.text(errorThrown);
+        }
       });
       return false;
     });
 
     functionContainer.removeClass('hidden');
+  }
+
+  function processService(serviceInfo) {
+    var endpoints = serviceInfo.endpoints;
+    for (var idx = 0; idx < endpoints.length; idx++) {
+      processPath(serviceInfo, endpoints[idx]);
+    }
+  }
+
+  function processPath(serviceInfo, pathInfo) {
+    var availableMimeTypes = pathInfo.availableMimeTypes;
+    for (var idx = 0; idx < availableMimeTypes.length; idx++) {
+      var mimeType = availableMimeTypes[idx];
+      if (mimeType === TTEXT_MIME_TYPE && serviceInfo.debugPath == undefined) {
+        serviceInfo.debugPath = pathInfo.path;
+      }
+      if (mimeType === pathInfo.defaultMimeType) {
+        availableMimeTypes[idx] = '<b>' + mimeType + '</b>';
+      }
+    }
   }
 
   function processFunction(functionInfo) {

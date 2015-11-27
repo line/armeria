@@ -113,12 +113,7 @@ public enum SerializationFormat {
 
     private static Optional<SerializationFormat> fromThriftMimeType(String params) {
         final String protocol = MimeTypeParams.find(params, "protocol");
-        if (protocol == null) {
-            return Optional.empty();
-        }
-
-        final Optional<SerializationFormat> serFmt = PROTOCOL_TO_THRIFT_FORMATS.get(protocol);
-        return serFmt != null ? serFmt : Optional.empty();
+        return PROTOCOL_TO_THRIFT_FORMATS.getOrDefault(protocol, Optional.empty());
     }
 
     private final String uriText;

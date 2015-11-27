@@ -15,13 +15,18 @@
  */
 package com.linecorp.armeria.server.docs;
 
+import static com.linecorp.armeria.common.SerializationFormat.THRIFT_BINARY;
+import static com.linecorp.armeria.common.SerializationFormat.THRIFT_COMPACT;
+import static com.linecorp.armeria.common.SerializationFormat.THRIFT_TEXT;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
-import java.util.Optional;
+import java.util.Map;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -53,12 +58,11 @@ public class DocServiceTest extends AbstractServerTest {
     protected void configureServer(ServerBuilder sb) {
         final ThriftService helloService = ThriftService.of(HELLO_SERVICE_HANDLER);
         final ThriftService fooService = ThriftService.ofFormats(mock(FooService.AsyncIface.class),
-                                                                 SerializationFormat.THRIFT_BINARY);
+                                                                 THRIFT_COMPACT);
         final ThriftService cassandraService = ThriftService.ofFormats(mock(Cassandra.AsyncIface.class),
-                                                                       SerializationFormat.THRIFT_BINARY);
+                                                                       THRIFT_BINARY);
         final ThriftService cassandraServiceDebug =
-                ThriftService.ofFormats(mock(Cassandra.AsyncIface.class),
-                                        SerializationFormat.THRIFT_TEXT);
+                ThriftService.ofFormats(mock(Cassandra.AsyncIface.class), THRIFT_TEXT);
         final ThriftService hbaseService = ThriftService.of(mock(Hbase.AsyncIface.class));
 
         final VirtualHostBuilder defaultVirtualHost = new VirtualHostBuilder();
@@ -76,11 +80,17 @@ public class DocServiceTest extends AbstractServerTest {
 
     @Test
     public void testOk() throws Exception {
-        HashMap<Class<?>, Optional<String>> serviceMap = new LinkedHashMap<>();
-        serviceMap.put(HelloService.class, Optional.of("/hello"));
-        serviceMap.put(FooService.class, Optional.empty());
-        serviceMap.put(Cassandra.class, Optional.of("/cassandra/debug"));
-        serviceMap.put(Hbase.class, Optional.of("/hbase"));
+        final Map<Class<?>, Iterable<EndpointInfo>> serviceMap = new LinkedHashMap<>();
+        serviceMap.put(HelloService.class, Collections.singletonList(
+                EndpointInfo.of("*", "/hello", THRIFT_BINARY, SerializationFormat.ofThrift())));
+        serviceMap.put(FooService.class, Collections.singletonList(
+                EndpointInfo.of("*", "/foo", THRIFT_COMPACT, EnumSet.of(THRIFT_COMPACT))));
+        serviceMap.put(Cassandra.class, Arrays.asList(
+                EndpointInfo.of("*", "/cassandra", THRIFT_BINARY, EnumSet.of(THRIFT_BINARY)),
+                EndpointInfo.of("*", "/cassandra/debug", THRIFT_TEXT, EnumSet.of(THRIFT_TEXT))));
+        serviceMap.put(Hbase.class, Collections.singletonList(
+                EndpointInfo.of("*", "/hbase", THRIFT_BINARY, SerializationFormat.ofThrift())));
+
         final String expected = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(
                 Specification.forServiceClasses(serviceMap));
 
