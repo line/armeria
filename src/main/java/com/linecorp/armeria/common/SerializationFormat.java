@@ -18,12 +18,21 @@ package com.linecorp.armeria.common;
 
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 /**
  * Serialization format of a remote procedure call and its reply.
  */
 public enum SerializationFormat {
+
     /**
      * No serialization format. Used when no serialization/deserialization is desired or when the server
      * failed to determine the serialization format.
@@ -51,8 +60,19 @@ public enum SerializationFormat {
      */
     THRIFT_TEXT("ttext", "application/x-thrift; protocol=TTEXT");
 
+    private static final Pattern WHITESPACE = Pattern.compile("\\s");
+
+    private static final Function<String, String> MIME_TYPE_NORMALIZER =
+            s -> WHITESPACE.matcher(s.toLowerCase()).replaceAll("");
+
     private static final Set<SerializationFormat> THRIFT_FORMAT = Collections.unmodifiableSet(
             EnumSet.of(THRIFT_BINARY, THRIFT_COMPACT, THRIFT_JSON, THRIFT_TEXT));
+
+    private static final Map<String, SerializationFormat> MIME_TYPE_TO_FORMAT =
+            Collections.unmodifiableMap(
+                    Stream.of(SerializationFormat.values()).collect(
+                            Collectors.toMap(f -> MIME_TYPE_NORMALIZER.apply(f.mimeType),
+                                             Function.identity())));
 
     /**
      * Returns the set of all known Thrift serialization formats. This method is useful when determining if a
@@ -61,6 +81,18 @@ public enum SerializationFormat {
      */
     public static Set<SerializationFormat> ofThrift() {
         return THRIFT_FORMAT;
+    }
+
+    /**
+     * Returns the serialization format corresponding to the passed in {@code mimeType}, or
+     * {@link Optional#empty} if the mimetype is not recognized. {@code null} is treated as an unknown
+     * mimetype.
+     */
+    public static Optional<SerializationFormat> fromMimeType(@Nullable String mimeType) {
+        if (mimeType == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(MIME_TYPE_TO_FORMAT.get(MIME_TYPE_NORMALIZER.apply(mimeType)));
     }
     
     private final String uriText;

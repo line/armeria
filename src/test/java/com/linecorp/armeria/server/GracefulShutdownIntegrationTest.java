@@ -41,7 +41,7 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
         sb.gracefulShutdownTimeout(1000L, 2000L);
         final VirtualHostBuilder defaultVirtualHost = new VirtualHostBuilder();
 
-        defaultVirtualHost.serviceAt("/sleep", new ThriftService(
+        defaultVirtualHost.serviceAt("/sleep", ThriftService.of(
                 (AsyncIface) (milliseconds, resultHandler) ->
                         ServiceInvocationContext.current().eventLoop().schedule(
                                 () -> resultHandler.onComplete(milliseconds),

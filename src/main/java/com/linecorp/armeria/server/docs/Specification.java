@@ -50,7 +50,7 @@ class Specification {
 
             final ThriftService thriftService = thriftServiceOptional.get();
             final Optional<String> debugPath =
-                    thriftService.serializationFormat() == SerializationFormat.THRIFT_TEXT ?
+                    thriftService.allowedSerializationFormats().contains(SerializationFormat.THRIFT_TEXT) ?
                     serviceEntry.pathMapping().exactPath() : Optional.empty();
 
             final Class<?>[] ifaces = thriftService.thriftService().getClass().getInterfaces();

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.thrift.text;
 
+import static net.javacrumbs.jsonunit.JsonAssert.assertJsonEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
@@ -209,7 +210,7 @@ public class TTextProtocolTest {
         args.write(prot);
         prot.writeMessageEnd();
 
-        assertEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -279,7 +280,7 @@ public class TTextProtocolTest {
         args.write(prot);
         prot.writeMessageEnd();
 
-        assertEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -315,7 +316,7 @@ public class TTextProtocolTest {
         result.write(prot);
         prot.writeMessageEnd();
 
-        assertEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -351,7 +352,7 @@ public class TTextProtocolTest {
         result.write(prot);
         prot.writeMessageEnd();
 
-        assertEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
+        assertJsonEquals(request, new String(outputStream.toByteArray(), StandardCharsets.UTF_8));
     }
 
     @Test(expected = TException.class)

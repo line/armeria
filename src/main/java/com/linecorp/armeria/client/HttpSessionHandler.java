@@ -272,6 +272,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
             headers.set(HttpHeaderNames.CONTENT_LENGTH, contentBuf.readableBytes());
         }
 
+        invocation.options().get(ClientOption.HTTP_HEADERS).ifPresent(headers::add);
         //we allow a user can set content type and accept headers
         String mimeType = ctx.scheme().serializationFormat().mimeType();
         if (!headers.contains(HttpHeaderNames.CONTENT_TYPE)) {
@@ -280,7 +281,6 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         if (!headers.contains(HttpHeaderNames.ACCEPT)) {
             headers.set(HttpHeaderNames.ACCEPT, mimeType);
         }
-        invocation.options().get(ClientOption.HTTP_HEADERS).ifPresent(headers::add);
 
         return request;
     }

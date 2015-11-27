@@ -131,7 +131,6 @@ public interface PathMapping extends Function<String, String> {
      * otherwise. This can be useful for services which provide logic after scanning the server's mapped
      * services, e.g., {@link com.linecorp.armeria.server.docs.DocService}.
      */
-    @Deprecated  // TODO(#35): Remove this after switching to header-based detection of thrift formats.
     default Optional<String> exactPath() {
         return Optional.empty();
     }

@@ -59,11 +59,11 @@ public abstract class AbstractThriftOverHttpTest {
             final VirtualHostBuilder defaultVirtualHost =
                     new VirtualHostBuilder().sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
 
-            defaultVirtualHost.serviceAt("/hello", new ThriftService(
+            defaultVirtualHost.serviceAt("/hello", ThriftService.of(
                     (AsyncIface) (name, resultHandler) ->
                             resultHandler.onComplete("Hello, " + name + '!')).decorate(LoggingService::new));
 
-            defaultVirtualHost.serviceAt("/sleep", new ThriftService(
+            defaultVirtualHost.serviceAt("/sleep", ThriftService.of(
                     (SleepService.AsyncIface) (milliseconds, resultHandler) -> {
                         // FIXME: Provide a way to access the current executor.
                         GlobalEventExecutor.INSTANCE.schedule(

@@ -26,7 +26,7 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceEntry;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -42,21 +42,17 @@ public class SpecificationTest {
                         new ServiceEntry(
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/hello"),
-                                new ThriftService(mock(HelloService.AsyncIface.class))),
-                        new ServiceEntry(
-                                new VirtualHostBuilder().build(),
-                                PathMapping.ofExact("/debug/hello"),
-                                new ThriftService(mock(HelloService.AsyncIface.class),
-                                                  ThriftProtocolFactories.TEXT)),
+                                ThriftService.of(mock(HelloService.AsyncIface.class))),
                         new ServiceEntry(
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/foo"),
-                                new ThriftService(mock(FooService.AsyncIface.class)))));
+                                ThriftService.ofFormats(mock(FooService.AsyncIface.class),
+                                                  SerializationFormat.THRIFT_BINARY))));
 
         final Map<String, ServiceInfo> services = specification.services();
         assertThat(services.size(), is(2));
         assertThat(services.containsKey(HelloService.class.getName()), is(true));
-        assertThat(services.get(HelloService.class.getName()).debugPath(), is("/debug/hello"));
+        assertThat(services.get(HelloService.class.getName()).debugPath(), is("/hello"));
         assertThat(services.containsKey(FooService.class.getName()), is(true));
         assertThat(services.get(FooService.class.getName()).debugPath(), nullValue());
     }

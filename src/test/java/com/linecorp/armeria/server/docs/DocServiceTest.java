@@ -33,7 +33,7 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -51,18 +51,22 @@ public class DocServiceTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) {
-        final ThriftService helloService = new ThriftService(HELLO_SERVICE_HANDLER);
-        final ThriftService fooService = new ThriftService(mock(FooService.AsyncIface.class));
-        final ThriftService cassandraService = new ThriftService(mock(Cassandra.AsyncIface.class));
-        final ThriftService hbaseService = new ThriftService(mock(Hbase.AsyncIface.class));
+        final ThriftService helloService = ThriftService.of(HELLO_SERVICE_HANDLER);
+        final ThriftService fooService = ThriftService.ofFormats(mock(FooService.AsyncIface.class),
+                                                                 SerializationFormat.THRIFT_BINARY);
+        final ThriftService cassandraService = ThriftService.ofFormats(mock(Cassandra.AsyncIface.class),
+                                                                       SerializationFormat.THRIFT_BINARY);
+        final ThriftService cassandraServiceDebug =
+                ThriftService.ofFormats(mock(Cassandra.AsyncIface.class),
+                                        SerializationFormat.THRIFT_TEXT);
+        final ThriftService hbaseService = ThriftService.of(mock(Hbase.AsyncIface.class));
 
         final VirtualHostBuilder defaultVirtualHost = new VirtualHostBuilder();
 
         defaultVirtualHost.serviceAt("/hello", helloService);
-        defaultVirtualHost.serviceAt("/internal/debug/hello", new ThriftService(HELLO_SERVICE_HANDLER,
-                                                                                ThriftProtocolFactories.TEXT));
         defaultVirtualHost.serviceAt("/foo", fooService);
         defaultVirtualHost.serviceAt("/cassandra", cassandraService);
+        defaultVirtualHost.serviceAt("/cassandra/debug", cassandraServiceDebug);
         defaultVirtualHost.serviceAt("/hbase", hbaseService);
 
         defaultVirtualHost.serviceUnder("/docs/", new DocService().decorate(LoggingService::new));
@@ -73,10 +77,10 @@ public class DocServiceTest extends AbstractServerTest {
     @Test
     public void testOk() throws Exception {
         HashMap<Class<?>, Optional<String>> serviceMap = new LinkedHashMap<>();
-        serviceMap.put(HelloService.class, Optional.of("/internal/debug/hello"));
+        serviceMap.put(HelloService.class, Optional.of("/hello"));
         serviceMap.put(FooService.class, Optional.empty());
-        serviceMap.put(Cassandra.class, Optional.empty());
-        serviceMap.put(Hbase.class, Optional.empty());
+        serviceMap.put(Cassandra.class, Optional.of("/cassandra/debug"));
+        serviceMap.put(Hbase.class, Optional.of("/hbase"));
         final String expected = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(
                 Specification.forServiceClasses(serviceMap));
 
@@ -85,7 +89,8 @@ public class DocServiceTest extends AbstractServerTest {
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is(expected));
+                String responseJson = EntityUtils.toString(res.getEntity());
+                assertThat(responseJson, is(expected));
             }
         }
     }
