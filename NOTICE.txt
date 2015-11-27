@@ -61,6 +61,22 @@ by Adobe Systems Incorporated:
   * Homepage: http://adobe-fonts.github.io/source-sans-pro/
               http://adobe-fonts.github.io/source-code-pro/
 
+
+Modified redistributions
+========================
+
+This product contains a modified part of Netty, distributed by Netty.io:
+
+  * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
+  * Homepage: http://netty.io/
+
+This product contains a modified part of Twitter Commons, distributed by Twitter,
+Inc:
+
+  * License: license/LICENSE.twitter.al20.txt (Apache License v2.0)
+  * Homepage: http://twitter.github.io/commons/
+
+
 Dependencies
 ============
 
