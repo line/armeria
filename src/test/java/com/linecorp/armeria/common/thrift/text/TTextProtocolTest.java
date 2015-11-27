@@ -117,14 +117,14 @@ public class TTextProtocolTest {
                 ))
                 .setF(true)
                 .setG((byte) 12)
-                .setH(ImmutableMap.<Integer, Long>of(
+                .setH(ImmutableMap.of(
                         1, 2L,
                         3, 4L,
                         5, 6L
                 ))
                 .setJ(ImmutableMap.<Short,List<Boolean>>of(
-                        (short) 1, ImmutableList.<Boolean>of(true, true, false, true),
-                        (short) 5, ImmutableList.<Boolean>of(false)
+                        (short) 1, ImmutableList.of(true, true, false, true),
+                        (short) 5, ImmutableList.of(false)
                 ))
                 .setK(ImmutableSet.of(true, false, false, false, true))
                 .setL(base64Encoder.decode("SGVsbG8gV29ybGQ="))
@@ -132,17 +132,17 @@ public class TTextProtocolTest {
                 .setN((short) 678)
                 .setP(Letter.CHARLIE)
                 .setQ(EnumSet.allOf(Letter.class))
-                .setR(ImmutableMap.<Sub, Long>of(sub(1, 2), 100L))
+                .setR(ImmutableMap.of(sub(1, 2), 100L))
                 .setS(ImmutableMap.<Map<Map<Long, Long>, Long> ,Long>of(
                         ImmutableMap.<Map<Long, Long>, Long>of(
-                                ImmutableMap.<Long, Long>of(200L, 400L), 300L
+                                ImmutableMap.of(200L, 400L), 300L
                         ), 100L
                 ))
                 ;
 
     }
 
-    private Sub sub(int s, int x) {
+    private static Sub sub(int s, int x) {
         return new Sub(s, new SubSub(x));
     }
 
@@ -166,9 +166,9 @@ public class TTextProtocolTest {
                 "  \"u\" : {\n" +
                 "    \"f2\" : 2\n" +
                 "  }\n" +
-                "}";
+                '}';
 
-        assertEquals(expectedMsg, baos.toString());
+        assertJsonEquals(expectedMsg, baos.toString());
     }
 
     @Test
@@ -186,7 +186,7 @@ public class TTextProtocolTest {
                 "      \"detailsArg2\" : 100\n" +
                 "    }\n" +
                 "  }\n" +
-                "}";
+                '}';
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
@@ -227,7 +227,7 @@ public class TTextProtocolTest {
                 "      \"detailsArg2\" : 100\n" +
                 "    }\n" +
                 "  }\n" +
-                "}";
+                '}';
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
@@ -256,7 +256,7 @@ public class TTextProtocolTest {
                 "      \"detailsArg2\" : 100\n" +
                 "    }\n" +
                 "  }\n" +
-                "}";
+                '}';
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
@@ -295,7 +295,7 @@ public class TTextProtocolTest {
                 "      \"response\" : \"Nice response\"\n" +
                 "    }\n" +
                 "  }\n" +
-                "}";
+                '}';
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
@@ -331,7 +331,7 @@ public class TTextProtocolTest {
                 "      \"reason\" : \"Bad rpc\"\n" +
                 "    }\n" +
                 "  }\n" +
-                "}";
+                '}';
 
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
@@ -368,7 +368,7 @@ public class TTextProtocolTest {
                 "      \"detailsArg2\" : 100\n" +
                 "    }\n" +
                 "  }\n" +
-                "}";
+                '}';
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
@@ -387,7 +387,7 @@ public class TTextProtocolTest {
                 "      \"detailsArg2\" : 100\n" +
                 "    }\n" +
                 "  }\n" +
-                "}";
+                '}';
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
@@ -399,7 +399,7 @@ public class TTextProtocolTest {
                 "{\n" +
                 "  \"method\" : \"doDebug\"\n" +
                 "  \"type\" : \"CALL\",\n" +
-                "}";
+                '}';
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
@@ -411,7 +411,7 @@ public class TTextProtocolTest {
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
                 "  \"args\" : 100\n" +
-                "}";
+                '}';
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         prot.readMessageBegin();
