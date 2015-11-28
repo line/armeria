@@ -21,9 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URLConnection;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -104,6 +105,8 @@ public interface HttpVfs {
 
         /**
          * Returns the MIME type of the entry.
+         *
+         * @return {@code null} if unknown
          */
         String mimeType();
 
@@ -132,8 +135,15 @@ public interface HttpVfs {
          * Creates a new instance with the specified {@code path}.
          */
         protected AbstractEntry(String path) {
+            this(path, MimeTypeUtil.guessFromPath(path));
+        }
+
+        /**
+         * Creates a new instance with the specified {@code path} and {@code mimeType}.
+         */
+        protected AbstractEntry(String path, @Nullable String mimeType) {
             this.path = requireNonNull(path, "path");
-            mimeType = URLConnection.guessContentTypeFromName(path);
+            this.mimeType = mimeType;
         }
 
         @Override
@@ -225,6 +235,14 @@ public interface HttpVfs {
          */
         public ByteArrayEntry(String path, byte[] content) {
             super(path);
+            this.content = requireNonNull(content, "content");
+        }
+
+        /**
+         * Creates a new instance with the specified {@code path}, {@code mimeType} and byte array.
+         */
+        public ByteArrayEntry(String path, String mimeType, byte[] content) {
+            super(path, mimeType);
             this.content = requireNonNull(content, "content");
         }
 
