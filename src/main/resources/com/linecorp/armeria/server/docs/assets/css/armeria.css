@@ -36,6 +36,10 @@ h2 {
   font-size: 125%;
 }
 
+label {
+  font-weight: inherit;
+}
+
 /*
  * Top navigation
  * Hide default border to remove 1px line.
@@ -114,6 +118,11 @@ h2 {
   font-size: 60%;
 }
 
+.main td ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
 .main h2 ~ .table-responsive {
   /* Remove the spacing between a heading and its first table */
   margin-top: -0.75em;
@@ -148,4 +157,15 @@ h2 {
 
 .debug-textarea {
   width: 100%;
+  max-width: 100%;
+  font-size: 90%;
+  min-height: 256px;
+}
+
+.debug-submit {
+  margin-top: 8px;
+}
+
+.debug-response {
+  min-height: 256px;
 }

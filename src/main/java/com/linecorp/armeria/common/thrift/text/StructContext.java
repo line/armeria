@@ -21,11 +21,13 @@ import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TField;
+import org.apache.thrift.protocol.TStruct;
 import org.apache.thrift.protocol.TType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +94,7 @@ class StructContext extends PairContext {
      * To fix this, we can track call stack of nested thrift objects on our own by overriding
      * TProtocol.writeStructBegin(), rather than relying on the stack trace.
      */
-    private Class<? extends TBase> getCurrentThriftMessageClass() {
+    private Class<?> getCurrentThriftMessageClass() {
         StackTraceElement[] frames =
                 Thread.currentThread().getStackTrace();
 
@@ -107,21 +109,25 @@ class StructContext extends PairContext {
                 // if the class has no-arg constructor, because FieldMetaData.getStructMetaDataMap
                 //   calls clazz.newInstance
                 if (isTBase(clazz) && !isAbstract(clazz) && hasNoArgConstructor(clazz)) {
-                    // Safe to suppress this, since I've just checked that clazz
-                    // can be assigned to a TBase.
-                    @SuppressWarnings("unchecked")
-                    Class<? extends TBase> asTBase = clazz.asSubclass(TBase.class);
-                    return asTBase;
+                    return clazz;
+                }
+
+                if (isTApplicationException(clazz)) {
+                    return clazz;
                 }
             } catch (ClassNotFoundException ex) {
                 log.warn("Can't find class: " + className, ex);
             }
         }
-        throw new RuntimeException("Must call (indirectly) from a TBase object.");
+        throw new RuntimeException("Must call (indirectly) from a TBase/TApplicationException object.");
     }
 
     private boolean isTBase(Class clazz) {
         return TBase.class.isAssignableFrom(clazz);
+    }
+
+    private boolean isTApplicationException(Class clazz) {
+        return TApplicationException.class.isAssignableFrom(clazz);
     }
 
     private boolean isAbstract(Class clazz) {
@@ -147,29 +153,35 @@ class StructContext extends PairContext {
     private Map<String, TField> computeFieldNameMap() {
         Map<String, TField> map = new HashMap<String, TField>();
 
-        Class<? extends TBase> clazz = getCurrentThriftMessageClass();
+        Class<?> clazz = getCurrentThriftMessageClass();
 
-        // Get the metaDataMap for this Thrift class
-        Map<? extends TFieldIdEnum, FieldMetaData> metaDataMap =
-                FieldMetaData.getStructMetaDataMap(clazz);
+        if (isTBase(clazz)) {
+            // Get the metaDataMap for this Thrift class
+            Map<? extends TFieldIdEnum, FieldMetaData> metaDataMap =
+                    FieldMetaData.getStructMetaDataMap((Class<? extends TBase>) clazz);
 
-        for (TFieldIdEnum key : metaDataMap.keySet()) {
-            final String fieldName = key.getFieldName();
-            final FieldMetaData metaData = metaDataMap.get(key);
+            for (TFieldIdEnum key : metaDataMap.keySet()) {
+                final String fieldName = key.getFieldName();
+                final FieldMetaData metaData = metaDataMap.get(key);
 
-            // Workaround a bug in the generated thrift message read()
-            // method by mapping the ENUM type to the INT32 type
-            // The thrift generated parsing code requires that, when expecting
-            // a value of enum, we actually parse a value of type int32. The
-            // generated read() method then looks up the enum value in a map.
-            byte type = (TType.ENUM == metaData.valueMetaData.type)
-                        ? TType.I32 : metaData.valueMetaData.type;
+                // Workaround a bug in the generated thrift message read()
+                // method by mapping the ENUM type to the INT32 type
+                // The thrift generated parsing code requires that, when expecting
+                // a value of enum, we actually parse a value of type int32. The
+                // generated read() method then looks up the enum value in a map.
+                byte type = (TType.ENUM == metaData.valueMetaData.type)
+                            ? TType.I32 : metaData.valueMetaData.type;
 
-            map.put(fieldName,
-                    new TField(fieldName,
-                               type,
-                               key.getThriftFieldId()));
+                map.put(fieldName,
+                        new TField(fieldName,
+                                   type,
+                                   key.getThriftFieldId()));
+            }
+        } else { // TApplicationException
+            map.put("message", new TField("message", (byte)11, (short)1));
+            map.put("type", new TField("type", (byte)8, (short)2));
         }
+
         return map;
     }
 }

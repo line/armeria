@@ -18,13 +18,11 @@ package com.linecorp.armeria.common;
 
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -60,19 +58,18 @@ public enum SerializationFormat {
      */
     THRIFT_TEXT("ttext", "application/x-thrift; protocol=TTEXT");
 
-    private static final Pattern WHITESPACE = Pattern.compile("\\s");
-
-    private static final Function<String, String> MIME_TYPE_NORMALIZER =
-            s -> WHITESPACE.matcher(s.toLowerCase()).replaceAll("");
-
-    private static final Set<SerializationFormat> THRIFT_FORMAT = Collections.unmodifiableSet(
+    private static final Set<SerializationFormat> THRIFT_FORMATS = Collections.unmodifiableSet(
             EnumSet.of(THRIFT_BINARY, THRIFT_COMPACT, THRIFT_JSON, THRIFT_TEXT));
 
-    private static final Map<String, SerializationFormat> MIME_TYPE_TO_FORMAT =
-            Collections.unmodifiableMap(
-                    Stream.of(SerializationFormat.values()).collect(
-                            Collectors.toMap(f -> MIME_TYPE_NORMALIZER.apply(f.mimeType),
-                                             Function.identity())));
+    private static final Map<String, Optional<SerializationFormat>> PROTOCOL_TO_THRIFT_FORMATS;
+
+    static {
+        Map<String, Optional<SerializationFormat>> protocolToThriftFormats = new HashMap<>();
+        for (SerializationFormat f : THRIFT_FORMATS) {
+            protocolToThriftFormats.put(f.uriText(), Optional.of(f));
+        }
+        PROTOCOL_TO_THRIFT_FORMATS = Collections.unmodifiableMap(protocolToThriftFormats);
+    }
 
     /**
      * Returns the set of all known Thrift serialization formats. This method is useful when determining if a
@@ -80,7 +77,7 @@ public enum SerializationFormat {
      * e.g. {@code if (SerializationFormat.ofThrift().contains(serFmt)) { ... }}
      */
     public static Set<SerializationFormat> ofThrift() {
-        return THRIFT_FORMAT;
+        return THRIFT_FORMATS;
     }
 
     /**
@@ -89,12 +86,36 @@ public enum SerializationFormat {
      * mimetype.
      */
     public static Optional<SerializationFormat> fromMimeType(@Nullable String mimeType) {
-        if (mimeType == null) {
+        if (mimeType == null || mimeType.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.ofNullable(MIME_TYPE_TO_FORMAT.get(MIME_TYPE_NORMALIZER.apply(mimeType)));
+
+        final int semicolonIdx = mimeType.indexOf(';');
+        final String paramPart;
+        if (semicolonIdx >= 0) {
+            paramPart = mimeType.substring(semicolonIdx).toLowerCase(Locale.US);
+            mimeType = mimeType.substring(0, semicolonIdx).toLowerCase(Locale.US).trim();
+        } else {
+            paramPart = null;
+            mimeType = mimeType.toLowerCase(Locale.US).trim();
+        }
+
+        if ("application/x-thrift".equals(mimeType)) {
+            return fromThriftMimeType(paramPart);
+        }
+
+        if (NONE.mimeType().equals(mimeType)) {
+            return Optional.of(NONE);
+        }
+
+        return Optional.empty();
     }
-    
+
+    private static Optional<SerializationFormat> fromThriftMimeType(String params) {
+        final String protocol = MimeTypeParams.find(params, "protocol");
+        return PROTOCOL_TO_THRIFT_FORMATS.getOrDefault(protocol, Optional.empty());
+    }
+
     private final String uriText;
     private final String mimeType;
 

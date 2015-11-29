@@ -26,7 +26,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -34,7 +33,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 class ServiceInfo {
 
-    static ServiceInfo of(Class<?> serviceClass, Optional<String> debugPath) throws ClassNotFoundException {
+    static ServiceInfo of(
+            Class<?> serviceClass, Iterable<EndpointInfo> endpoints) throws ClassNotFoundException {
+
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -56,7 +57,7 @@ class ServiceInfo {
             });
         }
 
-        return new ServiceInfo(name, functions, classes, debugPath);
+        return new ServiceInfo(name, functions, classes, endpoints);
     }
 
     private static void addClassIfPossible(Set<ClassInfo> classes, TypeInfo typeInfo) {
@@ -76,15 +77,16 @@ class ServiceInfo {
     private final String name;
     private final Map<String, FunctionInfo> functions;
     private final Map<String, ClassInfo> classes;
-    private final Optional<String> debugPath;
+    private final Map<String, EndpointInfo> endpoints;
 
     private ServiceInfo(String name, List<FunctionInfo> functions, Collection<ClassInfo> classes,
-                        Optional<String> debugPath) {
+                        Iterable<EndpointInfo> endpoints) {
+
         this.name = requireNonNull(name, "name");
-        this.debugPath = requireNonNull(debugPath, "debugPath");
 
         requireNonNull(functions, "functions");
         requireNonNull(classes, "classes");
+        requireNonNull(endpoints, "endpoints");
 
         final Map<String, FunctionInfo> functions0 = new TreeMap<>();
         for (FunctionInfo function : functions) {
@@ -97,6 +99,12 @@ class ServiceInfo {
             classes0.put(classInfo.name(), classInfo);
         }
         this.classes = Collections.unmodifiableMap(classes0);
+
+        final Map<String, EndpointInfo> endpoints0 = new TreeMap<>();
+        for (EndpointInfo i : endpoints) {
+            endpoints0.put(i.hostnamePattern() + ':' + i.path(), i);
+        }
+        this.endpoints = Collections.unmodifiableMap(endpoints0);
     }
 
     @JsonProperty
@@ -120,8 +128,8 @@ class ServiceInfo {
     }
 
     @JsonProperty
-    public String debugPath() {
-        return debugPath.orElse(null);
+    public Collection<EndpointInfo> endpoints() {
+        return endpoints.values();
     }
 
     @Override
@@ -132,21 +140,21 @@ class ServiceInfo {
         return Objects.equals(name, that.name) &&
                Objects.equals(functions, that.functions) &&
                Objects.equals(classes, that.classes) &&
-               Objects.equals(debugPath, that.debugPath);
+               Objects.equals(endpoints, that.endpoints);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, functions, classes);
+        return Objects.hash(name, functions, classes, endpoints);
     }
 
     @Override
     public String toString() {
         return "ServiceInfo{" +
-               "name='" + name + '\'' +
-               ", functions=" + functions +
-               ", classes=" + classes +
-               ", debugPath=" + debugPath +
+               "name='" + name() + '\'' +
+               ", functions=" + functions() +
+               ", classes=" + classes() +
+               ", endpoints=" + endpoints() +
                '}';
     }
 }

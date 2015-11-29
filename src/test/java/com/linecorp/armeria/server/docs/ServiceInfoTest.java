@@ -16,16 +16,20 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.thrift.meta_data.StructMetaData;
 import org.apache.thrift.protocol.TType;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 
@@ -33,9 +37,20 @@ public class ServiceInfoTest {
 
     @Test
     public void fooServiceTest() throws Exception {
-        final ServiceInfo service = ServiceInfo.of(FooService.class, Optional.of("/debug/foo"));
+        final ServiceInfo service =
+                ServiceInfo.of(FooService.class, Arrays.asList(
+                        EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_BINARY,
+                                        EnumSet.of(SerializationFormat.THRIFT_BINARY)),
+                        EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
+                                        EnumSet.of(SerializationFormat.THRIFT_TEXT))));
 
-        assertThat(service.debugPath(), is("/debug/foo"));
+        assertThat(service.endpoints(), hasSize(2));
+        // Should be sorted alphabetically
+        assertThat(service.endpoints(),
+                   contains(EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
+                                            EnumSet.of(SerializationFormat.THRIFT_TEXT)),
+                            EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_BINARY,
+                                            EnumSet.of(SerializationFormat.THRIFT_BINARY))));
 
         final Map<String, FunctionInfo> functions = service.functions();
         assertThat(functions.size(), is(5));
