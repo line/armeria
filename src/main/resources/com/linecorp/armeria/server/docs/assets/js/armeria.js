@@ -90,7 +90,8 @@ $(function () {
       try {
         args = JSON.parse(debugText.val());
       } catch (e) {
-        debugResponse.text("Failed to parse a JSON object:\n" + e);
+        debugResponse.text("Failed to parse a JSON object, please check your request:\n" + e);
+        return false;
       }
       var request = {
         method: functionInfo.name,
