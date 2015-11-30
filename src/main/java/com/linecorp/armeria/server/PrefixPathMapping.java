@@ -30,7 +30,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
         this.prefix = prefix;
         this.stripPrefix = stripPrefix;
-        strVal = "prefix: " + prefix;
+        strVal = "prefix: " + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
     @Override
@@ -44,14 +44,21 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
     @Override
     public int hashCode() {
-        return strVal.hashCode();
+        return stripPrefix ? prefix.hashCode() : -prefix.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof PrefixPathMapping &&
-               (this == obj || prefix.equals(((PrefixPathMapping) obj).prefix));
+        if (!(obj instanceof PrefixPathMapping)) {
+            return false;
+        }
 
+        if (this == obj) {
+            return true;
+        }
+
+        final PrefixPathMapping that = (PrefixPathMapping) obj;
+        return stripPrefix == that.stripPrefix && prefix.equals(that.prefix);
     }
 
     @Override
