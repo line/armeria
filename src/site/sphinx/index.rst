@@ -40,5 +40,6 @@ Read more
     server
     client
     Fork me at GitHub <https://github.com/line/armeria>
+    Release notes <https://github.com/line/armeria/releases>
     API documentation <apidocs/index.html#://>
     Source cross-reference <xref/index.html#://>
