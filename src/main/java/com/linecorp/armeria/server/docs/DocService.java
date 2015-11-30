@@ -91,7 +91,7 @@ public class DocService extends AbstractCompositeService {
 
         void setSpecification(byte[] content) {
             assert entry == Entry.NONE;
-            entry = new ByteArrayEntry("/", content);
+            entry = new ByteArrayEntry("/", "application/json", content);
         }
     }
 }
