@@ -22,6 +22,9 @@ import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofEx
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.server.Server;
@@ -41,6 +44,8 @@ import com.linecorp.armeria.server.thrift.ThriftService;
  * discovers all {@link ThriftService}s in the {@link Server} automatically.
  */
 public class DocService extends AbstractCompositeService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DocService.class);
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -70,6 +75,16 @@ public class DocService extends AbstractCompositeService {
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
                                              .writeValueAsBytes(Specification.forServiceEntries(services)));
+
+                // Do a simple sanity check to make sure this service has not been registered using serviceAt,
+                // which is indicated by the presence of an exact path registration.
+                services.stream()
+                        .filter(se -> se.service().as(DocService.class).orElse(null) == DocService.this &&
+                                      se.pathMapping().exactPath().isPresent())
+                        .forEach(
+                                se -> logger.error("Invalid service registration {} - DocService will not work " +
+                                                   "correctly. Please use serviceUnder when registering " +
+                                                   "DocService.", se));
             }
         });
     }
