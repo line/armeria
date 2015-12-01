@@ -70,9 +70,6 @@ final class ThriftServiceCodec implements ServiceCodec {
     private static final Exception HTTP_METHOD_NOT_ALLOWED_EXCEPTION =
             new IllegalArgumentException("HTTP method not allowed");
     @SuppressWarnings("ThrowableInstanceNeverThrown")
-    private static final Exception MIME_TYPE_MUST_BE_THRIFT =
-            new IllegalArgumentException("MIME type must be application/x-thrift");
-    @SuppressWarnings("ThrowableInstanceNeverThrown")
     private static final Exception THRIFT_PROTOCOL_NOT_SUPPORTED =
             new IllegalArgumentException("Specified Thrift protocol not supported");
     @SuppressWarnings("ThrowableInstanceNeverThrown")
@@ -443,7 +440,6 @@ final class ThriftServiceCodec implements ServiceCodec {
 
         final String contentTypeHeader = httpRequest.headers().get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeHeader != null) {
-            validateContentType(contentTypeHeader);
             serializationFormat = SerializationFormat.fromMimeType(contentTypeHeader)
                     .orElse(defaultSerializationFormat);
             if (!allowedSerializationFormats.contains(serializationFormat)) {
@@ -456,7 +452,6 @@ final class ThriftServiceCodec implements ServiceCodec {
 
         final String acceptHeader = httpRequest.headers().get(HttpHeaderNames.ACCEPT);
         if (acceptHeader != null) {
-            validateAccept(acceptHeader);
             // If accept header is present, make sure it is sane. Currently, we do not support accept
             // headers with a different format than the content type header.
             SerializationFormat outputSerializationFormat =
@@ -467,24 +462,6 @@ final class ThriftServiceCodec implements ServiceCodec {
             }
         }
         return serializationFormat;
-    }
-
-    private static void validateContentType(String contentType) throws InvalidHttpRequestException {
-        if (!contentType.contains("application/x-thrift")) {
-            throw new InvalidHttpRequestException(HttpResponseStatus.UNSUPPORTED_MEDIA_TYPE,
-                                                  MIME_TYPE_MUST_BE_THRIFT);
-        }
-    }
-
-    private static void validateAccept(String accept) throws InvalidHttpRequestException {
-        if (accept.contains("application/x-thrift") ||
-            accept.contains("*/*") ||
-            accept.contains("application/*")) {
-            return;
-        }
-
-        throw new InvalidHttpRequestException(HttpResponseStatus.NOT_ACCEPTABLE,
-                                              MIME_TYPE_MUST_BE_THRIFT);
     }
 
     private static String typeString(byte typeValue) {

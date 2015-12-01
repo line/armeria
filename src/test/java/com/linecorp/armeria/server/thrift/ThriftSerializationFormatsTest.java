@@ -66,28 +66,15 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
 
     @Test
     public void contentTypeNotThrift() throws Exception {
+        // Browser clients often send a non-thrift content type.
         HttpHeaders headers = new DefaultHttpHeaders().set(HttpHeaderNames.CONTENT_TYPE,
-                                                           "text/html; protocol=TBINARY");
+                                                           "text/plain; charset=utf-8");
         HelloService.Iface client =
-                Clients.newClient("ttext+" + uri("/hello"),
+                Clients.newClient("tbinary+" + uri("/hello"),
                                   HelloService.Iface.class,
                                   ClientOption.HTTP_HEADERS.newValue(headers));
-        thrown.expect(InvalidResponseException.class);
-        thrown.expectMessage("HTTP Response code: 415 Unsupported Media Type");
-        client.hello("Trustin");
-    }
-
-    @Test
-    public void acceptNotThrift() throws Exception {
-        HttpHeaders headers = new DefaultHttpHeaders().set(HttpHeaderNames.ACCEPT,
-                                                           "text/html; protocol=TBINARY");
-        HelloService.Iface client =
-                Clients.newClient("ttext+" + uri("/hello"),
-                                  HelloService.Iface.class,
-                                  ClientOption.HTTP_HEADERS.newValue(headers));
-        thrown.expect(InvalidResponseException.class);
-        thrown.expectMessage("HTTP Response code: 406 Not Acceptable");
-        client.hello("Trustin");
+        String res = client.hello("Trustin");
+        assertEquals("Hello, Trustin!", res);
     }
 
     @Test
