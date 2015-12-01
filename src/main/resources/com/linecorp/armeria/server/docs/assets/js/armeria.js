@@ -11,6 +11,8 @@ $(function () {
   var functionContainer = $('#function');
   var classContainer = $('#class');
 
+  var previousFragmentPath = null;
+
   $.getJSON('specification.json', function (data) {
     specification = data;
 
@@ -19,21 +21,31 @@ $(function () {
   });
 
   $(window).on('hashchange', function () {
-    render(window.location.hash);
+    render(URI(window.location.href));
   });
 
-  function render(hash) {
+  function render(uri) {
+    var fragmentUri = uri.fragment(true);
+    var path = fragmentUri.pathname();
+
+    if (path == previousFragmentPath) {
+      // Path hasn't changed so don't re-render (probably just updated link
+      // for sharing debug requests).
+      return;
+    }
+    previousFragmentPath = path;
+
     resetClasses();
 
-    var hashSplit = hash.split('/');
+    var hashSplit = path.split('/');
     var prefix = hashSplit[0];
 
     var mapping = {
-      '#function': function (serviceName, functionName) {
+      'function': function (serviceName, functionName) {
         renderFunction(serviceName, functionName);
       },
 
-      '#class': function (className) {
+      'class': function (className) {
         renderClass(className);
       }
     };
@@ -85,7 +97,7 @@ $(function () {
     var debugText = functionContainer.find('.debug-textarea');
     var debugResponse = functionContainer.find('.debug-response code');
 
-    functionContainer.find('.debug-submit').on('click', function () {
+    var submitDebugRequest = function () {
       var args;
       try {
         args = JSON.parse(debugText.val());
@@ -106,15 +118,27 @@ $(function () {
         success: function (response) {
           debugResponse.text(response);
           hljs.highlightBlock(debugResponse.get(0));
+          var uri = URI(window.location.href);
+          var fragment = uri.fragment(true);
+          fragment.setQuery('req', debugText.val());
+          window.location.href = uri.toString();
         },
         error: function (jqXHR, textStatus, errorThrown) {
           debugResponse.text(errorThrown);
         }
       });
       return false;
-    });
+    };
+    functionContainer.find('.debug-submit').on('click', submitDebugRequest);
 
     functionContainer.removeClass('hidden');
+
+    var fragment = URI(window.location.href).fragment(true);
+    var fragmentParams = fragment.query(true);
+    if (fragmentParams.req) {
+      debugText.val(fragmentParams.req);
+      submitDebugRequest();
+    }
   }
 
   function processService(serviceInfo) {
