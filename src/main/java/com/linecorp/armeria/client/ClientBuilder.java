@@ -19,13 +19,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
-import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.apache.thrift.protocol.TProtocolFactory;
 
@@ -35,8 +32,6 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
-
-import io.netty.util.concurrent.Future;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -118,32 +113,12 @@ public final class ClientBuilder {
         final ClientCodec codec = options.clientCodecDecorator()
                                          .apply(createCodec(uri, scheme, interfaceClass));
 
-        final InvocationHandler defaultHandler = (proxy, method, args) -> {
-            try {
-                Future<Object> resultFuture = remoteInvoker.invoke(uri, options, codec, method, args);
-                if (codec.isAsyncClient()) {
-                    return method.getReturnType().isInstance(resultFuture) ? resultFuture : null;
-                } else {
-                    return resultFuture.sync().getNow();
-                }
-            } catch (Throwable cause) {
-                final Throwable finalCause;
-                if (cause instanceof ClosedChannelException) {
-                    finalCause = ClosedSessionException.INSTANCE;
-                } else if (cause instanceof Error ||
-                           cause instanceof RuntimeException ||
-                           Stream.of(method.getExceptionTypes()).anyMatch(v -> v.isInstance(cause))) {
-                    finalCause = cause;
-                } else {
-                    finalCause = new UndeclaredThrowableException(cause);
-                }
+        final InvocationHandler handler = options.invocationHandlerDecorator().apply(
+                new ClientInvocationHandler(uri, interfaceClass, remoteInvoker, codec, options));
 
-                throw finalCause;
-            }
-        };
-        final InvocationHandler handler = options.invocationHandlerDecorator().apply(defaultHandler);
-        ClassLoader classLoader = interfaceClass.getClassLoader();
-        return (T) Proxy.newProxyInstance(classLoader, new Class[] { interfaceClass }, handler);
+        return (T) Proxy.newProxyInstance(interfaceClass.getClassLoader(),
+                                          new Class[] { interfaceClass },
+                                          handler);
     }
 
     private static ClientCodec createCodec(URI uri, Scheme scheme, Class<?> interfaceClass) {
