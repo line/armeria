@@ -232,7 +232,7 @@ service Hbase {
     throws (1:IOError io)
 
   /**
-   * List all the column families assoicated with a table.
+   * List all the column families associated with a table.
    *
    * @return list of column family descriptors
    */

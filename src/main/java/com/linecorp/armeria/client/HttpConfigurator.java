@@ -313,7 +313,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
 
     /**
      * Workaround handler for interoperability with Jetty.
-     * - Jetty performs case-sensitive comparision for the Connection header value. (upgrade vs Upgrade)
+     * - Jetty performs case-sensitive comparison for the Connection header value. (upgrade vs Upgrade)
      * - Jetty does not send 'Upgrade: h2c' header in its 101 Switching Protocol response.
      */
     private static final class WorkaroundHandler extends ChannelDuplexHandler {
