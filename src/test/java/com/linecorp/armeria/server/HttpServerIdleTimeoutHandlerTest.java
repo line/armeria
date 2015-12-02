@@ -78,7 +78,7 @@ public class HttpServerIdleTimeoutHandlerTest {
     }
 
     @Test
-    public void testIdleTimeoutOccuredTwice() throws Exception {
+    public void testIdleTimeoutOccurredTwice() throws Exception {
         readRequest();
         waitUntilTimeout();
         //pending request count is 2
