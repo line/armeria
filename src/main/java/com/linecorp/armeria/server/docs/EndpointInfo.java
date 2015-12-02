@@ -45,9 +45,11 @@ class EndpointInfo {
         this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
         this.path = requireNonNull(path, "path");
         defaultMimeType = requireNonNull(defaultFormat, "defaultFormat").mimeType();
-        availableMimeTypes = Collections.unmodifiableSet(
+
+        final Set<String> sortedAvailableMimeTypes =
                 availableFormats.stream().map(SerializationFormat::mimeType)
-                                .collect(Collectors.toCollection(TreeSet::new)));
+                                .collect(Collectors.toCollection(TreeSet::new));
+        availableMimeTypes = Collections.unmodifiableSet(sortedAvailableMimeTypes);
     }
 
     @JsonProperty
