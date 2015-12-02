@@ -89,10 +89,10 @@ public class SimpleHttpClientCodec implements ClientCodec {
         if (request.content().length > 0) {
             ByteBuf content = channel.alloc().ioBuffer().writeBytes(request.content());
             fullHttpRequest = new DefaultFullHttpRequest(
-                    HttpVersion.HTTP_1_1, request.method(), request.uri().getPath(), content);
+                    HttpVersion.HTTP_1_1, request.method(), request.uri().toASCIIString(), content);
         } else {
             fullHttpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, request.method(),
-                                                         request.uri().getPath());
+                                                         request.uri().toASCIIString());
         }
         fullHttpRequest.headers().set(request.headers());
         return fullHttpRequest;
