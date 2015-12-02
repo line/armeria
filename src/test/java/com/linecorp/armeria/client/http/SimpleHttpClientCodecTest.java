@@ -78,7 +78,7 @@ public class SimpleHttpClientCodecTest {
 
     @Test
     public void encodeRequestNoBody() {
-        SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/foo")
+        SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/foo?q=foo&bar=baz")
                 .header(HttpHeaderNames.ORIGIN, "localhost")
                 .build();
         EncodeResult result = codec.encodeRequest(channel, SCHEME.sessionProtocol(), EXECUTE_METHOD, new Object[]{ request });
@@ -88,14 +88,14 @@ public class SimpleHttpClientCodecTest {
         assertEquals("www.github.com", result.encodedHost().get());
         FullHttpRequest fullHttpRequest = (FullHttpRequest) result.content();
         assertEquals(HttpVersion.HTTP_1_1, fullHttpRequest.protocolVersion());
-        assertEquals("/foo", fullHttpRequest.uri());
+        assertEquals("/foo?q=foo&bar=baz", fullHttpRequest.uri());
         assertEquals(HttpMethod.GET, fullHttpRequest.method());
         assertEquals("localhost", fullHttpRequest.headers().get(HttpHeaderNames.ORIGIN));
     }
 
     @Test
     public void encodeRequestWithBody() {
-        SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/foo")
+        SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/foo?q=foo&bar=baz")
                 .content("lorem ipsum foo bar", StandardCharsets.UTF_8)
                 .header(HttpHeaderNames.ORIGIN, "localhost")
                 .build();
@@ -106,7 +106,7 @@ public class SimpleHttpClientCodecTest {
         assertEquals("www.github.com", result.encodedHost().get());
         FullHttpRequest fullHttpRequest = (FullHttpRequest) result.content();
         assertEquals(HttpVersion.HTTP_1_1, fullHttpRequest.protocolVersion());
-        assertEquals("/foo", fullHttpRequest.uri());
+        assertEquals("/foo?q=foo&bar=baz", fullHttpRequest.uri());
         assertEquals(HttpMethod.GET, fullHttpRequest.method());
         assertEquals("localhost", fullHttpRequest.headers().get(HttpHeaderNames.ORIGIN));
         assertEquals("lorem ipsum foo bar",
