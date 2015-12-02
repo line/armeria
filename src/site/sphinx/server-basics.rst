@@ -68,7 +68,7 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
 
     VirtualHost vh = new VirtualHostBuilder().serviceAt(
             "/hello",
-            new ThriftService(helloHandler, ThriftProtocolFactories.BINARY)
+            ThriftService.of(helloHandler, SerializationFormat.THRIFT_BINARY)
                     .decorate(LoggingService::new)).build();
 
     sb.defaultVirtualHost(vh);
@@ -97,8 +97,8 @@ and lets you browse the available service operations and structs:
 .. code-block:: java
 
     VirtualHostBuilder vhb= new VirtualHostBuilder();
-    vhb.serviceAt("/foo/", new ThriftService(...))
-       .serviceAt("/bar/", new ThriftService(...))
+    vhb.serviceAt("/foo/", ThriftService.of(...))
+       .serviceAt("/bar/", ThriftService.of(...))
        .serviceUnder("/docs/", new DocService());
 
 Note that we used ``serviceUnder()`` for ``DocService`` unlike the other services. ``serviceUnder()`` binds
