@@ -53,7 +53,7 @@
         <ul class="nav nav-sidebar">
           {{#each functions}}
           <li id="nav-{{../name}}.{{name}}">
-            <a href="#function/{{../name}}/{{name}}"><code>{{name}}()</code></a>
+            <a href="#!function/{{../name}}/{{name}}"><code>{{name}}()</code></a>
           </li>
           {{/each}}
         </ul>
@@ -62,7 +62,7 @@
         <h1>Classes</h1>
         <ul class="nav nav-sidebar">
           {{#each specification.classes}}
-          <li id="nav-{{name}}"><a href="#class/{{name}}"><code title="{{name}}">{{simpleName}}</code></a></li>
+          <li id="nav-{{name}}"><a href="#!class/{{name}}"><code title="{{name}}">{{simpleName}}</code></a></li>
           {{/each}}
         </ul>
       </script>
@@ -237,6 +237,7 @@
 <script src="assets/js/vendor/bootstrap-3.3.5.min.js"></script>
 <script src="assets/js/vendor/handlebars-4.0.4.min.js"></script>
 <script src="assets/js/vendor/highlight-jsononly-8.9.1.pack.js"></script>
+<script src="assets/js/vendor/URI-1.17.0.min.js"></script>
 <script src="assets/js/armeria.js"></script>
 </body>
 </html>
