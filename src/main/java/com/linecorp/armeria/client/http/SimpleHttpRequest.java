@@ -95,7 +95,7 @@ public class SimpleHttpRequest {
         buf.append(", method: ").append(method);
         buf.append(", headers: ").append(headers);
         buf.append(", content: ");
-        if (content.length > 0) {
+        if (content != null && content.length > 0) {
             buf.append("<length: ").append(content.length).append('>');
         } else {
             buf.append("<none>");
