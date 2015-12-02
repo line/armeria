@@ -61,6 +61,14 @@ public class SimpleHttpClientIntegrationTest {
             vhBuilder.serviceAt("/httptestbody", new HttpService(
                     (ctx, executor, promise) -> {
                         FullHttpRequest request = ctx.originalRequest();
+                        if (request.headers().get(HttpHeaderNames.CONTENT_TYPE) != null) {
+                            throw new IllegalArgumentException(
+                                    "Serialization format is none, so content type should not be set!");
+                        }
+                        if (!"utf-8".equals(request.headers().get(HttpHeaderNames.ACCEPT))) {
+                            throw new IllegalArgumentException(
+                                    "Serialization format is none, so accept should be set to netty default!");
+                        }
                         ByteBuf content = ctx.alloc().ioBuffer();
                         byte[] body = ByteBufUtil.getBytes(request.content());
                         content.writeBytes(String.format("METHOD: %s|ACCEPT: %s|BODY: %s",
