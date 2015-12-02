@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -273,13 +274,15 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         }
 
         invocation.options().get(ClientOption.HTTP_HEADERS).ifPresent(headers::add);
-        //we allow a user can set content type and accept headers
-        String mimeType = ctx.scheme().serializationFormat().mimeType();
-        if (!headers.contains(HttpHeaderNames.CONTENT_TYPE)) {
-            headers.set(HttpHeaderNames.CONTENT_TYPE, mimeType);
-        }
-        if (!headers.contains(HttpHeaderNames.ACCEPT)) {
-            headers.set(HttpHeaderNames.ACCEPT, mimeType);
+        if (ctx.scheme().serializationFormat() != SerializationFormat.NONE) {
+            //we allow a user can set content type and accept headers
+            String mimeType = ctx.scheme().serializationFormat().mimeType();
+            if (!headers.contains(HttpHeaderNames.CONTENT_TYPE)) {
+                headers.set(HttpHeaderNames.CONTENT_TYPE, mimeType);
+            }
+            if (!headers.contains(HttpHeaderNames.ACCEPT)) {
+                headers.set(HttpHeaderNames.ACCEPT, mimeType);
+            }
         }
 
         return request;
