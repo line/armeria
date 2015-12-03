@@ -2,6 +2,14 @@
 language: java
 sudo: false
 
+# Force update Java in our build since Travis default is 1.8.0_31,
+# which sometimes can't compile correct Java8 code.
+# https://github.com/travis-ci/travis-ci/issues/3259
+addons:
+  apt:
+    packages:
+      - oracle-java8-installer
+
 jdk:
   - oraclejdk8
 
