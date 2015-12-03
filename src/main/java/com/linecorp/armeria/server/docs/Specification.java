@@ -29,6 +29,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.thrift.TBase;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.server.Service;
@@ -37,7 +39,8 @@ import com.linecorp.armeria.server.thrift.ThriftService;
 
 class Specification {
 
-    static Specification forServiceEntries(Iterable<ServiceEntry> services) {
+    static Specification forServiceEntries(Iterable<ServiceEntry> services,
+                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) {
         final Map<Class<?>, Iterable<EndpointInfo>> map = new LinkedHashMap<>();
 
         for (ServiceEntry serviceEntry : services) {
@@ -66,17 +69,18 @@ class Specification {
             }
         }
 
-        return forServiceClasses(map);
+        return forServiceClasses(map, sampleRequests);
     }
 
-    static Specification forServiceClasses(Map<Class<?>, Iterable<EndpointInfo>> map) {
+    static Specification forServiceClasses(Map<Class<?>, Iterable<EndpointInfo>> map,
+                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) {
         requireNonNull(map, "map");
 
         final List<ServiceInfo> services = new ArrayList<>(map.size());
         final Set<ClassInfo> classes = new HashSet<>();
         map.forEach((serviceClass, endpoints) -> {
             try {
-                final ServiceInfo service = ServiceInfo.of(serviceClass, endpoints);
+                final ServiceInfo service = ServiceInfo.of(serviceClass, endpoints, sampleRequests);
                 services.add(service);
                 classes.addAll(service.classes().values());
             } catch (ClassNotFoundException e) {

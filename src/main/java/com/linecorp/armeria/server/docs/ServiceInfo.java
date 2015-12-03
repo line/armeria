@@ -29,12 +29,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.thrift.TBase;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 class ServiceInfo {
 
     static ServiceInfo of(
-            Class<?> serviceClass, Iterable<EndpointInfo> endpoints) throws ClassNotFoundException {
+            Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
+            Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) throws ClassNotFoundException {
 
         requireNonNull(serviceClass, "serviceClass");
 
@@ -46,7 +49,7 @@ class ServiceInfo {
         final List<FunctionInfo> functions = new ArrayList<>(methods.length);
         final Set<ClassInfo> classes = new LinkedHashSet<>();
         for (Method method : methods) {
-            final FunctionInfo function = FunctionInfo.of(method);
+            final FunctionInfo function = FunctionInfo.of(method, sampleRequests);
             functions.add(function);
 
             addClassIfPossible(classes, function.returnType());

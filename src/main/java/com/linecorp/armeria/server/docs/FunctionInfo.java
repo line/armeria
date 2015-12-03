@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.docs;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,13 +30,17 @@ import java.util.stream.Collectors;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
+import org.apache.thrift.TSerializer;
 import org.apache.thrift.meta_data.FieldMetaData;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+
 class FunctionInfo {
 
-    static FunctionInfo of(Method method) throws ClassNotFoundException {
+    static FunctionInfo of(Method method, Map<Class<?>, ? extends TBase<?, ?>> sampleRequests)
+            throws ClassNotFoundException {
         requireNonNull(method, "method");
 
         final String methodName = method.getName();
@@ -45,13 +50,30 @@ class FunctionInfo {
         final ClassLoader classLoader = serviceClass.getClassLoader();
 
         @SuppressWarnings("unchecked")
+        Class<? extends TBase<?, ?>> argsClass = (Class<? extends TBase<?, ?>>) Class.forName(
+                serviceName + '$' + methodName + "_args", false, classLoader);
+        String sampleJsonRequest;
+        TBase<?, ?> sampleRequest = sampleRequests.get(argsClass);
+        if (sampleRequest == null) {
+            sampleJsonRequest = "";
+        } else {
+            TSerializer serializer = new TSerializer(ThriftProtocolFactories.TEXT);
+            try {
+                sampleJsonRequest = serializer.toString(sampleRequest, StandardCharsets.UTF_8.name());
+            } catch (TException e) {
+                throw new IllegalArgumentException(
+                        "Failed to serialize to a memory buffer, this shouldn't ever happen.", e);
+            }
+        }
+
+        @SuppressWarnings("unchecked")
         final FunctionInfo function =
                 new FunctionInfo(methodName,
-                                 (Class<? extends TBase>) Class.forName(
-                                         serviceName + '$' + methodName + "_args", false, classLoader),
-                                 (Class<? extends TBase>) Class.forName(
+                                 argsClass,
+                                 (Class<? extends TBase<?, ?>>) Class.forName(
                                          serviceName + '$' + methodName + "_result", false, classLoader),
-                                 (Class<? extends TException>[]) method.getExceptionTypes());
+                                 (Class<? extends TException>[]) method.getExceptionTypes(),
+                                 sampleJsonRequest);
         return function;
     }
 
@@ -59,12 +81,15 @@ class FunctionInfo {
     private final TypeInfo returnType;
     private final List<FieldInfo> parameters;
     private final List<ExceptionInfo> exceptions;
+    private final String sampleJsonRequest;
 
     private FunctionInfo(String name,
-                         Class<? extends TBase> argsClass,
-                         Class<? extends TBase> resultClass,
-                         Class<? extends TException>[] exceptionClasses) {
+                         Class<? extends TBase<?, ?>> argsClass,
+                         Class<? extends TBase<?, ?>> resultClass,
+                         Class<? extends TException>[] exceptionClasses,
+                         String sampleJsonRequest) {
         this.name = requireNonNull(name, "name");
+        this.sampleJsonRequest = requireNonNull(sampleJsonRequest, "sampleJsonRequest");
         requireNonNull(argsClass, "argsClass");
         requireNonNull(resultClass, "resultClass");
         requireNonNull(exceptionClasses, "exceptionClasses");
@@ -117,6 +142,11 @@ class FunctionInfo {
     @JsonProperty
     public List<ExceptionInfo> exceptions() {
         return exceptions;
+    }
+
+    @JsonProperty
+    public String sampleJsonRequest() {
+        return sampleJsonRequest;
     }
 
     @Override

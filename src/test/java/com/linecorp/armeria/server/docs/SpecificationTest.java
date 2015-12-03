@@ -17,13 +17,12 @@
 package com.linecorp.armeria.server.docs;
 
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 
@@ -38,6 +37,7 @@ import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
 public class SpecificationTest {
+
     @Test
     public void servicesTest() throws Exception {
         final Specification specification =
@@ -50,7 +50,8 @@ public class SpecificationTest {
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/foo"),
                                 ThriftService.ofFormats(mock(FooService.AsyncIface.class),
-                                                  SerializationFormat.THRIFT_COMPACT))));
+                                                        SerializationFormat.THRIFT_COMPACT))),
+                                                Collections.emptyMap());
 
         final Map<String, ServiceInfo> services = specification.services();
         assertThat(services.size(), is(2));
