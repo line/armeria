@@ -75,9 +75,12 @@ public class HttpFileServiceTest {
                     "/fs/",
                     HttpFileService.forFileSystem(tmpDir.toPath()).decorate(LoggingService::new));
 
+            final String baseResourceDir = HttpFileServiceTest.class.getPackage().getName().replace('.', '/');
             defaultVirtualHost.serviceUnder(
                     "/",
-                    HttpFileService.forClassPath("/http_file_service").decorate(LoggingService::new));
+                    HttpFileService.forClassPath(baseResourceDir + "/foo")
+                                   .orElse(HttpFileService.forClassPath(baseResourceDir + "/bar"))
+                                   .decorate(LoggingService::new));
 
             sb.defaultVirtualHost(defaultVirtualHost.build());
         } catch (Exception e) {
@@ -120,7 +123,7 @@ public class HttpFileServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final String lastModified;
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/foo.txt")))) {
-                lastModified = assert200Ok(res, "text/plain", "bar");
+                lastModified = assert200Ok(res, "text/plain", "foo");
             }
 
             // Test if the 'If-Modified-Since' header works as expected.
@@ -131,6 +134,14 @@ public class HttpFileServiceTest {
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert304NotModified(res, lastModified, "text/plain");
             }
+        }
+    }
+
+    @Test
+    public void testClassPathOrElseGet() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal();
+             CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.txt")))) {
+            assert200Ok(res, "text/plain", "bar");
         }
     }
 
