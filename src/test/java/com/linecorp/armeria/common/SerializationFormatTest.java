@@ -10,6 +10,9 @@ public class SerializationFormatTest {
     @Test
     public void fromMimeType_exactMatch() {
         for (SerializationFormat format : SerializationFormat.values()) {
+            if (format == SerializationFormat.UNKNOWN) {
+                continue;
+            }
             assertSame(format, SerializationFormat.fromMimeType(format.mimeType()).get());
         }
     }
