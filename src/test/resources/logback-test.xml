@@ -23,6 +23,7 @@
   </appender>
 
   <logger name="com.linecorp.armeria" level="DEBUG" />
+  <logger name="armeria" level="DEBUG" />
 
   <root level="WARN">
     <appender-ref ref="STDOUT" />

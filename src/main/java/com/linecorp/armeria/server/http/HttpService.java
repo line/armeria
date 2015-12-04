@@ -38,15 +38,15 @@ import io.netty.util.concurrent.Promise;
  */
 public class HttpService implements Service {
 
-    private ServiceCodec codec;
+    static final HttpServiceCodec CODEC = new HttpServiceCodec();
+
     private final ServiceInvocationHandler handler;
 
     /**
      * Creates a new instance with the specified {@link ServiceInvocationHandler}.
      */
     public HttpService(ServiceInvocationHandler handler) {
-        codec = new HttpServiceCodec(requireNonNull(handler, "handler").getClass().getName());
-        this.handler = handler;
+        this.handler = requireNonNull(handler, "handler");
     }
 
     /**
@@ -60,12 +60,7 @@ public class HttpService implements Service {
 
     @Override
     public ServiceCodec codec() {
-        ServiceCodec codec = this.codec;
-        if (codec == null) {
-            return this.codec = new HttpServiceCodec(handler().getClass().getName());
-        } else {
-            return codec;
-        }
+        return CODEC;
     }
 
     @Override

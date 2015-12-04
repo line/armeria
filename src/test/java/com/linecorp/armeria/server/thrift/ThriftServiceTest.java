@@ -44,8 +44,10 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceCodec;
 import com.linecorp.armeria.server.ServiceCodec.DecodeResult;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.FileService;
 import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
@@ -626,15 +628,18 @@ public class ThriftServiceTest {
                                Channel ch, SessionProtocol protocol, String hostname, String path,
                                ByteBuf in, Promise<ByteBuf> promise) throws Exception {
 
+        final ServiceConfig cfg =
+                new ServerBuilder().serviceAt("/", service).build().config().serviceConfigs().get(0);
+
         final ServiceCodec codec = service.codec();
         final Promise<Object> objPromise = ch.eventLoop().newPromise();
         final DecodeResult result = codec.decodeRequest(
-                ch, protocol, hostname, path, path, in, null, objPromise);
+                cfg, ch, protocol, hostname, path, path, in, null, objPromise);
 
         switch (result.type()) {
         case SUCCESS:
             final ServiceInvocationContext ctx = result.invocationContext();
-            service.handler().invoke(ctx, GlobalEventExecutor.INSTANCE, objPromise);
+            cfg.service().handler().invoke(ctx, GlobalEventExecutor.INSTANCE, objPromise);
             objPromise.addListener((Future<Object> future) -> {
                 if (future.isSuccess()) {
                     promise.setSuccess(codec.encodeResponse(ctx, future.getNow()));

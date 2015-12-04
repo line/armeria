@@ -52,16 +52,12 @@ public class CompositeServiceTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) {
-        VirtualHostBuilder defaultVirtualHost = new VirtualHostBuilder();
-
-        defaultVirtualHost.serviceUnder("/qux/", composite);
+        sb.serviceUnder("/qux/", composite);
 
         // Should not hit the following services
-        defaultVirtualHost.serviceUnder("/foo/", otherService);
-        defaultVirtualHost.serviceUnder("/bar/", otherService);
-        defaultVirtualHost.service(PathMapping.ofGlob("/*"), otherService);
-
-        sb.defaultVirtualHost(defaultVirtualHost.build());
+        sb.serviceUnder("/foo/", otherService);
+        sb.serviceUnder("/bar/", otherService);
+        sb.service(PathMapping.ofGlob("/*"), otherService);
     }
 
     @Test

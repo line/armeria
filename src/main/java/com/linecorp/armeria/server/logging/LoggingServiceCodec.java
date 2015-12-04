@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.DecoratingServiceCodec;
 import com.linecorp.armeria.server.ServiceCodec;
+import com.linecorp.armeria.server.ServiceConfig;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -46,14 +47,14 @@ final class LoggingServiceCodec extends DecoratingServiceCodec {
     }
 
     @Override
-    public DecodeResult decodeRequest(
-            Channel ch, SessionProtocol sessionProtocol, String hostname, String path, String mappedPath,
-            ByteBuf in, Object originalRequest, Promise<Object> promise) throws Exception {
+    public DecodeResult decodeRequest(ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
+                                      String hostname, String path, String mappedPath, ByteBuf in,
+                                      Object originalRequest, Promise<Object> promise) throws Exception {
 
         final int requestSize = in.readableBytes();
         final DecodeResult result =
-                delegate().decodeRequest(ch, sessionProtocol, hostname, path, mappedPath, in, originalRequest,
-                                         promise);
+                delegate().decodeRequest(cfg, ch, sessionProtocol, hostname, path, mappedPath, in,
+                                         originalRequest, promise);
 
 
         switch (result.type()) {
@@ -88,6 +89,7 @@ final class LoggingServiceCodec extends DecoratingServiceCodec {
 
     @Override
     public ByteBuf encodeResponse(ServiceInvocationContext ctx, Object response) throws Exception {
+
         final Logger logger = ctx.logger();
         if (logger.isInfoEnabled() && ctx.hasAttr(START_TIME_NANOS)) {
             return logAndEncodeResponse(ctx, logger, response);
@@ -129,5 +131,4 @@ final class LoggingServiceCodec extends DecoratingServiceCodec {
 
         return encoded;
     }
-
 }

@@ -45,16 +45,17 @@ import org.junit.Test;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.handler.codec.http.HttpHeaderDateFormat;
 
 public class HttpFileServiceTest {
 
-    private static final Server server;
+    private static final String baseResourceDir =
+            HttpFileServiceTest.class.getPackage().getName().replace('.', '/') + '/';
     private static final File tmpDir;
 
+    private static final Server server;
     private static int httpPort;
 
     static {
@@ -67,22 +68,15 @@ public class HttpFileServiceTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            sb.port(0, SessionProtocol.HTTP);
-
-            final VirtualHostBuilder defaultVirtualHost = new VirtualHostBuilder();
-
-            defaultVirtualHost.serviceUnder(
+            sb.serviceUnder(
                     "/fs/",
                     HttpFileService.forFileSystem(tmpDir.toPath()).decorate(LoggingService::new));
 
-            final String baseResourceDir = HttpFileServiceTest.class.getPackage().getName().replace('.', '/');
-            defaultVirtualHost.serviceUnder(
+            sb.serviceUnder(
                     "/",
-                    HttpFileService.forClassPath(baseResourceDir + "/foo")
-                                   .orElse(HttpFileService.forClassPath(baseResourceDir + "/bar"))
+                    HttpFileService.forClassPath(baseResourceDir + "foo")
+                                   .orElse(HttpFileService.forClassPath(baseResourceDir + "bar"))
                                    .decorate(LoggingService::new));
-
-            sb.defaultVirtualHost(defaultVirtualHost.build());
         } catch (Exception e) {
             throw new Error(e);
         }

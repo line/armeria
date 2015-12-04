@@ -81,6 +81,7 @@ public final class Server implements AutoCloseable {
 
     Server(ServerConfig config) {
         this.config = requireNonNull(config, "config");
+        config.setServer(this);
 
         // Pre-populate the domain name mapping for later matching.
         SslContext lastSslContext = null;
@@ -107,17 +108,17 @@ public final class Server implements AutoCloseable {
 
         // Invoke the service/codec/handlerAdded() methods in Service/ServiceCodec/ServiceInvocationHandler
         // so that it can keep the reference to this Server or add a listener to it.
-        config.services().forEach(this::initService);
+        config.serviceConfigs().forEach(Server::initService);
     }
 
-    private void initService(ServiceEntry e) {
-        final Service service = e.service();
+    private static void initService(ServiceConfig serviceCfg) {
+        final Service service = serviceCfg.service();
         final ServiceCodec codec = service.codec();
         final ServiceInvocationHandler handler = service.handler();
 
-        ServiceCallbackInvoker.invokeServiceAdded(this, service);
-        ServiceCallbackInvoker.invokeCodecAdded(this, codec);
-        ServiceCallbackInvoker.invokeHandlerAdded(this, handler);
+        ServiceCallbackInvoker.invokeServiceAdded(serviceCfg, service);
+        ServiceCallbackInvoker.invokeCodecAdded(serviceCfg, codec);
+        ServiceCallbackInvoker.invokeHandlerAdded(serviceCfg, handler);
     }
 
     /**

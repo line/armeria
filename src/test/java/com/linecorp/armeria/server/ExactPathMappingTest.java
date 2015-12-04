@@ -16,28 +16,21 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.Optional;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertThat;
 
-final class CatchAllPathMapping extends AbstractPathMapping {
+import org.junit.Test;
 
-    static final CatchAllPathMapping INSTANCE = new CatchAllPathMapping();
+public class ExactPathMappingTest {
 
-    private static final Optional<String> PREFIX_PATH_OPT = Optional.of("/");
-
-    private CatchAllPathMapping() {}
-
-    @Override
-    protected String doApply(String path) {
-        return path;
+    @Test
+    public void shouldReturnNullOnMismatch() {
+        assertThat(new ExactPathMapping("/find/me").apply("/find/me/not"), is(nullValue()));
     }
 
-    @Override
-    public Optional<String> prefixPath() {
-        return PREFIX_PATH_OPT;
-    }
-
-    @Override
-    public String toString() {
-        return "catchAll";
+    @Test
+    public void shouldReturnExactPathOnMatch() {
+        assertThat(new ExactPathMapping("/find/me").apply("/find/me"), is("/find/me"));
     }
 }

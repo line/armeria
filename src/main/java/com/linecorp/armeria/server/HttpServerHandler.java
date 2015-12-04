@@ -84,6 +84,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         }
     };
 
+    @SuppressWarnings("ThrowableInstanceNeverThrown")
     private static final Exception SERVICE_NOT_FOUND = new ServiceNotFoundException();
 
     private final ServerConfig config;
@@ -174,18 +175,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
             final String path = stripQuery(req.uri());
 
             // Find the service that matches the path.
-            final MappedService service = host.findService(path);
-            if (!service.isPresent()) {
+            final PathMapped<ServiceConfig> mapped = host.findServiceConfig(path);
+            if (!mapped.isPresent()) {
                 respond(ctx, reqSeq, req, HttpResponseStatus.NOT_FOUND);
                 return;
             }
 
             // Decode the request and create a new invocation context from it.
-            final String mappedPath = service.mappedPath();
+            final String mappedPath = mapped.mappedPath();
+            final ServiceConfig serviceCfg = mapped.value();
+            final Service service = serviceCfg.service();
             final ServiceCodec codec = service.codec();
             final Promise<Object> promise = ctx.executor().newPromise();
             final DecodeResult decodeResult = codec.decodeRequest(
-                    ctx.channel(), sessionProtocol, hostname, path, mappedPath, req.content(), req, promise);
+                    serviceCfg, ctx.channel(), sessionProtocol,
+                    hostname, path, mappedPath, req.content(), req, promise);
 
             switch (decodeResult.type()) {
             case SUCCESS: {
@@ -193,13 +197,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 final long timeoutMillis = config.requestTimeoutPolicy().timeout(iCtx);
 
                 // Perform the actual invocation.
-                invoke(service, iCtx, promise);
+                invoke(iCtx, service.handler(), promise);
                 invoked = true;
 
                 if (promise.isDone()) {
                     // If the invocation has been finished immediately,
                     // there's no need to schedule a timeout nor to add a listener to the promise.
-                    handleInvocationResult(ctx, reqSeq, req, iCtx, codec, promise, null);
+                    handleInvocationResult(ctx, reqSeq, req, serviceCfg, iCtx, codec, promise, null);
                 } else {
                     final ScheduledFuture<?> timeoutFuture;
                     if (timeoutMillis > 0) {
@@ -213,7 +217,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
                     promise.addListener((Future<Object> future) -> {
                         try {
-                            handleInvocationResult(ctx, reqSeq, req, iCtx, codec, future, timeoutFuture);
+                            handleInvocationResult(ctx, reqSeq, req, serviceCfg, iCtx, codec, future, timeoutFuture);
                         } catch (Exception e) {
                             respond(ctx, reqSeq, req, HttpResponseStatus.INTERNAL_SERVER_ERROR, e);
                         }
@@ -251,10 +255,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void invoke(Service service, ServiceInvocationContext iCtx, Promise<Object> promise) {
+    private void invoke(ServiceInvocationContext iCtx, ServiceInvocationHandler handler,
+                        Promise<Object> promise) {
+
         ServiceInvocationContext.setCurrent(iCtx);
         try {
-            service.handler().invoke(iCtx, config.blockingTaskExecutor(), promise);
+            handler.invoke(iCtx, config.blockingTaskExecutor(), promise);
         } catch (Throwable t) {
             if (!promise.tryFailure(t)) {
                 logger.warn("{} invoke() failed with a finished promise: {}", iCtx, promise, t);
@@ -285,7 +291,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     private void handleInvocationResult(
             ChannelHandlerContext ctx, int reqSeq, FullHttpRequest req,
-            ServiceInvocationContext iCtx, ServiceCodec codec, Future<Object> future,
+            ServiceConfig sCfg, ServiceInvocationContext iCtx, ServiceCodec codec, Future<Object> future,
             ScheduledFuture<?> timeoutFuture) throws Exception {
 
         // Release the original request which was retained before the invocation.

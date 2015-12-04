@@ -51,7 +51,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.ThriftService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
@@ -135,24 +134,20 @@ public class ThriftOverHttpClientTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            ssc = new SelfSignedCertificate("127.0.0.1");
-
             sb.port(0, SessionProtocol.HTTP);
             sb.port(0, SessionProtocol.HTTPS);
 
-            VirtualHostBuilder vhBuilder = new VirtualHostBuilder();
+            ssc = new SelfSignedCertificate("127.0.0.1");
+            sb.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
 
             for (Handlers h : Handlers.values()) {
                 for (SerializationFormat defaultSerializationFormat : SerializationFormat.ofThrift()) {
-                    vhBuilder.serviceAt(
+                    sb.serviceAt(
                             h.getPath(defaultSerializationFormat),
                             ThriftService.of(h.handler(), defaultSerializationFormat).decorate(
                                     LoggingService::new));
                 }
             }
-
-            sb.defaultVirtualHost(
-                    vhBuilder.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey()).build());
         } catch (Exception e) {
             throw new Error(e);
         }

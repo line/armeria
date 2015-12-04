@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServiceCodec;
+import com.linecorp.armeria.server.ServiceConfig;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -41,15 +42,9 @@ final class HttpServiceCodec implements ServiceCodec {
             SessionProtocol.H2, SessionProtocol.H2C,
             SessionProtocol.HTTP, SessionProtocol.HTTPS);
 
-    private final String loggerName;
-
-    HttpServiceCodec(String loggerName) {
-        this.loggerName = loggerName;
-    }
-
     @Override
-    public DecodeResult decodeRequest(Channel ch, SessionProtocol sessionProtocol, String hostname,
-                                      String path, String mappedPath, ByteBuf in,
+    public DecodeResult decodeRequest(ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
+                                      String hostname, String path, String mappedPath, ByteBuf in,
                                       Object originalRequest, Promise<Object> promise) throws Exception {
 
         if (!ALLOWED_PROTOCOLS.contains(sessionProtocol)) {
@@ -58,7 +53,7 @@ final class HttpServiceCodec implements ServiceCodec {
 
         return new HttpServiceInvocationContext(
                 ch, Scheme.of(SerializationFormat.NONE, sessionProtocol),
-                hostname, path, mappedPath, loggerName, (FullHttpRequest) originalRequest);
+                hostname, path, mappedPath, cfg.loggerName(), (FullHttpRequest) originalRequest);
     }
 
     @Override
@@ -67,12 +62,16 @@ final class HttpServiceCodec implements ServiceCodec {
     }
 
     @Override
-    public ByteBuf encodeResponse(ServiceInvocationContext ctx, Object response) throws Exception {
+    public ByteBuf encodeResponse(ServiceInvocationContext ctx,
+                                  Object response) throws Exception {
+
         throw new IllegalStateException("unsupported message type: " + response.getClass().getName());
     }
 
     @Override
-    public ByteBuf encodeFailureResponse(ServiceInvocationContext ctx, Throwable cause) throws Exception {
+    public ByteBuf encodeFailureResponse(ServiceInvocationContext ctx,
+                                         Throwable cause) throws Exception {
+
         final StringWriter sw = new StringWriter(512);
         final PrintWriter pw = new PrintWriter(sw);
         cause.printStackTrace(pw);

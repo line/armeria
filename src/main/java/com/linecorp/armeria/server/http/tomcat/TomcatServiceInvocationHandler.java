@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
 
 import io.netty.buffer.ByteBuf;
@@ -87,13 +88,17 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
     }
 
     @Override
-    public void handlerAdded(Server server) throws Exception {
+    public void handlerAdded(ServiceConfig cfg) throws Exception {
         if (armeriaServer != null) {
-            throw new IllegalStateException("cannot be added to more than one server");
+            if (armeriaServer != cfg.server()) {
+                throw new IllegalStateException("cannot be added to more than one server");
+            } else {
+                return;
+            }
         }
 
-        armeriaServer = server;
-        server.addListener(configurer);
+        armeriaServer = cfg.server();
+        armeriaServer.addListener(configurer);
     }
 
     void start() {

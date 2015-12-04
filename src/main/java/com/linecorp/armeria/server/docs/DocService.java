@@ -34,7 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
-import com.linecorp.armeria.server.ServiceEntry;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.http.HttpService;
@@ -53,6 +53,7 @@ public class DocService extends AbstractCompositeService {
 
     private final Map<Class<?>, ? extends TBase<?, ?>> sampleRequests;
 
+    private Server server;
 
     /**
      * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}.
@@ -79,8 +80,18 @@ public class DocService extends AbstractCompositeService {
     }
 
     @Override
-    public void serviceAdded(Server server) throws Exception {
-        super.serviceAdded(server);
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        super.serviceAdded(cfg);
+
+        if (server != null) {
+            if (server != cfg.server()) {
+                throw new IllegalStateException("cannot be added to more than one server");
+            } else {
+                return;
+            }
+        }
+
+        server = cfg.server();
 
         // Build the Specification after all the services are added to the server.
         server.addListener(new ServerListenerAdapter() {
@@ -89,12 +100,12 @@ public class DocService extends AbstractCompositeService {
                 final ServerConfig config = server.config();
                 final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
 
-                final List<ServiceEntry> services = config.services().stream()
-                                                     .filter(se -> virtualHosts.contains(se.virtualHost()))
-                                                     .collect(Collectors.toList());
+                final List<ServiceConfig> services = config.serviceConfigs().stream()
+                                                           .filter(se -> virtualHosts.contains(se.virtualHost()))
+                                                           .collect(Collectors.toList());
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
-                                             .writeValueAsBytes(Specification.forServiceEntries(
+                                             .writeValueAsBytes(Specification.forServiceConfigs(
                                                      services, sampleRequests)));
             }
         });
@@ -110,8 +121,6 @@ public class DocService extends AbstractCompositeService {
 
         @Override
         public Entry get(String path) {
-            // Exact path mapping always translates a matching path to "/"
-            assert "/".equals(path);
             return entry;
         }
 

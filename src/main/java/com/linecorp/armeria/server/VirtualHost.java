@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map.Entry;
 
 import io.netty.handler.ssl.SslContext;
 
@@ -41,29 +40,32 @@ import io.netty.handler.ssl.SslContext;
  */
 public final class VirtualHost {
 
+    /** Initialized later by {@link ServerConfig} via {@link #setServerConfig(ServerConfig)}. */
+    private ServerConfig serverConfig;
+
     private final String hostnamePattern;
     private final SslContext sslContext;
-    private final List<ServiceEntry> services;
-    private final ServiceMapping serviceMapping = new ServiceMapping();
+    private final List<ServiceConfig> services;
+    private final PathMappings<ServiceConfig> serviceMapping = new PathMappings<>();
+
     private String strVal;
 
-    VirtualHost(String hostnamePattern, SslContext sslContext, List<Entry<PathMapping, Service>> services) {
+    VirtualHost(String hostnamePattern, SslContext sslContext, Iterable<ServiceConfig> serviceConfigs) {
 
         this.hostnamePattern = normalizeHostnamePattern(hostnamePattern);
         this.sslContext = validateSslContext(sslContext);
 
-        final List<ServiceEntry> servicesCopy = new ArrayList<>(requireNonNull(services, "services").size());
+        requireNonNull(serviceConfigs, "serviceConfigs");
 
-        for (Entry<PathMapping, Service> e : services) {
-            final PathMapping pathMapping = e.getKey();
-            final Service service = e.getValue();
+        final List<ServiceConfig> servicesCopy = new ArrayList<>();
 
-            servicesCopy.add(new ServiceEntry(this, pathMapping, service));
-            serviceMapping.add(pathMapping, service);
+        for (ServiceConfig c : serviceConfigs) {
+            c = c.build(this);
+            servicesCopy.add(c);
+            serviceMapping.add(c.pathMapping(), c);
         }
 
-        this.services = Collections.unmodifiableList(servicesCopy);
-
+        services = Collections.unmodifiableList(servicesCopy);
         serviceMapping.freeze();
     }
 
@@ -97,6 +99,24 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the {@link Server} where this {@link VirtualHost} belongs to.
+     */
+    public Server server() {
+        if (serverConfig == null) {
+            throw new IllegalStateException("server is not configured yet.");
+        }
+        return serverConfig.server();
+    }
+
+    void setServerConfig(ServerConfig serverConfig) {
+        if (this.serverConfig != null) {
+            throw new IllegalStateException("VirtualHost cannot be added to more than one Server.");
+        }
+
+        this.serverConfig = requireNonNull(serverConfig, "serverConfig");
+    }
+
+    /**
      * Returns the hostname pattern of this virtual host, as defined in
      * <a href="http://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>
      */
@@ -114,17 +134,17 @@ public final class VirtualHost {
     /**
      * Returns the information about the {@link Service}s bound to this virtual host.
      */
-    public List<ServiceEntry> services() {
+    public List<ServiceConfig> serviceConfigs() {
         return services;
     }
 
     /**
      * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
      *
-     * @return the {@link Service} wrapped by {@link MappedService} if there's a match.
-     *         {@link MappedService#empty()} if there's no match.
+     * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
+     *         {@link PathMapped#empty()} if there's no match.
      */
-    public MappedService findService(String path) {
+    public PathMapped<ServiceConfig> findServiceConfig(String path) {
         return serviceMapping.apply(path);
     }
 
@@ -132,7 +152,7 @@ public final class VirtualHost {
     public String toString() {
         String strVal = this.strVal;
         if (strVal == null) {
-            this.strVal = strVal = toString(getClass(), hostnamePattern(), sslContext(), services());
+            this.strVal = strVal = toString(getClass(), hostnamePattern(), sslContext(), serviceConfigs());
         }
 
         return strVal;

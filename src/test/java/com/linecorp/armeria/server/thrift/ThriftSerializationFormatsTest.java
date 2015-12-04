@@ -12,7 +12,6 @@ import com.linecorp.armeria.client.InvalidResponseException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -31,12 +30,10 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) {
-        sb.defaultVirtualHost(new VirtualHostBuilder()
-                                      .serviceAt("/hello", ThriftService.of(HELLO_SERVICE))
-                                      .serviceAt("/hellobinaryonly",
-                                                 ThriftService.ofFormats(HELLO_SERVICE,
-                                                                         SerializationFormat.THRIFT_BINARY))
-                                      .build());
+        sb.serviceAt("/hello", ThriftService.of(HELLO_SERVICE))
+          .serviceAt("/hellobinaryonly",
+                     ThriftService.ofFormats(HELLO_SERVICE,
+                                             SerializationFormat.THRIFT_BINARY));
     }
 
     @Test

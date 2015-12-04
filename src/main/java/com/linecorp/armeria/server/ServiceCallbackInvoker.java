@@ -18,172 +18,57 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.lang.ref.Reference;
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Supplier;
-
 /**
  * A helper class that invokes the callback methods in {@link Service}, {@link ServiceCodec} and
- * {@link ServiceInvocationHandler}. It ensures callback methods are invoked only once for the same
- * {@link Server} instance.
+ * {@link ServiceInvocationHandler}.
  */
 public final class ServiceCallbackInvoker {
 
     /**
-     * NOTE: Used weak-key just in case a service component is from a different {@link ClassLoader}
-     *       because otherwise the keys will be leaked in a container environment where apps can be reloaded.
+     * Invokes {@link Service#serviceAdded(ServiceConfig)}.
      */
-    private static final WeakIdentityMap<Object, Set<Server>> map = new WeakIdentityMap<>();
-
-    /**
-     * Invokes {@link Service#serviceAdded(Server)}.
-     */
-    public static void invokeServiceAdded(Server server, Service service) {
-        requireNonNull(server, "server");
+    public static void invokeServiceAdded(ServiceConfig cfg, Service service) {
+        requireNonNull(cfg, "cfg");
         requireNonNull(service, "service");
 
-        final Set<Server> owners = map.getOrCompute(service, HashSet<Server>::new);
-        if (owners.contains(server)) {
-            // Invoked already
-            return;
-        }
-
         try {
-            service.serviceAdded(server);
+            service.serviceAdded(cfg);
         } catch (Exception e) {
             fail("serviceAdded", service, e);
         }
-
-        owners.add(server);
     }
 
     /**
-     * Invokes {@link ServiceCodec#codecAdded(Server)}.
+     * Invokes {@link ServiceCodec#codecAdded(ServiceConfig)}.
      */
-    public static void invokeCodecAdded(Server server, ServiceCodec codec) {
-        requireNonNull(server, "server");
+    public static void invokeCodecAdded(ServiceConfig cfg, ServiceCodec codec) {
+        requireNonNull(cfg, "cfg");
         requireNonNull(codec, "codec");
 
-        final Set<Server> owners = map.getOrCompute(codec, HashSet<Server>::new);
-        if (owners.contains(server)) {
-            // Invoked already
-            return;
-        }
-
         try {
-            codec.codecAdded(server);
+            codec.codecAdded(cfg);
         } catch (Exception e) {
             fail("codecAdded", codec, e);
         }
-
-        owners.add(server);
     }
 
     /**
-     * Invokes {@link ServiceInvocationHandler#handlerAdded(Server)}.
+     * Invokes {@link ServiceInvocationHandler#handlerAdded(ServiceConfig)}.
      */
-    public static void invokeHandlerAdded(Server server, ServiceInvocationHandler handler) {
-        requireNonNull(server, "server");
+    public static void invokeHandlerAdded(ServiceConfig cfg, ServiceInvocationHandler handler) {
+        requireNonNull(cfg, "cfg");
         requireNonNull(handler, "handler");
 
-        final Set<Server> owners = map.getOrCompute(handler, HashSet<Server>::new);
-        if (owners.contains(server)) {
-            // Invoked already
-            return;
-        }
-
         try {
-            handler.handlerAdded(server);
+            handler.handlerAdded(cfg);
         } catch (Exception e) {
             fail("handlerAdded", handler, e);
         }
-
-        owners.add(server);
     }
 
     private static <T> void fail(String operationName, T component, Exception e) {
         throw new IllegalStateException(
                 "failed to invoke " + operationName + "() on: " + component, e);
-    }
-
-    private static class WeakIdentityMap<K, V> {
-        private final Map<KeyRef<K>, V> map = new HashMap<>();
-        private final ReferenceQueue<K> refQueue = new ReferenceQueue<>();
-
-        synchronized V getOrCompute(K key, Supplier<V> supplier) {
-            V value = get(key);
-            if (value == null) {
-                value = supplier.get();
-                assert value != null;
-                put(key, value);
-            }
-
-            return value;
-        }
-
-        private V get(K key) {
-            expunge();
-            return map.get(new KeyRef<>(key));
-        }
-
-        private V put(K key, V value) {
-            expunge();
-            requireNonNull(key, "key");
-            requireNonNull(value, "value");
-
-            return map.put(new KeyRef<>(key, refQueue), value);
-        }
-
-        private void expunge() {
-            Reference<? extends K> ref;
-            while ((ref = refQueue.poll()) != null) {
-                map.remove(ref);
-            }
-        }
-    }
-
-    private static final class KeyRef<T> extends WeakReference<T> {
-
-        private final int hashCode;
-
-        KeyRef(T key) {
-            this(key, null);
-        }
-
-        KeyRef(T key, ReferenceQueue<T> q) {
-            super(key, q);
-            requireNonNull(key, "key");
-            hashCode = key.hashCode();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o instanceof KeyRef)) {
-                return false;
-            }
-
-            final KeyRef<?> that = (KeyRef<?>) o;
-            final Object value = get();
-            return value != null && value == that.get();
-        }
-
-        @Override
-        public int hashCode() {
-            return hashCode;
-        }
-
-        @Override
-        public String toString() {
-            return String.valueOf(get());
-        }
     }
 
     private ServiceCallbackInvoker() {}

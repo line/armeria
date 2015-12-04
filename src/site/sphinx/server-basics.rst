@@ -3,7 +3,6 @@
 .. _`Serving static files`: server-http-file.html
 .. _`Embedding Apache Tomcat`: server-http-tomcat.html
 .. _`ServerBuilder`: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
-.. _`VirtualHostBuilder`: apidocs/index.html?com/linecorp/armeria/server/VirtualHostBuilder.html
 .. _`Service`: apidocs/index.html?com/linecorp/armeria/server/Service.html
 
 Server basics
@@ -65,25 +64,21 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
 
     ServerBuilder sb = new ServerBuilder();
     sb.port(8080, SessionProtocol.HTTP);
-
-    VirtualHost vh = new VirtualHostBuilder().serviceAt(
+    sb.serviceAt(
             "/hello",
             ThriftService.of(helloHandler, SerializationFormat.THRIFT_BINARY)
                     .decorate(LoggingService::new)).build();
 
-    sb.defaultVirtualHost(vh);
-
     Server server= sb.build();
     server.start();
 
-In the example above, we created a default ``VirtualHost`` and added a new ``ThriftService`` to it.
+In the example above, we created a new ``ServerBuilder`` and added a new ``ThriftService`` to it.
 The ``ThriftService`` is bound at the path ``/hello`` and will use the TBinary format.
 
 We also decorated the ``ThriftService`` using ``LoggingService``, which logs all Thrift calls and replies.
 You might be interested in decorating a service using other decorators, to gather metrics for example.
 
-Note that you can add more than one ``VirtualHost`` to a ``Server`` and more than one ``ThriftService``
-(or any service implementation) to a ``VirtualHost``.
+Note that you can add more than one ``ThriftService`` (or any ``Service`` implementation) to a ``Server``.
 
 Adding a documentation service
 ------------------------------
@@ -96,10 +91,10 @@ and lets you browse the available service operations and structs:
 
 .. code-block:: java
 
-    VirtualHostBuilder vhb= new VirtualHostBuilder();
-    vhb.serviceAt("/foo/", ThriftService.of(...))
-       .serviceAt("/bar/", ThriftService.of(...))
-       .serviceUnder("/docs/", new DocService());
+    ServerBuilder sb = new ServerBuilder();
+    sb.serviceAt("/foo/", ThriftService.of(...))
+      .serviceAt("/bar/", ThriftService.of(...))
+      .serviceUnder("/docs/", new DocService());
 
 Note that we used ``serviceUnder()`` for ``DocService`` unlike the other services. ``serviceUnder()`` binds
 a service to a directory recursively (prefix match) while ``serviceAt()`` binds to a specific path only
@@ -118,5 +113,4 @@ Next steps
 - `Embedding Apache Tomcat`_ if you want to run your JEE web application on the same port
 - or you could explore the server-side API documentation:
    - `ServerBuilder`_
-   - `VirtualHostBuilder`_
    - `Service`_

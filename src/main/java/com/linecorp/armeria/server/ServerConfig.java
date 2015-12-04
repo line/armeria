@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,11 +38,14 @@ import io.netty.util.concurrent.Promise;
  */
 public final class ServerConfig {
 
+    /** Initialized later by {@link Server} via {@link #setServer(Server)}. */
+    private Server server;
+
     private final List<ServerPort> ports;
     private final VirtualHost defaultVirtualHost;
     private final List<VirtualHost> virtualHosts;
     private final DomainNameMapping<VirtualHost> virtualHostMapping;
-    private final List<ServiceEntry> services;
+    private final List<ServiceConfig> services;
 
     private final int numWorkers;
     private final int maxPendingRequests;
@@ -57,6 +59,8 @@ public final class ServerConfig {
 
     private final Executor blockingTaskExecutor;
 
+    private final String serviceLoggerPrefix;
+
     private String strVal;
 
     ServerConfig(
@@ -65,7 +69,7 @@ public final class ServerConfig {
             int numWorkers, int maxPendingRequests, int maxConnections,
             TimeoutPolicy requestTimeoutPolicy, long idleTimeoutMillis, int maxFrameLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor) {
+            Executor blockingTaskExecutor, String serviceLoggerPrefix) {
 
         requireNonNull(ports, "ports");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -86,6 +90,7 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
 
         // Set localAddresses.
         final List<ServerPort> portsCopy = new ArrayList<>();
@@ -118,7 +123,10 @@ public final class ServerConfig {
         // via virtualHosts(). i.e. no need to check defaultVirtualHost().
         virtualHostsCopy.add(defaultVirtualHost);
 
-        if (virtualHostsCopy.stream().allMatch(h -> h.services().isEmpty())) {
+        // Sets the parent of VirtualHost to this configuration.
+        virtualHostsCopy.forEach(h -> h.setServerConfig(this));
+
+        if (virtualHostsCopy.stream().allMatch(h -> h.serviceConfigs().isEmpty())) {
             throw new IllegalArgumentException("no services in the server");
         }
 
@@ -127,7 +135,7 @@ public final class ServerConfig {
 
         // Build the complete list of the services available in this server.
         services = Collections.unmodifiableList(
-                virtualHostsCopy.stream().flatMap(h -> h.services().stream()).collect(Collectors.toList()));
+                virtualHostsCopy.stream().flatMap(h -> h.serviceConfigs().stream()).collect(Collectors.toList()));
     }
 
     static int validateNumWorkers(int numWorkers) {
@@ -188,8 +196,28 @@ public final class ServerConfig {
         }
 
         return new VirtualHost(
-                "*", sslCtx, h.services().stream().map(
-                e -> new SimpleEntry<>(e.pathMapping(), e.service())).collect(Collectors.toList()));
+                "*", sslCtx,
+                h.serviceConfigs().stream().map(
+                        e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerNameWithoutPrefix()))
+                 .collect(Collectors.toList()));
+    }
+
+    /**
+     * Returns the {@link Server}.
+     */
+    public Server server() {
+        if (server == null) {
+            throw new IllegalStateException("Server has not been configured yet.");
+        }
+
+        return server;
+    }
+
+    void setServer(Server server) {
+        if (this.server != null) {
+            throw new IllegalStateException("ServerConfig cannot be used for more than one Server.");
+        }
+        this.server = requireNonNull(server, "server");
     }
 
     /**
@@ -240,15 +268,15 @@ public final class ServerConfig {
         final Class<? extends Service> serviceType = service.getClass();
         final List<VirtualHost> res = new ArrayList<>();
         for (VirtualHost h : virtualHosts) {
-            for (ServiceEntry e : h.services()) {
+            for (ServiceConfig c : h.serviceConfigs()) {
                 // Consider the case where the specified service is decorated before being added.
-                Optional<? extends Service> sOpt = e.service().as(serviceType);
+                Optional<? extends Service> sOpt = c.service().as(serviceType);
                 if (!sOpt.isPresent()) {
                     continue;
                 }
 
                 if (sOpt.get() == service) {
-                    res.add(e.virtualHost());
+                    res.add(c.virtualHost());
                     break;
                 }
             }
@@ -260,7 +288,7 @@ public final class ServerConfig {
     /**
      * Returns the information of all available {@link Service}s in the {@link Server}.
      */
-    public List<ServiceEntry> services() {
+    public List<ServiceConfig> serviceConfigs() {
         return services;
     }
 
@@ -331,6 +359,13 @@ public final class ServerConfig {
         return blockingTaskExecutor;
     }
 
+    /**
+     * Returns the prefix of {@linkplain ServiceInvocationContext#logger() service logger}'s names.
+     */
+    public String serviceLoggerPrefix() {
+        return serviceLoggerPrefix;
+    }
+
     @Override
     public String toString() {
         String strVal = this.strVal;
@@ -339,7 +374,8 @@ public final class ServerConfig {
                     getClass(), ports(), null, virtualHosts(),
                     numWorkers(), maxPendingRequests(), maxConnections(),
                     requestTimeoutPolicy(), idleTimeoutMillis(), maxFrameLength(),
-                    gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(), blockingTaskExecutor());
+                    gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
+                    blockingTaskExecutor(), serviceLoggerPrefix());
         }
 
         return strVal;
@@ -351,7 +387,7 @@ public final class ServerConfig {
             int numWorkers, int maxPendingRequests, int maxConnections,
             TimeoutPolicy requestTimeoutPolicy, long idleTimeoutMillis, int maxFrameLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor) {
+            Executor blockingTaskExecutor, String serviceLoggerPrefix) {
 
         StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -377,18 +413,18 @@ public final class ServerConfig {
         buf.append(" virtualHosts: [");
         if (!virtualHosts.isEmpty()) {
             virtualHosts.forEach(c -> {
-                buf.append(VirtualHost.toString(null, c.hostnamePattern(), c.sslContext(), c.services()));
+                buf.append(VirtualHost.toString(null, c.hostnamePattern(), c.sslContext(), c.serviceConfigs()));
                 buf.append(", ");
             });
 
             if (defaultVirtualHost != null) {
                 buf.append(VirtualHost.toString(null, "*", defaultVirtualHost.sslContext(),
-                                                defaultVirtualHost.services()));
+                                                defaultVirtualHost.serviceConfigs()));
             } else {
                 buf.setLength(buf.length() - 2);
             }
         } else if (defaultVirtualHost != null) {
-            buf.append(VirtualHost.toString(null, "*", defaultVirtualHost.sslContext(), defaultVirtualHost.services()));
+            buf.append(VirtualHost.toString(null, "*", defaultVirtualHost.sslContext(), defaultVirtualHost.serviceConfigs()));
         }
 
         buf.append("], numWorkers: ");
@@ -409,6 +445,8 @@ public final class ServerConfig {
         buf.append(gracefulShutdownTimeout);
         buf.append(", blockingTaskExecutor: ");
         buf.append(blockingTaskExecutor);
+        buf.append(", serviceLoggerPrefix: ");
+        buf.append(serviceLoggerPrefix);
         buf.append(')');
 
         return buf.toString();

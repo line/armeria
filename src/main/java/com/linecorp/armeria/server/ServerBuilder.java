@@ -18,19 +18,24 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.SSLException;
+
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TimeoutPolicy;
 
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Promise;
 
@@ -43,8 +48,9 @@ import io.netty.util.concurrent.Promise;
  * sb.port(8080, SessionProtocol.HTTP);
  * // Build and add a virtual host.
  * sb.virtualHost(new VirtualHost("*.foo.com").serviceAt(...).build());
- * // Build and add the default virtual host.
- * sb.defaultVirtualHost(new VirtualHost().serviceAt(...).build());
+ * // Add services to the default virtual host.
+ * sb.serviceAt(...);
+ * sb.serviceUnder(...);
  * // Build a server.
  * Server s = sb.build();
  * }</pre>
@@ -53,7 +59,6 @@ import io.netty.util.concurrent.Promise;
  */
 public final class ServerBuilder {
 
-    private static final VirtualHost DEFAULT_VIRTUAL_HOST = new VirtualHostBuilder("*").build();
     private static final int DEFAULT_NUM_WORKERS;
     private static final int DEFAULT_MAX_PENDING_REQUESTS = 8;
     private static final int DEFAULT_MAX_CONNECTIONS = 65536;
@@ -65,6 +70,7 @@ public final class ServerBuilder {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int DEFAULT_MAX_BLOCKING_TASK_THREADS = 200; // from Tomcat's maxThreads.
+    private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
 
     static {
         String value = System.getProperty("io.netty.eventLoopThreads", "0");
@@ -95,8 +101,10 @@ public final class ServerBuilder {
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<VirtualHost> virtualHosts = new ArrayList<>();
+    private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder();
+    private boolean updatedDefaultVirtualHostBuilder;
 
-    private VirtualHost defaultVirtualHost = DEFAULT_VIRTUAL_HOST;
+    private VirtualHost defaultVirtualHost;
     private int numWorkers = DEFAULT_NUM_WORKERS;
     private int maxPendingRequests = DEFAULT_MAX_PENDING_REQUESTS;
     private int maxConnections = DEFAULT_MAX_CONNECTIONS;
@@ -107,10 +115,13 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor;
+    private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
-     * interfaces using the specified {@link SessionProtocol}.
+     * interfaces using the specified {@link SessionProtocol}. If no port is added (i.e. no {@code port()}
+     * method is called), a default of {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP}
+     * will be used.
      */
     public ServerBuilder port(int port, SessionProtocol protocol) {
         ports.add(new ServerPort(port, protocol));
@@ -119,7 +130,8 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
-     * {@link SessionProtocol}.
+     * {@link SessionProtocol}. If no port is added (i.e. no {@code port()} method is called), a default of
+     * {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP} will be used.
      */
     public ServerBuilder port(InetSocketAddress localAddress, SessionProtocol protocol) {
         ports.add(new ServerPort(localAddress, protocol));
@@ -127,7 +139,8 @@ public final class ServerBuilder {
     }
 
     /**
-     * Adds the specified {@link ServerPort}.
+     * Adds the specified {@link ServerPort}. If no port is added (i.e. no {@code port()} method is called),
+     * a default of {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP} will be used.
      */
     public ServerBuilder port(ServerPort port) {
         ports.add(requireNonNull(port, "port"));
@@ -140,18 +153,6 @@ public final class ServerBuilder {
      */
     public ServerBuilder virtualHost(VirtualHost virtualHost) {
         virtualHosts.add(requireNonNull(virtualHost, "virtualHost"));
-        return this;
-    }
-
-    /**
-     * Sets the default {@link VirtualHost}, which is used when no other {@link VirtualHost}s match the
-     * host name of a client request. e.g. the {@code "Host"} header in HTTP or host name in TLS SNI extension
-     *
-     * @see #virtualHost(VirtualHost)
-     */
-    public ServerBuilder defaultVirtualHost(VirtualHost defaultVirtualHost) {
-        requireNonNull(defaultVirtualHost, "defaultVirtualHost");
-        this.defaultVirtualHost = defaultVirtualHost;
         return this;
     }
 
@@ -284,6 +285,144 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the prefix of {@linkplain ServiceInvocationContext#logger() service logger} names.
+     * The default value is "{@value #DEFAULT_SERVICE_LOGGER_PREFIX}". A service logger name prefix must be
+     * a string of valid Java identifier names concatenated by period ({@code '.'}), such as a package name.
+     */
+    public ServerBuilder serviceLoggerPrefix(String serviceLoggerPrefix) {
+        this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
+        return this;
+    }
+
+    /**
+     * Sets the {@link SslContext} of the default {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder sslContext(SslContext sslContext) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.sslContext(sslContext);
+        return this;
+    }
+
+    /**
+     * Sets the {@link SslContext} of the default {@link VirtualHost} from the specified
+     * {@link SessionProtocol}, {@code keyCertChainFile} and cleartext {@code keyFile}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder sslContext(
+            SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.sslContext(protocol, keyCertChainFile, keyFile);
+        return this;
+    }
+
+    /**
+     * Sets the {@link SslContext} of the default {@link VirtualHost} from the specified
+     * {@link SessionProtocol}, {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder sslContext(
+            SessionProtocol protocol,
+            File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
+
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.sslContext(protocol, keyCertChainFile, keyFile, keyPassword);
+        return this;
+    }
+
+    /**
+     * Binds the specified {@link Service} at the specified exact path of the default {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder serviceAt(String exactPath, Service service) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.serviceAt(exactPath, service);
+        return this;
+    }
+
+    /**
+     * Binds the specified {@link Service} under the specified directory of the default {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder serviceUnder(String pathPrefix, Service service) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
+        return this;
+    }
+
+    /**
+     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
+     * {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder service(PathMapping pathMapping, Service service) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(pathMapping, service);
+        return this;
+    }
+
+    /**
+     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
+     * {@link VirtualHost}.
+     *
+     * @param loggerName the name of the {@linkplain ServiceInvocationContext#logger() service logger};
+     *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
+     *                   such as a package name or a fully-qualified class name
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder service(PathMapping pathMapping, Service service, String loggerName) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
+        return this;
+    }
+
+    private void defaultVirtualHostBuilderUpdated() {
+        updatedDefaultVirtualHostBuilder = true;
+        if (defaultVirtualHost != null) {
+            throw new IllegalStateException("ServerBuilder.defaultVirtualHost() invoked already.");
+        }
+    }
+
+    /**
+     * Sets the default {@link VirtualHost}, which is used when no other {@link VirtualHost}s match the
+     * host name of a client request. e.g. the {@code "Host"} header in HTTP or host name in TLS SNI extension
+     *
+     * @throws IllegalStateException if other default {@link VirtualHost} builder methods have been invoked
+     * already, including:
+     * <ul>
+     *   <li>{@link #sslContext(SslContext)}</li>
+     *   <li>{@link #serviceAt(String, Service)}</li>
+     *   <li>{@link #serviceUnder(String, Service)}</li>
+     *   <li>{@link #service(PathMapping, Service)}</li>
+     * </ul>
+     *
+     * @see #virtualHost(VirtualHost)
+     */
+    public ServerBuilder defaultVirtualHost(VirtualHost defaultVirtualHost) {
+        requireNonNull(defaultVirtualHost, "defaultVirtualHost");
+        if (updatedDefaultVirtualHostBuilder) {
+            throw new IllegalStateException("invoked other default VirtualHost builder methods already");
+        }
+
+        this.defaultVirtualHost = defaultVirtualHost;
+        return this;
+    }
+
+    /**
      * Creates a new {@link Server} with the configuration properties set so far.
      */
     public Server build() {
@@ -292,10 +431,18 @@ public final class ServerBuilder {
             blockingTaskExecutor = defaultBlockingTaskExecutor();
         }
 
+        final List<ServerPort> ports =
+                !this.ports.isEmpty() ? this.ports
+                                      : Collections.singletonList(new ServerPort(0, SessionProtocol.HTTP));
+
+        final VirtualHost defaultVirtualHost =
+                this.defaultVirtualHost != null ? this.defaultVirtualHost
+                                                : defaultVirtualHostBuilder.build();
+
         return new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, numWorkers, maxPendingRequests, maxConnections,
                 requestTimeoutPolicy, idleTimeoutMillis, maxFrameLength, gracefulShutdownQuietPeriod,
-                gracefulShutdownTimeout, blockingTaskExecutor));
+                gracefulShutdownTimeout, blockingTaskExecutor, serviceLoggerPrefix));
     }
 
     @Override
@@ -303,6 +450,7 @@ public final class ServerBuilder {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts,
                 numWorkers, maxPendingRequests, maxConnections, requestTimeoutPolicy, idleTimeoutMillis,
-                maxFrameLength, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor);
+                maxFrameLength, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
+                serviceLoggerPrefix);
     }
 }

@@ -20,12 +20,12 @@ import java.util.Optional;
 import java.util.function.LongSupplier;
 
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.DecoratingServiceCodec;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceCodec;
+import com.linecorp.armeria.server.ServiceConfig;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -49,20 +49,21 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
      * Creates a new instance that decorates the specified {@link ServiceCodec} with
      * the specified {@link ServiceMetricConsumer}.
      */
-    public MetricCollectingServiceCodec(ServiceCodec codec, ServiceMetricConsumer consumer) {
+    MetricCollectingServiceCodec(ServiceCodec codec, ServiceMetricConsumer consumer) {
         super(codec);
         metricConsumer = consumer;
     }
 
     @Override
-    public DecodeResult decodeRequest(Channel ch, SessionProtocol sessionProtocol, String hostname, String path,
-                                      String mappedPath, ByteBuf in, Object originalRequest,
-                                      Promise<Object> promise) throws Exception {
+    public DecodeResult decodeRequest(ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
+                                      String hostname, String path, String mappedPath, ByteBuf in,
+                                      Object originalRequest, Promise<Object> promise) throws Exception {
+
         final long startTime = System.nanoTime();
         final int requestSize = in.readableBytes();
 
         DecodeResult decodeResult = delegate().decodeRequest(
-                ch, sessionProtocol, hostname, path, mappedPath, in, originalRequest, promise);
+                cfg, ch, sessionProtocol, hostname, path, mappedPath, in, originalRequest, promise);
 
         LongSupplier lazyElapsedTime = () -> System.nanoTime() - startTime;
 

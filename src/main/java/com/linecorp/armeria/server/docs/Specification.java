@@ -34,17 +34,18 @@ import org.apache.thrift.TBase;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceEntry;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.thrift.ThriftService;
 
 class Specification {
 
-    static Specification forServiceEntries(Iterable<ServiceEntry> services,
+    static Specification forServiceConfigs(Iterable<ServiceConfig> serviceConfigs,
                                            Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) {
+
         final Map<Class<?>, Iterable<EndpointInfo>> map = new LinkedHashMap<>();
 
-        for (ServiceEntry serviceEntry : services) {
-            Service service = serviceEntry.service();
+        for (ServiceConfig c : serviceConfigs) {
+            Service service = c.service();
             final Optional<ThriftService> thriftServiceOptional = service.as(ThriftService.class);
             if (!thriftServiceOptional.isPresent()) {
                 continue;
@@ -59,11 +60,11 @@ class Specification {
 
                 final Class<?> serviceClass = iface.getEnclosingClass();
                 final List<EndpointInfo> endpoints =
-                        (List<EndpointInfo>) map.computeIfAbsent(serviceClass, c -> new ArrayList<>());
+                        (List<EndpointInfo>) map.computeIfAbsent(serviceClass, cls -> new ArrayList<>());
 
-                serviceEntry.pathMapping().exactPath().ifPresent(
+                c.pathMapping().exactPath().ifPresent(
                         p -> endpoints.add(EndpointInfo.of(
-                                serviceEntry.virtualHost().hostnamePattern(),
+                                c.virtualHost().hostnamePattern(),
                                 p, thriftService.defaultSerializationFormat(),
                                 thriftService.allowedSerializationFormats())));
             }

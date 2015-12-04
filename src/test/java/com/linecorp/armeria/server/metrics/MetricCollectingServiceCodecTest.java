@@ -39,7 +39,6 @@ import com.linecorp.armeria.server.ServiceCodec;
 import com.linecorp.armeria.server.ServiceCodec.DecodeResult;
 import com.linecorp.armeria.server.ServiceCodec.DecodeResultType;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
@@ -53,36 +52,28 @@ import io.netty.util.DefaultAttributeMap;
 public class MetricCollectingServiceCodecTest {
     @SuppressWarnings("unchecked")
     protected static void setupServer(
-            ServerBuilder sb, ServiceInvocationHandler handler, final ServiceMetricConsumer consumer) {
+            ServerBuilder sb, ServiceInvocationHandler handler, final ServiceMetricConsumer consumer) throws Exception {
         ServiceCodec codec = Mockito.mock(ServiceCodec.class);
         DecodeResult decodeResult = Mockito.mock(DecodeResult.class);
         DefaultAttributeMap defaultAttributeMap = new DefaultAttributeMap();
         ServiceInvocationContext invocationContext = Mockito.mock(ServiceInvocationContext.class);
 
-        try {
-            when(decodeResult.type()).thenReturn(DecodeResultType.SUCCESS);
-            when(decodeResult.invocationContext()).thenReturn(invocationContext);
-            when(invocationContext.attr(any())).then(x -> {
-                return defaultAttributeMap.attr(AttributeKey.valueOf("TEST"));
-            });
-            when(invocationContext.method()).thenReturn("someMethod");
+        when(decodeResult.type()).thenReturn(DecodeResultType.SUCCESS);
+        when(decodeResult.invocationContext()).thenReturn(invocationContext);
+        when(invocationContext.attr(any())).then(x -> defaultAttributeMap.attr(AttributeKey.valueOf("TEST")));
+        when(invocationContext.method()).thenReturn("someMethod");
 
-            when(codec.decodeRequest(any(), any(), any(), any(), any(), any(), any(), any()))
-                    .thenReturn(decodeResult);
+        when(codec.decodeRequest(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(decodeResult);
 
-            when(codec.encodeResponse(any(), any())).thenReturn(Unpooled.EMPTY_BUFFER);
-            when(codec.encodeFailureResponse(any(), any())).thenReturn(Unpooled.EMPTY_BUFFER);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        when(codec.encodeResponse(any(), any())).thenReturn(Unpooled.EMPTY_BUFFER);
+        when(codec.encodeFailureResponse(any(), any())).thenReturn(Unpooled.EMPTY_BUFFER);
 
-        Service service = Service.of(new MetricCollectingServiceCodec(codec, consumer), handler);
-
-        sb.defaultVirtualHost(new VirtualHostBuilder().serviceAt("/", service).build());
+        sb.serviceAt("/", Service.of(new MetricCollectingServiceCodec(codec, consumer), handler));
     }
 
     abstract static class ExecutionCheckingTest extends AbstractServerTest {
-        private int executed = 0;
+        private int executed;
 
         protected ServiceMetricConsumer defaultConsumer = (a, b, c, d, e, f, g, h) -> executed += 1;
 
@@ -101,7 +92,7 @@ public class MetricCollectingServiceCodecTest {
 
     public static class NormalResponseTest extends ExecutionCheckingTest {
         @Override
-        protected void configureServer(ServerBuilder sb) {
+        protected void configureServer(ServerBuilder sb) throws Exception {
             setupServer(sb, (ctx, blockingTaskExecutor, promise) -> promise.trySuccess("Hello World"),
                         defaultConsumer);
         }
@@ -109,7 +100,7 @@ public class MetricCollectingServiceCodecTest {
 
     public static class TypedResponseTest extends ExecutionCheckingTest {
         @Override
-        protected void configureServer(ServerBuilder sb) {
+        protected void configureServer(ServerBuilder sb) throws Exception {
             ByteBufHolder response = Mockito.mock(ByteBufHolder.class);
             when(response.content()).thenReturn(Unpooled.EMPTY_BUFFER);
             setupServer(sb, (ctx, blockingTaskExecutor, promise) -> promise.trySuccess(response),
@@ -119,7 +110,7 @@ public class MetricCollectingServiceCodecTest {
 
     public static class HttpResponseTest extends ExecutionCheckingTest {
         @Override
-        protected void configureServer(ServerBuilder sb) {
+        protected void configureServer(ServerBuilder sb) throws Exception {
             setupServer(
                     sb, (ctx, blockingTaskExecutor, promise) -> promise.trySuccess(
                             new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)),
@@ -129,7 +120,7 @@ public class MetricCollectingServiceCodecTest {
 
     public static class ExceptionResponseTest extends ExecutionCheckingTest {
         @Override
-        protected void configureServer(ServerBuilder sb) {
+        protected void configureServer(ServerBuilder sb) throws Exception {
             setupServer(sb, (ctx, blockingTaskExecutor, promise) -> promise.tryFailure(new RuntimeException()),
                         defaultConsumer);
         }

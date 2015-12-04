@@ -66,9 +66,11 @@ public interface Service {
     }
 
     /**
-     * Invoked when this {@link Service} has been added to the specified {@link Server}.
+     * Invoked when this {@link Service} has been added to a {@link Server} with the specified configuration.
+     * Please note that this method can be invoked more than once if ths {@link Service} has been added more
+     * than once.
      */
-    default void serviceAdded(Server server) throws Exception {}
+    default void serviceAdded(ServiceConfig cfg) throws Exception {}
 
     /**
      * Returns the {@link ServiceCodec} of this {@link Service}.
