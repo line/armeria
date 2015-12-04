@@ -37,6 +37,7 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.AbstractServerTest;
@@ -48,11 +49,14 @@ import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
 import com.linecorp.armeria.service.test.thrift.hbase.Hbase;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
+import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 
 public class DocServiceTest extends AbstractServerTest {
 
     private static final HelloService.AsyncIface HELLO_SERVICE_HANDLER =
             (name, resultHandler) -> resultHandler.onComplete("Hello " + name);
+
+    private static final hello_args SAMPLE_HELLO = new hello_args().setName("sample user");
 
     @Override
     protected void configureServer(ServerBuilder sb) {
@@ -73,7 +77,8 @@ public class DocServiceTest extends AbstractServerTest {
         defaultVirtualHost.serviceAt("/cassandra/debug", cassandraServiceDebug);
         defaultVirtualHost.serviceAt("/hbase", hbaseService);
 
-        defaultVirtualHost.serviceUnder("/docs/", new DocService().decorate(LoggingService::new));
+        defaultVirtualHost.serviceUnder("/docs/", new DocService(Collections.singletonList(SAMPLE_HELLO))
+                .decorate(LoggingService::new));
 
         sb.defaultVirtualHost(defaultVirtualHost.build());
     }
@@ -92,7 +97,7 @@ public class DocServiceTest extends AbstractServerTest {
                 EndpointInfo.of("*", "/hbase", THRIFT_BINARY, SerializationFormat.ofThrift())));
 
         final String expected = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(
-                Specification.forServiceClasses(serviceMap));
+                Specification.forServiceClasses(serviceMap, ImmutableMap.of(hello_args.class, SAMPLE_HELLO)));
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpGet req = new HttpGet(specificationUri());

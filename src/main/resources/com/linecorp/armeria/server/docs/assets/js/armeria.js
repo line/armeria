@@ -94,7 +94,7 @@ $(function () {
       'function': functionInfo
     }));
 
-    var debugText = functionContainer.find('.debug-textarea');
+    var debugText = functionContainer.find('.debug-textarea').val(functionInfo.sampleJsonRequest);
     var debugResponse = functionContainer.find('.debug-response code');
 
     var submitDebugRequest = function () {

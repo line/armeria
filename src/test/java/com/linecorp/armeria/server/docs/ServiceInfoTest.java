@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static net.javacrumbs.jsonunit.JsonAssert.assertJsonEquals;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
@@ -29,8 +31,11 @@ import org.apache.thrift.meta_data.StructMetaData;
 import org.apache.thrift.protocol.TType;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
+import com.linecorp.armeria.service.test.thrift.main.FooService.bar3_args;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 
 public class ServiceInfoTest {
@@ -38,11 +43,13 @@ public class ServiceInfoTest {
     @Test
     public void fooServiceTest() throws Exception {
         final ServiceInfo service =
-                ServiceInfo.of(FooService.class, Arrays.asList(
-                        EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_BINARY,
-                                        EnumSet.of(SerializationFormat.THRIFT_BINARY)),
-                        EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
-                                        EnumSet.of(SerializationFormat.THRIFT_TEXT))));
+                ServiceInfo.of(FooService.class,
+                               Arrays.asList(
+                                       EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_BINARY,
+                                                       EnumSet.of(SerializationFormat.THRIFT_BINARY)),
+                                       EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
+                                                       EnumSet.of(SerializationFormat.THRIFT_TEXT))),
+                               ImmutableMap.of(bar3_args.class, new bar3_args().setIntVal(10)));
 
         assertThat(service.endpoints(), hasSize(2));
         // Should be sorted alphabetically
@@ -59,12 +66,14 @@ public class ServiceInfoTest {
         assertThat(bar1.parameters().isEmpty(), is(true));
         assertThat(bar1.returnType(), is(TypeInfo.VOID));
         assertThat(bar1.exceptions().size(), is(1));
+        assertEquals("", bar1.sampleJsonRequest());
 
         final TypeInfo string = TypeInfo.of(ValueType.STRING, false);
         final FunctionInfo bar2 = functions.get("bar2");
         assertThat(bar2.parameters().isEmpty(), is(true));
         assertThat(bar2.returnType(), is(string));
         assertThat(bar2.exceptions().size(), is(1));
+        assertEquals("", bar2.sampleJsonRequest());
 
         final StructInfo foo = StructInfo.of(new StructMetaData(TType.STRUCT, FooStruct.class));
         final FunctionInfo bar3 = functions.get("bar3");
@@ -74,6 +83,7 @@ public class ServiceInfoTest {
         assertThat(bar3.parameters().get(1), is(FieldInfo.of("foo", RequirementType.DEFAULT, foo)));
         assertThat(bar3.returnType(), is(foo));
         assertThat(bar3.exceptions().size(), is(1));
+        assertJsonEquals("{\"intVal\": 10}", bar3.sampleJsonRequest());
 
         final FunctionInfo bar4 = functions.get("bar4");
         assertThat(bar4.parameters().size(), is(1));
@@ -81,6 +91,7 @@ public class ServiceInfoTest {
                    is(FieldInfo.of("foos", RequirementType.DEFAULT, ListInfo.of(foo))));
         assertThat(bar4.returnType(), is(ListInfo.of(foo)));
         assertThat(bar4.exceptions().size(), is(1));
+        assertEquals("", bar4.sampleJsonRequest());
 
         final FunctionInfo bar5 = functions.get("bar5");
         assertThat(bar5.parameters().size(), is(1));
@@ -88,5 +99,6 @@ public class ServiceInfoTest {
                    is(FieldInfo.of("foos", RequirementType.DEFAULT, MapInfo.of(string, foo))));
         assertThat(bar5.returnType(), is(MapInfo.of(string, foo)));
         assertThat(bar5.exceptions().size(), is(1));
+        assertEquals("", bar5.sampleJsonRequest());
     }
 }

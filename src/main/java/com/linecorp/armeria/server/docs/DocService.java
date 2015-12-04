@@ -18,9 +18,16 @@ package com.linecorp.armeria.server.docs;
 
 import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofCatchAll;
 import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofExact;
+import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,13 +51,31 @@ public class DocService extends AbstractCompositeService {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    private final Map<Class<?>, ? extends TBase<?, ?>> sampleRequests;
+
+
     /**
-     * Creates a new instance.
+     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}.
+     * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
+     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
      */
-    public DocService() {
+    @SafeVarargs
+    public <T extends TBase<?, ?>> DocService(T... sampleRequests) {
+        this(Arrays.asList(requireNonNull(sampleRequests, "sampleRequests")));
+    }
+
+    /**
+     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}.
+     * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
+     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
+     */
+    public DocService(Iterable<? extends TBase<?, ?>> sampleRequests) {
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
+        requireNonNull(sampleRequests, "sampleRequests");
+        this.sampleRequests = StreamSupport.stream(sampleRequests.spliterator(), false)
+                .collect(Collectors.toMap(Object::getClass, Function.identity()));
     }
 
     @Override
@@ -69,7 +94,8 @@ public class DocService extends AbstractCompositeService {
                                                      .collect(Collectors.toList());
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
-                                             .writeValueAsBytes(Specification.forServiceEntries(services)));
+                                             .writeValueAsBytes(Specification.forServiceEntries(
+                                                     services, sampleRequests)));
             }
         });
     }
