@@ -18,11 +18,19 @@ package com.linecorp.armeria.server.http;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.Executor;
+
+import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCodec;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
+
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 /**
  * A {@link Service} that handles an HTTP request. This {@link Service} must run on a {@link ServerPort}
@@ -69,8 +77,77 @@ public class HttpService implements Service {
         return handler;
     }
 
+    /**
+     * Creates a new {@link HttpService} that tries this {@link HttpService} first and then the specified
+     * {@link HttpService} when this {@link HttpService} returned a {@code 404 Not Found} response.
+     *
+     * @param nextService the {@link HttpService} to try secondly
+     */
+    public HttpService orElse(HttpService nextService) {
+        requireNonNull(nextService, "nextService");
+        return new HttpService(new OrElseHandler(handler(), nextService.handler()));
+    }
+
     @Override
     public String toString() {
         return "HttpService(" + handler().getClass().getSimpleName() + ')';
+    }
+
+    private static final class OrElseHandler implements ServiceInvocationHandler {
+
+        private final ServiceInvocationHandler first;
+        private final ServiceInvocationHandler second;
+
+        OrElseHandler(ServiceInvocationHandler first, ServiceInvocationHandler second) {
+            this.first = first;
+            this.second = second;
+        }
+
+        @Override
+        public void invoke(ServiceInvocationContext ctx,
+                           Executor blockingTaskExecutor, Promise<Object> promise) throws Exception {
+
+            invoke0(ctx, blockingTaskExecutor, first, second, promise);
+        }
+
+        private void invoke0(ServiceInvocationContext ctx, Executor blockingTaskExecutor,
+                             ServiceInvocationHandler subHandler, ServiceInvocationHandler nextSubHandler,
+                             Promise<Object> promise) throws Exception {
+
+            Promise<Object> subPromise = ctx.eventLoop().newPromise();
+            subHandler.invoke(ctx, blockingTaskExecutor, subPromise);
+            if (subPromise.isDone()) {
+                handleResponse(ctx, blockingTaskExecutor, subPromise, nextSubHandler, promise);
+            } else {
+                subPromise.addListener(
+                        future -> handleResponse(ctx, blockingTaskExecutor, future, nextSubHandler, promise));
+            }
+        }
+
+        void handleResponse(ServiceInvocationContext ctx, Executor blockingTaskExecutor,
+                            Future<Object> subFuture, ServiceInvocationHandler nextSubHandler,
+                            Promise<Object> promise) throws Exception {
+
+            if (!subFuture.isSuccess()) {
+                // sub-handler failed with an exception.
+                promise.tryFailure(subFuture.cause());
+                return;
+            }
+
+            final FullHttpResponse res = (FullHttpResponse) subFuture.getNow();
+            if (res.status().code() == HttpResponseStatus.NOT_FOUND.code() && nextSubHandler != null) {
+                // The current sub-handler returned 404. Try the next sub-handler.
+                res.release();
+                if (!promise.isDone()) {
+                    invoke0(ctx, blockingTaskExecutor, nextSubHandler, null, promise);
+                }
+                return;
+            }
+
+            // The current sub-handler returned non-404 or it is the last resort.
+            if (!promise.trySuccess(res)) {
+                res.release();
+            }
+        }
     }
 }
