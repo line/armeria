@@ -70,7 +70,7 @@ struct FooStruct {
     6: double doubleVal,
     7: string stringVal,
     8: binary binaryVal,
-    9: slist slistVal,
+    /* 9: slist slistVal, */
     10: FooEnum enumVal,
     11: FooUnion unionVal,
     12: map<string, FooEnum> mapVal,
@@ -82,6 +82,6 @@ service FooService {
     void bar1() throws (1: FooServiceException e),
     string bar2() throws (1: FooServiceException e),
     FooStruct bar3(1: i32 intVal, 2: FooStruct foo) throws (1: FooServiceException e),
-    list<FooStruct> bar4(list<FooStruct> foos) throws (1: FooServiceException e),
-    map<string, FooStruct> bar5(map<string, FooStruct> foos) throws (1: FooServiceException e)
+    list<FooStruct> bar4(1: list<FooStruct> foos) throws (1: FooServiceException e),
+    map<string, FooStruct> bar5(1: map<string, FooStruct> foos) throws (1: FooServiceException e)
 }
