@@ -48,7 +48,6 @@ public class StructInfoTest {
         fields.add(FieldInfo.of("doubleVal", RequirementType.DEFAULT, TypeInfo.of(ValueType.DOUBLE, false)));
         fields.add(FieldInfo.of("stringVal", RequirementType.DEFAULT, string));
         fields.add(FieldInfo.of("binaryVal", RequirementType.DEFAULT, TypeInfo.of(ValueType.STRING, true)));
-        fields.add(FieldInfo.of("slistVal", RequirementType.DEFAULT, string));
         fields.add(FieldInfo.of("enumVal", RequirementType.DEFAULT, fooEnum));
         fields.add(FieldInfo.of("unionVal", RequirementType.DEFAULT, union));
         fields.add(FieldInfo.of("mapVal", RequirementType.DEFAULT, MapInfo.of(string, fooEnum)));
