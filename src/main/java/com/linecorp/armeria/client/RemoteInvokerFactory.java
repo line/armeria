@@ -18,15 +18,20 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollDatagramChannel;
@@ -37,7 +42,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.resolver.dns.DnsNameResolverGroup;
+import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsServerAddresses;
 
 /**
@@ -63,8 +68,7 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         final Bootstrap baseBootstrap = new Bootstrap();
 
         baseBootstrap.channel(channelType());
-        baseBootstrap.resolver(new DnsNameResolverGroup(datagramChannelType(),
-                                                        DnsServerAddresses.defaultAddresses()));
+        baseBootstrap.resolver(new ConfiguredDnsNameResolverGroup());
 
         baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
                              ConvertUtils.safeLongToInt(options.connectTimeoutMillis()));
@@ -90,10 +94,6 @@ public final class RemoteInvokerFactory implements AutoCloseable {
 
     private static Class<? extends SocketChannel> channelType() {
         return Epoll.isAvailable() ? EpollSocketChannel.class : NioSocketChannel.class;
-    }
-
-    private static Class<? extends DatagramChannel> datagramChannelType() {
-        return Epoll.isAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class;
     }
 
     private static EventLoopGroup createGroup() {
@@ -125,6 +125,46 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         remoteInvokers.forEach((k, v) -> v.close());
         if (closeEventLoopGroup) {
             eventLoopGroup.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    private static final class ConfiguredDnsNameResolverGroup extends DnsNameResolverGroup {
+
+        private static final DnsServerAddresses DEFAULT_DNS_SERVER_ADDRS;
+        private static final int DEFAULT_MAX_TRIES;
+
+        static {
+            List<InetSocketAddress> defaultList = new ArrayList<>(DnsServerAddresses.defaultAddressList());
+            List<InetSocketAddress> doubledList = new ArrayList<>(defaultList);
+
+            // Add the same set of servers again, rotated left by 1 this time, so Netty does not always cycle
+            // through the same servers. This works around: https://github.com/netty/netty/pull/4541
+            // TODO(trustin): Remove the workaround and simplify when the upstream fix lands down.
+            Collections.rotate(defaultList, 1);
+            doubledList.addAll(defaultList);
+
+            DEFAULT_DNS_SERVER_ADDRS = DnsServerAddresses.rotational(doubledList);
+            DEFAULT_MAX_TRIES = doubledList.size();
+        }
+
+        ConfiguredDnsNameResolverGroup() {
+            super(datagramChannelType(), DEFAULT_DNS_SERVER_ADDRS);
+        }
+
+        private static Class<? extends DatagramChannel> datagramChannelType() {
+            return Epoll.isAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class;
+        }
+
+        @Override
+        protected DnsNameResolver newResolver(EventLoop eventLoop,
+                                              ChannelFactory<? extends DatagramChannel> channelFactory,
+                                              InetSocketAddress localAddress,
+                                              DnsServerAddresses nameServerAddresses) throws Exception {
+
+            final DnsNameResolver resolver =
+                    new DnsNameResolver(eventLoop, channelFactory, localAddress, nameServerAddresses);
+
+            return resolver.setMaxQueriesPerResolve(DEFAULT_MAX_TRIES);
         }
     }
 }
