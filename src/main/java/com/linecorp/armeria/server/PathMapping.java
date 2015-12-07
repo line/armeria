@@ -26,6 +26,7 @@ import com.linecorp.armeria.server.PathManipulators.Prepend;
 import com.linecorp.armeria.server.PathManipulators.StripParents;
 import com.linecorp.armeria.server.PathManipulators.StripPrefixByNumPathComponents;
 import com.linecorp.armeria.server.PathManipulators.StripPrefixByPathPrefix;
+import com.linecorp.armeria.server.docs.DocService;
 
 /**
  * Matches the absolute path part of a URI and translates the matched path to another path string.
@@ -43,6 +44,16 @@ public interface PathMapping extends Function<String, String> {
      */
     static PathMapping ofRegex(Pattern regex) {
         return new RegexPathMapping(regex);
+    }
+
+    /**
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceInvocationContext#path() path} with
+     * the specified regular expression, as defined in {@link Pattern}. The returned {@link PathMapping} does
+     * not perform any translation. To create a {@link PathMapping} that performs a translation, use the
+     * decorator methods like {@link #stripPrefix(String)}.
+     */
+    static PathMapping ofRegex(String regex) {
+        return ofRegex(Pattern.compile(requireNonNull(regex, "regex")));
     }
 
     /**
@@ -129,9 +140,18 @@ public interface PathMapping extends Function<String, String> {
     /**
      * Returns the exact path of this path mapping if it is an exact path mapping, or {@link Optional#empty}
      * otherwise. This can be useful for services which provide logic after scanning the server's mapped
-     * services, e.g., {@link com.linecorp.armeria.server.docs.DocService}.
+     * services, e.g. {@link DocService}
      */
     default Optional<String> exactPath() {
+        return Optional.empty();
+    }
+
+    /**
+     * Returns the prefix of this path mapping if it is a prefix path mapping, or {@link Optional#empty}
+     * otherwise. This can be useful for services which provide logic after scanning the server's mapped
+     * services, e.g. {@link DocService}
+     */
+    default Optional<String> prefixPath() {
         return Optional.empty();
     }
 

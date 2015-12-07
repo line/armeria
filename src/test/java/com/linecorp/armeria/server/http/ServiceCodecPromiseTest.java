@@ -34,6 +34,7 @@ import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.DecoratingServiceCodec;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
@@ -49,17 +50,17 @@ import io.netty.util.concurrent.Promise;
 
 @RunWith(Enclosed.class)
 public class ServiceCodecPromiseTest {
+
     protected static void setupServer(
             ServerBuilder sb, GenericFutureListener<? extends Future<? super Object>> listener,
             ServiceInvocationHandler handler) {
-        Service service = Service.of(new DecoratingServiceCodec(new HttpServiceCodec("test")) {
+        Service service = Service.of(new DecoratingServiceCodec(new HttpServiceCodec()) {
             @Override
-            public DecodeResult decodeRequest(Channel ch, SessionProtocol sessionProtocol, String hostname,
-                                              String path,
-                                              String mappedPath, ByteBuf in, Object originalRequest,
-                                              Promise<Object> promise) throws Exception {
+            public DecodeResult decodeRequest(ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
+                                              String hostname, String path, String mappedPath, ByteBuf in,
+                                              Object originalRequest, Promise<Object> promise) throws Exception {
                 promise.addListener(listener);
-                return delegate().decodeRequest(ch, sessionProtocol, hostname, path, mappedPath, in,
+                return delegate().decodeRequest(cfg, ch, sessionProtocol, hostname, path, mappedPath, in,
                                                 originalRequest, promise);
             }
 
@@ -68,11 +69,12 @@ public class ServiceCodecPromiseTest {
                 return Unpooled.EMPTY_BUFFER;
             }
         }, handler);
-        sb.defaultVirtualHost(new VirtualHostBuilder().serviceAt("/", service).build());
+
+        sb.serviceAt("/", service);
     }
 
     abstract static class ExecutionCheckingTest extends AbstractServerTest {
-        private boolean executed = false;
+        private boolean executed;
 
         protected GenericFutureListener<? extends Future<? super Object>> defaultListener =
                 (Future<? super Object> future) -> executed = true;

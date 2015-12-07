@@ -86,8 +86,8 @@ public class DecoratingService implements Service {
     }
 
     @Override
-    public void serviceAdded(Server server) throws Exception {
-        ServiceCallbackInvoker.invokeServiceAdded(server, delegate());
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        ServiceCallbackInvoker.invokeServiceAdded(cfg, delegate());
     }
 
     @Override

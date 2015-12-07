@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
 import com.linecorp.armeria.server.http.HttpService;
 
@@ -116,14 +117,18 @@ public class HttpHealthCheckService extends HttpService {
     }
 
     @Override
-    public void serviceAdded(Server server) throws Exception {
-        super.serviceAdded(server);
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        super.serviceAdded(cfg);
 
-        if (this.server != null) {
-            throw new IllegalStateException("cannot be added to more than one server");
+        if (server != null) {
+            if (server != cfg.server()) {
+                throw new IllegalStateException("cannot be added to more than one server");
+            } else {
+                return;
+            }
         }
 
-        this.server = server;
+        server = cfg.server();
         server.addListener(serverHealthUpdater);
     }
 

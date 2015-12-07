@@ -19,13 +19,12 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 
 import javax.net.ssl.SSLException;
 
+import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -63,8 +62,8 @@ public final class VirtualHostBuilder {
             ApplicationProtocolNames.HTTP_2,
             ApplicationProtocolNames.HTTP_1_1);
 
-    private final List<Entry<PathMapping, Service>> services = new ArrayList<>();
-    private String hostnamePattern;
+    private final String hostnamePattern;
+    private final List<ServiceConfig> services = new ArrayList<>();
     private SslContext sslContext;
 
     /**
@@ -135,8 +134,19 @@ public final class VirtualHostBuilder {
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
     public VirtualHostBuilder service(PathMapping pathMapping, Service service) {
-        services.add(new SimpleEntry<>(requireNonNull(pathMapping, "pathMapping"),
-                                       requireNonNull(service, "service")));
+        services.add(new ServiceConfig(pathMapping, service, null));
+        return this;
+    }
+
+    /**
+     * Binds the specified {@link Service} at the specified {@link PathMapping}.
+     *
+     * @param loggerName the name of the {@linkplain ServiceInvocationContext#logger() service logger};
+     *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
+     *                   such as a package name or a fully-qualified class name
+     */
+    public VirtualHostBuilder service(PathMapping pathMapping, Service service, String loggerName) {
+        services.add(new ServiceConfig(pathMapping, service, loggerName));
         return this;
     }
 

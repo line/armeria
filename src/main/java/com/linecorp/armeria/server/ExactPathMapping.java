@@ -23,10 +23,12 @@ import java.util.Optional;
 final class ExactPathMapping extends AbstractPathMapping {
 
     private final String exactPath;
+    private final Optional<String> exactPathOpt;
     private final String strVal;
 
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
+        exactPathOpt = Optional.of(exactPath);
         strVal = "exact: " + exactPath;
     }
 
@@ -39,7 +41,12 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     protected String doApply(String path) {
-        return exactPath.equals(path) ? "/" : null;
+        return exactPath.equals(path) ? path : null;
+    }
+
+    @Override
+    public Optional<String> exactPath() {
+        return exactPathOpt;
     }
 
     @Override
@@ -56,10 +63,5 @@ final class ExactPathMapping extends AbstractPathMapping {
     @Override
     public String toString() {
         return strVal;
-    }
-
-    @Override
-    public Optional<String> exactPath() {
-        return Optional.of(exactPath);
     }
 }

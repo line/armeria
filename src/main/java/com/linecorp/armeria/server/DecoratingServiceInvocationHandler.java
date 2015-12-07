@@ -56,13 +56,14 @@ public abstract class DecoratingServiceInvocationHandler implements ServiceInvoc
     }
 
     @Override
-    public void handlerAdded(Server server) throws Exception {
-        ServiceCallbackInvoker.invokeHandlerAdded(server, delegate());
+    public void handlerAdded(ServiceConfig cfg) throws Exception {
+        ServiceCallbackInvoker.invokeHandlerAdded(cfg, delegate());
     }
 
     @Override
-    public void invoke(ServiceInvocationContext ctx, Executor blockingTaskExecutor, Promise<Object> promise)
-            throws Exception {
+    public void invoke(ServiceInvocationContext ctx,
+                       Executor blockingTaskExecutor, Promise<Object> promise) throws Exception {
+
         delegate().invoke(ctx, blockingTaskExecutor, promise);
     }
 

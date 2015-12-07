@@ -35,10 +35,11 @@ import io.netty.util.concurrent.Promise;
 public interface ServiceInvocationHandler {
 
     /**
-     * Invoked when the {@link Service} of this {@link ServiceInvocationHandler} has been added to the
-     * specified {@link Server}.
+     * Invoked when the {@link Service} of this {@link ServiceInvocationHandler} has been added to a
+     * {@link Server} with the specified configuration. Please note that this method can be invoked more than
+     * once if the {@link Service} has been added more than once.
      */
-    default void handlerAdded(Server server) throws Exception {}
+    default void handlerAdded(ServiceConfig cfg) throws Exception {}
 
     /**
      * Handles the invocation request and finishes the specified {@code promise} with its result.
@@ -47,10 +48,8 @@ public interface ServiceInvocationHandler {
      * @param blockingTaskExecutor an {@link Executor} to use when this handler has to perform a task that
      *                             would block the current thread
      * @param promise the {@link Promise} of the invocation, which is expected to be marked as done once
-     *                the result of the invocation is produced.
      */
-    void invoke(ServiceInvocationContext ctx, Executor blockingTaskExecutor,
-                Promise<Object> promise) throws Exception;
+    void invoke(ServiceInvocationContext ctx, Executor blockingTaskExecutor, Promise<Object> promise) throws Exception;
 
     /**
      * Undecorates this {@link ServiceInvocationHandler} to find the {@link ServiceInvocationHandler} which is

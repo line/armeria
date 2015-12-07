@@ -42,7 +42,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.ThriftService;
 import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
@@ -69,18 +68,13 @@ public class DocServiceTest extends AbstractServerTest {
                 ThriftService.ofFormats(mock(Cassandra.AsyncIface.class), THRIFT_TEXT);
         final ThriftService hbaseService = ThriftService.of(mock(Hbase.AsyncIface.class));
 
-        final VirtualHostBuilder defaultVirtualHost = new VirtualHostBuilder();
+        sb.serviceAt("/hello", helloService);
+        sb.serviceAt("/foo", fooService);
+        sb.serviceAt("/cassandra", cassandraService);
+        sb.serviceAt("/cassandra/debug", cassandraServiceDebug);
+        sb.serviceAt("/hbase", hbaseService);
 
-        defaultVirtualHost.serviceAt("/hello", helloService);
-        defaultVirtualHost.serviceAt("/foo", fooService);
-        defaultVirtualHost.serviceAt("/cassandra", cassandraService);
-        defaultVirtualHost.serviceAt("/cassandra/debug", cassandraServiceDebug);
-        defaultVirtualHost.serviceAt("/hbase", hbaseService);
-
-        defaultVirtualHost.serviceUnder("/docs/", new DocService(Collections.singletonList(SAMPLE_HELLO))
-                .decorate(LoggingService::new));
-
-        sb.defaultVirtualHost(defaultVirtualHost.build());
+        sb.serviceUnder("/docs/", new DocService(SAMPLE_HELLO).decorate(LoggingService::new));
     }
 
     @Test

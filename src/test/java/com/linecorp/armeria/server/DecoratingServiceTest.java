@@ -118,7 +118,8 @@ public class DecoratingServiceTest {
     static final class AC implements ServiceCodec {
         @Override
         public DecodeResult decodeRequest(
-                Channel ch, SessionProtocol sessionProtocol, String hostname, String path, String mappedPath,
+                ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
+                String hostname, String path, String mappedPath,
                 ByteBuf in, Object originalRequest, Promise<Object> promise) throws Exception {
             return null;
         }
@@ -153,8 +154,8 @@ public class DecoratingServiceTest {
 
     static final class AH implements ServiceInvocationHandler {
         @Override
-        public void invoke(ServiceInvocationContext ctx, Executor blockingTaskExecutor, Promise<Object> promise)
-                throws Exception {}
+        public void invoke(ServiceInvocationContext ctx,
+                           Executor blockingTaskExecutor, Promise<Object> promise) throws Exception {}
     }
 
     static final class BH extends DecoratingServiceInvocationHandler {

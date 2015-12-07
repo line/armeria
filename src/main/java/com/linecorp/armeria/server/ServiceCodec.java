@@ -40,15 +40,17 @@ import io.netty.util.concurrent.Promise;
 public interface ServiceCodec {
 
     /**
-     * Invoked when the {@link Service} of this {@link ServiceCodec} has been added to the specified
-     * {@link Server}.
+     * Invoked when the {@link Service} of this {@link ServiceCodec} has been added to a {@link Server} with
+     * the specified configuration. Please note that this method can be invoked more than once if the
+     * {@link Service} has been added more than once.
      */
-    default void codecAdded(Server server) throws Exception {}
+    default void codecAdded(ServiceConfig cfg) throws Exception {}
 
     /**
      * Decodes an invocation request.
      */
-    DecodeResult decodeRequest(Channel ch, SessionProtocol sessionProtocol,
+    DecodeResult decodeRequest(ServiceConfig cfg,
+                               Channel ch, SessionProtocol sessionProtocol,
                                String hostname, String path, String mappedPath,
                                ByteBuf in, Object originalRequest, Promise<Object> promise) throws Exception;
 
@@ -96,7 +98,7 @@ public interface ServiceCodec {
 
     /**
      * Whether
-     * {@link #decodeRequest(Channel, SessionProtocol, String, String, String, ByteBuf, Object, Promise)
+     * {@link #decodeRequest(ServiceConfig, Channel, SessionProtocol, String, String, String, ByteBuf, Object, Promise)
      * ServiceCodec.decodeRequest()} has succeeded or not.
      */
     enum DecodeResultType {
@@ -120,7 +122,7 @@ public interface ServiceCodec {
 
     /**
      * The result of
-     * {@link #decodeRequest(Channel, SessionProtocol, String, String, String, ByteBuf, Object, Promise)
+     * {@link #decodeRequest(ServiceConfig, Channel, SessionProtocol, String, String, String, ByteBuf, Object, Promise)
      * ServiceCodec.decodeRequest()}.
      */
     interface DecodeResult {
@@ -137,7 +139,7 @@ public interface ServiceCodec {
 
         /**
          * Returns the {@link ServiceInvocationContext} created as a result of
-         * {@link ServiceCodec#decodeRequest(Channel, SessionProtocol, String, String, String, ByteBuf, Object,
+         * {@link ServiceCodec#decodeRequest(ServiceConfig, Channel, SessionProtocol, String, String, String, ByteBuf, Object,
          * Promise) ServiceCodec.decodeRequest()}.
          *
          * @throws IllegalStateException if the decode result is not successful

@@ -41,13 +41,9 @@ public class TomcatServiceTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) {
-        final VirtualHostBuilder defaultVirtualHost = new VirtualHostBuilder();
-
-        defaultVirtualHost.serviceUnder(
+        sb.serviceUnder(
                 "/tc/",
                 TomcatService.forCurrentClassPath("tomcat_service").decorate(LoggingService::new));
-
-        sb.defaultVirtualHost(defaultVirtualHost.build());
     }
 
     @Test

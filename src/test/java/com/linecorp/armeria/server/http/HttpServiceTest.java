@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.buffer.Unpooled;
@@ -55,11 +54,7 @@ public class HttpServiceTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            sb.port(0, SessionProtocol.HTTP);
-
-            final VirtualHostBuilder defaultVirtualHost = new VirtualHostBuilder();
-
-            defaultVirtualHost.service(
+            sb.service(
                     PathMapping.ofGlob("/hello/*").stripPrefix(1),
                     new HttpService((ctx, exec, promise) -> {
                         final FullHttpRequest req = ctx.originalRequest();
@@ -80,8 +75,6 @@ public class HttpServiceTest {
 
                         promise.setSuccess(res);
                     }).decorate(LoggingService::new));
-
-            sb.defaultVirtualHost(defaultVirtualHost.build());
         } catch (Exception e) {
             throw new Error(e);
         }

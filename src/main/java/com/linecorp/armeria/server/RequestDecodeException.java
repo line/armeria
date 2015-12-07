@@ -23,7 +23,7 @@ import io.netty.util.concurrent.Promise;
 
 /**
  * A {@link RuntimeException} raised when
- * {@link ServiceCodec#decodeRequest(Channel, SessionProtocol, String, String, String, ByteBuf, Object, Promise)
+ * {@link ServiceCodec#decodeRequest(ServiceConfig, Channel, SessionProtocol, String, String, String, ByteBuf, Object, Promise)
  * ServiceCodec.decodeRequest()} failed to decode an invocation request.
  */
 public class RequestDecodeException extends RuntimeException {

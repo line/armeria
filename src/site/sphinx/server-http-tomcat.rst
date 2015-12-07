@@ -4,16 +4,16 @@
 Embedding Apache Tomcat
 =======================
 You can make Armeria serve your JEE web application on the same JVM and TCP/IP port by adding a
-``TomcatService`` to a ``VirtualHost``:
+``TomcatService`` to a ``Server``:
 
 .. code-block:: java
 
-    VirtualHostBuilder vhb = new VirtualHostBuilder();
-    vhb.serviceUnder("/api/rest/v2/",
-                     TomcatService.forCurrentClassPath());
+    ServerBuilder sb = new ServerBuilder();
+    sb.serviceUnder("/api/rest/v2/",
+                    TomcatService.forCurrentClassPath());
 
-    vhb.serviceUnder("/api/rest/v1/",
-                     TomcatService.forFileSystem("/var/lib/webapps/old_api.war"));
+    sb.serviceUnder("/api/rest/v1/",
+                    TomcatService.forFileSystem("/var/lib/webapps/old_api.war"));
 
 Note that Tomcat will not open a server socket or accept an incoming connection. All HTTP requests and
 responses go through Armeria. As a result, you get the following bonuses:

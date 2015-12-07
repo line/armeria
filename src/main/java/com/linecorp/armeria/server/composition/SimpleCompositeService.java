@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.composition;
 
 import java.util.List;
 
-import com.linecorp.armeria.server.MappedService;
+import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -46,7 +46,7 @@ public class SimpleCompositeService extends AbstractCompositeService {
     }
 
     @Override
-    public MappedService findService(String path) {
+    public PathMapped<Service> findService(String path) {
         return super.findService(path);
     }
 }

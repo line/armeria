@@ -26,14 +26,14 @@ import java.util.concurrent.Executor;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.MappedService;
+import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.PathMappings;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCallbackInvoker;
 import com.linecorp.armeria.server.ServiceCodec;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
-import com.linecorp.armeria.server.ServiceMapping;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -58,11 +58,11 @@ import io.netty.util.concurrent.Promise;
  */
 public abstract class AbstractCompositeService implements Service {
 
-    private static final AttributeKey<MappedService> MAPPED_SERVICE =
+    private static final AttributeKey<Service> MAPPED_SERVICE =
             AttributeKey.valueOf(AbstractCompositeService.class, "MAPPED_SERVICE");
 
     private final List<CompositeServiceEntry> services;
-    private final ServiceMapping serviceMapping = new ServiceMapping();
+    private final PathMappings<Service> serviceMapping = new PathMappings<>();
     private final ServiceCodec codec = new CompositeServiceCodec();
     private final ServiceInvocationHandler handler = new CompositeServiceInvocationHandler();
 
@@ -91,9 +91,9 @@ public abstract class AbstractCompositeService implements Service {
     }
 
     @Override
-    public void serviceAdded(Server server) throws Exception {
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
         for (CompositeServiceEntry e : services()) {
-            ServiceCallbackInvoker.invokeServiceAdded(server, e.service());
+            ServiceCallbackInvoker.invokeServiceAdded(cfg, e.service());
         }
     }
 
@@ -116,10 +116,10 @@ public abstract class AbstractCompositeService implements Service {
     /**
      * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
      *
-     * @return the {@link Service} wrapped by {@link MappedService} if there's a match.
-     *         {@link MappedService#empty()} if there's no match.
+     * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
+     *         {@link PathMapped#empty()} if there's no match.
      */
-    protected MappedService findService(String path) {
+    protected PathMapped<Service> findService(String path) {
         return serviceMapping.apply(path);
     }
 
@@ -135,24 +135,25 @@ public abstract class AbstractCompositeService implements Service {
 
     private final class CompositeServiceCodec implements ServiceCodec {
         @Override
-        public void codecAdded(Server server) throws Exception {
+        public void codecAdded(ServiceConfig cfg) throws Exception {
             for (CompositeServiceEntry e : services()) {
-                ServiceCallbackInvoker.invokeCodecAdded(server, e.service().codec());
+                ServiceCallbackInvoker.invokeCodecAdded(cfg, e.service().codec());
             }
         }
 
         @Override
         public DecodeResult decodeRequest(
-                Channel ch, SessionProtocol sessionProtocol, String hostname, String path,
+                ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol, String hostname, String path,
                 String mappedPath, ByteBuf in, Object origReq, Promise<Object> promise) throws Exception {
 
-            final MappedService service = findService(mappedPath);
-            if (!service.isPresent()) {
+            final PathMapped<Service> mapped = findService(mappedPath);
+            if (!mapped.isPresent()) {
                 return DecodeResult.NOT_FOUND;
             }
 
+            final Service service = mapped.value();
             final DecodeResult result = service.codec().decodeRequest(
-                    ch, sessionProtocol, hostname, path, service.mappedPath(), in, origReq, promise);
+                    cfg, ch, sessionProtocol, hostname, path, mapped.mappedPath(), in, origReq, promise);
 
             if (result.type() == DecodeResultType.SUCCESS) {
                 ServiceInvocationContext ctx = result.invocationContext();
@@ -180,15 +181,15 @@ public abstract class AbstractCompositeService implements Service {
 
     private final class CompositeServiceInvocationHandler implements ServiceInvocationHandler {
         @Override
-        public void handlerAdded(Server server) throws Exception {
+        public void handlerAdded(ServiceConfig cfg) throws Exception {
             for (CompositeServiceEntry e : services()) {
-                ServiceCallbackInvoker.invokeHandlerAdded(server, e.service().handler());
+                ServiceCallbackInvoker.invokeHandlerAdded(cfg, e.service().handler());
             }
         }
 
         @Override
-        public void invoke(ServiceInvocationContext ctx, Executor blockingTaskExecutor, Promise<Object> promise)
-                throws Exception {
+        public void invoke(ServiceInvocationContext ctx,
+                           Executor blockingTaskExecutor, Promise<Object> promise) throws Exception {
             ctx.attr(MAPPED_SERVICE).get().handler().invoke(ctx, blockingTaskExecutor, promise);
         }
     }

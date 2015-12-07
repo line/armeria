@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
@@ -51,27 +50,23 @@ public abstract class AbstractThriftOverHttpTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            ssc = new SelfSignedCertificate("127.0.0.1");
-
             sb.port(0, SessionProtocol.HTTP);
             sb.port(0, SessionProtocol.HTTPS);
 
-            final VirtualHostBuilder defaultVirtualHost =
-                    new VirtualHostBuilder().sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
+            ssc = new SelfSignedCertificate("127.0.0.1");
+            sb.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
 
-            defaultVirtualHost.serviceAt("/hello", ThriftService.of(
+            sb.serviceAt("/hello", ThriftService.of(
                     (AsyncIface) (name, resultHandler) ->
                             resultHandler.onComplete("Hello, " + name + '!')).decorate(LoggingService::new));
 
-            defaultVirtualHost.serviceAt("/sleep", ThriftService.of(
+            sb.serviceAt("/sleep", ThriftService.of(
                     (SleepService.AsyncIface) (milliseconds, resultHandler) -> {
                         // FIXME: Provide a way to access the current executor.
                         GlobalEventExecutor.INSTANCE.schedule(
                                 () -> resultHandler.onComplete(milliseconds),
                                 milliseconds, TimeUnit.MILLISECONDS);
                     }).decorate(LoggingService::new));
-
-            sb.defaultVirtualHost(defaultVirtualHost.build());
         } catch (Exception e) {
             throw new Error(e);
         }

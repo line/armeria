@@ -57,16 +57,16 @@ public abstract class DecoratingServiceCodec implements ServiceCodec {
     }
 
     @Override
-    public void codecAdded(Server server) throws Exception {
-        ServiceCallbackInvoker.invokeCodecAdded(server, delegate());
+    public void codecAdded(ServiceConfig cfg) throws Exception {
+        ServiceCallbackInvoker.invokeCodecAdded(cfg, delegate());
     }
 
     @Override
-    public DecodeResult decodeRequest(Channel ch, SessionProtocol sessionProtocol, String hostname,
-                                      String path, String mappedPath, ByteBuf in,
+    public DecodeResult decodeRequest(ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
+                                      String hostname, String path, String mappedPath, ByteBuf in,
                                       Object originalRequest, Promise<Object> promise) throws Exception {
-        return delegate().decodeRequest(ch, sessionProtocol, hostname, path, mappedPath, in, originalRequest,
-                                        promise);
+        return delegate().decodeRequest(cfg, ch, sessionProtocol, hostname,
+                                        path, mappedPath, in, originalRequest, promise);
     }
 
     @Override

@@ -84,14 +84,12 @@ public class ServerTest extends AbstractServerTest {
             throw new Exception("bug!");
         }).decorate(LoggingService::new);
 
-        final VirtualHost defaultVirtualHost =
-                new VirtualHostBuilder().serviceAt("/", immediateResponseOnIoThread)
-                                        .serviceAt("/delayed", delayedResponseOnIoThread)
-                                        .serviceAt("/timeout", lazyResponseNotOnIoThread)
-                                        .serviceAt("/timeout-not", lazyResponseNotOnIoThread)
-                                        .serviceAt("/buggy", buggy).build();
+        sb.serviceAt("/", immediateResponseOnIoThread)
+          .serviceAt("/delayed", delayedResponseOnIoThread)
+          .serviceAt("/timeout", lazyResponseNotOnIoThread)
+          .serviceAt("/timeout-not", lazyResponseNotOnIoThread)
+          .serviceAt("/buggy", buggy);
 
-        sb.defaultVirtualHost(defaultVirtualHost);
         // Disable request timeout for '/timeout-not' only.
         sb.requestTimeout(ctx -> "/timeout-not".equals(ctx.path()) ? 0 : requestTimeoutMillis);
         sb.idleTimeoutMillis(idleTimeoutMillis);
@@ -197,8 +195,8 @@ public class ServerTest extends AbstractServerTest {
 
     /**
      * Ensure that the connection is not broken even if
-     * {@link ServiceInvocationHandler#invoke(ServiceInvocationContext, Executor, Promise)} raised an
-     * exception.
+     * {@link ServiceInvocationHandler#invoke(ServiceInvocationContext, Executor, Promise)}
+     * raised an exception.
      */
     @Test(timeout = idleTimeoutMillis * 5)
     public void testBuggyService() throws Exception {
@@ -238,7 +236,7 @@ public class ServerTest extends AbstractServerTest {
             super(new ServiceCodec() {
                 @Override
                 public DecodeResult decodeRequest(
-                        Channel ch, SessionProtocol sessionProtocol,
+                        ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
                         String hostname, String path, String mappedPath,
                         ByteBuf in, Object originalRequest, Promise<Object> promise) throws Exception {
 
@@ -281,7 +279,8 @@ public class ServerTest extends AbstractServerTest {
                 }
 
                 @Override
-                public ByteBuf encodeResponse(ServiceInvocationContext ctx, Object response) throws Exception {
+                public ByteBuf encodeResponse(
+                        ServiceInvocationContext ctx, Object response) throws Exception {
                     return (ByteBuf) response;
                 }
 

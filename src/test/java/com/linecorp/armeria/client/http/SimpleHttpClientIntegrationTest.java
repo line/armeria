@@ -29,7 +29,6 @@ import com.linecorp.armeria.client.RemoteInvokerFactory;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.http.HttpService;
 
 import io.netty.buffer.ByteBuf;
@@ -53,12 +52,12 @@ public class SimpleHttpClientIntegrationTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            ssc = new SelfSignedCertificate("127.0.0.1");
-
             sb.port(0, SessionProtocol.HTTP);
 
-            VirtualHostBuilder vhBuilder = new VirtualHostBuilder();
-            vhBuilder.serviceAt("/httptestbody", new HttpService(
+            ssc = new SelfSignedCertificate("127.0.0.1");
+            sb.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
+
+            sb.serviceAt("/httptestbody", new HttpService(
                     (ctx, executor, promise) -> {
                         FullHttpRequest request = ctx.originalRequest();
                         if (request.headers().get(HttpHeaderNames.CONTENT_TYPE) != null) {
@@ -71,19 +70,18 @@ public class SimpleHttpClientIntegrationTest {
                         }
                         ByteBuf content = ctx.alloc().ioBuffer();
                         byte[] body = ByteBufUtil.getBytes(request.content());
-                        content.writeBytes(String.format("METHOD: %s|ACCEPT: %s|BODY: %s",
-                                                         request.method().name(),
-                                                         request.headers().get(HttpHeaderNames.ACCEPT),
-                                                 new String(body, StandardCharsets.UTF_8))
-                                                   .getBytes(StandardCharsets.UTF_8));
+                        content.writeBytes(String.format(
+                                "METHOD: %s|ACCEPT: %s|BODY: %s",
+                                request.method().name(),
+                                request.headers().get(HttpHeaderNames.ACCEPT),
+                                new String(body, StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8));
+
                         DefaultFullHttpResponse response =
                                 new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
                                                             content, false);
                         response.headers().set(HttpHeaderNames.CACHE_CONTROL, "alwayscache");
                         promise.setSuccess(response);
                     }));
-            sb.defaultVirtualHost(
-                    vhBuilder.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey()).build());
         } catch (Exception e) {
             throw new Error(e);
         }

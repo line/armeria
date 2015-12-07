@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.ServiceEntry;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.thrift.ThriftService;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
@@ -41,12 +41,12 @@ public class SpecificationTest {
     @Test
     public void servicesTest() throws Exception {
         final Specification specification =
-                Specification.forServiceEntries(Arrays.asList(
-                        new ServiceEntry(
+                Specification.forServiceConfigs(Arrays.asList(
+                        new ServiceConfig(
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/hello"),
                                 ThriftService.of(mock(HelloService.AsyncIface.class))),
-                        new ServiceEntry(
+                        new ServiceConfig(
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/foo"),
                                 ThriftService.ofFormats(mock(FooService.AsyncIface.class),

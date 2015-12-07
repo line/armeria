@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftUtil;
 import com.linecorp.armeria.server.ServiceCodec;
+import com.linecorp.armeria.server.ServiceConfig;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -87,7 +88,6 @@ final class ThriftServiceCodec implements ServiceCodec {
 
     private final Set<SerializationFormat> allowedSerializationFormats;
     private final Object service;
-    private final String serviceLoggerName;
 
     /**
      * A map whose key is a method name and whose value is {@link AsyncProcessFunction} or {@link ProcessFunction}.
@@ -132,8 +132,6 @@ final class ThriftServiceCodec implements ServiceCodec {
             throw new IllegalArgumentException('\'' + serviceClass.getName() +
                                                "' is not a Thrift service implementation.");
         }
-
-        serviceLoggerName = service.getClass().getName();
     }
 
     @SuppressWarnings("rawtypes")
@@ -238,17 +236,15 @@ final class ThriftServiceCodec implements ServiceCodec {
 
     @Override
     public DecodeResult decodeRequest(
-            Channel ch, SessionProtocol sessionProtocol, String hostname, String path, String mappedPath,
-            ByteBuf in, Object originalRequest, Promise<Object> promise) throws Exception {
+            ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol, String hostname,
+            String path, String mappedPath, ByteBuf in, Object originalRequest, Promise<Object> promise) throws Exception {
 
         final SerializationFormat serializationFormat;
         try {
             serializationFormat = validateRequestAndDetermineSerializationFormat(originalRequest);
         } catch (InvalidHttpRequestException e) {
             return new DefaultDecodeResult(
-                    new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                                                e.httpResponseStatus),
-                    e.getCause());
+                    new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, e.httpResponseStatus), e.getCause());
         }
 
         final TProtocol inProto = FORMAT_TO_THREAD_LOCAL_IN_PROTOCOL.get(serializationFormat).get();
@@ -316,7 +312,7 @@ final class ThriftServiceCodec implements ServiceCodec {
 
             return new ThriftServiceInvocationContext(
                     ch, Scheme.of(serializationFormat, sessionProtocol),
-                    hostname, path, mappedPath, serviceLoggerName, originalRequest, f, seqId, args);
+                    hostname, path, mappedPath, cfg.loggerName(), originalRequest, f, seqId, args);
         } finally {
             inTransport.clear();
         }
@@ -370,8 +366,8 @@ final class ThriftServiceCodec implements ServiceCodec {
     private static ByteBuf encodeSuccess(ThriftServiceInvocationContext ctx,
                                          TBase<TBase<?, ?>, TFieldIdEnum> result) {
 
-        final TProtocol outProto = FORMAT_TO_THREAD_LOCAL_OUT_PROTOCOL.get(ctx.scheme().serializationFormat())
-                .get();
+        final TProtocol outProto =
+                FORMAT_TO_THREAD_LOCAL_OUT_PROTOCOL.get(ctx.scheme().serializationFormat()).get();
         outProto.reset();
         final TByteBufTransport outTransport = (TByteBufTransport) outProto.getTransport();
         final ByteBuf out = ctx.alloc().buffer();
@@ -404,8 +400,7 @@ final class ThriftServiceCodec implements ServiceCodec {
 
     private static ByteBuf encodeException(
             ByteBufAllocator alloc, SerializationFormat serializationFormat,
-            String methodName, int seqId,
-            TApplicationException cause) {
+            String methodName, int seqId, TApplicationException cause) {
 
         final TProtocol outProto = FORMAT_TO_THREAD_LOCAL_OUT_PROTOCOL.get(serializationFormat).get();
         outProto.reset();

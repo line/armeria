@@ -40,7 +40,6 @@ public abstract class AbstractServerTest {
             }
 
             final ServerBuilder sb = new ServerBuilder();
-            sb.port(0, SessionProtocol.HTTP);
             configureServer(sb);
             server = sb.build();
 
@@ -56,7 +55,7 @@ public abstract class AbstractServerTest {
         }
     }
 
-    protected abstract void configureServer(ServerBuilder sb);
+    protected abstract void configureServer(ServerBuilder sb) throws Exception;
 
     @AfterClass
     public static void stopServer() throws Exception {

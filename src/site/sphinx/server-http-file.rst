@@ -7,9 +7,9 @@ For more information, please refer to the API documentation of `HttpFileService`
 
 .. code-block:: java
 
-    VirtualHostBuilder vhb = new VirtualHostBuilder();
-    vhb.serviceUnder("/images/",
-                     HttpFileService.forFileSystem("/var/lib/www/images"));
+    ServerBuilder sb = new ServerBuilder();
+    sb.serviceUnder("/images/",
+                    HttpFileService.forFileSystem("/var/lib/www/images"));
 
-    vhb.serviceUnder("/",
-                     HttpFileService.forClassPath("/com/example/files"));
+    sb.serviceUnder("/",
+                    HttpFileService.forClassPath("/com/example/files"));
