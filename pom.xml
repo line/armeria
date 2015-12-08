@@ -26,7 +26,7 @@
 
   <groupId>com.linecorp.armeria</groupId>
   <artifactId>armeria</artifactId>
-  <version>0.6.0.Final-SNAPSHOT</version>
+  <version>0.6.0.Final</version>
   <packaging>jar</packaging>
   <name>Armeria</name>
   <description>
@@ -51,7 +51,7 @@
     <url>${project.url}</url>
     <connection>scm:git:https://github.com/line/armeria.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/line/armeria.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>armeria-0.6.0.Final</tag>
   </scm>
 
   <developers>
