@@ -355,6 +355,9 @@ public final class Server implements AutoCloseable {
     }
 
     private Future<Void> stop1(Promise<Void> promise, EventLoopGroup bossGroup) {
+        // FIXME(trustin): Shutdown and terminate the blockingTaskExecutor.
+        //                 Could be fixed while fixing https://github.com/line/armeria/issues/46
+
         final Future<?> bossShutdownFuture;
         if (bossGroup != null) {
             bossShutdownFuture = bossGroup.shutdownGracefully();

@@ -25,6 +25,10 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ThreadFactory;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -44,16 +48,53 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
  * Creates and manages {@link RemoteInvoker}s.
+ *
+ * <h3>Life cycle of the default {@link RemoteInvokerFactory}</h3>
+ * <p>
+ * {@link Clients} or {@link ClientBuilder} uses {@link #DEFAULT}, the default {@link RemoteInvokerFactory},
+ * unless you specified a {@link RemoteInvokerFactory} explicitly. Calling {@link #close()} on the default
+ * {@link RemoteInvokerFactory} won't terminate its I/O threads and release other related resources unlike
+ * other {@link RemoteInvokerFactory} to protect itself from accidental premature termination.
+ * </p><p>
+ * Instead, when the current {@link ClassLoader} is {@linkplain ClassLoader#getSystemClassLoader() the system
+ * class loader}, a {@link Runtime#addShutdownHook(Thread) shutdown hook} is registered so that they are
+ * released when the JVM exits.
+ * </p><p>
+ * If you are in an environment managed by a container or you desire the early termination of the default
+ * {@link RemoteInvokerFactory}, use {@link #closeDefault()}.
+ * </p>
  */
 public final class RemoteInvokerFactory implements AutoCloseable {
+
+    private static final Logger logger = LoggerFactory.getLogger(RemoteInvokerFactory.class);
 
     /**
      * The default {@link RemoteInvokerFactory} implementation.
      */
-    public static final RemoteInvokerFactory DEFAULT = new RemoteInvokerFactory(RemoteInvokerOptions.DEFAULT);
+    public static final RemoteInvokerFactory DEFAULT =
+            new RemoteInvokerFactory(RemoteInvokerOptions.DEFAULT,
+                                     new DefaultThreadFactory("defaultArmeriaClient", true));
+
+    /**
+     * Closes the default {@link RemoteInvokerFactory}.
+     */
+    public static void closeDefault() {
+        logger.debug("Closing the default {}", RemoteInvokerFactory.class.getSimpleName());
+        DEFAULT.close0();
+    }
+
+    static {
+        if (RemoteInvokerFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
+            Runtime.getRuntime().addShutdownHook(new Thread(RemoteInvokerFactory::closeDefault));
+        }
+    }
+
+    private static final ThreadFactory DEFAULT_THREAD_FACTORY =
+            new DefaultThreadFactory("armeriaClient", false);
 
     private final EventLoopGroup eventLoopGroup;
     private final boolean closeEventLoopGroup;
@@ -63,7 +104,12 @@ public final class RemoteInvokerFactory implements AutoCloseable {
      * Creates a new instance with the specified {@link RemoteInvokerOptions}.
      */
     public RemoteInvokerFactory(RemoteInvokerOptions options) {
+        this(options, DEFAULT_THREAD_FACTORY);
+    }
+
+    private RemoteInvokerFactory(RemoteInvokerOptions options, ThreadFactory threadFactory) {
         requireNonNull(options, "options");
+        requireNonNull(threadFactory, "threadFactory");
 
         final Bootstrap baseBootstrap = new Bootstrap();
 
@@ -79,7 +125,7 @@ public final class RemoteInvokerFactory implements AutoCloseable {
             eventLoopGroup = eventLoopOption.get();
             closeEventLoopGroup = false;
         } else {
-            eventLoopGroup = createGroup();
+            eventLoopGroup = createGroup(threadFactory);
             closeEventLoopGroup = true;
         }
 
@@ -96,8 +142,9 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         return Epoll.isAvailable() ? EpollSocketChannel.class : NioSocketChannel.class;
     }
 
-    private static EventLoopGroup createGroup() {
-        return Epoll.isAvailable() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
+    private static EventLoopGroup createGroup(ThreadFactory threadFactory) {
+        return Epoll.isAvailable() ? new EpollEventLoopGroup(0, threadFactory)
+                                   : new NioEventLoopGroup(0, threadFactory);
     }
 
     /**
@@ -119,9 +166,15 @@ public final class RemoteInvokerFactory implements AutoCloseable {
     public void close() {
         // The global default should never be closed.
         if (this == DEFAULT) {
+            logger.debug("Refusing to close the default {}; must be closed via closeDefault()",
+                         RemoteInvokerFactory.class.getSimpleName());
             return;
         }
 
+        close0();
+    }
+
+    private void close0() {
         remoteInvokers.forEach((k, v) -> v.close());
         if (closeEventLoopGroup) {
             eventLoopGroup.shutdownGracefully().syncUninterruptibly();
