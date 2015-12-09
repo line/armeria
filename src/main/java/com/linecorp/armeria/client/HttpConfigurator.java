@@ -39,6 +39,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -62,6 +63,7 @@ import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
@@ -259,9 +261,23 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
 
             ctx.writeAndFlush(upgradeReq);
             ctx.fireChannelActive();
+        }
 
-            // Done with this handler, remove it from the pipeline.
-            ctx.pipeline().remove(this);
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof FullHttpResponse) {
+                final FullHttpResponse res = (FullHttpResponse) msg;
+                if ("1".equals(res.headers().get(ExtensionHeaderNames.STREAM_ID.text()))) {
+                    // Received the response for the upgrade request sent in channelActive().
+                    res.release();
+
+                    // Done with this handler, remove it from the pipeline.
+                    ctx.pipeline().remove(this);
+                    return;
+                }
+            }
+
+            ctx.fireChannelRead(msg);
         }
     }
 
