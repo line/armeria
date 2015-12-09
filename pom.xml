@@ -641,7 +641,7 @@
       <plugin>
         <groupId>kr.motd.maven</groupId>
         <artifactId>sphinx-maven-plugin</artifactId>
-        <version>1.1.0.Final</version>
+        <version>1.2.0.Final</version>
         <reportSets>
           <reportSet>
             <reports>
