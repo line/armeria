@@ -17,8 +17,8 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayDeque;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.Queue;
 
 import com.linecorp.armeria.common.SerializationFormat;
@@ -180,7 +180,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         private final Queue<Promise<FullHttpResponse>> requestExpectQueue;
 
         SequentialWaitsHolder() {
-            requestExpectQueue = new LinkedList<>();
+            requestExpectQueue = new ArrayDeque<>();
         }
 
         @Override
@@ -216,7 +216,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         @Override
         public Promise<FullHttpResponse> poll(FullHttpResponse response) {
             int streamID = response.headers().getInt(ExtensionHeaderNames.STREAM_ID.text(), 0);
-            return resultExpectMap.get(streamID);
+            return resultExpectMap.remove(streamID);
         }
 
         @Override
