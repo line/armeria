@@ -20,7 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 
 import org.apache.catalina.Context;
@@ -32,11 +33,13 @@ import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 import org.apache.catalina.startup.ContextConfig;
 import org.apache.coyote.Adapter;
+import org.apache.coyote.InputBuffer;
 import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.ProtocolHandler;
 import org.apache.coyote.Request;
 import org.apache.coyote.Response;
 import org.apache.tomcat.util.buf.ByteChunk;
+import org.apache.tomcat.util.buf.MessageBytes;
 import org.apache.tomcat.util.http.MimeHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +59,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Promise;
 
 final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
@@ -72,7 +76,7 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
     }
 
     private final TomcatServiceConfig config;
-    private final ServerListener configurer = new Configurer();
+    private final ServerListener configurator = new Configurator();
 
     private volatile StandardServer server;
     private volatile Adapter coyoteAdapter;
@@ -98,7 +102,7 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         }
 
         armeriaServer = cfg.server();
-        armeriaServer.addListener(configurer);
+        armeriaServer.addListener(configurator);
     }
 
     void start() {
@@ -248,17 +252,73 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         final byte[] uriBytes = mappedPath.getBytes(StandardCharsets.US_ASCII);
         coyoteReq.requestURI().setBytes(uriBytes, 0, uriBytes.length);
 
-        final HttpHeaders headers = req.headers();
-        final HttpHeaders trailingHeaders = req.trailingHeaders();
-        final MimeHeaders cheaders = coyoteReq.getMimeHeaders();
-        for (Map.Entry<String, String> e: headers) {
-            cheaders.addValue(e.getKey()).setString(e.getValue());
-        }
-        for (Map.Entry<String, String> e: trailingHeaders) {
-            cheaders.addValue(e.getKey()).setString(e.getValue());
+        final MimeHeaders cHeaders = coyoteReq.getMimeHeaders();
+        convertHeaders(req.headers(), cHeaders);
+        convertHeaders(req.trailingHeaders(), cHeaders);
+
+        final ByteBuf content = req.content();
+        if (content.isReadable()) {
+            coyoteReq.setInputBuffer(new InputBuffer() {
+                private boolean read;
+
+                @Override
+                public int doRead(ByteChunk chunk, Request request) {
+                    if (read) {
+                        // Read only once.
+                        return -1;
+                    }
+
+                    read = true;
+
+                    final int readableBytes = content.readableBytes();
+                    if (content.hasArray()) {
+                        // Note that we do not increase the reference count of the request (and thus its
+                        // content as well) in spite that setBytes() does not perform a deep copy,
+                        // because it will not be released until the invocation is handled completely.
+                        // See HttpServerHandler.handleInvocationResult() for more information.
+                        chunk.setBytes(content.array(),
+                                       content.arrayOffset() + content.readerIndex(),
+                                       readableBytes);
+                    } else {
+                        final byte[] buf = new byte[readableBytes];
+                        content.getBytes(content.readerIndex(), buf);
+                        chunk.setBytes(buf, 0, buf.length);
+                    }
+
+                    return readableBytes;
+                }
+            });
         }
 
         return coyoteReq;
+    }
+
+    private static void convertHeaders(HttpHeaders headers, MimeHeaders cHeaders) {
+        if (headers.isEmpty()) {
+            return;
+        }
+
+        for (Iterator<Entry<CharSequence, CharSequence>> i = headers.iteratorCharSequence(); i.hasNext();) {
+            final Entry<CharSequence, CharSequence> e = i.next();
+            final CharSequence k = e.getKey();
+            final CharSequence v = e.getValue();
+
+            final MessageBytes cValue;
+            if (k instanceof AsciiString) {
+                final AsciiString ak = (AsciiString) k;
+                cValue = cHeaders.addValue(ak.array(), ak.arrayOffset(), ak.length());
+            } else {
+                cValue = cHeaders.addValue(k.toString());
+            }
+
+            if (v instanceof AsciiString) {
+                final AsciiString av = (AsciiString) v;
+                cValue.setBytes(av.array(), av.arrayOffset(), av.length());
+            } else {
+                final byte[] valueBytes = v.toString().getBytes(StandardCharsets.US_ASCII);
+                cValue.setBytes(valueBytes, 0, valueBytes.length);
+            }
+        }
     }
 
     private static FullHttpResponse convertResponse(Response coyoteRes, ByteBuf content) {
@@ -272,18 +332,26 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
             headers.set(HttpHeaderNames.CONTENT_TYPE, contentType);
         }
 
-        final MimeHeaders cheaders = coyoteRes.getMimeHeaders();
-        final int numHeaders = cheaders.size();
-        for (int i = 0; i < numHeaders; i ++) {
-            final String name = cheaders.getName(i).toString();
-            final String value = cheaders.getValue(i).toString();
-            headers.add(name, value);
+        final MimeHeaders cHeaders = coyoteRes.getMimeHeaders();
+        final int numHeaders = cHeaders.size();
+        for (int i = 0; i < numHeaders; i++) {
+            headers.add(convertMessageBytes(cHeaders.getName(i)),
+                        convertMessageBytes(cHeaders.getValue(i)));
         }
 
         return res;
     }
 
-    private final class Configurer extends ServerListenerAdapter {
+    private static CharSequence convertMessageBytes(MessageBytes value) {
+        if (value.getType() != MessageBytes.T_BYTES) {
+            return value.toString();
+        }
+
+        final ByteChunk chunk = value.getByteChunk();
+        return new AsciiString(chunk.getBuffer(), chunk.getOffset(), chunk.getLength(), false);
+    }
+
+    private final class Configurator extends ServerListenerAdapter {
         @Override
         public void serverStarting(Server server) {
             start();
