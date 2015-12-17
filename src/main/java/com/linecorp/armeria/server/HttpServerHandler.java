@@ -470,7 +470,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        if (IGNORABLE_ERROR_MESSAGE.matcher(cause.getMessage()).find()) {
+        if (cause.getMessage() != null && IGNORABLE_ERROR_MESSAGE.matcher(cause.getMessage()).find()) {
             return;
         }
 
