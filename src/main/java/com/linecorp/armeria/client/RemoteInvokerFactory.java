@@ -148,6 +148,14 @@ public final class RemoteInvokerFactory implements AutoCloseable {
     }
 
     /**
+     * Returns the {@link EventLoopGroup} being used by this remote invoker factory. Can be used to, e.g.,
+     * schedule a periodic task without creating a separate event loop.
+     */
+    public EventLoopGroup eventLoopGroup() {
+        return eventLoopGroup;
+    }
+
+    /**
      * Returns a {@link RemoteInvoker} that can handle the specified {@link SessionProtocol}.
      */
     public RemoteInvoker getInvoker(SessionProtocol sessionProtocol) {
