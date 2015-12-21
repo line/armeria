@@ -57,6 +57,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
@@ -248,14 +249,27 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
 
     private static Request convertRequest(FullHttpRequest req, String mappedPath) {
         final Request coyoteReq = new Request();
-        coyoteReq.method().setString(req.method().name());
+
+        // Set the method.
+        final HttpMethod method = req.method();
+        coyoteReq.method().setString(method.name());
+
+        // Set the request URI.
         final byte[] uriBytes = mappedPath.getBytes(StandardCharsets.US_ASCII);
         coyoteReq.requestURI().setBytes(uriBytes, 0, uriBytes.length);
 
+        // Set the query string if any.
+        final int queryIndex = req.uri().indexOf('?');
+        if (queryIndex >= 0) {
+            coyoteReq.queryString().setString(req.uri().substring(queryIndex + 1));
+        }
+
+        // Set the headers.
         final MimeHeaders cHeaders = coyoteReq.getMimeHeaders();
         convertHeaders(req.headers(), cHeaders);
         convertHeaders(req.trailingHeaders(), cHeaders);
 
+        // Set the content.
         final ByteBuf content = req.content();
         if (content.isReadable()) {
             coyoteReq.setInputBuffer(new InputBuffer() {
