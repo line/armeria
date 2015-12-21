@@ -82,6 +82,11 @@ public class SimpleHttpClientIntegrationTest {
                         response.headers().set(HttpHeaderNames.CACHE_CONTROL, "alwayscache");
                         promise.setSuccess(response);
                     }));
+            sb.serviceAt("/not200", new HttpService((ctx, executor, promise) -> {
+                DefaultFullHttpResponse response =
+                        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
+                promise.setSuccess(response);
+            }));
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -130,5 +135,14 @@ public class SimpleHttpClientIntegrationTest {
         assertEquals("alwayscache", response.headers().get(HttpHeaderNames.CACHE_CONTROL));
         assertEquals("METHOD: POST|ACCEPT: utf-8|BODY: requestbody日本語",
                      new String(response.content(), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void testNot200() throws Exception {
+        SimpleHttpClient client = Clients.newClient(remoteInvokerFactory, "none+http://127.0.0.1:" + httpPort,
+                                                    SimpleHttpClient.class);
+        SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/not200").build();
+        SimpleHttpResponse response = client.execute(request).get();
+        assertEquals(HttpResponseStatus.NOT_FOUND, response.status());
     }
 }
