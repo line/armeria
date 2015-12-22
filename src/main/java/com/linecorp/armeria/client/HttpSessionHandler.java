@@ -96,21 +96,26 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         } else if (msg instanceof FullHttpResponse) {
             FullHttpResponse response = (FullHttpResponse) msg;
 
-            final Promise<FullHttpResponse> promise = waitsHolder.poll(response);
+            final Invocation invocation = waitsHolder.poll(response);
+            final SerializationFormat serializationFormat =
+                    invocation.invocationContext().scheme().serializationFormat();
 
-            if (promise != null) {
+            if (invocation != null) {
                 try {
-                    if (HttpStatusClass.SUCCESS == response.status().codeClass()) {
-                        promise.setSuccess(response.retain());
+                    if (HttpStatusClass.SUCCESS == response.status().codeClass()
+                            // No serialization indicates a raw HTTP protocol which should
+                            // have error responses returned.
+                            || serializationFormat == SerializationFormat.NONE) {
+                        invocation.resultPromise().setSuccess(response.retain());
                     } else {
-                        promise.setFailure(new InvalidResponseException(
+                        invocation.resultPromise().setFailure(new InvalidResponseException(
                                 "HTTP Response code: " + response.status()));
                     }
                 } finally {
                     ReferenceCountUtil.release(msg);
                 }
             } else {
-                //if promise not found, we just bypass message to next
+                //if invocation not found, we just bypass message to next
                 ctx.fireChannelRead(msg);
             }
 
@@ -139,10 +144,10 @@ class HttpSessionHandler extends ChannelDuplexHandler {
 
     private void failPendingResponses(Throwable e) {
         active = false;
-        final Collection<Promise<FullHttpResponse>> resultPromises = waitsHolder.getAll();
+        final Collection<Invocation> invocations = waitsHolder.getAll();
         waitsHolder.clear();
-        if (!resultPromises.isEmpty()) {
-            resultPromises.forEach(promise -> promise.tryFailure(e));
+        if (!invocations.isEmpty()) {
+            invocations.forEach(invocation -> invocation.resultPromise().tryFailure(e));
         }
     }
 
@@ -159,11 +164,11 @@ class HttpSessionHandler extends ChannelDuplexHandler {
     }
 
     private interface WaitsHolder {
-        Promise<FullHttpResponse> poll(FullHttpResponse response);
+        Invocation poll(FullHttpResponse response);
 
         void put(Invocation invocation, FullHttpRequest request);
 
-        Collection<Promise<FullHttpResponse>> getAll();
+        Collection<Invocation> getAll();
 
         void clear();
 
@@ -177,24 +182,24 @@ class HttpSessionHandler extends ChannelDuplexHandler {
     }
 
     private static class SequentialWaitsHolder implements WaitsHolder {
-        private final Queue<Promise<FullHttpResponse>> requestExpectQueue;
+        private final Queue<Invocation> requestExpectQueue;
 
         SequentialWaitsHolder() {
             requestExpectQueue = new ArrayDeque<>();
         }
 
         @Override
-        public Promise<FullHttpResponse> poll(FullHttpResponse response) {
+        public Invocation poll(FullHttpResponse response) {
             return requestExpectQueue.poll();
         }
 
         @Override
         public void put(Invocation invocation, FullHttpRequest request) {
-            requestExpectQueue.add(invocation.resultPromise());
+            requestExpectQueue.add(invocation);
         }
 
         @Override
-        public Collection<Promise<FullHttpResponse>> getAll() {
+        public Collection<Invocation> getAll() {
             return requestExpectQueue;
         }
 
@@ -205,7 +210,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
     }
 
     private static class MultiplexWaitsHolder implements WaitsHolder {
-        private final IntObjectMap<Promise<FullHttpResponse>> resultExpectMap;
+        private final IntObjectMap<Invocation> resultExpectMap;
         private int streamId;
 
         MultiplexWaitsHolder() {
@@ -214,7 +219,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         }
 
         @Override
-        public Promise<FullHttpResponse> poll(FullHttpResponse response) {
+        public Invocation poll(FullHttpResponse response) {
             int streamID = response.headers().getInt(ExtensionHeaderNames.STREAM_ID.text(), 0);
             return resultExpectMap.remove(streamID);
         }
@@ -223,11 +228,11 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         public void put(Invocation invocation, FullHttpRequest request) {
             int streamId = nextStreamID();
             request.headers().add(ExtensionHeaderNames.STREAM_ID.text(), streamIdToString(streamId));
-            resultExpectMap.put(streamId, invocation.resultPromise());
+            resultExpectMap.put(streamId, invocation);
         }
 
         @Override
-        public Collection<Promise<FullHttpResponse>> getAll() {
+        public Collection<Invocation> getAll() {
             return resultExpectMap.values();
         }
 
