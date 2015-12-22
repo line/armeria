@@ -30,7 +30,7 @@ public class TomcatService extends HttpService {
      * JAR/WAR/directory where the caller class is located at.
      */
     public static TomcatService forCurrentClassPath() {
-        return TomcatServiceBuilder.forCurrentClassPath(2).build();
+        return TomcatServiceBuilder.forCurrentClassPath(3).build();
     }
 
     /**
@@ -38,7 +38,7 @@ public class TomcatService extends HttpService {
      * inside the JAR/WAR/directory where the caller class is located at.
      */
     public static TomcatService forCurrentClassPath(String docBase) {
-        return TomcatServiceBuilder.forCurrentClassPath(docBase, 2).build();
+        return TomcatServiceBuilder.forCurrentClassPath(docBase, 3).build();
     }
 
     /**
