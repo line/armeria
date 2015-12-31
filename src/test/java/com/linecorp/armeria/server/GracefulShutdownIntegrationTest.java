@@ -28,6 +28,8 @@ import org.apache.thrift.TException;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.ClosedSessionException;
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.ThriftService;
@@ -39,6 +41,7 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
     @Override
     protected void configureServer(ServerBuilder sb) {
         sb.gracefulShutdownTimeout(1000L, 2000L);
+        sb.requestTimeoutMillis(0); // Disable RequestTimeoutException.
 
         sb.serviceAt("/sleep", ThriftService.of(
                 (AsyncIface) (milliseconds, resultHandler) ->
@@ -47,7 +50,7 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
                                 milliseconds, TimeUnit.MILLISECONDS)).decorate(LoggingService::new));
     }
 
-    @Test
+    @Test(timeout = 10000L)
     public void waitsForRequestToComplete() throws Exception {
         startServer();
 
@@ -59,8 +62,8 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
                 latch.countDown();
                 client.sleep(1000L);
                 completed.set(true);
-            } catch (TException e) {
-                fail("Shouldn't happen");
+            } catch (Throwable t) {
+                fail("Shouldn't happen: " + t);
             }
         }).start();
 
@@ -71,28 +74,34 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
         assertTrue(completed.get());
     }
 
-    @Test
+    @Test(timeout = 10000L)
     public void interruptsSlowRequests() throws Exception {
         startServer();
 
         SleepService.Iface client = newClient();
         AtomicBoolean completed = new AtomicBoolean(false);
-        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch1 = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
         new Thread(() -> {
             try {
-                latch.countDown();
-                client.sleep(10000L);
+                latch1.countDown();
+                client.sleep(30000L);
                 completed.set(true);
-            } catch (TException e) {
-                fail("Shouldn't happen");
+            } catch (ClosedSessionException expected) {
+                latch2.countDown();
+            } catch (Throwable t) {
+                fail("Shouldn't happen: " + t);
             }
         }).start();
 
         // Wait for the latch to make sure the request has been sent before shutting down.
-        latch.await();
+        latch1.await();
 
         stopServer(true);
         assertFalse(completed.get());
+
+        // 'client.sleep()' must fail immediately when the server closes the connection.
+        latch2.await();
     }
 
     private static SleepService.Iface newClient() throws Exception {

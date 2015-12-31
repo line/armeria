@@ -125,7 +125,7 @@ public class HttpService implements Service {
 
             if (!subFuture.isSuccess()) {
                 // sub-handler failed with an exception.
-                promise.tryFailure(subFuture.cause());
+                ctx.rejectPromise(promise, subFuture.cause());
                 return;
             }
 
@@ -140,9 +140,7 @@ public class HttpService implements Service {
             }
 
             // The current sub-handler returned non-404 or it is the last resort.
-            if (!promise.trySuccess(res)) {
-                res.release();
-            }
+            ctx.resolvePromise(promise, res);
         }
     }
 }

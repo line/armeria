@@ -93,14 +93,14 @@ final class HttpFileServiceInvocationHandler implements ServiceInvocationHandler
 
         final HttpRequest req = ctx.originalRequest();
         if (req.method() != HttpMethod.GET) {
-            respond(promise, HttpResponseStatus.METHOD_NOT_ALLOWED,
+            respond(ctx, promise, HttpResponseStatus.METHOD_NOT_ALLOWED,
                     0, ERROR_MIME_TYPE, Unpooled.wrappedBuffer(CONTENT_METHOD_NOT_ALLOWED));
             return;
         }
 
         final String path = normalizePath(ctx.mappedPath());
         if (path == null) {
-            respond(promise, HttpResponseStatus.NOT_FOUND,
+            respond(ctx, promise, HttpResponseStatus.NOT_FOUND,
                     0, ERROR_MIME_TYPE, Unpooled.wrappedBuffer(CONTENT_NOT_FOUND));
             return;
         }
@@ -118,7 +118,7 @@ final class HttpFileServiceInvocationHandler implements ServiceInvocationHandler
             }
 
             if (!found) {
-                respond(promise, HttpResponseStatus.NOT_FOUND,
+                respond(ctx, promise, HttpResponseStatus.NOT_FOUND,
                         0, ERROR_MIME_TYPE, Unpooled.wrappedBuffer(CONTENT_NOT_FOUND));
                 return;
             }
@@ -144,12 +144,12 @@ final class HttpFileServiceInvocationHandler implements ServiceInvocationHandler
         }
 
         if (lastModifiedMillis < ifModifiedSinceMillis) {
-            respond(promise, HttpResponseStatus.NOT_MODIFIED,
+            respond(ctx, promise, HttpResponseStatus.NOT_MODIFIED,
                     lastModifiedMillis, entry.mimeType(), Unpooled.EMPTY_BUFFER);
             return;
         }
 
-        respond(promise, HttpResponseStatus.OK,
+        respond(ctx, promise, HttpResponseStatus.OK,
                 lastModifiedMillis, entry.mimeType(), entry.readContent(ctx.alloc()));
     }
 
@@ -184,7 +184,7 @@ final class HttpFileServiceInvocationHandler implements ServiceInvocationHandler
     }
 
     private static void respond(
-            Promise<Object> promise,
+            ServiceInvocationContext ctx, Promise<Object> promise,
             HttpResponseStatus status, long lastModifiedMillis, String contentType, ByteBuf content) {
 
         final FullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, content);
@@ -196,7 +196,7 @@ final class HttpFileServiceInvocationHandler implements ServiceInvocationHandler
             res.headers().set(HttpHeaderNames.CONTENT_TYPE, contentType);
         }
 
-        promise.setSuccess(res);
+        ctx.resolvePromise(promise, res);
     }
 
     private Entry getEntry(String path) {

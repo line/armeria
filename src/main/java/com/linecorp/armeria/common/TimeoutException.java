@@ -56,4 +56,9 @@ public class TimeoutException extends RuntimeException {
                                boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
+
+    @Override
+    public Throwable fillInStackTrace() {
+        return this;
+    }
 }

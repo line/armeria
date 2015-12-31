@@ -61,26 +61,26 @@ final class ThriftServiceInvocationHandler implements ServiceInvocationHandler {
                 @Override
                 public void onComplete(Object response) {
                     if (func.isOneway()) {
-                        safeSetSuccess(ctx, promise, null);
+                        ctx.resolvePromise(promise, null);
                         return;
                     }
 
                     try {
                         TBase<TBase<?, ?>, TFieldIdEnum> result = func.newResult();
                         func.setSuccess(result, response);
-                        safeSetSuccess(ctx, promise, result);
+                        ctx.resolvePromise(promise, result);
                     } catch (Throwable t) {
-                        safeSetFailure(ctx, promise, t);
+                        ctx.rejectPromise(promise, t);
                     }
                 }
 
                 @Override
                 public void onError(Exception e) {
-                    safeSetFailure(ctx, promise, e);
+                    ctx.rejectPromise(promise, e);
                 }
             });
         } catch (Throwable t) {
-            safeSetFailure(ctx, promise, t);
+            ctx.rejectPromise(promise, t);
         }
     }
 
@@ -104,29 +104,15 @@ final class ThriftServiceInvocationHandler implements ServiceInvocationHandler {
                         result = null;
                     }
 
-                    safeSetSuccess(ctx, promise, result);
+                    ctx.resolvePromise(promise, result);
                 } catch (Throwable t) {
-                    safeSetFailure(ctx, promise, t);
+                    ctx.rejectPromise(promise, t);
                 } finally {
                     ServiceInvocationContext.removeCurrent();
                 }
             });
         } catch (Throwable t) {
-            promise.setFailure(t);
-        }
-    }
-
-    private static void safeSetSuccess(
-            ThriftServiceInvocationContext ctx, Promise<Object> promise, TBase<TBase<?, ?>, TFieldIdEnum> result) {
-
-        if (!promise.trySuccess(result)) {
-            ctx.logger().warn("Failed to notify a result ({}) to a promise ({})", result, promise);
-        }
-    }
-
-    private static void safeSetFailure(ThriftServiceInvocationContext ctx, Promise<Object> promise, Throwable t) {
-        if (!promise.tryFailure(t)) {
-            ctx.logger().warn("Failed to notify a failure ({}) to a promise ({})", t, promise, t);
+            ctx.rejectPromise(promise, t);
         }
     }
 }

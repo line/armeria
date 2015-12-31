@@ -17,6 +17,9 @@
 package com.linecorp.armeria.server.http.healthcheck;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
@@ -61,6 +64,17 @@ public class HttpHealthCheckServiceTest {
     public void setUp() {
         service = new HttpHealthCheckService(health1, health2, health3);
         service.serverHealth.setHealthy(true);
+
+        doAnswer(invocation -> {
+            final Object[] args = invocation.getArguments();
+
+            @SuppressWarnings("unchecked")
+            final Promise<Object> promise = (Promise<Object>) args[0];
+            final FullHttpResponse response = (FullHttpResponse) args[1];
+
+            promise.setSuccess(response);
+            return null;
+        }).when(context).resolvePromise(any(), any());
     }
 
     @Test
