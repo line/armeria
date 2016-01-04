@@ -85,10 +85,9 @@
     <netty.version>4.1.0.Beta8</netty.version>
     <slf4j.version>1.7.13</slf4j.version>
     <tomcat.version>8.0.28</tomcat.version>
-    <jetty.alpn.version.latest>8.1.6.v20151105</jetty.alpn.version.latest>
-    <jetty.alpn.version>${jetty.alpn.version.latest}</jetty.alpn.version>
-    <jetty.alpn.path>${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar</jetty.alpn.path>
-    <argLine.bootcp>-Xbootclasspath/p:${jetty.alpn.path}</argLine.bootcp>
+    <jetty.alpnAgent.version>1.0.0.Final</jetty.alpnAgent.version>
+    <jetty.alpnAgent.path>${settings.localRepository}/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
+    <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <thrift.executable>${project.basedir}/src/build/thrift.${os.detected.classifier}</thrift.executable>
     <thrift.source.main>${project.basedir}/src/main/thrift</thrift.source.main>
@@ -132,12 +131,6 @@
       <groupId>org.eclipse.jetty.alpn</groupId>
       <artifactId>alpn-api</artifactId>
       <version>1.1.2.v20150522</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mortbay.jetty.alpn</groupId>
-      <artifactId>alpn-boot</artifactId>
-      <version>${jetty.alpn.version}</version>
       <scope>provided</scope>
     </dependency>
 
@@ -337,21 +330,20 @@
           </execution>
         </executions>
       </plugin>
-      <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
         <version>2.10</version>
         <executions>
           <execution>
-            <id>get-alpn-boot</id>
+            <id>get-jetty-alpn-agent</id>
             <phase>validate</phase>
             <goals>
               <goal>get</goal>
             </goals>
             <configuration>
-              <groupId>org.mortbay.jetty.alpn</groupId>
-              <artifactId>alpn-boot</artifactId>
-              <version>${jetty.alpn.version}</version>
+              <groupId>kr.motd.javaagent</groupId>
+              <artifactId>jetty-alpn-agent</artifactId>
+              <version>${jetty.alpnAgent.version}</version>
             </configuration>
           </execution>
         </executions>
@@ -499,7 +491,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${argLine.bootcp} ${argLine.leak}</argLine>
+          <argLine>${argLine.alpnAgent} ${argLine.leak}</argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -658,143 +650,6 @@
       <id>leak</id>
       <properties>
         <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid</argLine.leak>
-      </properties>
-    </profile>
-
-    <!--
-      Profiles that assign proper Jetty npn-boot and alpn-boot version.
-      See: http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-versions
-    -->
-    <profile>
-      <id>alpn-8u05</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_05</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u11</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_11</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u20</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_20</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.0.v20141016</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u25</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_25</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.2.v20141202</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u31</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_31</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u40</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_40</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u45</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_45</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.3.v20150130</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u51</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_51</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.4.v20150727</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u60</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_60</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.5.v20150921</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u65</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_65</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.6.v20151105</jetty.alpn.version>
-      </properties>
-    </profile>
-    <profile>
-      <id>alpn-8u66</id>
-      <activation>
-        <property>
-          <name>java.version</name>
-          <value>1.8.0_66</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpn.version>8.1.6.v20151105</jetty.alpn.version>
       </properties>
     </profile>
   </profiles>
