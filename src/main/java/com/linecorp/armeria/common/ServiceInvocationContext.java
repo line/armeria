@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -31,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -38,6 +41,9 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
 /**
@@ -146,6 +152,137 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
      */
     public final EventLoop eventLoop() {
         return channel().eventLoop();
+    }
+
+    /**
+     * Returns an {@link EventLoop} that will make sure this invocation is set
+     * as the current invocation before executing any callback. This should
+     * almost always be used for executing asynchronous callbacks in service
+     * code to make sure features that require the invocation context work
+     * properly. Most asynchronous libraries like
+     * {@link java.util.concurrent.CompletableFuture} provide methods that
+     * accept an {@link Executor} to run callbacks on.
+     */
+    public final EventLoop contextAwareEventLoop() {
+        return new ServiceInvocationContextAwareEventLoop(this, eventLoop());
+    }
+
+    /**
+     * Returns an {@link Executor} that will execute callbacks in the given
+     * {@code executor}, making sure to propagate the current invocation context
+     * into the callback execution. It is generally preferred to use
+     * {@link #contextAwareEventLoop()} to ensure the callback stays on the
+     * same thread as well.
+     */
+    public final Executor makeContextAware(Executor executor) {
+        return runnable -> executor.execute(makeContextAware(runnable));
+    }
+
+    /**
+     * Returns a {@link Callable} that makes sure the current invocation context
+     * is set and then invokes the input {@code callable}.
+     */
+    public final <T> Callable<T> makeContextAware(Callable<T> callable) {
+        ServiceInvocationContext propagatedContext = this;
+        return () -> {
+            boolean mustResetContext = propagateContextIfNotPresent(propagatedContext);
+            try {
+                return callable.call();
+            } finally {
+                if (mustResetContext) {
+                    removeCurrent();
+                }
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link Runnable} that makes sure the current invocation context
+     * is set and then invokes the input {@code runnable}.
+     */
+    public final Runnable makeContextAware(Runnable runnable) {
+        ServiceInvocationContext propagatedContext = this;
+        return () -> {
+            boolean mustResetContext = propagateContextIfNotPresent(propagatedContext);
+            try {
+                runnable.run();
+            } finally {
+                if (mustResetContext) {
+                    removeCurrent();
+                }
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link FutureListener} that makes sure the current invocation
+     * context is set and then invokes the input {@code listener}.
+     */
+    public final <T> FutureListener<T> makeContextAware(FutureListener<T> listener) {
+        ServiceInvocationContext propagatedContext = this;
+        return future -> {
+            boolean mustResetContext = propagateContextIfNotPresent(propagatedContext);
+            try {
+                listener.operationComplete(future);
+            } finally {
+                if (mustResetContext) {
+                    removeCurrent();
+                }
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link ChannelFutureListener} that makes sure the current invocation
+     * context is set and then invokes the input {@code listener}.
+     */
+    public final ChannelFutureListener makeContextAware(ChannelFutureListener listener) {
+        ServiceInvocationContext propagatedContext = this;
+        return future -> {
+            boolean mustResetContext = propagateContextIfNotPresent(propagatedContext);
+            try {
+                listener.operationComplete(future);
+            } finally {
+                if (mustResetContext) {
+                    removeCurrent();
+                }
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link ChannelFutureListener} that makes sure the current invocation
+     * context is set and then invokes the input {@code listener}.
+     */
+    final <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener) {
+        ServiceInvocationContext propagatedContext = this;
+        return future -> {
+            boolean mustResetContext = propagateContextIfNotPresent(propagatedContext);
+            try {
+                listener.operationComplete(future);
+            } finally {
+                if (mustResetContext) {
+                    removeCurrent();
+                }
+            }
+        };
+    }
+
+    private static boolean propagateContextIfNotPresent(ServiceInvocationContext propagatedContext) {
+        return mapCurrent(currentContext -> {
+            if (!currentContext.equals(propagatedContext)) {
+                throw new IllegalStateException(
+                        "Trying to call object made with makeContextAware or object on executor made with " +
+                        "makeContextAware with context " + propagatedContext +
+                        ", but context is currently set to " + currentContext + ". This means the " +
+                        "callback was passed from one invocation to another which is not allowed. Make " +
+                        "sure you are not saving callbacks into shared state.");
+            }
+            return false;
+        }, () -> {
+            setCurrent(propagatedContext);
+            return true;
+        });
     }
 
     /**
