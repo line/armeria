@@ -236,11 +236,9 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
             ServiceInvocationContext.setCurrent(ctx);
             try {
                 coyoteAdapter.service(coyoteReq, coyoteRes);
-                promise.trySuccess(convertResponse(coyoteRes, resContent));
+                ctx.resolvePromise(promise, convertResponse(coyoteRes, resContent));
             } catch (Throwable t) {
-                if (!promise.tryFailure(t)) {
-                    ctx.logger().warn("Failed to mark a promise as a failure: {}", promise, t);
-                }
+                ctx.rejectPromise(promise, t);
             } finally {
                 ServiceInvocationContext.removeCurrent();
             }

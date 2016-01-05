@@ -160,7 +160,8 @@ public class HttpHealthCheckService extends HttpService {
             } else {
                 response = newUnhealthyResponse(ctx);
             }
-            promise.setSuccess(response);
+
+            ctx.resolvePromise(promise, response);
         }
 
         private boolean isHealthy() {

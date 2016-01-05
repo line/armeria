@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -34,8 +33,12 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.util.DefaultAttributeMap;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.Promise;
 
 /**
  * Provides information about an invocation and related utilities. Every remote invocation, regardless of if
@@ -242,6 +245,77 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
     @SuppressWarnings("unchecked")
     public <T> T originalRequest() {
         return (T) originalRequest;
+    }
+
+    /**
+     * Resolves the specified {@code promise} with the specified {@code result} so that the {@code promise} is
+     * marked as 'done'. If {@code promise} is done already, this method does the following:
+     * <ul>
+     *   <li>Log a warning about the failure, and</li>
+     *   <li>Release {@code result} if it is {@linkplain ReferenceCounted a reference-counted object},
+     *       such as {@link ByteBuf} and {@link FullHttpResponse}.</li>
+     * </ul>
+     * Note that a {@link Promise} can be done already even if you did not call this method in the following
+     * cases:
+     * <ul>
+     *   <li>Invocation timeout - The invocation associated with the {@link Promise} has been timed out.</li>
+     *   <li>User error - A service implementation called any of the following methods more than once:
+     *     <ul>
+     *       <li>{@link #resolvePromise(Promise, Object)}</li>
+     *       <li>{@link #rejectPromise(Promise, Throwable)}</li>
+     *       <li>{@link Promise#setSuccess(Object)}</li>
+     *       <li>{@link Promise#setFailure(Throwable)}</li>
+     *       <li>{@link Promise#cancel(boolean)}</li>
+     *     </ul>
+     *   </li>
+     * </ul>
+     */
+    public void resolvePromise(Promise<?> promise, Object result) {
+        @SuppressWarnings("unchecked")
+        final Promise<Object> castPromise = (Promise<Object>) promise;
+
+        if (castPromise.trySuccess(result)) {
+            // Resolved successfully.
+            return;
+        }
+
+        try {
+            if (!(promise.cause() instanceof TimeoutException)) {
+                // Log resolve failure unless it is due to a timeout.
+                logger().warn("Failed to resolve a promise ({}) with {}", promise, result);
+            }
+        } finally {
+            ReferenceCountUtil.safeRelease(result);
+        }
+    }
+
+    /**
+     * Rejects the specified {@code promise} with the specified {@code cause}. If {@code promise} is done
+     * already, this method logs a warning about the failure. Note that a {@link Promise} can be done already
+     * even if you did not call this method in the following cases:
+     * <ul>
+     *   <li>Invocation timeout - The invocation associated with the {@link Promise} has been timed out.</li>
+     *   <li>User error - A service implementation called any of the following methods more than once:
+     *     <ul>
+     *       <li>{@link #resolvePromise(Promise, Object)}</li>
+     *       <li>{@link #rejectPromise(Promise, Throwable)}</li>
+     *       <li>{@link Promise#setSuccess(Object)}</li>
+     *       <li>{@link Promise#setFailure(Throwable)}</li>
+     *       <li>{@link Promise#cancel(boolean)}</li>
+     *     </ul>
+     *   </li>
+     * </ul>
+     */
+    public void rejectPromise(Promise<?> promise, Throwable cause) {
+        if (promise.tryFailure(cause)) {
+            // Fulfilled successfully.
+            return;
+        }
+
+        if (!(promise.cause() instanceof TimeoutException)) {
+            // Log reject failure unless it is due to a timeout.
+            logger().warn("Failed to reject a promise ({}) with {}", promise, cause, cause);
+        }
     }
 
     @Override

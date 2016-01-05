@@ -97,19 +97,21 @@ class HttpSessionHandler extends ChannelDuplexHandler {
             FullHttpResponse response = (FullHttpResponse) msg;
 
             final Invocation invocation = waitsHolder.poll(response);
-            final SerializationFormat serializationFormat =
-                    invocation.invocationContext().scheme().serializationFormat();
 
             if (invocation != null) {
+                final ServiceInvocationContext iCtx = invocation.invocationContext();
+                final SerializationFormat serializationFormat = iCtx.scheme().serializationFormat();
                 try {
+                    final Promise<FullHttpResponse> resultPromise = invocation.resultPromise();
                     if (HttpStatusClass.SUCCESS == response.status().codeClass()
-                            // No serialization indicates a raw HTTP protocol which should
-                            // have error responses returned.
-                            || serializationFormat == SerializationFormat.NONE) {
-                        invocation.resultPromise().setSuccess(response.retain());
+                        // No serialization indicates a raw HTTP protocol which should
+                        // have error responses returned.
+                        || serializationFormat == SerializationFormat.NONE) {
+                        iCtx.resolvePromise(resultPromise, response.retain());
                     } else {
-                        invocation.resultPromise().setFailure(new InvalidResponseException(
-                                "HTTP Response code: " + response.status()));
+                        iCtx.rejectPromise(
+                                resultPromise,
+                                new InvalidResponseException("HTTP Response code: " + response.status()));
                     }
                 } finally {
                     ReferenceCountUtil.release(msg);
@@ -145,9 +147,9 @@ class HttpSessionHandler extends ChannelDuplexHandler {
     private void failPendingResponses(Throwable e) {
         active = false;
         final Collection<Invocation> invocations = waitsHolder.getAll();
-        waitsHolder.clear();
         if (!invocations.isEmpty()) {
-            invocations.forEach(invocation -> invocation.resultPromise().tryFailure(e));
+            invocations.forEach(i -> i.invocationContext().rejectPromise(i.resultPromise(), e));
+            waitsHolder.clear();
         }
     }
 

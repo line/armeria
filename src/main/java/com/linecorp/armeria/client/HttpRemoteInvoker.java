@@ -33,6 +33,9 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ClientCodec.EncodeResult;
 import com.linecorp.armeria.client.HttpSessionHandler.Invocation;
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
@@ -59,6 +62,8 @@ import io.netty.util.internal.OneTimeTask;
 import io.netty.util.internal.PlatformDependent;
 
 final class HttpRemoteInvoker implements RemoteInvoker {
+
+    private static final Logger logger = LoggerFactory.getLogger(HttpRemoteInvoker.class);
 
     private static final KeyedChannelPoolHandlerAdapter<PoolKey> NOOP_POOL_HANDLER =
             new KeyedChannelPoolHandlerAdapter<>();
@@ -166,10 +171,10 @@ final class HttpRemoteInvoker implements RemoteInvoker {
             final ChannelFuture writeFuture = writeRequest(channel, invocation, ctx, options);
             writeFuture.addListener(fut -> {
                 if (!fut.isSuccess()) {
-                    responsePromise.tryFailure(fut.cause());
+                    ctx.rejectPromise(responsePromise, fut.cause());
                 } else {
                     long responseTimeoutMillis = options.responseTimeoutPolicy().timeout(ctx);
-                    scheduleTimeout(channel, responsePromise, responseTimeoutMillis);
+                    scheduleTimeout(channel, responsePromise, responseTimeoutMillis, false);
                 }
             });
 
@@ -181,12 +186,16 @@ final class HttpRemoteInvoker implements RemoteInvoker {
                     if (future.isSuccess()) {
                         decodeResult(codec, resultPromise, ctx, responsePromise.getNow());
                     } else {
-                        resultPromise.tryFailure(future.cause());
+                        ctx.rejectPromise(resultPromise, future.cause());
                     }
                 });
             }
         } else {
-            resultPromise.setFailure(encodeResult.cause());
+            final Throwable cause = encodeResult.cause();
+            if (!resultPromise.tryFailure(cause)) {
+                logger.warn("Failed to reject an invocation promise ({}) with {}",
+                            resultPromise, cause, cause);
+            }
         }
 
         //release channel
@@ -201,9 +210,9 @@ final class HttpRemoteInvoker implements RemoteInvoker {
     private static <T> void decodeResult(ClientCodec codec, Promise<T> resultPromise,
                                          ServiceInvocationContext ctx, FullHttpResponse response) {
         try {
-            resultPromise.setSuccess(codec.decodeResponse(ctx, response.content(), response));
+            ctx.resolvePromise(resultPromise, codec.decodeResponse(ctx, response.content(), response));
         } catch (Throwable e) {
-            resultPromise.tryFailure(e);
+            ctx.rejectPromise(resultPromise, e);
         } finally {
             ReferenceCountUtil.release(response);
         }
@@ -214,15 +223,16 @@ final class HttpRemoteInvoker implements RemoteInvoker {
         final long writeTimeoutMillis = options.writeTimeoutPolicy().timeout(ctx);
         final ChannelPromise writePromise = channel.newPromise();
         channel.writeAndFlush(invocation, writePromise);
-        scheduleTimeout(channel, writePromise, writeTimeoutMillis);
+        scheduleTimeout(channel, writePromise, writeTimeoutMillis, true);
         return writePromise;
     }
 
-    private static <T> void scheduleTimeout(Channel channel, Promise<T> promise, long timeoutMillis) {
+    private static <T> void scheduleTimeout(
+            Channel channel, Promise<T> promise, long timeoutMillis, boolean useWriteTimeoutException) {
         final ScheduledFuture<?> timeoutFuture;
         if (timeoutMillis > 0) {
             timeoutFuture = channel.eventLoop().schedule(
-                    new TimeoutTask(promise, timeoutMillis),
+                    new TimeoutTask(promise, timeoutMillis, useWriteTimeoutException),
                     timeoutMillis, TimeUnit.MILLISECONDS);
         } else {
             timeoutFuture = null;
@@ -239,16 +249,23 @@ final class HttpRemoteInvoker implements RemoteInvoker {
 
         private final Promise<?> promise;
         private final long timeoutMillis;
+        private final boolean useWriteTimeoutException;
 
-        private TimeoutTask(Promise<?> promise, long timeoutMillis) {
+        private TimeoutTask(Promise<?> promise, long timeoutMillis, boolean useWriteTimeoutException) {
             this.promise = promise;
             this.timeoutMillis = timeoutMillis;
+            this.useWriteTimeoutException = useWriteTimeoutException;
         }
 
         @Override
         public void run() {
-            promise.tryFailure(new WriteTimeoutException(
-                    "write timed out within " + timeoutMillis + "ms"));
+            if (useWriteTimeoutException) {
+                promise.tryFailure(new WriteTimeoutException(
+                        "write timed out after " + timeoutMillis + "ms"));
+            } else {
+                promise.tryFailure(new ResponseTimeoutException(
+                        "did not receive a response within " + timeoutMillis + "ms"));
+            }
         }
     }
 
