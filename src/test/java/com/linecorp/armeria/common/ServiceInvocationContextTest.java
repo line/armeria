@@ -2,6 +2,7 @@ package com.linecorp.armeria.common;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -15,8 +16,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.eclipse.jetty.util.ConcurrentHashSet;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -41,8 +44,16 @@ public class ServiceInvocationContextTest {
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     @Mock
     private Channel channel;
+
+    @After
+    public void tearDown() {
+        ServiceInvocationContext.removeCurrent();
+    }
 
     @Test
     public void contextAwareEventExecutor() throws Exception {
@@ -132,6 +143,26 @@ public class ServiceInvocationContextTest {
         promise.addListener(context.makeContextAware((ChannelFutureListener) f ->
                 assertEquals(context, ServiceInvocationContext.current())));
         promise.setSuccess(null);
+    }
+
+    @Test
+    public void contextPropagationSameContextAlreadySet() {
+        ServiceInvocationContext context = createContext();
+        ServiceInvocationContext.setCurrent(context);
+        context.makeContextAware(() -> {
+            assertEquals(context, ServiceInvocationContext.current());
+        }).run();
+    }
+
+    @Test
+    public void contextPropagationDifferentContextAlreadySet() {
+        ServiceInvocationContext context = createContext();
+        ServiceInvocationContext context2 = createContext();
+        ServiceInvocationContext.setCurrent(context2);
+        thrown.expect(IllegalStateException.class);
+        context.makeContextAware(() -> {
+            fail();
+        }).run();
     }
 
     private static List<Callable<String>> makeTaskList(int startId,
