@@ -1,5 +1,5 @@
 <%@ page import="io.netty.buffer.ByteBuf" %>
-<%@ page contentType="text/html; ISO-8859-1" %>
+<%@ page contentType="text/html; charset=UTF-8" %>
 <html>
 <body>
 <%-- Attempt to access the class that exists only in WEB-INF/lib/hello.jar --%>

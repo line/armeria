@@ -18,9 +18,9 @@ package com.linecorp.armeria.server.http.tomcat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.regex.Pattern;
 
@@ -108,6 +108,29 @@ public class TomcatServiceTest extends AbstractServerTest {
                         "<html><body>" +
                         "<p>foo is 3</p>" +
                         "<p>bar is 4</p>" +
+                        "</body></html>"));
+            }
+        }
+    }
+
+    @Test
+    public void testAddressesAndPorts() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/tc/addrs_and_ports.jsp")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("text/html"));
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+
+                assertTrue(actualContent, actualContent.matches(
+                        "<html><body>" +
+                        "<p>RemoteAddr: 127\\.0\\.0\\.1</p>" +
+                        "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
+                        "<p>RemotePort: [1-9][0-9]+</p>" +
+                        "<p>LocalAddr: (?!null)[^<]+</p>" +
+                        "<p>LocalName: localhost</p>" +
+                        "<p>LocalPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
                         "</body></html>"));
             }
         }

@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.http.tomcat;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -205,7 +206,7 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
     public void invoke(ServiceInvocationContext ctx,
                        Executor blockingTaskExecutor, Promise<Object> promise) throws Exception {
 
-        final Request coyoteReq = convertRequest(ctx.originalRequest(), ctx.mappedPath());
+        final Request coyoteReq = convertRequest(ctx);
         final Response coyoteRes = new Response();
         coyoteReq.setResponse(coyoteRes);
         coyoteRes.setRequest(coyoteReq);
@@ -245,8 +246,23 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         });
     }
 
-    private static Request convertRequest(FullHttpRequest req, String mappedPath) {
+    private Request convertRequest(ServiceInvocationContext ctx) {
+        final FullHttpRequest req = ctx.originalRequest();
+        final String mappedPath = ctx.mappedPath();
+
         final Request coyoteReq = new Request();
+
+        // Set the remote host/address.
+        final InetSocketAddress remoteAddr = (InetSocketAddress) ctx.remoteAddress();
+        coyoteReq.remoteAddr().setString(remoteAddr.getAddress().getHostAddress());
+        coyoteReq.remoteHost().setString(remoteAddr.getHostString());
+        coyoteReq.setRemotePort(remoteAddr.getPort());
+
+        // Set the local host/address.
+        final InetSocketAddress localAddr = (InetSocketAddress) ctx.localAddress();
+        coyoteReq.localAddr().setString(localAddr.getAddress().getHostAddress());
+        coyoteReq.localName().setString(config().hostname());
+        coyoteReq.setLocalPort(localAddr.getPort());
 
         // Set the method.
         final HttpMethod method = req.method();
