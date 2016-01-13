@@ -351,6 +351,13 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
     }
 
     /**
+     * Returns the local address of this invocation.
+     */
+    public final SocketAddress localAddress() {
+        return ch.localAddress();
+    }
+
+    /**
      * Returns the ID of this invocation. Note that the ID returned by this method is only for debugging
      * purposes and thus is never guaranteed to be unique.
      */
