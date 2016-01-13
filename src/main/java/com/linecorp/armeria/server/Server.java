@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -327,6 +328,19 @@ public final class Server implements AutoCloseable {
                 return promise;
             }
         }
+    }
+
+    /**
+     * Returns a {@link EventLoop} from the worker group. This can be used for, e.g., scheduling background
+     * tasks for the lifetime of the {@link Server} using
+     * {@link EventLoop#scheduleAtFixedRate(Runnable, long, long, TimeUnit)}. It is very important that these
+     * tasks do not block as this would block all requests in the server on that {@link EventLoop}.
+     */
+    public EventLoop nextEventLoop() {
+        if (workerGroup == null) {
+            throw new IllegalStateException("nextEventLoop must be called after the server is started.");
+        }
+        return workerGroup.next();
     }
 
     private Future<Void> stop0(Promise<Void> promise) {
