@@ -66,6 +66,17 @@ public class RemoteInvokerOptions extends AbstractOptions {
         return new RemoteInvokerOptions(DEFAULT, options);
     }
 
+    /**
+     * Returns the {@link RemoteInvokerOptions} with the specified {@link RemoteInvokerOptionValue}s.
+     */
+    public static RemoteInvokerOptions of(Iterable<RemoteInvokerOptionValue<?>> options) {
+        if (options == null) {
+            return DEFAULT;
+        }
+        return new RemoteInvokerOptions(DEFAULT, options);
+    }
+
+
     private static <T> RemoteInvokerOptionValue<T> validateValue(RemoteInvokerOptionValue<T> optionValue) {
         requireNonNull(optionValue, "value");
 
@@ -122,6 +133,11 @@ public class RemoteInvokerOptions extends AbstractOptions {
     }
 
     private RemoteInvokerOptions(RemoteInvokerOptions baseOptions, RemoteInvokerOptionValue<?>... options) {
+        super(baseOptions, RemoteInvokerOptions::validateValue, options);
+    }
+
+    private RemoteInvokerOptions(
+            RemoteInvokerOptions baseOptions, Iterable<RemoteInvokerOptionValue<?>> options) {
         super(baseOptions, RemoteInvokerOptions::validateValue, options);
     }
 

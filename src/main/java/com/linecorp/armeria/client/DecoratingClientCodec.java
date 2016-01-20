@@ -30,7 +30,7 @@ import io.netty.util.concurrent.Promise;
 /**
  * A {@link ClientCodec} that decorates another {@link ClientCodec}.
  *
- * @see ClientOption#CLIENT_CODEC_DECORATOR
+ * @see ClientOption#DECORATOR
  */
 public abstract class DecoratingClientCodec implements ClientCodec {
 

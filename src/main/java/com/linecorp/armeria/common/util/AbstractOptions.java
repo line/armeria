@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * A set of configuration options and their respective values.
@@ -34,7 +35,6 @@ public abstract class AbstractOptions {
     protected Map<AbstractOption<Object>, AbstractOptionValue<AbstractOption<Object>, Object>> valueMap;
 
     @SafeVarargs
-    @SuppressWarnings("unchecked")
     protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(
             AbstractOptions baseConstantValues, Function<T, T> validator, T... values) {
 
@@ -44,15 +44,33 @@ public abstract class AbstractOptions {
             validator = Function.identity();
         }
         if (values != null) {
-            Stream.of(values)
-                  .map(validator)
-                  .forEach(v -> valueMap.put((AbstractOption<Object>) v.option(),
-                                             (AbstractOptionValue<AbstractOption<Object>, Object>) v));
+            putAll(validator, Stream.of(values));
         }
     }
 
     protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(
-            AbstractOptions baseConstantValue, T[] values) {
+            AbstractOptions baseConstantValues, Function<T, T> validator, Iterable<T> values) {
+
+        valueMap = baseConstantValues == null ? new IdentityHashMap<>()
+                                              : new IdentityHashMap<>(baseConstantValues.valueMap);
+        if (validator == null) {
+            validator = Function.identity();
+        }
+        if (values != null) {
+            putAll(validator, StreamSupport.stream(values.spliterator(), false));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends AbstractOptionValue<?, ?>> void putAll(Function<T, T> validator, Stream<T> values) {
+        values.map(validator)
+              .forEach(v -> valueMap.put((AbstractOption<Object>) v.option(),
+                                         (AbstractOptionValue<AbstractOption<Object>, Object>) v));
+    }
+
+    @SafeVarargs
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(
+            AbstractOptions baseConstantValue, T... values) {
         this(baseConstantValue, null, values);
     }
 
