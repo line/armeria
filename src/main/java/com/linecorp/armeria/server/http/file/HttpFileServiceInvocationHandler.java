@@ -211,19 +211,21 @@ final class HttpFileServiceInvocationHandler implements ServiceInvocationHandler
             return e;
         }
 
-        e = new CachedEntry(config.vfs().get(path));
+        e = new CachedEntry(config.vfs().get(path), config.maxCacheEntrySizeBytes());
         cache.put(path, e);
         return e;
     }
 
-    private final class CachedEntry implements Entry {
+    private static final class CachedEntry implements Entry {
 
         private final Entry e;
+        private final int maxCacheEntrySizeBytes;
         private ByteBuf cachedContent;
         private volatile long cachedLastModifiedMillis;
 
-        CachedEntry(Entry e) {
+        CachedEntry(Entry e, int maxCacheEntrySizeBytes) {
             this.e = e;
+            this.maxCacheEntrySizeBytes = maxCacheEntrySizeBytes;
             cachedLastModifiedMillis = e.lastModifiedMillis();
         }
 
@@ -247,7 +249,7 @@ final class HttpFileServiceInvocationHandler implements ServiceInvocationHandler
         public synchronized ByteBuf readContent(ByteBufAllocator alloc) throws IOException {
             if (cachedContent == null) {
                 final ByteBuf newContent = e.readContent(alloc);
-                if (newContent.readableBytes() > config.maxCacheEntrySizeBytes()) {
+                if (newContent.readableBytes() > maxCacheEntrySizeBytes) {
                     // Do not cache if the content is too large.
                     return newContent;
                 }
