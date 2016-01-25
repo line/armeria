@@ -23,7 +23,7 @@ import com.linecorp.armeria.server.http.HttpService;
 /**
  * An {@link HttpService} that dispatches its requests to a web application running in an embedded Tomcat.
  */
-public class TomcatService extends HttpService {
+public final class TomcatService extends HttpService {
 
     /**
      * Creates a new {@link TomcatService} with the web application at the root directory inside the

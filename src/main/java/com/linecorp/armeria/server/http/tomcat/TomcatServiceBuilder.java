@@ -28,10 +28,17 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 import org.apache.catalina.Realm;
+import org.apache.catalina.core.StandardEngine;
+import org.apache.catalina.core.StandardServer;
+import org.apache.catalina.core.StandardService;
 import org.apache.catalina.realm.NullRealm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +50,10 @@ import org.slf4j.LoggerFactory;
 public final class TomcatServiceBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatServiceBuilder.class);
+
+    // From Tomcat conf/server.xml
+    private static final String DEFAULT_SERVICE_NAME = "Catalina";
+    private static final String DEFAULT_ENGINE_NAME = DEFAULT_SERVICE_NAME;
 
     /**
      * Creates a new {@link TomcatServiceBuilder} with the web application at the root directory inside the
@@ -159,7 +170,10 @@ public final class TomcatServiceBuilder {
     private static final Realm NULL_REALM = new NullRealm();
 
     private final Path docBase;
+    private final List<Consumer<? super StandardServer>> configurators = new ArrayList<>();
 
+    private String serviceName = DEFAULT_SERVICE_NAME;
+    private String engineName = DEFAULT_ENGINE_NAME;
     private Path baseDir;
     private Realm realm = NULL_REALM;
     private String hostname = "localhost";
@@ -190,6 +204,22 @@ public final class TomcatServiceBuilder {
         }
 
         return docBase;
+    }
+
+    /**
+     * Sets the name of the {@link StandardService} of an embedded Tomcat.
+     */
+    public TomcatServiceBuilder serviceName(String serviceName) {
+        this.serviceName = requireNonNull(serviceName, "serviceName");
+        return this;
+    }
+
+    /**
+     * Sets the name of the {@link StandardEngine} of an embedded Tomcat.
+     */
+    public TomcatServiceBuilder engineName(String engineName) {
+        this.engineName = requireNonNull(engineName, "engineName");
+        return this;
     }
 
     /**
@@ -238,6 +268,16 @@ public final class TomcatServiceBuilder {
     }
 
     /**
+     * Sets a {@link Consumer} that performs additional configuration operations against
+     * the Tomcat {@link StandardServer} created by a {@link TomcatService}. This method can be invoked
+     * multiple times to add multiple {@code configurator}s.
+     */
+    public TomcatServiceBuilder configurator(Consumer<? super StandardServer> configurator) {
+        configurators.add(requireNonNull(configurator, "configurator"));
+        return this;
+    }
+
+    /**
      * Creates a new {@link TomcatService}.
      */
     public TomcatService build() {
@@ -261,11 +301,13 @@ public final class TomcatServiceBuilder {
             }
         }
 
-        return new TomcatService(new TomcatServiceConfig(baseDir, realm, hostname, docBase));
+        return new TomcatService(new TomcatServiceConfig(
+                serviceName, engineName, baseDir, realm, hostname, docBase,
+                Collections.unmodifiableList(configurators)));
     }
 
     @Override
     public String toString() {
-        return TomcatServiceConfig.toString(this, baseDir, realm, hostname, docBase);
+        return TomcatServiceConfig.toString(this, serviceName, engineName, baseDir, realm, hostname, docBase);
     }
 }

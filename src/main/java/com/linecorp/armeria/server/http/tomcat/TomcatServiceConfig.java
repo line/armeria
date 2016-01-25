@@ -17,25 +17,51 @@
 package com.linecorp.armeria.server.http.tomcat;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.function.Consumer;
 
 import org.apache.catalina.Realm;
+import org.apache.catalina.core.StandardEngine;
+import org.apache.catalina.core.StandardServer;
+import org.apache.catalina.core.StandardService;
 
 /**
  * {@link TomcatService} configuration.
  */
 public class TomcatServiceConfig {
 
+    private final String serviceName;
+    private final String engineName;
     private final Path baseDir;
     private final Realm realm;
     private final String hostname;
     private final Path docBase;
+    private final List<Consumer<? super StandardServer>> configurators;
 
-    TomcatServiceConfig(Path baseDir, Realm realm, String hostname, Path docBase) {
+    TomcatServiceConfig(String serviceName, String engineName, Path baseDir, Realm realm,
+                        String hostname, Path docBase, List<Consumer<? super StandardServer>> configurators) {
 
+        this.engineName = engineName;
+        this.serviceName = serviceName;
         this.baseDir = baseDir;
         this.realm = realm;
         this.hostname = hostname;
         this.docBase = docBase;
+        this.configurators = configurators;
+    }
+
+    /**
+     * Returns the name of the {@link StandardService} of an embedded Tomcat.
+     */
+    public String serviceName() {
+        return serviceName;
+    }
+
+    /**
+     * Returns the name of the {@link StandardEngine} of an embedded Tomcat.
+     */
+    public String engineName() {
+        return engineName;
     }
 
     /**
@@ -66,15 +92,26 @@ public class TomcatServiceConfig {
         return docBase;
     }
 
-    @Override
-    public String toString() {
-        return toString(this, baseDir(), realm(), hostname(), docBase());
+    /**
+     * Returns the {@link Consumer}s that performs additional configuration operations against
+     * the Tomcat {@link StandardServer} created by a {@link TomcatService}.
+     */
+    public List<Consumer<? super StandardServer>> configurators() {
+        return configurators;
     }
 
-    static String toString(Object holder, Path baseDir, Realm realm, String hostname, Path docBase) {
+    @Override
+    public String toString() {
+        return toString(this, serviceName(), engineName(), baseDir(), realm(), hostname(), docBase());
+    }
+
+    static String toString(Object holder, String serviceName, String engineName,
+                           Path baseDir, Realm realm, String hostname, Path docBase) {
 
         return holder.getClass().getSimpleName() +
-               "(baseDir: " + baseDir +
+               "(serviceName: " + serviceName +
+               ", engineName: " + engineName +
+               ", baseDir: " + baseDir +
                ", realm: " + realm.getClass().getSimpleName() +
                ", hostname: " + hostname +
                ", docBase: " + docBase + ')';

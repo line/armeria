@@ -21,12 +21,17 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 
+import org.apache.catalina.Container;
 import org.apache.catalina.Context;
+import org.apache.catalina.Engine;
 import org.apache.catalina.LifecycleException;
+import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardEngine;
 import org.apache.catalina.core.StandardHost;
@@ -68,9 +73,13 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatServiceInvocationHandler.class);
 
-    private static final String SERVICE_NAME = "Tomcat-over-Armeria";
-    private static final String ENGINE_NAME = SERVICE_NAME;
     private static final String ROOT_CONTEXT_PATH = "";
+
+    /**
+     * See {@link StandardServer#await()} for more information about this magic number (-2),
+     * which is used for an embedded Tomcat server that manages its life cycle manually.
+     */
+    private static final int EMBEDDED_TOMCAT_PORT = -2;
 
     static {
         // Disable JNDI naming provided by Tomcat by default.
@@ -121,6 +130,25 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
 
         server = newServer(connector, config());
 
+        // Retrieve the components configured by newServer(), so we can use it in checkConfiguration().
+        final Service service = server.findServices()[0];
+        @SuppressWarnings("deprecation")
+        final Engine engine = (Engine) service.getContainer();
+        final StandardHost host = (StandardHost) engine.findChildren()[0];
+        final Context context = (Context) host.findChildren()[0];
+
+
+        // Apply custom configurators set via TomcatServiceBuilder.configurator()
+        try {
+            config().configurators().forEach(c -> c.accept(server));
+        } catch (Throwable t) {
+            throw new TomcatServiceException("failed to configure an embedded Tomcat", t);
+        }
+
+        // Make sure the configurators did not ruin what we have configured in this method.
+        checkConfiguration(service, connector, engine, host, context);
+
+        // Start the server finally.
         try {
             server.start();
         } catch (LifecycleException e) {
@@ -146,15 +174,16 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         // server <------ services <------ engines <------ realm
         //                                         <------ hosts <------ contexts
         //                         <------ connectors
+        //                         <------ executors
         //
 
         final StandardEngine engine = new StandardEngine();
-        engine.setName(ENGINE_NAME);
+        engine.setName(config.engineName());
         engine.setDefaultHost(config.hostname());
         engine.setRealm(config.realm());
 
         final StandardService service = new StandardService();
-        service.setName(SERVICE_NAME);
+        service.setName(config.serviceName());
         service.setContainer(engine);
 
         service.addConnector(connector);
@@ -164,10 +193,7 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         final File baseDir = config.baseDir().toFile();
         server.setCatalinaBase(baseDir);
         server.setCatalinaHome(baseDir);
-
-        // See StandardServer.await() for more information about this magic number (-2),
-        // which is used for a embedded Tomcat server that manages its life cycle manually.
-        server.setPort(-2);
+        server.setPort(EMBEDDED_TOMCAT_PORT);
 
         server.addService(service);
 
@@ -200,6 +226,79 @@ final class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         host.addChild(ctx);
 
         return server;
+    }
+
+    private void checkConfiguration(Service expectedService, Connector expectedConnector,
+                                    Engine expectedEngine, StandardHost expectedHost, Context expectedContext) {
+
+
+        // Check if Catalina base and home directories have not been changed.
+        final File expectedBaseDir = config.baseDir().toFile();
+        if (!Objects.equals(server.getCatalinaBase(), expectedBaseDir) ||
+            !Objects.equals(server.getCatalinaHome(), expectedBaseDir)) {
+            throw new TomcatServiceException("A configurator should never change the Catalina base and home.");
+        }
+
+        // Check if the server's port has not been changed.
+        if (server.getPort() != EMBEDDED_TOMCAT_PORT) {
+            throw new TomcatServiceException("A configurator should never change the port of the server.");
+        }
+
+        // Check if the default service has not been removed and a new service has not been added.
+        final Service[] services = server.findServices();
+        if (services == null || services.length != 1 || services[0] != expectedService) {
+            throw new TomcatServiceException(
+                    "A configurator should never remove the default service or add a new service.");
+        }
+
+        // Check if the name of the default service has not been changed.
+        if (!config().serviceName().equals(expectedService.getName())) {
+            throw new TomcatServiceException(
+                    "A configurator should never change the name of the default service.");
+        }
+
+        // Check if the default connector has not been removed
+        final Connector[] connectors = expectedService.findConnectors();
+        if (connectors == null || Arrays.stream(connectors).noneMatch(c -> c == expectedConnector)) {
+            throw new TomcatServiceException("A configurator should never remove the default connector.");
+        }
+
+        // Check if the engine has not been changed.
+        @SuppressWarnings("deprecation")
+        final Container actualEngine = expectedService.getContainer();
+        if (actualEngine != expectedEngine) {
+            throw new TomcatServiceException(
+                    "A configurator should never change the engine of the default service.");
+        }
+
+        // Check if the engine's name has not been changed.
+        if (!config().engineName().equals(expectedEngine.getName())) {
+            throw new TomcatServiceException(
+                    "A configurator should never change the name of the default engine.");
+        }
+
+        // Check if the default realm has not been changed.
+        if (expectedEngine.getRealm() != config().realm()) {
+            throw new TomcatServiceException("A configurator should never change the default realm.");
+        }
+
+        // Check if the default host has not been removed.
+        final Container[] engineChildren = expectedEngine.findChildren();
+        if (engineChildren == null || Arrays.stream(engineChildren).noneMatch(c -> c == expectedHost)) {
+            throw new TomcatServiceException("A configurator should never remove the default host.");
+        }
+
+        // Check if the default context has not been removed.
+        final Container[] contextChildren = expectedHost.findChildren();
+        if (contextChildren == null || Arrays.stream(contextChildren).noneMatch(c -> c == expectedContext)) {
+            throw new TomcatServiceException("A configurator should never remove the default context.");
+        }
+
+        // Check if the docBase of the default context has not been changed.
+        if (!config.docBase().toString().equals(expectedContext.getDocBase())) {
+            throw new TomcatServiceException(
+                    "A configurator should never change the docBase of the default context.");
+        }
     }
 
     @Override

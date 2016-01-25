@@ -15,15 +15,19 @@
  */
 package com.linecorp.armeria.server.http.tomcat;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.catalina.Service;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -44,11 +48,19 @@ public class TomcatServiceTest extends AbstractServerTest {
 
     private static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
 
+    private static final String SERVICE_NAME = "TomcatServiceTest";
+
+    private final List<Service> tomcatServices = new ArrayList<>();
+
     @Override
     protected void configureServer(ServerBuilder sb) {
         sb.serviceUnder(
                 "/tc/",
-                TomcatService.forCurrentClassPath("tomcat_service").decorate(LoggingService::new));
+                TomcatServiceBuilder.forCurrentClassPath("tomcat_service")
+                                    .serviceName(SERVICE_NAME)
+                                    .configurator(s -> Collections.addAll(tomcatServices, s.findServices()))
+                                    .build()
+                                    .decorate(LoggingService::new));
     }
 
     @Test
@@ -134,5 +146,11 @@ public class TomcatServiceTest extends AbstractServerTest {
                         "</body></html>"));
             }
         }
+    }
+
+    @Test
+    public void testConfigurator() throws Exception {
+        assertThat(tomcatServices, hasSize(1));
+        assertThat(tomcatServices.get(0).getName(), is(SERVICE_NAME));
     }
 }
