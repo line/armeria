@@ -77,10 +77,7 @@ public final class ClientBuilder {
 
         final Map<ClientOption<Object>, ClientOptionValue<Object>> optionMap = options.asMap();
         for (ClientOptionValue<?> o : optionMap.values()) {
-            if (o.option() == ClientOption.DECORATOR && decorator != null) {
-                throw new IllegalArgumentException(
-                        "option(" + ClientOption.DECORATOR + ") and decorator() are mutually exclusive.");
-            }
+            validateOption(o.option());
         }
 
         this.options.putAll(optionMap);
@@ -113,14 +110,17 @@ public final class ClientBuilder {
      * Adds the specified {@link ClientOption} and its {@code value}.
      */
     public <T> ClientBuilder option(ClientOption<T> option, T value) {
+        validateOption(option);
+        options.put(option, option.newValue(value));
+        return this;
+    }
+
+    private void validateOption(ClientOption<?> option) {
         requireNonNull(option, "option");
         if (option == ClientOption.DECORATOR && decorator != null) {
             throw new IllegalArgumentException(
                     "option(" + ClientOption.DECORATOR + ") and decorator() are mutually exclusive.");
         }
-
-        options.put(option, option.newValue(value));
-        return this;
     }
 
     /**
@@ -181,7 +181,7 @@ public final class ClientBuilder {
     public ClientBuilder decorator(Function<Client, Client> decorator) {
         requireNonNull(decorator, "decorator");
 
-        if (this.options.containsKey(ClientOption.DECORATOR)) {
+        if (options.containsKey(ClientOption.DECORATOR)) {
             throw new IllegalArgumentException(
                     "decorator() and option(" + ClientOption.DECORATOR + ") are mutually exclusive.");
         }

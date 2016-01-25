@@ -64,12 +64,11 @@ public interface Client {
     default Client decorate(Function<Client, Client> decorator) {
         @SuppressWarnings("unchecked")
         final Client newClient = decorator.apply(this);
-
-        if (newClient != null) {
-            return newClient;
-        } else {
-            return this;
+        if (newClient == null) {
+            throw new NullPointerException("decorator.apply() returned null: " + decorator);
         }
+
+        return newClient;
     }
 
     /**

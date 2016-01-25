@@ -42,8 +42,11 @@ public class DecoratingClient extends SimpleClient {
         @SuppressWarnings("unchecked")
         final T codec = (T) client.codec();
         final U decoratedCodec = codecDecorator.apply(codec);
+        if (decoratedCodec == null) {
+            throw new NullPointerException("codecDecorator.apply() returned null: " + codecDecorator);
+        }
 
-        return decoratedCodec != null ? decoratedCodec : codec;
+        return decoratedCodec;
     }
 
     private static <T extends RemoteInvoker, U extends RemoteInvoker>
@@ -54,7 +57,10 @@ public class DecoratingClient extends SimpleClient {
         @SuppressWarnings("unchecked")
         final T invoker = (T) client.invoker();
         final U decoratedInvoker = invokerDecorator.apply(invoker);
+        if (decoratedInvoker == null) {
+            throw new NullPointerException("invokerDecorator.apply() returned null: " + invokerDecorator);
+        }
 
-        return decoratedInvoker != null ? decoratedInvoker : invoker;
+        return decoratedInvoker;
     }
 }

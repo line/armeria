@@ -80,7 +80,8 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(ClientOptionValue<?>... options) {
-        if (options == null || options.length == 0) {
+        requireNonNull(options, "options");
+        if (options.length == 0) {
             return DEFAULT;
         }
         return new ClientOptions(DEFAULT, options);
@@ -90,9 +91,6 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(Iterable<ClientOptionValue<?>> options) {
-        if (options == null) {
-            return DEFAULT;
-        }
         return new ClientOptions(DEFAULT, options);
     }
 
@@ -121,7 +119,7 @@ public final class ClientOptions extends AbstractOptions {
         return new ClientOptions(baseOptions, options);
     }
 
-    private static <T> ClientOptionValue<T> validateValue(ClientOptionValue<T> optionValue) {
+    private static <T> ClientOptionValue<T> filterValue(ClientOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
 
         ClientOption<?> option = optionValue.option();
@@ -132,13 +130,13 @@ public final class ClientOptions extends AbstractOptions {
             ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) option;
             @SuppressWarnings("unchecked")
             ClientOptionValue<T> castOptionValue =
-                    (ClientOptionValue<T>) castOption.newValue(validateHttpHeaders((HttpHeaders) value));
+                    (ClientOptionValue<T>) castOption.newValue(filterHttpHeaders((HttpHeaders) value));
             optionValue = castOptionValue;
         }
         return optionValue;
     }
 
-    private static HttpHeaders validateHttpHeaders(HttpHeaders headers) {
+    private static HttpHeaders filterHttpHeaders(HttpHeaders headers) {
         requireNonNull(headers, "headers");
         BLACKLISTED_HEADER_NAMES.stream().filter(headers::contains).anyMatch(h -> {
             throw new IllegalArgumentException("unallowed header name: " + h);
@@ -149,15 +147,15 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     private ClientOptions(ClientOptionValue<?>... options) {
-        this(null, options);
+        super(ClientOptions::filterValue, options);
     }
 
     private ClientOptions(ClientOptions clientOptions, ClientOptionValue<?>... options) {
-        super(clientOptions, ClientOptions::validateValue, options);
+        super(ClientOptions::filterValue, clientOptions, options);
     }
 
     private ClientOptions(ClientOptions clientOptions, Iterable<ClientOptionValue<?>> options) {
-        super(clientOptions, ClientOptions::validateValue, options);
+        super(ClientOptions::filterValue, clientOptions, options);
     }
 
     /**

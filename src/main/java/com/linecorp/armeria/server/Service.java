@@ -113,12 +113,11 @@ public interface Service {
     default <T extends Service, U extends Service> Service decorate(Function<T, U> decorator) {
         @SuppressWarnings("unchecked")
         final Service newService = decorator.apply((T) this);
-
-        if (newService != null) {
-            return newService;
-        } else {
-            return this;
+        if (newService == null) {
+            throw new NullPointerException("decorator.apply() returned null: " + decorator);
         }
+
+        return newService;
     }
 
     /**
