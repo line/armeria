@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientCodec;
+import com.linecorp.armeria.client.DecoratingClientCodec;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -39,44 +40,35 @@ import io.netty.util.concurrent.Promise;
 /**
  * Decorates a {@link ClientCodec} to log invocation requests and responses.
  */
-public class LoggingClientCodec implements ClientCodec {
+final class LoggingClientCodec extends DecoratingClientCodec {
 
     private static final Logger logger = LoggerFactory.getLogger(LoggingClientCodec.class);
 
     private static final AttributeKey<Long> START_TIME_NANOS =
             AttributeKey.valueOf(LoggingClientCodec.class, "START_TIME_NANOS");
 
-    private final ClientCodec c;
-
     private final Ticker ticker;
-
-    /**
-     * Creates a new instance that decorates the specified {@code codec}.
-     */
-    public LoggingClientCodec(ClientCodec codec) {
-        this(codec, Ticker.systemTicker());
-    }
 
     /**
      * Creates a new instance that decorates the specified {@code codec}.
      *
      * @param ticker an alternative {@link Ticker}
      */
-    public LoggingClientCodec(ClientCodec codec, Ticker ticker) {
-        c = requireNonNull(codec, "codec");
+    LoggingClientCodec(ClientCodec codec, Ticker ticker) {
+        super(codec);
         this.ticker = requireNonNull(ticker);
     }
 
     @Override
     public <T> void prepareRequest(Method method, Object[] args, Promise<T> resultPromise) {
-        c.prepareRequest(method, args, resultPromise);
+        delegate().prepareRequest(method, args, resultPromise);
     }
 
     @Override
     public EncodeResult encodeRequest(
             Channel channel, SessionProtocol sessionProtocol, Method method, Object[] args) {
 
-        final EncodeResult result = c.encodeRequest(channel, sessionProtocol, method, args);
+        final EncodeResult result = delegate().encodeRequest(channel, sessionProtocol, method, args);
         if (result.isSuccess()) {
             final ServiceInvocationContext ctx = result.invocationContext();
             final Logger logger = ctx.logger();
@@ -118,7 +110,7 @@ public class LoggingClientCodec implements ClientCodec {
         if (logger.isInfoEnabled() && ctx.hasAttr(START_TIME_NANOS)) {
             return logAndDecodeResponse(ctx, logger, originalResponse, content);
         } else {
-            return c.decodeResponse(ctx, content, originalResponse);
+            return delegate().decodeResponse(ctx, content, originalResponse);
         }
     }
 
@@ -128,17 +120,12 @@ public class LoggingClientCodec implements ClientCodec {
         final long startTimeNanos = ctx.attr(START_TIME_NANOS).get();
 
         try {
-            T result = c.decodeResponse(ctx, content, originalResponse);
+            T result = delegate().decodeResponse(ctx, content, originalResponse);
             logger.info("Response: {} ({})", result, elapsed(startTimeNanos, endTimeNanos));
             return result;
         } catch (Throwable cause) {
             logger.info("Exception: {} ({})", cause, elapsed(startTimeNanos, endTimeNanos));
             throw cause;
         }
-    }
-
-    @Override
-    public boolean isAsyncClient() {
-        return c.isAsyncClient();
     }
 }

@@ -16,15 +16,12 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.ClientOption.CLIENT_CODEC_DECORATOR;
+import static com.linecorp.armeria.client.ClientOption.DECORATOR;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
-import static com.linecorp.armeria.client.ClientOption.INVOCATION_HANDLER_DECORATOR;
-import static com.linecorp.armeria.client.ClientOption.REMOTE_INVOKER_DECORATOR;
 import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_POLICY;
 import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_POLICY;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.InvocationHandler;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
@@ -83,9 +80,17 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(ClientOptionValue<?>... options) {
-        if (options == null || options.length == 0) {
+        requireNonNull(options, "options");
+        if (options.length == 0) {
             return DEFAULT;
         }
+        return new ClientOptions(DEFAULT, options);
+    }
+
+    /**
+     * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
+     */
+    public static ClientOptions of(Iterable<ClientOptionValue<?>> options) {
         return new ClientOptions(DEFAULT, options);
     }
 
@@ -103,7 +108,18 @@ public final class ClientOptions extends AbstractOptions {
         return new ClientOptions(baseOptions, options);
     }
 
-    private static <T> ClientOptionValue<T> validateValue(ClientOptionValue<T> optionValue) {
+    /**
+     * Merges the specified {@link ClientOptions} and {@link ClientOptionValue}s.
+     *
+     * @return the merged {@link ClientOptions}
+     */
+    public static ClientOptions of(ClientOptions baseOptions, Iterable<ClientOptionValue<?>> options) {
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+        return new ClientOptions(baseOptions, options);
+    }
+
+    private static <T> ClientOptionValue<T> filterValue(ClientOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
 
         ClientOption<?> option = optionValue.option();
@@ -114,13 +130,13 @@ public final class ClientOptions extends AbstractOptions {
             ClientOption<HttpHeaders> castOption = (ClientOption<HttpHeaders>) option;
             @SuppressWarnings("unchecked")
             ClientOptionValue<T> castOptionValue =
-                    (ClientOptionValue<T>) castOption.newValue(validateHttpHeaders((HttpHeaders) value));
+                    (ClientOptionValue<T>) castOption.newValue(filterHttpHeaders((HttpHeaders) value));
             optionValue = castOptionValue;
         }
         return optionValue;
     }
 
-    private static HttpHeaders validateHttpHeaders(HttpHeaders headers) {
+    private static HttpHeaders filterHttpHeaders(HttpHeaders headers) {
         requireNonNull(headers, "headers");
         BLACKLISTED_HEADER_NAMES.stream().filter(headers::contains).anyMatch(h -> {
             throw new IllegalArgumentException("unallowed header name: " + h);
@@ -131,11 +147,15 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     private ClientOptions(ClientOptionValue<?>... options) {
-        this(null, options);
+        super(ClientOptions::filterValue, options);
     }
 
     private ClientOptions(ClientOptions clientOptions, ClientOptionValue<?>... options) {
-        super(clientOptions, ClientOptions::validateValue, options);
+        super(ClientOptions::filterValue, clientOptions, options);
+    }
+
+    private ClientOptions(ClientOptions clientOptions, Iterable<ClientOptionValue<?>> options) {
+        super(ClientOptions::filterValue, clientOptions, options);
     }
 
     /**
@@ -181,24 +201,10 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     /**
-     * Returns the {@link Function} that decorates the {@link InvocationHandler}.
+     * Returns the {@link Function} that decorates the components of a client.
      */
-    public Function<InvocationHandler, InvocationHandler> invocationHandlerDecorator() {
-        return getOrElse(INVOCATION_HANDLER_DECORATOR, Function.identity());
-    }
-
-    /**
-     * The {@link Function} that decorates the {@link ClientCodec}.
-     */
-    public Function<ClientCodec, ClientCodec> clientCodecDecorator() {
-        return getOrElse(CLIENT_CODEC_DECORATOR, Function.identity());
-    }
-
-    /**
-     * Returns the {@link Function} that decorates the {@link RemoteInvoker}.
-     */
-    public Function<RemoteInvoker, RemoteInvoker> remoteInvokerDecorator() {
-        return getOrElse(REMOTE_INVOKER_DECORATOR, Function.identity());
+    public Function<Client, Client> decorator() {
+        return getOrElse(DECORATOR, Function.identity());
     }
 }
 

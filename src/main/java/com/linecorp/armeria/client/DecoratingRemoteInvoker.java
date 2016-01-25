@@ -26,7 +26,7 @@ import io.netty.util.concurrent.Future;
 /**
  * A {@link RemoteInvoker} that decorates another {@link RemoteInvoker}.
  *
- * @see ClientOption#REMOTE_INVOKER_DECORATOR
+ * @see ClientOption#DECORATOR
  */
 public abstract class DecoratingRemoteInvoker implements RemoteInvoker {
 

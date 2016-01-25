@@ -17,7 +17,6 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.InvocationHandler;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -58,22 +57,10 @@ public final class ClientOption<T> extends AbstractOption<T> {
     public static final ClientOption<HttpHeaders> HTTP_HEADERS = valueOf("HTTP_HEADERS");
 
     /**
-     * The {@link Function} that decorates the {@link ClientCodec}.
+     * The {@link Function} that decorates the client components provided by {@link Client}.
      */
-    public static final ClientOption<Function<ClientCodec, ClientCodec>> CLIENT_CODEC_DECORATOR = valueOf(
-            "CLIENT_CODEC_DECORATOR");
-
-    /**
-     * The {@link Function} that decorates the {@link RemoteInvoker}.
-     */
-    public static final ClientOption<Function<RemoteInvoker, RemoteInvoker>> REMOTE_INVOKER_DECORATOR = valueOf(
-            "REMOTE_INVOKER_DECORATOR");
-
-    /**
-     * The {@link Function} that decorates the {@link InvocationHandler}.
-     */
-    public static final ClientOption<Function<InvocationHandler, InvocationHandler>>
-            INVOCATION_HANDLER_DECORATOR = valueOf("INVOCATION_HANDLER_DECORATOR");
+    public static final ClientOption<Function<Client, Client>> DECORATOR = valueOf(
+            "DECORATOR");
 
     /**
      * Returns the {@link ClientOption} of the specified name.

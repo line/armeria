@@ -62,12 +62,11 @@ public interface TimeoutPolicy {
     default <T extends TimeoutPolicy, U extends TimeoutPolicy> TimeoutPolicy decorate(Function<T, U> decorator) {
         @SuppressWarnings("unchecked")
         final TimeoutPolicy newPolicy = decorator.apply((T) this);
-
-        if (newPolicy != null) {
-            return newPolicy;
-        } else {
-            return this;
+        if (newPolicy == null) {
+            throw new NullPointerException("decorator.apply() returned null: " + decorator);
         }
+
+        return newPolicy;
     }
 
     /**

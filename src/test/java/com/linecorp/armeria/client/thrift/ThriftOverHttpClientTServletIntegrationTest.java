@@ -133,7 +133,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         AtomicReference<Scheme> scheme = new AtomicReference<>();
         HelloService.Iface client = Clients.newClient(
                 http1uri("/thrift"), HelloService.Iface.class,
-                ClientOption.CLIENT_CODEC_DECORATOR.newValue(c -> new SchemeCapturer(c, scheme)));
+                ClientOption.DECORATOR.newValue(
+                        c -> c.decorateCodec(codec -> new SchemeCapturer(codec, scheme))));
 
         assertEquals("Hello, old world!", client.hello("old world"));
         assertThat(scheme.get().sessionProtocol(), is(SessionProtocol.H1C));
@@ -144,7 +145,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         AtomicReference<Scheme> scheme = new AtomicReference<>();
         HelloService.Iface client = Clients.newClient(
                 http2uri("/thrift"), HelloService.Iface.class,
-                ClientOption.CLIENT_CODEC_DECORATOR.newValue(c -> new SchemeCapturer(c, scheme)));
+                ClientOption.DECORATOR.newValue(
+                        c -> c.decorateCodec(codec -> new SchemeCapturer(codec, scheme))));
 
         assertEquals("Hello, new world!", client.hello("new world"));
         assertThat(scheme.get().sessionProtocol(), is(SessionProtocol.H2C));

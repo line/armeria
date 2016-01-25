@@ -61,8 +61,11 @@ public class DecoratingService implements Service {
         @SuppressWarnings("unchecked")
         final T codec = (T) service.codec();
         final U decoratedCodec = codecDecorator.apply(codec);
+        if (decoratedCodec == null) {
+            throw new NullPointerException("codecDecorator.apply() returned null: " + codecDecorator);
+        }
 
-        return decoratedCodec != null ? decoratedCodec : codec;
+        return decoratedCodec;
     }
 
     private static <T extends ServiceInvocationHandler, U extends ServiceInvocationHandler>
@@ -73,8 +76,11 @@ public class DecoratingService implements Service {
         @SuppressWarnings("unchecked")
         final T handler = (T) service.handler();
         final U decoratedHandler = handlerDecorator.apply(handler);
+        if (decoratedHandler == null) {
+            throw new NullPointerException("handlerDecorator.apply() returned null: " + handlerDecorator);
+        }
 
-        return decoratedHandler != null ? decoratedHandler : handler;
+        return decoratedHandler;
     }
 
     /**

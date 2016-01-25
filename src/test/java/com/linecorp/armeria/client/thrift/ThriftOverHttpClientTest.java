@@ -46,7 +46,7 @@ import com.linecorp.armeria.client.RemoteInvokerFactory;
 import com.linecorp.armeria.client.RemoteInvokerOption;
 import com.linecorp.armeria.client.RemoteInvokerOptions;
 import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
-import com.linecorp.armeria.client.logging.LoggingClientCodec;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
@@ -195,7 +195,7 @@ public class ThriftOverHttpClientTest {
                 RemoteInvokerOption.POOL_HANDLER_DECORATOR.newValue(KeyedChannelPoolLoggingHandler::new));
         remoteInvokerFactory = new RemoteInvokerFactory(options);
 
-        clientOptions = ClientOptions.of(ClientOption.CLIENT_CODEC_DECORATOR.newValue(LoggingClientCodec::new));
+        clientOptions = ClientOptions.of(ClientOption.DECORATOR.newValue(LoggingClient::new));
     }
 
     @AfterClass

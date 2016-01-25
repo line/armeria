@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -22,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * A set of configuration options and their respective values.
@@ -34,26 +37,53 @@ public abstract class AbstractOptions {
     protected Map<AbstractOption<Object>, AbstractOptionValue<AbstractOption<Object>, Object>> valueMap;
 
     @SafeVarargs
-    @SuppressWarnings("unchecked")
-    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(
-            AbstractOptions baseConstantValues, Function<T, T> validator, T... values) {
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter, T... values) {
+        requireNonNull(valueFilter, "valueFilter");
+        requireNonNull(values, "values");
 
-        valueMap = baseConstantValues == null ? new IdentityHashMap<>()
-                                              : new IdentityHashMap<>(baseConstantValues.valueMap);
-        if (validator == null) {
-            validator = Function.identity();
-        }
-        if (values != null) {
-            Stream.of(values)
-                  .map(validator)
-                  .forEach(v -> valueMap.put((AbstractOption<Object>) v.option(),
-                                             (AbstractOptionValue<AbstractOption<Object>, Object>) v));
-        }
+        valueMap = new IdentityHashMap<>();
+        putAll(valueFilter, Stream.of(values));
     }
 
-    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(
-            AbstractOptions baseConstantValue, T[] values) {
-        this(baseConstantValue, null, values);
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
+                                                                    Iterable<T> values) {
+
+        requireNonNull(valueFilter, "valueFilter");
+        requireNonNull(values, "values");
+
+        valueMap = new IdentityHashMap<>();
+        putAll(valueFilter, StreamSupport.stream(values.spliterator(), false));
+    }
+
+    @SafeVarargs
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
+                                                                    AbstractOptions baseOptions, T... values) {
+
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(valueFilter, "valueFilter");
+        requireNonNull(values, "values");
+
+        valueMap = new IdentityHashMap<>(baseOptions.valueMap);
+        putAll(valueFilter, Stream.of(values));
+    }
+
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
+                                                                    AbstractOptions baseOptions,
+                                                                    Iterable<T> values) {
+
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(valueFilter, "valueFilter");
+        requireNonNull(values, "values");
+
+        valueMap = new IdentityHashMap<>(baseOptions.valueMap);
+        putAll(valueFilter, StreamSupport.stream(values.spliterator(), false));
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends AbstractOptionValue<?, ?>> void putAll(Function<T, T> valueFilter, Stream<T> values) {
+        values.map(valueFilter)
+              .forEach(v -> valueMap.put((AbstractOption<Object>) v.option(),
+                                         (AbstractOptionValue<AbstractOption<Object>, Object>) v));
     }
 
     @SuppressWarnings("unchecked")

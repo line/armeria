@@ -44,7 +44,7 @@ public class RemoteInvokerOptions extends AbstractOptions {
 
     private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofMillis(3200);
     private static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(10);
-    private static final int DEFAULT_MAX_FRAME_LENGTH = 10485760;//10 MB
+    private static final int DEFAULT_MAX_FRAME_LENGTH = 10485760; //10 MB
     private static final Integer DEFAULT_MAX_CONCURRENCY = Integer.MAX_VALUE;
 
     private static final RemoteInvokerOptionValue<?>[] DEFAULT_OPTION_VALUES = {
@@ -63,6 +63,13 @@ public class RemoteInvokerOptions extends AbstractOptions {
      * Creates a new {@link RemoteInvokerOptions} with the specified {@link RemoteInvokerOptionValue}s.
      */
     public static RemoteInvokerOptions of(RemoteInvokerOptionValue<?>... options) {
+        return new RemoteInvokerOptions(DEFAULT, options);
+    }
+
+    /**
+     * Returns the {@link RemoteInvokerOptions} with the specified {@link RemoteInvokerOptionValue}s.
+     */
+    public static RemoteInvokerOptions of(Iterable<RemoteInvokerOptionValue<?>> options) {
         return new RemoteInvokerOptions(DEFAULT, options);
     }
 
@@ -118,11 +125,16 @@ public class RemoteInvokerOptions extends AbstractOptions {
     }
 
     private RemoteInvokerOptions(RemoteInvokerOptionValue<?>... options) {
-        this(null, options);
+        super(RemoteInvokerOptions::validateValue, options);
     }
 
     private RemoteInvokerOptions(RemoteInvokerOptions baseOptions, RemoteInvokerOptionValue<?>... options) {
-        super(baseOptions, RemoteInvokerOptions::validateValue, options);
+        super(RemoteInvokerOptions::validateValue, baseOptions, options);
+    }
+
+    private RemoteInvokerOptions(
+            RemoteInvokerOptions baseOptions, Iterable<RemoteInvokerOptionValue<?>> options) {
+        super(RemoteInvokerOptions::validateValue, baseOptions, options);
     }
 
     /**
