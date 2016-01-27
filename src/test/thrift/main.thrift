@@ -46,6 +46,7 @@ service SleepService {
     i64 sleep(1:i64 delay)
 }
 
+// Tests DocService
 exception FooServiceException {
     1: string stringVal,
 }
@@ -84,4 +85,9 @@ service FooService {
     FooStruct bar3(1: i32 intVal, 2: FooStruct foo) throws (1: FooServiceException e),
     list<FooStruct> bar4(1: list<FooStruct> foos) throws (1: FooServiceException e),
     map<string, FooStruct> bar5(1: map<string, FooStruct> foos) throws (1: FooServiceException e)
+}
+
+// Tests Clients.newDerivedClient()
+service HeaderService {
+    string header(1: string name)
 }

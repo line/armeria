@@ -15,7 +15,12 @@
  */
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.util.function.Function;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -129,6 +134,59 @@ public final class Clients {
                                   ClientOptions options) {
         return new ClientBuilder(uri).remoteInvokerFactory(remoteInvokerFactory).options(options)
                                      .build(interfaceClass);
+    }
+
+    /**
+     * Creates a new derived client that connects to the same {@link URI} with the specified {@code client}
+     * with the specified {@code additionalOptions}. Note that the derived client will use the options of
+     * the specified {@code client} unless specified in {@code additionalOptions}.
+     */
+    public static <T> T newDerivedClient(T client, ClientOptionValue<?>... additionalOptions) {
+        requireNonNull(additionalOptions, "additionalOptions");
+        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
+        return newDerivedClient(client, baseOptions -> ClientOptions.of(baseOptions, additionalOptions));
+    }
+
+    /**
+     * Creates a new derived client that connects to the same {@link URI} with the specified {@code client}
+     * with the specified {@code additionalOptions}. Note that the derived client will use the options of
+     * the specified {@code client} unless specified in {@code additionalOptions}.
+     */
+    public static <T> T newDerivedClient(T client, Iterable<ClientOptionValue<?>> additionalOptions) {
+        requireNonNull(additionalOptions, "additionalOptions");
+        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
+        return newDerivedClient(client, baseOptions -> ClientOptions.of(baseOptions, additionalOptions));
+    }
+
+    private static <T> T newDerivedClient(T client,
+                                          Function<ClientOptions, ClientOptions> optionFactory) {
+
+        requireNonNull(client, "client");
+
+        ClientInvocationHandler parent = null;
+        try {
+            InvocationHandler ih = Proxy.getInvocationHandler(client);
+            if (ih instanceof ClientInvocationHandler) {
+                parent = (ClientInvocationHandler) ih;
+            }
+        } catch (IllegalArgumentException expected) {
+            // Will reach here when 'client' is not a proxy object.
+        }
+
+        if (parent == null) {
+            throw new IllegalArgumentException("not a client: " + client);
+        }
+
+        final Class<?> interfaceClass = parent.interfaceClass();
+
+        @SuppressWarnings("unchecked")
+        final T derived = (T) Proxy.newProxyInstance(
+                interfaceClass.getClassLoader(),
+                new Class[] { interfaceClass },
+                new ClientInvocationHandler(parent.uri(), interfaceClass, parent.invoker(), parent.codec(),
+                                            optionFactory.apply(parent.options())));
+
+        return derived;
     }
 
     private Clients() {}

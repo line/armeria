@@ -28,58 +28,68 @@ import io.netty.util.internal.EmptyArrays;
 
 final class ClientInvocationHandler implements InvocationHandler {
 
-    private static final Method OBJECT_HASHCODE = objectMethod("hashCode");
-    private static final Method OBJECT_EQUALS = objectMethod("equals", Object.class);
-    private static final Method OBJECT_TOSTRING = objectMethod("toString");
-
-    private static Method objectMethod(String name, Class<?>... paramTypes) {
-        try {
-            return Object.class.getMethod(name, paramTypes);
-        } catch (NoSuchMethodException e) {
-            throw new Error(e); // Should never happen
-        }
-    }
-
     private final URI uri;
     private final Class<?> interfaceClass;
-    private final RemoteInvoker remoteInvoker;
+    private final RemoteInvoker invoker;
     private final ClientCodec codec;
     private final ClientOptions options;
 
     ClientInvocationHandler(URI uri, Class<?> interfaceClass,
-                            RemoteInvoker remoteInvoker, ClientCodec codec, ClientOptions options) {
+                            RemoteInvoker invoker, ClientCodec codec, ClientOptions options) {
 
         this.uri = uri;
         this.interfaceClass = interfaceClass;
-        this.remoteInvoker = remoteInvoker;
+        this.invoker = invoker;
         this.codec = codec;
         this.options = options;
     }
 
+    URI uri() {
+        return uri;
+    }
+
+    Class<?> interfaceClass() {
+        return interfaceClass;
+    }
+
+    RemoteInvoker invoker() {
+        return invoker;
+    }
+
+    ClientCodec codec() {
+        return codec;
+    }
+
+    ClientOptions options() {
+        return options;
+    }
+
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (method.getDeclaringClass() == Object.class) {
+        final Class<?> declaringClass = method.getDeclaringClass();
+        if (declaringClass == Object.class) {
             // Handle the methods in Object
             return invokeObjectMethod(proxy, method, args);
-        } else {
-            assert method.getDeclaringClass() == interfaceClass;
-            // Handle the methods in the interface.
-            return invokeClientMethod(method, args);
         }
+
+        assert declaringClass == interfaceClass;
+        // Handle the methods in the interface.
+        return invokeClientMethod(method, args);
     }
 
     private Object invokeObjectMethod(Object proxy, Method method, Object[] args) {
-        if (OBJECT_TOSTRING.equals(method)) {
-            return interfaceClass.getSimpleName() + '(' + uri + ')';
-        }
-        if (OBJECT_HASHCODE.equals(method)) {
-            return System.identityHashCode(proxy);
-        }
-        if (OBJECT_EQUALS.equals(method)) {
-            return proxy == args[0];
-        }
+        final String methodName = method.getName();
 
-        throw new Error("unknown method: " + method);
+        switch (methodName) {
+        case "toString":
+            return interfaceClass.getSimpleName() + '(' + uri + ')';
+        case "hashCode":
+            return System.identityHashCode(proxy);
+        case "equals":
+            return proxy == args[0];
+        default:
+            throw new Error("unknown method: " + methodName);
+        }
     }
 
     private Object invokeClientMethod(Method method, Object[] args) throws Throwable {
@@ -88,7 +98,7 @@ final class ClientInvocationHandler implements InvocationHandler {
         }
 
         try {
-            Future<Object> resultFuture = remoteInvoker.invoke(uri, options, codec, method, args);
+            Future<Object> resultFuture = invoker.invoke(uri, options, codec, method, args);
             if (codec.isAsyncClient()) {
                 return method.getReturnType().isInstance(resultFuture) ? resultFuture : null;
             } else {
