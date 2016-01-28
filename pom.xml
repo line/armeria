@@ -82,7 +82,7 @@
 
     <!-- Dependency versions -->
     <jackson.version>2.6.3</jackson.version>
-    <netty.version>4.1.0.Beta8</netty.version>
+    <netty.version>4.1.0.CR1</netty.version>
     <slf4j.version>1.7.13</slf4j.version>
     <tomcat.version>8.0.30</tomcat.version>
     <jetty.alpnAgent.version>1.0.0.Final</jetty.alpnAgent.version>

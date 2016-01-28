@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
 import com.linecorp.armeria.common.http.Http1ClientCodec;
+import com.linecorp.armeria.common.http.Http1ClientUpgradeHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -42,7 +43,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpClientUpgradeHandler;
+import io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -67,6 +68,7 @@ import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
+import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterBuilder;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
@@ -169,8 +171,8 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
             Http1ClientCodec http1Codec = newHttp1Codec();
             Http2ClientUpgradeCodec http2ClientUpgradeCodec =
                     new Http2ClientUpgradeCodec(newHttp2ConnectionHandler());
-            HttpClientUpgradeHandler http2UpgradeHandler =
-                    new HttpClientUpgradeHandler(http1Codec, http2ClientUpgradeCodec, options.maxFrameLength());
+            Http1ClientUpgradeHandler http2UpgradeHandler =
+                    new Http1ClientUpgradeHandler(http1Codec, http2ClientUpgradeCodec, options.maxFrameLength());
 
             pipeline.addLast(http1Codec);
             pipeline.addLast(new WorkaroundHandler());
@@ -178,8 +180,8 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
             pipeline.addLast(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                    if (evt instanceof HttpClientUpgradeHandler.UpgradeEvent) {
-                        switch ((HttpClientUpgradeHandler.UpgradeEvent) evt) {
+                    if (evt instanceof UpgradeEvent) {
+                        switch ((UpgradeEvent) evt) {
                         case UPGRADE_SUCCESSFUL:
                             finishConfiguration(pipeline, SessionProtocol.H2C);
                             pipeline.remove(this);
@@ -238,39 +240,6 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
         return ApplicationProtocolNames.HTTP_2.equals(sslHandler.applicationProtocol());
     }
 
-    Http2ConnectionHandler newHttp2ConnectionHandler() {
-        final boolean validateHeaders = false;
-        final Http2Connection conn = new DefaultHttp2Connection(false);
-        final InboundHttp2ToHttpAdapter listener = new InboundHttp2ToHttpAdapter.Builder(conn)
-                .propagateSettings(true).validateHttpHeaders(validateHeaders)
-                .maxContentLength(options.maxFrameLength()).build();
-
-        Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
-        Http2FrameWriter writer = new DefaultHttp2FrameWriter();
-
-        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
-        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
-
-        final HttpToHttp2ClientConnectionHandler handler =
-                new HttpToHttp2ClientConnectionHandler(
-                        decoder, encoder, new Http2Settings(), validateHeaders);
-
-        // Setup post build options
-        handler.gracefulShutdownTimeoutMillis(options.idleTimeoutMillis());
-        handler.decoder().frameListener(listener);
-
-        return handler;
-    }
-
-    static Http1ClientCodec newHttp1Codec() {
-        return new Http1ClientCodec() {
-            @Override
-            protected void onCloseRequest(ChannelHandlerContext ctx) throws Exception {
-                HttpSessionHandler.deactivate(ctx.channel());
-            }
-        };
-    }
-
     /**
      * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
      */
@@ -318,6 +287,40 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
 
             ctx.fireChannelRead(msg);
         }
+    }
+
+    private Http2ConnectionHandler newHttp2ConnectionHandler() {
+        final boolean validateHeaders = false;
+        final Http2Connection conn = new DefaultHttp2Connection(false);
+        final InboundHttp2ToHttpAdapter listener = new InboundHttp2ToHttpAdapterBuilder(conn)
+                .propagateSettings(true).validateHttpHeaders(validateHeaders)
+                .maxContentLength(options.maxFrameLength()).build();
+
+        Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
+        Http2FrameWriter writer = new DefaultHttp2FrameWriter();
+
+        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
+        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
+
+        final HttpToHttp2ClientConnectionHandler handler =
+                new HttpToHttp2ClientConnectionHandler(
+                        decoder, encoder, new Http2Settings(), validateHeaders);
+
+        // Setup post build options
+        handler.gracefulShutdownTimeoutMillis(options.idleTimeoutMillis());
+        handler.decoder().frameListener(listener);
+
+        return handler;
+    }
+
+    private static Http1ClientCodec newHttp1Codec() {
+        return new Http1ClientCodec() {
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+                HttpSessionHandler.deactivate(ctx.channel());
+                super.close(ctx, promise);
+            }
+        };
     }
 
     private static final class HttpToHttp2ClientConnectionHandler extends AbstractHttpToHttp2ConnectionHandler {

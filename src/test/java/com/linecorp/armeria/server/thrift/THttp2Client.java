@@ -26,6 +26,7 @@ import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 import com.linecorp.armeria.common.http.Http1ClientCodec;
+import com.linecorp.armeria.common.http.Http1ClientUpgradeHandler;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -44,7 +45,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
@@ -57,7 +57,8 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
-import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
+import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder;
+import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterBuilder;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -247,12 +248,14 @@ final class THttp2Client extends TTransport {
         public void initChannel(SocketChannel ch) throws Exception {
             final ChannelPipeline p = ch.pipeline();
             final Http2Connection conn = new DefaultHttp2Connection(false);
-            final HttpToHttp2ConnectionHandler connHandler = new HttpToHttp2ConnectionHandler.Builder()
+            final HttpToHttp2ConnectionHandler connHandler = new HttpToHttp2ConnectionHandlerBuilder()
+                    .connection(conn)
                     .frameListener(new DelegatingDecompressorFrameListener(
                             conn,
-                            new InboundHttp2ToHttpAdapter.Builder(conn)
+                            new InboundHttp2ToHttpAdapterBuilder(conn)
                                     .maxContentLength(Integer.MAX_VALUE)
-                                    .propagateSettings(true).build())).build(conn);
+                                    .propagateSettings(true).build()))
+                    .build();
 
             THttp2ClientHandler = new THttp2ClientHandler(ch.eventLoop());
 
@@ -262,8 +265,8 @@ final class THttp2Client extends TTransport {
                 configureEndOfPipeline(p);
             } else {
                 Http1ClientCodec sourceCodec = new Http1ClientCodec();
-                HttpClientUpgradeHandler upgradeHandler =
-                        new HttpClientUpgradeHandler(sourceCodec, new Http2ClientUpgradeCodec(connHandler), 65536);
+                Http1ClientUpgradeHandler upgradeHandler =
+                        new Http1ClientUpgradeHandler(sourceCodec, new Http2ClientUpgradeCodec(connHandler), 65536);
 
                 p.addLast(sourceCodec, upgradeHandler, new UpgradeRequestHandler());
             }

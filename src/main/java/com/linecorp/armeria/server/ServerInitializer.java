@@ -49,7 +49,7 @@ import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
-import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
+import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapterBuilder;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SniHandler;
@@ -142,7 +142,7 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
     private Http2ConnectionHandler createHttp2ConnectionHandler(ChannelPipeline pipeline, ChannelHandler... toRemove) {
         final boolean validateHeaders = true;
         final Http2Connection conn = new DefaultHttp2Connection(true);
-        final Http2FrameListener listener = new InboundHttp2ToHttpAdapter.Builder(conn)
+        final Http2FrameListener listener = new InboundHttp2ToHttpAdapterBuilder(conn)
                 .propagateSettings(true).validateHttpHeaders(validateHeaders)
                 .maxContentLength(config.maxFrameLength()).build();
 
@@ -153,8 +153,8 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
         Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
         final HttpToHttp2ServerConnectionHandler handler =
-                new HttpToHttp2ServerConnectionHandler(pipeline,
-                                                       decoder, encoder, new Http2Settings(), validateHeaders, toRemove);
+                new HttpToHttp2ServerConnectionHandler(pipeline, decoder, encoder, new Http2Settings(),
+                                                       validateHeaders, toRemove);
 
         // Setup post build options
         handler.gracefulShutdownTimeoutMillis(config.idleTimeoutMillis());
