@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.thrift;
 
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isOneOf;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
@@ -40,6 +41,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.RemoteInvokerFactory;
@@ -48,6 +50,7 @@ import com.linecorp.armeria.client.RemoteInvokerOptions;
 import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -56,10 +59,14 @@ import com.linecorp.armeria.server.thrift.ThriftService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.FileService;
 import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
+import com.linecorp.armeria.service.test.thrift.main.HeaderService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.TimeService;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
@@ -95,12 +102,19 @@ public class ThriftOverHttpClientTest {
     private static final FileService.AsyncIface fileServiceHandler =
             (path, resultHandler) -> resultHandler.onError(new FileServiceException());
 
+    private static final HeaderService.AsyncIface headerServiceHandler =
+            (name, resultHandler) -> {
+                final FullHttpRequest req = ServiceInvocationContext.current().originalRequest();
+                resultHandler.onComplete(req.headers().get(name, ""));
+            };
+
     private enum Handlers {
         HELLO(helloHandler, HelloService.Iface.class, HelloService.AsyncIface.class),
         ONEWAYHELLO(onewayHelloHandler, OnewayHelloService.Iface.class, OnewayHelloService.AsyncIface.class),
         DEVNULL(devNullHandler, DevNullService.Iface.class, DevNullService.AsyncIface.class),
         TIME(timeServiceHandler, TimeService.Iface.class, TimeService.AsyncIface.class),
-        FILE(fileServiceHandler, FileService.Iface.class, FileService.AsyncIface.class);
+        FILE(fileServiceHandler, FileService.Iface.class, FileService.AsyncIface.class),
+        HEADER(headerServiceHandler, HeaderService.Iface.class, HeaderService.AsyncIface.class);
 
         private final Object handler;
         private final Class<?> iface;
@@ -350,6 +364,35 @@ public class ThriftOverHttpClientTest {
         client.create("test", new RequestQueuingCallback(resQueue));
 
         assertThat(resQueue.take(), instanceOf(FileServiceException.class));
+    }
+
+    @Test(timeout = 10000)
+    public void testDerivedClient() throws Exception {
+        final String AUTHORIZATION = "Authorization";
+        final String NO_TOKEN = "";
+        final String TOKEN_A = "token 1234";
+        final String TOKEN_B = "token 5678";
+
+        final HeaderService.Iface client = Clients.newClient(remoteInvokerFactory, getURI(Handlers.HEADER),
+                                                             Handlers.HEADER.Iface(), clientOptions);
+
+        assertThat(client.header(AUTHORIZATION), is(NO_TOKEN));
+
+        final HeaderService.Iface clientA =
+                Clients.newDerivedClient(client, newHttpHeaderOption(AUTHORIZATION, TOKEN_A));
+
+        final HeaderService.Iface clientB =
+                Clients.newDerivedClient(client, newHttpHeaderOption(AUTHORIZATION, TOKEN_B));
+
+        assertThat(clientA.header(AUTHORIZATION), is(TOKEN_A));
+        assertThat(clientB.header(AUTHORIZATION), is(TOKEN_B));
+
+        // Ensure that the parent client's HTTP_HEADERS option did not change:
+        assertThat(client.header(AUTHORIZATION), is(NO_TOKEN));
+    }
+
+    private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(String name, String value) {
+        return ClientOption.HTTP_HEADERS.newValue(new DefaultHttpHeaders().set(name, value));
     }
 
     private String getURI(Handlers handler) {
