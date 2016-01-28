@@ -107,10 +107,6 @@ final class HttpRemoteInvoker implements RemoteInvoker {
         });
     }
 
-    static PoolKey poolKey(InetSocketAddress remoteAddress, SessionProtocol sessionProtocol) {
-        return new PoolKey(remoteAddress, sessionProtocol);
-    }
-
     @Override
     public <T> Future<T> invoke(URI uri, ClientOptions options, ClientCodec codec, Method method,
                                 Object[] args) throws Exception {
@@ -124,7 +120,7 @@ final class HttpRemoteInvoker implements RemoteInvoker {
         final SessionProtocol sessionProtocol = validateSessionProtocol(scheme.sessionProtocol());
         final InetSocketAddress remoteAddress = convertToSocketAddress(uri, sessionProtocol.isTls());
 
-        PoolKey poolKey = poolKey(remoteAddress, sessionProtocol);
+        final PoolKey poolKey = new PoolKey(remoteAddress, sessionProtocol);
         final Future<Channel> channelFuture = pool(eventLoop).acquire(poolKey);
 
         final Promise<T> resultPromise = eventLoop.newPromise();

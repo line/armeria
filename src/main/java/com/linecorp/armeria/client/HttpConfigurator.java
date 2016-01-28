@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -84,12 +86,10 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
                                                                                    SessionProtocol.HTTPS);
     private final SslContext sslCtx;
     private final boolean isHttp2Preferred;
-    private final String host;
     private final RemoteInvokerOptions options;
 
-    HttpConfigurator(SessionProtocol sessionProtocol, String host, RemoteInvokerOptions options) {
+    HttpConfigurator(SessionProtocol sessionProtocol, RemoteInvokerOptions options) {
         isHttp2Preferred = http2preferredProtocols.contains(sessionProtocol);
-        this.host = requireNonNull(host, "host");
         this.options = requireNonNull(options, "options");
 
         if (sessionProtocol.isTls()) {
@@ -194,7 +194,7 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
                     ctx.fireUserEventTriggered(evt);
                 }
             });
-            pipeline.addLast(new UpgradeRequestHandler(host));
+            pipeline.addLast(new UpgradeRequestHandler());
         } else {
             pipeline.addLast(newHttp1Codec());
             finishConfiguration(pipeline, SessionProtocol.H1C);
@@ -234,54 +234,11 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
     }
 
-    protected boolean isHttp2Protocol(SslHandler sslHandler) {
+    boolean isHttp2Protocol(SslHandler sslHandler) {
         return ApplicationProtocolNames.HTTP_2.equals(sslHandler.applicationProtocol());
     }
 
-    /**
-     * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
-     */
-    private static final class UpgradeRequestHandler extends ChannelInboundHandlerAdapter {
-
-        private final String host;
-
-        UpgradeRequestHandler(String host) {
-            this.host = host;
-        }
-
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            final FullHttpRequest upgradeReq =
-                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/");
-            final HttpHeaders headers = upgradeReq.headers();
-
-            // Note: There's no need to fill Connection, Upgrade, and HTTP2-Settings headers here
-            //       because they are filled by Http2ClientUpgradeCodec.
-            headers.set(HttpHeaderNames.HOST, host);
-
-            ctx.writeAndFlush(upgradeReq);
-            ctx.fireChannelActive();
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof FullHttpResponse) {
-                final FullHttpResponse res = (FullHttpResponse) msg;
-                if ("1".equals(res.headers().get(ExtensionHeaderNames.STREAM_ID.text()))) {
-                    // Received the response for the upgrade request sent in channelActive().
-                    res.release();
-
-                    // Done with this handler, remove it from the pipeline.
-                    ctx.pipeline().remove(this);
-                    return;
-                }
-            }
-
-            ctx.fireChannelRead(msg);
-        }
-    }
-
-    private Http2ConnectionHandler newHttp2ConnectionHandler() {
+    Http2ConnectionHandler newHttp2ConnectionHandler() {
         final boolean validateHeaders = false;
         final Http2Connection conn = new DefaultHttp2Connection(false);
         final InboundHttp2ToHttpAdapter listener = new InboundHttp2ToHttpAdapter.Builder(conn)
@@ -305,13 +262,62 @@ class HttpConfigurator extends ChannelInitializer<Channel> {
         return handler;
     }
 
-    private static Http1ClientCodec newHttp1Codec() {
+    static Http1ClientCodec newHttp1Codec() {
         return new Http1ClientCodec() {
             @Override
             protected void onCloseRequest(ChannelHandlerContext ctx) throws Exception {
                 HttpSessionHandler.deactivate(ctx.channel());
             }
         };
+    }
+
+    /**
+     * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
+     */
+    private final class UpgradeRequestHandler extends ChannelDuplexHandler {
+
+        private InetSocketAddress remoteAddress;
+
+        @Override
+        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                            ChannelPromise promise) throws Exception {
+            this.remoteAddress = (InetSocketAddress) remoteAddress;
+            ctx.connect(remoteAddress, localAddress, promise);
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            final FullHttpRequest upgradeReq =
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/");
+
+            // Note: There's no need to fill Connection, Upgrade, and HTTP2-Settings headers here
+            //       because they are filled by Http2ClientUpgradeCodec.
+
+            final String host = HttpHostHeaderUtil.hostHeader(
+                    remoteAddress.getHostString(), remoteAddress.getPort(), sslCtx != null);
+
+            upgradeReq.headers().set(HttpHeaderNames.HOST, host);
+
+            ctx.writeAndFlush(upgradeReq);
+            ctx.fireChannelActive();
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof FullHttpResponse) {
+                final FullHttpResponse res = (FullHttpResponse) msg;
+                if ("1".equals(res.headers().get(ExtensionHeaderNames.STREAM_ID.text()))) {
+                    // Received the response for the upgrade request sent in channelActive().
+                    res.release();
+
+                    // Done with this handler, remove it from the pipeline.
+                    ctx.pipeline().remove(this);
+                    return;
+                }
+            }
+
+            ctx.fireChannelRead(msg);
+        }
     }
 
     private static final class HttpToHttp2ClientConnectionHandler extends AbstractHttpToHttp2ConnectionHandler {
