@@ -112,7 +112,9 @@ final class ThriftServiceCodec implements ServiceCodec {
         final Class<?> serviceClass = service.getClass();
         final ClassLoader serviceClassLoader = serviceClass.getClassLoader();
 
-        for (Class<?> iface : serviceClass.getInterfaces()) {
+        Set<Class<?>> interfaces = new HashSet<>();
+        getAllInterfaces(serviceClass, interfaces);
+        for (Class<?> iface : interfaces) {
             final Map<String, AsyncProcessFunction<?, ?, ?>> asyncProcessMap;
             asyncProcessMap = getThriftAsyncProcessMap(service, iface, serviceClassLoader);
             if (asyncProcessMap != null) {
@@ -557,6 +559,18 @@ final class ThriftServiceCodec implements ServiceCodec {
         @Override
         protected TProtocol initialValue() {
             return protoFactory.getProtocol(new TByteBufTransport());
+        }
+    }
+
+    private static void getAllInterfaces(Class<?> cls, Set<Class<?>> interfacesFound) {
+        while (cls != null) {
+            final Class<?>[] interfaces = cls.getInterfaces();
+            for (final Class<?> i : interfaces) {
+                if (interfacesFound.add(i)) {
+                    getAllInterfaces(i, interfacesFound);
+                }
+            }
+            cls = cls.getSuperclass();
         }
     }
 }

@@ -20,6 +20,8 @@ import static org.junit.Assert.assertThat;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.thrift.TException;
+import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
@@ -45,6 +47,24 @@ public abstract class AbstractThriftOverHttpTest {
     private static int httpPort;
     private static int httpsPort;
 
+    abstract static class HelloServiceBase implements AsyncIface {
+        @Override
+        public void hello(String name, AsyncMethodCallback resultHandler) throws TException {
+            resultHandler.onComplete(getResponse(name));
+        }
+
+        protected String getResponse(String name) {
+            return "Hello, " + name + '!';
+        }
+    }
+
+    static class HelloServiceChild extends HelloServiceBase {
+        @Override
+        protected String getResponse(String name) {
+            return "Goodbye, " + name + '!';
+        }
+    }
+
     static {
         final SelfSignedCertificate ssc;
         final ServerBuilder sb = new ServerBuilder();
@@ -59,6 +79,8 @@ public abstract class AbstractThriftOverHttpTest {
             sb.serviceAt("/hello", ThriftService.of(
                     (AsyncIface) (name, resultHandler) ->
                             resultHandler.onComplete("Hello, " + name + '!')).decorate(LoggingService::new));
+
+            sb.serviceAt("/hellochild", ThriftService.of(new HelloServiceChild()));
 
             sb.serviceAt("/sleep", ThriftService.of(
                     (SleepService.AsyncIface) (milliseconds, resultHandler) -> {
@@ -92,9 +114,21 @@ public abstract class AbstractThriftOverHttpTest {
     public void testHttpInvocation() throws Exception {
         try (TTransport transport = newTransport("http", "/hello")) {
             HelloService.Client client =
-                    new HelloService.Client.Factory().getClient(ThriftProtocolFactories.BINARY.getProtocol(transport));
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
             String res = client.hello("Trustin");
             assertThat(res, is("Hello, Trustin!"));
+        }
+    }
+
+    @Test
+    public void testInheritedThriftService() throws Exception {
+        try (TTransport transport = newTransport("http", "/hellochild")) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+            String res = client.hello("Trustin");
+            assertThat(res, is("Goodbye, Trustin!"));
         }
     }
 
@@ -102,7 +136,8 @@ public abstract class AbstractThriftOverHttpTest {
     public void testHttpsInvocation() throws Exception {
         try (TTransport transport = newTransport("https", "/hello")) {
             HelloService.Client client =
-                    new HelloService.Client.Factory().getClient(ThriftProtocolFactories.BINARY.getProtocol(transport));
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
             String res = client.hello("Trustin");
             assertThat(res, is("Hello, Trustin!"));
         }
