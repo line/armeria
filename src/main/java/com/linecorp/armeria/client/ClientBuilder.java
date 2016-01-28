@@ -16,9 +16,9 @@
 package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
+import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
+import static net.bytebuddy.matcher.ElementMatchers.not;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -26,6 +26,10 @@ import java.util.Map;
 import java.util.function.Function;
 
 import org.apache.thrift.protocol.TProtocolFactory;
+
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.dynamic.loading.ClassLoadingStrategy.Default;
+import net.bytebuddy.implementation.MethodDelegation;
 
 import com.linecorp.armeria.client.http.SimpleHttpClientCodec;
 import com.linecorp.armeria.client.thrift.ThriftClientCodec;
@@ -238,12 +242,22 @@ public final class ClientBuilder {
 
         final Client decoratable = options.decorator().apply(newClient(interfaceClass));
 
-        final InvocationHandler handler = new ClientInvocationHandler(
+        final ClientInvocationHandler handler = new ClientInvocationHandler(
                 uri, interfaceClass, decoratable.invoker(), decoratable.codec(), options);
 
-        return (T) Proxy.newProxyInstance(interfaceClass.getClassLoader(),
-                                          new Class[] { interfaceClass },
-                                          handler);
+        try {
+            return new ByteBuddy()
+                    .subclass(interfaceClass)
+                    .method(isDeclaredBy(interfaceClass))
+                    .intercept(MethodDelegation.to(handler, "handler")
+                                               .filter(not(isDeclaredBy(Object.class))))
+                    .make()
+                    .load(interfaceClass.getClassLoader(), Default.INJECTION)
+                    .getLoaded()
+                    .newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new IllegalArgumentException("Could not generate client proxy.", e);
+        }
     }
 
     private Client newClient(Class<?> interfaceClass) {

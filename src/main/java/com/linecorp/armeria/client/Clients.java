@@ -16,11 +16,15 @@
 package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
+import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
+import static net.bytebuddy.matcher.ElementMatchers.not;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.function.Function;
+
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.dynamic.loading.ClassLoadingStrategy.Default;
+import net.bytebuddy.implementation.MethodDelegation;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -165,11 +169,11 @@ public final class Clients {
 
         ClientInvocationHandler parent = null;
         try {
-            InvocationHandler ih = Proxy.getInvocationHandler(client);
-            if (ih instanceof ClientInvocationHandler) {
-                parent = (ClientInvocationHandler) ih;
+            Object handler = client.getClass().getField("handler").get(client);
+            if (handler instanceof ClientInvocationHandler) {
+                parent = (ClientInvocationHandler) handler;
             }
-        } catch (IllegalArgumentException expected) {
+        } catch (IllegalArgumentException|NoSuchFieldException|IllegalAccessException expected) {
             // Will reach here when 'client' is not a proxy object.
         }
 
@@ -179,14 +183,25 @@ public final class Clients {
 
         final Class<?> interfaceClass = parent.interfaceClass();
 
-        @SuppressWarnings("unchecked")
-        final T derived = (T) Proxy.newProxyInstance(
-                interfaceClass.getClassLoader(),
-                new Class[] { interfaceClass },
+        ClientInvocationHandler derived =
                 new ClientInvocationHandler(parent.uri(), interfaceClass, parent.invoker(), parent.codec(),
-                                            optionFactory.apply(parent.options())));
+                                            optionFactory.apply(parent.options()));
 
-        return derived;
+        try {
+            @SuppressWarnings("unchecked")
+            final T proxy = (T) new ByteBuddy()
+                    .subclass(interfaceClass)
+                    .method(isDeclaredBy(interfaceClass))
+                    .intercept(MethodDelegation.to(derived, "handler")
+                                               .filter(not(isDeclaredBy(Object.class))))
+                    .make()
+                    .load(interfaceClass.getClassLoader(), Default.INJECTION)
+                    .getLoaded()
+                    .newInstance();
+            return proxy;
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new IllegalArgumentException("Could not create client proxy.", e);
+        }
     }
 
     private Clients() {}
