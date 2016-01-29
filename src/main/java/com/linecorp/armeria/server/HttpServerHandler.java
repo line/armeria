@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
 import com.linecorp.armeria.server.ServiceCodec.DecodeResult;
 
 import io.netty.buffer.ByteBuf;
@@ -72,7 +73,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         if (cause != null) {
             logUnexpectedException(ch, cause);
         }
-        ch.close();
+        safeClose(ch);
     };
 
     private static final ChannelFutureListener CLOSE_ON_FAILURE = future -> {
@@ -80,9 +81,33 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         if (cause != null) {
             final Channel ch = future.channel();
             logUnexpectedException(ch, cause);
-            ch.close();
+            safeClose(ch);
         }
     };
+
+    static void safeClose(Channel ch) {
+        if (!ch.isActive()) {
+            return;
+        }
+
+        // Do not call Channel.close() if AbstractHttpToHttp2ConnectionHandler.close() has been invoked
+        // already. Otherwise, it can trigger a bad cycle:
+        //
+        //   1. Channel.close() triggers AbstractHttpToHttp2ConnectionHandler.close().
+        //   2. AbstractHttpToHttp2ConnectionHandler.close() triggers Http2Stream.close().
+        //   3. Http2Stream.close() fails the promise of its pending writes.
+        //   4. The failed promise notifies this listener (CLOSE_ON_FAILURE).
+        //   5. This listener calls Channel.close().
+        //   6. Repeat from the step 1.
+        //
+
+        final AbstractHttpToHttp2ConnectionHandler h2handler =
+                ch.pipeline().get(AbstractHttpToHttp2ConnectionHandler.class);
+
+        if (h2handler == null || !h2handler.isClosing()) {
+            ch.close();
+        }
+    }
 
     @SuppressWarnings("ThrowableInstanceNeverThrown")
     private static final Exception SERVICE_NOT_FOUND = new ServiceNotFoundException();
