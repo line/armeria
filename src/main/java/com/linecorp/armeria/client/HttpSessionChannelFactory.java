@@ -121,8 +121,10 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(new OneTimeTask() {
             @Override
             public void run() {
-                result.setFailure(
-                        new TimeoutException("connection established, but session creation timed out: " + ch));
+                if (result.tryFailure(new TimeoutException(
+                        "connection established, but session creation timed out: " + ch))) {
+                    ch.close();
+                }
             }
         }, options.connectTimeoutMillis(), TimeUnit.MILLISECONDS);
 
@@ -131,7 +133,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SessionProtocol) {
                     timeoutFuture.cancel(false);
-                    result.setSuccess(ctx.channel());
+                    result.trySuccess(ctx.channel());
                     ctx.pipeline().remove(this);
                 }
                 ctx.fireUserEventTriggered(evt);

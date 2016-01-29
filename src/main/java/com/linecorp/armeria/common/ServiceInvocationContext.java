@@ -31,6 +31,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.util.Exceptions;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -429,7 +431,7 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
         try {
             if (!(promise.cause() instanceof TimeoutException)) {
                 // Log resolve failure unless it is due to a timeout.
-                logger().warn("Failed to resolve a promise ({}) with {}", promise, result);
+                logger().warn("Failed to resolve a completed promise ({}) with {}", promise, result);
             }
         } finally {
             ReferenceCountUtil.safeRelease(result);
@@ -459,10 +461,18 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
             return;
         }
 
-        if (!(promise.cause() instanceof TimeoutException)) {
-            // Log reject failure unless it is due to a timeout.
-            logger().warn("Failed to reject a promise ({}) with {}", promise, cause, cause);
+        final Throwable firstCause = promise.cause();
+        if (firstCause instanceof TimeoutException) {
+            // Timed out already.
+            return;
         }
+
+        if (!Exceptions.needsAttention(cause)) {
+            // The late cause was just a usual expected exception.
+            return;
+        }
+
+        logger().warn("Failed to reject a completed promise ({}) with {}", promise, cause, cause);
     }
 
     @Override

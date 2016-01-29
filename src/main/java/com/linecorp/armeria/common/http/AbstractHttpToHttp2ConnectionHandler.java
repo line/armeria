@@ -55,6 +55,7 @@ public abstract class AbstractHttpToHttp2ConnectionHandler extends HttpToHttp2Co
     };
 
     private boolean closing;
+    private boolean handlingConnectionError;
 
     protected AbstractHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                                    Http2Settings initialSettings, boolean validateHeaders) {
@@ -63,6 +64,16 @@ public abstract class AbstractHttpToHttp2ConnectionHandler extends HttpToHttp2Co
 
     public boolean isClosing() {
         return closing;
+    }
+
+    @Override
+    protected void onConnectionError(ChannelHandlerContext ctx, Throwable cause, Http2Exception http2Ex) {
+        if (handlingConnectionError) {
+            return;
+        }
+
+        handlingConnectionError = true;
+        super.onConnectionError(ctx, cause, http2Ex);
     }
 
     @Override
