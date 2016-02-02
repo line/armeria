@@ -61,8 +61,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         final InetSocketAddress remoteAddress = key.remoteAddress();
         final SessionProtocol sessionProtocol = key.sessionProtocol();
 
-        final String host = remoteAddress.getHostString() + ':' + remoteAddress.getPort();
-        final Bootstrap bootstrap = bootstrap(sessionProtocol, host);
+        final Bootstrap bootstrap = bootstrap(sessionProtocol);
         final ChannelFuture connectFuture = bootstrap.connect(remoteAddress);
         final Channel ch = connectFuture.channel();
         final Promise<Channel> sessionPromise = connectFuture.channel().eventLoop().newPromise();
@@ -77,10 +76,10 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         return sessionPromise;
     }
 
-    private Bootstrap bootstrap(SessionProtocol sessionProtocol, String host) {
+    private Bootstrap bootstrap(SessionProtocol sessionProtocol) {
         return bootstrapMap.computeIfAbsent(sessionProtocol, sp -> {
             Bootstrap bs = baseBootstrap.clone();
-            bs.handler(new HttpConfigurator(sp, host, options));
+            bs.handler(new HttpConfigurator(sp, options));
             return bs;
         });
     }

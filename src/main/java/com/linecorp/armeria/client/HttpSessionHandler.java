@@ -17,6 +17,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Queue;
@@ -270,7 +271,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
 
         HttpHeaders headers = request.headers();
 
-        headers.set(HttpHeaderNames.HOST, ctx.host());
+        headers.set(HttpHeaderNames.HOST, hostHeader(ctx));
         headers.set(ExtensionHeaderNames.SCHEME.text(), sessionProtocol.uriText());
         headers.set(HttpHeaderNames.USER_AGENT, ARMERIA_USER_AGENT);
         headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
@@ -293,6 +294,12 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         }
 
         return request;
+    }
+
+    private static String hostHeader(ServiceInvocationContext ctx) {
+        final int port = ((InetSocketAddress) ctx.remoteAddress()).getPort();
+        return HttpHostHeaderUtil.hostHeader(ctx.host(), port,
+                                             ctx.scheme().sessionProtocol().isTls());
     }
 
     static class Invocation {

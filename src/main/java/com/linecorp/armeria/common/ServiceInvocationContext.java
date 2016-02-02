@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
@@ -319,7 +320,9 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
     /**
      * Returns the host part of this invocation, as defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.23">the
-     * section 14.23 of RFC2616</a>. e.g. {@code "example.com"} or {@code "example.com:8080"}
+     * section 14.23 of RFC2616</a>. e.g. {@code "example.com"} and <em>not</em> {@code "example.com:8080"}
+     *
+     * @see URI#getHost()
      */
     public final String host() {
         return host;
