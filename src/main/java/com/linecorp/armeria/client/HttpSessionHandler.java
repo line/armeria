@@ -22,9 +22,13 @@ import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Queue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -48,6 +52,9 @@ import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.Promise;
 
 class HttpSessionHandler extends ChannelDuplexHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(HttpSessionHandler.class);
+
     private static final String ARMERIA_USER_AGENT = "armeria client";
 
     static boolean isActive(Channel ch) {
@@ -139,6 +146,15 @@ class HttpSessionHandler extends ChannelDuplexHandler {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         failPendingResponses(ClosedSessionException.INSTANCE);
         ctx.fireChannelInactive();
+    }
+
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+        if (ctx.channel().isActive()) {
+            ctx.close();
+        }
     }
 
     void deactivateSession() {

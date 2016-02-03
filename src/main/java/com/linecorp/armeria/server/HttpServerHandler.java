@@ -21,13 +21,14 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceCodec.DecodeResult;
 
 import io.netty.buffer.ByteBuf;
@@ -63,26 +64,47 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
     private static final AsciiString STREAM_ID = HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text();
     private static final AsciiString ERROR_CONTENT_TYPE = new AsciiString("text/plain; charset=UTF-8");
 
-    private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
-            "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
-
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
         final Channel ch = future.channel();
         if (cause != null) {
-            logUnexpectedException(ch, cause);
+            Exceptions.logIfUnexpected(logger, ch, cause);
         }
-        ch.close();
+        safeClose(ch);
     };
 
     private static final ChannelFutureListener CLOSE_ON_FAILURE = future -> {
         final Throwable cause = future.cause();
         if (cause != null) {
             final Channel ch = future.channel();
-            logUnexpectedException(ch, cause);
-            ch.close();
+            Exceptions.logIfUnexpected(logger, ch, cause);
+            safeClose(ch);
         }
     };
+
+    static void safeClose(Channel ch) {
+        if (!ch.isActive()) {
+            return;
+        }
+
+        // Do not call Channel.close() if AbstractHttpToHttp2ConnectionHandler.close() has been invoked
+        // already. Otherwise, it can trigger a bad cycle:
+        //
+        //   1. Channel.close() triggers AbstractHttpToHttp2ConnectionHandler.close().
+        //   2. AbstractHttpToHttp2ConnectionHandler.close() triggers Http2Stream.close().
+        //   3. Http2Stream.close() fails the promise of its pending writes.
+        //   4. The failed promise notifies this listener (CLOSE_ON_FAILURE).
+        //   5. This listener calls Channel.close().
+        //   6. Repeat from the step 1.
+        //
+
+        final AbstractHttpToHttp2ConnectionHandler h2handler =
+                ch.pipeline().get(AbstractHttpToHttp2ConnectionHandler.class);
+
+        if (h2handler == null || !h2handler.isClosing()) {
+            ch.close();
+        }
+    }
 
     @SuppressWarnings("ThrowableInstanceNeverThrown")
     private static final Exception SERVICE_NOT_FOUND = new ServiceNotFoundException();
@@ -510,19 +532,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logUnexpectedException(ctx.channel(), cause);
-        ctx.close();
-    }
-
-    private static void logUnexpectedException(Channel ch, Throwable cause) {
-        if (!logger.isWarnEnabled()) {
-            return;
+        Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+        if (ctx.channel().isActive()) {
+            ctx.close();
         }
-
-        if (cause.getMessage() != null && IGNORABLE_ERROR_MESSAGE.matcher(cause.getMessage()).find()) {
-            return;
-        }
-
-        logger.warn("{} Unexpected exception:", ch, cause);
     }
 }
