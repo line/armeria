@@ -1,20 +1,4 @@
 /*
- * Copyright 2015 LINE Corporation
- *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
-
-/*
  * Copyright 2012 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
@@ -37,27 +21,37 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerAppender;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.util.internal.OneTimeTask;
+import io.netty.util.ReferenceCountUtil;
 
 /**
- * A fork of {@link HttpClientCodec} that fixes
- * <a href="https://github.com/netty/netty/issues/4504">netty/netty#4504</a>.
+ * A combination of {@link HttpRequestEncoder} and {@link HttpResponseDecoder}
+ * which enables easier client side HTTP implementation. {@link Http1ClientCodec}
+ * provides additional state management for <tt>HEAD</tt> and <tt>CONNECT</tt>
+ * requests, which {@link HttpResponseDecoder} lacks.  Please refer to
+ * {@link HttpResponseDecoder} to learn what additional state management needs
+ * to be done for <tt>HEAD</tt> and <tt>CONNECT</tt> and why
+ * {@link HttpResponseDecoder} can not handle it by itself.
+ *
+ * If the {@link Channel} is closed and there are missing responses,
+ * a {@link PrematureChannelClosureException} is thrown.
+ *
+ * @see HttpServerCodec
  */
-public class Http1ClientCodec extends ChannelHandlerAppender implements HttpClientUpgradeHandler.SourceCodec {
+public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder>
+                              implements Http1ClientUpgradeHandler.SourceCodec {
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<>();
@@ -98,9 +92,13 @@ public class Http1ClientCodec extends ChannelHandlerAppender implements HttpClie
     public Http1ClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders) {
-        add(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders));
-        add(new Encoder());
+        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders), new Encoder());
         this.failOnMissingResponse = failOnMissingResponse;
+    }
+
+    @Override
+    public void prepareUpgradeFrom(ChannelHandlerContext ctx) {
+        ((Encoder) outboundHandler()).upgraded = true;
     }
 
     /**
@@ -110,44 +108,30 @@ public class Http1ClientCodec extends ChannelHandlerAppender implements HttpClie
     @Override
     public void upgradeFrom(ChannelHandlerContext ctx) {
         final ChannelPipeline p = ctx.pipeline();
-        p.remove(Encoder.class);
-        ctx.executor().execute(new OneTimeTask() {
-            @Override
-            public void run() {
-                p.remove(Decoder.class);
-            }
-        });
-    }
-
-    /**
-     * Returns the encoder of this codec.
-     */
-    public HttpRequestEncoder encoder() {
-        return handlerAt(1);
-    }
-
-    /**
-     * Returns the decoder of this codec.
-     */
-    public HttpResponseDecoder decoder() {
-        return handlerAt(0);
+        p.remove(this);
     }
 
     public void setSingleDecode(boolean singleDecode) {
-        decoder().setSingleDecode(singleDecode);
+        inboundHandler().setSingleDecode(singleDecode);
     }
 
     public boolean isSingleDecode() {
-        return decoder().isSingleDecode();
+        return inboundHandler().isSingleDecode();
     }
 
-    protected void onCloseRequest(ChannelHandlerContext ctx) throws Exception {}
-
     private final class Encoder extends HttpRequestEncoder {
+
+        boolean upgraded;
 
         @Override
         protected void encode(
                 ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+
+            if (upgraded) {
+                out.add(ReferenceCountUtil.retain(msg));
+                return;
+            }
+
             if (msg instanceof HttpRequest && !done) {
                 queue.offer(((HttpRequest) msg).method());
             }
@@ -161,12 +145,6 @@ public class Http1ClientCodec extends ChannelHandlerAppender implements HttpClie
                     requestResponseCounter.incrementAndGet();
                 }
             }
-        }
-
-        @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            onCloseRequest(ctx);
-            super.close(ctx, promise);
         }
     }
 
