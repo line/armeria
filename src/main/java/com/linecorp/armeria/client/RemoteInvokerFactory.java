@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -30,7 +31,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollDatagramChannel;
@@ -41,7 +44,9 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.resolver.AddressResolver;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
@@ -110,7 +115,22 @@ public final class RemoteInvokerFactory implements AutoCloseable {
 
         baseBootstrap.channel(channelType());
         baseBootstrap.resolver(new DnsAddressResolverGroup(datagramChannelType(),
-                                                           DnsServerAddresses.defaultAddresses()));
+                                                           DnsServerAddresses.defaultAddresses()) {
+            @Override
+            protected AddressResolver<InetSocketAddress> newResolver(
+                    EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
+                    InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) throws Exception {
+
+                // TODO(trustin): Remove this once Netty 4.1.0.CR2 is out.
+                return new DnsNameResolverBuilder(eventLoop)
+                        .channelFactory(channelFactory)
+                        .localAddress(localAddress)
+                        .nameServerAddresses(nameServerAddresses)
+                        .hostsFileEntriesResolver(new DefaultHostsFileEntriesResolver())
+                        .build()
+                        .asAddressResolver();
+            }
+        });
 
         baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
                              ConvertUtils.safeLongToInt(options.connectTimeoutMillis()));

@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -35,6 +36,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.concurrent.Future;
@@ -43,15 +45,20 @@ import io.netty.util.internal.OneTimeTask;
 
 class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
+    static final Object RETRY_WITH_H1C = new Object();
+
     static final ChannelHealthChecker HEALTH_CHECKER =
             ch -> ch.eventLoop().newSucceededFuture(HttpSessionHandler.isActive(ch));
 
     private final Bootstrap baseBootstrap;
+    private final EventLoop eventLoop;
     private final Map<SessionProtocol, Bootstrap> bootstrapMap;
     private final RemoteInvokerOptions options;
 
     HttpSessionChannelFactory(Bootstrap bootstrap, RemoteInvokerOptions options) {
         baseBootstrap = requireNonNull(bootstrap);
+        eventLoop = (EventLoop) bootstrap.group();
+
         bootstrapMap = Collections.synchronizedMap(new EnumMap<>(SessionProtocol.class));
         this.options = options;
     }
@@ -59,12 +66,26 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
     @Override
     public Future<Channel> apply(PoolKey key) {
         final InetSocketAddress remoteAddress = key.remoteAddress();
-        final SessionProtocol sessionProtocol = key.sessionProtocol();
+        final SessionProtocol protocol = key.sessionProtocol();
 
-        final Bootstrap bootstrap = bootstrap(sessionProtocol);
+        if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, protocol)) {
+            // Fail immediately if it is sure that the remote address does not support the requested protocol.
+            return eventLoop.newFailedFuture(
+                    new SessionProtocolNegotiationException(protocol, "previously failed negotiation"));
+        }
+
+        final Promise<Channel> sessionPromise = eventLoop.newPromise();
+        connect(remoteAddress, protocol, sessionPromise);
+
+        return sessionPromise;
+    }
+
+    private void connect(SocketAddress remoteAddress, SessionProtocol protocol,
+                         Promise<Channel> sessionPromise) {
+
+        final Bootstrap bootstrap = bootstrap(protocol);
         final ChannelFuture connectFuture = bootstrap.connect(remoteAddress);
         final Channel ch = connectFuture.channel();
-        final Promise<Channel> sessionPromise = connectFuture.channel().eventLoop().newPromise();
 
         if (connectFuture.isDone()) {
             notifySessionPromise(ch, connectFuture, sessionPromise);
@@ -72,14 +93,17 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
             connectFuture.addListener(
                     (Future<Void> future) -> notifySessionPromise(ch, future, sessionPromise));
         }
-
-        return sessionPromise;
     }
 
     private Bootstrap bootstrap(SessionProtocol sessionProtocol) {
         return bootstrapMap.computeIfAbsent(sessionProtocol, sp -> {
             Bootstrap bs = baseBootstrap.clone();
-            bs.handler(new HttpConfigurator(sp, options));
+            bs.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(new HttpConfigurator(sp, options));
+                }
+            });
             return bs;
         });
     }
@@ -94,34 +118,34 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         }
     }
 
-    private Future<Channel> watchSessionActive(Channel ch, Promise<Channel> promise) {
+    private Future<Channel> watchSessionActive(Channel ch, Promise<Channel> sessionPromise) {
         EventLoop eventLoop = ch.eventLoop();
 
         if (eventLoop.inEventLoop()) {
-            watchSessionActive0(ch, promise);
+            watchSessionActive0(ch, sessionPromise);
         } else {
             eventLoop.execute(new OneTimeTask() {
                 @Override
                 public void run() {
-                    watchSessionActive0(ch, promise);
+                    watchSessionActive0(ch, sessionPromise);
                 }
             });
         }
-        return promise;
+        return sessionPromise;
     }
 
-    private void watchSessionActive0(final Channel ch, Promise<Channel> result) {
+    private void watchSessionActive0(final Channel ch, Promise<Channel> sessionPromise) {
         assert ch.eventLoop().inEventLoop();
 
         if (HttpSessionHandler.isActive(ch)) {
-            result.setSuccess(ch);
+            sessionPromise.setSuccess(ch);
             return;
         }
 
-        ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(new OneTimeTask() {
+        final ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(new OneTimeTask() {
             @Override
             public void run() {
-                if (result.tryFailure(new TimeoutException(
+                if (sessionPromise.tryFailure(new TimeoutException(
                         "connection established, but session creation timed out: " + ch))) {
                     ch.close();
                 }
@@ -133,9 +157,28 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SessionProtocol) {
                     timeoutFuture.cancel(false);
-                    result.trySuccess(ctx.channel());
+                    if (!sessionPromise.trySuccess(ctx.channel())) {
+                        ctx.close();
+                    }
                     ctx.pipeline().remove(this);
+                    return;
                 }
+
+                if (evt instanceof SessionProtocolNegotiationException) {
+                    timeoutFuture.cancel(false);
+                    sessionPromise.tryFailure((SessionProtocolNegotiationException) evt);
+                    ctx.close();
+                    return;
+                }
+
+                if (evt == RETRY_WITH_H1C) {
+                    // Protocol upgrade has failed, but needs to retry.
+                    timeoutFuture.cancel(false);
+                    ctx.close();
+                    connect(ctx.channel().remoteAddress(), SessionProtocol.H1C, sessionPromise);
+                    return;
+                }
+
                 ctx.fireUserEventTriggered(evt);
             }
         });

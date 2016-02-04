@@ -35,6 +35,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -117,9 +119,22 @@ class HttpSessionHandler extends ChannelDuplexHandler {
                         || serializationFormat == SerializationFormat.NONE) {
                         iCtx.resolvePromise(resultPromise, response.retain());
                     } else {
-                        iCtx.rejectPromise(
-                                resultPromise,
-                                new InvalidResponseException("HTTP Response code: " + response.status()));
+                        final DecoderResult decoderResult = response.decoderResult();
+                        final Throwable cause;
+
+                        if (decoderResult.isSuccess()) {
+                            cause = new InvalidResponseException("HTTP Response code: " + response.status());
+                        } else {
+                            final Throwable decoderCause = decoderResult.cause();
+                            if (decoderCause instanceof DecoderException) {
+                                cause = decoderCause;
+                            } else {
+                                cause = new DecoderException("protocol violation: " + decoderCause,
+                                                             decoderCause);
+                            }
+                        }
+
+                        iCtx.rejectPromise(resultPromise, cause);
                     }
                 } finally {
                     ReferenceCountUtil.release(msg);

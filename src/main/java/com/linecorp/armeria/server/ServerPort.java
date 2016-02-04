@@ -60,8 +60,16 @@ public final class ServerPort implements Comparable<ServerPort> {
             }
         }
 
+        requireNonNull(protocol, "protocol");
+
+        if (protocol != SessionProtocol.HTTP && protocol != SessionProtocol.HTTPS) {
+            throw new IllegalArgumentException(
+                    "protocol: " + protocol +
+                    " (expected: " + SessionProtocol.HTTP + " or " + SessionProtocol.HTTPS + ')');
+        }
+
         this.localAddress = localAddress;
-        this.protocol = requireNonNull(protocol, "protocol");
+        this.protocol = protocol;
 
         localAddressString = localAddress.getAddress().getHostAddress() + ':' + localAddress.getPort();
     }

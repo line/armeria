@@ -29,6 +29,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nonnull;
+
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TProtocol;
@@ -44,6 +46,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceCodec;
 import com.linecorp.armeria.server.ServiceCodec.DecodeResult;
@@ -324,7 +327,7 @@ public class ThriftServiceTest {
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
         ThriftService service = ThriftService.of((FileService.Iface) path -> {
-            throw new FileServiceException();
+            throw newFileServiceException();
         }, defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
@@ -348,7 +351,7 @@ public class ThriftServiceTest {
 
         ThriftService service = ThriftService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
-                        resultHandler.onError(new FileServiceException()), defaultSerializationFormat);
+                        resultHandler.onError(newFileServiceException()), defaultSerializationFormat);
 
         invoke(service, CH, PROTO, HOST, PATH, out, promise);
         promise.sync();
@@ -370,12 +373,12 @@ public class ThriftServiceTest {
         assertThat(out.readableBytes(), is(greaterThan(0)));
 
         ThriftService syncService = ThriftService.of((FileService.Iface) path -> {
-            throw new FileServiceException();
+            throw newFileServiceException();
         }, defaultSerializationFormat);
 
         ThriftService asyncService = ThriftService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
-                        resultHandler.onError(new FileServiceException()), defaultSerializationFormat);
+                        resultHandler.onError(newFileServiceException()), defaultSerializationFormat);
 
         invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
         invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
@@ -654,5 +657,11 @@ public class ThriftServiceTest {
         default:
             promise.setFailure(new IllegalStateException("unexpected decode result type: " + result.type()));
         }
+    }
+
+    @Nonnull
+    private static FileServiceException newFileServiceException() {
+        // Remove the stack trace so we do not pollute the build log.
+        return Exceptions.clearTrace(new FileServiceException());
     }
 }

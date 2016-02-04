@@ -15,14 +15,34 @@
  */
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.EnumSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nonnull;
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.Servlet;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.thrift.server.TServlet;
 import org.eclipse.jetty.http2.server.HTTP2CServerConnectionFactory;
@@ -33,9 +53,11 @@ import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.NetworkConnector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -43,11 +65,14 @@ import com.linecorp.armeria.client.ClientCodec;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingClientCodec;
+import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
+import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
+import com.linecorp.armeria.service.test.thrift.main.HelloService.Processor;
 
 import io.netty.buffer.ByteBuf;
 
@@ -57,24 +82,42 @@ import io.netty.buffer.ByteBuf;
  */
 public class ThriftOverHttpClientTServletIntegrationTest {
 
-    private static final HelloService.Iface helloHandler = name -> "Hello, " + name + '!';
+    private static final String TSERVLET_PATH = "/thrift";
 
-    private static Servlet servlet;
+    @SuppressWarnings("unchecked")
+    private static final Servlet thriftServlet =
+            new TServlet(new Processor(name -> "Hello, " + name + '!'), ThriftProtocolFactories.BINARY);
+
+    private static final Servlet rootServlet = new HttpServlet() {
+        private static final long serialVersionUID = 6765028749367036441L;
+
+        @Override
+        protected void doGet(HttpServletRequest req, HttpServletResponse resp) {
+            resp.setStatus(404);
+            resp.setContentLength(0);
+        }
+    };
+
+    private static final AtomicBoolean sendConnectionClose = new AtomicBoolean();
+
     private static Server http1server;
     private static Server http2server;
 
     @BeforeClass
     public static void createServer() throws Exception {
-        servlet = new TServlet(new HelloService.Processor(helloHandler), ThriftProtocolFactories.BINARY);
-
         http1server = startHttp1();
         http2server = startHttp2();
     }
 
     private static Server startHttp1() throws Exception {
         Server server = new Server(0);
+
         ServletHandler handler = new ServletHandler();
-        handler.addServletWithMapping(new ServletHolder(servlet), "/thrift");
+        handler.addServletWithMapping(newServletHolder(thriftServlet), TSERVLET_PATH);
+        handler.addServletWithMapping(newServletHolder(rootServlet), "/");
+        handler.addFilterWithMapping(new FilterHolder(new ConnectionCloseFilter()), "/*",
+                                     EnumSet.of(DispatcherType.REQUEST));
+
         server.setHandler(handler);
 
         for (Connector c : server.getConnectors()) {
@@ -90,6 +133,13 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
         server.start();
         return server;
+    }
+
+    @Nonnull
+    private static ServletHolder newServletHolder(Servlet rootServlet) {
+        final ServletHolder holder = new ServletHolder(rootServlet);
+        holder.setInitParameter("cacheControl", "max-age=0, public");
+        return holder;
     }
 
     private static Server startHttp2() throws Exception {
@@ -110,7 +160,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
         // Add the servlet.
         ServletHandler handler = new ServletHandler();
-        handler.addServletWithMapping(new ServletHolder(servlet), "/thrift");
+        handler.addServletWithMapping(newServletHolder(thriftServlet), TSERVLET_PATH);
         server.setHandler(handler);
 
         // Start the server.
@@ -128,38 +178,102 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         }
     }
 
+    @Before
+    public void setup() {
+        SessionProtocolNegotiationCache.clear();
+        sendConnectionClose.set(false);
+    }
+
     @Test
     public void sendHelloViaHttp1() throws Exception {
-        AtomicReference<Scheme> scheme = new AtomicReference<>();
-        HelloService.Iface client = Clients.newClient(
-                http1uri("/thrift"), HelloService.Iface.class,
-                ClientOption.DECORATOR.newValue(
-                        c -> c.decorateCodec(codec -> new SchemeCapturer(codec, scheme))));
+        final AtomicReference<Scheme> scheme = new AtomicReference<>();
+        final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), scheme);
 
         assertEquals("Hello, old world!", client.hello("old world"));
-        assertThat(scheme.get().sessionProtocol(), is(SessionProtocol.H1C));
+        assertThat(scheme.get().sessionProtocol(), is(H1C));
+    }
+
+    /**
+     * When an upgrade request is rejected with 'Connection: close', the client should retry the connection
+     * attempt silently with explicit H1C.
+     */
+    @Test
+    public void sendHelloViaHttp1WithConnectionClose() throws Exception {
+        sendConnectionClose.set(true);
+
+        final AtomicReference<Scheme> scheme = new AtomicReference<>();
+        final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), scheme);
+
+        assertEquals("Hello, ancient world!", client.hello("ancient world"));
+        assertThat(scheme.get().sessionProtocol(), is(H1C));
     }
 
     @Test
     public void sendHelloViaHttp2() throws Exception {
-        AtomicReference<Scheme> scheme = new AtomicReference<>();
-        HelloService.Iface client = Clients.newClient(
-                http2uri("/thrift"), HelloService.Iface.class,
-                ClientOption.DECORATOR.newValue(
-                        c -> c.decorateCodec(codec -> new SchemeCapturer(codec, scheme))));
+        final AtomicReference<Scheme> scheme = new AtomicReference<>();
+        final HelloService.Iface client = newSchemeCapturingClient(http2uri(HTTP), scheme);
 
         assertEquals("Hello, new world!", client.hello("new world"));
-        assertThat(scheme.get().sessionProtocol(), is(SessionProtocol.H2C));
+        assertThat(scheme.get().sessionProtocol(), is(H2C));
     }
 
-    private static String http1uri(String path) {
-        int port = ((NetworkConnector) http1server.getConnectors()[0]).getLocalPort();
-        return "tbinary+http://127.0.0.1:" + port + path;
+    /**
+     * {@link SessionProtocolNegotiationException} should be raised if a user specified H2C explicitly and the
+     * client failed to upgrade.
+     */
+    @Test
+    public void testRejectedUpgrade() throws Exception {
+        final InetSocketAddress remoteAddress = new InetSocketAddress("127.0.0.1", http1Port());
+
+        assertFalse(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C));
+
+        final HelloService.Iface client =
+                Clients.newClient(http1uri(H2C), HelloService.Iface.class);
+
+        try {
+            client.hello("unused");
+            fail();
+        } catch (SessionProtocolNegotiationException e) {
+            // Test if a failed upgrade attempt triggers an exception with
+            // both 'expected' and 'actual' protocols.
+            assertThat(e.expected(), is(H2C));
+            assertThat(e.actual().orElse(null), is(H1C));
+            // .. and if the negotiation cache is updated.
+            assertTrue(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C));
+        }
+
+        try {
+            client.hello("unused");
+            fail();
+        } catch (SessionProtocolNegotiationException e) {
+            // Test if no upgrade attempt is made thanks to the cache.
+            assertThat(e.expected(), is(H2C));
+            // It has no idea about the actual protocol, because it did not create any connection.
+            assertThat(e.actual().isPresent(), is(false));
+        }
     }
 
-    private static String http2uri(String path) {
-        int port = ((NetworkConnector) http2server.getConnectors()[0]).getLocalPort();
-        return "tbinary+http://127.0.0.1:" + port + path;
+    private static HelloService.Iface newSchemeCapturingClient(String uri, AtomicReference<Scheme> scheme) {
+        return Clients.newClient(
+                uri, HelloService.Iface.class,
+                ClientOption.DECORATOR.newValue(
+                        c -> c.decorateCodec(codec -> new SchemeCapturer(codec, scheme))));
+    }
+
+    private static String http1uri(SessionProtocol protocol) {
+        return "tbinary+" + protocol.uriText() + "://127.0.0.1:" + http1Port() + TSERVLET_PATH;
+    }
+
+    private static int http1Port() {
+        return ((NetworkConnector) http1server.getConnectors()[0]).getLocalPort();
+    }
+
+    private static String http2uri(SessionProtocol protocol) {
+        return "tbinary+" + protocol.uriText() + "://127.0.0.1:" + http2Port() + TSERVLET_PATH;
+    }
+
+    private static int http2Port() {
+        return ((NetworkConnector) http2server.getConnectors()[0]).getLocalPort();
     }
 
     private static class SchemeCapturer extends DecoratingClientCodec {
@@ -180,5 +294,24 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
             return super.decodeResponse(ctx, content, originalResponse);
         }
+    }
+
+    private static class ConnectionCloseFilter implements Filter {
+        @Override
+        public void init(FilterConfig filterConfig) {}
+
+        @Override
+        public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+                throws IOException, ServletException {
+
+            chain.doFilter(request, response);
+
+            if (sendConnectionClose.get()) {
+                ((HttpServletResponse) response).setHeader("Connection", "close");
+            }
+        }
+
+        @Override
+        public void destroy() {}
     }
 }
