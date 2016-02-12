@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.server.http.tomcat;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.file.Path;
+
+import org.apache.catalina.connector.Connector;
 
 import com.linecorp.armeria.server.http.HttpService;
 
@@ -24,7 +28,6 @@ import com.linecorp.armeria.server.http.HttpService;
  * An {@link HttpService} that dispatches its requests to a web application running in an embedded Tomcat.
  */
 public final class TomcatService extends HttpService {
-
     /**
      * Creates a new {@link TomcatService} with the web application at the root directory inside the
      * JAR/WAR/directory where the caller class is located at.
@@ -73,14 +76,29 @@ public final class TomcatService extends HttpService {
         return TomcatServiceBuilder.forFileSystem(docBase).build();
     }
 
+    /**
+     * Creates a new {@link TomcatService} with existing web application instance.
+     * If web application is not configured properly, generated service may responds with 503 error
+     */
+    public static TomcatService forConnector(String hostname, Connector connector) {
+        requireNonNull(hostname, "hostname");
+        requireNonNull(connector, "connector");
+
+        return new TomcatService(hostname, connector);
+    }
+
     TomcatService(TomcatServiceConfig config) {
-        super(new TomcatServiceInvocationHandler(config));
+        super(new ManagedTomcatServiceInvocationHandler(config));
+    }
+
+    TomcatService(String hostname, Connector connector) {
+        super(new TomcatServiceInvocationHandler(hostname, connector));
     }
 
     /**
-     * Returns the configuration.
+     * Returns tomcat {@link Connector}
      */
-    public TomcatServiceConfig config() {
-        return ((TomcatServiceInvocationHandler) handler()).config();
+    public Connector connector() {
+        return ((TomcatServiceInvocationHandler)handler()).connector();
     }
 }

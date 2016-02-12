@@ -383,7 +383,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private static HttpResponseStatus toHttpResponseStatus(Throwable cause) {
-        if (cause instanceof RequestTimeoutException) {
+        if (cause instanceof RequestTimeoutException || cause instanceof ServiceUnavailableException) {
             return HttpResponseStatus.SERVICE_UNAVAILABLE;
         }
 
