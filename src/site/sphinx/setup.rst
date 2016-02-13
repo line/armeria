@@ -300,6 +300,7 @@ You might want to use the following  ``pom.xml`` as a template if you are starti
         <!-- Dependency versions -->
         <armeria.version>\ |release|\ </armeria.version>
         <tomcat.version>8.0.28</tomcat.version>
+        <slf4j.version>1.7.16</slf4j.version>
         <jetty.alpn.version.latest>8.1.6.v20151105</jetty.alpn.version.latest>
         <jetty.alpn.version>${jetty.alpn.version.latest}</jetty.alpn.version>
         <jetty.alpn.path>${settings.localRepository}/org/mortbay/jetty/alpn/alpn-boot/${jetty.alpn.version}/alpn-boot-${jetty.alpn.version}.jar</jetty.alpn.path>
