@@ -52,6 +52,22 @@ like the following:
         }
     });
 
+You can also use the builder pattern for client construction:
+
+.. code-block:: java
+
+    HelloService.Iface helloService = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
+            .responseTimeoutMillis(10000)
+            .decorator(LoggingClient::new)
+            .build(HelloService.Iface.class); // or AsyncIface.class
+
+    String greeting = helloService.hello("Armerian World");
+    assert greeting.equals("Hello, Armerian World!");
+
+As you might have noticed already, we decorated the client using ``LoggingClient``, which logs all Thrift calls
+and replies. You might be interested in decorating a client using other decorators, for example to gather
+metrics. Please also refer to `ClientBuilder`_ for more configuration options.
+
 Next steps
 ----------
 - `Server basics`_ if you did not write a Thrift RPC server with Armeria yet
