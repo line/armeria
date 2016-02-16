@@ -36,8 +36,8 @@ copyright = str(date.today().year) + ', ' + pom['organization']['name']
 # Set the project version and release.
 # Use the last known stable release if the current version ends with '-SNAPSHOT'.
 if re.match(r'^.*-SNAPSHOT$', pom['version']):
-    release = '0.8.0.Final'
-    version = '0.8'
+    release = '0.9.0.Final'
+    version = '0.9'
 else:
     release = pom['version']
     version = re.match(r'^[0-9]+\.[0-9]+', pom['version']).group(0)
