@@ -52,6 +52,7 @@ import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -100,7 +101,7 @@ public class ThriftOverHttpClientTest {
             resultHandler -> resultHandler.onComplete(System.currentTimeMillis());
 
     private static final FileService.AsyncIface fileServiceHandler =
-            (path, resultHandler) -> resultHandler.onError(new FileServiceException());
+            (path, resultHandler) -> resultHandler.onError(Exceptions.clearTrace(new FileServiceException()));
 
     private static final HeaderService.AsyncIface headerServiceHandler =
             (name, resultHandler) -> {
@@ -289,8 +290,11 @@ public class ThriftOverHttpClientTest {
         }
 
         for (String ignored : names) {
-            assertThat(serverReceivedNames.take(), isOneOf(names));
             assertEquals("null", resQueue.take());
+        }
+
+        for (String ignored : names) {
+            assertThat(serverReceivedNames.take(), isOneOf(names));
         }
     }
 
@@ -306,7 +310,7 @@ public class ThriftOverHttpClientTest {
     }
 
     @Test(timeout = 10000)
-    public void testODevNullServiceAsync() throws Exception {
+    public void testDevNullServiceAsync() throws Exception {
         DevNullService.AsyncIface client =
                 Clients.newClient(remoteInvokerFactory, getURI(Handlers.DEVNULL),
                                   Handlers.DEVNULL.AsyncIface(), clientOptions);
@@ -318,8 +322,11 @@ public class ThriftOverHttpClientTest {
         }
 
         for (String ignored : names) {
-            assertThat(serverReceivedNames.take(), isOneOf(names));
             assertEquals("null", resQueue.take());
+        }
+
+        for (String ignored : names) {
+            assertThat(serverReceivedNames.take(), isOneOf(names));
         }
     }
 
@@ -342,7 +349,9 @@ public class ThriftOverHttpClientTest {
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
         client.getServerTime(new RequestQueuingCallback(resQueue));
 
-        assertThat((Long) resQueue.take(), lessThanOrEqualTo(System.currentTimeMillis()));
+        final Object result = resQueue.take();
+        assertThat(result, is(instanceOf(Long.class)));
+        assertThat((Long) result, lessThanOrEqualTo(System.currentTimeMillis()));
     }
 
     @Test(timeout = 1000, expected = FileServiceException.class)

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.regex.Pattern;
@@ -27,6 +29,7 @@ import com.linecorp.armeria.client.ClosedSessionException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.util.internal.EmptyArrays;
 
 /**
  * Provides the methods that are useful for handling exceptions.
@@ -48,6 +51,17 @@ public final class Exceptions {
         }
 
         logger.warn("{} Unexpected exception:", ch, cause);
+    }
+
+    /**
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     */
+    public static void logIfUnexpected(Logger logger, Channel ch, String debugData, Throwable cause) {
+        if (!logger.isWarnEnabled() || !isExpected(cause)) {
+            return;
+        }
+
+        logger.warn("{} Unexpected exception: {}", ch, debugData, cause);
     }
 
     /**
@@ -83,6 +97,15 @@ public final class Exceptions {
         }
 
         return false;
+    }
+
+    /**
+     * Empties the stack trace of the specified {@code exception}.
+     */
+    public static <T extends Throwable> T clearTrace(T exception) {
+        requireNonNull(exception, "exception");
+        exception.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        return exception;
     }
 
     private Exceptions() {}

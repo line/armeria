@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.buffer.ByteBuf;
@@ -81,7 +82,7 @@ public class ServerTest extends AbstractServerTest {
         }).decorate(LoggingService::new);
 
         final Service buggy = new ByteBufService((ctx, exec, promise) -> {
-            throw new Exception("bug!");
+            throw Exceptions.clearTrace(new Exception("bug!"));
         }).decorate(LoggingService::new);
 
         sb.serviceAt("/", immediateResponseOnIoThread)

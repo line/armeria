@@ -418,13 +418,22 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
         assert status.code() >= 400;
 
-        final String msg = errorMessage(status);
-        if (cause != null) {
-            logger.warn("{} Unexpected failure: {}", ctx.channel(), msg, cause);
+        final ByteBuf content;
+        if (req.method() == HttpMethod.HEAD) {
+            // A response to a HEAD request must have no content.
+            content = Unpooled.EMPTY_BUFFER;
+            if (cause != null) {
+                Exceptions.logIfUnexpected(logger, ctx.channel(), errorMessage(status), cause);
+            }
+        } else {
+            final String msg = errorMessage(status);
+            if (cause != null) {
+                Exceptions.logIfUnexpected(logger, ctx.channel(), msg, cause);
+            }
+            content = Unpooled.copiedBuffer(msg, StandardCharsets.UTF_8);
         }
 
-        final DefaultFullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, status, Unpooled.copiedBuffer(msg, StandardCharsets.UTF_8));
+        final DefaultFullHttpResponse res = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, content);
         res.headers().set(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE);
 
         respond(ctx, reqSeq, req, res);
