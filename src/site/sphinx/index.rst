@@ -4,6 +4,7 @@
 .. _`Thrift`: http://thrift.apache.org/
 .. _`Apache License 2.0`: https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)
 .. _`LINE Corporation`: http://linecorp.com/en/
+.. _`the introductory slides and case study`: https://speakerdeck.com/trustin/armeria-lines-next-generation-rpc-layer
 .. _`THttpClient`: https://github.com/apache/thrift/blob/0.9.3/lib/javame/src/org/apache/thrift/transport/THttpClient.java
 
 Welcome to Armeria
@@ -15,7 +16,7 @@ it in production.
 .. note::
 
     Want a quick tour?
-    Check out :download:`our introductory slides <_downloads/LINE_DevDay2015_Armeria.pdf>`.
+    Check out `the introductory slides and case study`_.
 
 Is your RPC really async?
 -------------------------
