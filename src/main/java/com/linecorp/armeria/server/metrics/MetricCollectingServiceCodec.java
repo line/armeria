@@ -22,6 +22,7 @@ import java.util.function.LongSupplier;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metrics.MetricConsumer;
 import com.linecorp.armeria.server.DecoratingServiceCodec;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceCodec;
@@ -37,19 +38,19 @@ import io.netty.util.concurrent.Promise;
 /**
  * Decorator to collect service metrics.
  *
- * This class is expected to be used with other {@link ServiceMetricConsumer}
+ * This class is expected to be used with other {@link MetricConsumer}
  */
 final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
-    private static final AttributeKey<Metrics> METRICS =
+    private static final AttributeKey<MetricsData> METRICS =
             AttributeKey.valueOf(MetricCollectingServiceCodec.class, "METRICS");
 
-    private final ServiceMetricConsumer metricConsumer;
+    private final MetricConsumer metricConsumer;
 
     /**
      * Creates a new instance that decorates the specified {@link ServiceCodec} with
-     * the specified {@link ServiceMetricConsumer}.
+     * the specified {@link MetricConsumer}.
      */
-    MetricCollectingServiceCodec(ServiceCodec codec, ServiceMetricConsumer consumer) {
+    MetricCollectingServiceCodec(ServiceCodec codec, MetricConsumer consumer) {
         super(codec);
         metricConsumer = consumer;
     }
@@ -70,7 +71,7 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
         switch (decodeResult.type()) {
         case SUCCESS: {
             ServiceInvocationContext context = decodeResult.invocationContext();
-            context.attr(METRICS).set(new Metrics(requestSize, startTime));
+            context.attr(METRICS).set(new MetricsData(requestSize, startTime));
 
             promise.addListener(future -> {
                 if (!future.isSuccess()) {
@@ -119,10 +120,10 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
 
     private void invokeComplete(ServiceInvocationContext ctx, HttpResponseStatus status, ByteBuf buf)
             throws Exception {
-        Metrics metrics = ctx.attr(METRICS).get();
-        long elapsedTime = System.nanoTime() - metrics.startTime;
+        MetricsData metricsData = ctx.attr(METRICS).get();
+        long elapsedTime = System.nanoTime() - metricsData.startTimeNanos;
         metricConsumer.invocationComplete(
-                ctx.scheme(), status.code(), elapsedTime, metrics.requestSize,
+                ctx.scheme(), status.code(), elapsedTime, metricsData.requestSizeBytes,
                 buf.readableBytes(), ctx.host(), ctx.path(), Optional.of(ctx.method()));
     }
 
@@ -147,13 +148,13 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
     /**
      * internal container for metric data
      */
-    static class Metrics {
-        final int requestSize;
-        final long startTime;
+    private static class MetricsData {
+        private final int requestSizeBytes;
+        private final long startTimeNanos;
 
-        Metrics(int requestSize, long startTime) {
-            this.requestSize = requestSize;
-            this.startTime = startTime;
+        private MetricsData(int requestSizeBytes, long startTimeNanos) {
+            this.requestSizeBytes = requestSizeBytes;
+            this.startTimeNanos = startTimeNanos;
         }
     }
 }

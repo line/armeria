@@ -18,6 +18,10 @@ package com.linecorp.armeria.server.metrics;
 
 import java.util.function.Function;
 
+import com.codahale.metrics.MetricRegistry;
+
+import com.linecorp.armeria.common.metrics.DropwizardMetricConsumer;
+import com.linecorp.armeria.common.metrics.MetricConsumer;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 
@@ -26,7 +30,33 @@ import com.linecorp.armeria.server.Service;
  * Currently only HTTP-based session protocols are supported.
  */
 public class MetricCollectingService extends DecoratingService {
-    public MetricCollectingService(Service service, ServiceMetricConsumer consumer) {
+
+    /**
+     * A {@link Service} decorator that tracks request stats using the Dropwizard metrics library.
+     * To use, simply prepare a {@link MetricRegistry} and add this decorator to a service specification.
+     *
+     * @param serviceName a name to describe this service. Metrics will all be logged with name
+     *     server.serviceName.method.metricName.
+     * @param metricRegistry the {@link MetricRegistry} to store metrics into.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * MetricRegistry metricRegistry = new MetricRegistry();
+     * serverBuilder.serviceAt("/service", ThriftService.of(handler)
+     *     .decorate(MetricCollectingService.newDropwizardDecorator("MyService", metricRegistry)));
+     * }
+     * </pre>
+     * <p>It is generally recommended to define your own name for the service instead of using something like
+     * the Java class to make sure otherwise safe changes like renames don't break metrics.
+     */
+    public static Function<Service, Service> newDropwizardDecorator(
+            String serviceName, MetricRegistry metricRegistry) {
+        return service -> new MetricCollectingService(
+                service,
+                new DropwizardMetricConsumer("server", serviceName, metricRegistry));
+    }
+
+    public MetricCollectingService(Service service, MetricConsumer consumer) {
         super(service, x -> new MetricCollectingServiceCodec(x, consumer), Function.identity());
     }
 }
