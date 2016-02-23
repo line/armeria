@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
 import com.linecorp.armeria.common.http.Http1ClientCodec;
-import com.linecorp.armeria.common.http.Http1ClientUpgradeHandler;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
@@ -45,6 +44,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -250,8 +250,8 @@ class HttpConfigurator extends ChannelDuplexHandler {
             Http1ClientCodec http1Codec = newHttp1Codec();
             Http2ClientUpgradeCodec http2ClientUpgradeCodec =
                     new Http2ClientUpgradeCodec(newHttp2ConnectionHandler());
-            Http1ClientUpgradeHandler http2UpgradeHandler =
-                    new Http1ClientUpgradeHandler(http1Codec, http2ClientUpgradeCodec, options.maxFrameLength());
+            HttpClientUpgradeHandler http2UpgradeHandler =
+                    new HttpClientUpgradeHandler(http1Codec, http2ClientUpgradeCodec, options.maxFrameLength());
 
             pipeline.addLast(http1Codec);
             pipeline.addLast(new WorkaroundHandler());
