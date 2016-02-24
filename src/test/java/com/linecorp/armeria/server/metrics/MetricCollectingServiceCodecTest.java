@@ -32,6 +32,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.metrics.MetricConsumer;
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -52,7 +53,7 @@ import io.netty.util.DefaultAttributeMap;
 public class MetricCollectingServiceCodecTest {
     @SuppressWarnings("unchecked")
     protected static void setupServer(
-            ServerBuilder sb, ServiceInvocationHandler handler, final ServiceMetricConsumer consumer) throws Exception {
+            ServerBuilder sb, ServiceInvocationHandler handler, final MetricConsumer consumer) throws Exception {
         ServiceCodec codec = Mockito.mock(ServiceCodec.class);
         DecodeResult decodeResult = Mockito.mock(DecodeResult.class);
         DefaultAttributeMap defaultAttributeMap = new DefaultAttributeMap();
@@ -75,7 +76,7 @@ public class MetricCollectingServiceCodecTest {
     abstract static class ExecutionCheckingTest extends AbstractServerTest {
         private int executed;
 
-        protected ServiceMetricConsumer defaultConsumer = (a, b, c, d, e, f, g, h) -> executed += 1;
+        protected MetricConsumer defaultConsumer = (a, b, c, d, e, f, g, h) -> executed += 1;
 
         @Test
         public void test() throws Exception {

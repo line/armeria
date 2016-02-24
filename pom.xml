@@ -83,6 +83,7 @@
     <!-- Dependency versions -->
     <jackson.version>2.6.5</jackson.version>
     <logback.version>1.1.5</logback.version>
+    <metrics.version>3.1.2</metrics.version>
     <netty.version>4.1.0.CR3</netty.version>
     <slf4j.version>1.7.16</slf4j.version>
     <tomcat.version>8.0.30</tomcat.version>
@@ -200,6 +201,13 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
+    </dependency>
+
+    <!-- Metrics -->
+    <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <version>${metrics.version}</version>
     </dependency>
 
     <!-- Logging libraries -->

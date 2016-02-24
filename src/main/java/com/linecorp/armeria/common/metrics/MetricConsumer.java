@@ -14,17 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.metrics;
+package com.linecorp.armeria.common.metrics;
 
 import java.util.Objects;
 import java.util.Optional;
 
-import com.linecorp.armeria.common.Scheme;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 
 @FunctionalInterface
-public interface ServiceMetricConsumer {
+public interface MetricConsumer {
     /**
      * Invoked for each request that has been processed
      *
@@ -38,7 +39,7 @@ public interface ServiceMetricConsumer {
     void invocationComplete(Scheme scheme, int code, long processTimeNanos, int requestSize,
                             int responseSize, String hostname, String path, Optional<String> method);
 
-    default ServiceMetricConsumer andThen(ServiceMetricConsumer other) {
+    default MetricConsumer andThen(MetricConsumer other) {
         Objects.requireNonNull(other, "other");
         return (scheme, code, processNanoTime, requestSize, responseSize, hostname, path,
                 mappedPath) -> {
@@ -46,7 +47,7 @@ public interface ServiceMetricConsumer {
                 invocationComplete(scheme, code, processNanoTime, requestSize, responseSize,
                                    hostname, path, mappedPath);
             } catch (Throwable e) {
-                LoggerFactory.getLogger(ServiceMetricConsumer.class).warn(
+                LoggerFactory.getLogger(MetricConsumer.class).warn(
                         "invocationComplete() failed with an exception: {}", e);
             }
             other.invocationComplete(scheme, code, processNanoTime, requestSize, responseSize,

@@ -25,13 +25,14 @@ import com.linecorp.armeria.common.SerializationFormat;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metrics.MetricConsumer;
 
-public class ServiceMetricConsumerTest {
+public class MetricConsumerTest {
     @Test
     public void testInfiniteRecursion() throws Exception {
         final int[] executeCounter = { 0 };
 
-        ServiceMetricConsumer consumer = (a, b, c, d, e, f, g, h) -> executeCounter[0] += 1;
+        MetricConsumer consumer = (a, b, c, d, e, f, g, h) -> executeCounter[0] += 1;
         consumer.andThen(consumer).invocationComplete(
                 Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP), 200, 0, 0, 0, "", "",
                 Optional.of(""));
