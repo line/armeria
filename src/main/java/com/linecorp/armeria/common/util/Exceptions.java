@@ -46,7 +46,7 @@ public final class Exceptions {
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, Throwable cause) {
-        if (!logger.isWarnEnabled() || !isExpected(cause)) {
+        if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
 
@@ -57,7 +57,7 @@ public final class Exceptions {
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, String debugData, Throwable cause) {
-        if (!logger.isWarnEnabled() || !isExpected(cause)) {
+        if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
 
