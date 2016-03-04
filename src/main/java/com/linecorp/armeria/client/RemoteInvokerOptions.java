@@ -44,7 +44,7 @@ public class RemoteInvokerOptions extends AbstractOptions {
 
     private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofMillis(3200);
     private static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(10);
-    private static final int DEFAULT_MAX_FRAME_LENGTH = 10485760; //10 MB
+    private static final int DEFAULT_MAX_FRAME_LENGTH = 10 * 1024 * 1024; // 10 MB
     private static final Integer DEFAULT_MAX_CONCURRENCY = Integer.MAX_VALUE;
 
     private static final RemoteInvokerOptionValue<?>[] DEFAULT_OPTION_VALUES = {

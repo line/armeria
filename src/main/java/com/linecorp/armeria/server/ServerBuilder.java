@@ -65,7 +65,7 @@ public final class ServerBuilder {
     private static final TimeoutPolicy DEFAULT_REQUEST_TIMEOUT_POLICY =
             TimeoutPolicy.ofFixed(Duration.ofSeconds(10));
     private static final long DEFAULT_IDLE_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
-    private static final int DEFAULT_MAX_FRAME_LENGTH = 1048576;
+    private static final int DEFAULT_MAX_FRAME_LENGTH = 10 * 1024 * 1024; // 10 MB
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
