@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.TimeoutPolicy;
 
 import io.netty.handler.ssl.SslContext;
+import io.netty.util.DomainMappingBuilder;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.concurrent.Promise;
 
@@ -109,15 +110,16 @@ public final class ServerConfig {
 
         // Set virtual host definitions and initialize their domain name mapping.
         defaultVirtualHost = normalizeDefaultVirtualHost(defaultVirtualHost, portsCopy);
-        virtualHostMapping = new DomainNameMapping<>(defaultVirtualHost);
+        final DomainMappingBuilder<VirtualHost> mappingBuilder = new DomainMappingBuilder<>(defaultVirtualHost);
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
         for (VirtualHost h : virtualHosts) {
             if (h == null) {
                 break;
             }
             virtualHostsCopy.add(h);
-            virtualHostMapping.add(h.hostnamePattern(), h);
+            mappingBuilder.add(h.hostnamePattern(), h);
         }
+        virtualHostMapping = mappingBuilder.build();
 
         // Add the default VirtualHost to the virtualHosts so that a user can retrieve all VirtualHosts
         // via virtualHosts(). i.e. no need to check defaultVirtualHost().
