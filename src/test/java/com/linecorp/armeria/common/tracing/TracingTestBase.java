@@ -24,6 +24,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.github.kristofa.brave.EmptySpanCollector;
 import com.github.kristofa.brave.SpanCollector;
 import com.twitter.zipkin.gen.Span;
 
@@ -33,17 +34,13 @@ import io.netty.util.concurrent.Promise;
 
 public abstract class TracingTestBase {
 
-    public static class StubCollector implements SpanCollector {
+    public static class StubCollector extends EmptySpanCollector {
 
         public final List<Span> spans = new ArrayList<>();
 
         @Override
         public void collect(Span span) {
             spans.add(span);
-        }
-
-        @Override
-        public void addDefaultAnnotation(String s, String s1) {
         }
     }
 
