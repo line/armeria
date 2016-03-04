@@ -16,17 +16,21 @@
 
 package com.linecorp.armeria.client;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.stream.Stream;
 
+import net.bytebuddy.implementation.bind.annotation.AllArguments;
+import net.bytebuddy.implementation.bind.annotation.Origin;
+import net.bytebuddy.implementation.bind.annotation.RuntimeType;
+
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.EmptyArrays;
 
-final class ClientInvocationHandler implements InvocationHandler {
+// Visible to generated proxies, should not be used by client code.
+public final class ClientInvocationHandler {
 
     private final URI uri;
     private final Class<?> interfaceClass;
@@ -64,32 +68,13 @@ final class ClientInvocationHandler implements InvocationHandler {
         return options;
     }
 
-    @Override
-    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    @RuntimeType
+    public Object invoke(@Origin Method method, @AllArguments @RuntimeType Object[] args)
+            throws Throwable {
         final Class<?> declaringClass = method.getDeclaringClass();
-        if (declaringClass == Object.class) {
-            // Handle the methods in Object
-            return invokeObjectMethod(proxy, method, args);
-        }
-
         assert declaringClass == interfaceClass;
         // Handle the methods in the interface.
         return invokeClientMethod(method, args);
-    }
-
-    private Object invokeObjectMethod(Object proxy, Method method, Object[] args) {
-        final String methodName = method.getName();
-
-        switch (methodName) {
-        case "toString":
-            return interfaceClass.getSimpleName() + '(' + uri + ')';
-        case "hashCode":
-            return System.identityHashCode(proxy);
-        case "equals":
-            return proxy == args[0];
-        default:
-            throw new Error("unknown method: " + methodName);
-        }
     }
 
     private Object invokeClientMethod(Method method, Object[] args) throws Throwable {
