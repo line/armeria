@@ -126,7 +126,7 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         }
 
         final EnumMap<SessionProtocol, RemoteInvoker> remoteInvokers = new EnumMap<>(SessionProtocol.class);
-        final HttpRemoteInvoker remoteInvoker = new HttpRemoteInvoker(eventLoopGroup, baseBootstrap, options);
+        final HttpRemoteInvoker remoteInvoker = new HttpRemoteInvoker(baseBootstrap, options);
 
         SessionProtocol.ofHttp().stream().forEach(
                 protocol -> remoteInvokers.put(protocol, remoteInvoker));

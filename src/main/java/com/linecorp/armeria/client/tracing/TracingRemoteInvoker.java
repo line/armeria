@@ -37,6 +37,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingRemoteInvoker;
 import com.linecorp.armeria.client.RemoteInvoker;
 
+import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 
 /**
@@ -48,17 +49,14 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
 
     private final ClientTracingInterceptor clientInterceptor;
 
-    public TracingRemoteInvoker(RemoteInvoker remoteInvoker, Brave brave) {
+    protected TracingRemoteInvoker(RemoteInvoker remoteInvoker, Brave brave) {
         super(remoteInvoker);
         clientInterceptor = new ClientTracingInterceptor(brave);
     }
 
     @Override
-    public final <T> Future<T> invoke(URI uri,
-                                      ClientOptions options,
-                                      ClientCodec codec,
-                                      Method method,
-                                      Object[] args) throws Exception {
+    public final <T> Future<T> invoke(EventLoop eventLoop,  URI uri, ClientOptions options, ClientCodec codec,
+                                      Method method, Object[] args) throws Exception {
 
         // create new request adapter to catch generated spanId
         final InternalClientRequestAdapter requestAdapter = new InternalClientRequestAdapter(method.getName());
@@ -70,7 +68,7 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
 
         if (span == null) {
             // skip tracing
-            return super.invoke(uri, traceAwareOptions, codec, method, args);
+            return super.invoke(eventLoop, uri, traceAwareOptions, codec, method, args);
         }
 
         // The actual remote invocation is done asynchronously.
@@ -79,11 +77,11 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
 
         Future<T> result = null;
         try {
-            result = super.invoke(uri, traceAwareOptions, codec, method, args);
-            result.addListener(future -> {
-                clientInterceptor.closeSpan(span,
-                                            createResponseAdapter(uri, options, codec, method, args, future));
-            });
+            result = super.invoke(eventLoop, uri, traceAwareOptions, codec, method, args);
+            result.addListener(
+                    future -> clientInterceptor.closeSpan(span,
+                                                          createResponseAdapter(uri, options, codec,
+                                                                                method, args, future)));
         } finally {
             if (result == null) {
                 clientInterceptor.closeSpan(span,
@@ -102,6 +100,7 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
     /**
      * Returns client side annotations that should be added to span.
      */
+    @SuppressWarnings("UnusedParameters")
     protected <T> List<KeyValueAnnotation> annotations(URI uri, ClientOptions options, ClientCodec codec,
                                                        Method method, Object[] args,
                                                        @Nullable Future<? super T> result) {
@@ -130,12 +129,7 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
                                                               @Nullable Future<? super T> result) {
 
         final List<KeyValueAnnotation> annotations = annotations(uri, options, codec, method, args, result);
-        return new ClientResponseAdapter() {
-            @Override
-            public Collection<KeyValueAnnotation> responseAnnotations() {
-                return annotations;
-            }
-        };
+        return () -> annotations;
     }
 
     /**
@@ -147,7 +141,7 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
 
         private SpanId spanId;
 
-        public InternalClientRequestAdapter(String spanName) {
+        InternalClientRequestAdapter(String spanName) {
             this.spanName = spanName;
         }
 

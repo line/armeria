@@ -23,25 +23,33 @@ import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.stream.Stream;
 
+import com.linecorp.armeria.common.ServiceInvocationContext;
+
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.EmptyArrays;
 
 final class ClientInvocationHandler implements InvocationHandler {
 
+    private final EventLoopGroup eventLoopGroup;
     private final URI uri;
     private final Class<?> interfaceClass;
-    private final RemoteInvoker invoker;
-    private final ClientCodec codec;
+    private final Client client;
     private final ClientOptions options;
 
-    ClientInvocationHandler(URI uri, Class<?> interfaceClass,
-                            RemoteInvoker invoker, ClientCodec codec, ClientOptions options) {
+    ClientInvocationHandler(EventLoopGroup eventLoopGroup, URI uri,
+                            Class<?> interfaceClass, Client client, ClientOptions options) {
 
+        this.eventLoopGroup = eventLoopGroup;
         this.uri = uri;
         this.interfaceClass = interfaceClass;
-        this.invoker = invoker;
-        this.codec = codec;
+        this.client = client;
         this.options = options;
+    }
+
+    EventLoopGroup eventLoopGroup() {
+        return eventLoopGroup;
     }
 
     URI uri() {
@@ -52,12 +60,16 @@ final class ClientInvocationHandler implements InvocationHandler {
         return interfaceClass;
     }
 
-    RemoteInvoker invoker() {
-        return invoker;
+    Client client() {
+        return client;
     }
 
-    ClientCodec codec() {
-        return codec;
+    private RemoteInvoker invoker() {
+        return client.invoker();
+    }
+
+    private ClientCodec codec() {
+        return client.codec();
     }
 
     ClientOptions options() {
@@ -98,8 +110,8 @@ final class ClientInvocationHandler implements InvocationHandler {
         }
 
         try {
-            Future<Object> resultFuture = invoker.invoke(uri, options, codec, method, args);
-            if (codec.isAsyncClient()) {
+            Future<Object> resultFuture = invoker().invoke(eventLoop(), uri, options, codec(), method, args);
+            if (codec().isAsyncClient()) {
                 return method.getReturnType().isInstance(resultFuture) ? resultFuture : null;
             } else {
                 return resultFuture.sync().getNow();
@@ -118,5 +130,9 @@ final class ClientInvocationHandler implements InvocationHandler {
 
             throw finalCause;
         }
+    }
+
+    private EventLoop eventLoop() {
+        return ServiceInvocationContext.mapCurrent(ServiceInvocationContext::eventLoop, eventLoopGroup::next);
     }
 }

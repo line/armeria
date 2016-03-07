@@ -236,10 +236,10 @@ public final class ClientBuilder {
 
         final ClientOptions options = ClientOptions.of(this.options.values());
 
-        final Client decoratable = options.decorator().apply(newClient(interfaceClass));
+        final Client client = options.decorator().apply(newClient(interfaceClass));
 
         final InvocationHandler handler = new ClientInvocationHandler(
-                uri, interfaceClass, decoratable.invoker(), decoratable.codec(), options);
+                remoteInvokerFactory.eventLoopGroup(), uri, interfaceClass, client, options);
 
         return (T) Proxy.newProxyInstance(interfaceClass.getClassLoader(),
                                           new Class[] { interfaceClass },
