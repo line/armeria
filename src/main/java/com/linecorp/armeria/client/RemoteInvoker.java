@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import java.lang.reflect.Method;
 import java.net.URI;
 
+import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 
 /**
@@ -29,6 +30,7 @@ public interface RemoteInvoker extends AutoCloseable {
     /**
      * Performs a remote invocation to the specified {@link URI}.
      *
+     * @param eventLoop the {@link EventLoop} to perform the invocation
      * @param uri the {@link URI} of the server endpoint
      * @param options the {@link ClientOptions}
      * @param codec the {@link ClientCodec}
@@ -37,8 +39,8 @@ public interface RemoteInvoker extends AutoCloseable {
      *
      * @return the {@link Future} that notifies the result of the remote invocation.
      */
-    <T> Future<T> invoke(URI uri, ClientOptions options, ClientCodec codec, Method method, Object[] args)
-            throws Exception;
+    <T> Future<T> invoke(EventLoop eventLoop, URI uri, ClientOptions options, ClientCodec codec,
+                         Method method, Object[] args) throws Exception;
 
     /**
      * Closes the underlying socket connection and releases its associated resources.

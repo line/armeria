@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.Method;
 import java.net.URI;
 
+import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 
 /**
@@ -48,12 +49,12 @@ public abstract class DecoratingRemoteInvoker implements RemoteInvoker {
     }
 
     @Override
-    public <T> Future<T> invoke(URI uri,
+    public <T> Future<T> invoke(EventLoop eventLoop, URI uri,
                                 ClientOptions options,
                                 ClientCodec codec, Method method,
                                 Object[] args) throws Exception {
 
-        return delegate().invoke(uri, options, codec, method, args);
+        return delegate().invoke(eventLoop, uri, options, codec, method, args);
     }
 
     @Override

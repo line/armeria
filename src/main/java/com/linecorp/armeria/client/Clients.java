@@ -183,7 +183,8 @@ public final class Clients {
         final T derived = (T) Proxy.newProxyInstance(
                 interfaceClass.getClassLoader(),
                 new Class[] { interfaceClass },
-                new ClientInvocationHandler(parent.uri(), interfaceClass, parent.invoker(), parent.codec(),
+                new ClientInvocationHandler(parent.eventLoopGroup(),
+                                            parent.uri(), interfaceClass, parent.client(),
                                             optionFactory.apply(parent.options())));
 
         return derived;

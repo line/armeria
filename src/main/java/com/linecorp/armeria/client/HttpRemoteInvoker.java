@@ -38,11 +38,11 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientCodec.EncodeResult;
 import com.linecorp.armeria.client.HttpSessionHandler.Invocation;
+import com.linecorp.armeria.client.pool.DefaultKeyedChannelPool;
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandlerAdapter;
 import com.linecorp.armeria.client.pool.PoolKey;
-import com.linecorp.armeria.client.pool.DefaultKeyedChannelPool;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -52,7 +52,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -72,50 +71,25 @@ final class HttpRemoteInvoker implements RemoteInvoker {
 
     final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> map = PlatformDependent.newConcurrentHashMap();
 
-    private final EventLoopGroup eventLoopGroup;
     private final Bootstrap baseBootstrap;
     private final RemoteInvokerOptions options;
 
-    HttpRemoteInvoker(EventLoopGroup eventLoopGroup, Bootstrap baseBootstrap, RemoteInvokerOptions options) {
-        this.eventLoopGroup = requireNonNull(eventLoopGroup, "eventLoopGroup");
+    HttpRemoteInvoker(Bootstrap baseBootstrap, RemoteInvokerOptions options) {
         this.baseBootstrap = requireNonNull(baseBootstrap, "baseBootstrap");
         this.options = requireNonNull(options, "options");
 
         assert baseBootstrap.group() == null;
     }
 
-    private KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {
-        KeyedChannelPool<PoolKey> pool = map.get(eventLoop);
-        if (pool != null) {
-            return pool;
-        }
-
-        return map.computeIfAbsent(eventLoop, e -> {
-            final Bootstrap bootstrap = baseBootstrap.clone();
-            bootstrap.group(eventLoop);
-
-            Function<PoolKey, Future<Channel>> factory = new HttpSessionChannelFactory(bootstrap, options);
-
-            final KeyedChannelPoolHandler<PoolKey> handler =
-                    options.poolHandlerDecorator().apply(NOOP_POOL_HANDLER);
-
-            eventLoop.terminationFuture().addListener((FutureListener<Object>) f -> map.remove(eventLoop));
-
-            //TODO(inch772) handle options.maxConcurrency();
-            return new DefaultKeyedChannelPool<>(eventLoop, factory,
-                                                 HttpSessionChannelFactory.HEALTH_CHECKER, handler, true);
-        });
-    }
-
     @Override
-    public <T> Future<T> invoke(URI uri, ClientOptions options, ClientCodec codec, Method method,
-                                Object[] args) throws Exception {
+    public <T> Future<T> invoke(EventLoop eventLoop, URI uri, ClientOptions options, ClientCodec codec,
+                                Method method, Object[] args) throws Exception {
+
         requireNonNull(uri, "uri");
         requireNonNull(options, "options");
         requireNonNull(codec, "codec");
         requireNonNull(method, "method");
 
-        final EventLoop eventLoop = eventLoop();
         final Scheme scheme = Scheme.parse(uri.getScheme());
         final SessionProtocol sessionProtocol = validateSessionProtocol(scheme.sessionProtocol());
         final InetSocketAddress remoteAddress = convertToSocketAddress(uri, sessionProtocol.isTls());
@@ -143,8 +117,27 @@ final class HttpRemoteInvoker implements RemoteInvoker {
         return resultPromise;
     }
 
-    private EventLoop eventLoop() {
-        return ServiceInvocationContext.mapCurrent(ServiceInvocationContext::eventLoop, eventLoopGroup::next);
+    private KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {
+        KeyedChannelPool<PoolKey> pool = map.get(eventLoop);
+        if (pool != null) {
+            return pool;
+        }
+
+        return map.computeIfAbsent(eventLoop, e -> {
+            final Bootstrap bootstrap = baseBootstrap.clone();
+            bootstrap.group(eventLoop);
+
+            Function<PoolKey, Future<Channel>> factory = new HttpSessionChannelFactory(bootstrap, options);
+
+            final KeyedChannelPoolHandler<PoolKey> handler =
+                    options.poolHandlerDecorator().apply(NOOP_POOL_HANDLER);
+
+            eventLoop.terminationFuture().addListener((FutureListener<Object>) f -> map.remove(eventLoop));
+
+            //TODO(inch772) handle options.maxConcurrency();
+            return new DefaultKeyedChannelPool<>(eventLoop, factory,
+                                                 HttpSessionChannelFactory.HEALTH_CHECKER, handler, true);
+        });
     }
 
     static <T> void invoke0(ClientCodec codec, Channel channel,

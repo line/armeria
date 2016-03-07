@@ -47,6 +47,8 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.RemoteInvoker;
 import com.linecorp.armeria.common.tracing.TracingTestBase;
 
+import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 
 public class TracingRemoteInvokerTest extends TracingTestBase {
@@ -99,11 +101,12 @@ public class TracingRemoteInvokerTest extends TracingTestBase {
         Future<Object> mockFut = mockFuture();
 
         RemoteInvoker remoteInvoker = mock(RemoteInvoker.class);
-        when(remoteInvoker.invoke(any(), any(), any(), any(), any())).thenReturn(mockFut);
+        when(remoteInvoker.invoke(any(), any(), any(), any(), any(), any())).thenReturn(mockFut);
 
         TracingRemoteInvoker stub = new TracingRemoteInvokerImpl(remoteInvoker, brave);
 
         // prepare parameters
+        EventLoop eventLoop = new DefaultEventLoop();
         URI uri = new URI("http://xxx");
         ClientOptions options = ClientOptions.of();
         ClientCodec codec = mock(ClientCodec.class);
@@ -111,11 +114,12 @@ public class TracingRemoteInvokerTest extends TracingTestBase {
         Object[] args = { "a", "b" };
 
         // do invoke
-        Future<Object> resultFut = stub.invoke(uri, options, codec, method, args);
+        Future<Object> resultFut = stub.invoke(eventLoop, uri, options, codec, method, args);
 
         assertThat(resultFut, is(mockFut));
 
-        verify(remoteInvoker, times(1)).invoke(eq(uri), anyObject(), eq(codec), eq(method), eq(args));
+        verify(remoteInvoker, times(1)).invoke(eq(eventLoop), eq(uri), anyObject(), eq(codec),
+                                               eq(method), eq(args));
 
         return spanCollector;
     }
