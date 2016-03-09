@@ -29,7 +29,6 @@ import com.linecorp.armeria.client.ClosedSessionException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.util.internal.EmptyArrays;
 
 /**
  * Provides the methods that are useful for handling exceptions.
@@ -41,6 +40,8 @@ public final class Exceptions {
 
     private static final Pattern IGNORABLE_HTTP2_ERROR_MESSAGE = Pattern.compile(
             "(?:stream closed)", Pattern.CASE_INSENSITIVE);
+
+    private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
     /**
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
@@ -104,7 +105,7 @@ public final class Exceptions {
      */
     public static <T extends Throwable> T clearTrace(T exception) {
         requireNonNull(exception, "exception");
-        exception.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
+        exception.setStackTrace(EMPTY_STACK_TRACE);
         return exception;
     }
 

@@ -21,16 +21,16 @@ import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
-import java.util.stream.Stream;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.EmptyArrays;
 
 final class ClientInvocationHandler implements InvocationHandler {
+
+    private static final Object[] NO_ARGS = new Object[0];
 
     private final EventLoopGroup eventLoopGroup;
     private final URI uri;
@@ -106,7 +106,7 @@ final class ClientInvocationHandler implements InvocationHandler {
 
     private Object invokeClientMethod(Method method, Object[] args) throws Throwable {
         if (args == null) {
-            args = EmptyArrays.EMPTY_OBJECTS;
+            args = NO_ARGS;
         }
 
         try {
@@ -116,19 +116,8 @@ final class ClientInvocationHandler implements InvocationHandler {
             } else {
                 return resultFuture.sync().getNow();
             }
-        } catch (Throwable cause) {
-            final Throwable finalCause;
-            if (cause instanceof ClosedChannelException) {
-                finalCause = ClosedSessionException.INSTANCE;
-            } else if (cause instanceof Error ||
-                       cause instanceof RuntimeException ||
-                       Stream.of(method.getExceptionTypes()).anyMatch(v -> v.isInstance(cause))) {
-                finalCause = cause;
-            } else {
-                finalCause = new UndeclaredThrowableException(cause);
-            }
-
-            throw finalCause;
+        } catch (ClosedChannelException ignored) {
+            throw ClosedSessionException.INSTANCE;
         }
     }
 

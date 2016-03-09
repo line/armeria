@@ -16,32 +16,18 @@
 
 package com.linecorp.armeria.common.http;
 
-import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.Http2StreamVisitor;
 import io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler;
-import io.netty.util.internal.EmptyArrays;
 
 public abstract class AbstractHttpToHttp2ConnectionHandler extends HttpToHttp2ConnectionHandler {
-
-    private static final StreamException REFUSED_STREAM_EXCEPTION =
-            (StreamException) Http2Exception.streamError(
-                    HTTP_UPGRADE_STREAM_ID, Http2Error.REFUSED_STREAM,
-                    "The request sent with the upgrade request has been refused; try again.");
-
-    static {
-        REFUSED_STREAM_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
 
     /**
      * XXX(trustin): Don't know why, but {@link Http2ConnectionHandler} does not close the last stream

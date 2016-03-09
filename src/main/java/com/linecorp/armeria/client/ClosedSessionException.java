@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
-import io.netty.util.internal.EmptyArrays;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link RuntimeException} raised when the connection to the server has been closed unexpectedly.
@@ -24,12 +24,7 @@ public class ClosedSessionException extends RuntimeException {
 
     private static final long serialVersionUID = -78487475521731580L;
 
-    @SuppressWarnings("ThrowableInstanceNeverThrown")
-    static final ClosedSessionException INSTANCE = new ClosedSessionException();
-
-    static {
-        INSTANCE.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
+    static final ClosedSessionException INSTANCE = Exceptions.clearTrace(new ClosedSessionException());
 
     /**
      * Creates a new instance.
