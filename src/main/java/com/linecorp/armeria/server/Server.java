@@ -51,7 +51,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 
 /**
  * Listens to {@link ServerPort}s and delegates client requests to {@link Service}s.
@@ -407,15 +406,11 @@ public final class Server implements AutoCloseable {
     }
 
     /**
-     * A shortcut to {@link #stop() stop().sync()}.
+     * A shortcut to {@link #stop() stop().syncUninterruptibly()}.
      */
     @Override
     public void close() {
-        try {
-            stop().sync();
-        } catch (Exception e) {
-            PlatformDependent.throwException(e);
-        }
+        stop().syncUninterruptibly();
     }
 
     enum StateType {

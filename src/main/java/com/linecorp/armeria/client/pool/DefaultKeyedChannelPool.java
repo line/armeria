@@ -19,7 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Deque;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Function;
+
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -27,25 +31,18 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.OneTimeTask;
-import io.netty.util.internal.PlatformDependent;
 
 /**
  * Default {@link KeyedChannelPool} implementation.
  */
 public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
-    @SuppressWarnings("ThrowableInstanceNeverThrown")
-    private static final IllegalStateException FULL_EXCEPTION = new IllegalStateException("ChannelPool full");
-    @SuppressWarnings("ThrowableInstanceNeverThrown")
-    private static final IllegalStateException UNHEALTHY_NON_OFFERED_TO_POOL =
-            new IllegalStateException("Channel is unhealthy; not offering it back to pool");
+    private static final IllegalStateException FULL_EXCEPTION =
+            Exceptions.clearTrace(new IllegalStateException("ChannelPool full"));
 
-    static {
-        FULL_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-        UNHEALTHY_NON_OFFERED_TO_POOL.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
+    private static final IllegalStateException UNHEALTHY_NON_OFFERED_TO_POOL =
+            Exceptions.clearTrace(new IllegalStateException("Channel is unhealthy; not offering it back to pool"));
 
     private final EventLoop eventLoop;
     private final Function<K, Future<Channel>> channelFactory;
@@ -86,7 +83,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                                                                                    "channelPoolHandler"));
         this.releaseHealthCheck = releaseHealthCheck;
 
-        pool = PlatformDependent.newConcurrentHashMap();
+        pool = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -300,7 +297,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     }
 
     protected boolean offerChannel(K key, Channel channel) {
-        return pool.computeIfAbsent(key, k -> PlatformDependent.newConcurrentDeque()).offer(channel);
+        return pool.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>()).offer(channel);
     }
 
     @Override

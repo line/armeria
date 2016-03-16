@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -58,7 +59,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.OneTimeTask;
-import io.netty.util.internal.PlatformDependent;
 
 final class HttpRemoteInvoker implements RemoteInvoker {
 
@@ -69,7 +69,7 @@ final class HttpRemoteInvoker implements RemoteInvoker {
 
     static final Set<SessionProtocol> HTTP_PROTOCOLS = EnumSet.of(H1, H1C, H2, H2C, HTTPS, HTTP);
 
-    final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> map = PlatformDependent.newConcurrentHashMap();
+    final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> map = new ConcurrentHashMap<>();
 
     private final Bootstrap baseBootstrap;
     private final RemoteInvokerOptions options;

@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftUtil;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceCodec;
 import com.linecorp.armeria.server.ServiceConfig;
 
@@ -63,24 +64,19 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.EmptyArrays;
 
 final class ThriftServiceCodec implements ServiceCodec {
 
-    @SuppressWarnings("ThrowableInstanceNeverThrown")
     private static final Exception HTTP_METHOD_NOT_ALLOWED_EXCEPTION =
-            new IllegalArgumentException("HTTP method not allowed");
-    @SuppressWarnings("ThrowableInstanceNeverThrown")
-    private static final Exception THRIFT_PROTOCOL_NOT_SUPPORTED =
-            new IllegalArgumentException("Specified Thrift protocol not supported");
-    @SuppressWarnings("ThrowableInstanceNeverThrown")
-    private static final Exception ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE =
-            new IllegalArgumentException("Thrift protocol specified in Accept header must match the one " +
-                                         "specified in Content-Type header");
+            Exceptions.clearTrace(new IllegalArgumentException("HTTP method not allowed"));
 
-    static {
-        HTTP_METHOD_NOT_ALLOWED_EXCEPTION.setStackTrace(EmptyArrays.EMPTY_STACK_TRACE);
-    }
+    private static final Exception THRIFT_PROTOCOL_NOT_SUPPORTED =
+            Exceptions.clearTrace(new IllegalArgumentException("Specified Thrift protocol not supported"));
+
+    private static final Exception ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE =
+            Exceptions.clearTrace(new IllegalArgumentException(
+                    "Thrift protocol specified in Accept header must match the one specified " +
+                    "in Content-Type header"));
 
     private static final Logger logger = LoggerFactory.getLogger(ThriftServiceCodec.class);
 
