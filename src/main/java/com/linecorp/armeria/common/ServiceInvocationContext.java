@@ -301,6 +301,11 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
         });
     }
 
+    /**
+     * Registers {@code callback} to be run when re-entering this {@link ServiceInvocationContext},
+     * usually when using the {@link #makeContextAware} family of methods. Any thread-local state
+     * associated with this context should be restored by this callback.
+     */
     public ServiceInvocationContext onEnter(Runnable callback) {
         if (onEnterCallbacks == null) {
             onEnterCallbacks = new ArrayList<>(4);
@@ -309,6 +314,11 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
         return this;
     }
 
+    /**
+     * Registers {@code callback} to be run when re-exiting this {@link ServiceInvocationContext},
+     * usually when using the {@link #makeContextAware} family of methods. Any thread-local state
+     * associated with this context should be reset by this callback.
+     */
     public ServiceInvocationContext onExit(Runnable callback) {
         if (onExitCallbacks == null) {
             onExitCallbacks = new ArrayList<>(4);
