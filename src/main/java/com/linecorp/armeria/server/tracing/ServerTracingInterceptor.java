@@ -53,6 +53,10 @@ class ServerTracingInterceptor {
         return spanThreadBinder.getCurrentServerSpan();
     }
 
+    void setSpan(ServerSpan span) {
+        spanThreadBinder.setCurrentSpan(span);
+    }
+
     void closeSpan(ServerSpan span, ServerResponseAdapter adapter) {
         spanThreadBinder.setCurrentSpan(span);
         responseInterceptor.handle(adapter);
