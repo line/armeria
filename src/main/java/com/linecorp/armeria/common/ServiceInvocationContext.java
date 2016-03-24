@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
@@ -116,6 +117,8 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
     private final Object originalRequest;
     private Logger logger;
     private String strVal;
+    private List<Runnable> onEnterCallbacks;
+    private List<Runnable> onExitCallbacks;
 
     /**
      * Creates a new instance.
@@ -193,7 +196,7 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
                 return callable.call();
             } finally {
                 if (mustResetContext) {
-                    removeCurrent();
+                    resetContext(propagatedContext);
                 }
             }
         };
@@ -211,7 +214,7 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
                 runnable.run();
             } finally {
                 if (mustResetContext) {
-                    removeCurrent();
+                    resetContext(propagatedContext);
                 }
             }
         };
@@ -229,7 +232,7 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
                 listener.operationComplete(future);
             } finally {
                 if (mustResetContext) {
-                    removeCurrent();
+                    resetContext(propagatedContext);
                 }
             }
         };
@@ -247,7 +250,7 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
                 listener.operationComplete(future);
             } finally {
                 if (mustResetContext) {
-                    removeCurrent();
+                    resetContext(propagatedContext);
                 }
             }
         };
@@ -265,10 +268,17 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
                 listener.operationComplete(future);
             } finally {
                 if (mustResetContext) {
-                    removeCurrent();
+                    resetContext(propagatedContext);
                 }
             }
         };
+    }
+
+    private static void resetContext(ServiceInvocationContext ctx) {
+        removeCurrent();
+        if (ctx.onExitCallbacks != null) {
+            ctx.onExitCallbacks.forEach(Runnable::run);
+        }
     }
 
     private static boolean propagateContextIfNotPresent(ServiceInvocationContext propagatedContext) {
@@ -284,8 +294,27 @@ public abstract class ServiceInvocationContext extends DefaultAttributeMap {
             return false;
         }, () -> {
             setCurrent(propagatedContext);
+            if (propagatedContext.onEnterCallbacks != null) {
+                propagatedContext.onEnterCallbacks.forEach(Runnable::run);
+            }
             return true;
         });
+    }
+
+    public ServiceInvocationContext onEnter(Runnable callback) {
+        if (onEnterCallbacks == null) {
+            onEnterCallbacks = new ArrayList<>(4);
+        }
+        onEnterCallbacks.add(callback);
+        return this;
+    }
+
+    public ServiceInvocationContext onExit(Runnable callback) {
+        if (onExitCallbacks == null) {
+            onExitCallbacks = new ArrayList<>(4);
+        }
+        onExitCallbacks.add(callback);
+        return this;
     }
 
     /**

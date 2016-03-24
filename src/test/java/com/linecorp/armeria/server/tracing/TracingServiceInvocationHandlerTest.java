@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import org.junit.Test;
+import org.mockito.Matchers;
 
 import com.github.kristofa.brave.Brave;
 import com.github.kristofa.brave.KeyValueAnnotation;
@@ -108,6 +109,8 @@ public class TracingServiceInvocationHandlerTest extends TracingTestBase {
 
         ServiceInvocationContext ctx = mock(ServiceInvocationContext.class);
         when(ctx.method()).thenReturn(TEST_SPAN);
+        when(ctx.onEnter(Matchers.isA(Runnable.class))).thenReturn(ctx);
+        when(ctx.onExit(Matchers.isA(Runnable.class))).thenReturn(ctx);
         Executor executor = mock(Executor.class);
         Promise<Object> promise = mockPromise();
 

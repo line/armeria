@@ -1,6 +1,7 @@
 package com.linecorp.armeria.common;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
@@ -49,6 +50,8 @@ public class ServiceInvocationContextTest {
 
     @Mock
     private Channel channel;
+
+    private AtomicBoolean entered = new AtomicBoolean();
 
     @After
     public void tearDown() {
@@ -105,9 +108,11 @@ public class ServiceInvocationContextTest {
         AtomicBoolean callbackCalled = new AtomicBoolean(false);
         executor.execute(() -> {
             assertEquals(context, ServiceInvocationContext.current());
+            assertTrue(entered.get());
             callbackCalled.set(true);
         });
         assertTrue(callbackCalled.get());
+        assertFalse(entered.get());
     }
 
     @Test
@@ -115,8 +120,10 @@ public class ServiceInvocationContextTest {
         ServiceInvocationContext context = createContext();
         context.makeContextAware(() -> {
             assertEquals(context, ServiceInvocationContext.current());
+            assertTrue(entered.get());
             return "success";
         }).call();
+        assertFalse(entered.get());
     }
 
     @Test
@@ -124,15 +131,19 @@ public class ServiceInvocationContextTest {
         ServiceInvocationContext context = createContext();
         context.makeContextAware(() -> {
             assertEquals(context, ServiceInvocationContext.current());
+            assertTrue(entered.get());
         }).run();
+        assertFalse(entered.get());
     }
 
     @Test
     public void makeContextAwareFutureListener() {
         ServiceInvocationContext context = createContext();
         Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        promise.addListener(context.makeContextAware((FutureListener<String>) f ->
-                assertEquals(context, ServiceInvocationContext.current())));
+        promise.addListener(context.makeContextAware((FutureListener<String>) f -> {
+            assertEquals(context, ServiceInvocationContext.current());
+            assertTrue(entered.get());
+        }));
         promise.setSuccess("success");
     }
 
@@ -140,8 +151,10 @@ public class ServiceInvocationContextTest {
     public void makeContextAwareChannelFutureListener() {
         ServiceInvocationContext context = createContext();
         ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-        promise.addListener(context.makeContextAware((ChannelFutureListener) f ->
-                assertEquals(context, ServiceInvocationContext.current())));
+        promise.addListener(context.makeContextAware((ChannelFutureListener) f -> {
+            assertEquals(context, ServiceInvocationContext.current());
+            assertTrue(entered.get());
+        }));
         promise.setSuccess(null);
     }
 
@@ -151,6 +164,9 @@ public class ServiceInvocationContextTest {
         ServiceInvocationContext.setCurrent(context);
         context.makeContextAware(() -> {
             assertEquals(context, ServiceInvocationContext.current());
+            // Context was already correct, so handlers were not run (in real code they would already be
+            // in the correct state).
+            assertFalse(entered.get());
         }).run();
     }
 
@@ -163,6 +179,16 @@ public class ServiceInvocationContextTest {
         context.makeContextAware(() -> {
             fail();
         }).run();
+    }
+
+    @Test
+    public void makeContextAwareRunnableNoContextAwareHandler() {
+        ServiceInvocationContext context = createContext(false);
+        context.makeContextAware(() -> {
+            assertEquals(context, ServiceInvocationContext.current());
+            assertFalse(entered.get());
+        }).run();
+        assertFalse(entered.get());
     }
 
     private static List<Callable<String>> makeTaskList(int startId,
@@ -186,8 +212,12 @@ public class ServiceInvocationContextTest {
     }
 
     private ServiceInvocationContext createContext() {
-        return new ServiceInvocationContext(channel, Scheme.parse("http+none"), "localhost", "/path", "/path",
-                                            "logger", null) {
+        return createContext(true);
+    }
+
+    private ServiceInvocationContext createContext(boolean addContextAwareHandler) {
+        ServiceInvocationContext ctx =  new ServiceInvocationContext(
+                channel, Scheme.parse("http+none"), "localhost", "/path", "/path", "logger", null) {
             @Override
             public String invocationId() {
                 return null;
@@ -213,6 +243,10 @@ public class ServiceInvocationContextTest {
                 return null;
             }
         };
+        if (addContextAwareHandler) {
+            ctx.onEnter(() -> entered.set(true)).onExit(() -> entered.set(false));
+        }
+        return ctx;
     }
 
 }

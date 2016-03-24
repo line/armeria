@@ -61,6 +61,8 @@ public abstract class TracingServiceInvocationHandler extends DecoratingServiceI
 
         final ServerSpan span = serverInterceptor.openSpan(requestAdapter);
         if (span != null && span.getSample()) {
+            ctx.onEnter(() -> serverInterceptor.setSpan(span))
+               .onExit(serverInterceptor::clearSpan);
             promise.addListener(future -> {
                 serverInterceptor.closeSpan(span, createResponseAdapter(ctx, future));
             });
