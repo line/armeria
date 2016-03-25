@@ -59,13 +59,15 @@ public abstract class TracingServiceInvocationHandler extends DecoratingServiceI
 
         final ServerRequestAdapter requestAdapter = new InternalServerRequestAdapter(ctx.method(), traceData);
 
-        final ServerSpan span = serverInterceptor.openSpan(requestAdapter);
-        if (span != null && span.getSample()) {
-            ctx.onEnter(() -> serverInterceptor.setSpan(span))
+        final ServerSpan serverSpan = serverInterceptor.openSpan(requestAdapter);
+        if (serverSpan != null) {
+            ctx.onEnter(() -> serverInterceptor.setSpan(serverSpan))
                .onExit(serverInterceptor::clearSpan);
-            promise.addListener(future -> {
-                serverInterceptor.closeSpan(span, createResponseAdapter(ctx, future));
-            });
+            if (serverSpan.getSample()) {
+                promise.addListener(future -> {
+                    serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, future));
+                });
+            }
         }
         try {
             super.invoke(ctx, blockingTaskExecutor, promise);
