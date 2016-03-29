@@ -144,7 +144,8 @@ final class HttpRemoteInvoker implements RemoteInvoker {
                             Method method, Object[] args, ClientOptions options,
                             Promise<T> resultPromise, PoolKey poolKey) {
 
-        final SessionProtocol sessionProtocol = HttpSessionHandler.protocol(channel);
+        final HttpSession session = HttpSessionHandler.get(channel);
+        final SessionProtocol sessionProtocol = session.protocol();
         if (sessionProtocol == null) {
             resultPromise.setFailure(ClosedSessionException.INSTANCE);
             return;
@@ -187,7 +188,12 @@ final class HttpRemoteInvoker implements RemoteInvoker {
             }
         }
 
-        //release channel
+        if (!session.onRequestSent()) {
+            // Can't send a request via the current session anymore; do not return the channel to the pool.
+            return;
+        }
+
+        // Return the channel to the pool.
         final KeyedChannelPool<PoolKey> pool = KeyedChannelPool.findPool(channel);
         if (sessionProtocol.isMultiplex()) {
             pool.release(poolKey, channel);

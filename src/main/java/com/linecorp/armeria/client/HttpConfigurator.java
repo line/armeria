@@ -465,7 +465,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
         return new Http1ClientCodec() {
             @Override
             public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                HttpSessionHandler.deactivate(ctx.channel());
+                HttpSessionHandler.get(ctx.channel()).deactivate();
                 super.close(ctx, promise);
             }
         };
@@ -480,7 +480,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
 
         @Override
         protected void onCloseRequest(ChannelHandlerContext ctx) throws Exception {
-            HttpSessionHandler.deactivate(ctx.channel());
+            HttpSessionHandler.get(ctx.channel()).deactivate();
         }
     }
 
