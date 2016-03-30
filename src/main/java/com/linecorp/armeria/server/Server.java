@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,6 +34,8 @@ import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -44,9 +47,11 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainMappingBuilder;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -60,6 +65,22 @@ import io.netty.util.concurrent.Promise;
 public final class Server implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
+
+    private static final ThreadFactory DEFAULT_THREAD_FACTORY_BOSS_NIO =
+            new DefaultThreadFactory("armeria-server-boss-nio", false);
+
+    private static final ThreadFactory DEFAULT_THREAD_FACTORY_NIO =
+            new DefaultThreadFactory("armeria-server-nio", false);
+
+    private static final ThreadFactory DEFAULT_THREAD_FACTORY_BOSS_EPOLL =
+            new DefaultThreadFactory("armeria-server-boss-epoll", false);
+
+    private static final ThreadFactory DEFAULT_THREAD_FACTORY_EPOLL =
+            new DefaultThreadFactory("armeria-server-epoll", false);
+
+    static {
+        NativeLibraries.report();
+    }
 
     private final ServerConfig config;
     private final DomainNameMapping<SslContext> sslContexts;
@@ -236,11 +257,11 @@ public final class Server implements AutoCloseable {
         try {
             // Initialize the event loop groups.
             if (Epoll.isAvailable()) {
-                bossGroup = new EpollEventLoopGroup(1);
-                workerGroup = new EpollEventLoopGroup(config.numWorkers());
+                bossGroup = new EpollEventLoopGroup(1, DEFAULT_THREAD_FACTORY_BOSS_EPOLL);
+                workerGroup = new EpollEventLoopGroup(config.numWorkers(), DEFAULT_THREAD_FACTORY_EPOLL);
             } else {
-                bossGroup = new NioEventLoopGroup(1);
-                workerGroup = new NioEventLoopGroup(config.numWorkers());
+                bossGroup = new NioEventLoopGroup(1, DEFAULT_THREAD_FACTORY_BOSS_NIO);
+                workerGroup = new NioEventLoopGroup(config.numWorkers(), DEFAULT_THREAD_FACTORY_NIO);
             }
 
             // Initialize the server sockets asynchronously.
