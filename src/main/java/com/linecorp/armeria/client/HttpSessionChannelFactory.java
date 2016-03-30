@@ -48,7 +48,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
     static final Object RETRY_WITH_H1C = new Object();
 
     static final ChannelHealthChecker HEALTH_CHECKER =
-            ch -> ch.eventLoop().newSucceededFuture(HttpSessionHandler.isActive(ch));
+            ch -> ch.eventLoop().newSucceededFuture(HttpSessionHandler.get(ch).isActive());
 
     private final Bootstrap baseBootstrap;
     private final EventLoop eventLoop;
@@ -137,7 +137,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
     private void watchSessionActive0(final Channel ch, Promise<Channel> sessionPromise) {
         assert ch.eventLoop().inEventLoop();
 
-        if (HttpSessionHandler.isActive(ch)) {
+        if (HttpSessionHandler.get(ch).isActive()) {
             sessionPromise.setSuccess(ch);
             return;
         }

@@ -53,50 +53,73 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.Promise;
 
-class HttpSessionHandler extends ChannelDuplexHandler {
+class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpSessionHandler.class);
 
+    /**
+     * 2^29 - We could have used 2^30 but this should be large enough.
+     */
+    private static final int MAX_NUM_REQUESTS_SENT = 536870912;
+
     private static final String ARMERIA_USER_AGENT = "armeria client";
 
-    static boolean isActive(Channel ch) {
-        final boolean active;
+    static HttpSession get(Channel ch) {
         if (!ch.isActive()) {
-            active = false;
-        } else {
-            final HttpSessionHandler sessionHandler = ch.pipeline().get(HttpSessionHandler.class);
-            active = sessionHandler != null ? sessionHandler.active : false;
+            return HttpSession.INACTIVE;
         }
+
+        final HttpSessionHandler sessionHandler = ch.pipeline().get(HttpSessionHandler.class);
+        if (sessionHandler == null) {
+            return HttpSession.INACTIVE;
+        }
+
+        return sessionHandler;
+    }
+
+    private final SessionProtocol protocol;
+    private final WaitsHolder waitsHolder;
+    private volatile boolean active = true;
+    private int numRequestsSent;
+
+    HttpSessionHandler(SessionProtocol protocol) {
+        this.protocol = requireNonNull(protocol);
+        waitsHolder = protocol.isMultiplex() ? new MultiplexWaitsHolder() : new SequentialWaitsHolder();
+    }
+
+    @Override
+    public SessionProtocol protocol() {
+        return protocol;
+    }
+
+    @Override
+    public boolean isActive() {
         return active;
     }
 
-    static void deactivate(Channel ch) {
-        final HttpSessionHandler sessionHandler = ch.pipeline().get(HttpSessionHandler.class);
-        if (sessionHandler == null) {
-            // Protocol has not been determined yet.
-        } else {
-            sessionHandler.deactivateSession();
-        }
+    @Override
+    public boolean onRequestSent() {
+        return !isDisconnectionPending(++numRequestsSent);
     }
 
-    static SessionProtocol protocol(Channel ch) {
-        final HttpSessionHandler sessionHandler = ch.pipeline().get(HttpSessionHandler.class);
-        if (sessionHandler == null || !sessionHandler.active) {
-            return null;
-        } else {
-            return sessionHandler.sessionProtocol;
+    private boolean isDisconnectionRequired(FullHttpResponse response) {
+        if (isDisconnectionPending(numRequestsSent) && waitsHolder.isEmpty()) {
+            return true;
         }
+
+        // HTTP/1 request with the 'Connection: close' header
+        return !protocol().isMultiplex() &&
+               HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(
+                       response.headers().get(HttpHeaderNames.CONNECTION));
     }
 
-    private final SessionProtocol sessionProtocol;
-    private final boolean isMultiplex;
-    private final WaitsHolder waitsHolder;
-    private volatile boolean active = true;
+    private static boolean isDisconnectionPending(int numRequestsSent) {
+        return numRequestsSent >= MAX_NUM_REQUESTS_SENT;
+    }
 
-    HttpSessionHandler(SessionProtocol sessionProtocol) {
-        this.sessionProtocol = requireNonNull(sessionProtocol);
-        isMultiplex = sessionProtocol.isMultiplex();
-        waitsHolder = isMultiplex ? new MultiplexWaitsHolder() : new SequentialWaitsHolder();
+    @Override
+    public void deactivate() {
+        failPendingResponses(ClosedSessionException.INSTANCE);
     }
 
     @Override
@@ -144,8 +167,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
                 ctx.fireChannelRead(msg);
             }
 
-            if (!isMultiplex && HttpHeaderValues.CLOSE.contentEqualsIgnoreCase(
-                    response.headers().get(HttpHeaderNames.CONNECTION))) {
+            if (isDisconnectionRequired(response)) {
                 ctx.close();
             }
         } else {
@@ -170,10 +192,6 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         if (ctx.channel().isActive()) {
             ctx.close();
         }
-    }
-
-    void deactivateSession() {
-        failPendingResponses(ClosedSessionException.INSTANCE);
     }
 
     private void failPendingResponses(Throwable e) {
@@ -206,13 +224,9 @@ class HttpSessionHandler extends ChannelDuplexHandler {
 
         void clear();
 
-        default int size() {
-            return getAll().size();
-        }
+        int size();
 
-        default boolean isEmpty() {
-            return getAll().isEmpty();
-        }
+        boolean isEmpty();
     }
 
     private static class SequentialWaitsHolder implements WaitsHolder {
@@ -240,6 +254,16 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         @Override
         public void clear() {
             requestExpectQueue.clear();
+        }
+
+        @Override
+        public int size() {
+            return requestExpectQueue.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return requestExpectQueue.isEmpty();
         }
     }
 
@@ -275,6 +299,16 @@ class HttpSessionHandler extends ChannelDuplexHandler {
             resultExpectMap.clear();
         }
 
+        @Override
+        public int size() {
+            return resultExpectMap.size();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return resultExpectMap.isEmpty();
+        }
+
         private static String streamIdToString(int streamID) {
             return Integer.toString(streamID);
         }
@@ -303,7 +337,7 @@ class HttpSessionHandler extends ChannelDuplexHandler {
         HttpHeaders headers = request.headers();
 
         headers.set(HttpHeaderNames.HOST, hostHeader(ctx));
-        headers.set(ExtensionHeaderNames.SCHEME.text(), sessionProtocol.uriText());
+        headers.set(ExtensionHeaderNames.SCHEME.text(), protocol.uriText());
         headers.set(HttpHeaderNames.USER_AGENT, ARMERIA_USER_AGENT);
         headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
 
