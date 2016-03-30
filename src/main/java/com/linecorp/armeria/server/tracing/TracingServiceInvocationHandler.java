@@ -113,7 +113,7 @@ public abstract class TracingServiceInvocationHandler extends DecoratingServiceI
             annotations.add(KeyValueAnnotation.create("server.result", resultText));
 
             if (result.cause() != null) {
-                annotations.add(KeyValueAnnotation.create("server.cause", result.cause().getMessage()));
+                annotations.add(KeyValueAnnotation.create("server.cause", result.cause().toString()));
             }
         }
         return annotations;
