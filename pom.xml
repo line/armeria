@@ -84,7 +84,7 @@
     <jackson.version>2.6.5</jackson.version>
     <logback.version>1.1.5</logback.version>
     <metrics.version>3.1.2</metrics.version>
-    <netty.version>4.1.0.CR3</netty.version>
+    <netty.version>4.1.0.CR5</netty.version>
     <slf4j.version>1.7.16</slf4j.version>
     <tomcat.version>8.0.30</tomcat.version>
     <jetty.alpnAgent.version>1.0.1.Final</jetty.alpnAgent.version>
@@ -110,6 +110,7 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-native-epoll</artifactId>
       <version>${netty.version}</version>
+      <classifier>linux-x86_64</classifier>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
@@ -127,6 +128,13 @@
       <artifactId>javassist</artifactId>
       <version>3.20.0-GA</version>
       <scope>runtime</scope>
+    </dependency>
+    <!-- BoringSSL support -->
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative-boringssl-static</artifactId>
+      <version>1.1.33.Fork15</version>
+      <classifier>linux-x86_64</classifier>
     </dependency>
 
     <!-- ALPN -->

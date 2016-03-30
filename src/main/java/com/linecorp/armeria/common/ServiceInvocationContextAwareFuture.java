@@ -54,7 +54,8 @@ final class ServiceInvocationContextAwareFuture<T> implements Future<T> {
     }
 
     @Override
-    public Future<T> removeListeners(
+    @SafeVarargs
+    public final Future<T> removeListeners(
             GenericFutureListener<? extends Future<? super T>>... listeners) {
         return delegate.removeListeners(listeners);
     }

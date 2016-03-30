@@ -23,11 +23,13 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadFactory;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
@@ -67,12 +69,25 @@ public final class RemoteInvokerFactory implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(RemoteInvokerFactory.class);
 
+    private enum TransportType {
+        NIO, EPOLL;
+    }
+
     /**
      * The default {@link RemoteInvokerFactory} implementation.
      */
-    public static final RemoteInvokerFactory DEFAULT =
-            new RemoteInvokerFactory(RemoteInvokerOptions.DEFAULT,
-                                     new DefaultThreadFactory("defaultArmeriaClient", true));
+    public static final RemoteInvokerFactory DEFAULT = new RemoteInvokerFactory(
+            RemoteInvokerOptions.DEFAULT,
+            type -> {
+                switch (type) {
+                    case NIO:
+                        return new DefaultThreadFactory("default-armeria-client-nio", true);
+                    case EPOLL:
+                        return new DefaultThreadFactory("default-armeria-client-epoll", true);
+                    default:
+                        throw new Error();
+                }
+            });
 
     /**
      * Closes the default {@link RemoteInvokerFactory}.
@@ -83,13 +98,18 @@ public final class RemoteInvokerFactory implements AutoCloseable {
     }
 
     static {
+        NativeLibraries.report();
+
         if (RemoteInvokerFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
             Runtime.getRuntime().addShutdownHook(new Thread(RemoteInvokerFactory::closeDefault));
         }
     }
 
-    private static final ThreadFactory DEFAULT_THREAD_FACTORY =
-            new DefaultThreadFactory("armeriaClient", false);
+    private static final ThreadFactory DEFAULT_THREAD_FACTORY_NIO =
+            new DefaultThreadFactory("armeria-client-nio", false);
+
+    private static final ThreadFactory DEFAULT_THREAD_FACTORY_EPOLL =
+            new DefaultThreadFactory("armeria-client-epoll", false);
 
     private final EventLoopGroup eventLoopGroup;
     private final boolean closeEventLoopGroup;
@@ -99,12 +119,23 @@ public final class RemoteInvokerFactory implements AutoCloseable {
      * Creates a new instance with the specified {@link RemoteInvokerOptions}.
      */
     public RemoteInvokerFactory(RemoteInvokerOptions options) {
-        this(options, DEFAULT_THREAD_FACTORY);
+        this(options, type -> {
+            switch (type) {
+                case NIO:
+                    return DEFAULT_THREAD_FACTORY_NIO;
+                case EPOLL:
+                    return DEFAULT_THREAD_FACTORY_EPOLL;
+                default:
+                    throw new Error();
+            }
+        });
     }
 
-    private RemoteInvokerFactory(RemoteInvokerOptions options, ThreadFactory threadFactory) {
+    private RemoteInvokerFactory(RemoteInvokerOptions options,
+                                 Function<TransportType, ThreadFactory> threadFactoryFactory) {
+
         requireNonNull(options, "options");
-        requireNonNull(threadFactory, "threadFactory");
+        requireNonNull(threadFactoryFactory, "threadFactoryFactory");
 
         final Bootstrap baseBootstrap = new Bootstrap();
 
@@ -121,7 +152,7 @@ public final class RemoteInvokerFactory implements AutoCloseable {
             eventLoopGroup = eventLoopOption.get();
             closeEventLoopGroup = false;
         } else {
-            eventLoopGroup = createGroup(threadFactory);
+            eventLoopGroup = createGroup(threadFactoryFactory);
             closeEventLoopGroup = true;
         }
 
@@ -142,9 +173,9 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         return Epoll.isAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class;
     }
 
-    private static EventLoopGroup createGroup(ThreadFactory threadFactory) {
-        return Epoll.isAvailable() ? new EpollEventLoopGroup(0, threadFactory)
-                                   : new NioEventLoopGroup(0, threadFactory);
+    private static EventLoopGroup createGroup(Function<TransportType, ThreadFactory> threadFactoryFactory) {
+        return Epoll.isAvailable() ? new EpollEventLoopGroup(0, threadFactoryFactory.apply(TransportType.EPOLL))
+                                   : new NioEventLoopGroup(0, threadFactoryFactory.apply(TransportType.NIO));
     }
 
     /**
