@@ -15,12 +15,15 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.HttpSessionChannelFactory.RETRY_WITH_H1C;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Queue;
+import java.util.concurrent.ScheduledFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,14 +80,21 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
         return sessionHandler;
     }
 
-    private final SessionProtocol protocol;
-    private final WaitsHolder waitsHolder;
+    private final HttpSessionChannelFactory channelFactory;
+    private final Promise<Channel> sessionPromise;
+    private final ScheduledFuture<?> timeoutFuture;
+
+    private SessionProtocol protocol;
+    private WaitsHolder waitsHolder = PreNegotiationWaitsHolder.INSTANCE;
     private volatile boolean active = true;
     private int numRequestsSent;
 
-    HttpSessionHandler(SessionProtocol protocol) {
-        this.protocol = requireNonNull(protocol);
-        waitsHolder = protocol.isMultiplex() ? new MultiplexWaitsHolder() : new SequentialWaitsHolder();
+    HttpSessionHandler(HttpSessionChannelFactory channelFactory,
+                       Promise<Channel> sessionPromise, ScheduledFuture<?> timeoutFuture) {
+
+        this.channelFactory = requireNonNull(channelFactory, "channelFactory");
+        this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
+        this.timeoutFuture = requireNonNull(timeoutFuture, "timeoutFuture");
     }
 
     @Override
@@ -180,6 +190,44 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
     }
 
     @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof SessionProtocol) {
+            assert protocol == null;
+            assert waitsHolder instanceof PreNegotiationWaitsHolder;
+
+            timeoutFuture.cancel(false);
+
+            // Set the current protocol and its associated WaitsHolder implementation.
+            final SessionProtocol protocol = (SessionProtocol) evt;
+            this.protocol = protocol;
+            waitsHolder = protocol.isMultiplex() ? new MultiplexWaitsHolder() : new SequentialWaitsHolder();
+
+            if (!sessionPromise.trySuccess(ctx.channel())) {
+                // Session creation has been failed already; close the connection.
+                ctx.close();
+            }
+            return;
+        }
+
+        if (evt instanceof SessionProtocolNegotiationException) {
+            timeoutFuture.cancel(false);
+            sessionPromise.tryFailure((SessionProtocolNegotiationException) evt);
+            ctx.close();
+            return;
+        }
+
+        if (evt == RETRY_WITH_H1C) {
+            // Protocol upgrade has failed, but needs to retry.
+            timeoutFuture.cancel(false);
+            ctx.close();
+            channelFactory.connect(ctx.channel().remoteAddress(), SessionProtocol.H1C, sessionPromise);
+            return;
+        }
+
+        logger.debug("Swallowing a user event: {}", evt);
+    }
+
+    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         failPendingResponses(ClosedSessionException.INSTANCE);
         ctx.fireChannelInactive();
@@ -229,7 +277,41 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
         boolean isEmpty();
     }
 
-    private static class SequentialWaitsHolder implements WaitsHolder {
+    private static final class PreNegotiationWaitsHolder implements WaitsHolder {
+
+        static final WaitsHolder INSTANCE = new PreNegotiationWaitsHolder();
+
+        @Override
+        public Invocation poll(FullHttpResponse response) {
+            return null;
+        }
+
+        @Override
+        public void put(Invocation invocation, FullHttpRequest request) {
+            throw new IllegalStateException("protocol negotiation not complete");
+        }
+
+        @Override
+        public Collection<Invocation> getAll() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public void clear() {}
+
+        @Override
+        public int size() {
+            return 0;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return true;
+        }
+    }
+
+    private static final class SequentialWaitsHolder implements WaitsHolder {
+
         private final Queue<Invocation> requestExpectQueue;
 
         SequentialWaitsHolder() {
@@ -267,7 +349,8 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
         }
     }
 
-    private static class MultiplexWaitsHolder implements WaitsHolder {
+    private static final class MultiplexWaitsHolder implements WaitsHolder {
+
         private final IntObjectMap<Invocation> resultExpectMap;
         private int streamId;
 

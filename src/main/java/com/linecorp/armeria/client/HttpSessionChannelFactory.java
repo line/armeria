@@ -34,8 +34,6 @@ import com.linecorp.armeria.common.TimeoutException;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelHealthChecker;
@@ -80,8 +78,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         return sessionPromise;
     }
 
-    private void connect(SocketAddress remoteAddress, SessionProtocol protocol,
-                         Promise<Channel> sessionPromise) {
+    void connect(SocketAddress remoteAddress, SessionProtocol protocol, Promise<Channel> sessionPromise) {
 
         final Bootstrap bootstrap = bootstrap(protocol);
         final ChannelFuture connectFuture = bootstrap.connect(remoteAddress);
@@ -137,11 +134,6 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
     private void watchSessionActive0(final Channel ch, Promise<Channel> sessionPromise) {
         assert ch.eventLoop().inEventLoop();
 
-        if (HttpSessionHandler.get(ch).isActive()) {
-            sessionPromise.setSuccess(ch);
-            return;
-        }
-
         final ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(new OneTimeTask() {
             @Override
             public void run() {
@@ -152,35 +144,6 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
             }
         }, options.connectTimeoutMillis(), TimeUnit.MILLISECONDS);
 
-        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-            @Override
-            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                if (evt instanceof SessionProtocol) {
-                    timeoutFuture.cancel(false);
-                    if (!sessionPromise.trySuccess(ctx.channel())) {
-                        ctx.close();
-                    }
-                    ctx.pipeline().remove(this);
-                    return;
-                }
-
-                if (evt instanceof SessionProtocolNegotiationException) {
-                    timeoutFuture.cancel(false);
-                    sessionPromise.tryFailure((SessionProtocolNegotiationException) evt);
-                    ctx.close();
-                    return;
-                }
-
-                if (evt == RETRY_WITH_H1C) {
-                    // Protocol upgrade has failed, but needs to retry.
-                    timeoutFuture.cancel(false);
-                    ctx.close();
-                    connect(ctx.channel().remoteAddress(), SessionProtocol.H1C, sessionPromise);
-                    return;
-                }
-
-                ctx.fireUserEventTriggered(evt);
-            }
-        });
+        ch.pipeline().addLast(new HttpSessionHandler(this, sessionPromise, timeoutFuture));
     }
 }
