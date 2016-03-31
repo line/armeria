@@ -81,12 +81,12 @@
     <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
 
     <!-- Dependency versions -->
-    <jackson.version>2.6.5</jackson.version>
-    <logback.version>1.1.5</logback.version>
+    <jackson.version>2.7.3</jackson.version>
+    <logback.version>1.1.7</logback.version>
     <metrics.version>3.1.2</metrics.version>
     <netty.version>4.1.0.CR5</netty.version>
-    <slf4j.version>1.7.16</slf4j.version>
-    <tomcat.version>8.0.30</tomcat.version>
+    <slf4j.version>1.7.20</slf4j.version>
+    <tomcat.version>8.0.32</tomcat.version>
     <jetty.alpnAgent.version>1.0.1.Final</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
@@ -96,7 +96,7 @@
     <thrift.source.test>${project.basedir}/src/test/thrift</thrift.source.test>
     <thrift.generated.main>${project.build.directory}/generated-sources</thrift.generated.main>
     <thrift.generated.test>${project.build.directory}/generated-test-sources</thrift.generated.test>
-    <brave.version>3.4.0</brave.version>
+    <brave.version>3.5.0</brave.version>
     <guava.version>19.0</guava.version>
   </properties>
 

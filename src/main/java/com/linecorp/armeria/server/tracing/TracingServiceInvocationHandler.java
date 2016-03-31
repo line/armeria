@@ -64,9 +64,8 @@ public abstract class TracingServiceInvocationHandler extends DecoratingServiceI
             ctx.onEnter(() -> serverInterceptor.setSpan(serverSpan))
                .onExit(serverInterceptor::clearSpan);
             if (serverSpan.getSample()) {
-                promise.addListener(future -> {
-                    serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, future));
-                });
+                promise.addListener(
+                        f -> serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, f)));
             }
         }
         try {
@@ -123,12 +122,7 @@ public abstract class TracingServiceInvocationHandler extends DecoratingServiceI
                                                               Future<? super T> result) {
 
         final List<KeyValueAnnotation> annotations = annotations(ctx, result);
-        return new ServerResponseAdapter() {
-            @Override
-            public Collection<KeyValueAnnotation> responseAnnotations() {
-                return annotations;
-            }
-        };
+        return () -> annotations;
     }
 
     /**
@@ -140,7 +134,7 @@ public abstract class TracingServiceInvocationHandler extends DecoratingServiceI
 
         private final TraceData traceData;
 
-        public InternalServerRequestAdapter(String spanName, TraceData traceData) {
+        InternalServerRequestAdapter(String spanName, TraceData traceData) {
             this.spanName = spanName;
             this.traceData = traceData;
         }

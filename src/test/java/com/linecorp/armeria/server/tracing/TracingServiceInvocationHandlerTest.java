@@ -67,10 +67,10 @@ public class TracingServiceInvocationHandlerTest extends TracingTestBase {
 
         // check span name
         Span span = spanCollector.spans.get(0);
-        assertThat(span.name, is(TEST_SPAN));
+        assertThat(span.getName(), is(TEST_SPAN));
 
         // check # of annotations
-        List<Annotation> annotations = span.annotations;
+        List<Annotation> annotations = span.getAnnotations();
         assertThat(annotations, hasSize(2));
 
         // check annotation values
@@ -79,7 +79,7 @@ public class TracingServiceInvocationHandlerTest extends TracingTestBase {
 
         // check service name
         List<String> serviceNames = annotations.stream()
-                                               .map(anno -> anno.getHost().getService_name())
+                                               .map(anno -> anno.host.service_name)
                                                .collect(Collectors.toList());
         assertThat(serviceNames, is(contains(TEST_SERVICE, TEST_SERVICE)));
     }
@@ -125,9 +125,9 @@ public class TracingServiceInvocationHandlerTest extends TracingTestBase {
 
         private final TraceData traceData;
 
-        public TracingServiceInvocationHandlerImpl(ServiceInvocationHandler serviceInvocationHandler,
-                                                   Brave brave,
-                                                   TraceData traceData) {
+        TracingServiceInvocationHandlerImpl(ServiceInvocationHandler serviceInvocationHandler,
+                                            Brave brave,
+                                            TraceData traceData) {
             super(serviceInvocationHandler, brave);
             this.traceData = traceData;
         }
