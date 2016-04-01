@@ -32,6 +32,12 @@ public final class NativeLibraries {
     private static final Logger logger = LoggerFactory.getLogger(NativeLibraries.class);
     private static final AtomicBoolean reported = new AtomicBoolean();
 
+    private static final boolean USE_EPOLL =
+            !"false".equals(System.getProperty("com.linecorp.armeria.useEpoll", "true"));
+
+    private static final boolean USE_OPENSSL =
+            !"false".equals(System.getProperty("com.linecorp.armeria.useOpenSsl", "true"));
+
     /**
      * Logs the availability of the native libraries used by Armeria. This method does nothing if it was
      * called once before.
@@ -41,14 +47,22 @@ public final class NativeLibraries {
             return;
         }
 
-        logger.info("/dev/epoll: " +
-                    (Epoll.isAvailable() ? "yes"
-                                         : "no (" + filterCause(Epoll.unavailabilityCause()) + ')'));
+        if (USE_EPOLL) {
+            logger.info("/dev/epoll: " +
+                        (Epoll.isAvailable() ? "yes"
+                                             : "no (" + filterCause(Epoll.unavailabilityCause()) + ')'));
+        } else {
+            logger.info("/dev/epoll: disabled");
+        }
 
-        logger.info("OpenSSL: " +
-                    (OpenSsl.isAvailable() ? "yes (" + OpenSsl.versionString() + ", " +
-                                             OpenSsl.version() + ')'
-                                           : "no (" + filterCause(OpenSsl.unavailabilityCause()) + ')'));
+        if (USE_OPENSSL) {
+            logger.info("OpenSSL: " +
+                        (OpenSsl.isAvailable() ? "yes (" + OpenSsl.versionString() + ", " +
+                                                           OpenSsl.version() + ')'
+                                               : "no (" + filterCause(OpenSsl.unavailabilityCause()) + ')'));
+        } else {
+            logger.info("OpenSSL: disabled");
+        }
     }
 
     private static Throwable filterCause(Throwable cause) {
@@ -57,6 +71,22 @@ public final class NativeLibraries {
         }
 
         return cause;
+    }
+
+    /**
+     * Returns {@code true} if JNI-based {@code /dev/epoll} transport is available.
+     */
+    public static boolean isEpollAvailable() {
+        report();
+        return USE_EPOLL && Epoll.isAvailable();
+    }
+
+    /**
+     * Returns {@code true} if JNI-based OpenSSL/BoringSSL/LibreSSL transport is available.
+     */
+    public static boolean isOpenSslAvailable() {
+        report();
+        return USE_OPENSSL && OpenSsl.isAvailable();
     }
 
     private NativeLibraries() {}

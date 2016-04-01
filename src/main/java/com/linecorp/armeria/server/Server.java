@@ -78,10 +78,6 @@ public final class Server implements AutoCloseable {
     private static final ThreadFactory DEFAULT_THREAD_FACTORY_EPOLL =
             new DefaultThreadFactory("armeria-server-epoll", false);
 
-    static {
-        NativeLibraries.report();
-    }
-
     private final ServerConfig config;
     private final DomainNameMapping<SslContext> sslContexts;
 
@@ -256,7 +252,7 @@ public final class Server implements AutoCloseable {
 
         try {
             // Initialize the event loop groups.
-            if (Epoll.isAvailable()) {
+            if (NativeLibraries.isEpollAvailable()) {
                 bossGroup = new EpollEventLoopGroup(1, DEFAULT_THREAD_FACTORY_BOSS_EPOLL);
                 workerGroup = new EpollEventLoopGroup(config.numWorkers(), DEFAULT_THREAD_FACTORY_EPOLL);
             } else {

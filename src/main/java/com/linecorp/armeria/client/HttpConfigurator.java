@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
 import com.linecorp.armeria.common.http.Http1ClientCodec;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -77,6 +78,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.AsciiString;
 
@@ -118,7 +120,10 @@ class HttpConfigurator extends ChannelDuplexHandler {
 
         if (sessionProtocol.isTls()) {
             try {
-                SslContextBuilder builder = SslContextBuilder.forClient();
+                final SslContextBuilder builder = SslContextBuilder.forClient();
+
+                builder.sslProvider(
+                        NativeLibraries.isOpenSslAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
                 options.trustManagerFactory().ifPresent(builder::trustManager);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED ||
