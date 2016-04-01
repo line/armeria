@@ -119,7 +119,7 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
         annotations.add(KeyValueAnnotation.create("client.result", clientResultText));
 
         if (result.cause() != null) {
-            annotations.add(KeyValueAnnotation.create("client.cause", result.cause().getMessage()));
+            annotations.add(KeyValueAnnotation.create("client.cause", result.cause().toString()));
         }
         return annotations;
     }
