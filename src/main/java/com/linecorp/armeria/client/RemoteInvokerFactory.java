@@ -98,8 +98,6 @@ public final class RemoteInvokerFactory implements AutoCloseable {
     }
 
     static {
-        NativeLibraries.report();
-
         if (RemoteInvokerFactory.class.getClassLoader() == ClassLoader.getSystemClassLoader()) {
             Runtime.getRuntime().addShutdownHook(new Thread(RemoteInvokerFactory::closeDefault));
         }
@@ -166,16 +164,17 @@ public final class RemoteInvokerFactory implements AutoCloseable {
     }
 
     private static Class<? extends SocketChannel> channelType() {
-        return Epoll.isAvailable() ? EpollSocketChannel.class : NioSocketChannel.class;
+        return NativeLibraries.isEpollAvailable() ? EpollSocketChannel.class : NioSocketChannel.class;
     }
 
     private static Class<? extends DatagramChannel> datagramChannelType() {
-        return Epoll.isAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class;
+        return NativeLibraries.isEpollAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class;
     }
 
     private static EventLoopGroup createGroup(Function<TransportType, ThreadFactory> threadFactoryFactory) {
-        return Epoll.isAvailable() ? new EpollEventLoopGroup(0, threadFactoryFactory.apply(TransportType.EPOLL))
-                                   : new NioEventLoopGroup(0, threadFactoryFactory.apply(TransportType.NIO));
+        return NativeLibraries.isEpollAvailable() ?
+               new EpollEventLoopGroup(0, threadFactoryFactory.apply(TransportType.EPOLL)) :
+               new NioEventLoopGroup(0, threadFactoryFactory.apply(TransportType.NIO));
     }
 
     /**

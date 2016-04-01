@@ -26,6 +26,7 @@ import javax.net.ssl.SSLException;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -35,6 +36,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 
 /**
@@ -109,9 +111,13 @@ public final class VirtualHostBuilder {
             throw new IllegalArgumentException("unsupported protocol: " + protocol);
         }
 
-        sslContext(SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword)
-                .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
-                .applicationProtocolConfig(HTTPS_ALPN_CFG).build());
+        final SslContextBuilder builder = SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword);
+
+        builder.sslProvider(NativeLibraries.isOpenSslAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
+        builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+        builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
+
+        sslContext(builder.build());
 
         return this;
     }
