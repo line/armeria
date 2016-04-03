@@ -18,6 +18,10 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 
@@ -37,6 +41,8 @@ public class NonBlockingCircuitBreakerTest {
 
     private static final Duration counterUpdateInterval = Duration.ofSeconds(1);
 
+    private static final CircuitBreakerListener listener = mock(CircuitBreakerListener.class);
+
     private static NonBlockingCircuitBreaker create(long minimumRequestThreshold, double failureRateThreshold) {
         return (NonBlockingCircuitBreaker) new CircuitBreakerBuilder(remoteServiceName)
                 .failureRateThreshold(failureRateThreshold)
@@ -45,6 +51,7 @@ public class NonBlockingCircuitBreakerTest {
                 .trialRequestInterval(trialRequestInterval)
                 .counterSlidingWindow(Duration.ofSeconds(10))
                 .counterUpdateInterval(counterUpdateInterval)
+                .listener(listener)
                 .ticker(ticker)
                 .build();
     }
@@ -187,4 +194,58 @@ public class NonBlockingCircuitBreakerTest {
                 .build();
         cb.onFailure(new Exception());
     }
+
+    @Test
+    public void testNotification() throws Exception {
+        reset(listener);
+
+        NonBlockingCircuitBreaker cb = create(4, 0.5);
+
+        // Notify initial state
+        verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(cb, CircuitState.CLOSED);
+        reset(listener);
+
+        cb.onFailure();
+        ticker.advance(counterUpdateInterval.toNanos());
+        cb.onFailure();
+
+        // Notify updated event count
+        verify(listener, times(1)).onEventCountUpdated(cb, new EventCount(0, 1));
+        reset(listener);
+
+        // Notify circuit tripped
+
+        cb.onFailure();
+        cb.onFailure();
+        ticker.advance(counterUpdateInterval.toNanos());
+        cb.onFailure();
+
+        verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(cb, CircuitState.OPEN);
+        reset(listener);
+
+        // Notify request rejected
+
+        cb.canRequest();
+        verify(listener, times(1)).onRequestRejected(cb);
+
+        ticker.advance(circuitOpenWindow.toNanos());
+
+        // Notify half open
+
+        cb.canRequest();
+
+        verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(cb, CircuitState.HALF_OPEN);
+        reset(listener);
+
+        // Notify circuit closed
+
+        cb.onSuccess();
+
+        verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
+        verify(listener, times(1)).onStateChanged(cb, CircuitState.CLOSED);
+    }
+
 }

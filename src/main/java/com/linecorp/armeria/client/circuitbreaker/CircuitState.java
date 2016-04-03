@@ -16,29 +16,22 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import java.util.Optional;
-
-interface EventCounter {
-
+/**
+ * Defines the states of <a href="http://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker</a>.
+ */
+public enum CircuitState {
     /**
-     * Returns the current {@link EventCount}
+     * Initial state. All requests are sent to the remote service.
      */
-    EventCount count();
-
+    CLOSED,
     /**
-     * Counts success events
-     *
-     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated, or else
-     * an empty {@link Optional}.
+     * The circuit is tripped. All requests fail immediately without calling the remote service.
      */
-    Optional<EventCount> onSuccess();
-
+    OPEN,
     /**
-     * Counts failure events
-     *
-     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated, or else
-     * an empty {@link Optional}.
+     * Only one trial request is sent at a time until at least one request succeeds or fails.
+     * If it doesn't complete within a certain time, another trial request will be sent again.
+     * All other requests fails immediately same as OPEN.
      */
-    Optional<EventCount> onFailure();
-
+    HALF_OPEN
 }

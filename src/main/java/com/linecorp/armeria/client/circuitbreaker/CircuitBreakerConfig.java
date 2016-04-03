@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 import com.google.common.base.MoreObjects;
@@ -42,11 +43,13 @@ class CircuitBreakerConfig {
 
     private final ExceptionFilter exceptionFilter;
 
+    private final List<CircuitBreakerListener> listeners;
+
     CircuitBreakerConfig(Optional<String> name,
                          double failureRateThreshold, long minimumRequestThreshold,
                          Duration circuitOpenWindow, Duration trialRequestInterval,
                          Duration counterSlidingWindow, Duration counterUpdateInterval,
-                         ExceptionFilter exceptionFilter) {
+                         ExceptionFilter exceptionFilter, List<CircuitBreakerListener> listeners) {
         this.name = name;
         this.failureRateThreshold = failureRateThreshold;
         this.minimumRequestThreshold = minimumRequestThreshold;
@@ -55,6 +58,7 @@ class CircuitBreakerConfig {
         this.counterSlidingWindow = counterSlidingWindow;
         this.counterUpdateInterval = counterUpdateInterval;
         this.exceptionFilter = exceptionFilter;
+        this.listeners = listeners;
     }
 
     Optional<String> name() {
@@ -87,6 +91,10 @@ class CircuitBreakerConfig {
 
     ExceptionFilter exceptionFilter() {
         return exceptionFilter;
+    }
+
+    List<CircuitBreakerListener> listeners() {
+        return listeners;
     }
 
     @Override

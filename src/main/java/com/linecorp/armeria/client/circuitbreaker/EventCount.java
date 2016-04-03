@@ -19,37 +19,37 @@ package com.linecorp.armeria.client.circuitbreaker;
 /**
  * An immutable object that stores the count of events.
  */
-final class EventCount {
+public final class EventCount {
 
-    static final EventCount ZERO = new EventCount(0, 0);
+    public static final EventCount ZERO = new EventCount(0, 0);
 
     private final long success;
 
     private final long failure;
 
-    EventCount(long success, long failure) {
+    public EventCount(long success, long failure) {
         this.success = success;
         this.failure = failure;
         assert 0 <= success;
         assert 0 <= failure;
     }
 
-    long success() {
+    public long success() {
         return success;
     }
 
-    long failure() {
+    public long failure() {
         return failure;
     }
 
-    long total() {
+    public long total() {
         return success + failure;
     }
 
     /**
      * Returns the success rate (success/total), or throws an {@link ArithmeticException} if total is 0.
      */
-    double successRate() {
+    public double successRate() {
         final long total = total();
         if (total == 0) {
             throw new ArithmeticException("Failed to calculate success rate since total count is 0");
@@ -60,7 +60,7 @@ final class EventCount {
     /**
      * Returns the failure rate (failure/total), or throws an {@link ArithmeticException} if total is 0.
      */
-    double failureRate() {
+    public double failureRate() {
         final long total = total();
         if (total == 0) {
             throw new ArithmeticException("Failed to calculate failure rate since total count is 0");

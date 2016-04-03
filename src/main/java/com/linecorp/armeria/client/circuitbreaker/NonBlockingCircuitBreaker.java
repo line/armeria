@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -39,23 +40,6 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
 
     private static final AtomicLong seqNo = new AtomicLong(0);
 
-    private enum CircuitState {
-        /**
-         * Initial state. All requests are sent to the remote service.
-         */
-        CLOSED,
-        /**
-         * The circuit is tripped. All requests fail immediately without calling the remote service.
-         */
-        OPEN,
-        /**
-         * Only one trial request is sent at a time until at least one request succeeds or fails.
-         * If it doesn't complete within a certain time, another trial request will be sent again.
-         * All other requests fails immediately same as OPEN.
-         */
-        HALF_OPEN
-    }
-
     private final String name;
 
     private final CircuitBreakerConfig config;
@@ -74,6 +58,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         name = config.name().orElseGet(() -> "circuit-breaker-" + seqNo.getAndIncrement());
         state = new AtomicReference<>(newClosedState());
         logStateTransition(CircuitState.CLOSED, null);
+        notifyStateChanged(CircuitState.CLOSED);
     }
 
     @Override
@@ -86,11 +71,14 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         final State currentState = state.get();
         if (currentState.isClosed()) {
             // fires success event
-            currentState.counter().onSuccess();
+            final Optional<EventCount> updatedCount = currentState.counter().onSuccess();
+            // notifies the count if it has been updated
+            updatedCount.ifPresent(this::notifyCountUpdated);
         } else if (currentState.isHalfOpen()) {
             // changes to CLOSED if at least one request succeeds during HALF_OPEN
             if (state.compareAndSet(currentState, newClosedState())) {
                 logStateTransition(CircuitState.CLOSED, null);
+                notifyStateChanged(CircuitState.CLOSED);
             }
         }
     }
@@ -112,18 +100,23 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         final State currentState = state.get();
         if (currentState.isClosed()) {
             // fires failure event
-            currentState.counter().onFailure();
-            final EventCount count = currentState.counter().count();
-            if (checkIfExceedingFailureThreshold(count)) {
+            final Optional<EventCount> updatedCount = currentState.counter().onFailure();
+            // checks the count if it has been updated
+            updatedCount.ifPresent(count -> {
                 // changes to OPEN if failure rate exceeds the threshold
-                if (state.compareAndSet(currentState, newOpenState())) {
+                if (checkIfExceedingFailureThreshold(count) &&
+                    state.compareAndSet(currentState, newOpenState())) {
                     logStateTransition(CircuitState.OPEN, count);
+                    notifyStateChanged(CircuitState.OPEN);
+                } else {
+                    notifyCountUpdated(count);
                 }
-            }
+            });
         } else if (currentState.isHalfOpen()) {
             // returns to OPEN if a request fails during HALF_OPEN
             if (state.compareAndSet(currentState, newOpenState())) {
                 logStateTransition(CircuitState.OPEN, null);
+                notifyStateChanged(CircuitState.OPEN);
             }
         }
     }
@@ -144,9 +137,11 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             if (currentState.checkTimeout() && state.compareAndSet(currentState, newHalfOpenState())) {
                 // changes to HALF_OPEN if OPEN state has timed out
                 logStateTransition(CircuitState.HALF_OPEN, null);
+                notifyStateChanged(CircuitState.HALF_OPEN);
                 return true;
             }
             // all other requests are refused
+            notifyRequestRejected();
             return false;
         }
         return true;
@@ -184,6 +179,41 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
             }
             logger.info(builder.toString());
         }
+    }
+
+    private void notifyStateChanged(CircuitState circuitState) {
+        config.listeners().forEach(listener -> {
+            try {
+                listener.onStateChanged(this, circuitState);
+            } catch (Throwable t) {
+                logger.warn("An error occured when notifying a state changed event", t);
+            }
+            try {
+                listener.onEventCountUpdated(this, EventCount.ZERO);
+            } catch (Throwable t) {
+                logger.warn("An error occured when notifying an EventCount updated event", t);
+            }
+        });
+    }
+
+    private void notifyCountUpdated(EventCount count) {
+        config.listeners().forEach(listener -> {
+            try {
+                listener.onEventCountUpdated(this, count);
+            } catch (Throwable t) {
+                logger.warn("An error occured when notifying an EventCount updated event", t);
+            }
+        });
+    }
+
+    private void notifyRequestRejected() {
+        config.listeners().forEach(listener -> {
+            try {
+                listener.onRequestRejected(this);
+            } catch (Throwable t) {
+                logger.warn("An error occured when notifying a request rejected event", t);
+            }
+        });
     }
 
     @VisibleForTesting
@@ -256,11 +286,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
         }
 
         @Override
-        public void onSuccess() {
+        public Optional<EventCount> onSuccess() {
+            return Optional.empty();
         }
 
         @Override
-        public void onFailure() {
+        public Optional<EventCount> onFailure() {
+            return Optional.empty();
         }
     }
 }
