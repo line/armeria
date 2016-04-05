@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
@@ -204,7 +205,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
                         return;
                     }
 
-                    pipeline.addLast(newHttp2ConnectionHandler());
+                    addBeforeSessionHandler(pipeline, newHttp2ConnectionHandler());
                     protocol = H2;
                 } else {
                     if (httpPreference != HttpPreference.HTTP1_REQUIRED) {
@@ -216,7 +217,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
                         return;
                     }
 
-                    pipeline.addLast(newHttp1Codec());
+                    addBeforeSessionHandler(pipeline, newHttp1Codec());
                     protocol = H1;
                 }
                 finishSuccessfully(pipeline, protocol);
@@ -264,16 +265,28 @@ class HttpConfigurator extends ChannelDuplexHandler {
             pipeline.addLast(new UpgradeRequestHandler());
         } else {
             pipeline.addLast(newHttp1Codec());
-            finishSuccessfully(pipeline, H1C);
+
+            // NB: We do not call finishSuccessfully() immediately here
+            //     because it assumes HttpSessionHandler to be in the pipeline,
+            //     which is only true after the connection attempt is successful.
+            pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.pipeline().remove(this);
+                    finishSuccessfully(pipeline, H1C);
+                    ctx.fireChannelActive();
+                }
+            });
         }
     }
 
     // FIXME: Ensure unnecessary handlers are all removed from the pipeline for all protocol types.
     void finishSuccessfully(ChannelPipeline pipeline, SessionProtocol protocol) {
+
         switch (protocol) {
         case H1:
         case H1C:
-            pipeline.addLast(new HttpObjectAggregator(options.maxFrameLength()));
+            addBeforeSessionHandler(pipeline, new HttpObjectAggregator(options.maxFrameLength()));
             break;
         case H2:
         case H2C:
@@ -296,11 +309,16 @@ class HttpConfigurator extends ChannelDuplexHandler {
                 //       'x-http2-stream-id' have been set by us or a malicious server.
                 timeoutHandler = new HttpClientIdleTimeoutHandler(idleTimeoutMillis);
             }
-            pipeline.addLast(timeoutHandler);
+            addBeforeSessionHandler(pipeline, timeoutHandler);
         }
 
-        pipeline.addLast(new HttpSessionHandler(protocol));
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
+    }
+
+    void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
+        // Get the name of the HttpSessionHandler so that we can put our handlers before it.
+        final String sessionHandlerName = pipeline.context(HttpSessionHandler.class).name();
+        pipeline.addBefore(sessionHandlerName, null, handler);
     }
 
     void finishWithNegotiationFailure(
