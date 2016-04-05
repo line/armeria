@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.http;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -77,7 +76,7 @@ class SimpleHttpInvocation extends ServiceInvocationContext implements EncodeRes
 
     @Override
     public List<Object> params() {
-        return Arrays.asList(originalRequest());
+        return Collections.singletonList(originalRequest());
     }
 
     @Override
