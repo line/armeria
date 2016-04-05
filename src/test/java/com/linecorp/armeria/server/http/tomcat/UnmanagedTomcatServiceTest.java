@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.http.tomcat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+import java.io.File;
+
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
@@ -39,6 +41,8 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
     @BeforeClass
     public static void createTomcat() {
         tomcat = new Tomcat();
+        tomcat.setBaseDir("target" + File.separatorChar +
+                          "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName());
     }
 
     @Override
