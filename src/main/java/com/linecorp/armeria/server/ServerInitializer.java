@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
+import com.linecorp.armeria.common.http.Http2GoAwayListener;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -45,6 +46,7 @@ import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameListener;
+import io.netty.handler.codec.http2.Http2FrameListenerDecorator;
 import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
@@ -142,6 +144,8 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
     private Http2ConnectionHandler createHttp2ConnectionHandler(ChannelPipeline pipeline, ChannelHandler... toRemove) {
         final boolean validateHeaders = true;
         final Http2Connection conn = new DefaultHttp2Connection(true);
+        conn.addListener(new Http2GoAwayListener(pipeline.channel()));
+
         final Http2FrameListener listener = new InboundHttp2ToHttpAdapterBuilder(conn)
                 .propagateSettings(true).validateHttpHeaders(validateHeaders)
                 .maxContentLength(config.maxFrameLength()).build();

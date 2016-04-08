@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClosedSessionException;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -46,23 +47,31 @@ public final class Exceptions {
     /**
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
      */
-    public static void logIfUnexpected(Logger logger, Channel ch, Throwable cause) {
+    public static void logIfUnexpected(Logger logger, Channel ch, SessionProtocol protocol, Throwable cause) {
         if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
 
-        logger.warn("{} Unexpected exception:", ch, cause);
+        logger.warn("{}[{}] Unexpected exception:",
+                    ch, protocolName(protocol), cause);
     }
 
     /**
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
      */
-    public static void logIfUnexpected(Logger logger, Channel ch, String debugData, Throwable cause) {
+    public static void logIfUnexpected(Logger logger, Channel ch, SessionProtocol protocol,
+                                       String debugData, Throwable cause) {
+
         if (!logger.isWarnEnabled() || isExpected(cause)) {
             return;
         }
 
-        logger.warn("{} Unexpected exception: {}", ch, debugData, cause);
+        logger.warn("{}[{}] Unexpected exception: {}",
+                    ch, protocolName(protocol), debugData, cause);
+    }
+
+    private static String protocolName(SessionProtocol protocol) {
+        return protocol != null ? protocol.uriText() : "<unknown>";
     }
 
     /**

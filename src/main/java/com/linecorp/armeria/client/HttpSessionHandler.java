@@ -88,6 +88,7 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
     private WaitsHolder waitsHolder = PreNegotiationWaitsHolder.INSTANCE;
     private volatile boolean active = true;
     private int numRequestsSent;
+    private boolean needsRetryWithH1C;
 
     HttpSessionHandler(HttpSessionChannelFactory channelFactory,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> timeoutFuture) {
@@ -173,8 +174,7 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
                     ReferenceCountUtil.release(msg);
                 }
             } else {
-                //if invocation not found, we just bypass message to next
-                ctx.fireChannelRead(msg);
+                logger.warn("{} Received a response without a matching request: {}", ctx.channel(), msg);
             }
 
             if (isDisconnectionRequired(response)) {
@@ -218,25 +218,32 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
 
         if (evt == RETRY_WITH_H1C) {
             // Protocol upgrade has failed, but needs to retry.
+            needsRetryWithH1C = true;
             timeoutFuture.cancel(false);
             ctx.close();
             channelFactory.connect(ctx.channel().remoteAddress(), SessionProtocol.H1C, sessionPromise);
             return;
         }
 
-        logger.debug("Swallowing a user event: {}", evt);
+        logger.warn("{} Unexpected user event: {}", ctx.channel(), evt);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         failPendingResponses(ClosedSessionException.INSTANCE);
-        ctx.fireChannelInactive();
+
+        if (!needsRetryWithH1C) {
+            // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
+            // even before the session protocol negotiation is done.
+            timeoutFuture.cancel(false);
+            sessionPromise.tryFailure(ClosedSessionException.INSTANCE);
+        }
     }
 
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+        Exceptions.logIfUnexpected(logger, ctx.channel(), protocol(), cause);
         if (ctx.channel().isActive()) {
             ctx.close();
         }
