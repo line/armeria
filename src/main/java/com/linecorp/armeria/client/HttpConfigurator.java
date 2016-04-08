@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
 import com.linecorp.armeria.common.http.Http1ClientCodec;
+import com.linecorp.armeria.common.http.Http2GoAwayListener;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
@@ -205,7 +206,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
                         return;
                     }
 
-                    addBeforeSessionHandler(pipeline, newHttp2ConnectionHandler());
+                    addBeforeSessionHandler(pipeline, newHttp2ConnectionHandler(ch));
                     protocol = H2;
                 } else {
                     if (httpPreference != HttpPreference.HTTP1_REQUIRED) {
@@ -226,7 +227,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+                Exceptions.logIfUnexpected(logger, ctx.channel(), null, cause);
                 ctx.close();
             }
         });
@@ -255,7 +256,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
         if (attemptUpgrade) {
             Http1ClientCodec http1Codec = newHttp1Codec();
             Http2ClientUpgradeCodec http2ClientUpgradeCodec =
-                    new Http2ClientUpgradeCodec(newHttp2ConnectionHandler());
+                    new Http2ClientUpgradeCodec(newHttp2ConnectionHandler(ch));
             HttpClientUpgradeHandler http2UpgradeHandler =
                     new HttpClientUpgradeHandler(http1Codec, http2ClientUpgradeCodec, options.maxFrameLength());
 
@@ -460,9 +461,10 @@ class HttpConfigurator extends ChannelDuplexHandler {
         }
     }
 
-    private Http2ConnectionHandler newHttp2ConnectionHandler() {
+    private Http2ConnectionHandler newHttp2ConnectionHandler(Channel ch) {
         final boolean validateHeaders = false;
         final Http2Connection conn = new DefaultHttp2Connection(false);
+        conn.addListener(new Http2GoAwayListener(ch));
         final InboundHttp2ToHttpAdapter listener = new InboundHttp2ToHttpAdapterBuilder(conn)
                 .propagateSettings(true).validateHttpHeaders(validateHeaders)
                 .maxContentLength(options.maxFrameLength()).build();

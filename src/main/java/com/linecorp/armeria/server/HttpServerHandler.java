@@ -68,7 +68,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         final Throwable cause = future.cause();
         final Channel ch = future.channel();
         if (cause != null) {
-            Exceptions.logIfUnexpected(logger, ch, cause);
+            Exceptions.logIfUnexpected(logger, ch, protocol(ch), cause);
         }
         safeClose(ch);
     };
@@ -77,10 +77,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         final Throwable cause = future.cause();
         if (cause != null) {
             final Channel ch = future.channel();
-            Exceptions.logIfUnexpected(logger, ch, cause);
+            Exceptions.logIfUnexpected(logger, ch, protocol(ch), cause);
             safeClose(ch);
         }
     };
+
+    private static SessionProtocol protocol(Channel ch) {
+        final HttpServerHandler handler = ch.pipeline().get(HttpServerHandler.class);
+        final SessionProtocol protocol;
+        if (handler != null) {
+            protocol = handler.protocol;
+        } else {
+            protocol = null;
+        }
+        return protocol;
+    }
 
     static void safeClose(Channel ch) {
         if (!ch.isActive()) {
@@ -110,7 +121,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
     private static final Exception SERVICE_NOT_FOUND = new ServiceNotFoundException();
 
     private final ServerConfig config;
-    private SessionProtocol sessionProtocol;
+    private SessionProtocol protocol;
 
     private boolean isReading;
 
@@ -137,13 +148,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     private boolean handledLastRequest;
 
-    HttpServerHandler(ServerConfig config, SessionProtocol sessionProtocol) {
-        assert sessionProtocol == SessionProtocol.H1 ||
-               sessionProtocol == SessionProtocol.H1C ||
-               sessionProtocol == SessionProtocol.H2;
+    HttpServerHandler(ServerConfig config, SessionProtocol protocol) {
+        assert protocol == SessionProtocol.H1 ||
+               protocol == SessionProtocol.H1C ||
+               protocol == SessionProtocol.H2;
 
         this.config = requireNonNull(config, "config");
-        this.sessionProtocol = requireNonNull(sessionProtocol, "protocol");
+        this.protocol = requireNonNull(protocol, "protocol");
     }
 
     @Override
@@ -159,16 +170,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     private void handleHttp2Settings(ChannelHandlerContext ctx, Http2Settings h2settings) {
         logger.debug("{} HTTP/2 settings: {}", ctx.channel(), h2settings);
-
-        useHeadOfLineBlocking = false;
-        switch (sessionProtocol) {
-        case H1:
-            sessionProtocol = SessionProtocol.H2;
-            break;
-        case H1C:
-            sessionProtocol = SessionProtocol.H2C;
-            break;
-        }
     }
 
     private void handleRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
@@ -217,7 +218,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
             final ServiceCodec codec = service.codec();
             final Promise<Object> promise = ctx.executor().newPromise();
             final DecodeResult decodeResult = codec.decodeRequest(
-                    serviceCfg, ctx.channel(), sessionProtocol,
+                    serviceCfg, ctx.channel(), protocol,
                     hostname, path, mappedPath, req.content(), req, promise);
 
             switch (decodeResult.type()) {
@@ -423,12 +424,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
             // A response to a HEAD request must have no content.
             content = Unpooled.EMPTY_BUFFER;
             if (cause != null) {
-                Exceptions.logIfUnexpected(logger, ctx.channel(), errorMessage(status), cause);
+                Exceptions.logIfUnexpected(logger, ctx.channel(), protocol, errorMessage(status), cause);
             }
         } else {
             final String msg = errorMessage(status);
             if (cause != null) {
-                Exceptions.logIfUnexpected(logger, ctx.channel(), msg, cause);
+                Exceptions.logIfUnexpected(logger, ctx.channel(), protocol, msg, cause);
             }
             content = Unpooled.copiedBuffer(msg, StandardCharsets.UTF_8);
         }
@@ -526,22 +527,41 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         if (evt instanceof UpgradeEvent) {
             assert !isReading;
 
+            // Upgraded to HTTP/2.
+            useHeadOfLineBlocking = false;
+            switch (protocol) {
+                case H1:
+                    protocol = SessionProtocol.H2;
+                    break;
+                case H1C:
+                    protocol = SessionProtocol.H2C;
+                    break;
+            }
+
             final FullHttpRequest req = ((UpgradeEvent) evt).upgradeRequest();
-            req.headers().set(STREAM_ID, "1");
 
             // Remove the headers related with the upgrade.
             req.headers().remove(HttpHeaderNames.CONNECTION);
             req.headers().remove(HttpHeaderNames.UPGRADE);
             req.headers().remove(Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER);
 
+            logger.debug("{} Handling the pre-upgrade request ({}): {}",
+                         ctx.channel(), ((UpgradeEvent) evt).protocol(), req);
+
+            // Set the stream ID of the pre-upgrade request, which is always 1.
+            req.headers().set(STREAM_ID, "1");
+
             channelRead(ctx, req);
             channelReadComplete(ctx);
+            return;
         }
+
+        logger.warn("{} Unexpected user event: {}", ctx.channel(), evt);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+        Exceptions.logIfUnexpected(logger, ctx.channel(), protocol, cause);
         if (ctx.channel().isActive()) {
             ctx.close();
         }
