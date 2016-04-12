@@ -342,7 +342,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
     private final class UpgradeRequestHandler extends ChannelDuplexHandler {
 
         private UpgradeEvent upgradeEvt;
-        private FullHttpResponse upgradeRes;
+        private boolean receivedUpgradeRes;
 
         /**
          * Sends the initial upgrade request, which is {@code "HEAD / HTTP/1.1"}
@@ -381,7 +381,6 @@ class HttpConfigurator extends ChannelDuplexHandler {
             }
 
             this.upgradeEvt = upgradeEvt;
-            onUpgradeResult(ctx);
         }
 
         /**
@@ -390,15 +389,14 @@ class HttpConfigurator extends ChannelDuplexHandler {
          */
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (upgradeRes == null && msg instanceof FullHttpResponse) {
+            if (!receivedUpgradeRes && msg instanceof FullHttpResponse) {
                 final FullHttpResponse res = (FullHttpResponse) msg;
                 final HttpHeaders headers = res.headers();
                 final String streamId = headers.get(ExtensionHeaderNames.STREAM_ID.text());
                 if (streamId == null || "1".equals(streamId)) {
                     // Received the response for the upgrade request sent in channelActive().
-                    res.release();
-                    upgradeRes = res;
-                    onUpgradeResult(ctx);
+                    receivedUpgradeRes = true;
+                    onUpgradeResponse(ctx, res);
                     return;
                 }
             }
@@ -406,13 +404,12 @@ class HttpConfigurator extends ChannelDuplexHandler {
             ctx.fireChannelRead(msg);
         }
 
-        private void onUpgradeResult(ChannelHandlerContext ctx) {
+        private void onUpgradeResponse(ChannelHandlerContext ctx, FullHttpResponse upgradeRes) {
             final UpgradeEvent upgradeEvt = this.upgradeEvt;
-            final FullHttpResponse upgradeRes = this.upgradeRes;
-            if (upgradeEvt == null || upgradeRes == null) {
-                return;
-            }
+            assert upgradeEvt != null : "received an upgrade response before an UpgradeEvent";
 
+            // Not interested in the content.
+            upgradeRes.release();
             final ChannelPipeline p = ctx.pipeline();
 
             // Done with this handler, remove it from the pipeline.

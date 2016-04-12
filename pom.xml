@@ -84,11 +84,11 @@
     <jackson.version>2.7.3</jackson.version>
     <logback.version>1.1.7</logback.version>
     <metrics.version>3.1.2</metrics.version>
-    <netty.version>4.1.0.CR6</netty.version>
-    <slf4j.version>1.7.20</slf4j.version>
-    <tomcat.version>8.0.32</tomcat.version>
-    <jetty.alpnAgent.version>1.0.1.Final</jetty.alpnAgent.version>
-    <jetty.alpnAgent.path>${settings.localRepository}/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
+    <netty.version>4.1.0.CR7</netty.version>
+    <slf4j.version>1.7.21</slf4j.version>
+    <tomcat.version>8.0.33</tomcat.version>
+    <jetty.alpnAgent.version>2.0.1</jetty.alpnAgent.version>
+    <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <thrift.executable>${project.basedir}/src/build/thrift.${os.detected.classifier}</thrift.executable>
@@ -380,7 +380,7 @@
               <goal>get</goal>
             </goals>
             <configuration>
-              <groupId>kr.motd.javaagent</groupId>
+              <groupId>org.mortbay.jetty.alpn</groupId>
               <artifactId>jetty-alpn-agent</artifactId>
               <version>${jetty.alpnAgent.version}</version>
             </configuration>
