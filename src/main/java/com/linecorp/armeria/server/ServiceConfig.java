@@ -115,6 +115,9 @@ public final class ServiceConfig {
                         buf.append(ch);
                     } else {
                         buf.append('_');
+                        if (Character.isJavaIdentifierPart(ch)) {
+                            buf.append(ch);
+                        }
                     }
                 } else {
                     if (Character.isJavaIdentifierPart(ch)) {
