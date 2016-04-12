@@ -18,14 +18,12 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Optional;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
 import com.linecorp.armeria.common.http.Http2GoAwayListener;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -46,7 +44,6 @@ import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameListener;
-import io.netty.handler.codec.http2.Http2FrameListenerDecorator;
 import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
@@ -56,7 +53,6 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SniHandler;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 
@@ -83,23 +79,8 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
         final ChannelPipeline p = ch.pipeline();
 
         if (port.protocol().isTls()) {
-            p.addLast(new SniHandler(sslContexts) {
-                @Override
-                protected void decode(
-                        ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-
-                    // FIXME(trustin): Workaround for the problem in ApplicationProtocolNegotiationHadler
-                    //                 which refuses to add itself to the pipeline if SslHandler does not
-                    //                 exist in the pipeline.
-
-                    super.decode(ctx, in, out);
-
-                    final ChannelPipeline p = ctx.pipeline();
-                    if (p.get(SslHandler.class) != null) {
-                        configureHttps(p);
-                    }
-                }
-            });
+            p.addLast(new SniHandler(sslContexts));
+            configureHttps(p);
         } else {
             configureHttp(p);
         }
