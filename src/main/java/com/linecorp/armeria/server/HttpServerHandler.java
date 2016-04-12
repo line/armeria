@@ -48,7 +48,11 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeEvent;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.codec.http2.Http2Stream;
+import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.HttpConversionUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
@@ -122,14 +126,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     private final ServerConfig config;
     private SessionProtocol protocol;
+    private Http2Connection http2conn;
 
     private boolean isReading;
 
-    // When head-of-line blocking is enabled (i.e. HTTP/1 without extension),
-    // We assign a monotonically increasing integer ('request sequence') to each received request, and
-    // assign the integer of the same value when creating its response.
-
-    private boolean useHeadOfLineBlocking = true;
+    // When head-of-line blocking is enabled (i.e. HTTP/1), we assign a monotonically increasing integer
+    // ('request sequence') to each received request, and assign the integer of the same value
+    // when creating its response.
 
     /**
      * The request sequence of the most recently received request.
@@ -157,6 +160,24 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         this.protocol = requireNonNull(protocol, "protocol");
     }
 
+    private boolean isHttp2() {
+        return http2conn != null;
+    }
+
+    private void setHttp2(ChannelHandlerContext ctx) {
+        switch (protocol) {
+            case H1:
+                protocol = SessionProtocol.H2;
+                break;
+            case H1C:
+                protocol = SessionProtocol.H2C;
+                break;
+        }
+
+        final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
+        http2conn = handler.connection();
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         isReading = true; // Cleared in channelReadComplete()
@@ -170,6 +191,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     private void handleHttp2Settings(ChannelHandlerContext ctx, Http2Settings h2settings) {
         logger.debug("{} HTTP/2 settings: {}", ctx.channel(), h2settings);
+        setHttp2(ctx);
     }
 
     private void handleRequest(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
@@ -326,8 +348,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         ReferenceCountUtil.safeRelease(req);
 
         // Cancel the associated timeout, if any.
-        if (timeoutFuture != null && !timeoutFuture.isDone()) {
+        if (timeoutFuture != null) {
             timeoutFuture.cancel(true);
+        }
+
+        // No need to build the HTTP response if the connection/stream has been closed.
+        if (isStreamClosed(ctx, req)) {
+            if (future.isSuccess()) {
+                ReferenceCountUtil.safeRelease(future.getNow());
+            }
+            return;
         }
 
         if (future.isSuccess()) {
@@ -347,6 +377,33 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 respond(ctx, reqSeq, req, encoded);
             }
         }
+    }
+
+    private boolean isStreamClosed(ChannelHandlerContext ctx, FullHttpRequest req) {
+        if (!ctx.channel().isActive()) {
+            // Connection has been closed.
+            return true;
+        }
+
+        final Http2Connection http2conn = this.http2conn;
+        if (http2conn == null) {
+            // HTTP/1 connection
+            return false;
+        }
+
+        final Integer streamId = req.headers().getInt(STREAM_ID);
+        if (streamId == null) {
+            throw new IllegalStateException("An HTTP/2 request does not have a stream ID: " + req);
+        }
+
+        final Http2Stream stream = http2conn.stream(streamId);
+        if (stream == null) {
+            // The stream has been closed and removed.
+            return true;
+        }
+
+        final State state = stream.state();
+        return state == State.CLOSED || state == State.HALF_CLOSED_LOCAL;
     }
 
     private void handleDecodeFailure(ChannelHandlerContext ctx, int reqSeq, FullHttpRequest req,
@@ -459,20 +516,22 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void respond(ChannelHandlerContext ctx, int reqSeq, FullHttpRequest req, FullHttpResponse res) {
-        String streamId = req.headers().getAsString(STREAM_ID);
-        if (streamId != null) {
-            // HTTP/2
+        if (isHttp2()) {
+            final String streamId = req.headers().getAsString(STREAM_ID);
             res.headers().set(STREAM_ID, streamId);
-        }
-
-        if (useHeadOfLineBlocking && !handlePendingResponses(ctx, reqSeq, res)) {
+        } else if (!handlePendingResponses(ctx, reqSeq, req, res)) {
+            // HTTP/1 and the responses for the previous requests are not all ready.
             return;
         }
 
         if (!handledLastRequest) {
-            addKeepAliveHeaders(res);
+            addKeepAliveHeaders(req, res);
             ctx.write(res).addListener(CLOSE_ON_FAILURE);
         } else {
+            // Note that it is perfectly fine not to set the 'content-length' header to the last response
+            // of an HTTP/1 connection. We just set it to work around overly strict HTTP clients that always
+            // require a 'content-length' header for non-chunked responses.
+            setContentLength(req, res);
             ctx.write(res).addListener(CLOSE);
         }
 
@@ -481,12 +540,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private boolean handlePendingResponses(ChannelHandlerContext ctx, int reqSeq, FullHttpResponse res) {
+    private boolean handlePendingResponses(
+            ChannelHandlerContext ctx, int reqSeq, FullHttpRequest req, FullHttpResponse res) {
+
         final IntObjectMap<FullHttpResponse> pendingResponses = this.pendingResponses;
         while (reqSeq != resSeq) {
             FullHttpResponse pendingRes = pendingResponses.remove(resSeq);
             if (pendingRes == null) {
                 // Stuck by head-of-line blocking; try again later.
+                addKeepAliveHeaders(req, res);
                 FullHttpResponse oldPendingRes = pendingResponses.put(reqSeq, res);
                 if (oldPendingRes != null) {
                     // It is impossible to reach here as long as there are 2G+ pending responses.
@@ -496,7 +558,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 return false;
             }
 
-            addKeepAliveHeaders(pendingRes);
             ctx.write(pendingRes);
             resSeq++;
         }
@@ -507,12 +568,27 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         return true;
     }
 
-    private static void addKeepAliveHeaders(FullHttpResponse res) {
-        // Add 'Content-Length' header only for a keep-alive connection.
-        res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
-        // Add keep alive header as per:
-        // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
+    /**
+     * Sets the keep alive header as per:
+     * - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
+     */
+    private static void addKeepAliveHeaders(FullHttpRequest req, FullHttpResponse res) {
         res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+        setContentLength(req, res);
+    }
+
+    /**
+     * Sets the 'content-length' header to the response.
+     */
+    private static void setContentLength(FullHttpRequest req, FullHttpResponse res) {
+        final int statusCode = res.status().code();
+        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+        // prohibits to send message body for below cases.
+        // and in those cases, content-length should not be sent.
+        if (statusCode < 200 || statusCode == 204 || statusCode == 304 || req.method() == HttpMethod.HEAD) {
+            return;
+        }
+        res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
     }
 
     @Override
@@ -523,21 +599,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        // Continue handling the upgrade request after the upgrade is complete.
         if (evt instanceof UpgradeEvent) {
             assert !isReading;
 
             // Upgraded to HTTP/2.
-            useHeadOfLineBlocking = false;
-            switch (protocol) {
-                case H1:
-                    protocol = SessionProtocol.H2;
-                    break;
-                case H1C:
-                    protocol = SessionProtocol.H2C;
-                    break;
-            }
+            setHttp2(ctx);
 
+            // Continue handling the upgrade request after the upgrade is complete.
             final FullHttpRequest req = ((UpgradeEvent) evt).upgradeRequest();
 
             // Remove the headers related with the upgrade.
