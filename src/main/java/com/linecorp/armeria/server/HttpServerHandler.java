@@ -465,6 +465,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
             res.headers().set(STREAM_ID, streamId);
         }
 
+        addContentLengthHeader(req.method(), res);
+
         if (useHeadOfLineBlocking && !handlePendingResponses(ctx, reqSeq, res)) {
             return;
         }
@@ -507,9 +509,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         return true;
     }
 
-    private static void addKeepAliveHeaders(FullHttpResponse res) {
-        // Add 'Content-Length' header only for a keep-alive connection.
+    private static void addContentLengthHeader(HttpMethod reqMethod, FullHttpResponse res) {
+        int statusCode = res.status().code();
+        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+        // prohibits to send message body for below cases.
+        // and in those cases, content-length should not be sent.
+        if (statusCode < 200 || statusCode == 204 || statusCode == 304 || reqMethod == HttpMethod.HEAD) {
+            return;
+        }
         res.headers().set(HttpHeaderNames.CONTENT_LENGTH, res.content().readableBytes());
+    }
+
+    private static void addKeepAliveHeaders(FullHttpResponse res) {
         // Add keep alive header as per:
         // - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
         res.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
