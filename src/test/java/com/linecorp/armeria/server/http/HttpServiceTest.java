@@ -15,12 +15,15 @@
  */
 package com.linecorp.armeria.server.http;
 
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -74,7 +77,12 @@ public class HttpServiceTest {
                         res.headers().set(HttpHeaderNames.CONTENT_ENCODING, "text/plain; charset=UTF-8");
 
                         promise.setSuccess(res);
-                    }).decorate(LoggingService::new));
+                    }).decorate(LoggingService::new)
+            ).serviceAt("/204", new HttpService((ctx, exec, promise) -> {
+                final FullHttpResponse res = new DefaultFullHttpResponse(
+                        HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT);
+                promise.setSuccess(res);
+            }).decorate(LoggingService::new));
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -86,7 +94,8 @@ public class HttpServiceTest {
         server.start().sync();
 
         httpPort = server.activePorts().values().stream()
-                .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress().getPort();
+                         .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress()
+                         .getPort();
     }
 
     @AfterClass
@@ -109,6 +118,23 @@ public class HttpServiceTest {
             try (CloseableHttpResponse res = hc.execute(new HttpDelete(newUri("/hello/bar")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Nice try, bar!"));
+            }
+        }
+    }
+
+    @Test
+    public void testContentLength() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpUriRequest request = new HttpGet(newUri("/hello/foo"));
+            request.setHeader("Connection", "Close");
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getHeaders("Content-Length"), not(emptyArray()));
+            }
+
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/204")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 204 No Content"));
+                assertThat(res.getHeaders("Content-Length"), emptyArray());
             }
         }
     }
