@@ -19,6 +19,9 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -65,6 +68,8 @@ public final class CircuitBreakerBuilder {
     private Duration counterUpdateInterval = Defaults.COUNTER_UPDATE_INTERVAL;
 
     private Ticker ticker = Defaults.TICKER;
+
+    private List<CircuitBreakerListener> listeners = Collections.emptyList();
 
     /**
      * Creates a new {@link CircuitBreakerBuilder} with the specified name.
@@ -204,6 +209,18 @@ public final class CircuitBreakerBuilder {
         return this;
     }
 
+    /**
+     * Adds a {@link CircuitBreakerListener}.
+     */
+    public CircuitBreakerBuilder listener(CircuitBreakerListener listener) {
+        requireNonNull(listener, "listener");
+        if (listeners.isEmpty()) {
+            listeners = new ArrayList<>(3);
+        }
+        listeners.add(listener);
+        return this;
+    }
+
     @VisibleForTesting
     CircuitBreakerBuilder ticker(Ticker ticker) {
         this.ticker = requireNonNull(ticker, "ticker");
@@ -223,7 +240,7 @@ public final class CircuitBreakerBuilder {
                 new CircuitBreakerConfig(name, failureRateThreshold, minimumRequestThreshold,
                                          circuitOpenWindow, trialRequestInterval,
                                          counterSlidingWindow, counterUpdateInterval,
-                                         exceptionFilter));
+                                         exceptionFilter, Collections.unmodifiableList(listeners)));
     }
 
 }

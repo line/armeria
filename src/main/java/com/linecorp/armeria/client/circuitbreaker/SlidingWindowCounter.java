@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
@@ -66,16 +67,16 @@ final class SlidingWindowCounter implements EventCounter {
     }
 
     @Override
-    public void onSuccess() {
-        onEvent(Event.SUCCESS);
+    public Optional<EventCount> onSuccess() {
+        return onEvent(Event.SUCCESS);
     }
 
     @Override
-    public void onFailure() {
-        onEvent(Event.FAILURE);
+    public Optional<EventCount> onFailure() {
+        return onEvent(Event.FAILURE);
     }
 
-    private void onEvent(Event event) {
+    private Optional<EventCount> onEvent(Event event) {
         final long tickerNanos = ticker.read();
 
         final Bucket currentBucket = current.get();
@@ -86,11 +87,11 @@ final class SlidingWindowCounter implements EventCounter {
             final Bucket bucket = new Bucket(tickerNanos);
             event.increment(bucket);
             reservoir.offer(bucket);
-            return;
+            return Optional.empty();
         } else if (tickerNanos < currentBucket.timestamp() + updateIntervalNanos) {
             // increments the current bucket since it is exactly latest
             event.increment(currentBucket);
-            return;
+            return Optional.empty();
         }
 
         // the current bucket is old
@@ -103,11 +104,14 @@ final class SlidingWindowCounter implements EventCounter {
             // puts old one to the reservoir
             reservoir.offer(currentBucket);
             // and then updates count
-            snapshot.set(trimAndSum(tickerNanos));
+            final EventCount eventCount = trimAndSum(tickerNanos);
+            snapshot.set(eventCount);
+            return Optional.of(eventCount);
         } else {
             // the bucket has been replaced already
             // puts new one as an instant bucket to the reservoir not to lose event
             reservoir.offer(nextBucket);
+            return Optional.empty();
         }
     }
 

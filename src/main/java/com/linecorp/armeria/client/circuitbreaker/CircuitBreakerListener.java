@@ -16,29 +16,24 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import java.util.Optional;
-
-interface EventCounter {
-
-    /**
-     * Returns the current {@link EventCount}
-     */
-    EventCount count();
+/**
+ * The listener interface for receiving {@link CircuitBreaker} events.
+ */
+public interface CircuitBreakerListener {
 
     /**
-     * Counts success events
-     *
-     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated, or else
-     * an empty {@link Optional}.
+     * Invoked when the circuit state is changed.
      */
-    Optional<EventCount> onSuccess();
+    void onStateChanged(CircuitBreaker circuitBreaker, CircuitState state) throws Exception;
 
     /**
-     * Counts failure events
-     *
-     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated, or else
-     * an empty {@link Optional}.
+     * Invoked when the circuit breaker's internal {@link EventCount} is updated.
      */
-    Optional<EventCount> onFailure();
+    void onEventCountUpdated(CircuitBreaker circuitBreaker, EventCount eventCount) throws Exception;
+
+    /**
+     * Invoked when the circuit breaker rejects a request.
+     */
+    void onRequestRejected(CircuitBreaker circuitBreaker) throws Exception;
 
 }
