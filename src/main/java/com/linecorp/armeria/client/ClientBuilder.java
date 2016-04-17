@@ -25,6 +25,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.routing.EndpointGroup;
+import com.linecorp.armeria.client.routing.EndpointGroupInvoker;
+import com.linecorp.armeria.client.routing.EndpointGroupUtil;
 import org.apache.thrift.protocol.TProtocolFactory;
 
 import com.linecorp.armeria.client.http.SimpleHttpClientCodec;
@@ -249,13 +252,22 @@ public final class ClientBuilder {
     private Client newClient(Class<?> interfaceClass) {
         final Scheme scheme = Scheme.parse(uri.getScheme());
         final SessionProtocol sessionProtocol = scheme.sessionProtocol();
+        URI codecURI = this.uri;
 
-        final RemoteInvoker remoteInvoker = remoteInvokerFactory.getInvoker(sessionProtocol);
+        RemoteInvoker remoteInvoker = remoteInvokerFactory.getInvoker(sessionProtocol);
         if (remoteInvoker == null) {
             throw new IllegalArgumentException("unsupported scheme: " + scheme);
         }
 
-        final ClientCodec codec = createCodec(uri, scheme, interfaceClass);
+        final String groupName = EndpointGroupUtil.getEndpointGroupName(this.uri);
+        if (groupName != null) {
+            remoteInvoker = new EndpointGroupInvoker(remoteInvoker, groupName);
+            // Ensure a valid URL is returned in business logic that accesses it
+            // through the ServiceInvocationContext by stripping out our custom markers.
+            codecURI = URI.create(EndpointGroupUtil.removeGroupMark(this.uri));
+        }
+
+        final ClientCodec codec = createCodec(codecURI, scheme, interfaceClass);
 
         return new SimpleClient(codec, remoteInvoker);
     }
