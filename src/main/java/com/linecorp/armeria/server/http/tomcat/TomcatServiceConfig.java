@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.http.tomcat;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.apache.catalina.Realm;
@@ -36,10 +37,12 @@ public class TomcatServiceConfig {
     private final Realm realm;
     private final String hostname;
     private final Path docBase;
+    private final String jarRoot;
     private final List<Consumer<? super StandardServer>> configurators;
 
     TomcatServiceConfig(String serviceName, String engineName, Path baseDir, Realm realm,
-                        String hostname, Path docBase, List<Consumer<? super StandardServer>> configurators) {
+                        String hostname, Path docBase, String jarRoot,
+                        List<Consumer<? super StandardServer>> configurators) {
 
         this.engineName = engineName;
         this.serviceName = serviceName;
@@ -47,6 +50,7 @@ public class TomcatServiceConfig {
         this.realm = realm;
         this.hostname = hostname;
         this.docBase = docBase;
+        this.jarRoot = jarRoot;
         this.configurators = configurators;
     }
 
@@ -86,10 +90,19 @@ public class TomcatServiceConfig {
     }
 
     /**
-     * Returns the document base directory of an web application.
+     * Returns the document base directory of a web application.
      */
     public Path docBase() {
         return docBase;
+    }
+
+    /**
+     * Returns the path to the root directory of a web application inside a JAR/WAR.
+     *
+     * @return {@link Optional#empty()} if {@link #docBase()} is not a JAR/WAR file
+     */
+    public Optional<String> jarRoot() {
+        return Optional.ofNullable(jarRoot);
     }
 
     /**
@@ -102,11 +115,12 @@ public class TomcatServiceConfig {
 
     @Override
     public String toString() {
-        return toString(this, serviceName(), engineName(), baseDir(), realm(), hostname(), docBase());
+        return toString(this, serviceName(), engineName(), baseDir(), realm(), hostname(),
+                        docBase(), jarRoot().orElse(null));
     }
 
     static String toString(Object holder, String serviceName, String engineName,
-                           Path baseDir, Realm realm, String hostname, Path docBase) {
+                           Path baseDir, Realm realm, String hostname, Path docBase, String jarRoot) {
 
         return holder.getClass().getSimpleName() +
                "(serviceName: " + serviceName +
@@ -114,6 +128,8 @@ public class TomcatServiceConfig {
                ", baseDir: " + baseDir +
                ", realm: " + realm.getClass().getSimpleName() +
                ", hostname: " + hostname +
-               ", docBase: " + docBase + ')';
+               ", docBase: " + docBase +
+               (jarRoot != null ? ", jarRoot: " + jarRoot : "") +
+               ')';
     }
 }

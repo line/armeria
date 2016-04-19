@@ -33,7 +33,6 @@ import org.apache.catalina.core.StandardHost;
 import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 import org.apache.catalina.startup.ContextConfig;
-import org.apache.coyote.ProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +97,6 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
         // on its startup with the Coyote Adapter which gives an access to Tomcat's HTTP service pipeline.
         final Connector connector = connector();
         connector.setPort(0); // We do not really open a port - just trying to stop the Connector from complaining.
-        final ProtocolHandler protocolHandler = connector.getProtocolHandler();
 
         server = newServer(connector, config());
 
@@ -181,6 +179,10 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
         } catch (Exception e) {
             throw new TomcatServiceException("failed to create a new context: " + config, e);
         }
+
+        // Use our own WebResourceRoot implementation so that we can load a ZIP/JAR file
+        // whose extention is not '.war'.
+        ctx.setResources(new ArmeriaWebResourceRoot(ctx, config));
 
         ctx.setPath(ROOT_CONTEXT_PATH);
         ctx.setDocBase(config.docBase().toString());

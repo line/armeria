@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.server.http.tomcat;
 
+import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.zip.ZipFile;
 
 import org.apache.catalina.LifecycleListener;
 import org.apache.catalina.startup.Constants;
@@ -58,6 +61,19 @@ final class TomcatUtil {
         // - The anonymous SecurityManager
         final Class<?>[] classContext = classContextRef.get();
         return Arrays.copyOfRange(classContext, 2, classContext.length);
+    }
+
+    static boolean isZip(Path path) {
+        if (!Files.isRegularFile(path)) {
+            return false;
+        }
+
+        try (ZipFile ignored = new ZipFile(path.toFile())) {
+            return true;
+        } catch (IOException ignored) {
+            // Probably not a JAR file.
+            return false;
+        }
     }
 
     private TomcatUtil() {}
