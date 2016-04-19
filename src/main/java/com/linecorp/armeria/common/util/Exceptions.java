@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.channels.ClosedChannelException;
 import java.util.regex.Pattern;
 
@@ -116,6 +118,18 @@ public final class Exceptions {
         requireNonNull(exception, "exception");
         exception.setStackTrace(EMPTY_STACK_TRACE);
         return exception;
+    }
+
+    /**
+     * Returns the stack trace of the specified {@code exception} as a {@link String}.
+     */
+    public static String traceText(Throwable exception) {
+        requireNonNull(exception, "exception");
+        final StringWriter out = new StringWriter(256);
+        final PrintWriter pout = new PrintWriter(out);
+        exception.printStackTrace(pout);
+        pout.flush();
+        return out.toString();
     }
 
     private Exceptions() {}

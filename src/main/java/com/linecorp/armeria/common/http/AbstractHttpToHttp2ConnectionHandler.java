@@ -16,12 +16,17 @@
 
 package com.linecorp.armeria.common.http;
 
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+
+import com.linecorp.armeria.common.util.Exceptions;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2Exception.ClosedStreamCreationException;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.Http2StreamVisitor;
@@ -43,8 +48,10 @@ public abstract class AbstractHttpToHttp2ConnectionHandler extends HttpToHttp2Co
     private boolean closing;
     private boolean handlingConnectionError;
 
-    protected AbstractHttpToHttp2ConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-                                                   Http2Settings initialSettings, boolean validateHeaders) {
+    protected AbstractHttpToHttp2ConnectionHandler(
+            Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+            Http2Settings initialSettings, boolean validateHeaders) {
+
         super(decoder, encoder, initialSettings, validateHeaders);
     }
 
@@ -59,7 +66,43 @@ public abstract class AbstractHttpToHttp2ConnectionHandler extends HttpToHttp2Co
         }
 
         handlingConnectionError = true;
+
+        // TODO(trustin): Remove this once Http2ConnectionHandler.goAway() sends better debugData.
+        //                See https://github.com/netty/netty/issues/5160
+        if (http2Ex == null) {
+            http2Ex = new Http2Exception(INTERNAL_ERROR, goAwayDebugData(null, cause), cause);
+        } else if (http2Ex instanceof ClosedStreamCreationException) {
+            final ClosedStreamCreationException e = (ClosedStreamCreationException) http2Ex;
+            http2Ex = new ClosedStreamCreationException(e.error(), goAwayDebugData(e, cause), cause);
+        } else {
+            http2Ex = new Http2Exception(
+                    http2Ex.error(), goAwayDebugData(http2Ex, cause), cause, http2Ex.shutdownHint());
+        }
+
         super.onConnectionError(ctx, cause, http2Ex);
+    }
+
+    private static String goAwayDebugData(Http2Exception http2Ex, Throwable cause) {
+        final StringBuilder buf = new StringBuilder(256);
+        final String type;
+        final String message;
+
+        if (http2Ex != null) {
+            type = http2Ex.getClass().getName();
+            message = http2Ex.getMessage();
+        } else {
+            type = null;
+            message = null;
+        }
+
+        buf.append("type: ");
+        buf.append(type != null ? type : "n/a");
+        buf.append(", message: ");
+        buf.append(message != null ? message : "n/a");
+        buf.append(", cause: ");
+        buf.append(cause != null ? Exceptions.traceText(cause) : "n/a");
+
+        return buf.toString();
     }
 
     @Override

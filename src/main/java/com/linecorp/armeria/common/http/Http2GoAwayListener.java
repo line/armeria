@@ -70,7 +70,7 @@ public class Http2GoAwayListener extends Http2ConnectionAdapter {
                             ByteBufUtil.hexDump(debugData));
             }
         } else {
-            if (logger.isInfoEnabled()) {
+            if (logger.isDebugEnabled()) {
                 logger.debug("{} {} a GOAWAY frame: lastStreamId={}, errorCode=NO_ERROR",
                              ch, sentOrReceived, lastStreamId);
             }
