@@ -17,6 +17,8 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
+
 import org.junit.AfterClass;
 import org.junit.Before;
 
@@ -31,6 +33,7 @@ public abstract class AbstractServerTest {
 
     private static Server server;
     private static int httpPort;
+    private static int httpsPort;
 
     @Before
     public void startServer() throws Exception {
@@ -50,8 +53,12 @@ public abstract class AbstractServerTest {
             }
 
             httpPort = server.activePorts().values().stream()
-                             .filter(p -> p.protocol() == SessionProtocol.HTTP)
-                             .findAny().get().localAddress().getPort();
+                             .filter(p1 -> p1.protocol() == SessionProtocol.HTTP).findAny()
+                             .flatMap(p -> Optional.of(p.localAddress().getPort())).orElse(-1);
+
+            httpsPort = server.activePorts().values().stream()
+                              .filter(p1 -> p1.protocol() == SessionProtocol.HTTPS).findAny()
+                              .flatMap(p -> Optional.of(p.localAddress().getPort())).orElse(-1);
         }
     }
 
@@ -83,11 +90,41 @@ public abstract class AbstractServerTest {
         return server;
     }
 
+    protected static int httpPort() {
+        return httpPort;
+    }
+
+    protected static int httpsPort() {
+        return httpsPort;
+    }
+
     protected static String uri(String path) {
-        if (!requireNonNull(path, "path").startsWith("/")) {
-            throw new IllegalArgumentException("path: " + path + " (expected: an absolute path)");
+        return httpPort > 0 ? httpUri(path) : httpsUri(path);
+    }
+
+    protected static String httpUri(String path) {
+        validatePath(path);
+
+        if (httpPort <= 0) {
+            throw new IllegalStateException("HTTP port not open");
         }
 
         return "http://127.0.0.1:" + httpPort + path;
+    }
+
+    protected static String httpsUri(String path) {
+        validatePath(path);
+
+        if (httpsPort <= 0) {
+            throw new IllegalStateException("HTTPS port not open");
+        }
+
+        return "https://127.0.0.1:" + httpsPort + path;
+    }
+
+    private static void validatePath(String path) {
+        if (!requireNonNull(path, "path").startsWith("/")) {
+            throw new IllegalArgumentException("path: " + path + " (expected: an absolute path)");
+        }
     }
 }

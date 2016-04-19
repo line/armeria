@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.util.NativeLibraries;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -138,8 +137,10 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         final Bootstrap baseBootstrap = new Bootstrap();
 
         baseBootstrap.channel(channelType());
-        baseBootstrap.resolver(new DnsAddressResolverGroup(datagramChannelType(),
-                                                           DnsServerAddresses.defaultAddresses()));
+        baseBootstrap.resolver(
+                options.addressResolverGroup()
+                       .orElseGet(() -> new DnsAddressResolverGroup(
+                               datagramChannelType(), DnsServerAddresses.defaultAddresses())));
 
         baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
                              ConvertUtils.safeLongToInt(options.connectTimeoutMillis()));
