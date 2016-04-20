@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.List;
 
 import javax.net.ssl.SSLException;
 
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.http.Http2GoAwayListener;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
@@ -44,6 +46,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -254,16 +257,22 @@ class HttpConfigurator extends ChannelDuplexHandler {
         }
 
         if (attemptUpgrade) {
-            Http1ClientCodec http1Codec = newHttp1Codec();
-            Http2ClientUpgradeCodec http2ClientUpgradeCodec =
-                    new Http2ClientUpgradeCodec(newHttp2ConnectionHandler(ch));
-            HttpClientUpgradeHandler http2UpgradeHandler =
-                    new HttpClientUpgradeHandler(http1Codec, http2ClientUpgradeCodec, options.maxFrameLength());
+            if (options.useHttp2Preface()) {
+                pipeline.addLast(new DowngradeHandler());
+                pipeline.addLast(newHttp2ConnectionHandler(ch));
+            } else {
+                Http1ClientCodec http1Codec = newHttp1Codec();
+                Http2ClientUpgradeCodec http2ClientUpgradeCodec =
+                        new Http2ClientUpgradeCodec(newHttp2ConnectionHandler(ch));
+                HttpClientUpgradeHandler http2UpgradeHandler =
+                        new HttpClientUpgradeHandler(http1Codec, http2ClientUpgradeCodec,
+                                                     options.maxFrameLength());
 
-            pipeline.addLast(http1Codec);
-            pipeline.addLast(new WorkaroundHandler());
-            pipeline.addLast(http2UpgradeHandler);
-            pipeline.addLast(new UpgradeRequestHandler());
+                pipeline.addLast(http1Codec);
+                pipeline.addLast(new WorkaroundHandler());
+                pipeline.addLast(http2UpgradeHandler);
+                pipeline.addLast(new UpgradeRequestHandler());
+            }
         } else {
             pipeline.addLast(newHttp1Codec());
 
@@ -339,7 +348,7 @@ class HttpConfigurator extends ChannelDuplexHandler {
     /**
      * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
      */
-    private final class UpgradeRequestHandler extends ChannelDuplexHandler {
+    private final class UpgradeRequestHandler extends ChannelInboundHandlerAdapter {
 
         private UpgradeEvent upgradeEvt;
         private boolean receivedUpgradeRes;
@@ -449,13 +458,50 @@ class HttpConfigurator extends ChannelDuplexHandler {
                 throw new Error();
             }
         }
+    }
 
-        private void retryWithH1C(ChannelHandlerContext ctx) {
-            final ChannelPipeline pipeline = ctx.pipeline();
-            pipeline.channel().eventLoop().execute(
-                    () -> pipeline.fireUserEventTriggered(HttpSessionChannelFactory.RETRY_WITH_H1C));
-            ctx.close();
+    /**
+     * A handler that closes an HTTP/2 connection when the server responds with an HTTP/1 response, so that
+     * HTTP/1 is used instead of HTTP/2 on next connection attempt.
+     */
+    private final class DowngradeHandler extends ByteToMessageDecoder {
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            if (in.readableBytes() < 4) {
+                return;
+            }
+
+            final ChannelPipeline p = ctx.pipeline();
+
+            if (in.getInt(in.readerIndex()) == 0x48545450) { // If the response starts with 'HTTP'
+                // Http2ConnectionHandler sent the preface string, but the server responded with an HTTP/1
+                // response. i.e. The server does not support HTTP/2.
+                SessionProtocolNegotiationCache.setUnsupported(ctx.channel().remoteAddress(), H2C);
+                if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
+                    finishWithNegotiationFailure(ctx, H2C, H1C,
+                                                 "received an HTTP/1 response for the HTTP/2 preface string");
+                } else {
+                    // We can silently retry with H1C.
+                    retryWithH1C(ctx);
+                }
+
+                // We are going to close the connection really soon, so we don't need the response.
+                in.skipBytes(in.readableBytes());
+            } else {
+                // The server responded with a non-HTTP/1 response. Continue treating the connection as HTTP/2.
+                finishSuccessfully(p, H2C);
+            }
+
+            p.remove(this);
         }
+    }
+
+    static void retryWithH1C(ChannelHandlerContext ctx) {
+        final ChannelPipeline pipeline = ctx.pipeline();
+        pipeline.channel().eventLoop().execute(
+                () -> pipeline.fireUserEventTriggered(HttpSessionChannelFactory.RETRY_WITH_H1C));
+        ctx.close();
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(Channel ch) {
@@ -495,9 +541,18 @@ class HttpConfigurator extends ChannelDuplexHandler {
 
     private static final class HttpToHttp2ClientConnectionHandler extends AbstractHttpToHttp2ConnectionHandler {
 
-        HttpToHttp2ClientConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-                                           Http2Settings initialSettings, boolean validateHeaders) {
+        HttpToHttp2ClientConnectionHandler(
+                Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                Http2Settings initialSettings, boolean validateHeaders) {
             super(decoder, encoder, initialSettings, validateHeaders);
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            super.channelActive(ctx);
+
+            // NB: Http2ConnectionHandler does not flush the preface string automatically.
+            ctx.flush();
         }
 
         @Override

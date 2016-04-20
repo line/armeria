@@ -23,6 +23,7 @@ import static com.linecorp.armeria.client.RemoteInvokerOption.MAX_CONCURRENCY;
 import static com.linecorp.armeria.client.RemoteInvokerOption.MAX_FRAME_LENGTH;
 import static com.linecorp.armeria.client.RemoteInvokerOption.POOL_HANDLER_DECORATOR;
 import static com.linecorp.armeria.client.RemoteInvokerOption.TRUST_MANAGER_FACTORY;
+import static com.linecorp.armeria.client.RemoteInvokerOption.USE_HTTP2_PREFACE;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -32,6 +33,9 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import javax.net.ssl.TrustManagerFactory;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
@@ -45,16 +49,25 @@ import io.netty.resolver.AddressResolverGroup;
  */
 public class RemoteInvokerOptions extends AbstractOptions {
 
+    private static final Logger logger = LoggerFactory.getLogger(RemoteInvokerOptions.class);
+
     private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofMillis(3200);
     private static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(10);
     private static final int DEFAULT_MAX_FRAME_LENGTH = 10 * 1024 * 1024; // 10 MB
     private static final Integer DEFAULT_MAX_CONCURRENCY = Integer.MAX_VALUE;
+    private static final Boolean DEFAULT_USE_HTTP2_PREFACE =
+            !"false".equals(System.getProperty("com.linecorp.armeria.defaultUseHttp2Preface", "true"));
+
+    static {
+        logger.info("defaultUseHttp2Preface: {}", DEFAULT_USE_HTTP2_PREFACE);
+    }
 
     private static final RemoteInvokerOptionValue<?>[] DEFAULT_OPTION_VALUES = {
             CONNECT_TIMEOUT.newValue(DEFAULT_CONNECTION_TIMEOUT),
             IDLE_TIMEOUT.newValue(DEFAULT_IDLE_TIMEOUT),
             MAX_FRAME_LENGTH.newValue(DEFAULT_MAX_FRAME_LENGTH),
-            MAX_CONCURRENCY.newValue(DEFAULT_MAX_CONCURRENCY)
+            MAX_CONCURRENCY.newValue(DEFAULT_MAX_CONCURRENCY),
+            USE_HTTP2_PREFACE.newValue(DEFAULT_USE_HTTP2_PREFACE)
     };
 
     /**
@@ -212,5 +225,9 @@ public class RemoteInvokerOptions extends AbstractOptions {
 
     public Function<KeyedChannelPoolHandler<PoolKey>, KeyedChannelPoolHandler<PoolKey>> poolHandlerDecorator() {
         return getOrElse(POOL_HANDLER_DECORATOR, Function.identity());
+    }
+
+    public boolean useHttp2Preface() {
+        return getOrElse(USE_HTTP2_PREFACE, DEFAULT_USE_HTTP2_PREFACE);
     }
 }
