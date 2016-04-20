@@ -47,7 +47,6 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainMappingBuilder;
 import io.netty.util.DomainNameMapping;
@@ -95,7 +94,7 @@ public final class Server implements AutoCloseable {
      * A handler that is shared by all ports and channels to be able to keep
      * track of all requests being processed by the server.
      */
-    private volatile Optional<GracefulShutdownHandler> gracefulShutdownHandler;
+    private volatile GracefulShutdownHandler gracefulShutdownHandler;
 
     Server(ServerConfig config) {
         this.config = requireNonNull(config, "config");
@@ -264,11 +263,11 @@ public final class Server implements AutoCloseable {
             final List<ServerPort> ports = config().ports();
             final AtomicInteger remainingPorts = new AtomicInteger(ports.size());
             if (config().gracefulShutdownQuietPeriod().isZero()) {
-                gracefulShutdownHandler = Optional.empty();
+                gracefulShutdownHandler = null;
             } else {
                 gracefulShutdownHandler =
-                        Optional.of(GracefulShutdownHandler.create(config().gracefulShutdownQuietPeriod(),
-                                                                   config().blockingTaskExecutor()));
+                        GracefulShutdownHandler.create(config().gracefulShutdownQuietPeriod(),
+                                                       config().blockingTaskExecutor());
             }
 
             for (ServerPort p: ports) {
@@ -286,7 +285,8 @@ public final class Server implements AutoCloseable {
 
         b.group(bossGroup, workerGroup);
         b.channel(Epoll.isAvailable()? EpollServerSocketChannel.class : NioServerSocketChannel.class);
-        b.childHandler(new ServerInitializer(config, port, sslContexts, gracefulShutdownHandler));
+        b.childHandler(new ServerInitializer(config, port, sslContexts,
+                                             Optional.ofNullable(gracefulShutdownHandler)));
 
         return b.bind(port.localAddress());
     }
@@ -365,16 +365,16 @@ public final class Server implements AutoCloseable {
         assert promise != null;
 
         final EventLoopGroup bossGroup = this.bossGroup;
+        final GracefulShutdownHandler gracefulShutdownHandler = this.gracefulShutdownHandler;
 
-        if (!gracefulShutdownHandler.isPresent()) {
+        if (gracefulShutdownHandler == null) {
             return stop1(promise, bossGroup);
         }
 
         // Check every 100 ms for the server to have completed processing
         // requests.
-        final GracefulShutdownHandler handler = gracefulShutdownHandler.get();
         bossGroup.scheduleAtFixedRate(() -> {
-            if (handler.completedQuietPeriod()) {
+            if (gracefulShutdownHandler.completedQuietPeriod()) {
                 stop1(promise, bossGroup);
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
