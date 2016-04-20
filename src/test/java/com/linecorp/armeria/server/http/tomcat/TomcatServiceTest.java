@@ -43,6 +43,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.util.concurrent.Future;
 
 public class TomcatServiceTest extends AbstractServerTest {
 
@@ -61,6 +62,15 @@ public class TomcatServiceTest extends AbstractServerTest {
                                     .configurator(s -> Collections.addAll(tomcatServices, s.findServices()))
                                     .build()
                                     .decorate(LoggingService::new));
+
+        sb.serviceUnder(
+                "/tc_jar/",
+                TomcatService.forClassPath(Future.class).decorate(LoggingService::new));
+
+        sb.serviceUnder(
+                "/tc_jar_altroot/",
+                TomcatService.forClassPath(Future.class, "/io/netty/util/concurrent")
+                             .decorate(LoggingService::new));
     }
 
     @Test
@@ -152,5 +162,28 @@ public class TomcatServiceTest extends AbstractServerTest {
     public void testConfigurator() throws Exception {
         assertThat(tomcatServices, hasSize(1));
         assertThat(tomcatServices.get(0).getName(), is(SERVICE_NAME));
+    }
+
+    @Test
+    public void testJarBasedWebApp() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet(uri("/tc_jar/io/netty/util/concurrent/Future.class")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("application/java"));
+            }
+        }
+    }
+
+    @Test
+    public void testJarBasedWebAppWithAlternativeRoot() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/tc_jar_altroot/Future.class")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("application/java"));
+            }
+        }
     }
 }

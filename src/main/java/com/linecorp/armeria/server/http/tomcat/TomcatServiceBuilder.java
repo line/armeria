@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Consumer;
 
 import org.apache.catalina.Realm;
@@ -93,9 +92,9 @@ public final class TomcatServiceBuilder {
      * Creates a new {@link TomcatServiceBuilder} with the web application at the specified document base
      * directory inside the JAR/WAR/directory where the specified class is located at.
      */
-    public static TomcatServiceBuilder forClassPath(Class<?> clazz, String docBase) {
+    public static TomcatServiceBuilder forClassPath(Class<?> clazz, String docBaseOrJarRoot) {
         requireNonNull(clazz, "clazz");
-        requireNonNull(docBase, "docBase");
+        requireNonNull(docBaseOrJarRoot, "docBaseOrJarRoot");
 
         final ProtectionDomain pd = clazz.getProtectionDomain();
         if (pd == null) {
@@ -121,7 +120,11 @@ public final class TomcatServiceBuilder {
             f = new File(url.getPath());
         }
 
-        f = fileSystemDocBase(f, docBase);
+        if (TomcatUtil.isZip(f.toPath())) {
+            return new TomcatServiceBuilder(f.toPath(), docBaseOrJarRoot);
+        }
+
+        f = fileSystemDocBase(f, docBaseOrJarRoot);
 
         if (!f.isDirectory()) {
             throw new IllegalArgumentException(f + " is not a directory.");
@@ -130,21 +133,21 @@ public final class TomcatServiceBuilder {
         return forFileSystem(f.toPath());
     }
 
-    private static File fileSystemDocBase(File rootDir, String classPathDocBase) {
+    private static File fileSystemDocBase(File rootDir, String relativeDocBase) {
         // Append the specified docBase to the root directory to build the actual docBase on file system.
         String fileSystemDocBase = rootDir.getPath();
-        classPathDocBase = classPathDocBase.replace('/', File.separatorChar);
+        relativeDocBase = relativeDocBase.replace('/', File.separatorChar);
         if (fileSystemDocBase.endsWith(File.separator)) {
-            if (classPathDocBase.startsWith(File.separator)) {
-                fileSystemDocBase += classPathDocBase.substring(1);
+            if (relativeDocBase.startsWith(File.separator)) {
+                fileSystemDocBase += relativeDocBase.substring(1);
             } else {
-                fileSystemDocBase += classPathDocBase;
+                fileSystemDocBase += relativeDocBase;
             }
         } else {
-            if (classPathDocBase.startsWith(File.separator)) {
-                fileSystemDocBase += classPathDocBase;
+            if (relativeDocBase.startsWith(File.separator)) {
+                fileSystemDocBase += relativeDocBase;
             } else {
-                fileSystemDocBase = fileSystemDocBase + File.separatorChar + classPathDocBase;
+                fileSystemDocBase = fileSystemDocBase + File.separatorChar + relativeDocBase;
             }
         }
 
@@ -164,12 +167,13 @@ public final class TomcatServiceBuilder {
      * which can be a directory or a JAR/WAR file.
      */
     public static TomcatServiceBuilder forFileSystem(Path docBase) {
-        return new TomcatServiceBuilder(docBase);
+        return new TomcatServiceBuilder(docBase, null);
     }
 
     private static final Realm NULL_REALM = new NullRealm();
 
     private final Path docBase;
+    private final String jarRoot;
     private final List<Consumer<? super StandardServer>> configurators = new ArrayList<>();
 
     private String serviceName = DEFAULT_SERVICE_NAME;
@@ -178,8 +182,14 @@ public final class TomcatServiceBuilder {
     private Realm realm = NULL_REALM;
     private String hostname = "localhost";
 
-    private TomcatServiceBuilder(Path docBase) {
+    private TomcatServiceBuilder(Path docBase, String jarRoot) {
         this.docBase = validateDocBase(docBase);
+        if (TomcatUtil.isZip(docBase)) {
+            this.jarRoot = normalizeJarRoot(jarRoot);
+        } else {
+            assert jarRoot == null;
+            this.jarRoot = null;
+        }
     }
 
     private static Path validateDocBase(Path docBase) {
@@ -191,19 +201,28 @@ public final class TomcatServiceBuilder {
             throw new IllegalArgumentException("docBase: " + docBase + " (non-existent)");
         }
 
-        if (Files.isDirectory(docBase)) {
-            return docBase;
-        }
-
-        final String docBaseLowerCased = docBase.toString().toLowerCase(Locale.US);
-        if (!Files.isRegularFile(docBase) ||
-            !docBaseLowerCased.endsWith(".jar") &&
-            !docBaseLowerCased.endsWith(".war")) {
+        if (!Files.isDirectory(docBase) && !TomcatUtil.isZip(docBase)) {
             throw new IllegalArgumentException(
                     "docBase: " + docBase + " (expected: a directory or a WAR/JAR file)");
         }
 
         return docBase;
+    }
+
+    private static String normalizeJarRoot(String jarRoot) {
+        if (jarRoot == null || jarRoot.isEmpty() || "/".equals(jarRoot)) {
+            return "/";
+        }
+
+        if (!jarRoot.startsWith("/")) {
+            jarRoot = '/' + jarRoot;
+        }
+
+        if (jarRoot.endsWith("/")) {
+            jarRoot = jarRoot.substring(0, jarRoot.length() - 1);
+        }
+
+        return jarRoot;
     }
 
     /**
@@ -302,12 +321,13 @@ public final class TomcatServiceBuilder {
         }
 
         return new TomcatService(new TomcatServiceConfig(
-                serviceName, engineName, baseDir, realm, hostname, docBase,
+                serviceName, engineName, baseDir, realm, hostname, docBase, jarRoot,
                 Collections.unmodifiableList(configurators)));
     }
 
     @Override
     public String toString() {
-        return TomcatServiceConfig.toString(this, serviceName, engineName, baseDir, realm, hostname, docBase);
+        return TomcatServiceConfig.toString(
+                this, serviceName, engineName, baseDir, realm, hostname, docBase, jarRoot);
     }
 }
