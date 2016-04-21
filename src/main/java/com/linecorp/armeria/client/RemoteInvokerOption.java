@@ -17,6 +17,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.function.Function;
 
@@ -28,6 +29,7 @@ import com.linecorp.armeria.common.util.AbstractOption;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.ConstantPool;
 
 /**
@@ -70,6 +72,12 @@ public class RemoteInvokerOption<T> extends AbstractOption<T> {
      */
     public static final RemoteInvokerOption<TrustManagerFactory> TRUST_MANAGER_FACTORY =
             valueOf("TRUST_MANAGER_FACTORY");
+
+    /**
+     * The {@link AddressResolverGroup} to use to resolve remote addresses into {@link InetSocketAddress}es.
+     */
+    public static final RemoteInvokerOption<AddressResolverGroup<? extends InetSocketAddress>>
+            ADDRESS_RESOLVER_GROUP = valueOf("ADDRESS_RESOLVER_GROUP");
 
     /**
      * The {@link EventLoopGroup} that will provide the {@link EventLoop} for I/O and asynchronous invocations.

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.RemoteInvokerOption.ADDRESS_RESOLVER_GROUP;
 import static com.linecorp.armeria.client.RemoteInvokerOption.CONNECT_TIMEOUT;
 import static com.linecorp.armeria.client.RemoteInvokerOption.EVENT_LOOP_GROUP;
 import static com.linecorp.armeria.client.RemoteInvokerOption.IDLE_TIMEOUT;
@@ -24,6 +25,7 @@ import static com.linecorp.armeria.client.RemoteInvokerOption.POOL_HANDLER_DECOR
 import static com.linecorp.armeria.client.RemoteInvokerOption.TRUST_MANAGER_FACTORY;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.resolver.AddressResolverGroup;
 
 /**
  * A set of {@link RemoteInvokerOption}s and their respective values.
@@ -179,6 +182,16 @@ public class RemoteInvokerOptions extends AbstractOptions {
 
     public Optional<TrustManagerFactory> trustManagerFactory() {
         return get(TRUST_MANAGER_FACTORY);
+    }
+
+    public Optional<AddressResolverGroup<InetSocketAddress>> addressResolverGroup() {
+        final Optional<AddressResolverGroup<? extends InetSocketAddress>> value = get(ADDRESS_RESOLVER_GROUP);
+
+        @SuppressWarnings("unchecked")
+        final Optional<AddressResolverGroup<InetSocketAddress>> castValue =
+                (Optional<AddressResolverGroup<InetSocketAddress>>) (Optional<?>) value;
+
+        return castValue;
     }
 
     public Duration idleTimeout() {

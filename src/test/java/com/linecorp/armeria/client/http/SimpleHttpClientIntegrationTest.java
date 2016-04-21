@@ -38,7 +38,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public class SimpleHttpClientIntegrationTest {
 
@@ -48,14 +47,10 @@ public class SimpleHttpClientIntegrationTest {
     private static RemoteInvokerFactory remoteInvokerFactory;
 
     static {
-        final SelfSignedCertificate ssc;
         final ServerBuilder sb = new ServerBuilder();
 
         try {
             sb.port(0, SessionProtocol.HTTP);
-
-            ssc = new SelfSignedCertificate("127.0.0.1");
-            sb.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
 
             sb.serviceAt("/httptestbody", new HttpService(
                     (ctx, executor, promise) -> {
