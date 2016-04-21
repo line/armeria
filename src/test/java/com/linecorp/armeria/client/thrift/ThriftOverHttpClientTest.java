@@ -31,6 +31,9 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
+
+import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.AfterClass;
@@ -46,9 +49,12 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.RemoteInvokerFactory;
 import com.linecorp.armeria.client.RemoteInvokerOption;
+import com.linecorp.armeria.client.RemoteInvokerOptionValue;
 import com.linecorp.armeria.client.RemoteInvokerOptions;
 import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
+import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -79,7 +85,8 @@ public class ThriftOverHttpClientTest {
 
     private static int httpPort;
     private static int httpsPort;
-    private static RemoteInvokerFactory remoteInvokerFactory;
+    private static RemoteInvokerFactory remoteInvokerFactoryWithUseHttp2Preface;
+    private static RemoteInvokerFactory remoteInvokerFactoryWithoutUseHttp2Preface;
     private static ClientOptions clientOptions;
 
     private static final BlockingQueue<String> serverReceivedNames = new LinkedBlockingQueue<>();
@@ -169,16 +176,19 @@ public class ThriftOverHttpClientTest {
         server = sb.build();
     }
 
-    @Parameterized.Parameters(name = "thrift:{0}, http:{1}")
+    @Parameterized.Parameters(name = "serFmt: {0}, sessProto: {1}, useHttp2Preface: {3}")
     public static Collection<Object[]> parameters() throws Exception {
         List<Object[]> parameters = new ArrayList<>();
         for (SerializationFormat serializationFormat : SerializationFormat.ofThrift()) {
-            parameters.add(new Object[] { serializationFormat, "http", false });
-            parameters.add(new Object[] { serializationFormat, "https", true });
-            parameters.add(new Object[] { serializationFormat, "h1", true }); //force http/1 with ssl
-            parameters.add(new Object[] { serializationFormat, "h1c", false }); //force http/1 with clear text
-            parameters.add(new Object[] { serializationFormat, "h2", true }); //enable http2 with ssl
-            parameters.add(new Object[] { serializationFormat, "h2c", false }); // enable http2 with clear text
+            parameters.add(new Object[] { serializationFormat, "http",  false, true });
+            parameters.add(new Object[] { serializationFormat, "http",  false, false });
+            parameters.add(new Object[] { serializationFormat, "https", true,  false });
+            parameters.add(new Object[] { serializationFormat, "h1",    true,  false }); // HTTP/1 over TLS
+            parameters.add(new Object[] { serializationFormat, "h1c",   false, true  }); // HTTP/1 cleartext
+            parameters.add(new Object[] { serializationFormat, "h1c",   false, false });
+            parameters.add(new Object[] { serializationFormat, "h2",    true,  false }); // HTTP/2 over TLS
+            parameters.add(new Object[] { serializationFormat, "h2c",   false, true  }); // HTTP/2 cleartext
+            parameters.add(new Object[] { serializationFormat, "h2c",   false, false });
         }
         return parameters;
     }
@@ -186,12 +196,17 @@ public class ThriftOverHttpClientTest {
     private final SerializationFormat serializationFormat;
     private final String httpProtocol;
     private final boolean useTls;
+    private final boolean useHttp2Preface;
 
     public ThriftOverHttpClientTest(SerializationFormat serializationFormat, String httpProtocol,
-                                    boolean useTls) {
+                                    boolean useTls, boolean useHttp2Preface) {
+
+        assert !(useTls && useHttp2Preface);
+
         this.serializationFormat = serializationFormat;
         this.httpProtocol = httpProtocol;
         this.useTls = useTls;
+        this.useHttp2Preface = useHttp2Preface;
     }
 
     @BeforeClass
@@ -205,17 +220,30 @@ public class ThriftOverHttpClientTest {
                           .filter(p -> p.protocol() == SessionProtocol.HTTPS).findAny().get().localAddress()
                           .getPort();
 
-        RemoteInvokerOptions options = RemoteInvokerOptions.of(
-                RemoteInvokerOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE),
-                RemoteInvokerOption.POOL_HANDLER_DECORATOR.newValue(KeyedChannelPoolLoggingHandler::new));
-        remoteInvokerFactory = new RemoteInvokerFactory(options);
+        final RemoteInvokerOptionValue<TrustManagerFactory> trustManagerFactoryOptVal =
+                RemoteInvokerOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE);
+
+        final RemoteInvokerOptionValue<Function<KeyedChannelPoolHandler<PoolKey>,
+                                                KeyedChannelPoolHandler<PoolKey>>> poolHandlerDecoratorOptVal =
+                RemoteInvokerOption.POOL_HANDLER_DECORATOR.newValue(KeyedChannelPoolLoggingHandler::new);
+
+        remoteInvokerFactoryWithUseHttp2Preface = new RemoteInvokerFactory(RemoteInvokerOptions.of(
+                trustManagerFactoryOptVal,
+                poolHandlerDecoratorOptVal,
+                RemoteInvokerOption.USE_HTTP2_PREFACE.newValue(true)));
+
+        remoteInvokerFactoryWithoutUseHttp2Preface = new RemoteInvokerFactory(RemoteInvokerOptions.of(
+                trustManagerFactoryOptVal,
+                poolHandlerDecoratorOptVal,
+                RemoteInvokerOption.USE_HTTP2_PREFACE.newValue(false)));
 
         clientOptions = ClientOptions.of(ClientOption.DECORATOR.newValue(LoggingClient::new));
     }
 
     @AfterClass
     public static void destroy() throws Exception {
-        remoteInvokerFactory.close();
+        remoteInvokerFactoryWithUseHttp2Preface.close();
+        remoteInvokerFactoryWithoutUseHttp2Preface.close();
         server.stop();
     }
 
@@ -224,10 +252,15 @@ public class ThriftOverHttpClientTest {
         serverReceivedNames.clear();
     }
 
+    private RemoteInvokerFactory remoteInvokerFactory() {
+        return useHttp2Preface ? remoteInvokerFactoryWithUseHttp2Preface
+                               : remoteInvokerFactoryWithoutUseHttp2Preface;
+    }
+
     @Test
     public void testHelloServiceSync() throws Exception {
 
-        HelloService.Iface client = Clients.newClient(remoteInvokerFactory, getURI(Handlers.HELLO),
+        HelloService.Iface client = Clients.newClient(remoteInvokerFactory(), getURI(Handlers.HELLO),
                                                       Handlers.HELLO.Iface(), clientOptions);
         assertEquals("Hello, kukuman!", client.hello("kukuman"));
 
@@ -239,7 +272,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testHelloServiceAsync() throws Exception {
         HelloService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.HELLO), Handlers.HELLO.AsyncIface(),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.HELLO), Handlers.HELLO.AsyncIface(),
                                   clientOptions);
 
         int testCount = 10;
@@ -269,7 +302,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 1000)
     public void testOnewayHelloServiceSync() throws Exception {
         OnewayHelloService.Iface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.ONEWAYHELLO),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.ONEWAYHELLO),
                                   Handlers.ONEWAYHELLO.Iface(), clientOptions);
         client.hello("kukuman");
         client.hello("kukuman2");
@@ -280,7 +313,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 1000)
     public void testOnewayHelloServiceAsync() throws Exception {
         OnewayHelloService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.ONEWAYHELLO),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.ONEWAYHELLO),
                                   Handlers.ONEWAYHELLO.AsyncIface(), clientOptions);
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -301,7 +334,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testDevNullServiceSync() throws Exception {
         DevNullService.Iface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.DEVNULL), Handlers.DEVNULL.Iface(),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.DEVNULL), Handlers.DEVNULL.Iface(),
                                   clientOptions);
         client.consume("kukuman");
         client.consume("kukuman2");
@@ -312,7 +345,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testDevNullServiceAsync() throws Exception {
         DevNullService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.DEVNULL),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.DEVNULL),
                                   Handlers.DEVNULL.AsyncIface(), clientOptions);
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -333,7 +366,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testTimeServiceSync() throws Exception {
         TimeService.Iface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.TIME), Handlers.TIME.Iface(),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.TIME), Handlers.TIME.Iface(),
                                   clientOptions);
 
         long serverTime = client.getServerTime();
@@ -343,7 +376,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testTimeServiceAsync() throws Exception {
         TimeService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.TIME), Handlers.TIME.AsyncIface(),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.TIME), Handlers.TIME.AsyncIface(),
                                   clientOptions);
 
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -357,7 +390,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 1000, expected = FileServiceException.class)
     public void testFileServiceSync() throws Exception {
         FileService.Iface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.FILE), Handlers.FILE.Iface(),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.FILE), Handlers.FILE.Iface(),
                                   clientOptions);
 
         client.create("test");
@@ -366,7 +399,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testFileServiceAsync() throws Exception {
         FileService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory, getURI(Handlers.FILE), Handlers.FILE.AsyncIface(),
+                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.FILE), Handlers.FILE.AsyncIface(),
                                   clientOptions);
 
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -382,7 +415,7 @@ public class ThriftOverHttpClientTest {
         final String TOKEN_A = "token 1234";
         final String TOKEN_B = "token 5678";
 
-        final HeaderService.Iface client = Clients.newClient(remoteInvokerFactory, getURI(Handlers.HEADER),
+        final HeaderService.Iface client = Clients.newClient(remoteInvokerFactory(), getURI(Handlers.HEADER),
                                                              Handlers.HEADER.Iface(), clientOptions);
 
         assertThat(client.header(AUTHORIZATION), is(NO_TOKEN));

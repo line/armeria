@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -182,7 +183,13 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
             }
         } else {
             try {
-                throw new IllegalStateException("unexpected message type: " + msg);
+                final String typeInfo;
+                if (msg instanceof ByteBuf) {
+                    typeInfo = msg + " HexDump: " + ByteBufUtil.hexDump((ByteBuf) msg);
+                } else {
+                    typeInfo = String.valueOf(msg);
+                }
+                throw new IllegalStateException("unexpected message type: " + typeInfo);
             } finally {
                 ReferenceCountUtil.release(msg);
             }

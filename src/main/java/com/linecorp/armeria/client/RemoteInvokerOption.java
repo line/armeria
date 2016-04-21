@@ -92,6 +92,12 @@ public class RemoteInvokerOption<T> extends AbstractOption<T> {
             KeyedChannelPoolHandler<PoolKey>>> POOL_HANDLER_DECORATOR = valueOf("POOL_HANDLER_DECORATOR");
 
     /**
+     * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate the protocol
+     * version of a cleartext HTTP connection.
+     */
+    public static final RemoteInvokerOption<Boolean> USE_HTTP2_PREFACE = valueOf("USE_HTTP2_PREFACE");
+
+    /**
      * Returns the {@link RemoteInvokerOption} of the specified name.
      */
     @SuppressWarnings("unchecked")

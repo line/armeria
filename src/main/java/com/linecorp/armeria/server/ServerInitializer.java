@@ -18,17 +18,20 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AbstractHttpToHttp2ConnectionHandler;
 import com.linecorp.armeria.common.http.Http2GoAwayListener;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
@@ -87,23 +90,7 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
     }
 
     private void configureHttp(ChannelPipeline p) {
-        final HttpServerCodec http1codec = new HttpServerCodec();
-        final HttpObjectAggregator http1aggregator = new HttpObjectAggregator(config.maxFrameLength());
-
-        p.addLast(http1codec);
-        p.addLast(new HttpServerUpgradeHandler(
-                http1codec,
-                protocol -> {
-                    if (!AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-                        return null;
-                    }
-
-                    return new Http2ServerUpgradeCodec(
-                            createHttp2ConnectionHandler(p, http1aggregator));
-                },
-                config.maxFrameLength()));
-
-        p.addLast(http1aggregator);
+        p.addLast(new Http2PrefaceOrHttpHandler());
         configureRequestCountingHandlers(p);
         p.addLast(new HttpServerHandler(config, SessionProtocol.H1C));
     }
@@ -211,6 +198,66 @@ final class ServerInitializer extends ChannelInitializer<Channel> {
             p.addLast(new HttpObjectAggregator(config.maxFrameLength()));
             configureRequestCountingHandlers(p);
             p.addLast(new HttpServerHandler(config, SessionProtocol.H1));
+        }
+    }
+
+    private final class Http2PrefaceOrHttpHandler extends ByteToMessageDecoder {
+
+        private String name;
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            super.handlerAdded(ctx);
+            name = ctx.name();
+        }
+
+        @Override
+        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            if (in.readableBytes() < 4) {
+                return;
+            }
+
+            if (in.getInt(in.readerIndex()) == 0x50524920) { // If starts with 'PRI '
+                // Probably HTTP/2; received the HTTP/2 preface string.
+                configureHttp2(ctx);
+            } else {
+                // Probably HTTP/1; the client can still upgrade using the traditional HTTP/1 upgrade request.
+                configureHttp1WithUpgrade(ctx);
+            }
+
+            ctx.pipeline().remove(this);
+        }
+
+        private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {
+            final ChannelPipeline p = ctx.pipeline();
+            final HttpServerCodec http1codec = new HttpServerCodec();
+            final HttpObjectAggregator http1aggregator = new HttpObjectAggregator(config.maxFrameLength());
+
+            String baseName = name;
+            baseName = addAfter(p, baseName, http1codec);
+            baseName = addAfter(p, baseName, new HttpServerUpgradeHandler(
+                    http1codec,
+                    protocol -> {
+                        if (!AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
+                            return null;
+                        }
+
+                        return new Http2ServerUpgradeCodec(
+                                createHttp2ConnectionHandler(p, http1aggregator));
+                    },
+                    config.maxFrameLength()));
+
+            addAfter(p, baseName, http1aggregator);
+        }
+
+        private void configureHttp2(ChannelHandlerContext ctx) {
+            final ChannelPipeline p = ctx.pipeline();
+            addAfter(p, name, createHttp2ConnectionHandler(p));
+        }
+
+        private String addAfter(ChannelPipeline p, String baseName, ChannelHandler handler) {
+            p.addAfter(baseName, null, handler);
+            return p.context(handler).name();
         }
     }
 }
