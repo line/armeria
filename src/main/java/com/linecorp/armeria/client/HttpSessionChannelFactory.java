@@ -29,7 +29,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TimeoutException;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -85,10 +84,10 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         final Channel ch = connectFuture.channel();
 
         if (connectFuture.isDone()) {
-            notifySessionPromise(ch, connectFuture, sessionPromise);
+            notifySessionPromise(protocol, ch, connectFuture, sessionPromise);
         } else {
             connectFuture.addListener(
-                    (Future<Void> future) -> notifySessionPromise(ch, future, sessionPromise));
+                    (Future<Void> future) -> notifySessionPromise(protocol, ch, future, sessionPromise));
         }
     }
 
@@ -105,40 +104,44 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         });
     }
 
-    private void notifySessionPromise(Channel ch, Future<Void> connectFuture,
-                                      Promise<Channel> sessionPromise) {
+    private void notifySessionPromise(SessionProtocol protocol, Channel ch,
+                                      Future<Void> connectFuture, Promise<Channel> sessionPromise) {
         assert connectFuture.isDone();
         if (connectFuture.isSuccess()) {
-            watchSessionActive(ch, sessionPromise);
+            watchSessionActive(protocol, ch, sessionPromise);
         } else {
             sessionPromise.setFailure(connectFuture.cause());
         }
     }
 
-    private Future<Channel> watchSessionActive(Channel ch, Promise<Channel> sessionPromise) {
+    private Future<Channel> watchSessionActive(SessionProtocol protocol, Channel ch,
+                                               Promise<Channel> sessionPromise) {
+
         EventLoop eventLoop = ch.eventLoop();
 
         if (eventLoop.inEventLoop()) {
-            watchSessionActive0(ch, sessionPromise);
+            watchSessionActive0(protocol, ch, sessionPromise);
         } else {
             eventLoop.execute(new OneTimeTask() {
                 @Override
                 public void run() {
-                    watchSessionActive0(ch, sessionPromise);
+                    watchSessionActive0(protocol, ch, sessionPromise);
                 }
             });
         }
         return sessionPromise;
     }
 
-    private void watchSessionActive0(final Channel ch, Promise<Channel> sessionPromise) {
+    private void watchSessionActive0(SessionProtocol protocol, final Channel ch,
+                                     Promise<Channel> sessionPromise) {
+
         assert ch.eventLoop().inEventLoop();
 
         final ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(new OneTimeTask() {
             @Override
             public void run() {
-                if (sessionPromise.tryFailure(new TimeoutException(
-                        "connection established, but session creation timed out: " + ch))) {
+                if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
+                        protocol, "connection established, but session creation timed out: " + ch))) {
                     ch.close();
                 }
             }
