@@ -33,7 +33,7 @@ you don't need this if you are going to use HTTP/2 over a cleartext connection (
       ...
       <properties>
         <jetty.alpnAgent.version>\ |jetty_alpnAgent_version|\ </jetty.alpnAgent.version>
-        <jetty.alpnAgent.path>${settings.localRepository}/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
+        <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
         <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
       </properties>
       ...
@@ -52,7 +52,7 @@ you don't need this if you are going to use HTTP/2 over a cleartext connection (
                   <goal>get</goal>
                 </goals>
                 <configuration>
-                  <groupId>kr.motd.javaagent</groupId>
+                  <groupId>org.mortbay.jetty.alpn</groupId>
                   <artifactId>jetty-alpn-agent</artifactId>
                   <version>${jetty.alpnAgent.version}</version>
                 </configuration>
@@ -164,7 +164,7 @@ You might want to use the following  ``pom.xml`` as a template if you are starti
         <slf4j.version>\ |slf4j_version|\ </slf4j.version>
         <tomcat.version>\ |tomcat_version|\ </tomcat.version>
         <jetty.alpnAgent.version>\ |jetty_alpnAgent_version|\ </jetty.alpnAgent.version>
-        <jetty.alpnAgent.path>${settings.localRepository}/kr/motd/javaagent/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
+        <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
         <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
       </properties>
 
@@ -229,7 +229,7 @@ You might want to use the following  ``pom.xml`` as a template if you are starti
                   <goal>get</goal>
                 </goals>
                 <configuration>
-                  <groupId>kr.motd.javaagent</groupId>
+                  <groupId>org.mortbay.jetty.alpn</groupId>
                   <artifactId>jetty-alpn-agent</artifactId>
                   <version>${jetty.alpnAgent.version}</version>
                 </configuration>
