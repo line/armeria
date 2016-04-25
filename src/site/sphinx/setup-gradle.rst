@@ -31,7 +31,7 @@ You might want to use the following  ``build.gradle`` as a starting point if you
         runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: '\ |slf4j_version|\ '
 
         // JVM agent to enable TLS ALPN extension
-        javaAgent group: 'kr.motd.javaagent', name: 'jetty-alpn-agent', version: '\ |jetty_alpnAgent_version|\ '
+        javaAgent group: 'org.mortbay.jetty.alpn', name: 'jetty-alpn-agent', version: '\ |jetty_alpnAgent_version|\ '
     }
 
     // Require Java 8 to build the project.
