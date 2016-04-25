@@ -16,16 +16,17 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 
 public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
 
-    private MetricRegistry metricRegistry = new MetricRegistry();
+    private final MetricRegistry metricRegistry = new MetricRegistry();
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
         sb.serviceAt("/helloservice", ThriftService.of((Iface) name -> {
-            if (name.equals("world")) {
+            if ("world".equals(name)) {
                 return "success";
             }
             throw new IllegalArgumentException("bad argument");
-        }).decorate(MetricCollectingService.newDropwizardDecorator("HelloService", metricRegistry)));
+        }).decorate(MetricCollectingService.newDropwizardDecorator(
+                metricRegistry, MetricRegistry.name("client", "HelloService"))));
     }
 
     @Test(timeout = 10000L)
@@ -72,7 +73,8 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
 
     private void makeRequest(String name) {
         HelloService.Iface client = new ClientBuilder("tbinary+" + uri("/helloservice"))
-                .decorator(MetricCollectingClient.newDropwizardDecorator("HelloService", metricRegistry))
+                .decorator(MetricCollectingClient.newDropwizardDecorator(
+                        metricRegistry, MetricRegistry.name("server", "HelloService")))
                 .build(HelloService.Iface.class);
         try {
             client.hello(name);
