@@ -35,25 +35,28 @@ public class MetricCollectingService extends DecoratingService {
      * A {@link Service} decorator that tracks request stats using the Dropwizard metrics library.
      * To use, simply prepare a {@link MetricRegistry} and add this decorator to a service specification.
      *
-     * @param serviceName a name to describe this service. Metrics will all be logged with name
-     *     server.serviceName.method.metricName.
      * @param metricRegistry the {@link MetricRegistry} to store metrics into.
+     * @param metricNamePrefix the prefix of the names of the metrics created by the returned decorator.
      *
      * <p>Example:
      * <pre>{@code
      * MetricRegistry metricRegistry = new MetricRegistry();
-     * serverBuilder.serviceAt("/service", ThriftService.of(handler)
-     *     .decorate(MetricCollectingService.newDropwizardDecorator("MyService", metricRegistry)));
+     * serverBuilder.serviceAt(
+     *         "/service",
+     *         ThriftService.of(handler).decorate(
+     *                 MetricCollectingService.newDropwizardDecorator(
+     *                         metricRegistry, MetricRegister.name("services", "myService"))));
      * }
      * </pre>
      * <p>It is generally recommended to define your own name for the service instead of using something like
      * the Java class to make sure otherwise safe changes like renames don't break metrics.
      */
-    public static Function<Service, Service> newDropwizardDecorator(
-            String serviceName, MetricRegistry metricRegistry) {
+    public static Function<Service, Service> newDropwizardDecorator(MetricRegistry metricRegistry,
+                                                                    String metricNamePrefix) {
+
         return service -> new MetricCollectingService(
                 service,
-                new DropwizardMetricConsumer("server", serviceName, metricRegistry));
+                new DropwizardMetricConsumer(metricRegistry, metricNamePrefix));
     }
 
     public MetricCollectingService(Service service, MetricConsumer consumer) {

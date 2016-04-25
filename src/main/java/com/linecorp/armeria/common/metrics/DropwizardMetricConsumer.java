@@ -1,42 +1,43 @@
 package com.linecorp.armeria.common.metrics;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.codahale.metrics.MetricRegistry;
 
+import com.linecorp.armeria.client.metrics.MetricCollectingClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.server.ServiceCodec;
+import com.linecorp.armeria.server.metrics.MetricCollectingService;
 
 /**
- * {@link MetricConsumer} that accepts metric data from
- * {@link com.linecorp.armeria.client.metrics.MetricCollectingClient} or
- * {@link com.linecorp.armeria.server.metrics.MetricCollectingService} and stores it
- * into the {@link MetricRegistry}. Only for internal use.
+ * (Internal use only) {@link MetricConsumer} that accepts metric data from {@link MetricCollectingClient} or
+ * {@link MetricCollectingService} and stores it into the {@link MetricRegistry}.
  */
 public class DropwizardMetricConsumer implements MetricConsumer {
 
-    private final String prefix;
-    private final String serviceName;
     private final MetricRegistry metricRegistry;
+    private final String metricNamePrefix;
     private final Map<String, DropwizardRequestMetrics> methodRequestMetrics;
 
     /**
      * Creates a new instance that decorates the specified {@link ServiceCodec}.
      */
-    public DropwizardMetricConsumer(String prefix, String serviceName, MetricRegistry metricRegistry) {
-        this.prefix = prefix;
-        this.serviceName = serviceName;
-        this.metricRegistry = metricRegistry;
+    public DropwizardMetricConsumer(MetricRegistry metricRegistry, String metricNamePrefix) {
+        this.metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
+        this.metricNamePrefix = requireNonNull(metricNamePrefix, "metricNamePrefix");
         methodRequestMetrics = new ConcurrentHashMap<>();
     }
 
     @Override
     public void invocationComplete(Scheme scheme, int code, long processTimeNanos, int requestSize,
                                    int responseSize, String hostname, String path, Optional<String> method) {
-        String metricName = MetricRegistry.name(prefix, serviceName, method.orElse("__unknown__"));
-        DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
+
+        final String metricName = MetricRegistry.name(metricNamePrefix, method.orElse("__unknown__"));
+        final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
         metrics.updateTime(processTimeNanos);
         if (code < 400) {
             metrics.markSuccess();
