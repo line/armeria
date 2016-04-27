@@ -46,6 +46,8 @@ class MetricCollectingClientCodec extends DecoratingClientCodec {
         if (result.isSuccess()) {
             ServiceInvocationContext context = result.invocationContext();
             context.attr(METRICS).set(new MetricsData(getRequestSize(result.content()), startTime));
+            metricConsumer.invocationStarted(
+                    context.scheme(), context.host(), context.path(), Optional.of(context.method()));
         } else {
             metricConsumer.invocationComplete(
                     result.encodedScheme().orElse(Scheme.of(SerializationFormat.UNKNOWN, sessionProtocol)),
@@ -53,7 +55,8 @@ class MetricCollectingClientCodec extends DecoratingClientCodec {
                     System.nanoTime() - startTime, 0, 0,
                     result.encodedHost().orElse("__unknown_host__"),
                     result.encodedPath().orElse("__unknown_path__"),
-                    Optional.empty());
+                    Optional.empty(),
+                    false);
         }
         return result;
     }
@@ -64,7 +67,7 @@ class MetricCollectingClientCodec extends DecoratingClientCodec {
         metricConsumer.invocationComplete(
                 ctx.scheme(), status.code(), System.nanoTime() - metricsData.startTimeNanos,
                 metricsData.requestSizeBytes, responseSizeBytes, ctx.host(), ctx.path(),
-                Optional.of(ctx.method()));
+                Optional.of(ctx.method()), true);
     }
 
     @Override

@@ -72,6 +72,7 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
         case SUCCESS: {
             ServiceInvocationContext context = decodeResult.invocationContext();
             context.attr(METRICS).set(new MetricsData(requestSize, startTime));
+            metricConsumer.invocationStarted(context.scheme(), hostname, path, decodeResult.decodedMethod());
 
             promise.addListener(future -> {
                 if (!future.isSuccess()) {
@@ -85,7 +86,7 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
                     metricConsumer.invocationComplete(
                             context.scheme(), httpResponse.status().code(),
                             lazyElapsedTime.getAsLong(), requestSize, httpResponse.content().readableBytes(),
-                            hostname, path, decodeResult.decodedMethod());
+                            hostname, path, decodeResult.decodedMethod(), true);
                 }
                 // encodeResponse will process this case.
             });
@@ -98,12 +99,13 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
                 metricConsumer.invocationComplete(
                         Scheme.of(decodeResult.decodedSerializationFormat(), sessionProtocol),
                         httpResponse.status().code(), lazyElapsedTime.getAsLong(), requestSize,
-                        httpResponse.content().readableBytes(), hostname, path, decodeResult.decodedMethod());
+                        httpResponse.content().readableBytes(), hostname, path, decodeResult.decodedMethod(),
+                        false);
             } else {
                 metricConsumer.invocationComplete(
                         Scheme.of(decodeResult.decodedSerializationFormat(), sessionProtocol),
                         HttpResponseStatus.BAD_REQUEST.code(), lazyElapsedTime.getAsLong(), requestSize, 0, hostname,
-                        path, decodeResult.decodedMethod());
+                        path, decodeResult.decodedMethod(), false);
             }
             break;
         }
@@ -111,7 +113,7 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
             metricConsumer.invocationComplete(
                     Scheme.of(decodeResult.decodedSerializationFormat(), sessionProtocol),
                     HttpResponseStatus.NOT_FOUND.code(), lazyElapsedTime.getAsLong(), requestSize, 0, hostname, path,
-                    decodeResult.decodedMethod());
+                    decodeResult.decodedMethod(), false);
             break;
         }
 
@@ -124,7 +126,7 @@ final class MetricCollectingServiceCodec extends DecoratingServiceCodec {
         long elapsedTime = System.nanoTime() - metricsData.startTimeNanos;
         metricConsumer.invocationComplete(
                 ctx.scheme(), status.code(), elapsedTime, metricsData.requestSizeBytes,
-                buf.readableBytes(), ctx.host(), ctx.path(), Optional.of(ctx.method()));
+                buf.readableBytes(), ctx.host(), ctx.path(), Optional.of(ctx.method()), true);
     }
 
     @Override

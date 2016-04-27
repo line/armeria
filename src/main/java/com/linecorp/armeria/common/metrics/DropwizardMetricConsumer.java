@@ -33,8 +33,16 @@ public class DropwizardMetricConsumer implements MetricConsumer {
     }
 
     @Override
+    public void invocationStarted(Scheme scheme, String hostname, String path, Optional<String> method) {
+        final String metricName = MetricRegistry.name(metricNamePrefix, method.orElse("__unknown__"));
+        final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
+        metrics.markStart();
+    }
+
+    @Override
     public void invocationComplete(Scheme scheme, int code, long processTimeNanos, int requestSize,
-                                   int responseSize, String hostname, String path, Optional<String> method) {
+                                   int responseSize, String hostname, String path, Optional<String> method,
+                                   boolean started) {
 
         final String metricName = MetricRegistry.name(metricNamePrefix, method.orElse("__unknown__"));
         final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
@@ -46,6 +54,9 @@ public class DropwizardMetricConsumer implements MetricConsumer {
         }
         metrics.requestBytes(requestSize);
         metrics.responseBytes(responseSize);
+        if (started) {
+            metrics.markComplete();
+        }
     }
 
     private DropwizardRequestMetrics getRequestMetrics(String methodLoggedName) {
@@ -56,6 +67,7 @@ public class DropwizardMetricConsumer implements MetricConsumer {
                         metricRegistry.timer(MetricRegistry.name(m, "requests")),
                         metricRegistry.meter(MetricRegistry.name(m, "successes")),
                         metricRegistry.meter(MetricRegistry.name(m, "failures")),
+                        metricRegistry.counter(MetricRegistry.name(m, "activeRequests")),
                         metricRegistry.meter(MetricRegistry.name(m, "requestBytes")),
                         metricRegistry.meter(MetricRegistry.name(m, "responseBytes"))));
     }
