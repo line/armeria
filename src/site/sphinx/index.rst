@@ -27,8 +27,7 @@ Check out `the introductory slides and case study`_.
 
 .. raw:: html
 
-    <script async class="speakerdeck-embed" data-id="8d645c29ce33400e8360e61fd0250f91" data-ratio="1.6"
-            src="//speakerdeck.com/assets/embed.js"></script>
+    <div style="max-width: 512px;"><script async class="speakerdeck-embed" data-id="8d645c29ce33400e8360e61fd0250f91" data-ratio="1.6" src="//speakerdeck.com/assets/embed.js"></script></div>
 
 HTTP/2
 ^^^^^^
