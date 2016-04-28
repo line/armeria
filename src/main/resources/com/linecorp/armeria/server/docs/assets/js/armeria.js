@@ -184,7 +184,7 @@ $(function () {
                      return className;
                    }
 
-                   return '<a href="#class/' + encodeURIComponent(className) + '" title="' + className + '">' +
+                   return '<a href="#!class/' + encodeURIComponent(className) + '" title="' + className + '">' +
                           classInfo.simpleName + '</a>';
                  });
   }
