@@ -42,11 +42,6 @@ import io.netty.util.internal.OneTimeTask;
 
 class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
-    static final Object RETRY_WITH_H1C = new Object();
-
-    static final ChannelHealthChecker HEALTH_CHECKER =
-            ch -> ch.eventLoop().newSucceededFuture(HttpSessionHandler.get(ch).isActive());
-
     private final Bootstrap baseBootstrap;
     private final EventLoop eventLoop;
     private final Map<SessionProtocol, Bootstrap> bootstrapMap;

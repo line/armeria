@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.HttpSessionChannelFactory.RETRY_WITH_H1C;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -69,10 +68,6 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
     private static final String ARMERIA_USER_AGENT = "armeria client";
 
     static HttpSession get(Channel ch) {
-        if (!ch.isActive()) {
-            return HttpSession.INACTIVE;
-        }
-
         final HttpSessionHandler sessionHandler = ch.pipeline().get(HttpSessionHandler.class);
         if (sessionHandler == null) {
             return HttpSession.INACTIVE;
@@ -85,10 +80,25 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> timeoutFuture;
 
+    /** Whether the current channel is active or not **/
+    private volatile boolean active;
+
+    /** The current negotiated {@link SessionProtocol} */
     private SessionProtocol protocol;
+
+    /**
+     * A queue of pending requests.
+     * Set to {@link SequentialWaitsHolder} or {@link MultiplexWaitsHolder} later on protocol negotiation.
+     */
     private WaitsHolder waitsHolder = PreNegotiationWaitsHolder.INSTANCE;
-    private volatile boolean active = true;
+
+    /** The number of requests sent. Disconnects when it reaches at {@link #MAX_NUM_REQUESTS_SENT}. */
     private int numRequestsSent;
+
+    /**
+     * {@code true} if the protocol upgrade to HTTP/2 has failed.
+     * If set to {@code true}, another connection attempt will follow.
+     */
     private boolean needsRetryWithH1C;
 
     HttpSessionHandler(HttpSessionChannelFactory channelFactory,
@@ -114,6 +124,11 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
         return !isDisconnectionPending(++numRequestsSent);
     }
 
+    @Override
+    public void retryWithH1C() {
+        needsRetryWithH1C = true;
+    }
+
     private boolean isDisconnectionRequired(FullHttpResponse response) {
         if (isDisconnectionPending(numRequestsSent) && waitsHolder.isEmpty()) {
             return true;
@@ -131,7 +146,18 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
 
     @Override
     public void deactivate() {
+        active = false;
         failPendingResponses(ClosedSessionException.INSTANCE);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        active = ctx.channel().isActive();
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        active = true;
     }
 
     @Override
@@ -223,23 +249,22 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
             return;
         }
 
-        if (evt == RETRY_WITH_H1C) {
-            // Protocol upgrade has failed, but needs to retry.
-            needsRetryWithH1C = true;
-            timeoutFuture.cancel(false);
-            ctx.close();
-            channelFactory.connect(ctx.channel().remoteAddress(), SessionProtocol.H1C, sessionPromise);
-            return;
-        }
-
         logger.warn("{} Unexpected user event: {}", ctx.channel(), evt);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        failPendingResponses(ClosedSessionException.INSTANCE);
+        active = false;
 
-        if (!needsRetryWithH1C) {
+        // Protocol upgrade has failed, but needs to retry.
+        if (needsRetryWithH1C) {
+            assert waitsHolder.isEmpty();
+            timeoutFuture.cancel(false);
+            channelFactory.connect(ctx.channel().remoteAddress(), SessionProtocol.H1C, sessionPromise);
+        } else {
+            // Fail all pending responses.
+            failPendingResponses(ClosedSessionException.INSTANCE);
+
             // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
             // even before the session protocol negotiation is done.
             timeoutFuture.cancel(false);
@@ -257,7 +282,6 @@ class HttpSessionHandler extends ChannelDuplexHandler implements HttpSession {
     }
 
     private void failPendingResponses(Throwable e) {
-        active = false;
         final Collection<Invocation> invocations = waitsHolder.getAll();
         if (!invocations.isEmpty()) {
             invocations.forEach(i -> i.invocationContext().rejectPromise(i.resultPromise(), e));
