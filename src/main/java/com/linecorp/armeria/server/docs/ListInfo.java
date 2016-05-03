@@ -18,7 +18,11 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
+
+import javax.annotation.Nullable;
 
 import org.apache.thrift.meta_data.ListMetaData;
 import org.apache.thrift.protocol.TType;
@@ -26,12 +30,16 @@ import org.apache.thrift.protocol.TType;
 class ListInfo extends TypeInfo implements CollectionInfo {
 
     static ListInfo of(ListMetaData listMetaData) {
+        return of(listMetaData, null, Collections.emptyMap());
+    }
+
+    static ListInfo of(ListMetaData listMetaData, @Nullable String namespace, Map<String, String> docStrings) {
         requireNonNull(listMetaData, "listMetaData");
 
         assert listMetaData.type == TType.LIST;
         assert !listMetaData.isBinary();
 
-        return new ListInfo(of(listMetaData.elemMetaData));
+        return new ListInfo(of(listMetaData.elemMetaData, namespace, docStrings));
     }
 
     static ListInfo of(TypeInfo elementType) {

@@ -39,4 +39,7 @@ interface ClassInfo {
 
     @JsonProperty
     List<Object> constants();
+
+    @JsonProperty
+    String docString();
 }

@@ -18,7 +18,11 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
+
+import javax.annotation.Nullable;
 
 import org.apache.thrift.meta_data.FieldMetaData;
 
@@ -27,24 +31,39 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 class FieldInfo {
 
     static FieldInfo of(FieldMetaData fieldMetaData) {
-        requireNonNull(fieldMetaData, "fieldMetaData");
+        return of(fieldMetaData, null, Collections.emptyMap());
+    }
 
-        return new FieldInfo(fieldMetaData.fieldName, RequirementType.of(fieldMetaData.requirementType),
-                             TypeInfo.of(fieldMetaData.valueMetaData));
+    static FieldInfo of(FieldMetaData fieldMetaData, @Nullable String namespace,
+                        Map<String, String> docStrings) {
+        requireNonNull(fieldMetaData, "fieldMetaData");
+        final String docStringKey = ThriftDocString.key(namespace, fieldMetaData.fieldName);
+        return new FieldInfo(fieldMetaData.fieldName,
+                             RequirementType.of(fieldMetaData.requirementType),
+                             TypeInfo.of(fieldMetaData.valueMetaData, namespace, docStrings),
+                             docStrings.get(docStringKey));
     }
 
     static FieldInfo of(String name, RequirementType requirementType, TypeInfo type) {
-        return new FieldInfo(name, requirementType, type);
+        return of(name, requirementType, type, null, Collections.emptyMap());
+    }
+
+    static FieldInfo of(String name, RequirementType requirementType, TypeInfo type,
+                        @Nullable String namespace, Map<String, String> docStrings) {
+        final String docStringKey = ThriftDocString.key(namespace, name);
+        return new FieldInfo(name, requirementType, type, docStrings.get(docStringKey));
     }
 
     private final String name;
     private final RequirementType requirementType;
     private final TypeInfo type;
+    private final String docString;
 
-    private FieldInfo(String name, RequirementType requirementType, TypeInfo type) {
+    private FieldInfo(String name, RequirementType requirementType, TypeInfo type, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
         this.requirementType = requireNonNull(requirementType, "requirementType");
         this.type = requireNonNull(type, "type");
+        this.docString = docString;
     }
 
     @JsonProperty
@@ -60,6 +79,11 @@ class FieldInfo {
     @JsonProperty
     public TypeInfo type() {
         return type;
+    }
+
+    @JsonProperty
+    public String docString() {
+        return docString;
     }
 
     @Override

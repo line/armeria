@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.meta_data.StructMetaData;
 import org.apache.thrift.protocol.TType;
@@ -31,6 +33,10 @@ import org.apache.thrift.protocol.TType;
 class StructInfo extends TypeInfo implements ClassInfo {
 
     static StructInfo of(StructMetaData structMetaData) {
+        return of(structMetaData, null, Collections.emptyMap());
+    }
+
+    static StructInfo of(StructMetaData structMetaData, @Nullable String namespace, Map<String, String> docStrings) {
         final Class<?> structClass = structMetaData.structClass;
 
         assert structMetaData.type == TType.STRUCT;
@@ -39,23 +45,31 @@ class StructInfo extends TypeInfo implements ClassInfo {
         final Map<?, FieldMetaData> metaDataMap =
                 FieldMetaData.getStructMetaDataMap(structMetaData.structClass);
         final List<FieldInfo> fields = metaDataMap.values().stream()
-                                                  .map(FieldInfo::of).collect(Collectors.toList());
+                .map(fieldMetaData -> FieldInfo.of(fieldMetaData, namespace, docStrings))
+                .collect(Collectors.toList());
 
-        return new StructInfo(structClass.getName(), fields);
+        final String name = structClass.getName();
+        return new StructInfo(name, fields, docStrings.get(name));
     }
 
     static StructInfo of(String name, List<FieldInfo> fields) {
-        return new StructInfo(name, fields);
+        return of(name, fields, Collections.emptyMap());
+    }
+
+    static StructInfo of(String name, List<FieldInfo> fields, Map<String, String> docStrings) {
+        return new StructInfo(name, fields, docStrings.get(name));
     }
 
     private final String name;
     private final List<FieldInfo> fields;
+    private final String docString;
 
-    private StructInfo(String name, List<FieldInfo> fields) {
+    private StructInfo(String name, List<FieldInfo> fields, @Nullable String docString) {
         super(ValueType.STRUCT, false);
 
         this.name = requireNonNull(name, "name");
         this.fields = Collections.unmodifiableList(requireNonNull(fields, "fields"));
+        this.docString = docString;
     }
 
     @Override
@@ -71,6 +85,11 @@ class StructInfo extends TypeInfo implements ClassInfo {
     @Override
     public List<Object> constants() {
         return Collections.emptyList();
+    }
+
+    @Override
+    public String docString() {
+        return docString;
     }
 
     @Override

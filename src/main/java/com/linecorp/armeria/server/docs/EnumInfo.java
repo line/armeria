@@ -22,6 +22,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.thrift.meta_data.EnumMetaData;
@@ -30,6 +31,10 @@ import org.apache.thrift.protocol.TType;
 class EnumInfo extends TypeInfo implements ClassInfo {
 
     static EnumInfo of(EnumMetaData enumMetaData) {
+        return of(enumMetaData, Collections.emptyMap());
+    }
+
+    static EnumInfo of(EnumMetaData enumMetaData, Map<String, String> docStrings) {
         requireNonNull(enumMetaData, "enumMetaData");
 
         final Class<?> enumClass = enumMetaData.enumClass;
@@ -47,21 +52,28 @@ class EnumInfo extends TypeInfo implements ClassInfo {
             }
         }
 
-        return new EnumInfo(enumClass.getName(), constants);
+        final String name = enumClass.getName();
+        return new EnumInfo(name, constants, docStrings.get(name));
     }
 
     static EnumInfo of(String name, List<Object> constants) {
-        return new EnumInfo(name, constants);
+        return of(name, constants, Collections.emptyMap());
+    }
+
+    static EnumInfo of(String name, List<Object> constants, Map<String, String> docStrings) {
+        return new EnumInfo(name, constants, docStrings.get(name));
     }
 
     private final String name;
     private final List<Object> constants;
+    private final String docString;
 
-    private EnumInfo(String name, List<Object> constants) {
+    private EnumInfo(String name, List<Object> constants, String docString) {
         super(ValueType.ENUM, false);
 
         this.name = requireNonNull(name, "name");
         this.constants = Collections.unmodifiableList(requireNonNull(constants, "constants"));
+        this.docString = docString;
     }
 
     @Override
@@ -77,6 +89,11 @@ class EnumInfo extends TypeInfo implements ClassInfo {
     @Override
     public List<Object> constants() {
         return constants;
+    }
+
+    @Override
+    public String docString() {
+        return docString;
     }
 
     @Override

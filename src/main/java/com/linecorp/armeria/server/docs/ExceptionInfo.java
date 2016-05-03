@@ -24,13 +24,20 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TException;
 import org.apache.thrift.meta_data.FieldMetaData;
 
 class ExceptionInfo extends TypeInfo implements ClassInfo {
 
     static ExceptionInfo of(Class<? extends TException> exceptionClass) {
+        return of(exceptionClass, Collections.emptyMap());
+    }
+
+    static ExceptionInfo of(Class<? extends TException> exceptionClass, Map<String, String> docStrings) {
         requireNonNull(exceptionClass, "exceptionClass");
+        final String name = exceptionClass.getName();
 
         List<FieldInfo> fields;
         try {
@@ -38,28 +45,36 @@ class ExceptionInfo extends TypeInfo implements ClassInfo {
             final Map<?, FieldMetaData> metaDataMap =
                     (Map<?, FieldMetaData>) exceptionClass.getDeclaredField("metaDataMap").get(null);
 
-            fields = metaDataMap.values().stream().map(FieldInfo::of).collect(Collectors.toList());
+            fields = metaDataMap.values().stream()
+                                .map(fieldMetaData -> FieldInfo.of(fieldMetaData, name, docStrings))
+                                .collect(Collectors.toList());
         } catch (IllegalAccessException e) {
             throw new AssertionError("will not happen", e);
         } catch (NoSuchFieldException ignored) {
             fields = Collections.emptyList();
         }
 
-        return new ExceptionInfo(exceptionClass.getName(), fields);
+        return new ExceptionInfo(name, fields, docStrings.get(name));
     }
 
     static ExceptionInfo of(String name, List<FieldInfo> fields) {
-        return new ExceptionInfo(name, fields);
+        return of(name, fields, Collections.emptyMap());
+    }
+
+    static ExceptionInfo of(String name, List<FieldInfo> fields, Map<String, String> docStrings) {
+        return new ExceptionInfo(name, fields, docStrings.get(name));
     }
 
     private final String name;
     private final List<FieldInfo> fields;
+    private final String docString;
 
-    private ExceptionInfo(String name, List<FieldInfo> fields) {
+    private ExceptionInfo(String name, List<FieldInfo> fields, @Nullable String docString) {
         super(ValueType.STRUCT, false);
 
         this.name = requireNonNull(name, "name");
         this.fields = requireNonNull(Collections.unmodifiableList(fields), "fields");
+        this.docString = docString;
     }
 
     @Override
@@ -75,6 +90,11 @@ class ExceptionInfo extends TypeInfo implements ClassInfo {
     @Override
     public List<Object> constants() {
         return Collections.emptyList();
+    }
+
+    @Override
+    public String docString() {
+        return docString;
     }
 
     @Override

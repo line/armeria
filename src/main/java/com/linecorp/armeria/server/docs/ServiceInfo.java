@@ -29,6 +29,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,13 +45,15 @@ class ServiceInfo {
 
         final String name = serviceClass.getName();
 
-        final Class<?> interfaceClass = Class.forName(name + "$Iface", false, serviceClass.getClassLoader());
+        final ClassLoader serviceClassLoader = serviceClass.getClassLoader();
+        final Class<?> interfaceClass = Class.forName(name + "$Iface", false, serviceClassLoader);
         final Method[] methods = interfaceClass.getDeclaredMethods();
+        final Map<String, String> docStrings = ThriftDocString.getAllDocStrings(serviceClassLoader);
 
         final List<FunctionInfo> functions = new ArrayList<>(methods.length);
         final Set<ClassInfo> classes = new LinkedHashSet<>();
         for (Method method : methods) {
-            final FunctionInfo function = FunctionInfo.of(method, sampleRequests);
+            final FunctionInfo function = FunctionInfo.of(method, sampleRequests, name, docStrings);
             functions.add(function);
 
             addClassIfPossible(classes, function.returnType());
@@ -60,7 +64,7 @@ class ServiceInfo {
             });
         }
 
-        return new ServiceInfo(name, functions, classes, endpoints);
+        return new ServiceInfo(name, functions, classes, endpoints, docStrings.get(name));
     }
 
     private static void addClassIfPossible(Set<ClassInfo> classes, TypeInfo typeInfo) {
@@ -81,9 +85,10 @@ class ServiceInfo {
     private final Map<String, FunctionInfo> functions;
     private final Map<String, ClassInfo> classes;
     private final Map<String, EndpointInfo> endpoints;
+    private final String docString;
 
     private ServiceInfo(String name, List<FunctionInfo> functions, Collection<ClassInfo> classes,
-                        Iterable<EndpointInfo> endpoints) {
+                        Iterable<EndpointInfo> endpoints, @Nullable String docString) {
 
         this.name = requireNonNull(name, "name");
 
@@ -108,6 +113,8 @@ class ServiceInfo {
             endpoints0.put(i.hostnamePattern() + ':' + i.path(), i);
         }
         this.endpoints = Collections.unmodifiableMap(endpoints0);
+
+        this.docString = docString;
     }
 
     @JsonProperty
@@ -133,6 +140,11 @@ class ServiceInfo {
     @JsonProperty
     public Collection<EndpointInfo> endpoints() {
         return endpoints.values();
+    }
+
+    @JsonProperty
+    public String docString() {
+        return docString;
     }
 
     @Override
