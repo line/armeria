@@ -56,7 +56,7 @@ public class RemoteInvokerOptions extends AbstractOptions {
     private static final int DEFAULT_MAX_FRAME_LENGTH = 10 * 1024 * 1024; // 10 MB
     private static final Integer DEFAULT_MAX_CONCURRENCY = Integer.MAX_VALUE;
     private static final Boolean DEFAULT_USE_HTTP2_PREFACE =
-            !"false".equals(System.getProperty("com.linecorp.armeria.defaultUseHttp2Preface", "true"));
+            "true".equals(System.getProperty("com.linecorp.armeria.defaultUseHttp2Preface", "false"));
 
     static {
         logger.info("defaultUseHttp2Preface: {}", DEFAULT_USE_HTTP2_PREFACE);

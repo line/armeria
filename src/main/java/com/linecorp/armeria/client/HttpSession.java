@@ -37,11 +37,17 @@ interface HttpSession {
         }
 
         @Override
+        public void retryWithH1C() {
+            throw new IllegalStateException();
+        }
+
+        @Override
         public void deactivate() {}
     };
 
     SessionProtocol protocol();
     boolean isActive();
     boolean onRequestSent();
+    void retryWithH1C();
     void deactivate();
 }

@@ -53,6 +53,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -66,6 +67,10 @@ final class HttpRemoteInvoker implements RemoteInvoker {
 
     private static final KeyedChannelPoolHandlerAdapter<PoolKey> NOOP_POOL_HANDLER =
             new KeyedChannelPoolHandlerAdapter<>();
+
+    private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
+            ch -> ch.eventLoop().newSucceededFuture(HttpSessionHandler.get(ch).isActive());
+
 
     static final Set<SessionProtocol> HTTP_PROTOCOLS = EnumSet.of(H1, H1C, H2, H2C, HTTPS, HTTP);
 
@@ -136,7 +141,7 @@ final class HttpRemoteInvoker implements RemoteInvoker {
 
             //TODO(inch772) handle options.maxConcurrency();
             return new DefaultKeyedChannelPool<>(eventLoop, factory,
-                                                 HttpSessionChannelFactory.HEALTH_CHECKER, handler, true);
+                                                 POOL_HEALTH_CHECKER, handler, true);
         });
     }
 

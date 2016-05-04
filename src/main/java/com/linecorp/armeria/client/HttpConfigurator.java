@@ -466,11 +466,15 @@ class HttpConfigurator extends ChannelDuplexHandler {
      */
     private final class DowngradeHandler extends ByteToMessageDecoder {
 
+        private boolean handledResponse;
+
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             if (in.readableBytes() < 4) {
                 return;
             }
+
+            handledResponse = true;
 
             final ChannelPipeline p = ctx.pipeline();
 
@@ -495,12 +499,26 @@ class HttpConfigurator extends ChannelDuplexHandler {
 
             p.remove(this);
         }
+
+        @Override
+        protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+            super.decodeLast(ctx, in, out);
+            if (!handledResponse) {
+                // If the connection has been closed even without receiving anything useful,
+                // it is likely that the server failed to decode the preface string.
+                if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
+                    finishWithNegotiationFailure(ctx, H2C, H1C,
+                                                 "too little data to determine the HTTP version");
+                } else {
+                    // We can silently retry with H1C.
+                    retryWithH1C(ctx);
+                }
+            }
+        }
     }
 
     static void retryWithH1C(ChannelHandlerContext ctx) {
-        final ChannelPipeline pipeline = ctx.pipeline();
-        pipeline.channel().eventLoop().execute(
-                () -> pipeline.fireUserEventTriggered(HttpSessionChannelFactory.RETRY_WITH_H1C));
+        HttpSessionHandler.get(ctx.channel()).retryWithH1C();
         ctx.close();
     }
 

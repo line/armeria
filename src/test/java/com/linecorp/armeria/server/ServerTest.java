@@ -19,11 +19,15 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -228,6 +232,56 @@ public class ServerTest extends AbstractServerTest {
             long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - lastWriteNanos, TimeUnit.NANOSECONDS);
             assertThat(elapsedTimeMillis, is(greaterThanOrEqualTo(idleTimeoutMillis)));
+        }
+    }
+
+    @Test
+    public void testOptions() throws Exception {
+        testSimple("OPTIONS * HTTP/1.1", "HTTP/1.1 200 OK",
+                   "allow: DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT,TRACE");
+    }
+
+    @Test
+    public void testInvalidPath() throws Exception {
+        testSimple("GET * HTTP/1.1", "HTTP/1.1 400 Bad Request");
+    }
+
+    private static void testSimple(
+            String reqLine, String expectedStatusLine, String... expectedHeaders) throws Exception {
+
+        try (Socket socket = new Socket()) {
+            socket.setSoTimeout((int) (idleTimeoutMillis * 4));
+            socket.connect(server().activePort().get().localAddress());
+            PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
+
+            outWriter.print(reqLine);
+            outWriter.print("\r\n");
+            outWriter.print("Connection: close\r\n");
+            outWriter.print("Content-Length: 0\r\n");
+            outWriter.print("\r\n");
+            outWriter.flush();
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(
+                    socket.getInputStream(), StandardCharsets.US_ASCII));
+
+            assertThat(in.readLine(), is(expectedStatusLine));
+            // Read till the end of the connection.
+            List<String> headers = new ArrayList<>();
+            for (;;) {
+                String line = in.readLine();
+                if (line == null) {
+                    break;
+                }
+
+                // This is not really correct, but just wanna make it as simple as possible.
+                headers.add(line);
+            }
+
+            for (String expectedHeader : expectedHeaders) {
+                if (!headers.contains(expectedHeader)) {
+                    fail("does not contain '" + expectedHeader + "': " + headers);
+                }
+            }
         }
     }
 

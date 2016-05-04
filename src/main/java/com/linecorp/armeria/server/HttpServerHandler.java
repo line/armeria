@@ -67,6 +67,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final AsciiString STREAM_ID = HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text();
     private static final AsciiString ERROR_CONTENT_TYPE = new AsciiString("text/plain; charset=UTF-8");
+    private static final AsciiString ALLOWED_METHODS =
+            new AsciiString("DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT,TRACE");
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -221,9 +223,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
 
+            final String path = stripQuery(req.uri());
+            // Reject requests without a valid path, except for the special 'OPTIONS *' request.
+            if (path.isEmpty() || path.charAt(0) != '/') {
+                if (req.method() == HttpMethod.OPTIONS && "*".equals(path)) {
+                    handleOptions(ctx, req, reqSeq);
+                } else {
+                    respond(ctx, reqSeq, req, HttpResponseStatus.BAD_REQUEST);
+                }
+                return;
+            }
+
             final String hostname = hostname(req);
             final VirtualHost host = config.findVirtualHost(hostname);
-            final String path = stripQuery(req.uri());
 
             // Find the service that matches the path.
             final PathMapped<ServiceConfig> mapped = host.findServiceConfig(path);
@@ -272,6 +284,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 ReferenceCountUtil.safeRelease(req);
             }
         }
+    }
+
+    private void handleOptions(ChannelHandlerContext ctx, FullHttpRequest req, int reqSeq) {
+        final FullHttpResponse res = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
+        res.headers().set(HttpHeaderNames.ALLOW, ALLOWED_METHODS);
+        respond(ctx, reqSeq, req, res);
     }
 
     private void handleNonExistentMapping(ChannelHandlerContext ctx, int reqSeq, FullHttpRequest req,
