@@ -21,11 +21,15 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 
 import org.apache.catalina.connector.Connector;
+import org.apache.catalina.startup.Tomcat;
 
 import com.linecorp.armeria.server.http.HttpService;
 
 /**
- * An {@link HttpService} that dispatches its requests to a web application running in an embedded Tomcat.
+ * An {@link HttpService} that dispatches its requests to a web application running in an embedded
+ * <a href="http://tomcat.apache.org/">Tomcat</a>.
+ *
+ * @see TomcatServiceBuilder
  */
 public final class TomcatService extends HttpService {
     /**
@@ -77,8 +81,30 @@ public final class TomcatService extends HttpService {
     }
 
     /**
-     * Creates a new {@link TomcatService} with existing web application instance.
-     * If web application is not configured properly, generated service may responds with 503 error
+     * Creates a new {@link TomcatService} from an existing {@link Tomcat} instance.
+     * If the specified {@link Tomcat} instance is not configured properly, the returned {@link TomcatService}
+     * may respond with '503 Service Not Available' error.
+     */
+    public static TomcatService forTomcat(Tomcat tomcat) {
+        requireNonNull(tomcat, "tomcat");
+
+        final String hostname = tomcat.getEngine().getDefaultHost();
+        if (hostname == null) {
+            throw new IllegalArgumentException("default hostname not configured: " + tomcat);
+        }
+
+        final Connector connector = tomcat.getConnector();
+        if (connector == null) {
+            throw new IllegalArgumentException("connector not configured: " + tomcat);
+        }
+
+        return new TomcatService(hostname, connector);
+    }
+
+    /**
+     * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
+     * If the specified {@link Connector} instance is not configured properly, the returned
+     * {@link TomcatService} may respond with '503 Service Not Available' error.
      */
     public static TomcatService forConnector(String hostname, Connector connector) {
         requireNonNull(hostname, "hostname");
@@ -99,6 +125,6 @@ public final class TomcatService extends HttpService {
      * Returns tomcat {@link Connector}
      */
     public Connector connector() {
-        return ((TomcatServiceInvocationHandler)handler()).connector();
+        return ((TomcatServiceInvocationHandler) handler()).connector();
     }
 }

@@ -35,16 +35,18 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.apache.catalina.Realm;
+import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardEngine;
 import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 import org.apache.catalina.realm.NullRealm;
+import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Builds a {@link TomcatService} and its {@link TomcatServiceConfig}. Use the factory methods in
- * {@link TomcatService} if you do not override the default settings.
+ * Builds a {@link TomcatService}. Use the factory methods in {@link TomcatService} if you do not override
+ * the default settings or you have a configured {@link Tomcat} or {@link Connector} instance.
  */
 public final class TomcatServiceBuilder {
 
@@ -287,9 +289,8 @@ public final class TomcatServiceBuilder {
     }
 
     /**
-     * Sets a {@link Consumer} that performs additional configuration operations against
-     * the Tomcat {@link StandardServer} created by a {@link TomcatService}. This method can be invoked
-     * multiple times to add multiple {@code configurator}s.
+     * Adds a {@link Consumer} that performs additional configuration operations against
+     * the Tomcat {@link StandardServer} created by a {@link TomcatService}.
      */
     public TomcatServiceBuilder configurator(Consumer<? super StandardServer> configurator) {
         configurators.add(requireNonNull(configurator, "configurator"));

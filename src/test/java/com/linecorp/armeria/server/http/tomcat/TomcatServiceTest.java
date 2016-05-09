@@ -40,14 +40,13 @@ import org.junit.Test;
 
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.http.WebAppContainerTest;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.concurrent.Future;
 
-public class TomcatServiceTest extends AbstractServerTest {
-
-    private static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
+public class TomcatServiceTest extends WebAppContainerTest {
 
     private static final String SERVICE_NAME = "TomcatServiceTest";
 
@@ -56,7 +55,7 @@ public class TomcatServiceTest extends AbstractServerTest {
     @Override
     protected void configureServer(ServerBuilder sb) {
         sb.serviceUnder(
-                "/tc/",
+                "/jsp/",
                 TomcatServiceBuilder.forCurrentClassPath("tomcat_service")
                                     .serviceName(SERVICE_NAME)
                                     .configurator(s -> Collections.addAll(tomcatServices, s.findServices()))
@@ -64,98 +63,13 @@ public class TomcatServiceTest extends AbstractServerTest {
                                     .decorate(LoggingService::new));
 
         sb.serviceUnder(
-                "/tc_jar/",
+                "/jar/",
                 TomcatService.forClassPath(Future.class).decorate(LoggingService::new));
 
         sb.serviceUnder(
-                "/tc_jar_altroot/",
+                "/jar_altroot/",
                 TomcatService.forClassPath(Future.class, "/io/netty/util/concurrent")
                              .decorate(LoggingService::new));
-    }
-
-    @Test
-    public void testJsp() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/tc/")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
-                           startsWith("text/html"));
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent, is(
-                        "<html><body>" +
-                        "<p>Hello, Armerian World!</p>" +
-                        "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
-                        "<p>Context path: </p>" + // ROOT context path
-                        "<p>Request URI: /</p>" +
-                        "</body></html>"));
-            }
-        }
-    }
-
-    @Test
-    public void testGetQueryString() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(uri("/tc/query_string.jsp?foo=%31&bar=%32")))) {
-
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
-                           startsWith("text/html"));
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent, is(
-                        "<html><body>" +
-                        "<p>foo is 1</p>" +
-                        "<p>bar is 2</p>" +
-                        "</body></html>"));
-            }
-        }
-    }
-
-    @Test
-    public void testPostQueryString() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost post = new HttpPost(uri("/tc/query_string.jsp?foo=3"));
-            post.setEntity(new UrlEncodedFormEntity(
-                    Collections.singletonList(new BasicNameValuePair("bar", "4")), StandardCharsets.UTF_8));
-
-            try (CloseableHttpResponse res = hc.execute(post)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
-                           startsWith("text/html"));
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent, is(
-                        "<html><body>" +
-                        "<p>foo is 3</p>" +
-                        "<p>bar is 4</p>" +
-                        "</body></html>"));
-            }
-        }
-    }
-
-    @Test
-    public void testAddressesAndPorts() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/tc/addrs_and_ports.jsp")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
-                           startsWith("text/html"));
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-
-                assertTrue(actualContent, actualContent.matches(
-                        "<html><body>" +
-                        "<p>RemoteAddr: 127\\.0\\.0\\.1</p>" +
-                        "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
-                        "<p>RemotePort: [1-9][0-9]+</p>" +
-                        "<p>LocalAddr: (?!null)[^<]+</p>" +
-                        "<p>LocalName: localhost</p>" +
-                        "<p>LocalPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
-                        "</body></html>"));
-            }
-        }
     }
 
     @Test
@@ -168,7 +82,7 @@ public class TomcatServiceTest extends AbstractServerTest {
     public void testJarBasedWebApp() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(uri("/tc_jar/io/netty/util/concurrent/Future.class")))) {
+                    new HttpGet(uri("/jar/io/netty/util/concurrent/Future.class")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
                            startsWith("application/java"));
@@ -179,7 +93,7 @@ public class TomcatServiceTest extends AbstractServerTest {
     @Test
     public void testJarBasedWebAppWithAlternativeRoot() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/tc_jar_altroot/Future.class")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/jar_altroot/Future.class")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
                            startsWith("application/java"));
