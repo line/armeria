@@ -17,6 +17,8 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -210,5 +212,13 @@ public interface PathMapping extends Function<String, String> {
         }
 
         return new Prepend(this, pathPrefix);
+    }
+
+    /**
+     * Returns a map which contains routing variable symbols and values if the certain path mapping class supports
+     * variable symbols, {@link Optional#empty} otherwise
+     */
+    default Optional<HashMap<String, List<String>>> getRoutingVariables(String uri) {
+        return Optional.empty();
     }
 }
