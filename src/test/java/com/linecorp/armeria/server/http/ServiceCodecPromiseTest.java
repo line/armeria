@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.http;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -71,6 +72,7 @@ public class ServiceCodecPromiseTest {
         }, handler);
 
         sb.serviceAt("/", service);
+        sb.serviceAt("/:variable/*", service);
     }
 
     abstract static class ExecutionCheckingTest extends AbstractServerTest {
@@ -115,6 +117,42 @@ public class ServiceCodecPromiseTest {
         protected void configureServer(ServerBuilder sb) {
             setupServer(sb, defaultListener,
                         (ctx, blockingTaskExecutor, promise) -> promise.tryFailure(new RuntimeException()));
+        }
+    }
+
+    abstract static class RoutingVariableTest extends AbstractServerTest {
+        private boolean executed;
+
+        protected GenericFutureListener<? extends Future<? super Object>> defaultListener =
+                (Future<? super Object> future) -> executed = true;
+
+        @Test
+        public void test() throws Exception {
+            try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+                final HttpPost req = new HttpPost(uri("/hello/world"));
+                hc.execute(req);
+                assertTrue(executed);
+            }
+        }
+    }
+
+    public static class RoutingVariableContentTest extends RoutingVariableTest {
+        @Override
+        protected void configureServer(ServerBuilder sb) {
+            setupServer(sb, defaultListener,
+                    (ctx, blockingTaskExecutor, promise) -> {
+                        String variable = ((HttpServiceInvocationContext)ctx).getMappedVariables("variable");
+                        if (!variable.equals("hello")) {
+                            promise.tryFailure(new RuntimeException());
+                            return;
+                        }
+                        List<String> globs = ((HttpServiceInvocationContext)ctx).getGlobStrings();
+                        if (!globs.equals("world")) {
+                            promise.tryFailure(new RuntimeException());
+                            return;
+                        }
+                        promise.trySuccess("RoutingVariableContentTest");
+                    });
         }
     }
 }
