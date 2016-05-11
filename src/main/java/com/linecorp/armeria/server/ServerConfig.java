@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
@@ -58,7 +59,7 @@ public final class ServerConfig {
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
 
-    private final Executor blockingTaskExecutor;
+    private final ExecutorService blockingTaskExecutor;
 
     private final String serviceLoggerPrefix;
 
@@ -90,7 +91,14 @@ public final class ServerConfig {
         validateGreaterThanOrEqual(gracefulShutdownTimeout, "gracefulShutdownTimeout",
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
-        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        if (blockingTaskExecutor instanceof ExecutorService) {
+            this.blockingTaskExecutor = new InterminableExecutorService((ExecutorService) blockingTaskExecutor);
+        } else {
+            this.blockingTaskExecutor = new ExecutorBasedExecutorService(blockingTaskExecutor);
+        }
+
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
 
         // Set localAddresses.
@@ -355,9 +363,9 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the {@link Executor} dedicated to the execution of blocking tasks or invocations.
+     * Returns the {@link ExecutorService} dedicated to the execution of blocking tasks or invocations.
      */
-    public Executor blockingTaskExecutor() {
+    public ExecutorService blockingTaskExecutor() {
         return blockingTaskExecutor;
     }
 

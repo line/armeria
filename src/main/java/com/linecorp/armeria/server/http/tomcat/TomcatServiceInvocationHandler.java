@@ -52,8 +52,6 @@ import io.netty.util.concurrent.Promise;
 
 class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(TomcatServiceInvocationHandler.class);
-
     private final String hostname;
 
     private final Connector connector;

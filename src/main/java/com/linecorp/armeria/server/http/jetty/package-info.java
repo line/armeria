@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,6 +15,6 @@
  */
 
 /**
- * Embedded <a href="http://tomcat.apache.org/">Tomcat</a> service.
+ * Embedded <a href="http://www.eclipse.org/jetty/">Jetty</a> service.
  */
-package com.linecorp.armeria.server.http.tomcat;
+package com.linecorp.armeria.server.http.jetty;

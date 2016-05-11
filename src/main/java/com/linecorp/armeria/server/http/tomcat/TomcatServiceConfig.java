@@ -29,7 +29,7 @@ import org.apache.catalina.core.StandardService;
 /**
  * {@link TomcatService} configuration.
  */
-public class TomcatServiceConfig {
+final class TomcatServiceConfig {
 
     private final String serviceName;
     private final String engineName;
@@ -57,42 +57,42 @@ public class TomcatServiceConfig {
     /**
      * Returns the name of the {@link StandardService} of an embedded Tomcat.
      */
-    public String serviceName() {
+    String serviceName() {
         return serviceName;
     }
 
     /**
      * Returns the name of the {@link StandardEngine} of an embedded Tomcat.
      */
-    public String engineName() {
+    String engineName() {
         return engineName;
     }
 
     /**
      * Returns the base directory of an embedded Tomcat.
      */
-    public Path baseDir() {
+    Path baseDir() {
         return baseDir;
     }
 
     /**
      * Returns the {@link Realm} of an embedded Tomcat.
      */
-    public Realm realm() {
+    Realm realm() {
         return realm;
     }
 
     /**
      * Returns the hostname of an embedded Tomcat.
      */
-    public String hostname() {
+    String hostname() {
         return hostname;
     }
 
     /**
      * Returns the document base directory of a web application.
      */
-    public Path docBase() {
+    Path docBase() {
         return docBase;
     }
 
@@ -101,7 +101,7 @@ public class TomcatServiceConfig {
      *
      * @return {@link Optional#empty()} if {@link #docBase()} is not a JAR/WAR file
      */
-    public Optional<String> jarRoot() {
+    Optional<String> jarRoot() {
         return Optional.ofNullable(jarRoot);
     }
 
@@ -109,7 +109,7 @@ public class TomcatServiceConfig {
      * Returns the {@link Consumer}s that performs additional configuration operations against
      * the Tomcat {@link StandardServer} created by a {@link TomcatService}.
      */
-    public List<Consumer<? super StandardServer>> configurators() {
+    List<Consumer<? super StandardServer>> configurators() {
         return configurators;
     }
 
