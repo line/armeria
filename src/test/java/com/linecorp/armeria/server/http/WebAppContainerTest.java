@@ -121,7 +121,7 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
                         "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
                         "<p>RemotePort: [1-9][0-9]+</p>" +
                         "<p>LocalAddr: (?!null)[^<]+</p>" +
-                        "<p>LocalName: localhost</p>" +
+                        "<p>LocalName: " + server().defaultHostname() + "</p>" +
                         "<p>LocalPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
                         "</body></html>"));
             }

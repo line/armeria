@@ -147,6 +147,14 @@ public final class Server implements AutoCloseable {
     }
 
     /**
+     * Returns the hostname of the default {@link VirtualHost}, which is the hostname of the machine unless
+     * configured explicitly via {@link ServerBuilder#defaultVirtualHost(VirtualHost)}.
+     */
+    public String defaultHostname() {
+        return config().defaultVirtualHost().defaultHostname();
+    }
+
+    /**
      * Returns all {@link ServerPort}s that this {@link Server} is listening to.
      *
      * @return a {@link Map} whose key is the bind address and value is {@link ServerPort}.

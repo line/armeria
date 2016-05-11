@@ -28,7 +28,9 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.SessionIdManager;
+import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.util.component.Container;
+import org.eclipse.jetty.util.component.Container.Listener;
 import org.eclipse.jetty.util.component.LifeCycle;
 
 final class JettyServiceConfig {
@@ -42,6 +44,7 @@ final class JettyServiceConfig {
     private final SessionIdManager sessionIdManager;
     private final Map<String, Object> attrs;
     private final List<Bean> beans;
+    private final List<HandlerWrapper> handlerWrappers;
     private final List<Container.Listener> eventListeners;
     private final List<LifeCycle.Listener> lifeCycleListeners;
     private final List<Consumer<? super Server>> configurators;
@@ -49,8 +52,8 @@ final class JettyServiceConfig {
     JettyServiceConfig(String hostname,
                        Boolean dumpAfterStart, Boolean dumpBeforeStop, Long stopTimeoutMillis,
                        Handler handler, RequestLog requestLog, SessionIdManager sessionIdManager,
-                       Map<String, Object> attrs, List<Bean> beans,
-                       List<Container.Listener> eventListeners, List<LifeCycle.Listener> lifeCycleListeners,
+                       Map<String, Object> attrs, List<Bean> beans, List<HandlerWrapper> handlerWrappers,
+                       List<Listener> eventListeners, List<LifeCycle.Listener> lifeCycleListeners,
                        List<Consumer<? super Server>> configurators) {
 
         this.hostname = hostname;
@@ -62,13 +65,14 @@ final class JettyServiceConfig {
         this.sessionIdManager = sessionIdManager;
         this.attrs = Collections.unmodifiableMap(attrs);
         this.beans = Collections.unmodifiableList(beans);
+        this.handlerWrappers = Collections.unmodifiableList(handlerWrappers);
         this.eventListeners = Collections.unmodifiableList(eventListeners);
         this.lifeCycleListeners = Collections.unmodifiableList(lifeCycleListeners);
         this.configurators = Collections.unmodifiableList(configurators);
     }
 
-    String hostname() {
-        return hostname;
+    Optional<String> hostname() {
+        return Optional.ofNullable(hostname);
     }
 
     Optional<Boolean> dumpAfterStart() {
@@ -103,6 +107,10 @@ final class JettyServiceConfig {
         return beans;
     }
 
+    List<HandlerWrapper> handlerWrappers() {
+        return handlerWrappers;
+    }
+
     List<Container.Listener> eventListeners() {
         return eventListeners;
     }
@@ -118,15 +126,16 @@ final class JettyServiceConfig {
     @Override
     public String toString() {
         return toString(
-                this, hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler,
-                requestLog, sessionIdManager, attrs, beans, eventListeners, lifeCycleListeners, configurators);
+                this, hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
+                sessionIdManager, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
+                configurators);
     }
 
     static String toString(
-            Object holder, String hostname, Boolean dumpAfterStart, Boolean dumpBeforeStop,
-            Long stopTimeout, Handler handler, RequestLog requestLog,
-            SessionIdManager sessionIdManager, Map<String, Object> attrs, List<Bean> beans,
-            List<Container.Listener> eventListeners, List<LifeCycle.Listener> lifeCycleListeners,
+            Object holder, String hostname, Boolean dumpAfterStart, Boolean dumpBeforeStop, Long stopTimeout,
+            Handler handler, RequestLog requestLog, SessionIdManager sessionIdManager,
+            Map<String, Object> attrs, List<Bean> beans, List<HandlerWrapper> handlerWrappers,
+            List<Listener> eventListeners, List<LifeCycle.Listener> lifeCycleListeners,
             List<Consumer<? super Server>> configurators) {
 
         final StringBuilder buf = new StringBuilder(256);
@@ -149,6 +158,8 @@ final class JettyServiceConfig {
         buf.append(attrs);
         buf.append(", beans: ");
         buf.append(beans);
+        buf.append(", handlerWrappers: ");
+        buf.append(handlerWrappers);
         buf.append(", eventListeners: ");
         buf.append(eventListeners);
         buf.append(", lifeCycleListeners: ");

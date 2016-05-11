@@ -27,7 +27,6 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -36,26 +35,39 @@ import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 
 public class UnmanagedTomcatServiceTest extends AbstractServerTest {
-    private static Tomcat tomcat;
+    private static Tomcat tomcatWithWebApp;
+    private static Tomcat tomcatWithoutWebApp;
 
     @BeforeClass
-    public static void createTomcat() {
-        tomcat = new Tomcat();
-        tomcat.setBaseDir("target" + File.separatorChar +
-                          "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName());
+    public static void createTomcat() throws Exception {
+        tomcatWithWebApp = new Tomcat();
+        tomcatWithWebApp.setPort(0);
+        tomcatWithWebApp.setBaseDir("target" + File.separatorChar +
+                                    "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-1");
+        tomcatWithWebApp.addWebapp(
+                "",
+                new File("target" + File.separatorChar +
+                         "test-classes" + File.separatorChar + "tomcat_service").getAbsolutePath());
+        tomcatWithWebApp.getService().getContainer().setName("tomcatWithWebApp");
+
+        tomcatWithoutWebApp = new Tomcat();
+        tomcatWithoutWebApp.setPort(0);
+        tomcatWithoutWebApp.setBaseDir("target" + File.separatorChar +
+                                       "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-2");
     }
 
     @Override
     protected void configureServer(ServerBuilder sb) throws LifecycleException {
-        tomcat.start();
-        Connector configuredConnector = tomcat.getConnector();
+        tomcatWithWebApp.start();
+        tomcatWithoutWebApp.start();
 
-        sb.serviceUnder("/empty/", TomcatService.forConnector("somehost", new Connector()))
-          .serviceUnder("/some/", TomcatService.forConnector("somehost", configuredConnector));
+        sb.serviceUnder("/empty/", TomcatService.forConnector("someHost", new Connector()))
+          .serviceUnder("/no-webapp/", TomcatService.forConnector(tomcatWithoutWebApp.getConnector()))
+          .serviceUnder("/some-webapp/", TomcatService.forConnector(tomcatWithWebApp.getConnector()));
     }
 
     @Test
-    public void testUnavailableStatus() throws Exception {
+    public void testServiceUnavailable() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/empty/")))) {
                 // as connector is not configured, TomcatServiceInvocationHandler will throw.
@@ -65,22 +77,29 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
     }
 
     @Test
-    public void testSomeStatus() throws Exception {
+    public void testInternalServerError() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/some/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/no-webapp/")))) {
                 // as no webapp is configured inside tomcat, 500 will be thrown.
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
             }
         }
     }
 
-    @After
-    public void stopTomcat() throws LifecycleException {
-        tomcat.stop();
+    @Test
+    public void testOk() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/some-webapp/")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+            }
+        }
     }
 
     @AfterClass
-    public static void destroyTomcat() throws LifecycleException {
-        tomcat.destroy();
+    public static void destroyTomcat() throws Exception {
+        tomcatWithWebApp.stop();
+        tomcatWithWebApp.destroy();
+        tomcatWithoutWebApp.stop();
+        tomcatWithoutWebApp.destroy();
     }
 }

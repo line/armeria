@@ -16,13 +16,22 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
+import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
+import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static java.util.Objects.requireNonNull;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.net.ssl.SSLException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -55,6 +64,8 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
  */
 public final class VirtualHostBuilder {
 
+    private static final Logger logger = LoggerFactory.getLogger(VirtualHostBuilder.class);
+
     private static final ApplicationProtocolConfig HTTPS_ALPN_CFG = new ApplicationProtocolConfig(
             Protocol.ALPN,
             // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -64,6 +75,46 @@ public final class VirtualHostBuilder {
             ApplicationProtocolNames.HTTP_2,
             ApplicationProtocolNames.HTTP_1_1);
 
+    private static final String LOCAL_HOSTNAME;
+
+    static {
+        // Try the '/usr/bin/hostname' command first, which is more reliable.
+        Process process = null;
+        String hostname = null;
+        try {
+            process = Runtime.getRuntime().exec("hostname");
+            final String line = new BufferedReader(new InputStreamReader(process.getInputStream())).readLine();
+            if (line == null) {
+                logger.warn("The 'hostname' command returned nothing; " +
+                            "using InetAddress.getLocalHost() instead", line);
+            } else {
+                hostname = normalizeDefaultHostname(line.trim());
+                logger.info("Hostname: {} (via 'hostname' command)", hostname);
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to get the hostname using the 'hostname' command; " +
+                        "using InetAddress.getLocalHost() instead", e);
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
+        }
+
+        if (hostname == null) {
+            try {
+                hostname = normalizeDefaultHostname(InetAddress.getLocalHost().getHostName());
+                logger.info("Hostname: {} (via InetAddress.getLocalHost())", hostname);
+            } catch (Exception e) {
+                hostname = "localhost";
+                logger.warn("Failed to get the hostname using InetAddress.getLocalHost(); " +
+                            "using 'localhost' instead", e);
+            }
+        }
+
+        LOCAL_HOSTNAME = hostname;
+    }
+
+    private final String defaultHostname;
     private final String hostnamePattern;
     private final List<ServiceConfig> services = new ArrayList<>();
     private SslContext sslContext;
@@ -72,14 +123,38 @@ public final class VirtualHostBuilder {
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
      */
     public VirtualHostBuilder() {
-        this("*");
+        this(LOCAL_HOSTNAME, "*");
     }
 
     /**
      * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
      */
     public VirtualHostBuilder(String hostnamePattern) {
-        this.hostnamePattern = VirtualHost.normalizeHostnamePattern(hostnamePattern);
+        hostnamePattern = normalizeHostnamePattern(hostnamePattern);
+
+        if ("*".equals(hostnamePattern)) {
+            defaultHostname = LOCAL_HOSTNAME;
+        } else if (hostnamePattern.startsWith("*.")) {
+            defaultHostname = hostnamePattern.substring(2);
+        } else {
+            defaultHostname = hostnamePattern;
+        }
+
+        this.hostnamePattern = hostnamePattern;
+    }
+
+    /**
+     * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
+     */
+    public VirtualHostBuilder(String defaultHostname, String hostnamePattern) {
+        requireNonNull(defaultHostname, "defaultHostname");
+
+        defaultHostname = normalizeDefaultHostname(defaultHostname);
+        hostnamePattern = normalizeHostnamePattern(hostnamePattern);
+        ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
+
+        this.defaultHostname = defaultHostname;
+        this.hostnamePattern = hostnamePattern;
     }
 
     /**
@@ -160,11 +235,11 @@ public final class VirtualHostBuilder {
      * Creates a new {@link VirtualHost}.
      */
     public VirtualHost build() {
-        return new VirtualHost(hostnamePattern, sslContext, services);
+        return new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);
     }
 
     @Override
     public String toString() {
-        return VirtualHost.toString(getClass(), hostnamePattern, sslContext, services);
+        return VirtualHost.toString(getClass(), defaultHostname, hostnamePattern, sslContext, services);
     }
 }

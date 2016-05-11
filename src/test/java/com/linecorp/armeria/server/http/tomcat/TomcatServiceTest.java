@@ -19,26 +19,18 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import org.apache.catalina.Service;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
-import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.http.WebAppContainerTest;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -64,12 +56,17 @@ public class TomcatServiceTest extends WebAppContainerTest {
 
         sb.serviceUnder(
                 "/jar/",
-                TomcatService.forClassPath(Future.class).decorate(LoggingService::new));
+                TomcatServiceBuilder.forClassPath(Future.class)
+                                    .serviceName("TomcatServiceTest-JAR")
+                                    .build()
+                                    .decorate(LoggingService::new));
 
         sb.serviceUnder(
                 "/jar_altroot/",
-                TomcatService.forClassPath(Future.class, "/io/netty/util/concurrent")
-                             .decorate(LoggingService::new));
+                TomcatServiceBuilder.forClassPath(Future.class, "/io/netty/util/concurrent")
+                                    .serviceName("TomcatServiceTest-JAR-AltRoot")
+                                    .build()
+                                    .decorate(LoggingService::new));
     }
 
     @Test

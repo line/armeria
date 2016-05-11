@@ -54,7 +54,6 @@ public final class TomcatServiceBuilder {
 
     // From Tomcat conf/server.xml
     private static final String DEFAULT_SERVICE_NAME = "Catalina";
-    private static final String DEFAULT_ENGINE_NAME = DEFAULT_SERVICE_NAME;
 
     /**
      * Creates a new {@link TomcatServiceBuilder} with the web application at the root directory inside the
@@ -179,10 +178,10 @@ public final class TomcatServiceBuilder {
     private final List<Consumer<? super StandardServer>> configurators = new ArrayList<>();
 
     private String serviceName = DEFAULT_SERVICE_NAME;
-    private String engineName = DEFAULT_ENGINE_NAME;
+    private String engineName;
     private Path baseDir;
     private Realm realm = NULL_REALM;
-    private String hostname = "localhost";
+    private String hostname;
 
     private TomcatServiceBuilder(Path docBase, String jarRoot) {
         this.docBase = validateDocBase(docBase);
@@ -228,7 +227,8 @@ public final class TomcatServiceBuilder {
     }
 
     /**
-     * Sets the name of the {@link StandardService} of an embedded Tomcat.
+     * Sets the name of the {@link StandardService} of an embedded Tomcat. The default serviceName is
+     * {@code "Catalina"}.
      */
     public TomcatServiceBuilder serviceName(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
@@ -236,7 +236,8 @@ public final class TomcatServiceBuilder {
     }
 
     /**
-     * Sets the name of the {@link StandardEngine} of an embedded Tomcat.
+     * Sets the name of the {@link StandardEngine} of an embedded Tomcat. {@link #serviceName(String)} will be
+     * used instead if not set.
      */
     public TomcatServiceBuilder engineName(String engineName) {
         this.engineName = requireNonNull(engineName, "engineName");
@@ -321,7 +322,7 @@ public final class TomcatServiceBuilder {
             }
         }
 
-        return new TomcatService(new TomcatServiceConfig(
+        return TomcatService.forConfig(new TomcatServiceConfig(
                 serviceName, engineName, baseDir, realm, hostname, docBase, jarRoot,
                 Collections.unmodifiableList(configurators)));
     }

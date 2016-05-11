@@ -65,7 +65,7 @@ final class TomcatServiceConfig {
      * Returns the name of the {@link StandardEngine} of an embedded Tomcat.
      */
     String engineName() {
-        return engineName;
+        return engineName != null ? engineName : serviceName;
     }
 
     /**
@@ -85,8 +85,8 @@ final class TomcatServiceConfig {
     /**
      * Returns the hostname of an embedded Tomcat.
      */
-    String hostname() {
-        return hostname;
+    Optional<String> hostname() {
+        return Optional.ofNullable(hostname);
     }
 
     /**
@@ -115,7 +115,7 @@ final class TomcatServiceConfig {
 
     @Override
     public String toString() {
-        return toString(this, serviceName(), engineName(), baseDir(), realm(), hostname(),
+        return toString(this, serviceName(), engineName(), baseDir(), realm(), hostname().orElse(null),
                         docBase(), jarRoot().orElse(null));
     }
 

@@ -19,10 +19,12 @@ package com.linecorp.armeria.server.http.jetty;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.util.thread.ExecutorThreadPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.server.http.HttpService;
 
@@ -33,6 +35,18 @@ import com.linecorp.armeria.server.http.HttpService;
  * @see JettyServiceBuilder
  */
 public class JettyService extends HttpService {
+
+    private static final Logger logger = LoggerFactory.getLogger(JettyService.class);
+
+    /**
+     * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
+     *
+     * @param jettyServer the Jetty {@link Server}
+     */
+    public static JettyService forServer(Server jettyServer) {
+        requireNonNull(jettyServer, "jettyServer");
+        return new JettyService(null, blockingTaskExecutor -> jettyServer);
+    }
 
     /**
      * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
@@ -48,15 +62,17 @@ public class JettyService extends HttpService {
 
     static JettyService forConfig(JettyServiceConfig config) {
         final Function<ExecutorService, Server> serverFactory = blockingTaskExecutor -> {
-            final Server server = new Server(new ExecutorThreadPool(blockingTaskExecutor));
+            final Server server = new Server(new ArmeriaThreadPool(blockingTaskExecutor));
 
             config.dumpAfterStart().ifPresent(server::setDumpAfterStart);
             config.dumpBeforeStop().ifPresent(server::setDumpBeforeStop);
+            config.stopTimeoutMillis().ifPresent(server::setStopTimeout);
+
             config.handler().ifPresent(server::setHandler);
             config.requestLog().ifPresent(server::setRequestLog);
             config.sessionIdManager().ifPresent(server::setSessionIdManager);
-            config.stopTimeoutMillis().ifPresent(server::setStopTimeout);
 
+            config.handlerWrappers().forEach(server::insertHandler);
             config.attrs().forEach(server::setAttribute);
             config.beans().forEach(bean -> {
                 final Boolean managed = bean.isManaged();
@@ -75,10 +91,25 @@ public class JettyService extends HttpService {
             return server;
         };
 
-        return new JettyService(config.hostname(), serverFactory);
+        final Consumer<Server> postStopTask = server -> {
+            try {
+                logger.info("Destroying an embedded Jetty: {}", server);
+                server.destroy();
+            } catch (Exception e) {
+                logger.warn("Failed to destroy an embedded Jetty: {}", server, e);
+            }
+        };
+
+        return new JettyService(config.hostname().orElse(null), serverFactory, postStopTask);
     }
 
     private JettyService(String hostname, Function<ExecutorService, Server> serverSupplier) {
-        super(new JettyServiceInvocationHandler(hostname, serverSupplier));
+        this(hostname, serverSupplier, unused -> {});
+    }
+
+    private JettyService(String hostname,
+                         Function<ExecutorService, Server> serverSupplier,
+                         Consumer<Server> postStopTask) {
+        super(new JettyServiceInvocationHandler(hostname, serverSupplier, postStopTask));
     }
 }
