@@ -1,0 +1,1425 @@
+{
+  "name": "ThriftTest",
+  "namespaces": {
+    "*": "thrift.test",
+    "c_glib": "TTest",
+    "cocoa": "ThriftTest",
+    "cpp": "thrift.test",
+    "cpp.noexist": "ThriftTest",
+    "csharp": "Thrift.Test",
+    "delphi": "Thrift.Test",
+    "go": "thrifttest",
+    "java": "thrift.test",
+    "js": "ThriftTest",
+    "lua": "ThriftTest",
+    "noexist": "ThriftTest",
+    "perl": "ThriftTest",
+    "php": "ThriftTest",
+    "py": "ThriftTest",
+    "py.twisted": "ThriftTest",
+    "rb": "Thrift.Test",
+    "st": "ThriftTest",
+    "xsd": "test"
+  },
+  "includes": [
+  ],
+  "enums": [
+    {
+      "name": "Numberz",
+      "doc": "Docstring!\n",
+      "members": [
+        {
+          "name": "ONE",
+          "value": 1
+        },
+        {
+          "name": "TWO",
+          "value": 2
+        },
+        {
+          "name": "THREE",
+          "value": 3
+        },
+        {
+          "name": "FIVE",
+          "value": 5
+        },
+        {
+          "name": "SIX",
+          "value": 6
+        },
+        {
+          "name": "EIGHT",
+          "value": 8
+        }
+      ]
+    }
+  ],
+  "typedefs": [
+    {
+      "name": "UserId",
+      "typeId": "i64"
+    },
+    {
+      "name": "MapType",
+      "typeId": "map",
+      "type": {
+        "typeId": "map",
+        "keyTypeId": "string",
+        "valueTypeId": "struct",
+        "valueType": {
+          "typeId": "struct",
+          "class": "Bonk"
+        }
+      }
+    }
+  ],
+  "structs": [
+    {
+      "name": "Bonk",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "message",
+          "typeId": "string",
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "type",
+          "typeId": "i32",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "Bools",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "im_true",
+          "typeId": "bool",
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "im_false",
+          "typeId": "bool",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "Xtruct",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "string_thing",
+          "typeId": "string",
+          "required": "req_out"
+        },
+        {
+          "key": 4,
+          "name": "byte_thing",
+          "typeId": "i8",
+          "required": "req_out"
+        },
+        {
+          "key": 9,
+          "name": "i32_thing",
+          "typeId": "i32",
+          "required": "req_out"
+        },
+        {
+          "key": 11,
+          "name": "i64_thing",
+          "typeId": "i64",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "Xtruct2",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "byte_thing",
+          "typeId": "i8",
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "struct_thing",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Xtruct"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 3,
+          "name": "i32_thing",
+          "typeId": "i32",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "Xtruct3",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "string_thing",
+          "typeId": "string",
+          "required": "req_out"
+        },
+        {
+          "key": 4,
+          "name": "changed",
+          "typeId": "i32",
+          "required": "req_out"
+        },
+        {
+          "key": 9,
+          "name": "i32_thing",
+          "typeId": "i32",
+          "required": "req_out"
+        },
+        {
+          "key": 11,
+          "name": "i64_thing",
+          "typeId": "i64",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "Insanity",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "userMap",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "i32",
+            "valueTypeId": "i64"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "xtructs",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Xtruct"
+            }
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "CrazyNesting",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "string_field",
+          "typeId": "string",
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "set_field",
+          "typeId": "set",
+          "type": {
+            "typeId": "set",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Insanity"
+            }
+          },
+          "required": "optional"
+        },
+        {
+          "key": 3,
+          "name": "list_field",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "map",
+            "elemType": {
+              "typeId": "map",
+              "keyTypeId": "set",
+              "valueTypeId": "map",
+              "keyType": {
+                "typeId": "set",
+                "elemTypeId": "i32"
+              },
+              "valueType": {
+                "typeId": "map",
+                "keyTypeId": "i32",
+                "valueTypeId": "set",
+                "valueType": {
+                  "typeId": "set",
+                  "elemTypeId": "list",
+                  "elemType": {
+                    "typeId": "list",
+                    "elemTypeId": "map",
+                    "elemType": {
+                      "typeId": "map",
+                      "keyTypeId": "struct",
+                      "valueTypeId": "string",
+                      "keyType": {
+                        "typeId": "struct",
+                        "class": "Insanity"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 4,
+          "name": "binary_field",
+          "typeId": "binary",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "Xception",
+      "isException": true,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "errorCode",
+          "typeId": "i32",
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "message",
+          "typeId": "string",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "Xception2",
+      "isException": true,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "errorCode",
+          "typeId": "i32",
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "struct_thing",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Xtruct"
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "EmptyStruct",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+      ]
+    },
+    {
+      "name": "OneField",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "field",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "EmptyStruct"
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "VersioningTestV1",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "begin_in_both",
+          "typeId": "i32",
+          "required": "req_out"
+        },
+        {
+          "key": 3,
+          "name": "old_string",
+          "typeId": "string",
+          "required": "req_out"
+        },
+        {
+          "key": 12,
+          "name": "end_in_both",
+          "typeId": "i32",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "VersioningTestV2",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "begin_in_both",
+          "typeId": "i32",
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "newint",
+          "typeId": "i32",
+          "required": "req_out"
+        },
+        {
+          "key": 3,
+          "name": "newbyte",
+          "typeId": "i8",
+          "required": "req_out"
+        },
+        {
+          "key": 4,
+          "name": "newshort",
+          "typeId": "i16",
+          "required": "req_out"
+        },
+        {
+          "key": 5,
+          "name": "newlong",
+          "typeId": "i64",
+          "required": "req_out"
+        },
+        {
+          "key": 6,
+          "name": "newdouble",
+          "typeId": "double",
+          "required": "req_out"
+        },
+        {
+          "key": 7,
+          "name": "newstruct",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Bonk"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 8,
+          "name": "newlist",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "i32"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 9,
+          "name": "newset",
+          "typeId": "set",
+          "type": {
+            "typeId": "set",
+            "elemTypeId": "i32"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 10,
+          "name": "newmap",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "i32",
+            "valueTypeId": "i32"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 11,
+          "name": "newstring",
+          "typeId": "string",
+          "required": "req_out"
+        },
+        {
+          "key": 12,
+          "name": "end_in_both",
+          "typeId": "i32",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "ListTypeVersioningV1",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "myints",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "i32"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "hello",
+          "typeId": "string",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "ListTypeVersioningV2",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "strings",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "string"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "hello",
+          "typeId": "string",
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "GuessProtocolStruct",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 7,
+          "name": "map_field",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "LargeDeltas",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "b1",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Bools"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 10,
+          "name": "b10",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Bools"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 100,
+          "name": "b100",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Bools"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 500,
+          "name": "check_true",
+          "typeId": "bool",
+          "required": "req_out"
+        },
+        {
+          "key": 1000,
+          "name": "b1000",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Bools"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 1500,
+          "name": "check_false",
+          "typeId": "bool",
+          "required": "req_out"
+        },
+        {
+          "key": 2000,
+          "name": "vertwo2000",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "VersioningTestV2"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 2500,
+          "name": "a_set2500",
+          "typeId": "set",
+          "type": {
+            "typeId": "set",
+            "elemTypeId": "string"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 3000,
+          "name": "vertwo3000",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "VersioningTestV2"
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 4000,
+          "name": "big_numbers",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "i32"
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "NestedListsI32x2",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "integerlist",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "list",
+            "elemType": {
+              "typeId": "list",
+              "elemTypeId": "i32"
+            }
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "NestedListsI32x3",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "integerlist",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "list",
+            "elemType": {
+              "typeId": "list",
+              "elemTypeId": "list",
+              "elemType": {
+                "typeId": "list",
+                "elemTypeId": "i32"
+              }
+            }
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "NestedMixedx2",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "int_set_list",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "set",
+            "elemType": {
+              "typeId": "set",
+              "elemTypeId": "i32"
+            }
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 2,
+          "name": "map_int_strset",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "i32",
+            "valueTypeId": "set",
+            "valueType": {
+              "typeId": "set",
+              "elemTypeId": "string"
+            }
+          },
+          "required": "req_out"
+        },
+        {
+          "key": 3,
+          "name": "map_int_strset_list",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "map",
+            "elemType": {
+              "typeId": "map",
+              "keyTypeId": "i32",
+              "valueTypeId": "set",
+              "valueType": {
+                "typeId": "set",
+                "elemTypeId": "string"
+              }
+            }
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "ListBonks",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "bonk",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Bonk"
+            }
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "NestedListsBonk",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "bonk",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "list",
+            "elemType": {
+              "typeId": "list",
+              "elemTypeId": "list",
+              "elemType": {
+                "typeId": "list",
+                "elemTypeId": "struct",
+                "elemType": {
+                  "typeId": "struct",
+                  "class": "Bonk"
+                }
+              }
+            }
+          },
+          "required": "req_out"
+        }
+      ]
+    },
+    {
+      "name": "BoolTest",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "b",
+          "typeId": "bool",
+          "required": "optional",
+          "default": 1
+        },
+        {
+          "key": 2,
+          "name": "s",
+          "typeId": "string",
+          "required": "optional",
+          "default": "true"
+        }
+      ]
+    },
+    {
+      "name": "StructA",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "s",
+          "typeId": "string",
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "StructB",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "aa",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "StructA"
+          },
+          "required": "optional"
+        },
+        {
+          "key": 2,
+          "name": "ab",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "StructA"
+          },
+          "required": "required"
+        }
+      ]
+    }
+  ],
+  "constants": [
+    {
+      "name": "myNumberz",
+      "typeId": "i32",
+      "value": 1
+    }
+  ],
+  "services": [
+    {
+      "name": "ThriftTest",
+      "functions": [
+        {
+          "name": "testVoid",
+          "returnTypeId": "void",
+          "oneway": false,
+          "doc": "Prints \"testVoid()\" and returns nothing.\n",
+          "arguments": [
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testString",
+          "returnTypeId": "string",
+          "oneway": false,
+          "doc": "Prints 'testString(\"%s\")' with thing as '%s'\n@param string thing - the string to print\n@return string - returns the string 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "string",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testBool",
+          "returnTypeId": "bool",
+          "oneway": false,
+          "doc": "Prints 'testBool(\"%s\")' where '%s' with thing as 'true' or 'false'\n@param bool  thing - the bool data to print\n@return bool  - returns the bool 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "bool",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testByte",
+          "returnTypeId": "i8",
+          "oneway": false,
+          "doc": "Prints 'testByte(\"%d\")' with thing as '%d'\nThe types i8 and byte are synonyms, use of i8 is encouraged, byte still exists for the sake of compatibility.\n@param byte thing - the i8\/byte to print\n@return i8 - returns the i8\/byte 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "i8",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testI32",
+          "returnTypeId": "i32",
+          "oneway": false,
+          "doc": "Prints 'testI32(\"%d\")' with thing as '%d'\n@param i32 thing - the i32 to print\n@return i32 - returns the i32 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "i32",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testI64",
+          "returnTypeId": "i64",
+          "oneway": false,
+          "doc": "Prints 'testI64(\"%d\")' with thing as '%d'\n@param i64 thing - the i64 to print\n@return i64 - returns the i64 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "i64",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testDouble",
+          "returnTypeId": "double",
+          "oneway": false,
+          "doc": "Prints 'testDouble(\"%f\")' with thing as '%f'\n@param double thing - the double to print\n@return double - returns the double 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "double",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testBinary",
+          "returnTypeId": "binary",
+          "oneway": false,
+          "doc": "Prints 'testBinary(\"%s\")' where '%s' is a hex-formatted string of thing's data\n@param binary  thing - the binary data to print\n@return binary  - returns the binary 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "binary",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testStruct",
+          "returnTypeId": "struct",
+          "returnType": {
+            "typeId": "struct",
+            "class": "Xtruct"
+          },
+          "oneway": false,
+          "doc": "Prints 'testStruct(\"{%s}\")' where thing has been formatted into a string of comma separated values\n@param Xtruct thing - the Xtruct to print\n@return Xtruct - returns the Xtruct 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "struct",
+              "type": {
+                "typeId": "struct",
+                "class": "Xtruct"
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testNest",
+          "returnTypeId": "struct",
+          "returnType": {
+            "typeId": "struct",
+            "class": "Xtruct2"
+          },
+          "oneway": false,
+          "doc": "Prints 'testNest(\"{%s}\")' where thing has been formatted into a string of the nested struct\n@param Xtruct2 thing - the Xtruct2 to print\n@return Xtruct2 - returns the Xtruct2 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "struct",
+              "type": {
+                "typeId": "struct",
+                "class": "Xtruct2"
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testMap",
+          "returnTypeId": "map",
+          "returnType": {
+            "typeId": "map",
+            "keyTypeId": "i32",
+            "valueTypeId": "i32"
+          },
+          "oneway": false,
+          "doc": "Prints 'testMap(\"{%s\")' where thing has been formatted into a string of  'key => value' pairs\n separated by commas and new lines\n@param map<i32,i32> thing - the map<i32,i32> to print\n@return map<i32,i32> - returns the map<i32,i32> 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "map",
+              "type": {
+                "typeId": "map",
+                "keyTypeId": "i32",
+                "valueTypeId": "i32"
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testStringMap",
+          "returnTypeId": "map",
+          "returnType": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "oneway": false,
+          "doc": "Prints 'testStringMap(\"{%s}\")' where thing has been formatted into a string of  'key => value' pairs\n separated by commas and new lines\n@param map<string,string> thing - the map<string,string> to print\n@return map<string,string> - returns the map<string,string> 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "map",
+              "type": {
+                "typeId": "map",
+                "keyTypeId": "string",
+                "valueTypeId": "string"
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testSet",
+          "returnTypeId": "set",
+          "returnType": {
+            "typeId": "set",
+            "elemTypeId": "i32"
+          },
+          "oneway": false,
+          "doc": "Prints 'testSet(\"{%s}\")' where thing has been formatted into a string of  values\n separated by commas and new lines\n@param set<i32> thing - the set<i32> to print\n@return set<i32> - returns the set<i32> 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "set",
+              "type": {
+                "typeId": "set",
+                "elemTypeId": "i32"
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testList",
+          "returnTypeId": "list",
+          "returnType": {
+            "typeId": "list",
+            "elemTypeId": "i32"
+          },
+          "oneway": false,
+          "doc": "Prints 'testList(\"{%s}\")' where thing has been formatted into a string of  values\n separated by commas and new lines\n@param list<i32> thing - the list<i32> to print\n@return list<i32> - returns the list<i32> 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "list",
+              "type": {
+                "typeId": "list",
+                "elemTypeId": "i32"
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testEnum",
+          "returnTypeId": "i32",
+          "oneway": false,
+          "doc": "Prints 'testEnum(\"%d\")' where thing has been formatted into it's numeric value\n@param Numberz thing - the Numberz to print\n@return Numberz - returns the Numberz 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "i32",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testTypedef",
+          "returnTypeId": "i64",
+          "oneway": false,
+          "doc": "Prints 'testTypedef(\"%d\")' with thing as '%d'\n@param UserId thing - the UserId to print\n@return UserId - returns the UserId 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "i64",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testMapMap",
+          "returnTypeId": "map",
+          "returnType": {
+            "typeId": "map",
+            "keyTypeId": "i32",
+            "valueTypeId": "map",
+            "valueType": {
+              "typeId": "map",
+              "keyTypeId": "i32",
+              "valueTypeId": "i32"
+            }
+          },
+          "oneway": false,
+          "doc": "Prints 'testMapMap(\"%d\")' with hello as '%d'\n@param i32 hello - the i32 to print\n@return map<i32,map<i32,i32>> - returns a dictionary with these values:\n  {-4 => {-4 => -4, -3 => -3, -2 => -2, -1 => -1, }, 4 => {1 => 1, 2 => 2, 3 => 3, 4 => 4, }, }\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "hello",
+              "typeId": "i32",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testInsanity",
+          "returnTypeId": "map",
+          "returnType": {
+            "typeId": "map",
+            "keyTypeId": "i64",
+            "valueTypeId": "map",
+            "valueType": {
+              "typeId": "map",
+              "keyTypeId": "i32",
+              "valueTypeId": "struct",
+              "valueType": {
+                "typeId": "struct",
+                "class": "Insanity"
+              }
+            }
+          },
+          "oneway": false,
+          "doc": "So you think you've got this all worked, out eh?\n\nCreates a the returned map with these values and prints it out:\n  { 1 => { 2 => argument,\n           3 => argument,\n         },\n    2 => { 6 => <empty Insanity struct>, },\n  }\n@return map<UserId, map<Numberz,Insanity>> - a map with the above values\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "argument",
+              "typeId": "struct",
+              "type": {
+                "typeId": "struct",
+                "class": "Insanity"
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testMulti",
+          "returnTypeId": "struct",
+          "returnType": {
+            "typeId": "struct",
+            "class": "Xtruct"
+          },
+          "oneway": false,
+          "doc": "Prints 'testMulti()'\n@param i8 arg0 -\n@param i32 arg1 -\n@param i64 arg2 -\n@param map<i16, string> arg3 -\n@param Numberz arg4 -\n@param UserId arg5 -\n@return Xtruct - returns an Xtruct with string_thing = \"Hello2, byte_thing = arg0, i32_thing = arg1\n   and i64_thing = arg2\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "arg0",
+              "typeId": "i8",
+              "required": "req_out"
+            },
+            {
+              "key": 2,
+              "name": "arg1",
+              "typeId": "i32",
+              "required": "req_out"
+            },
+            {
+              "key": 3,
+              "name": "arg2",
+              "typeId": "i64",
+              "required": "req_out"
+            },
+            {
+              "key": 4,
+              "name": "arg3",
+              "typeId": "map",
+              "type": {
+                "typeId": "map",
+                "keyTypeId": "i16",
+                "valueTypeId": "string"
+              },
+              "required": "req_out"
+            },
+            {
+              "key": 5,
+              "name": "arg4",
+              "typeId": "i32",
+              "required": "req_out"
+            },
+            {
+              "key": 6,
+              "name": "arg5",
+              "typeId": "i64",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "testException",
+          "returnTypeId": "void",
+          "oneway": false,
+          "doc": "Print 'testException(%s)' with arg as '%s'\n@param string arg - a string indication what type of exception to throw\nif arg == \"Xception\" throw Xception with errorCode = 1001 and message = arg\nelsen if arg == \"TException\" throw TException\nelse do not throw anything\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "arg",
+              "typeId": "string",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+            {
+              "key": 1,
+              "name": "err1",
+              "typeId": "exception",
+              "type": {
+                "typeId": "exception",
+                "class": "Xception"
+              },
+              "required": "req_out"
+            }
+          ]
+        },
+        {
+          "name": "testMultiException",
+          "returnTypeId": "struct",
+          "returnType": {
+            "typeId": "struct",
+            "class": "Xtruct"
+          },
+          "oneway": false,
+          "doc": "Print 'testMultiException(%s, %s)' with arg0 as '%s' and arg1 as '%s'\n@param string arg - a string indication what type of exception to throw\nif arg0 == \"Xception\" throw Xception with errorCode = 1001 and message = \"This is an Xception\"\nelsen if arg0 == \"Xception2\" throw Xception2 with errorCode = 2002 and struct_thing.string_thing = \"This is an Xception2\"\nelse do not throw anything\n@return Xtruct - an Xtruct with string_thing = arg1\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "arg0",
+              "typeId": "string",
+              "required": "req_out"
+            },
+            {
+              "key": 2,
+              "name": "arg1",
+              "typeId": "string",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+            {
+              "key": 1,
+              "name": "err1",
+              "typeId": "exception",
+              "type": {
+                "typeId": "exception",
+                "class": "Xception"
+              },
+              "required": "req_out"
+            },
+            {
+              "key": 2,
+              "name": "err2",
+              "typeId": "exception",
+              "type": {
+                "typeId": "exception",
+                "class": "Xception2"
+              },
+              "required": "req_out"
+            }
+          ]
+        },
+        {
+          "name": "testOneway",
+          "returnTypeId": "void",
+          "oneway": true,
+          "doc": "Print 'testOneway(%d): Sleeping...' with secondsToSleep as '%d'\nsleep 'secondsToSleep'\nPrint 'testOneway(%d): done sleeping!' with secondsToSleep as '%d'\n@param i32 secondsToSleep - the number of seconds to sleep\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "secondsToSleep",
+              "typeId": "i32",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SecondService",
+      "functions": [
+        {
+          "name": "blahBlah",
+          "returnTypeId": "void",
+          "oneway": false,
+          "arguments": [
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "secondtestString",
+          "returnTypeId": "string",
+          "oneway": false,
+          "doc": "Prints 'testString(\"%s\")' with thing as '%s'\n@param string thing - the string to print\n@return string - returns the string 'thing'\n",
+          "arguments": [
+            {
+              "key": 1,
+              "name": "thing",
+              "typeId": "string",
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        }
+      ]
+    }
+  ]
+}

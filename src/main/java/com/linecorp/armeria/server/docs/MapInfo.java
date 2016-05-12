@@ -18,7 +18,11 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
+
+import javax.annotation.Nullable;
 
 import org.apache.thrift.meta_data.MapMetaData;
 import org.apache.thrift.protocol.TType;
@@ -28,12 +32,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 class MapInfo extends TypeInfo {
 
     static MapInfo of(MapMetaData mapMetaData) {
+        return of(mapMetaData, null, Collections.emptyMap());
+    }
+
+    static MapInfo of(MapMetaData mapMetaData, @Nullable String namespace, Map<String, String> docStrings) {
         requireNonNull(mapMetaData, "mapMetaData");
 
         assert mapMetaData.type == TType.MAP;
         assert !mapMetaData.isBinary();
 
-        return new MapInfo(TypeInfo.of(mapMetaData.keyMetaData), TypeInfo.of(mapMetaData.valueMetaData));
+        return new MapInfo(TypeInfo.of(mapMetaData.keyMetaData, namespace, docStrings),
+                           TypeInfo.of(mapMetaData.valueMetaData, namespace, docStrings));
     }
 
     static MapInfo of(TypeInfo keyType, TypeInfo valueType) {

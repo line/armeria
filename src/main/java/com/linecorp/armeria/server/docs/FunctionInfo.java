@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
@@ -41,6 +43,13 @@ class FunctionInfo {
 
     static FunctionInfo of(Method method, Map<Class<?>, ? extends TBase<?, ?>> sampleRequests)
             throws ClassNotFoundException {
+        return of(method, sampleRequests, null, Collections.emptyMap());
+    }
+
+    static FunctionInfo of(Method method,
+                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
+                           @Nullable String namespace,
+                           Map<String, String> docStrings) throws ClassNotFoundException {
         requireNonNull(method, "method");
 
         final String methodName = method.getName();
@@ -68,12 +77,14 @@ class FunctionInfo {
 
         @SuppressWarnings("unchecked")
         final FunctionInfo function =
-                new FunctionInfo(methodName,
+                new FunctionInfo(namespace,
+                                 methodName,
                                  argsClass,
                                  (Class<? extends TBase<?, ?>>) Class.forName(
                                          serviceName + '$' + methodName + "_result", false, classLoader),
                                  (Class<? extends TException>[]) method.getExceptionTypes(),
-                                 sampleJsonRequest);
+                                 sampleJsonRequest,
+                                 docStrings);
         return function;
     }
 
@@ -82,14 +93,19 @@ class FunctionInfo {
     private final List<FieldInfo> parameters;
     private final List<ExceptionInfo> exceptions;
     private final String sampleJsonRequest;
+    private final String docString;
 
-    private FunctionInfo(String name,
+    private FunctionInfo(String namespace,
+                         String name,
                          Class<? extends TBase<?, ?>> argsClass,
                          Class<? extends TBase<?, ?>> resultClass,
                          Class<? extends TException>[] exceptionClasses,
-                         String sampleJsonRequest) {
+                         String sampleJsonRequest,
+                         Map<String, String> docStrings) {
         this.name = requireNonNull(name, "name");
         this.sampleJsonRequest = requireNonNull(sampleJsonRequest, "sampleJsonRequest");
+        final String functionNamespace = ThriftDocString.key(namespace, name);
+        this.docString = docStrings.get(functionNamespace);
         requireNonNull(argsClass, "argsClass");
         requireNonNull(resultClass, "resultClass");
         requireNonNull(exceptionClasses, "exceptionClasses");
@@ -97,14 +113,16 @@ class FunctionInfo {
         final Map<? extends TFieldIdEnum, FieldMetaData> argsMetaData =
                 FieldMetaData.getStructMetaDataMap(argsClass);
         parameters = Collections.unmodifiableList(
-                argsMetaData.values().stream().map(FieldInfo::of).collect(Collectors.toList()));
+                argsMetaData.values().stream()
+                            .map(fieldMetaData -> FieldInfo.of(fieldMetaData, functionNamespace, docStrings))
+                            .collect(Collectors.toList()));
 
         final Map<? extends TFieldIdEnum, FieldMetaData> resultMetaData =
                 FieldMetaData.getStructMetaDataMap(resultClass);
         FieldInfo fieldInfo = null;
         for (FieldMetaData fieldMetaData : resultMetaData.values()) {
             if ("success".equals(fieldMetaData.fieldName)) {
-                fieldInfo = FieldInfo.of(fieldMetaData);
+                fieldInfo = FieldInfo.of(fieldMetaData, functionNamespace, docStrings);
                 break;
             }
         }
@@ -119,7 +137,7 @@ class FunctionInfo {
             if (exceptionClass == TException.class) {
                 continue;
             }
-            exceptions0.add(ExceptionInfo.of(exceptionClass));
+            exceptions0.add(ExceptionInfo.of(exceptionClass, docStrings));
         }
         exceptions = Collections.unmodifiableList(exceptions0);
     }
@@ -147,6 +165,11 @@ class FunctionInfo {
     @JsonProperty
     public String sampleJsonRequest() {
         return sampleJsonRequest;
+    }
+
+    @JsonProperty
+    public String docString() {
+        return docString;
     }
 
     @Override

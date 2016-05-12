@@ -18,7 +18,11 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
+
+import javax.annotation.Nullable;
 
 import org.apache.thrift.meta_data.SetMetaData;
 import org.apache.thrift.protocol.TType;
@@ -26,12 +30,16 @@ import org.apache.thrift.protocol.TType;
 class SetInfo extends TypeInfo implements CollectionInfo {
 
     static SetInfo of(SetMetaData setMetaData) {
+        return of(setMetaData, null, Collections.emptyMap());
+    }
+
+    static SetInfo of(SetMetaData setMetaData, @Nullable String namespace, Map<String, String> docStrings) {
         requireNonNull(setMetaData, "setMetaData");
 
         assert setMetaData.type == TType.SET;
         assert !setMetaData.isBinary();
 
-        return new SetInfo(of(setMetaData.elemMetaData));
+        return new SetInfo(of(setMetaData.elemMetaData, namespace, docStrings));
     }
 
     static SetInfo of(TypeInfo elementType) {

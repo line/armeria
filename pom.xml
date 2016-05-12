@@ -99,6 +99,7 @@
     <thrift.generated.test>${project.build.directory}/generated-test-sources</thrift.generated.test>
     <brave.version>3.5.0</brave.version>
     <guava.version>19.0</guava.version>
+    <reflections.version>0.9.10</reflections.version>
   </properties>
 
   <dependencies>
@@ -220,6 +221,13 @@
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
       <version>${jackson.version}</version>
+    </dependency>
+
+    <!-- reflections -->
+    <dependency>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <version>${reflections.version}</version>
     </dependency>
 
     <!-- Metrics -->
