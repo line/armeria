@@ -23,6 +23,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.servlet.DispatcherType;
@@ -39,6 +40,8 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.thread.Scheduler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -54,17 +57,25 @@ import io.netty.util.concurrent.Promise;
 
 final class JettyServiceInvocationHandler implements ServiceInvocationHandler {
 
-    private final String hostname;
+    private static final Logger logger = LoggerFactory.getLogger(JettyServiceInvocationHandler.class);
+
     private final Function<ExecutorService, Server> serverFactory;
-    private final Configurator configurator = new Configurator();
+    private final Consumer<Server> postStopTask;
+    private final Configurator configurator;
+
+    private String hostname;
     private Server server;
     private ArmeriaConnector connector;
     private com.linecorp.armeria.server.Server armeriaServer;
     private boolean startedServer;
 
-    JettyServiceInvocationHandler(String hostname, Function<ExecutorService, Server> serverFactory) {
+    JettyServiceInvocationHandler(String hostname,
+                                  Function<ExecutorService, Server> serverFactory,
+                                  Consumer<Server> postStopTask) {
         this.hostname = hostname;
         this.serverFactory = serverFactory;
+        this.postStopTask = postStopTask;
+        configurator = new Configurator();
     }
 
     @Override
@@ -79,6 +90,9 @@ final class JettyServiceInvocationHandler implements ServiceInvocationHandler {
 
         armeriaServer = cfg.server();
         armeriaServer.addListener(configurator);
+        if (hostname == null) {
+            hostname = armeriaServer.defaultHostname();
+        }
     }
 
     void start() throws Exception {
@@ -89,6 +103,7 @@ final class JettyServiceInvocationHandler implements ServiceInvocationHandler {
             server.addConnector(connector);
 
             if (!server.isStarted()) {
+                logger.info("Starting an embedded Jetty: {}", server);
                 server.start();
                 startedServer = true;
             } else {
@@ -104,18 +119,22 @@ final class JettyServiceInvocationHandler implements ServiceInvocationHandler {
     }
 
     void stop() throws Exception {
-        if (server == null) {
+        final Server server = this.server;
+        this.server = null;
+        connector = null;
+
+        if (server == null || !startedServer) {
             return;
         }
 
-        if (startedServer) {
-            try {
-                server.stop();
-            } finally {
-                server = null;
-                connector = null;
-            }
+        try {
+            logger.info("Stopping an embedded Jetty: {}", server);
+            server.stop();
+        } catch (Exception e) {
+            logger.warn("Failed to stop an embedded Jetty: {}", server, e);
         }
+
+        postStopTask.accept(server);
     }
 
     @Override

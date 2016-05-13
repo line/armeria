@@ -28,6 +28,7 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.SessionIdManager;
+import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.util.component.Container;
 import org.eclipse.jetty.util.component.LifeCycle;
 
@@ -41,11 +42,12 @@ public final class JettyServiceBuilder {
 
     private final Map<String, Object> attrs = new LinkedHashMap<>();
     private final List<Bean> beans = new ArrayList<>();
+    private final List<HandlerWrapper> handlerWrappers = new ArrayList<>();
     private final List<Container.Listener> eventListeners = new ArrayList<>();
     private final List<LifeCycle.Listener> lifeCycleListeners = new ArrayList<>();
     private final List<Consumer<? super Server>> configurators = new ArrayList<>();
 
-    private String hostname = "localhost";
+    private String hostname;
     private Boolean dumpAfterStart;
     private Boolean dumpBeforeStop;
     private Handler handler;
@@ -122,6 +124,16 @@ public final class JettyServiceBuilder {
     }
 
     /**
+     * Adds the specified {@link HandlerWrapper} to the Jetty {@link Server}.
+     *
+     * @see Server#insertHandler(HandlerWrapper)
+     */
+    public JettyServiceBuilder handlerWrapper(HandlerWrapper handlerWrapper) {
+        handlerWrappers.add(requireNonNull(handlerWrapper, "handlerWrapper"));
+        return this;
+    }
+
+    /**
      * Sets the {@link RequestLog} of the Jetty {@link Server}.
      *
      * @see Server#setRequestLog(RequestLog)
@@ -182,13 +194,15 @@ public final class JettyServiceBuilder {
     public JettyService build() {
         return JettyService.forConfig(new JettyServiceConfig(
                 hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
-                sessionIdManager, attrs, beans, eventListeners, lifeCycleListeners, configurators));
+                sessionIdManager, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
+                configurators));
     }
 
     @Override
     public String toString() {
         return JettyServiceConfig.toString(
-                this, hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler,
-                requestLog, sessionIdManager, attrs, beans, eventListeners, lifeCycleListeners, configurators);
+                this, hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
+                sessionIdManager, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
+                configurators);
     }
 }

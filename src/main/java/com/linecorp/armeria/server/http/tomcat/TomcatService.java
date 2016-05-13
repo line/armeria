@@ -19,9 +19,15 @@ package com.linecorp.armeria.server.http.tomcat;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
+import org.apache.catalina.LifecycleState;
+import org.apache.catalina.Server;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.server.http.HttpService;
 
@@ -32,6 +38,9 @@ import com.linecorp.armeria.server.http.HttpService;
  * @see TomcatServiceBuilder
  */
 public final class TomcatService extends HttpService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TomcatService.class);
+
     /**
      * Creates a new {@link TomcatService} with the web application at the root directory inside the
      * JAR/WAR/directory where the caller class is located at.
@@ -98,7 +107,17 @@ public final class TomcatService extends HttpService {
             throw new IllegalArgumentException("connector not configured: " + tomcat);
         }
 
-        return new TomcatService(hostname, connector);
+        return forConnector(hostname, connector);
+    }
+
+    /**
+     * Creates a new {@link TomcatService} from an existing Tomcat {@link Connector} instance.
+     * If the specified {@link Connector} instance is not configured properly, the returned
+     * {@link TomcatService} may respond with '503 Service Not Available' error.
+     */
+    public static TomcatService forConnector(Connector connector) {
+        requireNonNull(connector, "connector");
+        return new TomcatService(null, hostname -> connector);
     }
 
     /**
@@ -110,19 +129,36 @@ public final class TomcatService extends HttpService {
         requireNonNull(hostname, "hostname");
         requireNonNull(connector, "connector");
 
-        return new TomcatService(hostname, connector);
+        return new TomcatService(hostname, h -> connector);
     }
 
-    TomcatService(TomcatServiceConfig config) {
-        super(new ManagedTomcatServiceInvocationHandler(config));
+    static TomcatService forConfig(TomcatServiceConfig config) {
+        final Consumer<Connector> postStopTask = connector -> {
+            final Server server = connector.getService().getServer();
+            if (server.getState() == LifecycleState.STOPPED) {
+                try {
+                    logger.info("Destroying an embedded Tomcat: {}", server);
+                    server.destroy();
+                } catch (Exception e) {
+                    logger.warn("Failed to destroy an embedded Tomcat: {}", server, e);
+                }
+            }
+        };
+
+        return new TomcatService(null, new ManagedConnectorFactory(config), postStopTask);
     }
 
-    TomcatService(String hostname, Connector connector) {
-        super(new TomcatServiceInvocationHandler(hostname, connector));
+    private TomcatService(String hostname, Function<String, Connector> connectorFactory) {
+        this(hostname, connectorFactory, unused -> {});
+    }
+
+    private TomcatService(String hostname,
+                  Function<String, Connector> connectorFactory, Consumer<Connector> postStopTask) {
+        super(new TomcatServiceInvocationHandler(hostname, connectorFactory, postStopTask));
     }
 
     /**
-     * Returns tomcat {@link Connector}
+     * Returns Tomcat {@link Connector}
      */
     public Connector connector() {
         return ((TomcatServiceInvocationHandler) handler()).connector();

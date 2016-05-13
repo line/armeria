@@ -39,7 +39,7 @@ import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.util.resource.Resource;
-import org.eclipse.jetty.util.thread.ExecutorThreadPool;
+import org.eclipse.jetty.util.thread.ThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.junit.Test;
 
@@ -59,9 +59,7 @@ public class JettyServiceTest extends WebAppContainerTest {
                 "/jsp/",
                 new JettyServiceBuilder()
                         .handler(newWebAppContext())
-                        .configurator(s -> {
-                            jettyBeans.addAll(s.getBeans());
-                        })
+                        .configurator(s -> jettyBeans.addAll(s.getBeans()))
                         .build()
                         .decorate(LoggingService::new));
 
@@ -89,7 +87,7 @@ public class JettyServiceTest extends WebAppContainerTest {
 
     @Test
     public void testConfigurator() throws Exception {
-        assertThat(jettyBeans, hasItems(instanceOf(ExecutorThreadPool.class),
+        assertThat(jettyBeans, hasItems(instanceOf(ThreadPool.class),
                                         instanceOf(WebAppContext.class)));
     }
 

@@ -206,7 +206,7 @@ public final class ServerConfig {
         }
 
         return new VirtualHost(
-                "*", sslCtx,
+                h.defaultHostname(), "*", sslCtx,
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerNameWithoutPrefix()))
                  .collect(Collectors.toList()));
@@ -423,18 +423,22 @@ public final class ServerConfig {
         buf.append(" virtualHosts: [");
         if (!virtualHosts.isEmpty()) {
             virtualHosts.forEach(c -> {
-                buf.append(VirtualHost.toString(null, c.hostnamePattern(), c.sslContext(), c.serviceConfigs()));
+                buf.append(VirtualHost.toString(null, c.defaultHostname(), c.hostnamePattern(),
+                                                c.sslContext(), c.serviceConfigs()));
                 buf.append(", ");
             });
 
             if (defaultVirtualHost != null) {
-                buf.append(VirtualHost.toString(null, "*", defaultVirtualHost.sslContext(),
+                buf.append(VirtualHost.toString(null, defaultVirtualHost.defaultHostname(), "*",
+                                                defaultVirtualHost.sslContext(),
                                                 defaultVirtualHost.serviceConfigs()));
             } else {
                 buf.setLength(buf.length() - 2);
             }
         } else if (defaultVirtualHost != null) {
-            buf.append(VirtualHost.toString(null, "*", defaultVirtualHost.sslContext(), defaultVirtualHost.serviceConfigs()));
+            buf.append(VirtualHost.toString(null, defaultVirtualHost.defaultHostname(), "*",
+                                            defaultVirtualHost.sslContext(),
+                                            defaultVirtualHost.serviceConfigs()));
         }
 
         buf.append("], numWorkers: ");

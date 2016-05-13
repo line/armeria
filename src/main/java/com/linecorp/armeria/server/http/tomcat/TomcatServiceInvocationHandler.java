@@ -18,10 +18,17 @@ package com.linecorp.armeria.server.http.tomcat;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
+import org.apache.catalina.Engine;
+import org.apache.catalina.LifecycleState;
+import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.InputBuffer;
@@ -35,8 +42,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ServiceInvocationContext;
-import com.linecorp.armeria.server.ServiceUnavailableException;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerListener;
+import com.linecorp.armeria.server.ServerListenerAdapter;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
+import com.linecorp.armeria.server.ServiceUnavailableException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -52,23 +63,124 @@ import io.netty.util.concurrent.Promise;
 
 class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
 
-    private final String hostname;
+    private static final Logger logger = LoggerFactory.getLogger(TomcatServiceInvocationHandler.class);
 
-    private final Connector connector;
+    private static final Set<String> activeEngines = new HashSet<>();
 
-    TomcatServiceInvocationHandler(String hostname, Connector connector) {
+    private final Function<String, Connector> connectorFactory;
+    private final Consumer<Connector> postStopTask;
+    private final ServerListener configurator;
+
+    private org.apache.catalina.Server server;
+    private Server armeriaServer;
+    private String hostname;
+    private Connector connector;
+    private String engineName;
+    private boolean started;
+
+    TomcatServiceInvocationHandler(String hostname,
+                                   Function<String, Connector> connectorFactory,
+                                   Consumer<Connector> postStopTask) {
+
         this.hostname = hostname;
-        this.connector = connector;
+        this.connectorFactory = connectorFactory;
+        this.postStopTask = postStopTask;
+        configurator = new Configurator();
+    }
+
+    String hostname() {
+        assert hostname != null;
+        return hostname;
     }
 
     Connector connector() {
+        assert connector != null;
         return connector;
+    }
+
+    @Override
+    public void handlerAdded(ServiceConfig cfg) throws Exception {
+        if (hostname == null) {
+            hostname = cfg.server().defaultHostname();
+        }
+
+        if (armeriaServer != null) {
+            if (armeriaServer != cfg.server()) {
+                throw new IllegalStateException("cannot be added to more than one server");
+            } else {
+                return;
+            }
+        }
+
+        armeriaServer = cfg.server();
+        armeriaServer.addListener(configurator);
+    }
+
+    void start() throws Exception {
+        started = false;
+        connector = connectorFactory.apply(hostname());
+        final Service service = connector.getService();
+        if (service == null) {
+            return;
+        }
+
+        @SuppressWarnings("deprecation")
+        final Engine engine = (Engine) service.getContainer();
+        if (engine == null) {
+            return;
+        }
+
+        final String engineName = engine.getName();
+        if (engineName == null) {
+            return;
+        }
+
+        if (activeEngines.contains(engineName)) {
+            throw new TomcatServiceException("duplicate engine name: " + engineName);
+        }
+
+        server = service.getServer();
+
+        if (server.getState() != LifecycleState.STARTED) {
+            logger.info("Starting an embedded Tomcat: {}", server);
+            server.start();
+            started = true;
+        }
+
+        activeEngines.add(engineName);
+        this.engineName = engineName;
+    }
+
+    void stop() throws Exception {
+        final org.apache.catalina.Server server = this.server;
+        final Connector connector = this.connector;
+        this.server = null;
+        this.connector = null;
+
+        if (engineName != null) {
+            activeEngines.remove(engineName);
+            engineName = null;
+        }
+
+        if (server == null || !started) {
+            return;
+        }
+
+        try {
+            logger.info("Stopping an embedded Tomcat: {}", server);
+            server.stop();
+        } catch (Exception e) {
+            logger.warn("Failed to stop an embedded Tomcat: {}", server, e);
+        }
+
+        postStopTask.accept(connector);
     }
 
     @Override
     public void invoke(ServiceInvocationContext ctx,
                        Executor blockingTaskExecutor, Promise<Object> promise) throws Exception {
-        final Adapter coyoteAdapter = connector.getProtocolHandler().getAdapter();
+
+        final Adapter coyoteAdapter = connector().getProtocolHandler().getAdapter();
         if (coyoteAdapter == null) {
             // Tomcat is not configured / stopped.
             promise.tryFailure(new ServiceUnavailableException());
@@ -130,7 +242,7 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         // Set the local host/address.
         final InetSocketAddress localAddr = (InetSocketAddress) ctx.localAddress();
         coyoteReq.localAddr().setString(localAddr.getAddress().getHostAddress());
-        coyoteReq.localName().setString(hostname);
+        coyoteReq.localName().setString(hostname());
         coyoteReq.setLocalPort(localAddr.getPort());
 
         // Set the method.
@@ -246,5 +358,17 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
 
         final ByteChunk chunk = value.getByteChunk();
         return new AsciiString(chunk.getBuffer(), chunk.getOffset(), chunk.getLength(), false);
+    }
+
+    private final class Configurator extends ServerListenerAdapter {
+        @Override
+        public void serverStarting(Server server) throws Exception {
+            start();
+        }
+
+        @Override
+        public void serverStopped(Server server) throws Exception {
+            stop();
+        }
     }
 }

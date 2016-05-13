@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,16 +16,14 @@
 
 package com.linecorp.armeria.server.http.tomcat;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.File;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.apache.catalina.Container;
 import org.apache.catalina.Context;
 import org.apache.catalina.Engine;
-import org.apache.catalina.LifecycleException;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardEngine;
@@ -33,17 +31,8 @@ import org.apache.catalina.core.StandardHost;
 import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 import org.apache.catalina.startup.ContextConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerListener;
-import com.linecorp.armeria.server.ServerListenerAdapter;
-import com.linecorp.armeria.server.ServiceConfig;
-
-final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocationHandler {
-
-    private static final Logger logger = LoggerFactory.getLogger(ManagedTomcatServiceInvocationHandler.class);
+final class ManagedConnectorFactory implements Function<String, Connector> {
 
     private static final String ROOT_CONTEXT_PATH = "";
 
@@ -59,46 +48,20 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
     }
 
     private final TomcatServiceConfig config;
-    private final ServerListener configurator = new Configurator();
 
-    private volatile StandardServer server;
-
-    private Server armeriaServer;
-
-    ManagedTomcatServiceInvocationHandler(TomcatServiceConfig config) {
-        super(config.hostname(), new Connector(TomcatProtocolHandler.class.getName()));
-        this.config = requireNonNull(config, "config");
-    }
-
-    TomcatServiceConfig config() {
-        return config;
+    ManagedConnectorFactory(TomcatServiceConfig config) {
+        this.config = config;
     }
 
     @Override
-    public void handlerAdded(ServiceConfig cfg) throws Exception {
-        if (armeriaServer != null) {
-            if (armeriaServer != cfg.server()) {
-                throw new IllegalStateException("cannot be added to more than one server");
-            } else {
-                return;
-            }
-        }
-
-        armeriaServer = cfg.server();
-        armeriaServer.addListener(configurator);
-    }
-
-    void start() {
-        logger.info("Starting an embedded Tomcat: {}", config());
-
-        assert server == null;
+    public Connector apply(String hostname) {
 
         // Create the connector with our protocol handler. Tomcat will call ProtocolHandler.setAdapter()
         // on its startup with the Coyote Adapter which gives an access to Tomcat's HTTP service pipeline.
-        final Connector connector = connector();
+        final Connector connector = new Connector(TomcatProtocolHandler.class.getName());
         connector.setPort(0); // We do not really open a port - just trying to stop the Connector from complaining.
 
-        server = newServer(connector, config());
+        StandardServer server = newServer(hostname, connector, config);
 
         // Retrieve the components configured by newServer(), so we can use it in checkConfiguration().
         final Service service = server.findServices()[0];
@@ -109,33 +72,20 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
 
         // Apply custom configurators set via TomcatServiceBuilder.configurator()
         try {
-            config().configurators().forEach(c -> c.accept(server));
+            config.configurators().forEach(c -> c.accept(server));
         } catch (Throwable t) {
             throw new TomcatServiceException("failed to configure an embedded Tomcat", t);
         }
 
         // Make sure the configurators did not ruin what we have configured in this method.
-        checkConfiguration(service, connector, engine, host, context);
+        checkConfiguration(server, service, connector, engine, host, context);
 
-        // Start the server finally.
-        try {
-            server.start();
-        } catch (LifecycleException e) {
-            throw new TomcatServiceException("failed to start an embedded Tomcat", e);
-        }
+        assert connector.getService().getServer() != null;
+        return connector;
     }
 
-    void stop() {
-        StandardServer server = this.server;
-        this.server = null;
 
-        if (server != null) {
-            logger.info("Stopping an embedded Tomcat: {}", config());
-            server.stopAwait();
-        }
-    }
-
-    private StandardServer newServer(Connector connector, TomcatServiceConfig config) {
+    private StandardServer newServer(String hostname, Connector connector, TomcatServiceConfig config) {
         //
         // server <------ services <------ engines <------ realm
         //                                         <------ hosts <------ contexts
@@ -145,8 +95,9 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
 
         final StandardEngine engine = new StandardEngine();
         engine.setName(config.engineName());
-        engine.setDefaultHost(config.hostname());
+        engine.setDefaultHost(hostname);
         engine.setRealm(config.realm());
+        engine.setBackgroundProcessorDelay(-1);
 
         final StandardService service = new StandardService();
         service.setName(config.serviceName());
@@ -165,10 +116,10 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
 
         // Add the web application context.
         // Get or create a host.
-        StandardHost host = (StandardHost) engine.findChild(config.hostname());
+        StandardHost host = (StandardHost) engine.findChild(hostname);
         if (host == null) {
             host = new StandardHost();
-            host.setName(config.hostname());
+            host.setName(hostname);
             engine.addChild(host);
         }
 
@@ -181,7 +132,7 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
         }
 
         // Use our own WebResourceRoot implementation so that we can load a ZIP/JAR file
-        // whose extention is not '.war'.
+        // whose extension is not '.war'.
         ctx.setResources(new ArmeriaWebResourceRoot(ctx, config));
 
         ctx.setPath(ROOT_CONTEXT_PATH);
@@ -198,7 +149,8 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
         return server;
     }
 
-    private void checkConfiguration(Service expectedService, Connector expectedConnector,
+    private void checkConfiguration(StandardServer server,
+                                    Service expectedService, Connector expectedConnector,
                                     Engine expectedEngine, StandardHost expectedHost, Context expectedContext) {
 
 
@@ -222,7 +174,7 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
         }
 
         // Check if the name of the default service has not been changed.
-        if (!config().serviceName().equals(expectedService.getName())) {
+        if (!config.serviceName().equals(expectedService.getName())) {
             throw new TomcatServiceException(
                     "A configurator should never change the name of the default service.");
         }
@@ -242,13 +194,13 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
         }
 
         // Check if the engine's name has not been changed.
-        if (!config().engineName().equals(expectedEngine.getName())) {
+        if (!config.engineName().equals(expectedEngine.getName())) {
             throw new TomcatServiceException(
                     "A configurator should never change the name of the default engine.");
         }
 
         // Check if the default realm has not been changed.
-        if (expectedEngine.getRealm() != config().realm()) {
+        if (expectedEngine.getRealm() != config.realm()) {
             throw new TomcatServiceException("A configurator should never change the default realm.");
         }
 
@@ -268,18 +220,6 @@ final class ManagedTomcatServiceInvocationHandler extends TomcatServiceInvocatio
         if (!config.docBase().toString().equals(expectedContext.getDocBase())) {
             throw new TomcatServiceException(
                     "A configurator should never change the docBase of the default context.");
-        }
-    }
-
-    private final class Configurator extends ServerListenerAdapter {
-        @Override
-        public void serverStarting(Server server) {
-            start();
-        }
-
-        @Override
-        public void serverStopped(Server server) {
-            stop();
         }
     }
 }

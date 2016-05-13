@@ -36,14 +36,14 @@ public class UnmanagedJettyServiceTest extends WebAppContainerTest {
         jetty = new Server(0);
         jetty.setHandler(JettyServiceTest.newWebAppContext());
         jetty.start();
-
         sb.serviceUnder(
                 "/jsp/",
-                JettyService.forServer("localhost", jetty).decorate(LoggingService::new));
+                JettyService.forServer(jetty).decorate(LoggingService::new));
     }
 
     @AfterClass
     public static void stopJetty() throws Exception {
         jetty.stop();
+        jetty.destroy();
     }
 }

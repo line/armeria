@@ -23,8 +23,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import io.netty.handler.ssl.SslContext;
+import io.netty.util.DomainMappingBuilder;
+import io.netty.util.DomainNameMapping;
 
 /**
  * A <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
@@ -40,9 +43,13 @@ import io.netty.handler.ssl.SslContext;
  */
 public final class VirtualHost {
 
+    private static final Pattern HOSTNAME_PATTERN = Pattern.compile(
+            "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_\\.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
+
     /** Initialized later by {@link ServerConfig} via {@link #setServerConfig(ServerConfig)}. */
     private ServerConfig serverConfig;
 
+    private final String defaultHostname;
     private final String hostnamePattern;
     private final SslContext sslContext;
     private final List<ServiceConfig> services;
@@ -50,9 +57,15 @@ public final class VirtualHost {
 
     private String strVal;
 
-    VirtualHost(String hostnamePattern, SslContext sslContext, Iterable<ServiceConfig> serviceConfigs) {
+    VirtualHost(String defaultHostname, String hostnamePattern,
+                SslContext sslContext, Iterable<ServiceConfig> serviceConfigs) {
 
-        this.hostnamePattern = normalizeHostnamePattern(hostnamePattern);
+        defaultHostname = normalizeDefaultHostname(defaultHostname);
+        hostnamePattern = normalizeHostnamePattern(hostnamePattern);
+        ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
+
+        this.defaultHostname = defaultHostname;
+        this.hostnamePattern = hostnamePattern;
         this.sslContext = validateSslContext(sslContext);
 
         requireNonNull(serviceConfigs, "serviceConfigs");
@@ -70,14 +83,57 @@ public final class VirtualHost {
     }
 
     /**
-     * IDNA ASCII conversion and case normalization
+     * IDNA ASCII conversion, case normalization and validation.
+     */
+    static String normalizeDefaultHostname(String defaultHostname) {
+        requireNonNull(defaultHostname, "defaultHostname");
+        if (needsNormalization(defaultHostname)) {
+            defaultHostname = IDN.toASCII(defaultHostname, IDN.ALLOW_UNASSIGNED);
+        }
+
+        if (!HOSTNAME_PATTERN.matcher(defaultHostname).matches()) {
+            throw new IllegalArgumentException("defaultHostname: " + defaultHostname);
+        }
+
+        return defaultHostname.toLowerCase(Locale.ENGLISH);
+    }
+
+    /**
+     * IDNA ASCII conversion, case normalization and validation.
      */
     static String normalizeHostnamePattern(String hostnamePattern) {
         requireNonNull(hostnamePattern, "hostnamePattern");
         if (needsNormalization(hostnamePattern)) {
             hostnamePattern = IDN.toASCII(hostnamePattern, IDN.ALLOW_UNASSIGNED);
         }
-        return hostnamePattern.toLowerCase(Locale.US);
+
+        if (!"*".equals(hostnamePattern) &&
+            !HOSTNAME_PATTERN.matcher(hostnamePattern.startsWith("*.") ? hostnamePattern.substring(2)
+                                                                       : hostnamePattern).matches()) {
+            throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
+        }
+
+        return hostnamePattern.toLowerCase(Locale.ENGLISH);
+    }
+
+    /**
+     * Ensure that 'hostnamePattern' matches 'defaultHostname'.
+     */
+    static void ensureHostnamePatternMatchesDefaultHostname(String hostnamePattern, String defaultHostname) {
+        if ("*".equals(hostnamePattern)) {
+            return;
+        }
+
+        // Pretty convoluted way to validate but it's done only once and
+        // we don't need to duplicate the pattern matching logic.
+        final DomainNameMapping<Boolean> mapping =
+                new DomainMappingBuilder<>(Boolean.FALSE).add(hostnamePattern, Boolean.TRUE).build();
+
+        if (!mapping.map(defaultHostname)) {
+            throw new IllegalArgumentException(
+                    "defaultHostname: " + defaultHostname +
+                    " (must be matched by hostnamePattern: " + hostnamePattern + ')');
+        }
     }
 
     private static boolean needsNormalization(String hostnamePattern) {
@@ -117,6 +173,12 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the default hostname of this virtual host.
+     */
+    public String defaultHostname() {
+        return defaultHostname;
+    }
+    /**
      * Returns the hostname pattern of this virtual host, as defined in
      * <a href="http://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>
      */
@@ -152,14 +214,15 @@ public final class VirtualHost {
     public String toString() {
         String strVal = this.strVal;
         if (strVal == null) {
-            this.strVal = strVal = toString(getClass(), hostnamePattern(), sslContext(), serviceConfigs());
+            this.strVal = strVal = toString(
+                    getClass(), defaultHostname(), hostnamePattern(), sslContext(), serviceConfigs());
         }
 
         return strVal;
     }
 
-    static String toString(
-            Class<?> type, String hostnamePattern, SslContext sslContext, List<?> services) {
+    static String toString(Class<?> type, String defaultHostname, String hostnamePattern,
+                           SslContext sslContext, List<?> services) {
 
         StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -167,6 +230,8 @@ public final class VirtualHost {
         }
 
         buf.append('(');
+        buf.append(defaultHostname);
+        buf.append('/');
         buf.append(hostnamePattern);
         buf.append(", ssl: ");
         buf.append(sslContext != null);
