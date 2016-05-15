@@ -80,10 +80,25 @@ Inc:
 Dependencies
 ============
 
+This product depends on Brave, distributed by Zipkin.io:
+
+  * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/openzipkin/brave/
+
 This product depends on EasyMock, distributed by Easymock contributors:
 
   * License: licenses/LICENSE.easymock.al20.txt (Apache License v2.0)
   * Homepage: http://easymock.org/
+
+This product depends on FindBugs-JSR305, distributed by
+
+  * License: licenses/LICENSE.jsr305.al20.txt (Apache License v2.0)
+  * Homepage: http://findbugs.sourceforge.net/
+
+This product depends on Guava, distributed by Google:
+
+  * License: licenses/LICENSE.guava.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/google/guava
 
 This product depends on Hamcrest, distributed by hamcrest.org:
 
@@ -116,6 +131,11 @@ This product depends on jMock, distributed by jMock.org:
   * License: licenses/LICENSE.jmock.bsd.txt (BSD License)
   * Homepage: http://www.jmock.org/
 
+This product depends on JsonUnit, distributed by Lukáš Křečan:
+
+  * License: licenses/LICENSE.jsonunit.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/lukas-krecan/JsonUnit
+
 This product depends on jUnit, distributed by jUnit.org:
 
   * License: licenses/LICENSE.junit.epl10.html (Eclipse Public License v1.0)
@@ -126,6 +146,11 @@ This product depends on Logback, distributed by QOS.ch:
   * License: licenses/LICENSE.logback.epl10.html (Eclipse Public License v1.0)
   * Homepage: http://logback.qos.ch/
 
+This product depends on Metrics, distributed by Coda Hale:
+
+  * License: licenses/LICENSE.metrics.al20.txt (Apache License v2.0)
+  * Homepage: http://metrics.dropwizard.io/
+
 This product depends on Mockito, distributed by Mockito contributors:
 
   * License: licenses/LICENSE.mockito.mit.txt (MIT License)
@@ -135,6 +160,11 @@ This product depends on Netty, distributed by Netty.io:
 
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
   * Homepage: http://netty.io/
+
+This product depends on Reflections, distributed by ronmamo:
+
+  * License: licenses/LICENSE.reflections.wtfpl.txt (WTFPL)
+  * Homepage: https://github.com/ronmamo/reflections
 
 This product depends on SLF4J, distributed by QOS.ch:
 
