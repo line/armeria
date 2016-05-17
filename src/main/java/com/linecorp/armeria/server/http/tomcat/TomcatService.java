@@ -24,6 +24,7 @@ import java.util.function.Function;
 
 import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Server;
+import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
@@ -137,15 +138,29 @@ public final class TomcatService extends HttpService {
             final Server server = connector.getService().getServer();
             if (server.getState() == LifecycleState.STOPPED) {
                 try {
-                    logger.info("Destroying an embedded Tomcat: {}", server);
+                    logger.info("Destroying an embedded Tomcat: {}", toString(server));
                     server.destroy();
                 } catch (Exception e) {
-                    logger.warn("Failed to destroy an embedded Tomcat: {}", server, e);
+                    logger.warn("Failed to destroy an embedded Tomcat: {}", toString(server), e);
                 }
             }
         };
 
         return new TomcatService(null, new ManagedConnectorFactory(config), postStopTask);
+    }
+
+    static String toString(Server server) {
+        requireNonNull(server, "server");
+
+        final Service[] services = server.findServices();
+        final String serviceName;
+        if (services.length == 0) {
+            serviceName = "<unknown>";
+        } else {
+            serviceName = services[0].getName();
+        }
+
+        return "(serviceName: " + serviceName + ", catalinaBase: " + server.getCatalinaBase() + ')';
     }
 
     private TomcatService(String hostname, Function<String, Connector> connectorFactory) {

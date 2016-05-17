@@ -142,7 +142,7 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         server = service.getServer();
 
         if (server.getState() != LifecycleState.STARTED) {
-            logger.info("Starting an embedded Tomcat: {}", server);
+            logger.info("Starting an embedded Tomcat: {}", TomcatService.toString(server));
             server.start();
             started = true;
         }
@@ -167,10 +167,10 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         }
 
         try {
-            logger.info("Stopping an embedded Tomcat: {}", server);
+            logger.info("Stopping an embedded Tomcat: {}", TomcatService.toString(server));
             server.stop();
         } catch (Exception e) {
-            logger.warn("Failed to stop an embedded Tomcat: {}", server, e);
+            logger.warn("Failed to stop an embedded Tomcat: {}", TomcatService.toString(server), e);
         }
 
         postStopTask.accept(connector);
