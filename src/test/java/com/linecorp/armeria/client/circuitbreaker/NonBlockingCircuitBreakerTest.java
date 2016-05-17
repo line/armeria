@@ -29,6 +29,8 @@ import org.junit.Test;
 
 import com.google.common.testing.FakeTicker;
 
+import com.linecorp.armeria.common.util.Exceptions;
+
 public class NonBlockingCircuitBreakerTest {
 
     private static final String remoteServiceName = "testservice";
@@ -189,7 +191,9 @@ public class NonBlockingCircuitBreakerTest {
     @Test
     public void testFailureOfExceptionFilter() {
         NonBlockingCircuitBreaker cb = (NonBlockingCircuitBreaker) new CircuitBreakerBuilder()
-                .exceptionFilter(cause -> {throw new Exception();})
+                .exceptionFilter(cause -> {
+                    throw Exceptions.clearTrace(new Exception("exception filter failed"));
+                })
                 .ticker(ticker)
                 .build();
         cb.onFailure(new Exception());

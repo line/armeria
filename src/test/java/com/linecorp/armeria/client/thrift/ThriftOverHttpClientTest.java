@@ -61,6 +61,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.ThriftService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
@@ -80,6 +81,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 @SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
 public class ThriftOverHttpClientTest {
+
+    private static final boolean ENABLE_LOGGING_DECORATORS = false;
 
     private static final Server server;
 
@@ -164,10 +167,10 @@ public class ThriftOverHttpClientTest {
 
             for (Handlers h : Handlers.values()) {
                 for (SerializationFormat defaultSerializationFormat : SerializationFormat.ofThrift()) {
-                    sb.serviceAt(
-                            h.getPath(defaultSerializationFormat),
-                            ThriftService.of(h.handler(), defaultSerializationFormat).decorate(
-                                    LoggingService::new));
+                    final Service service = ThriftService.of(h.handler(), defaultSerializationFormat);
+                    sb.serviceAt(h.getPath(defaultSerializationFormat),
+                                 ENABLE_LOGGING_DECORATORS ? service.decorate(LoggingService::new)
+                                                           : service);
                 }
             }
         } catch (Exception e) {
@@ -225,7 +228,9 @@ public class ThriftOverHttpClientTest {
 
         final RemoteInvokerOptionValue<Function<KeyedChannelPoolHandler<PoolKey>,
                                                 KeyedChannelPoolHandler<PoolKey>>> poolHandlerDecoratorOptVal =
-                RemoteInvokerOption.POOL_HANDLER_DECORATOR.newValue(KeyedChannelPoolLoggingHandler::new);
+                RemoteInvokerOption.POOL_HANDLER_DECORATOR.newValue(
+                        ENABLE_LOGGING_DECORATORS ? KeyedChannelPoolLoggingHandler::new
+                                                  : Function.identity());
 
         remoteInvokerFactoryWithUseHttp2Preface = new RemoteInvokerFactory(RemoteInvokerOptions.of(
                 trustManagerFactoryOptVal,
@@ -237,7 +242,9 @@ public class ThriftOverHttpClientTest {
                 poolHandlerDecoratorOptVal,
                 RemoteInvokerOption.USE_HTTP2_PREFACE.newValue(false)));
 
-        clientOptions = ClientOptions.of(ClientOption.DECORATOR.newValue(LoggingClient::new));
+        clientOptions =
+                ENABLE_LOGGING_DECORATORS ? ClientOptions.of(ClientOption.DECORATOR.newValue(LoggingClient::new))
+                                          : ClientOptions.DEFAULT;
     }
 
     @AfterClass

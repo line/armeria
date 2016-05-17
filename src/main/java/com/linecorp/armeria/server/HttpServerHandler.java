@@ -632,8 +632,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
             req.headers().remove(HttpHeaderNames.UPGRADE);
             req.headers().remove(Http2CodecUtil.HTTP_UPGRADE_SETTINGS_HEADER);
 
-            logger.debug("{} Handling the pre-upgrade request ({}): {}",
-                         ctx.channel(), ((UpgradeEvent) evt).protocol(), req);
+            if (logger.isDebugEnabled()) {
+                logger.debug("{} Handling the pre-upgrade request ({}): {} {} {} ({}B)",
+                             ctx.channel(), ((UpgradeEvent) evt).protocol(),
+                             req.method(), req.uri(), req.protocolVersion(), req.content().readableBytes());
+            }
 
             // Set the stream ID of the pre-upgrade request, which is always 1.
             req.headers().set(STREAM_ID, "1");
