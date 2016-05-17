@@ -171,8 +171,6 @@ public final class TomcatServiceBuilder {
         return new TomcatServiceBuilder(docBase, null);
     }
 
-    private static final Realm NULL_REALM = new NullRealm();
-
     private final Path docBase;
     private final String jarRoot;
     private final List<Consumer<? super StandardServer>> configurators = new ArrayList<>();
@@ -180,7 +178,7 @@ public final class TomcatServiceBuilder {
     private String serviceName = DEFAULT_SERVICE_NAME;
     private String engineName;
     private Path baseDir;
-    private Realm realm = NULL_REALM;
+    private Realm realm;
     private String hostname;
 
     private TomcatServiceBuilder(Path docBase, String jarRoot) {
@@ -320,6 +318,12 @@ public final class TomcatServiceBuilder {
             } catch (IOException e) {
                 throw new TomcatServiceException("failed to secure a temporary directory", e);
             }
+        }
+
+        // Use a NullRealm if no Realm was specified.
+        Realm realm = this.realm;
+        if (realm == null) {
+            realm = new NullRealm();
         }
 
         return TomcatService.forConfig(new TomcatServiceConfig(

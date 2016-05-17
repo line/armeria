@@ -126,7 +126,7 @@ final class TomcatServiceConfig {
                "(serviceName: " + serviceName +
                ", engineName: " + engineName +
                ", baseDir: " + baseDir +
-               ", realm: " + realm.getClass().getSimpleName() +
+               ", realm: " + (realm != null ? realm.getClass().getSimpleName() : "null") +
                ", hostname: " + hostname +
                ", docBase: " + docBase +
                (jarRoot != null ? ", jarRoot: " + jarRoot : "") +
