@@ -7,7 +7,10 @@ JDK_TARBALL="$HOME/.jdk/${JDK_VERSION}.tar.gz"
 
 function install_symlink() {
   local DEFAULT_JDK_HOME="$HOME/.jdk/default"
-  ln -sf "$JDK_HOME" "$DEFAULT_JDK_HOME"
+  if [[ "$(readlink "$DEFAULT_JDK_HOME")" != "$JDK_HOME" ]]; then
+    rm -fr "$DEFAULT_JDK_HOME"
+    ln -sv "$JDK_HOME" "$DEFAULT_JDK_HOME"
+  fi
   "$DEFAULT_JDK_HOME/bin/java" -version
 }
 
