@@ -11,6 +11,8 @@ function install_symlink() {
     rm -fr "$DEFAULT_JDK_HOME"
     ln -sv "$JDK_HOME" "$DEFAULT_JDK_HOME"
   fi
+  # Remove cyclic symlinks created by the buggy version of this script
+  rm -vfr "$JDK_HOME/$JDK_VERSION" "$DEFAULT_JDK_HOME/$JDK_VERSION"
   "$DEFAULT_JDK_HOME/bin/java" -version
 }
 
