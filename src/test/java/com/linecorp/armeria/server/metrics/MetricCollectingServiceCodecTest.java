@@ -21,6 +21,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -31,6 +32,7 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.metrics.MetricConsumer;
 import com.linecorp.armeria.server.AbstractServerTest;
@@ -74,9 +76,22 @@ public class MetricCollectingServiceCodecTest {
     }
 
     abstract static class ExecutionCheckingTest extends AbstractServerTest {
-        private int executed;
+        private int started;
+        private int completed;
 
-        protected MetricConsumer defaultConsumer = (a, b, c, d, e, f, g, h) -> executed += 1;
+        protected MetricConsumer defaultConsumer = new MetricConsumer() {
+            @Override
+            public void invocationStarted(Scheme scheme, String hostname, String path, Optional<String> method) {
+                started++;
+            }
+
+            @Override
+            public void invocationComplete(Scheme scheme, int code, long processTimeNanos, int requestSize,
+                                           int responseSize, String hostname, String path,
+                                           Optional<String> method, boolean started) {
+                completed++;
+            }
+        };
 
         @Test
         public void test() throws Exception {
@@ -86,7 +101,8 @@ public class MetricCollectingServiceCodecTest {
 
                 hc.execute(req);
 
-                assertEquals(1, executed);
+                assertEquals(1, started);
+                assertEquals(1, completed);
             }
         }
     }
