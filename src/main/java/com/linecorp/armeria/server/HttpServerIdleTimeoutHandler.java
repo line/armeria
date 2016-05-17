@@ -80,9 +80,6 @@ class HttpServerIdleTimeoutHandler extends IdleStateHandler {
         if (pendingResCount == 0 && evt.isFirst()) {
             logger.debug("{} Closing due to idleness", ctx.channel());
             ctx.close();
-            return;
         }
-
-        ctx.fireUserEventTriggered(evt);
     }
 }
