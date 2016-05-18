@@ -23,8 +23,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
-
 /**
  * A {@link Service} and its {@link PathMapping} and {@link VirtualHost}.
  *
@@ -167,12 +165,13 @@ public final class ServiceConfig {
     /**
      * Returns the {@link Service}.
      */
-    public Service service() {
-        return service;
+    @SuppressWarnings("unchecked")
+    public <T extends Service> T service() {
+        return (T) service;
     }
 
     /**
-     * Returns the name of the {@link ServiceInvocationContext#logger() service logger}.
+     * Returns the name of the {@link ServiceRequestContext#logger() service logger}.
      */
     public String loggerName() {
         if (fullLoggerName == null) {

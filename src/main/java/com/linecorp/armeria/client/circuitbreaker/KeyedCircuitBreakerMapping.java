@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -18,16 +18,13 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Method;
-import java.net.URI;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientCodec;
-import com.linecorp.armeria.client.ClientOptions;
-
-import io.netty.channel.EventLoop;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RpcRequest;
 
 /**
  * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to its key. {@link KeySelector} is used
@@ -55,9 +52,8 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
     }
 
     @Override
-    public CircuitBreaker get(EventLoop eventLoop, URI uri, ClientOptions options, ClientCodec codec,
-                              Method method, Object[] args) throws Exception {
-        final K key = keySelector.get(eventLoop, uri, options, codec, method, args);
+    public CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception {
+        final K key = keySelector.get(ctx, req);
         final CircuitBreaker circuitBreaker = mapping.get(key);
         if (circuitBreaker != null) {
             return circuitBreaker;
@@ -75,25 +71,20 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
          * A {@link KeySelector} that returns remote method name as a key.
          */
         KeySelector<String> METHOD =
-                (eventLoop, uri, options, codec, method, args) -> method.getName();
+                (ctx, req) -> req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method();
 
         /**
          * A {@link KeySelector} that returns a key consisted of remote host name and port number.
          */
         KeySelector<String> HOST =
-                (eventLoop, uri, options, codec, method, args) ->
-                        uri.getPort() < 0 ? uri.getHost() : uri.getHost() + ':' + uri.getPort();
+                (ctx, req) -> ctx.endpoint().authority();
 
         /**
          * A {@link KeySelector} that returns a key consisted of remote host name, port number, and method name.
          */
         KeySelector<String> HOST_AND_METHOD =
-                (eventLoop, uri, options, codec, method, args) ->
-                        HOST.get(eventLoop, uri, options, codec, method, args) + '#' + method.getName();
+                (ctx, req) -> HOST.get(ctx, req) + '#' + METHOD.get(ctx, req);
 
-        K get(EventLoop eventLoop, URI uri, ClientOptions options, ClientCodec codec, Method method,
-              Object[] args) throws Exception;
-
+        K get(ClientRequestContext ctx, Request req) throws Exception;
     }
-
 }

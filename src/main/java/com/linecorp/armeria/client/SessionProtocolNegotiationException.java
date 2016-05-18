@@ -38,7 +38,7 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
      * Creates a new instance with the specified expected {@link SessionProtocol}.
      */
     public SessionProtocolNegotiationException(SessionProtocol expected, @Nullable String reason) {
-        super("expected: " + requireNonNull(expected, "expected"));
+        super("expected: " + requireNonNull(expected, "expected") + ", reason: " + reason);
         this.expected = expected;
         actual = null;
     }
@@ -50,39 +50,9 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
                                                @Nullable SessionProtocol actual, @Nullable String reason) {
 
         super("expected: " + requireNonNull(expected, "expected") +
-              ", actual: " + requireNonNull(actual, "actual"));
+              ", actual: " + requireNonNull(actual, "actual") + ", reason: " + reason);
         this.expected = expected;
         this.actual = actual;
-    }
-
-    private static String message(SessionProtocol expected, SessionProtocol actual, String reason) {
-        requireNonNull(expected, "expected");
-
-        final StringBuilder buf;
-
-        if (reason != null) {
-            buf = new StringBuilder(reason.length() + 32);
-
-            buf.append(reason);
-            buf.append(" (expected: ");
-            buf.append(expected);
-            if (actual != null) {
-                buf.append(", actual: ");
-                buf.append(actual);
-            }
-            buf.append(')');
-        } else {
-            buf = new StringBuilder(32);
-
-            buf.append("expected: ");
-            buf.append(expected);
-            if (actual != null) {
-                buf.append(", actual: ");
-                buf.append(actual);
-            }
-        }
-
-        return buf.toString();
     }
 
     /**

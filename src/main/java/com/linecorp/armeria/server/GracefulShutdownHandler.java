@@ -34,7 +34,7 @@ import io.netty.handler.codec.http.LastHttpContent;
  * after a fixed quiet period passes after the last one.
  */
 @Sharable
-class GracefulShutdownHandler extends ChannelDuplexHandler {
+public final class GracefulShutdownHandler extends ChannelDuplexHandler {
 
     private final long quietPeriodNanos;
     private final Ticker ticker;
@@ -120,7 +120,7 @@ class GracefulShutdownHandler extends ChannelDuplexHandler {
         return threadPool.getQueue().isEmpty() && threadPool.getActiveCount() == 0;
     }
 
-    void reset() {
+    public void reset() {
         shutdownStartTimeNanos = null;
     }
 }

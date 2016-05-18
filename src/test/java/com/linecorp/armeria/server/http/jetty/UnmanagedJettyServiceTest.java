@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.server.http.jetty;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
 
@@ -28,7 +25,6 @@ import com.linecorp.armeria.server.logging.LoggingService;
 
 public class UnmanagedJettyServiceTest extends WebAppContainerTest {
 
-    private final List<Object> jettyBeans = new ArrayList<>();
     private static Server jetty;
 
     @Override

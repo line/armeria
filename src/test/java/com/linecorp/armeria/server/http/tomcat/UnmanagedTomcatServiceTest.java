@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -27,6 +27,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -77,11 +78,12 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
     }
 
     @Test
-    public void testInternalServerError() throws Exception {
+    public void testUnconfiguredWebApp() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/no-webapp/")))) {
-                // as no webapp is configured inside tomcat, 500 will be thrown.
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
+                // as no webapp is configured inside tomcat, 404 will be thrown.
+                System.err.println("Entity: " + EntityUtils.toString(res.getEntity()));
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
             }
         }
     }

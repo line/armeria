@@ -26,6 +26,8 @@ import org.apache.catalina.core.StandardEngine;
 import org.apache.catalina.core.StandardServer;
 import org.apache.catalina.core.StandardService;
 
+import com.google.common.base.MoreObjects;
+
 /**
  * {@link TomcatService} configuration.
  */
@@ -65,7 +67,7 @@ final class TomcatServiceConfig {
      * Returns the name of the {@link StandardEngine} of an embedded Tomcat.
      */
     String engineName() {
-        return engineName != null ? engineName : serviceName;
+        return MoreObjects.firstNonNull(engineName, serviceName);
     }
 
     /**
