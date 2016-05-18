@@ -22,10 +22,12 @@ import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLException;
 
+import org.apache.thrift.transport.TMemoryBuffer;
+import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import com.linecorp.armeria.common.http.Http1ClientCodec;
+import com.linecorp.armeria.internal.http.Http1ClientCodec;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -68,7 +70,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
 /**
@@ -84,10 +85,8 @@ final class THttp2Client extends TTransport {
     private final int port;
     private final String path;
 
-    private final TByteBufTransport in = new TByteBufTransport();
-    private final TByteBufTransport out = new TByteBufTransport();
-    private final ByteBuf inBuf = Unpooled.buffer();
-    private final ByteBuf outBuf = Unpooled.buffer();
+    private TMemoryInputTransport in;
+    private final TMemoryBuffer out = new TMemoryBuffer(128);
 
     THttp2Client(String uriStr) throws TTransportException {
         uri = URI.create(uriStr);
@@ -140,9 +139,6 @@ final class THttp2Client extends TTransport {
         this.host = host;
         this.port = port;
         this.path = path;
-
-        in.reset(inBuf);
-        out.reset(outBuf);
     }
 
     @Override
@@ -155,14 +151,11 @@ final class THttp2Client extends TTransport {
 
     @Override
     public void close() {
-        group.shutdownGracefully().addListener((FutureListener<Object>) future -> {
-            inBuf.release();
-            outBuf.release();
-        });
+        group.shutdownGracefully();
     }
 
     @Override
-    public int read(byte[] buf, int off, int len) {
+    public int read(byte[] buf, int off, int len) throws TTransportException {
         return in.read(buf, off, len);
     }
 
@@ -198,8 +191,6 @@ final class THttp2Client extends TTransport {
 
     @Override
     public void flush() throws TTransportException {
-        inBuf.clear();
-
         THttp2ClientInitializer initHandler = new THttp2ClientInitializer();
 
         Bootstrap b = new Bootstrap();
@@ -218,7 +209,8 @@ final class THttp2Client extends TTransport {
 
             // Send a Thrift request.
             FullHttpRequest request = new DefaultFullHttpRequest(
-                    HttpVersion.HTTP_1_1, HttpMethod.POST, path, outBuf.duplicate().retain());
+                    HttpVersion.HTTP_1_1, HttpMethod.POST, path,
+                    Unpooled.wrappedBuffer(out.getArray(), 0, out.length()));
             request.headers().add(HttpHeaderNames.HOST, host);
             request.headers().set(ExtensionHeaderNames.SCHEME.text(), uri.getScheme());
             ch.writeAndFlush(request).sync();
@@ -228,12 +220,13 @@ final class THttp2Client extends TTransport {
             ByteBuf response = handler.responsePromise.get();
 
             // Pass the received Thrift response to the Thrift client.
-            inBuf.writeBytes(response);
+            final byte[] array = new byte[response.readableBytes()];
+            response.readBytes(array);
+            in = new TMemoryInputTransport(array);
             response.release();
         } catch (Exception e) {
             throw new TTransportException(TTransportException.UNKNOWN, e);
         } finally {
-            outBuf.clear();
             if (ch != null) {
                 ch.close();
             }

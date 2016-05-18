@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
+import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -28,16 +30,17 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLException;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TimeoutPolicy;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.concurrent.Promise;
 
 /**
  * Builds a new {@link Server} and its {@link ServerConfig}.
@@ -62,10 +65,10 @@ public final class ServerBuilder {
     private static final int DEFAULT_NUM_WORKERS;
     private static final int DEFAULT_MAX_PENDING_REQUESTS = 8;
     private static final int DEFAULT_MAX_CONNECTIONS = 65536;
-    private static final TimeoutPolicy DEFAULT_REQUEST_TIMEOUT_POLICY =
-            TimeoutPolicy.ofFixed(Duration.ofSeconds(10));
-    private static final long DEFAULT_IDLE_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
-    private static final int DEFAULT_MAX_FRAME_LENGTH = 10 * 1024 * 1024; // 10 MB
+    // Use slightly greater value than the client default so that clients close the connection more often.
+    private static final long DEFAULT_IDLE_TIMEOUT_MILLIS = Duration.ofSeconds(15).toMillis();
+    private static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
+    private static final long DEFAULT_DEFAULT_MAX_REQUEST_LENGTH = 10 * 1024 * 1024; // 10 MB
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
@@ -108,14 +111,16 @@ public final class ServerBuilder {
     private int numWorkers = DEFAULT_NUM_WORKERS;
     private int maxPendingRequests = DEFAULT_MAX_PENDING_REQUESTS;
     private int maxConnections = DEFAULT_MAX_CONNECTIONS;
-    private TimeoutPolicy requestTimeoutPolicy = DEFAULT_REQUEST_TIMEOUT_POLICY;
     @SuppressWarnings("RedundantFieldInitialization")
     private long idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT_MILLIS;
-    private int maxFrameLength = DEFAULT_MAX_FRAME_LENGTH;
+    private long defaultRequestTimeoutMillis = DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS;
+    private long defaultMaxRequestLength = DEFAULT_DEFAULT_MAX_REQUEST_LENGTH;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
+
+    private Function<Service<Request, Response>, Service<Request, Response>> decorator;
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
@@ -158,7 +163,7 @@ public final class ServerBuilder {
 
     /**
      * Sets the number of worker threads that performs socket I/O and runs
-     * {@link ServiceInvocationHandler#invoke(ServiceInvocationContext, Executor, Promise)}.
+     * {@link Service#serve(ServiceRequestContext, Request)}.
      */
     public ServerBuilder numWorkers(int numWorkers) {
         this.numWorkers = ServerConfig.validateNumWorkers(numWorkers);
@@ -182,32 +187,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the timeout of a request in milliseconds.
-     *
-     * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
-     */
-    public ServerBuilder requestTimeoutMillis(long requestTimeoutMillis) {
-        return requestTimeout(Duration.ofMillis(requestTimeoutMillis));
-    }
-
-    /**
-     * Sets the timeout of a request.
-     *
-     * @param requestTimeout the timeout. {@code 0} disables the timeout.
-     */
-    public ServerBuilder requestTimeout(Duration requestTimeout) {
-        return requestTimeout(TimeoutPolicy.ofFixed(requireNonNull(requestTimeout, "requestTimeout")));
-    }
-
-    /**
-     * Sets the {@link TimeoutPolicy} of a request.
-     */
-    public ServerBuilder requestTimeout(TimeoutPolicy requestTimeoutPolicy) {
-        this.requestTimeoutPolicy = requireNonNull(requestTimeoutPolicy, "requestTimeoutPolicy");
-        return this;
-    }
-
-    /**
      * Sets the idle timeout of a connection in milliseconds.
      *
      * @param idleTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
@@ -224,6 +203,39 @@ public final class ServerBuilder {
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
         idleTimeoutMillis = ServerConfig.validateIdleTimeoutMillis(idleTimeout.toMillis());
+        return this;
+    }
+
+    /**
+     * Sets the default timeout of a request in milliseconds.
+     *
+     * @param defaultRequestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     */
+    public ServerBuilder defaultRequestTimeoutMillis(long defaultRequestTimeoutMillis) {
+        validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
+        this.defaultRequestTimeoutMillis = defaultRequestTimeoutMillis;
+        return this;
+    }
+
+    /**
+     * Sets the default timeout of a request.
+     *
+     * @param defaultRequestTimeout the timeout. {@code 0} disables the timeout.
+     */
+    public ServerBuilder defaultRequestTimeout(Duration defaultRequestTimeout) {
+        return defaultRequestTimeoutMillis(
+                requireNonNull(defaultRequestTimeout, "defaultRequestTimeout").toMillis());
+    }
+
+    /**
+     * Sets the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     *  @param defaultMaxRequestLength the maximum allowed length. {@code 0} disables the length limit.
+     */
+    public ServerBuilder defaultMaxRequestLength(long defaultMaxRequestLength) {
+        validateDefaultMaxRequestLength(defaultMaxRequestLength);
+        this.defaultMaxRequestLength = defaultMaxRequestLength;
         return this;
     }
 
@@ -276,16 +288,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the maximum allowed length of the frame (or the content) decoded at the session layer. e.g. the
-     * content of an HTTP request.
-     */
-    public ServerBuilder maxFrameLength(int maxFrameLength) {
-        this.maxFrameLength = ServerConfig.validateMaxFrameLength(maxFrameLength);
-        return this;
-    }
-
-    /**
-     * Sets the prefix of {@linkplain ServiceInvocationContext#logger() service logger} names.
+     * Sets the prefix of {@linkplain ServiceRequestContext#logger() service logger} names.
      * The default value is "{@value #DEFAULT_SERVICE_LOGGER_PREFIX}". A service logger name prefix must be
      * a string of valid Java identifier names concatenated by period ({@code '.'}), such as a package name.
      */
@@ -342,7 +345,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceAt(String exactPath, Service service) {
+    public ServerBuilder serviceAt(String exactPath, Service<?, ?> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceAt(exactPath, service);
         return this;
@@ -354,7 +357,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceUnder(String pathPrefix, Service service) {
+    public ServerBuilder serviceUnder(String pathPrefix, Service<?, ?> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
         return this;
@@ -367,7 +370,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(PathMapping pathMapping, Service service) {
+    public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service);
         return this;
@@ -377,14 +380,14 @@ public final class ServerBuilder {
      * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
      * {@link VirtualHost}.
      *
-     * @param loggerName the name of the {@linkplain ServiceInvocationContext#logger() service logger};
+     * @param loggerName the name of the {@linkplain ServiceRequestContext#logger() service logger};
      *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
      *                   such as a package name or a fully-qualified class name
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(PathMapping pathMapping, Service service, String loggerName) {
+    public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
         return this;
@@ -422,6 +425,25 @@ public final class ServerBuilder {
         return this;
     }
 
+    public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
+            R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response> ServerBuilder decorator(
+            Function<T, R> decorator) {
+
+        requireNonNull(decorator, "decorator");
+
+        @SuppressWarnings("unchecked")
+        Function<Service<Request, Response>, Service<Request, Response>> castDecorator =
+                (Function<Service<Request, Response>, Service<Request, Response>>) decorator;
+
+        if (this.decorator != null) {
+            this.decorator = this.decorator.andThen(castDecorator);
+        } else {
+            this.decorator = castDecorator;
+        }
+
+        return this;
+    }
+
     /**
      * Creates a new {@link Server} with the configuration properties set so far.
      */
@@ -435,22 +457,36 @@ public final class ServerBuilder {
                 !this.ports.isEmpty() ? this.ports
                                       : Collections.singletonList(new ServerPort(0, SessionProtocol.HTTP));
 
-        final VirtualHost defaultVirtualHost =
-                this.defaultVirtualHost != null ? this.defaultVirtualHost
-                                                : defaultVirtualHostBuilder.build();
+        final VirtualHost defaultVirtualHost;
+        if (this.defaultVirtualHost != null) {
+            defaultVirtualHost = this.defaultVirtualHost.decorate(decorator);
+        } else {
+            defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
+        }
+
+        final List<VirtualHost> virtualHosts;
+        if (decorator != null) {
+            virtualHosts = this.virtualHosts.stream()
+                                            .map(h -> h.decorate(decorator))
+                                            .collect(Collectors.toList());
+        } else {
+            virtualHosts = this.virtualHosts;
+        }
 
         return new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, numWorkers, maxPendingRequests, maxConnections,
-                requestTimeoutPolicy, idleTimeoutMillis, maxFrameLength, gracefulShutdownQuietPeriod,
-                gracefulShutdownTimeout, blockingTaskExecutor, serviceLoggerPrefix));
+                idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                blockingTaskExecutor, serviceLoggerPrefix));
     }
 
     @Override
     public String toString() {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts,
-                numWorkers, maxPendingRequests, maxConnections, requestTimeoutPolicy, idleTimeoutMillis,
-                maxFrameLength, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
-                serviceLoggerPrefix);
+                numWorkers, maxPendingRequests, maxConnections, idleTimeoutMillis,
+                defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                blockingTaskExecutor, serviceLoggerPrefix);
     }
 }

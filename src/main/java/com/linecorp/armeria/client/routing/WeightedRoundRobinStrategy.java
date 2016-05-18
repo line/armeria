@@ -24,12 +24,14 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy<WeightedEndpoint> {
+import com.linecorp.armeria.client.Endpoint;
+
+final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
     @Override
     @SuppressWarnings("unchecked")
-    public EndpointSelector<WeightedEndpoint> newSelector(EndpointGroup<? extends WeightedEndpoint> endpointGroup) {
-        return new RoundRobinSelector((EndpointGroup<WeightedEndpoint>) endpointGroup);
+    public EndpointSelector newSelector(EndpointGroup endpointGroup) {
+        return new RoundRobinSelector(endpointGroup);
     }
 
 
@@ -41,8 +43,8 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy<Weig
      * if endpoint weights are 1,2,3(or 2,4,6),then select result is abcbcc(or abcabcbcbccc) ...<br>
      * if endpoint weights are 3,5,7,then select result is abcabcabcbcbcbb abcabcabcbcbcbb ...
      */
-    final static class RoundRobinSelector implements EndpointSelector<WeightedEndpoint> {
-        private EndpointGroup<WeightedEndpoint> endpointGroup;
+    static final class RoundRobinSelector implements EndpointSelector {
+        private final EndpointGroup endpointGroup;
 
         private final AtomicLong sequence = new AtomicLong();
 
@@ -50,13 +52,13 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy<Weig
 
         private int maxWeight = Integer.MIN_VALUE;
 
-        private int sumWeight = 0;
+        private int sumWeight;
 
-        RoundRobinSelector(EndpointGroup<WeightedEndpoint> endpointGroup) {
-            requireNonNull(endpointGroup, "group");
+        RoundRobinSelector(EndpointGroup endpointGroup) {
+            requireNonNull(endpointGroup, "endpointGroup");
 
             this.endpointGroup = endpointGroup;
-            endpointGroup.endpoints().stream().forEach(e -> {
+            endpointGroup.endpoints().forEach(e -> {
                 int weight = e.weight();
                 minWeight = Math.min(minWeight, weight);
                 maxWeight = Math.max(maxWeight, weight);
@@ -65,7 +67,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy<Weig
         }
 
         @Override
-        public EndpointGroup<WeightedEndpoint> group() {
+        public EndpointGroup group() {
             return endpointGroup;
         }
 
@@ -75,19 +77,19 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy<Weig
         }
 
         @Override
-        public WeightedEndpoint select() {
-            List<WeightedEndpoint> endpoints = endpointGroup.endpoints();
+        public Endpoint select() {
+            List<Endpoint> endpoints = endpointGroup.endpoints();
             long currentSequence = sequence.getAndIncrement();
 
             if (minWeight < maxWeight) {
-                HashMap<WeightedEndpoint, AtomicInteger> endpointWeights = new LinkedHashMap<>();
-                for (WeightedEndpoint endpoint : endpoints) {
+                HashMap<Endpoint, AtomicInteger> endpointWeights = new LinkedHashMap<>();
+                for (Endpoint endpoint : endpoints) {
                     endpointWeights.put(endpoint, new AtomicInteger(endpoint.weight()));
                 }
 
                 int mod = (int) (currentSequence % sumWeight);
                 for (int i = 0; i < maxWeight; i++) {
-                    for (Map.Entry<WeightedEndpoint, AtomicInteger> entry : endpointWeights.entrySet()) {
+                    for (Map.Entry<Endpoint, AtomicInteger> entry : endpointWeights.entrySet()) {
                         AtomicInteger weight = entry.getValue();
                         if (mod == 0 && weight.get() > 0) {
                             return entry.getKey();

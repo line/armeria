@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
@@ -55,13 +56,14 @@ final class ThriftDocString {
 
     private static final String THRIFT_JSON_PATH;
 
-    private static final TypeReference JSON_VALUE_TYPE = new TypeReference<HashMap<String, Object>>() {};
+    private static final TypeReference<HashMap<String, Object>> JSON_VALUE_TYPE =
+            new TypeReference<HashMap<String, Object>>() {};
 
     private static final String FQCN_DELIM = ".";
 
     private static final String DELIM = "#";
 
-    private static Map<ClassLoader, Map<String, String>> cached = new ConcurrentHashMap<>();
+    private static final Map<ClassLoader, Map<String, String>> cached = new ConcurrentHashMap<>();
 
     static {
         final String propertyName = "com.linecorp.armeria.thrift.jsonDir";
@@ -135,9 +137,10 @@ final class ThriftDocString {
             final String packageName = (String) namespaces.get("java");
             json.forEach((key, children) -> {
                 if (children instanceof Collection) {
-                    ((Collection) children).forEach(grandChild -> {
-                        traverseChildren(docStrings, packageName, FQCN_DELIM, grandChild);
-                    });
+                    @SuppressWarnings("unchecked")
+                    Collection<Object> castChildren = (Collection<Object>) children;
+                    castChildren.forEach(
+                            grandChild -> traverseChildren(docStrings, packageName, FQCN_DELIM, grandChild));
                 }
             });
 
@@ -156,7 +159,7 @@ final class ThriftDocString {
             final String doc = (String) map.get("doc");
             String childPrefix;
             if (name != null) {
-                childPrefix = (prefix != null ? prefix : "") + delimiter + name;
+                childPrefix = MoreObjects.firstNonNull(prefix, "") + delimiter + name;
                 if (doc != null) {
                     docStrings.put(childPrefix, doc.trim());
                 }

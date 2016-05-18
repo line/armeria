@@ -15,19 +15,20 @@
  */
 package com.linecorp.armeria.client.routing;
 
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class EndpointGroupUtilTest {
     String endpointGroupMark = "group:";
 
     @Test
     public void testGetEndpointGroupName() throws Exception {
-        assertEquals(null, EndpointGroupUtil.getEndpointGroupName("http://myGroupName/"));
-        assertEquals(null, EndpointGroupUtil.getEndpointGroupName("http://myGroupName:8080/xxx"));
-        assertEquals(null, EndpointGroupUtil.getEndpointGroupName("http://group1:myGroupName:8080/"));
-        assertEquals(null, EndpointGroupUtil.getEndpointGroupName("http://username:password@myGroupName:8080/"));
+        assertNull(EndpointGroupUtil.getEndpointGroupName("http://myGroupName/"));
+        assertNull(EndpointGroupUtil.getEndpointGroupName("http://myGroupName:8080/xxx"));
+        assertNull(EndpointGroupUtil.getEndpointGroupName("http://group1:myGroupName:8080/"));
+        assertNull(EndpointGroupUtil.getEndpointGroupName("http://username:password@myGroupName:8080/"));
 
         assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://" + endpointGroupMark + "myGroupName/"));
         assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://" + endpointGroupMark + "myGroupName:8080/"));
@@ -49,5 +50,4 @@ public class EndpointGroupUtilTest {
         assertEquals("http://127.0.0.1:1234/xxx", EndpointGroupUtil.replaceEndpointGroup("http://" + endpointGroupMark + "myGroupName:8080/xxx", replacement));
         assertEquals("http://username:password@127.0.0.1:1234/xxx", EndpointGroupUtil.replaceEndpointGroup("http://username:password@" + endpointGroupMark + "myGroupName:8080/xxx", replacement));
     }
-
 }

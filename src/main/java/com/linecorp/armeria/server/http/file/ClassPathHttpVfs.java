@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,8 +24,7 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import com.linecorp.armeria.common.http.HttpData;
 
 final class ClassPathHttpVfs implements HttpVfs {
 
@@ -97,9 +96,9 @@ final class ClassPathHttpVfs implements HttpVfs {
         }
 
         @Override
-        public ByteBuf readContent(ByteBufAllocator alloc) throws IOException {
+        public HttpData readContent() throws IOException {
             try (InputStream in = url.openStream()) {
-                return readContent(alloc, in);
+                return readContent(in);
             }
         }
     }

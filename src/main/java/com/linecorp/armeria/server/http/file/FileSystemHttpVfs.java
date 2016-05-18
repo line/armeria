@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -25,8 +25,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import com.linecorp.armeria.common.http.HttpData;
 
 final class FileSystemHttpVfs implements HttpVfs {
 
@@ -76,14 +75,14 @@ final class FileSystemHttpVfs implements HttpVfs {
         }
 
         @Override
-        public ByteBuf readContent(ByteBufAllocator alloc) throws IOException {
+        public HttpData readContent() throws IOException {
             final long fileLength = file.length();
             if (fileLength > Integer.MAX_VALUE) {
                 throw new IOException("file too large: " + file + " (" + fileLength + " bytes)");
             }
 
             try (InputStream in = new FileInputStream(file)) {
-                return readContent(alloc, in, (int) fileLength);
+                return readContent(in, (int) fileLength);
             }
         }
     }

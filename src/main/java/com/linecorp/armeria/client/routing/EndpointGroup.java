@@ -17,9 +17,12 @@ package com.linecorp.armeria.client.routing;
 
 import java.util.List;
 
-public interface EndpointGroup<T extends Endpoint> {
+import com.linecorp.armeria.client.Endpoint;
+
+@FunctionalInterface
+public interface EndpointGroup {
     /**
      * Return the endpoints held by this {@link EndpointGroup}.
      */
-    List<T> endpoints();
+    List<Endpoint> endpoints();
 }

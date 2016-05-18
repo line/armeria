@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.http.file;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
+import java.time.Clock;
 
 /**
  * Builds a new {@link HttpFileService} and its {@link HttpFileServiceConfig}. Use the factory methods in
@@ -64,11 +65,20 @@ public final class HttpFileServiceBuilder {
     }
 
     private final HttpVfs vfs;
+    private Clock clock = Clock.systemUTC();
     private int maxCacheEntries = 1024;
     private int maxCacheEntrySizeBytes = 65536;
 
     private HttpFileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
+    }
+
+    /**
+     * Sets the {@link Clock} that provides the current date and time.
+     */
+    public HttpFileServiceBuilder clock(Clock clock) {
+        this.clock = requireNonNull(clock, "clock");
+        return this;
     }
 
     /**
@@ -90,11 +100,12 @@ public final class HttpFileServiceBuilder {
     }
 
     public HttpFileService build() {
-        return new HttpFileService(new HttpFileServiceConfig(vfs, maxCacheEntries, maxCacheEntrySizeBytes));
+        return new HttpFileService(new HttpFileServiceConfig(
+                vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes));
     }
 
     @Override
     public String toString() {
-        return HttpFileServiceConfig.toString(this, vfs, maxCacheEntries, maxCacheEntrySizeBytes);
+        return HttpFileServiceConfig.toString(this, vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes);
     }
 }
