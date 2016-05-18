@@ -1,11 +1,16 @@
 package com.linecorp.armeria.client.metrics;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.codahale.metrics.MetricRegistry;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.metrics.DropwizardMetricConsumer;
 import com.linecorp.armeria.common.metrics.MetricConsumer;
 
@@ -30,16 +35,25 @@ public final class MetricCollectingClient extends DecoratingClient {
      * <p>It is generally recommended to define your own name for the service instead of using something like
      * the Java class to make sure otherwise safe changes like renames don't break metrics.
      */
-    public static Function<Client, Client> newDropwizardDecorator(MetricRegistry metricRegistry,
-                                                                  String metricNamePrefix) {
+    public static Function<Client, MetricCollectingClient> newDropwizardDecorator(
+            MetricRegistry metricRegistry, String metricNamePrefix) {
 
         return client -> new MetricCollectingClient(
                 client,
                 new DropwizardMetricConsumer(metricRegistry, metricNamePrefix));
     }
 
+    private final MetricConsumer consumer;
 
-    public MetricCollectingClient(Client client, MetricConsumer metricConsumer) {
-        super(client, codec -> new MetricCollectingClientCodec(codec, metricConsumer), Function.identity());
+    public MetricCollectingClient(Client delegate, MetricConsumer consumer) {
+        super(delegate);
+        this.consumer = requireNonNull(consumer, "consumer");
+    }
+
+    @Override
+    public Response execute(ClientRequestContext ctx, Request req) throws Exception {
+        ctx.awaitRequestLog().thenAccept(consumer::onRequest);
+        ctx.awaitResponseLog().thenAccept(consumer::onResponse);
+        return delegate().execute(ctx, req);
     }
 }

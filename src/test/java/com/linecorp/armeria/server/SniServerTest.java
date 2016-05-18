@@ -19,8 +19,6 @@ package com.linecorp.armeria.server;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-import java.nio.charset.StandardCharsets;
-
 import javax.net.ssl.SSLContext;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -34,13 +32,14 @@ import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.http.HttpService;
+import com.google.common.net.MediaType;
 
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.server.http.AbstractHttpService;
+
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 
@@ -69,23 +68,26 @@ public class SniServerTest extends AbstractServerTest {
         final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
         final VirtualHostBuilder c = new VirtualHostBuilder("c.com");
 
-        a.serviceAt("/", new HttpService(
-                (ctx, blockingTaskExecutor, promise) ->
-                        ctx.resolvePromise(promise, new DefaultFullHttpResponse(
-                                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                                Unpooled.copiedBuffer("a.com", StandardCharsets.UTF_8)))));
+        a.serviceAt("/", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "a.com");
+            }
+        });
 
-        b.serviceAt("/", new HttpService(
-                (ctx, blockingTaskExecutor, promise) ->
-                        ctx.resolvePromise(promise, new DefaultFullHttpResponse(
-                                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                                Unpooled.copiedBuffer("b.com", StandardCharsets.UTF_8)))));
+        b.serviceAt("/", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "b.com");
+            }
+        });
 
-        c.serviceAt("/", new HttpService(
-                (ctx, blockingTaskExecutor, promise) ->
-                        ctx.resolvePromise(promise, new DefaultFullHttpResponse(
-                                HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                                Unpooled.copiedBuffer("c.com", StandardCharsets.UTF_8)))));
+        c.serviceAt("/", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "c.com");
+            }
+        });
 
         a.sslContext(SessionProtocol.HTTPS, sscA.certificate(), sscA.privateKey());
         b.sslContext(SessionProtocol.HTTPS, sscB.certificate(), sscB.privateKey());

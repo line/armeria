@@ -22,8 +22,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.meta_data.ListMetaData;
 import org.apache.thrift.protocol.TType;
 

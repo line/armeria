@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
-
 /**
  * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(String)}.
  */
@@ -31,7 +29,7 @@ public abstract class AbstractPathMapping implements PathMapping {
      * and then performs sanity checks on the returned {@code mappedPath}.
      *
      * @param path an absolute path as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @return the translated path which is used as the value of {@link ServiceInvocationContext#mappedPath()}.
+     * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
      *         {@code null} if the specified {@code path} does not match this mapping.
      */
     @Override
@@ -61,7 +59,7 @@ public abstract class AbstractPathMapping implements PathMapping {
      * Invoked by {@link #apply(String)} to perform the actual path matching and translation.
      *
      * @param path an absolute path as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @return the translated path which is used as the value of {@link ServiceInvocationContext#mappedPath()}.
+     * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
      *         {@code null} if the specified {@code path} does not match this mapping.
      */
     protected abstract String doApply(String path);
