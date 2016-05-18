@@ -23,60 +23,45 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.ResponseLog;
 
 public interface MetricConsumer {
 
     /**
-     * Invoked when a request is being started
-     *
-     * @param scheme the {@link Scheme} which the invocation has been performed on.
+     * Invoked when a request has been streamed.
      */
-    void invocationStarted(Scheme scheme, String hostname, String path, Optional<String> method);
+    void onRequest(RequestLog req);
 
     /**
-     * Invoked for each request that has been processed
-     *
-     * @param scheme the {@link Scheme} which the invocation has been performed on.
-     * @param code the {@link SessionProtocol}-specific status code that signifies the result of the
-     *             invocation. e.g. HTTP response status code
-     * @param processTimeNanos elapsed nano time processing request
-     * @param requestSize number of bytes in request if possible, otherwise it will be 0
-     * @param responseSize number of bytes in response if possible, otherwise it will be 0
-     * @param started true if invocationStarted() is called before, otherwise false
+     * Invoked when a response has been streamed.
      */
-    void invocationComplete(Scheme scheme, int code, long processTimeNanos, int requestSize,
-                            int responseSize, String hostname, String path, Optional<String> method,
-                            boolean started);
+    void onResponse(ResponseLog res);
 
     default MetricConsumer andThen(MetricConsumer other) {
         Objects.requireNonNull(other, "other");
         MetricConsumer outer = this;
         return new MetricConsumer() {
-
             @Override
-            public void invocationStarted(Scheme scheme, String hostname, String path, Optional<String> method) {
+            public void onRequest(RequestLog req) {
                 try {
-                    outer.invocationStarted(scheme, hostname, path, method);
+                    outer.onRequest(req);
                 } catch (Throwable e) {
                     LoggerFactory.getLogger(MetricConsumer.class)
                                  .warn("invocationStarted() failed with an exception: {}", e);
                 }
-                other.invocationStarted(scheme, hostname, path, method);
+                other.onRequest(req);
             }
 
             @Override
-            public void invocationComplete(Scheme scheme, int code, long processTimeNanos, int requestSize,
-                                           int responseSize, String hostname, String path,
-                                           Optional<String> method, boolean started) {
+            public void onResponse(ResponseLog res) {
                 try {
-                    outer.invocationComplete(scheme, code, processTimeNanos, requestSize, responseSize,
-                                             hostname, path, method, started);
+                    outer.onResponse(res);
                 } catch (Throwable e) {
                     LoggerFactory.getLogger(MetricConsumer.class)
                                  .warn("invocationComplete() failed with an exception: {}", e);
                 }
-                other.invocationComplete(scheme, code, processTimeNanos, requestSize, responseSize,
-                                         hostname, path, method, started);
+                other.onResponse(res);
             }
         };
     }

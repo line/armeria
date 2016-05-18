@@ -3,14 +3,15 @@ package com.linecorp.armeria.common.metrics;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.metrics.MetricCollectingClient;
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.server.ServiceCodec;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.server.metrics.MetricCollectingService;
 
 /**
@@ -24,7 +25,7 @@ public class DropwizardMetricConsumer implements MetricConsumer {
     private final Map<String, DropwizardRequestMetrics> methodRequestMetrics;
 
     /**
-     * Creates a new instance that decorates the specified {@link ServiceCodec}.
+     * Creates a new instance.
      */
     public DropwizardMetricConsumer(MetricRegistry metricRegistry, String metricNamePrefix) {
         this.metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
@@ -33,30 +34,59 @@ public class DropwizardMetricConsumer implements MetricConsumer {
     }
 
     @Override
-    public void invocationStarted(Scheme scheme, String hostname, String path, Optional<String> method) {
-        final String metricName = MetricRegistry.name(metricNamePrefix, method.orElse("__unknown__"));
+    public void onRequest(RequestLog req) {
+        final String metricName = MetricRegistry.name(metricNamePrefix, method(req));
         final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
-        metrics.markStart();
+        if (req.cause() == null) {
+            metrics.markStart();
+        } else {
+            metrics.markFailure();
+        }
     }
 
     @Override
-    public void invocationComplete(Scheme scheme, int code, long processTimeNanos, int requestSize,
-                                   int responseSize, String hostname, String path, Optional<String> method,
-                                   boolean started) {
-
-        final String metricName = MetricRegistry.name(metricNamePrefix, method.orElse("__unknown__"));
+    public void onResponse(ResponseLog res) {
+        final RequestLog req = res.request();
+        final String metricName = MetricRegistry.name(metricNamePrefix, method(req));
         final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
-        metrics.updateTime(processTimeNanos);
-        if (code < 400) {
+        metrics.updateTime(res.endTimeNanos() - req.startTimeNanos());
+        if (isSuccess(res)) {
             metrics.markSuccess();
         } else {
             metrics.markFailure();
         }
-        metrics.requestBytes(requestSize);
-        metrics.responseBytes(responseSize);
-        if (started) {
+        metrics.requestBytes(req.contentLength());
+        metrics.responseBytes(res.contentLength());
+        if (req.cause() == null) {
             metrics.markComplete();
         }
+    }
+
+    private static boolean isSuccess(ResponseLog res) {
+        if (res.cause() != null) {
+            return false;
+        }
+
+        if (SessionProtocol.ofHttp().contains(res.request().scheme().sessionProtocol())) {
+            if (res.statusCode() >= 400) {
+                return false;
+            }
+        } else {
+            if (res.statusCode() != 0) {
+                return false;
+            }
+        }
+
+        return !res.hasAttr(ResponseLog.RPC_RESPONSE) ||
+               res.attr(ResponseLog.RPC_RESPONSE).get().getCause() == null;
+    }
+
+    private static String method(RequestLog log) {
+        if (log.hasAttr(RequestLog.RPC_REQUEST)) {
+            return log.attr(RequestLog.RPC_REQUEST).get().method();
+        }
+
+        return MoreObjects.firstNonNull(log.method(), "__unknown__");
     }
 
     private DropwizardRequestMetrics getRequestMetrics(String methodLoggedName) {

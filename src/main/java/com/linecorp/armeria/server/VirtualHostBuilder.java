@@ -27,13 +27,13 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
@@ -118,6 +118,7 @@ public final class VirtualHostBuilder {
     private final String hostnamePattern;
     private final List<ServiceConfig> services = new ArrayList<>();
     private SslContext sslContext;
+    private Function<Service, Service> decorator;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -222,7 +223,7 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      *
-     * @param loggerName the name of the {@linkplain ServiceInvocationContext#logger() service logger};
+     * @param loggerName the name of the {@linkplain ServiceRequestContext#logger() service logger};
      *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
      *                   such as a package name or a fully-qualified class name
      */
@@ -231,11 +232,24 @@ public final class VirtualHostBuilder {
         return this;
     }
 
+    public VirtualHostBuilder decorator(Function<? extends Service, ? extends Service> decorator) {
+        requireNonNull(decorator, "decorator");
+        @SuppressWarnings("unchecked")
+        final Function<Service, Service> castDecorator = (Function<Service, Service>) decorator;
+        if (this.decorator == null) {
+            this.decorator = castDecorator;
+        } else {
+            this.decorator = this.decorator.andThen(castDecorator);
+        }
+        return this;
+    }
+
     /**
      * Creates a new {@link VirtualHost}.
      */
     public VirtualHost build() {
-        return new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);
+        final VirtualHost virtualHost = new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);
+        return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
     @Override

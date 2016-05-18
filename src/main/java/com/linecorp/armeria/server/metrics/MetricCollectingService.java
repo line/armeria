@@ -16,20 +16,26 @@
 
 package com.linecorp.armeria.server.metrics;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.codahale.metrics.MetricRegistry;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.metrics.DropwizardMetricConsumer;
 import com.linecorp.armeria.common.metrics.MetricConsumer;
+import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A decorator {@link Service} that collects metrics for every requests
  * Currently only HTTP-based session protocols are supported.
  */
-public class MetricCollectingService extends DecoratingService {
+public final class MetricCollectingService extends DecoratingService {
 
     /**
      * A {@link Service} decorator that tracks request stats using the Dropwizard metrics library.
@@ -51,15 +57,31 @@ public class MetricCollectingService extends DecoratingService {
      * <p>It is generally recommended to define your own name for the service instead of using something like
      * the Java class to make sure otherwise safe changes like renames don't break metrics.
      */
-    public static Function<Service, Service> newDropwizardDecorator(MetricRegistry metricRegistry,
-                                                                    String metricNamePrefix) {
+    public static Function<Service, MetricCollectingService> newDropwizardDecorator(
+            MetricRegistry metricRegistry, String metricNamePrefix) {
 
         return service -> new MetricCollectingService(
                 service,
                 new DropwizardMetricConsumer(metricRegistry, metricNamePrefix));
     }
 
-    public MetricCollectingService(Service service, MetricConsumer consumer) {
-        super(service, x -> new MetricCollectingServiceCodec(x, consumer), Function.identity());
+    private final MetricConsumer consumer;
+
+    public MetricCollectingService(Service delegate, MetricConsumer consumer) {
+        super(delegate);
+        this.consumer = requireNonNull(consumer, "consumer");
+    }
+
+    @Override
+    public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
+        ctx.awaitRequestLog()
+           .thenAccept(consumer::onRequest)
+           .exceptionally(CompletionActions::log);
+
+        ctx.awaitResponseLog()
+           .thenAccept(consumer::onResponse)
+           .exceptionally(CompletionActions::log);
+
+        return delegate().serve(ctx, req);
     }
 }

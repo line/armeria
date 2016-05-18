@@ -15,35 +15,28 @@
  */
 package com.linecorp.armeria.common.util;
 
-import io.netty.buffer.ByteBuf;
-
 /**
  * Formats a duration and a buffer size into a {@link String} or a {@link StringBuilder}.
  */
 public final class UnitFormatter {
 
     /**
-     * Appends the number of readable bytes in the specified {@link ByteBuf} to the specified
-     * {@link StringBuilder}.
+     * Appends the human-readable representation of the specified byte-unit {@code size} to the specified
+     * {@link StringBuffer}.
      */
-    public static void appendSize(StringBuilder buf, ByteBuf content) {
-        if (content != null) {
-            final int size = content.readableBytes();
-            if (size >= 104857600) { // >= 100 MiB
-                buf.append(size / 1048576).append("MiB");
-            } else if (size >= 102400) { // >= 100 KiB
-                buf.append(size / 1024).append("KiB");
-            } else {
-                buf.append(size).append('B');
-            }
+    public static void appendSize(StringBuilder buf, long size) {
+        if (size >= 104857600) { // >= 100 MiB
+            buf.append(size / 1048576).append("MiB");
+        } else if (size >= 102400) { // >= 100 KiB
+            buf.append(size / 1024).append("KiB");
         } else {
-            buf.append("null");
+            buf.append(size).append('B');
         }
     }
 
     /**
-     * Appends the duration between the specified {@code startTimeNanos} and {@code endTimeNanos} to the
-     * specified {@link StringBuilder}.
+     * Appends the human-readable representation of the duration between the specified {@code startTimeNanos}
+     * and {@code endTimeNanos} to the specified {@link StringBuilder}.
      */
     public static void appendElapsed(StringBuilder buf, long startTimeNanos, long endTimeNanos) {
         final long elapsedNanos = endTimeNanos - startTimeNanos;
@@ -60,18 +53,18 @@ public final class UnitFormatter {
 
     /**
      * A shortcut method that calls {@link #appendElapsed(StringBuilder, long, long)} and
-     * {@link #appendSize(StringBuilder, ByteBuf)}, concatenated by {@code ", "}.
+     * {@link #appendSize(StringBuilder, long)}, concatenated by {@code ", "}.
      */
-    public static void appendElapsedAndSize(StringBuilder buf, long startTimeNanos, long endTimeNanos,
-                                            ByteBuf content) {
+    public static void appendElapsedAndSize(
+            StringBuilder buf, long startTimeNanos, long endTimeNanos, long size) {
         appendElapsed(buf, startTimeNanos, endTimeNanos);
         buf.append(", ");
-        appendSize(buf, content);
+        appendSize(buf, size);
     }
 
     /**
-     * Creates a new {@link StringBuilder} whose content is the duration between the specified
-     * {@code startTimeNanos} and {@code endTimeNanos}.
+     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
+     * between the specified {@code startTimeNanos} and {@code endTimeNanos}.
      */
     public static StringBuilder elapsed(long startTimeNanos, long endTimeNanos) {
         final StringBuilder buf = new StringBuilder(16);
@@ -80,22 +73,22 @@ public final class UnitFormatter {
     }
 
     /**
-     * Creates a new {@link StringBuilder} whose content is the number of readable bytes in the specified
-     * {@code ByteBuf}.
+     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the byte-unit
+     * {@code size}.
      */
-    public static StringBuilder size(ByteBuf content) {
+    public static StringBuilder size(long size) {
         final StringBuilder buf = new StringBuilder(16);
-        appendSize(buf, content);
+        appendSize(buf, size);
         return buf;
     }
 
     /**
-     * Similar to {@link #appendElapsedAndSize(StringBuilder, long, long, ByteBuf)} except that this method
+     * Similar to {@link #appendElapsedAndSize(StringBuilder, long, long, long)} except that this method
      * creates a new {@link StringBuilder}.
      */
-    public static StringBuilder elapsedAndSize(long startTimeNanos, long endTimeNanos, ByteBuf content) {
+    public static StringBuilder elapsedAndSize(long startTimeNanos, long endTimeNanos, long size) {
         final StringBuilder buf = new StringBuilder(16);
-        appendElapsedAndSize(buf, startTimeNanos, endTimeNanos, content);
+        appendElapsedAndSize(buf, startTimeNanos, endTimeNanos, size);
         return buf;
     }
 
