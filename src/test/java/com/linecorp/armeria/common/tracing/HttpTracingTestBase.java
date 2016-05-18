@@ -1,10 +1,16 @@
 package com.linecorp.armeria.common.tracing;
 
-import com.github.kristofa.brave.SpanId;
-import com.github.kristofa.brave.http.BraveHttpHeaders;
+import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.PARENT_SPAN_ID;
+import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.SAMPLED;
+import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.SPAN_ID;
+import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.TRACE_ID;
 
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders;
+import com.github.kristofa.brave.SpanId;
+
+import com.linecorp.armeria.common.http.DefaultHttpHeaders;
+import com.linecorp.armeria.common.http.HttpHeaders;
+
+import io.netty.util.AsciiString;
 
 public abstract class HttpTracingTestBase {
 
@@ -12,39 +18,38 @@ public abstract class HttpTracingTestBase {
 
     public static HttpHeaders traceHeaders() {
         HttpHeaders httpHeader = new DefaultHttpHeaders();
-        httpHeader.add(BraveHttpHeaders.Sampled.getName(), "1");
-        httpHeader.add(BraveHttpHeaders.TraceId.getName(), "1");
-        httpHeader.add(BraveHttpHeaders.SpanId.getName(), "2");
-        httpHeader.add(BraveHttpHeaders.ParentSpanId.getName(), "3");
+        httpHeader.add(SAMPLED, "1");
+        httpHeader.add(TRACE_ID, "1");
+        httpHeader.add(SPAN_ID, "2");
+        httpHeader.add(PARENT_SPAN_ID, "3");
         return httpHeader;
     }
 
     public static HttpHeaders otherHeaders() {
         HttpHeaders httpHeader = new DefaultHttpHeaders();
-        httpHeader.add("X-TEST-HEADER", "xtestheader");
+        httpHeader.add(AsciiString.of("x-test-header"), "test-value");
         return httpHeader;
     }
 
     public static HttpHeaders traceHeadersNotSampled() {
         HttpHeaders httpHeader = new DefaultHttpHeaders();
-        httpHeader.add(BraveHttpHeaders.Sampled.getName(), "0");
+        httpHeader.add(SAMPLED, "0");
         return httpHeader;
     }
 
     public static HttpHeaders traceHeadersNotSampledFalse() {
         HttpHeaders httpHeader = new DefaultHttpHeaders();
-        httpHeader.add(BraveHttpHeaders.Sampled.getName(), "false");
+        httpHeader.add(SAMPLED, "false");
         return httpHeader;
     }
 
     public static HttpHeaders traceHeadersNotSampledFalseUpperCase() {
         HttpHeaders httpHeader = new DefaultHttpHeaders();
-        httpHeader.add(BraveHttpHeaders.Sampled.getName(), "FALSE");
+        httpHeader.add(SAMPLED, "FALSE");
         return httpHeader;
     }
 
     public static HttpHeaders emptyHttpHeaders() {
         return new DefaultHttpHeaders();
     }
-
 }

@@ -23,8 +23,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
-
 /**
  * A {@link Service} and its {@link PathMapping} and {@link VirtualHost}.
  *
@@ -42,21 +40,21 @@ public final class ServiceConfig {
 
     private final PathMapping pathMapping;
     private final String loggerName;
-    private final Service service;
+    private final Service<?, ?> service;
 
     private String fullLoggerName;
 
     /**
      * Creates a new instance.
      */
-    public ServiceConfig(VirtualHost virtualHost, PathMapping pathMapping, Service service) {
+    public ServiceConfig(VirtualHost virtualHost, PathMapping pathMapping, Service<?, ?> service) {
         this(virtualHost, pathMapping, service, null);
     }
 
     /**
      * Creates a new instance.
      */
-    public ServiceConfig(VirtualHost virtualHost, PathMapping pathMapping, Service service,
+    public ServiceConfig(VirtualHost virtualHost, PathMapping pathMapping, Service<?, ?> service,
                          @Nullable String loggerName) {
         this(pathMapping, service, loggerName);
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
@@ -65,7 +63,7 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    ServiceConfig(PathMapping pathMapping, Service service, @Nullable String loggerName) {
+    ServiceConfig(PathMapping pathMapping, Service<?, ?> service, @Nullable String loggerName) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.service = requireNonNull(service, "service");
         this.loggerName = loggerName != null ? validateLoggerName(loggerName, "loggerName")
@@ -167,12 +165,13 @@ public final class ServiceConfig {
     /**
      * Returns the {@link Service}.
      */
-    public Service service() {
-        return service;
+    @SuppressWarnings("unchecked")
+    public <T extends Service<?, ?>> T service() {
+        return (T) service;
     }
 
     /**
-     * Returns the name of the {@link ServiceInvocationContext#logger() service logger}.
+     * Returns the name of the {@link ServiceRequestContext#logger() service logger}.
      */
     public String loggerName() {
         if (fullLoggerName == null) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.composition;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 
@@ -23,21 +25,24 @@ import com.linecorp.armeria.server.Service;
  * A general purpose {@link AbstractCompositeServiceBuilder} implementation. Useful when you do not want to
  * define a new dedicated {@link Service} builder type.
  */
-public final class SimpleCompositeServiceBuilder
-        extends AbstractCompositeServiceBuilder<SimpleCompositeServiceBuilder> {
+public final class SimpleCompositeServiceBuilder<I extends Request, O extends Response>
+        extends AbstractCompositeServiceBuilder<SimpleCompositeServiceBuilder<I, O>, I, O> {
 
     @Override
-    public SimpleCompositeServiceBuilder serviceAt(String exactPath, Service service) {
+    public SimpleCompositeServiceBuilder<I, O> serviceAt(
+            String exactPath, Service<? super I, ? extends O> service) {
         return super.serviceAt(exactPath, service);
     }
 
     @Override
-    public SimpleCompositeServiceBuilder serviceUnder(String pathPrefix, Service service) {
+    public SimpleCompositeServiceBuilder<I, O> serviceUnder(
+            String pathPrefix, Service<? super I, ? extends O>  service) {
         return super.serviceUnder(pathPrefix, service);
     }
 
     @Override
-    public SimpleCompositeServiceBuilder service(PathMapping pathMapping, Service service) {
+    public SimpleCompositeServiceBuilder<I, O> service(
+            PathMapping pathMapping, Service<? super I, ? extends O>  service) {
         return super.service(pathMapping, service);
     }
 
@@ -45,7 +50,7 @@ public final class SimpleCompositeServiceBuilder
      * Creates a new {@link SimpleCompositeService} with the {@link Service}s added by the {@code service*()}
      * methods.
      */
-    public SimpleCompositeService build() {
-        return new SimpleCompositeService(services());
+    public SimpleCompositeService<I, O> build() {
+        return new SimpleCompositeService<>(services());
     }
 }

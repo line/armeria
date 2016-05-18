@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,23 +22,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Executor;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.PathMappings;
+import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCallbackInvoker;
-import com.linecorp.armeria.server.ServiceCodec;
 import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.ServiceInvocationHandler;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Promise;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextWrapper;
 
 /**
  * A skeletal {@link Service} implementation that enables composing multiple {@link Service}s into one.
@@ -56,31 +51,27 @@ import io.netty.util.concurrent.Promise;
  * @see AbstractCompositeServiceBuilder
  * @see CompositeServiceEntry
  */
-public abstract class AbstractCompositeService implements Service {
+public abstract class AbstractCompositeService<I extends Request, O extends Response> implements Service<I, O> {
 
-    private static final AttributeKey<Service> MAPPED_SERVICE =
-            AttributeKey.valueOf(AbstractCompositeService.class, "MAPPED_SERVICE");
-
-    private final List<CompositeServiceEntry> services;
-    private final PathMappings<Service> serviceMapping = new PathMappings<>();
-    private final ServiceCodec codec = new CompositeServiceCodec();
-    private final ServiceInvocationHandler handler = new CompositeServiceInvocationHandler();
+    private final List<CompositeServiceEntry<? super I, ? extends O>> services;
+    private final PathMappings<Service<? super I, ? extends O>> serviceMapping = new PathMappings<>();
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
      */
-    protected AbstractCompositeService(CompositeServiceEntry... services) {
+    @SafeVarargs
+    protected AbstractCompositeService(CompositeServiceEntry<? super I, ? extends O>... services) {
         this(Arrays.asList(requireNonNull(services, "services")));
     }
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
      */
-    protected AbstractCompositeService(Iterable<CompositeServiceEntry> services) {
+    protected AbstractCompositeService(Iterable<CompositeServiceEntry<? super I, ? extends O>> services) {
         requireNonNull(services, "services");
 
-        final List<CompositeServiceEntry> servicesCopy = new ArrayList<>();
-        for (CompositeServiceEntry e : services) {
+        final List<CompositeServiceEntry<? super I, ? extends O>> servicesCopy = new ArrayList<>();
+        for (CompositeServiceEntry<? super I, ? extends O> e : services) {
             servicesCopy.add(e);
             serviceMapping.add(e.pathMapping(), e.service());
         }
@@ -92,7 +83,7 @@ public abstract class AbstractCompositeService implements Service {
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
-        for (CompositeServiceEntry e : services()) {
+        for (CompositeServiceEntry<? super I, ? extends O> e : services()) {
             ServiceCallbackInvoker.invokeServiceAdded(cfg, e.service());
         }
     }
@@ -100,7 +91,7 @@ public abstract class AbstractCompositeService implements Service {
     /**
      * Returns the list of {@link CompositeServiceEntry}s added to this composite {@link Service}.
      */
-    protected List<CompositeServiceEntry> services() {
+    protected List<CompositeServiceEntry<? super I, ? extends O>> services() {
         return services;
     }
 
@@ -109,7 +100,7 @@ public abstract class AbstractCompositeService implements Service {
      * {@link Service} added first is {@code 0}, and so on.
      */
     @SuppressWarnings("unchecked")
-    protected <T extends Service> T serviceAt(int index) {
+    protected <T extends Service<? super I, ? extends O>> T serviceAt(int index) {
         return (T) services().get(index).service();
     }
 
@@ -119,78 +110,33 @@ public abstract class AbstractCompositeService implements Service {
      * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
-    protected PathMapped<Service> findService(String path) {
+    protected PathMapped<Service<? super I, ? extends O>> findService(String path) {
         return serviceMapping.apply(path);
     }
 
     @Override
-    public final ServiceCodec codec() {
-        return codec;
+    public O serve(ServiceRequestContext ctx, I req) throws Exception {
+        final PathMapped<Service<? super I, ? extends O>> mapped = findService(ctx.mappedPath());
+        if (!mapped.isPresent()) {
+            throw ResourceNotFoundException.get();
+        }
+
+        ctx = new CompositeServiceRequestContext(ctx, mapped.mappedPath());
+        return mapped.value().serve(ctx, req);
     }
 
-    @Override
-    public final ServiceInvocationHandler handler() {
-        return handler;
-    }
+    private static final class CompositeServiceRequestContext extends ServiceRequestContextWrapper {
 
-    private final class CompositeServiceCodec implements ServiceCodec {
-        @Override
-        public void codecAdded(ServiceConfig cfg) throws Exception {
-            for (CompositeServiceEntry e : services()) {
-                ServiceCallbackInvoker.invokeCodecAdded(cfg, e.service().codec());
-            }
+        private final String mappedPath;
+
+        CompositeServiceRequestContext(ServiceRequestContext delegate, String mappedPath) {
+            super(delegate);
+            this.mappedPath = mappedPath;
         }
 
         @Override
-        public DecodeResult decodeRequest(
-                ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol, String hostname, String path,
-                String mappedPath, ByteBuf in, Object origReq, Promise<Object> promise) throws Exception {
-
-            final PathMapped<Service> mapped = findService(mappedPath);
-            if (!mapped.isPresent()) {
-                return DecodeResult.NOT_FOUND;
-            }
-
-            final Service service = mapped.value();
-            final DecodeResult result = service.codec().decodeRequest(
-                    cfg, ch, sessionProtocol, hostname, path, mapped.mappedPath(), in, origReq, promise);
-
-            if (result.type() == DecodeResultType.SUCCESS) {
-                ServiceInvocationContext ctx = result.invocationContext();
-                ctx.attr(MAPPED_SERVICE).set(service);
-            }
-
-            return result;
-        }
-
-        @Override
-        public boolean failureResponseFailsSession(ServiceInvocationContext ctx) {
-            return ctx.attr(MAPPED_SERVICE).get().codec().failureResponseFailsSession(ctx);
-        }
-
-        @Override
-        public ByteBuf encodeResponse(ServiceInvocationContext ctx, Object response) throws Exception {
-            return ctx.attr(MAPPED_SERVICE).get().codec().encodeResponse(ctx, response);
-        }
-
-        @Override
-        public ByteBuf encodeFailureResponse(ServiceInvocationContext ctx, Throwable cause) throws Exception {
-            return ctx.attr(MAPPED_SERVICE).get().codec().encodeFailureResponse(ctx, cause);
-        }
-    }
-
-    private final class CompositeServiceInvocationHandler implements ServiceInvocationHandler {
-        @Override
-        public void handlerAdded(ServiceConfig cfg) throws Exception {
-            for (CompositeServiceEntry e : services()) {
-                ServiceCallbackInvoker.invokeHandlerAdded(cfg, e.service().handler());
-            }
-        }
-
-        @Override
-        public void invoke(ServiceInvocationContext ctx,
-                           Executor blockingTaskExecutor, Promise<Object> promise) throws Exception {
-            ctx.attr(MAPPED_SERVICE).get().handler().invoke(ctx, blockingTaskExecutor, promise);
+        public String mappedPath() {
+            return mappedPath;
         }
     }
 }

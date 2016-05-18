@@ -153,6 +153,6 @@ public final class Scheme implements Comparable<Scheme> {
 
     @Override
     public String toString() {
-        return "Scheme(" + uriText() + ')';
+        return uriText();
     }
 }
