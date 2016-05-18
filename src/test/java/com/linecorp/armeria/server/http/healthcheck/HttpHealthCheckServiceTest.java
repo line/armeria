@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,12 +17,7 @@
 package com.linecorp.armeria.server.http.healthcheck;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
-
-import java.nio.charset.StandardCharsets;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -31,10 +26,13 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.DefaultHttpRequest;
+import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -56,7 +54,7 @@ public class HttpHealthCheckServiceTest {
     private HealthChecker health3;
 
     @Mock
-    private ServiceInvocationContext context;
+    private ServiceRequestContext context;
 
     private HttpHealthCheckService service;
 
@@ -64,17 +62,6 @@ public class HttpHealthCheckServiceTest {
     public void setUp() {
         service = new HttpHealthCheckService(health1, health2, health3);
         service.serverHealth.setHealthy(true);
-
-        doAnswer(invocation -> {
-            final Object[] args = invocation.getArguments();
-
-            @SuppressWarnings("unchecked")
-            final Promise<Object> promise = (Promise<Object>) args[0];
-            final FullHttpResponse response = (FullHttpResponse) args[1];
-
-            promise.setSuccess(response);
-            return null;
-        }).when(context).resolvePromise(any(), any());
     }
 
     @Test
@@ -83,11 +70,12 @@ public class HttpHealthCheckServiceTest {
         when(health2.isHealthy()).thenReturn(true);
         when(health3.isHealthy()).thenReturn(true);
 
-        Promise<Object> promise = executor.newPromise();
-        service.handler().invoke(context, executor, promise);
-        FullHttpResponse response = (FullHttpResponse) promise.get();
-        assertEquals(HttpResponseStatus.OK, response.status());
-        assertEquals("ok", response.content().toString(StandardCharsets.US_ASCII));
+        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/"));
+        req.close();
+        final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
+
+        assertEquals(HttpStatus.OK, res.status());
+        assertEquals("ok", res.content().toStringAscii());
     }
 
     @Test
@@ -110,9 +98,11 @@ public class HttpHealthCheckServiceTest {
     }
 
     private void assertNotOk() throws Exception {Promise<Object> promise = executor.newPromise();
-        service.handler().invoke(context, executor, promise);
-        FullHttpResponse response = (FullHttpResponse) promise.get();
-        assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE, response.status());
-        assertEquals("not ok", response.content().toString(StandardCharsets.US_ASCII));
+        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/"));
+        req.close();
+        final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, res.status());
+        assertEquals("not ok", res.content().toStringAscii());
     }
 }

@@ -79,6 +79,16 @@ public abstract class AbstractOptions {
         putAll(valueFilter, StreamSupport.stream(values.spliterator(), false));
     }
 
+    protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(AbstractOptions baseOptions,
+                                                                    AbstractOptions options) {
+
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+
+        valueMap = new IdentityHashMap<>(baseOptions.valueMap);
+        valueMap.putAll(options.valueMap);
+    }
+
     @SuppressWarnings("unchecked")
     private <T extends AbstractOptionValue<?, ?>> void putAll(Function<T, T> valueFilter, Stream<T> values) {
         values.map(valueFilter)

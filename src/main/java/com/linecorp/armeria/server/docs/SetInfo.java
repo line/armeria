@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-
-import javax.annotation.Nullable;
 
 import org.apache.thrift.meta_data.SetMetaData;
 import org.apache.thrift.protocol.TType;

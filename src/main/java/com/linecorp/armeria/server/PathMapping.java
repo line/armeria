@@ -21,7 +21,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.server.PathManipulators.Prepend;
 import com.linecorp.armeria.server.PathManipulators.StripParents;
 import com.linecorp.armeria.server.PathManipulators.StripPrefixByNumPathComponents;
@@ -31,13 +30,13 @@ import com.linecorp.armeria.server.docs.DocService;
 /**
  * Matches the absolute path part of a URI and translates the matched path to another path string.
  * The translated path, returned by {@link #apply(String)}, determines the value of
- * {@link ServiceInvocationContext#mappedPath()}.
+ * {@link ServiceRequestContext#mappedPath()}.
  */
 @FunctionalInterface
 public interface PathMapping extends Function<String, String> {
 
     /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceInvocationContext#path() path} with
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
      * the specified regular expression, as defined in {@link Pattern}. The returned {@link PathMapping} does
      * not perform any translation. To create a {@link PathMapping} that performs a translation, use the
      * decorator methods like {@link #stripPrefix(String)}.
@@ -47,7 +46,7 @@ public interface PathMapping extends Function<String, String> {
     }
 
     /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceInvocationContext#path() path} with
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
      * the specified regular expression, as defined in {@link Pattern}. The returned {@link PathMapping} does
      * not perform any translation. To create a {@link PathMapping} that performs a translation, use the
      * decorator methods like {@link #stripPrefix(String)}.
@@ -57,7 +56,7 @@ public interface PathMapping extends Function<String, String> {
     }
 
     /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceInvocationContext#path() path} with
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
      * the specified glob expression, where {@code "*"} matches a path component non-recursively and
      * {@code "**"} matches path components recursively. The returned {@link PathMapping} does not perform any
      * translation. To create a {@link PathMapping} that performs a translation, use the decorator methods like
@@ -74,9 +73,9 @@ public interface PathMapping extends Function<String, String> {
     }
 
     /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceInvocationContext#path() path}
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
      * under the specified directory prefix. It also removes the specified directory prefix from the matched
-     * path so that {@link ServiceInvocationContext#mappedPath()} does not have the specified directory prefix.
+     * path so that {@link ServiceRequestContext#mappedPath()} does not have the specified directory prefix.
      * For example, when {@code pathPrefix} is {@code "/foo/"}:
      * <ul>
      *   <li>{@code "/foo/"} translates to {@code "/"}</li>
@@ -90,9 +89,9 @@ public interface PathMapping extends Function<String, String> {
     }
 
     /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceInvocationContext#path() path}
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
      * under the specified directory prefix. When {@code stripPrefix} is {@code true}, it also removes the
-     * specified directory prefix from the matched path so that {@link ServiceInvocationContext#mappedPath()}
+     * specified directory prefix from the matched path so that {@link ServiceRequestContext#mappedPath()}
      * does not have the specified directory prefix. For example, when {@code pathPrefix} is {@code "/foo/"}:
      * <ul>
      *   <li>{@code "/foo/"} translates to {@code "/"}</li>
@@ -131,7 +130,7 @@ public interface PathMapping extends Function<String, String> {
      * Matches the specified {@code path} and translates the matched {@code path} to another path string.
      *
      * @param path an absolute path as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @return the translated path which is used as the value of {@link ServiceInvocationContext#mappedPath()}.
+     * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
      *         {@code null} if the specified {@code path} does not match this mapping.
      */
     @Override
@@ -157,7 +156,7 @@ public interface PathMapping extends Function<String, String> {
 
     /**
      * Creates a new {@link PathMapping} that removes the specified {@code pathPrefix} from the matched path
-     * so that the {@link ServiceInvocationContext#mappedPath()} does not have the specified {@code pathPrefix}.
+     * so that the {@link ServiceRequestContext#mappedPath()} does not have the specified {@code pathPrefix}.
      * This method is useful when used with {@link #ofRegex(Pattern)} or {@link #ofGlob(String)}. For example:
      * <pre>{@code
      * PathMapping.ofRegex("^/foo/[^/]+/bar/.*$").stripPrefix("/foo/");
@@ -175,7 +174,7 @@ public interface PathMapping extends Function<String, String> {
 
     /**
      * Creates a new {@link PathMapping} that removes the first {@code <numPathComponents>} path components
-     * from the matches path so that the {@link ServiceInvocationContext#mappedPath()} does not have
+     * from the matches path so that the {@link ServiceRequestContext#mappedPath()} does not have
      * unnecessary path prefixes. This method is useful when used with {@link #ofRegex(Pattern)} or
      * {@link #ofGlob(String)}. For example:
      * <pre>{@code
@@ -193,7 +192,7 @@ public interface PathMapping extends Function<String, String> {
 
     /**
      * Creates a new {@link PathMapping} that removes all parent components from the matched path so that
-     * the {@link ServiceInvocationContext#mappedPath()} contains only a single path component. This method
+     * the {@link ServiceRequestContext#mappedPath()} contains only a single path component. This method
      * is useful when you are interested only in the file name part of the path.
      */
     default PathMapping stripParents() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -64,7 +64,8 @@ public final class CompositeServiceEntry {
      *
      * @see PathMapping#ofPrefix(String, boolean)
      */
-    public static CompositeServiceEntry ofPrefix(String pathPrefix, Service service, boolean stripPrefix) {
+    public static CompositeServiceEntry ofPrefix(
+            String pathPrefix, Service service, boolean stripPrefix) {
         return new CompositeServiceEntry(PathMapping.ofPrefix(pathPrefix, stripPrefix), service);
     }
 
