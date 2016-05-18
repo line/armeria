@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -25,40 +25,49 @@ import org.junit.Test;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.DefaultResponseLog;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.metrics.MetricConsumer;
+
+import io.netty.channel.embedded.EmbeddedChannel;
 
 public class MetricConsumerTest {
     @Test
     public void testInfiniteRecursion() throws Exception {
         // Given
-        final int[] executeCounters = { 0,   // for invocationStarted
-                                        0 }; // for invocationComplete
+        final int[] executeCounters = { 0,   // for onRequest
+                                        0 }; // for onResponse
 
         MetricConsumer consumer = new MetricConsumer() {
             @Override
-            public void invocationStarted(Scheme scheme, String hostname, String path, Optional<String> method) {
-                executeCounters[0] += 1;
+            public void onRequest(RequestLog log) {
+                executeCounters[0]++;
             }
 
             @Override
-            public void invocationComplete(Scheme scheme, int code, long processTimeNanos, int requestSize,
-                                           int responseSize, String hostname, String path,
-                                           Optional<String> method, boolean started) {
-                executeCounters[1] += 1;
+            public void onResponse(ResponseLog log) {
+                executeCounters[1]++;
             }
         };
         MetricConsumer finalConsumer = consumer.andThen(consumer).andThen(consumer);
 
+        final DefaultRequestLog reqLog = new DefaultRequestLog();
+        final DefaultResponseLog resLog = new DefaultResponseLog(reqLog);
+
+        reqLog.start(new EmbeddedChannel(), SessionProtocol.H2C, "localhost", "GET", "/");
+        reqLog.end();
+        resLog.start();
+        resLog.end();
+
         // When
-        finalConsumer.invocationStarted(
-                Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP), "", "", Optional.empty());
-        finalConsumer.invocationComplete(
-                Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP), 200, 0, 0, 0, "", "",
-                Optional.of(""), true);
+        finalConsumer.onRequest(reqLog);
+        finalConsumer.onResponse(resLog);
 
         // Then
-        assertEquals("invocationStarted should be executed twice", 3, executeCounters[0]);
-        assertEquals("invocationComplete should be executed twice", 3, executeCounters[1]);
+        assertEquals("onRequest should be invoked 3 times", 3, executeCounters[0]);
+        assertEquals("onResponse should be invoked 3 times", 3, executeCounters[1]);
     }
 }
 

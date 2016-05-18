@@ -23,7 +23,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import com.github.kristofa.brave.internal.Nullable;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -44,7 +48,7 @@ import io.netty.util.DomainNameMappingBuilder;
 public final class VirtualHost {
 
     private static final Pattern HOSTNAME_PATTERN = Pattern.compile(
-            "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_\\.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
+            "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
 
     /** Initialized later by {@link ServerConfig} via {@link #setServerConfig(ServerConfig)}. */
     private ServerConfig serverConfig;
@@ -208,6 +212,22 @@ public final class VirtualHost {
      */
     public PathMapped<ServiceConfig> findServiceConfig(String path) {
         return serviceMapping.apply(path);
+    }
+
+    VirtualHost decorate(@Nullable Function<Service, Service> decorator) {
+        if (decorator == null) {
+            return this;
+        }
+
+        final List<ServiceConfig> services =
+                this.services.stream().map(cfg -> {
+                    final PathMapping pathMapping = cfg.pathMapping();
+                    final Service service = decorator.apply(cfg.service());
+                    final String loggerName = cfg.loggerNameWithoutPrefix();
+                    return new ServiceConfig(pathMapping, service, loggerName);
+                }).collect(Collectors.toList());
+
+        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(), services);
     }
 
     @Override

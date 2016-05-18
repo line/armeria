@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,9 +28,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -41,21 +39,21 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.ServiceInvocationContext;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpStatusClass;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.util.concurrent.Promise;
 
 public class ServerTest extends AbstractServerTest {
 
@@ -68,26 +66,36 @@ public class ServerTest extends AbstractServerTest {
     @Override
     protected void configureServer(ServerBuilder sb) {
 
-        final Service immediateResponseOnIoThread = new ByteBufService(
-                (ctx, exec, promise) -> promise.setSuccess(((ReferenceCounted) ctx.params().get(0)).retain()))
-                .decorate(LoggingService::new);
+        final Service immediateResponseOnIoThread = new EchoService().decorate(LoggingService::new);
 
-        final Service delayedResponseOnIoThread = new ByteBufService((ctx, exec, promise) -> {
-            Thread.sleep(processDelayMillis);
-            final ByteBuf buf = ((ByteBuf) ctx.params().get(0)).retain();
-            promise.setSuccess(buf);
-        }).decorate(LoggingService::new);
+        final Service delayedResponseOnIoThread = new EchoService() {
+            @Override
+            protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+                try {
+                    Thread.sleep(processDelayMillis);
+                    super.echo(aReq, res);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }.decorate(LoggingService::new);
 
-        final Service lazyResponseNotOnIoThread = new ByteBufService((ctx, exec, promise) -> {
-            final ByteBuf buf = ((ByteBuf) ctx.params().get(0)).retain();
-            asyncExecutorGroup.schedule(
-                    () -> promise.setSuccess(buf),
-                    processDelayMillis, TimeUnit.MILLISECONDS);
-        }).decorate(LoggingService::new);
+        final Service lazyResponseNotOnIoThread = new EchoService() {
+            @Override
+            protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+                asyncExecutorGroup.schedule(
+                        () -> super.echo(aReq, res), processDelayMillis, TimeUnit.MILLISECONDS);
+            }
+        }.decorate(LoggingService::new);
 
-        final Service buggy = new ByteBufService((ctx, exec, promise) -> {
-            throw Exceptions.clearTrace(new Exception("bug!"));
-        }).decorate(LoggingService::new);
+        final Service buggy = new AbstractHttpService() {
+            @Override
+            protected void doPost(ServiceRequestContext ctx,
+                                  HttpRequest req, HttpResponseWriter res) throws Exception {
+
+                throw Exceptions.clearTrace(new Exception("bug!"));
+            }
+        }.decorate(LoggingService::new);
 
         sb.serviceAt("/", immediateResponseOnIoThread)
           .serviceAt("/delayed", delayedResponseOnIoThread)
@@ -96,7 +104,14 @@ public class ServerTest extends AbstractServerTest {
           .serviceAt("/buggy", buggy);
 
         // Disable request timeout for '/timeout-not' only.
-        sb.requestTimeout(ctx -> "/timeout-not".equals(ctx.path()) ? 0 : requestTimeoutMillis);
+        sb.decorator(delegate -> new DecoratingService(delegate) {
+            @Override
+            public Response serve(ServiceRequestContext ctx, Request request) throws Exception {
+                final HttpRequest req = request.cast();
+                ctx.setRequestTimeoutMillis("/timeout-not".equals(req.path()) ? 0 : requestTimeoutMillis);
+                return delegate().serve(ctx, req);
+            }
+        });
         sb.idleTimeoutMillis(idleTimeoutMillis);
     }
 
@@ -104,7 +119,7 @@ public class ServerTest extends AbstractServerTest {
     public void testStartStop() throws Exception {
         try {
             assertThat(server().activePorts().size(), is(1));
-            server().stop().sync();
+            server().stop().get();
             assertThat(server().activePorts().size(), is(0));
         } finally {
             stopServer();
@@ -199,9 +214,8 @@ public class ServerTest extends AbstractServerTest {
     }
 
     /**
-     * Ensure that the connection is not broken even if
-     * {@link ServiceInvocationHandler#invoke(ServiceInvocationContext, Executor, Promise)}
-     * raised an exception.
+     * Ensure that the connection is not broken even if {@link Service#serve(ServiceRequestContext, Request)}
+     * raises an exception.
      */
     @Test(timeout = idleTimeoutMillis * 5)
     public void testBuggyService() throws Exception {
@@ -285,66 +299,18 @@ public class ServerTest extends AbstractServerTest {
         }
     }
 
-    private static class ByteBufService extends SimpleService {
+    private static class EchoService extends AbstractHttpService {
+        @Override
+        protected final void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+            req.aggregate()
+               .whenComplete((aReq, cause) -> echo(aReq, res))
+               .exceptionally(CompletionActions::log);
+        }
 
-        ByteBufService(ServiceInvocationHandler handler) {
-            super(new ServiceCodec() {
-                @Override
-                public DecodeResult decodeRequest(
-                        ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
-                        String hostname, String path, String mappedPath,
-                        ByteBuf in, Object originalRequest, Promise<Object> promise) throws Exception {
-
-                    return new DefaultDecodeResult(
-                            new ServiceInvocationContext(
-                                    ch, Scheme.of(SerializationFormat.THRIFT_BINARY, sessionProtocol),
-                                    hostname, path, mappedPath,
-                                    getClass().getName(), /* originalRequest */ null) {
-
-                                @Override
-                                public String method() {
-                                    return "invoke";
-                                }
-
-                                @Override
-                                public List<Class<?>> paramTypes() {
-                                    return Collections.singletonList(ByteBuf.class);
-                                }
-
-                                @Override
-                                public Class<?> returnType() {
-                                    return ByteBuf.class;
-                                }
-
-                                @Override
-                                public String invocationId() {
-                                    return "?";
-                                }
-
-                                @Override
-                                public List<Object> params() {
-                                    return Collections.singletonList(in);
-                                }
-                            });
-                }
-
-                @Override
-                public boolean failureResponseFailsSession(ServiceInvocationContext ctx) {
-                    return true;
-                }
-
-                @Override
-                public ByteBuf encodeResponse(
-                        ServiceInvocationContext ctx, Object response) throws Exception {
-                    return (ByteBuf) response;
-                }
-
-                @Override
-                public ByteBuf encodeFailureResponse(
-                        ServiceInvocationContext ctx, Throwable cause) throws Exception {
-                    return Unpooled.copiedBuffer(cause.toString(), StandardCharsets.UTF_8);
-                }
-            }, handler);
+        protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+            res.write(HttpHeaders.of(HttpStatus.OK));
+            res.write(aReq.content());
+            res.close();
         }
     }
 }

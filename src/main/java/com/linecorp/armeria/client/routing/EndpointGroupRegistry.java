@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.linecorp.armeria.client.Endpoint;
+
 /**
  * An in-memory registry of server groups.
  */
@@ -84,7 +86,7 @@ public final class EndpointGroupRegistry {
      * Select a endpoint from the target endpoint group.
      */
     public static Endpoint selectNode(String groupName) {
-        EndpointSelector endpointSelector = EndpointGroupRegistry.getNodeSelector(groupName);
+        EndpointSelector endpointSelector = getNodeSelector(groupName);
         if (endpointSelector == null) {
             throw new EndpointGroupException("non-existent EndpointGroup: " + groupName);
         }

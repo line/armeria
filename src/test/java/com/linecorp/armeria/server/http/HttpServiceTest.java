@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.http;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -30,21 +31,17 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.net.MediaType;
+
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
-
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.CharsetUtil;
 
 public class HttpServiceTest {
 
@@ -58,39 +55,42 @@ public class HttpServiceTest {
         try {
             sb.service(
                     PathMapping.ofGlob("/hello/*").stripPrefix(1),
-                    new HttpService((ctx, exec, promise) -> {
-                        final FullHttpRequest req = ctx.originalRequest();
-                        final String name = ctx.mappedPath().substring(1);
-                        final FullHttpResponse res;
+                    new AbstractHttpService() {
+                        @Override
+                        protected void doGet(
+                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
 
-                        if (req.method() == HttpMethod.GET) {
-                            res = new DefaultFullHttpResponse(
-                                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                                    Unpooled.copiedBuffer("Hello, " + name + '!', CharsetUtil.UTF_8));
-                        } else {
-                            res = new DefaultFullHttpResponse(
-                                    HttpVersion.HTTP_1_1, HttpResponseStatus.METHOD_NOT_ALLOWED,
-                                    Unpooled.copiedBuffer("Nice try, " + name + '!', CharsetUtil.UTF_8));
+                            final String name = ctx.mappedPath().substring(1);
+                            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
                         }
-
-                        res.headers().set(HttpHeaderNames.CONTENT_ENCODING, "text/plain; charset=UTF-8");
-
-                        ctx.resolvePromise(promise, res);
-                    }).decorate(LoggingService::new))
+                    }.decorate(LoggingService::new))
               .serviceAt(
                       "/200",
-                      new HttpService((ctx, exec, promise) -> {
-                          final FullHttpResponse res = new DefaultFullHttpResponse(
-                                  HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-                          ctx.resolvePromise(promise, res);
-                      }).decorate(LoggingService::new))
+                      new AbstractHttpService() {
+                          @Override
+                          protected void doHead(
+                                  ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+
+                              res.respond(HttpStatus.OK);
+                          }
+
+                          @Override
+                          protected void doGet(
+                                  ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+
+                              res.respond(HttpStatus.OK);
+                          }
+                      }.decorate(LoggingService::new))
               .serviceAt(
                       "/204",
-                      new HttpService((ctx, exec, promise) -> {
-                          final FullHttpResponse res = new DefaultFullHttpResponse(
-                                  HttpVersion.HTTP_1_1, HttpResponseStatus.NO_CONTENT);
-                          ctx.resolvePromise(promise, res);
-                      }).decorate(LoggingService::new));
+                      new AbstractHttpService() {
+                          @Override
+                          protected void doGet(
+                                  ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+
+                              res.respond(HttpStatus.NO_CONTENT);
+                          }
+                      }.decorate(LoggingService::new));
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -99,7 +99,7 @@ public class HttpServiceTest {
 
     @BeforeClass
     public static void init() throws Exception {
-        server.start().sync();
+        server.start().get();
 
         httpPort = server.activePorts().values().stream()
                          .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress()
@@ -125,7 +125,7 @@ public class HttpServiceTest {
 
             try (CloseableHttpResponse res = hc.execute(new HttpDelete(newUri("/hello/bar")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Nice try, bar!"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("405 Method Not Allowed"));
             }
         }
     }
@@ -141,21 +141,22 @@ public class HttpServiceTest {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(res.containsHeader("Content-Length"), is(true));
                 assertThat(res.getHeaders("Content-Length").length, is(1));
-                assertThat(res.getHeaders("Content-Length")[0].getValue(), is("0"));
+                assertThat(res.getHeaders("Content-Length")[0].getValue(), is("6"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("200 OK"));
             }
         }
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            // Ensure the HEAD response does not contain the 'content-length' header.
+            // Ensure the HEAD response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpHead(newUri("/200")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.containsHeader("Content-Length"), is(false));
+                assertThat(res.getEntity(), is(nullValue()));
             }
 
-            // Ensure the 204 response does not contain the 'content-length' header.
+            // Ensure the 204 response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/204")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 204 No Content"));
-                assertThat(res.containsHeader("Content-Length"), is(false));
+                assertThat(res.getEntity(), is(nullValue()));
             }
         }
     }
