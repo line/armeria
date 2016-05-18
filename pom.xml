@@ -86,6 +86,7 @@
     <logback.version>1.1.7</logback.version>
     <metrics.version>3.1.2</metrics.version>
     <netty.version>4.1.2.Final</netty.version>
+    <reactive-streams.version>1.0.0</reactive-streams.version>
     <slf4j.version>1.7.21</slf4j.version>
     <tomcat.version>8.0.36</tomcat.version>
     <jetty.alpnAgent.version>2.0.3</jetty.alpnAgent.version>
@@ -137,6 +138,13 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-tcnative-boringssl-static</artifactId>
       <version>1.1.33.Fork18</version>
+    </dependency>
+
+    <!-- Reactive Streams API -->
+    <dependency>
+      <groupId>org.reactivestreams</groupId>
+      <artifactId>reactive-streams</artifactId>
+      <version>${reactive-streams.version}</version>
     </dependency>
 
     <!-- ALPN -->
@@ -564,7 +572,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${argLine.alpnAgent} ${argLine.leak}</argLine>
+          <argLine>${argLine.alpnAgent} ${argLine.leak} -Xmx128m</argLine>
         </configuration>
       </plugin>
       <plugin>

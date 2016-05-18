@@ -18,72 +18,68 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.AfterClass;
 import org.junit.Before;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
-import io.netty.util.concurrent.Future;
-import io.netty.util.internal.PlatformDependent;
-
 public abstract class AbstractServerTest {
 
-    private static final Object lock = new Object();
-
-    private static Server server;
+    private static final AtomicReference<Server> server = new AtomicReference<>();
     private static int httpPort;
     private static int httpsPort;
 
     @Before
     public void startServer() throws Exception {
-        synchronized (lock) {
-            if (server != null) {
-                return;
-            }
-
-            final ServerBuilder sb = new ServerBuilder();
-            configureServer(sb);
-            server = sb.build();
-
-            try {
-                server.start().sync();
-            } catch (InterruptedException e) {
-                PlatformDependent.throwException(e);
-            }
-
-            httpPort = server.activePorts().values().stream()
-                             .filter(p1 -> p1.protocol() == SessionProtocol.HTTP).findAny()
-                             .flatMap(p -> Optional.of(p.localAddress().getPort())).orElse(-1);
-
-            httpsPort = server.activePorts().values().stream()
-                              .filter(p1 -> p1.protocol() == SessionProtocol.HTTPS).findAny()
-                              .flatMap(p -> Optional.of(p.localAddress().getPort())).orElse(-1);
+        if (server.get() != null) {
+            return;
         }
+
+        final ServerBuilder sb = new ServerBuilder();
+        configureServer(sb);
+        final Server server = sb.build();
+        server.start().get();
+
+        AbstractServerTest.server.set(server);
+
+        httpPort = server.activePorts().values().stream()
+                         .filter(p1 -> p1.protocol() == SessionProtocol.HTTP).findAny()
+                         .flatMap(p -> Optional.of(p.localAddress().getPort())).orElse(-1);
+
+        httpsPort = server.activePorts().values().stream()
+                          .filter(p1 -> p1.protocol() == SessionProtocol.HTTPS).findAny()
+                          .flatMap(p -> Optional.of(p.localAddress().getPort())).orElse(-1);
     }
 
     protected abstract void configureServer(ServerBuilder sb) throws Exception;
 
     @AfterClass
-    public static void stopServer() throws Exception {
-        stopServer(false);
+    public static void stopServerLater() throws Exception {
+        final Server server = AbstractServerTest.server.getAndSet(null);
+        stopServer(server, false);
     }
 
-    protected static void stopServer(boolean await) throws Exception {
-        synchronized (lock) {
-            if (server == null) {
-                return;
-            }
+    protected static void stopServer() {
+        final Server server = AbstractServerTest.server.getAndSet(null);
+        stopServer(server, true);
+    }
 
-            Future<Void> future = server.stop();
-            server = null;
-            if (await) {
-                future.sync();
-            }
+    private static void stopServer(Server server, boolean await) {
+        if (server == null) {
+            return;
+        }
+
+        if (await) {
+            server.close();
+        } else {
+            server.stop();
         }
     }
 
     protected static Server server() {
+        final Server server = AbstractServerTest.server.get();
         if (server == null) {
             throw new IllegalStateException("server did not start.");
         }

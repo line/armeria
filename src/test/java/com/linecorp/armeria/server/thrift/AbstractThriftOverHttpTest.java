@@ -28,6 +28,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.Server;
@@ -38,7 +39,6 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.concurrent.GlobalEventExecutor;
 
 public abstract class AbstractThriftOverHttpTest {
 
@@ -76,19 +76,17 @@ public abstract class AbstractThriftOverHttpTest {
             ssc = new SelfSignedCertificate("127.0.0.1");
             sb.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
 
-            sb.serviceAt("/hello", ThriftService.of(
+            sb.serviceAt("/hello", THttpService.of(
                     (AsyncIface) (name, resultHandler) ->
                             resultHandler.onComplete("Hello, " + name + '!')).decorate(LoggingService::new));
 
-            sb.serviceAt("/hellochild", ThriftService.of(new HelloServiceChild()));
+            sb.serviceAt("/hellochild", THttpService.of(new HelloServiceChild()));
 
-            sb.serviceAt("/sleep", ThriftService.of(
-                    (SleepService.AsyncIface) (milliseconds, resultHandler) -> {
-                        // FIXME: Provide a way to access the current executor.
-                        GlobalEventExecutor.INSTANCE.schedule(
-                                () -> resultHandler.onComplete(milliseconds),
-                                milliseconds, TimeUnit.MILLISECONDS);
-                    }).decorate(LoggingService::new));
+            sb.serviceAt("/sleep", THttpService.of(
+                    (SleepService.AsyncIface) (milliseconds, resultHandler) ->
+                            RequestContext.current().eventLoop().schedule(
+                                    () -> resultHandler.onComplete(milliseconds),
+                                    milliseconds, TimeUnit.MILLISECONDS)).decorate(LoggingService::new));
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -97,7 +95,7 @@ public abstract class AbstractThriftOverHttpTest {
 
     @BeforeClass
     public static void init() throws Exception {
-        server.start().sync();
+        server.start().get();
 
         httpPort = server.activePorts().values().stream()
                 .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress().getPort();

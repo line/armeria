@@ -19,15 +19,16 @@ import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class EndpointGroupUtil {
-    private final static String ENDPOINT_GROUP_MARK = "group:";
-    private final static Pattern ENDPOINT_GROUP_PATTERN = Pattern.compile("://(?:[^@]*@)?(" + ENDPOINT_GROUP_MARK + "([^:/]+)(:\\d+)?)");
+final class EndpointGroupUtil {
 
-    public final static String getEndpointGroupName(URI uri) {
-        return EndpointGroupUtil.getEndpointGroupName(uri.toString());
+    private static final String ENDPOINT_GROUP_MARK = "group:";
+    private static final Pattern ENDPOINT_GROUP_PATTERN = Pattern.compile("://(?:[^@]*@)?(" + ENDPOINT_GROUP_MARK + "([^:/]+)(:\\d+)?)");
+
+    public static String getEndpointGroupName(URI uri) {
+        return getEndpointGroupName(uri.toString());
     }
 
-    public final static String getEndpointGroupName(String uri) {
+    public static String getEndpointGroupName(String uri) {
         Matcher matcher = ENDPOINT_GROUP_PATTERN.matcher(uri);
         if (matcher.find()) {
             return matcher.group(2);
@@ -35,11 +36,11 @@ public final class EndpointGroupUtil {
         return null;
     }
 
-    public final static String replaceEndpointGroup(URI uri, String endpointUri) {
-        return EndpointGroupUtil.replaceEndpointGroup(uri.toString(), endpointUri);
+    public static String replaceEndpointGroup(URI uri, String endpointUri) {
+        return replaceEndpointGroup(uri.toString(), endpointUri);
     }
 
-    public final static String replaceEndpointGroup(String uri, String endpointUri) {
+    public static String replaceEndpointGroup(String uri, String endpointUri) {
         Matcher matcher = ENDPOINT_GROUP_PATTERN.matcher(uri);
         if (matcher.find()) {
             return new StringBuilder(uri).
@@ -49,7 +50,9 @@ public final class EndpointGroupUtil {
         return uri;
     }
 
-    public final static String removeGroupMark(URI uri) {
+    public static String removeGroupMark(URI uri) {
         return uri.toString().replaceFirst(ENDPOINT_GROUP_MARK, "");
     }
+
+    private EndpointGroupUtil() {}
 }

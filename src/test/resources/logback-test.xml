@@ -23,7 +23,7 @@
   </appender>
 
   <logger name="com.linecorp.armeria" level="DEBUG" />
-  <logger name="com.linecorp.armeria.common.http.Http2GoAwayListener" level="INFO" />
+  <logger name="com.linecorp.armeria.internal.http.Http2GoAwayListener" level="INFO" />
   <logger name="armeria" level="DEBUG" />
 
   <root level="WARN">

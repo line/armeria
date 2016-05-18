@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -27,7 +27,8 @@ public final class SimpleCompositeServiceBuilder
         extends AbstractCompositeServiceBuilder<SimpleCompositeServiceBuilder> {
 
     @Override
-    public SimpleCompositeServiceBuilder serviceAt(String exactPath, Service service) {
+    public SimpleCompositeServiceBuilder serviceAt(
+            String exactPath, Service service) {
         return super.serviceAt(exactPath, service);
     }
 

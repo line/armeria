@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -44,10 +44,12 @@ class EndpointInfo {
                  SerializationFormat defaultFormat, Set<SerializationFormat> availableFormats) {
         this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
         this.path = requireNonNull(path, "path");
-        defaultMimeType = requireNonNull(defaultFormat, "defaultFormat").mimeType();
+        defaultMimeType = requireNonNull(defaultFormat, "defaultFormat").mediaType().toString();
 
         final Set<String> sortedAvailableMimeTypes =
-                availableFormats.stream().map(SerializationFormat::mimeType)
+                availableFormats.stream()
+                                .map(SerializationFormat::mediaType)
+                                .map(Object::toString)
                                 .collect(Collectors.toCollection(TreeSet::new));
         availableMimeTypes = Collections.unmodifiableSet(sortedAvailableMimeTypes);
     }
