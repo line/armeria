@@ -13,25 +13,25 @@ public class SerializationFormatTest {
             if (format == SerializationFormat.UNKNOWN) {
                 continue;
             }
-            assertSame(format, SerializationFormat.fromMimeType(format.mimeType()).get());
+            assertSame(format, SerializationFormat.fromMediaType(format.mediaType().toString()).get());
         }
     }
 
     @Test
     public void fromMimeType_normalizes() {
         assertSame(SerializationFormat.THRIFT_BINARY,
-                   SerializationFormat.fromMimeType("application/x-thrift; protocol=tbinary").get());
+                   SerializationFormat.fromMediaType("application/x-thrift; protocol=tbinary").get());
         assertSame(SerializationFormat.THRIFT_COMPACT,
-                   SerializationFormat.fromMimeType("application/x-thrift;protocol=TCompact").get());
+                   SerializationFormat.fromMediaType("application/x-thrift;protocol=TCompact").get());
         assertSame(SerializationFormat.THRIFT_JSON,
-                   SerializationFormat.fromMimeType("application/x-thrift ; protocol=\"TjSoN\"").get());
+                   SerializationFormat.fromMediaType("application/x-thrift ; protocol=\"TjSoN\"").get());
         assertSame(SerializationFormat.THRIFT_TEXT,
-                   SerializationFormat.fromMimeType("application/x-thrift ; version=3;protocol=ttext").get());
+                   SerializationFormat.fromMediaType("application/x-thrift ; version=3;protocol=ttext").get());
     }
 
     @Test
     public void fromMimeType_notRecognized() {
-        assertFalse(SerializationFormat.fromMimeType("foo/bar").isPresent());
-        assertFalse(SerializationFormat.fromMimeType(null).isPresent());
+        assertFalse(SerializationFormat.fromMediaType("foo/bar").isPresent());
+        assertFalse(SerializationFormat.fromMediaType(null).isPresent());
     }
 }

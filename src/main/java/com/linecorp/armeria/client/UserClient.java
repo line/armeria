@@ -1,0 +1,100 @@
+/*
+ * Copyright 2016 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.client;
+
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.SessionProtocol;
+
+import io.netty.channel.EventLoop;
+
+public abstract class UserClient<T> implements ClientOptionDerivable<T> {
+
+    private final Client delegate;
+    private final Supplier<EventLoop> eventLoopSupplier;
+    private final SessionProtocol sessionProtocol;
+    private final ClientOptions options;
+    private final Endpoint endpoint;
+
+    protected UserClient(Client delegate, Supplier<EventLoop> eventLoopSupplier,
+                         SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
+
+        this.delegate = delegate;
+        this.eventLoopSupplier = eventLoopSupplier;
+        this.sessionProtocol = sessionProtocol;
+        this.options = options;
+        this.endpoint = endpoint;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected final <U extends Client> U delegate() {
+        return (U) delegate;
+    }
+
+    protected final EventLoop eventLoop() {
+        return eventLoopSupplier.get();
+    }
+
+    protected final SessionProtocol sessionProtocol() {
+        return sessionProtocol;
+    }
+
+    protected final ClientOptions options() {
+        return options;
+    }
+
+    protected final Endpoint endpoint() {
+        return endpoint;
+    }
+
+    protected final <U extends Response> U execute(
+            String method, String path, Request req, Function<Throwable, U> fallback) {
+        return execute(eventLoop(), method, path, req, fallback);
+    }
+
+    protected final <U extends Response> U execute(
+            EventLoop eventLoop, String method, String path, Request req, Function<Throwable, U> fallback) {
+        try {
+            final ClientRequestContext ctx = new DefaultClientRequestContext(
+                    eventLoop, sessionProtocol, endpoint, method, path, options, req);
+
+            @SuppressWarnings("unchecked")
+            final U res = (U) delegate().execute(ctx, req);
+            return res;
+        } catch (Throwable cause) {
+            return fallback.apply(cause);
+        }
+    }
+
+    @Override
+    public final T withOptions(ClientOptionValue<?>... additionalOptions) {
+        final ClientOptions options = ClientOptions.of(options(), additionalOptions);
+        return newInstance(delegate(), eventLoopSupplier, sessionProtocol(), options, endpoint());
+    }
+
+    @Override
+    public final T withOptions(Iterable<ClientOptionValue<?>> additionalOptions) {
+        final ClientOptions options = ClientOptions.of(options(), additionalOptions);
+        return newInstance(delegate(), eventLoopSupplier, sessionProtocol(), options, endpoint());
+    }
+
+    protected abstract T newInstance(Client delegate, Supplier<EventLoop> eventLoopSupplier,
+                                     SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint);
+}

@@ -59,11 +59,11 @@ public final class DropwizardRequestMetrics {
         activeRequests.dec();
     }
 
-    public void requestBytes(int requestBytes) {
+    public void requestBytes(long requestBytes) {
         this.requestBytes.mark(requestBytes);
     }
 
-    public void responseBytes(int responseBytes) {
+    public void responseBytes(long responseBytes) {
         this.responseBytes.mark(responseBytes);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -85,7 +85,7 @@ public class HttpFileServiceTest {
 
     @BeforeClass
     public static void init() throws Exception {
-        server.start().sync();
+        server.start().get();
 
         httpPort = server.activePorts().values().stream()
                 .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress().getPort();

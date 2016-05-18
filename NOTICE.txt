@@ -161,6 +161,11 @@ This product depends on Netty, distributed by Netty.io:
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
   * Homepage: http://netty.io/
 
+This product depends on Reactive Streams API, distributed by Reactive-Streams.org:
+
+  * License: licenses/LICENSE.reactivestreams.cc0.txt
+  * Homepage: http://www.reactive-streams.org/
+
 This product depends on Reflections, distributed by ronmamo:
 
   * License: licenses/LICENSE.reflections.wtfpl.txt (WTFPL)
