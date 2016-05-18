@@ -15,6 +15,6 @@
  */
 
 /**
- * Thrift {@link com.linecorp.armeria.client.ClientCodec}.
+ * Thrift client.
  */
 package com.linecorp.armeria.client.thrift;

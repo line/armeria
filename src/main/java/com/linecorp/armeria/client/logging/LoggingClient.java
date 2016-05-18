@@ -16,30 +16,56 @@
 
 package com.linecorp.armeria.client.logging;
 
-import java.util.function.Function;
+import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.client.Client;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
-import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.ResponseLog;
 
 /**
  * Decorates a {@link Client} to log invocation requests and responses.
  */
 public class LoggingClient extends DecoratingClient {
 
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    public LoggingClient(Client client) {
-        super(client, codec -> new LoggingClientCodec(codec, Ticker.systemTicker()), Function.identity());
-    }
+    private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
+
+    private static final String REQUEST_FORMAT = "{} Request: {}";
+    private static final String RESPONSE_FORMAT = "{} Response: {}";
+
+    private final LogLevel level;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
-     *
-     * @param ticker an alternative {@link Ticker}
      */
-    public LoggingClient(Client client, Ticker ticker) {
-        super(client, codec -> new LoggingClientCodec(codec, ticker), Function.identity());
+    public LoggingClient(Client delegate) {
+        this(delegate, LogLevel.INFO);
+    }
+
+    public LoggingClient(Client delegate, LogLevel level) {
+        super(delegate);
+        this.level = requireNonNull(level, "level");
+    }
+
+    @Override
+    public Response execute(ClientRequestContext ctx, Request req) throws Exception {
+        ctx.awaitRequestLog().thenAccept(log -> log(ctx, level, log));
+        ctx.awaitResponseLog().thenAccept(log -> log(ctx, level, log));
+        return delegate().execute(ctx, req);
+    }
+
+    protected void log(ClientRequestContext ctx, LogLevel level, RequestLog log) {
+        level.log(logger, REQUEST_FORMAT, ctx, log);
+    }
+
+    protected void log(ClientRequestContext ctx, LogLevel level, ResponseLog log) {
+        level.log(logger, RESPONSE_FORMAT, ctx, log);
     }
 }

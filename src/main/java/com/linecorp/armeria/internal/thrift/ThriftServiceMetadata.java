@@ -1,0 +1,209 @@
+/*
+ * Copyright 2016 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.internal.thrift;
+
+import static java.util.Objects.requireNonNull;
+
+import java.lang.reflect.Constructor;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.thrift.AsyncProcessFunction;
+import org.apache.thrift.ProcessFunction;
+import org.apache.thrift.TBaseAsyncProcessor;
+import org.apache.thrift.TBaseProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public final class ThriftServiceMetadata {
+
+    private static final Logger logger = LoggerFactory.getLogger(ThriftServiceMetadata.class);
+
+    private final Set<Class<?>> interfaces;
+
+    /**
+     * A map whose key is a method name and whose value is {@link AsyncProcessFunction} or {@link ProcessFunction}.
+     */
+    private final Map<String, ThriftFunction> functions = new HashMap<>();
+
+    public ThriftServiceMetadata(Object implementation) {
+        requireNonNull(implementation, "implementation");
+        interfaces = init(implementation);
+    }
+
+    public ThriftServiceMetadata(Class<?> iface) {
+        requireNonNull(iface, "iface");
+        interfaces = init(null, Collections.singleton(iface));
+    }
+
+    private Set<Class<?>> init(Object implementation) {
+        return init(implementation, getAllInterfaces(implementation.getClass()));
+    }
+
+    private Set<Class<?>> init(Object implementation, Iterable<Class<?>> candidateInterfaces) {
+
+        final Class<?> serviceClass = implementation != null ? implementation.getClass() : null;
+
+        // Build the map of method names and their corresponding process functions.
+        final Set<String> methodNames = new HashSet<>();
+        final Set<Class<?>> interfaces = new HashSet<>();
+
+        for (Class<?> iface : candidateInterfaces) {
+            final ClassLoader serviceClassLoader =
+                    serviceClass != null ? serviceClass.getClassLoader() : iface.getClassLoader();
+
+            final Map<String, AsyncProcessFunction<?, ?, ?>> asyncProcessMap;
+            asyncProcessMap = getThriftAsyncProcessMap(implementation, iface, serviceClassLoader);
+            if (asyncProcessMap != null) {
+                asyncProcessMap.forEach(
+                        (name, func) -> registerFunction(methodNames, iface, name, func));
+                interfaces.add(iface);
+            }
+
+            final Map<String, ProcessFunction<?, ?>> processMap;
+            processMap = getThriftProcessMap(implementation, iface, serviceClassLoader);
+            if (processMap != null) {
+                processMap.forEach(
+                        (name, func) -> registerFunction(methodNames, iface, name, func));
+                interfaces.add(iface);
+            }
+        }
+
+        if (functions.isEmpty()) {
+            throw new IllegalArgumentException('\'' + serviceClass.getName() +
+                                               "' is not a Thrift service implementation.");
+        }
+
+        return Collections.unmodifiableSet(interfaces);
+    }
+
+    private static Set<Class<?>> getAllInterfaces(Class<?> cls) {
+        final Set<Class<?>> interfacesFound = new HashSet<>();
+        getAllInterfaces(cls, interfacesFound);
+        return interfacesFound;
+    }
+
+    private static void getAllInterfaces(Class<?> cls, Set<Class<?>> interfacesFound) {
+        while (cls != null) {
+            final Class<?>[] interfaces = cls.getInterfaces();
+            for (final Class<?> i : interfaces) {
+                if (interfacesFound.add(i)) {
+                    getAllInterfaces(i, interfacesFound);
+                }
+            }
+            cls = cls.getSuperclass();
+        }
+    }
+
+    private static Map<String, ProcessFunction<?, ?>> getThriftProcessMap(
+            Object service, Class<?> iface, ClassLoader loader) {
+
+        final String name = iface.getName();
+        if (!name.endsWith("$Iface")) {
+            return null;
+        }
+
+        final String processorName = name.substring(0, name.length() - 5) + "Processor";
+        try {
+            final Class<?> processorClass = Class.forName(processorName, false, loader);
+            if (!TBaseProcessor.class.isAssignableFrom(processorClass)) {
+                return null;
+            }
+
+            final Constructor<?> processorConstructor = processorClass.getConstructor(iface);
+
+            @SuppressWarnings("rawtypes")
+            final TBaseProcessor processor = (TBaseProcessor) processorConstructor.newInstance(service);
+
+            @SuppressWarnings("unchecked")
+            Map<String, ProcessFunction<?, ?>> processMap =
+                    (Map<String, ProcessFunction<?, ?>>) processor.getProcessMapView();
+
+            return processMap;
+        } catch (Exception e) {
+            logger.debug("Failed to retrieve the process map from: {}", iface, e);
+            return null;
+        }
+    }
+
+    private static Map<String, AsyncProcessFunction<?, ?, ?>> getThriftAsyncProcessMap(
+            Object service, Class<?> iface, ClassLoader loader) {
+
+        final String name = iface.getName();
+        if (!name.endsWith("$AsyncIface")) {
+            return null;
+        }
+
+        final String processorName = name.substring(0, name.length() - 10) + "AsyncProcessor";
+        try {
+            Class<?> processorClass = Class.forName(processorName, false, loader);
+            if (!TBaseAsyncProcessor.class.isAssignableFrom(processorClass)) {
+                return null;
+            }
+
+            final Constructor<?> processorConstructor = processorClass.getConstructor(iface);
+
+            @SuppressWarnings("rawtypes")
+            final TBaseAsyncProcessor processor = (TBaseAsyncProcessor) processorConstructor.newInstance(service);
+
+            @SuppressWarnings("unchecked")
+            Map<String, AsyncProcessFunction<?, ?, ?>> processMap =
+                    (Map<String, AsyncProcessFunction<?, ?, ?>>) processor.getProcessMapView();
+
+            return processMap;
+        } catch (Exception e) {
+            logger.debug("Failed to retrieve the asynchronous process map from:: {}", iface, e);
+            return null;
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private void registerFunction(Set<String> methodNames, Class<?> iface, String name, Object func) {
+        checkDuplicateMethodName(methodNames, name);
+        methodNames.add(name);
+
+        try {
+            final ThriftFunction f;
+            if (func instanceof ProcessFunction) {
+                f = new ThriftFunction(iface, (ProcessFunction) func);
+            } else {
+                f = new ThriftFunction(iface, (AsyncProcessFunction) func);
+            }
+            functions.put(name, f);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("failed to retrieve function metadata: " +
+                                               iface.getName() + '.' + name + "()", e);
+        }
+    }
+
+    private static void checkDuplicateMethodName(Set<String> methodNames, String name) {
+        if (methodNames.contains(name)) {
+            throw new IllegalArgumentException("duplicate Thrift method name: " + name);
+        }
+    }
+
+    public Set<Class<?>> interfaces() {
+        return interfaces;
+    }
+
+    public ThriftFunction function(String method) {
+        return functions.get(method);
+    }
+}

@@ -15,11 +15,13 @@
  */
 package com.linecorp.armeria.client.routing;
 
-public interface EndpointSelector<T extends Endpoint> {
+import com.linecorp.armeria.client.Endpoint;
+
+public interface EndpointSelector {
     /**
      * Return the {@link EndpointGroup} held by this selector.
      */
-    EndpointGroup<T> group();
+    EndpointGroup group();
 
     /**
      * Return the {@link EndpointSelectionStrategy} used by this selector to select endpoints.
@@ -29,5 +31,5 @@ public interface EndpointSelector<T extends Endpoint> {
     /**
      * Return a selected endpoint.
      */
-    T select();
+    Endpoint select();
 }
