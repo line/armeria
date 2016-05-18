@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
@@ -156,7 +157,7 @@ final class ThriftDocString {
             final String doc = (String) map.get("doc");
             String childPrefix;
             if (name != null) {
-                childPrefix = (prefix != null ? prefix : "") + delimiter + name;
+                childPrefix = MoreObjects.firstNonNull(prefix, "") + delimiter + name;
                 if (doc != null) {
                     docStrings.put(childPrefix, doc.trim());
                 }

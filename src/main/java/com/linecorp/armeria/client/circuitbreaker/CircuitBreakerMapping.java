@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,13 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import java.lang.reflect.Method;
-import java.net.URI;
-
-import com.linecorp.armeria.client.ClientCodec;
-import com.linecorp.armeria.client.ClientOptions;
-
-import io.netty.channel.EventLoop;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.Request;
 
 /**
  * Returns a {@link CircuitBreaker} instance from remote invocation parameters.
@@ -33,6 +28,5 @@ public interface CircuitBreakerMapping {
     /**
      * Returns the {@link CircuitBreaker} mapped to the given parameters.
      */
-    CircuitBreaker get(EventLoop eventLoop, URI uri, ClientOptions options, ClientCodec codec, Method method,
-                       Object[] args) throws Exception;
+    CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception;
 }

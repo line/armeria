@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,16 +16,48 @@
 
 package com.linecorp.armeria.server.logging;
 
-import java.util.function.Function;
+import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A decorator {@link Service} that logs all requests and responses.
  */
 public class LoggingService extends DecoratingService {
-    public LoggingService(Service service) {
-        super(service, LoggingServiceCodec::new, Function.identity());
+
+    private static final String REQUEST_FORMAT = "Request: {}";
+    private static final String RESPONSE_FORMAT = "Response: {}";
+
+    private final LogLevel level;
+
+    public LoggingService(Service delegate) {
+        this(delegate, LogLevel.INFO);
+    }
+
+    public LoggingService(Service delegate, LogLevel level) {
+        super(delegate);
+        this.level = requireNonNull(level, "level");
+    }
+
+    @Override
+    public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
+        ctx.awaitRequestLog().thenAccept(log -> log(ctx, level, log));
+        ctx.awaitResponseLog().thenAccept(log -> log(ctx, level, log));
+        return delegate().serve(ctx, req);
+    }
+
+    protected void log(ServiceRequestContext ctx, LogLevel level, RequestLog log) {
+        level.log(ctx.logger(), REQUEST_FORMAT, log);
+    }
+
+    protected void log(ServiceRequestContext ctx, LogLevel level, ResponseLog log) {
+        level.log(ctx.logger(), RESPONSE_FORMAT, log);
     }
 }

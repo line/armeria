@@ -15,6 +15,6 @@
  */
 
 /**
- * HTTP1/2-related classes used internally.
+ * HTTP-related classes.
  */
 package com.linecorp.armeria.common.http;

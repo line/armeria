@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -69,7 +69,8 @@ import com.linecorp.armeria.server.Service;
 public abstract class AbstractCompositeServiceBuilder<T extends AbstractCompositeServiceBuilder<T>> {
 
     private final List<CompositeServiceEntry> services = new ArrayList<>();
-    private final List<CompositeServiceEntry> unmodifiableServices = Collections.unmodifiableList(services);
+    private final List<CompositeServiceEntry> unmodifiableServices =
+            Collections.unmodifiableList(services);
 
     /**
      * Creates a new instance.

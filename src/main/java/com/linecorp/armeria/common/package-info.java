@@ -19,8 +19,7 @@
  *
  * <h2>Starting points</h2>
  * <ul>
- *   <li>{@link com.linecorp.armeria.common.ServiceInvocationContext}</li>
- *   <li>{@link com.linecorp.armeria.common.TimeoutPolicy}</li>
+ *   <li>{@link com.linecorp.armeria.common.RequestContext}</li>
  * </ul>
  */
 package com.linecorp.armeria.common;

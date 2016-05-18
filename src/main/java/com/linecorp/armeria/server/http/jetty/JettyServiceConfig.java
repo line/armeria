@@ -29,7 +29,6 @@ import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.SessionIdManager;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
-import org.eclipse.jetty.util.component.Container;
 import org.eclipse.jetty.util.component.Container.Listener;
 import org.eclipse.jetty.util.component.LifeCycle;
 
@@ -45,7 +44,7 @@ final class JettyServiceConfig {
     private final Map<String, Object> attrs;
     private final List<Bean> beans;
     private final List<HandlerWrapper> handlerWrappers;
-    private final List<Container.Listener> eventListeners;
+    private final List<Listener> eventListeners;
     private final List<LifeCycle.Listener> lifeCycleListeners;
     private final List<Consumer<? super Server>> configurators;
 
@@ -111,7 +110,7 @@ final class JettyServiceConfig {
         return handlerWrappers;
     }
 
-    List<Container.Listener> eventListeners() {
+    List<Listener> eventListeners() {
         return eventListeners;
     }
 
