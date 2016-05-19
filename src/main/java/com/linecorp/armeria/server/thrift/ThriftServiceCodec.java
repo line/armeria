@@ -84,6 +84,7 @@ final class ThriftServiceCodec implements ServiceCodec {
 
     private final Set<SerializationFormat> allowedSerializationFormats;
     private final Object service;
+    private final Set<Class<?>> interfaces;
 
     /**
      * A map whose key is a method name and whose value is {@link AsyncProcessFunction} or {@link ProcessFunction}.
@@ -108,14 +109,14 @@ final class ThriftServiceCodec implements ServiceCodec {
         final Class<?> serviceClass = service.getClass();
         final ClassLoader serviceClassLoader = serviceClass.getClassLoader();
 
-        Set<Class<?>> interfaces = new HashSet<>();
-        getAllInterfaces(serviceClass, interfaces);
-        for (Class<?> iface : interfaces) {
+        final Set<Class<?>> interfaces = new HashSet<>();
+        for (Class<?> iface : getAllInterfaces(serviceClass)) {
             final Map<String, AsyncProcessFunction<?, ?, ?>> asyncProcessMap;
             asyncProcessMap = getThriftAsyncProcessMap(service, iface, serviceClassLoader);
             if (asyncProcessMap != null) {
                 asyncProcessMap.forEach(
                         (name, func) -> registerFunction(methodNames, serviceClass, name, func));
+                interfaces.add(iface);
             }
 
             final Map<String, ProcessFunction<?, ?>> processMap;
@@ -123,6 +124,7 @@ final class ThriftServiceCodec implements ServiceCodec {
             if (processMap != null) {
                 processMap.forEach(
                         (name, func) -> registerFunction(methodNames, serviceClass, name, func));
+                interfaces.add(iface);
             }
         }
 
@@ -130,6 +132,8 @@ final class ThriftServiceCodec implements ServiceCodec {
             throw new IllegalArgumentException('\'' + serviceClass.getName() +
                                                "' is not a Thrift service implementation.");
         }
+
+        this.interfaces = Collections.unmodifiableSet(interfaces);
     }
 
     @SuppressWarnings("rawtypes")
@@ -220,8 +224,12 @@ final class ThriftServiceCodec implements ServiceCodec {
         }
     }
 
-    Object thriftService() {
+    Object implementation() {
         return service;
+    }
+
+    Set<Class<?>> interfaces() {
+        return interfaces;
     }
 
     Set<SerializationFormat> allowedSerializationFormats() {
@@ -556,6 +564,12 @@ final class ThriftServiceCodec implements ServiceCodec {
         protected TProtocol initialValue() {
             return protoFactory.getProtocol(new TByteBufTransport());
         }
+    }
+
+    private static Set<Class<?>> getAllInterfaces(Class<?> cls) {
+        final Set<Class<?>> interfacesFound = new HashSet<>();
+        getAllInterfaces(cls, interfacesFound);
+        return interfacesFound;
     }
 
     private static void getAllInterfaces(Class<?> cls, Set<Class<?>> interfacesFound) {

@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -33,7 +32,6 @@ import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.thrift.ThriftService;
 
@@ -45,29 +43,19 @@ class Specification {
         final Map<Class<?>, Iterable<EndpointInfo>> map = new LinkedHashMap<>();
 
         for (ServiceConfig c : serviceConfigs) {
-            Service service = c.service();
-            final Optional<ThriftService> thriftServiceOptional = service.as(ThriftService.class);
-            if (!thriftServiceOptional.isPresent()) {
-                continue;
-            }
+            c.service().as(ThriftService.class).ifPresent(service -> {
+                for (Class<?> iface : service.interfaces()) {
+                    final Class<?> serviceClass = iface.getEnclosingClass();
+                    final List<EndpointInfo> endpoints =
+                            (List<EndpointInfo>) map.computeIfAbsent(serviceClass, cls -> new ArrayList<>());
 
-            final ThriftService thriftService = thriftServiceOptional.get();
-            final Class<?>[] ifaces = thriftService.thriftService().getClass().getInterfaces();
-            for (Class<?> iface : ifaces) {
-                if (!iface.getName().endsWith("$AsyncIface") && !iface.getName().endsWith("$Iface")) {
-                    continue;
+                    c.pathMapping().exactPath().ifPresent(
+                            p -> endpoints.add(EndpointInfo.of(
+                                    c.virtualHost().hostnamePattern(),
+                                    p, service.defaultSerializationFormat(),
+                                    service.allowedSerializationFormats())));
                 }
-
-                final Class<?> serviceClass = iface.getEnclosingClass();
-                final List<EndpointInfo> endpoints =
-                        (List<EndpointInfo>) map.computeIfAbsent(serviceClass, cls -> new ArrayList<>());
-
-                c.pathMapping().exactPath().ifPresent(
-                        p -> endpoints.add(EndpointInfo.of(
-                                c.virtualHost().hostnamePattern(),
-                                p, thriftService.defaultSerializationFormat(),
-                                thriftService.allowedSerializationFormats())));
-            }
+            });
         }
 
         return forServiceClasses(map, sampleRequests);
