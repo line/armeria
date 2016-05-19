@@ -114,8 +114,16 @@ public class ThriftService extends SimpleService {
     /**
      * Returns the Thrift service object that implements {@code *.Iface} or {@code *.AsyncIface}.
      */
-    public Object thriftService() {
-        return ((ThriftServiceCodec) codec()).thriftService();
+    public Object implementation() {
+        return ((ThriftServiceCodec) codec()).implementation();
+    }
+
+    /**
+     * Returns the Thrift service interfaces ({@code *.Iface} or {@code *.AsyncIface}) the Thrift service
+     * object implements.
+     */
+    public Set<Class<?>> interfaces() {
+        return ((ThriftServiceCodec) codec()).interfaces();
     }
 
     /**
