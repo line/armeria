@@ -117,13 +117,8 @@ public class TTextProtocol extends TProtocol {
         super(trans);
 
         writers = new Stack<>();
-
-        ByteArrayOutputStream mybaos = new TTransportOutputStream();
-        pushWriter(mybaos);
-
-        reset();
         contextStack = new Stack<>();
-        contextStack.push(new BaseContext());
+        reset();
     }
 
     @Override
@@ -134,6 +129,12 @@ public class TTextProtocol extends TProtocol {
     @Override
     public final void reset() {
         root = null;
+
+        writers.clear();
+        pushWriter(new TTransportOutputStream());
+
+        contextStack.clear();
+        contextStack.push(new BaseContext());
     }
 
     /**
