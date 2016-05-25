@@ -139,6 +139,10 @@ public class TTextProtocolTest {
                                 ImmutableMap.of(200L, 400L), 300L
                         ), 100L
                 ))
+                .setT(ImmutableList.of(Letter.ALPHA, Letter.ALPHA, Letter.CHARLIE, Letter.ALPHA, Letter.CHARLIE,
+                                       Letter.ECHO))
+                .setU(ImmutableMap.of("foo", Letter.ALPHA, "bar", Letter.DELTA))
+                .setV(Letter.BETA)
                 ;
 
     }

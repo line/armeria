@@ -21,13 +21,20 @@ import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
+import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
+import org.apache.thrift.meta_data.EnumMetaData;
 import org.apache.thrift.meta_data.FieldMetaData;
+import org.apache.thrift.meta_data.FieldValueMetaData;
+import org.apache.thrift.meta_data.ListMetaData;
+import org.apache.thrift.meta_data.MapMetaData;
+import org.apache.thrift.meta_data.SetMetaData;
 import org.apache.thrift.protocol.TField;
-import org.apache.thrift.protocol.TStruct;
 import org.apache.thrift.protocol.TType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,11 +55,14 @@ class StructContext extends PairContext {
     // field.
     private final Map<String, TField> fieldNameMap;
 
+    private final Map<String, Class<? extends TEnum>> enumMap;
+
     /**
      * Build the name -> TField map
      */
     StructContext(JsonNode json) {
         super(json);
+        enumMap = new HashMap<>();
         fieldNameMap = computeFieldNameMap();
     }
 
@@ -62,6 +72,12 @@ class StructContext extends PairContext {
             throw new TException("Unknown field: " + name);
         }
         return fieldNameMap.get(name);
+    }
+
+    @Override
+    @Nullable
+    protected Class<? extends TEnum> getEnumClassByFieldName(String fieldName) {
+        return enumMap.get(fieldName);
     }
 
     /**
@@ -163,6 +179,27 @@ class StructContext extends PairContext {
             for (TFieldIdEnum key : metaDataMap.keySet()) {
                 final String fieldName = key.getFieldName();
                 final FieldMetaData metaData = metaDataMap.get(key);
+
+                final FieldValueMetaData elementMetaData;
+                if (metaData.valueMetaData.isContainer()) {
+                    if (metaData.valueMetaData instanceof SetMetaData) {
+                        elementMetaData = ((SetMetaData) metaData.valueMetaData).elemMetaData;
+                    } else if (metaData.valueMetaData instanceof ListMetaData){
+                        elementMetaData = ((ListMetaData) metaData.valueMetaData).elemMetaData;
+                    } else if (metaData.valueMetaData instanceof MapMetaData) {
+                        elementMetaData = ((MapMetaData) metaData.valueMetaData).valueMetaData;
+                    } else {
+                        // Unrecognized container type, but let's still continue processing without
+                        // special enum support.
+                        elementMetaData = metaData.valueMetaData;
+                    }
+                } else {
+                    elementMetaData = metaData.valueMetaData;
+                }
+
+                if (TType.ENUM == elementMetaData.type) {
+                    enumMap.put(fieldName, ((EnumMetaData) elementMetaData).enumClass);
+                }
 
                 // Workaround a bug in the generated thrift message read()
                 // method by mapping the ENUM type to the INT32 type

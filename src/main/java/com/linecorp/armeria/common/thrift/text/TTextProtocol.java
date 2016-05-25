@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Stack;
 
+import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TField;
 import org.apache.thrift.protocol.TList;
@@ -89,7 +90,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * <p>
  * TODO(Alex Roetter): Also add a new TEXT_PROTOCOL field to ThriftCodec
  * <p>
- * TODO(Alex Roetter): add support for enums
+ * TODO: Support map enum keys specified as strings.
  */
 public class TTextProtocol extends TProtocol {
 
@@ -108,6 +109,7 @@ public class TTextProtocol extends TProtocol {
     private final Stack<WriterByteArrayOutputStream> writers;
     private final Stack<BaseContext> contextStack;
     private JsonNode root;
+    private Class<? extends TEnum> currentFieldEnumClass;
 
     /**
      * Create a parser which can read from trans, and create the output writer
@@ -445,8 +447,6 @@ public class TTextProtocol extends TProtocol {
 
     @Override
     public TField readFieldBegin() throws TException {
-        String name = null;
-
         if (!getCurrentContext().hasMoreChildren()) {
             return new TField("", UNUSED_TYPE, (short) 0);
         }
@@ -459,11 +459,15 @@ public class TTextProtocol extends TProtocol {
             throw new RuntimeException("Expected String for a field name");
         }
 
-        return getCurrentContext().getTFieldByName(jsonName.asText());
+        String fieldName = jsonName.asText();
+        currentFieldEnumClass = getCurrentContext().getEnumClassByFieldName(fieldName);
+
+        return getCurrentContext().getTFieldByName(fieldName);
     }
 
     @Override
     public void readFieldEnd() throws TException {
+        currentFieldEnumClass = null;
     }
 
     @Override
@@ -558,7 +562,24 @@ public class TTextProtocol extends TProtocol {
 
     @Override
     public int readI32() throws TException {
-        return readNameOrValue(TypedParser.INTEGER);
+        if (currentFieldEnumClass != null) {
+            // Enum fields may be set by string, even though they represent integers.
+            getCurrentContext().read();
+            JsonNode elem = getCurrentContext().getCurrentChild();
+            if (elem.isInt()) {
+                return TypedParser.INTEGER.readFromJsonElement(elem);
+            } else if (elem.isTextual()){
+                @SuppressWarnings("rawtypes,unchecked") // All TEnum are enums
+                Class casted = (Class) currentFieldEnumClass;
+                TEnum tEnum = (TEnum) Enum.valueOf(casted, TypedParser.STRING.readFromJsonElement(elem));
+                return tEnum.getValue();
+            } else {
+                throw new TTransportException("invalid value type for enum field: " + elem.getNodeType()
+                                              + " (" + elem + ')');
+            }
+        } else {
+            return readNameOrValue(TypedParser.INTEGER);
+        }
     }
 
     @Override
