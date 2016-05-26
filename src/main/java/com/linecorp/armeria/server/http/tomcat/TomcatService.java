@@ -21,12 +21,15 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Server;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.catalina.util.ServerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +44,29 @@ import com.linecorp.armeria.server.http.HttpService;
 public final class TomcatService extends HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatService.class);
+
+    private static final int TOMCAT_MAJOR_VERSION;
+
+    static {
+        final Pattern pattern = Pattern.compile("^([1-9][0-9]*)\\.");
+        final String version = ServerInfo.getServerNumber();
+        final Matcher matcher = pattern.matcher(version);
+        int tomcatMajorVersion = -1;
+        if (matcher.find()) {
+            try {
+                tomcatMajorVersion = Integer.parseInt(matcher.group(1));
+            } catch (NumberFormatException ignored) {
+                // Probably greater than Integer.MAX_VALUE
+            }
+        }
+
+        TOMCAT_MAJOR_VERSION = tomcatMajorVersion;
+        if (TOMCAT_MAJOR_VERSION > 0) {
+            logger.info("Tomcat version: {} (major: {})", version, TOMCAT_MAJOR_VERSION);
+        } else {
+            logger.info("Tomcat version: {} (major: unknown)", version);
+        }
+    }
 
     /**
      * Creates a new {@link TomcatService} with the web application at the root directory inside the
@@ -160,7 +186,16 @@ public final class TomcatService extends HttpService {
             serviceName = services[0].getName();
         }
 
-        return "(serviceName: " + serviceName + ", catalinaBase: " + server.getCatalinaBase() + ')';
+        final StringBuilder buf = new StringBuilder(128);
+
+        buf.append("(serviceName: ");
+        buf.append(serviceName);
+        if (TOMCAT_MAJOR_VERSION >= 8) {
+            buf.append(", catalinaBase: " + server.getCatalinaBase());
+        }
+        buf.append(')');
+
+        return buf.toString();
     }
 
     private TomcatService(String hostname, Function<String, Connector> connectorFactory) {
