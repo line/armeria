@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.thrift.text;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TField;
 
@@ -68,11 +67,11 @@ class BaseContext {
     }
 
     /**
-     * Returns the Java enum class for the field name if it is an enum,
+     * Returns the Java class for the field name if it is an enum or a struct,
      * or null otherwise.
      */
     @Nullable
-    protected Class<? extends TEnum> getEnumClassByFieldName(String fieldName) {
+    protected Class<?> getClassByFieldName(String fieldName) {
         return null;
     }
 

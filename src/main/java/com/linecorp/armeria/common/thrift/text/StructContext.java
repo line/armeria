@@ -25,7 +25,6 @@ import javax.annotation.Nullable;
 
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
-import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.EnumMetaData;
@@ -34,6 +33,7 @@ import org.apache.thrift.meta_data.FieldValueMetaData;
 import org.apache.thrift.meta_data.ListMetaData;
 import org.apache.thrift.meta_data.MapMetaData;
 import org.apache.thrift.meta_data.SetMetaData;
+import org.apache.thrift.meta_data.StructMetaData;
 import org.apache.thrift.protocol.TField;
 import org.apache.thrift.protocol.TType;
 import org.slf4j.Logger;
@@ -55,15 +55,19 @@ class StructContext extends PairContext {
     // field.
     private final Map<String, TField> fieldNameMap;
 
-    private final Map<String, Class<? extends TEnum>> enumMap;
+    private final Map<String, Class<?>> classMap;
 
     /**
      * Build the name -> TField map
      */
     StructContext(JsonNode json) {
+        this(json, getCurrentThriftMessageClass());
+    }
+
+    StructContext(JsonNode json, Class<?> clazz) {
         super(json);
-        enumMap = new HashMap<>();
-        fieldNameMap = computeFieldNameMap();
+        classMap = new HashMap<>();
+        fieldNameMap = computeFieldNameMap(clazz);
     }
 
     @Override
@@ -76,8 +80,8 @@ class StructContext extends PairContext {
 
     @Override
     @Nullable
-    protected Class<? extends TEnum> getEnumClassByFieldName(String fieldName) {
-        return enumMap.get(fieldName);
+    protected Class<?> getClassByFieldName(String fieldName) {
+        return classMap.get(fieldName);
     }
 
     /**
@@ -110,7 +114,7 @@ class StructContext extends PairContext {
      * To fix this, we can track call stack of nested thrift objects on our own by overriding
      * TProtocol.writeStructBegin(), rather than relying on the stack trace.
      */
-    private Class<?> getCurrentThriftMessageClass() {
+    private static Class<?> getCurrentThriftMessageClass() {
         StackTraceElement[] frames =
                 Thread.currentThread().getStackTrace();
 
@@ -138,19 +142,19 @@ class StructContext extends PairContext {
         throw new RuntimeException("Must call (indirectly) from a TBase/TApplicationException object.");
     }
 
-    private boolean isTBase(Class clazz) {
+    private static boolean isTBase(Class clazz) {
         return TBase.class.isAssignableFrom(clazz);
     }
 
-    private boolean isTApplicationException(Class clazz) {
+    private static boolean isTApplicationException(Class clazz) {
         return TApplicationException.class.isAssignableFrom(clazz);
     }
 
-    private boolean isAbstract(Class clazz) {
+    private static boolean isAbstract(Class clazz) {
         return Modifier.isAbstract(clazz.getModifiers());
     }
 
-    private boolean hasNoArgConstructor(Class clazz) {
+    private static boolean hasNoArgConstructor(Class clazz) {
         Constructor[] allConstructors = clazz.getConstructors();
         for (Constructor ctor : allConstructors) {
             Class<?>[] pType = ctor.getParameterTypes();
@@ -166,10 +170,8 @@ class StructContext extends PairContext {
      * Compute a new field name map for the current thrift message
      * we are parsing.
      */
-    private Map<String, TField> computeFieldNameMap() {
-        Map<String, TField> map = new HashMap<String, TField>();
-
-        Class<?> clazz = getCurrentThriftMessageClass();
+    private Map<String, TField> computeFieldNameMap(Class<?> clazz) {
+        Map<String, TField> map = new HashMap<>();
 
         if (isTBase(clazz)) {
             // Get the metaDataMap for this Thrift class
@@ -198,7 +200,9 @@ class StructContext extends PairContext {
                 }
 
                 if (TType.ENUM == elementMetaData.type) {
-                    enumMap.put(fieldName, ((EnumMetaData) elementMetaData).enumClass);
+                    classMap.put(fieldName, ((EnumMetaData) elementMetaData).enumClass);
+                } else if (elementMetaData instanceof StructMetaData) {
+                    classMap.put(fieldName, ((StructMetaData) elementMetaData).structClass);
                 }
 
                 // Workaround a bug in the generated thrift message read()

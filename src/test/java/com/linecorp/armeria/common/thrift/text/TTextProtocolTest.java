@@ -143,37 +143,14 @@ public class TTextProtocolTest {
                                        Letter.ECHO))
                 .setU(ImmutableMap.of("foo", Letter.ALPHA, "bar", Letter.DELTA))
                 .setV(Letter.BETA)
+                .setW(TestUnion.f2(4))
+                .setX(ImmutableList.of(TestUnion.f2(5), TestUnion.f1(base64Encoder.decode("SGVsbG8gV29ybGQ="))))
                 ;
 
     }
 
     private static Sub sub(int s, int x) {
         return new Sub(s, new SubSub(x));
-    }
-
-    // For TUnion structure, TTextProtocol can only handle serialization, but not deserialization.
-    // Because when deserialization, we loose the context of which thrift class we are currently at.
-    // Specifically, because we rely on the callstack to determine which structure is currently being
-    // parsed, but TUnion actually implements of read/write. So when the parser comes to any TUnion,
-    // it only knows TUnion from the stack, but not the specific thrift struct.
-    // So here we only test serialization, not the deserialization part.
-    @Test
-    public void tTextProtocolWriteUnionTest() throws Exception {
-        TTextProtocolTestMsgUnion msg = new TTextProtocolTestMsgUnion();
-        msg.setU(TestUnion.f2(2));
-
-        // Serialize that thrift message with union out to a byte array
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        msg.write(new TTextProtocol(new TIOStreamTransport(baos)));
-
-        String  expectedMsg =
-                "{\n" +
-                "  \"u\" : {\n" +
-                "    \"f2\" : 2\n" +
-                "  }\n" +
-                '}';
-
-        assertJsonEquals(expectedMsg, baos.toString());
     }
 
     @Test

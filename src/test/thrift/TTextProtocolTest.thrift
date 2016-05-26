@@ -87,6 +87,10 @@ struct TTextProtocolTestMsg {
   19: required map<string, Letter> u;
 
   20: required Letter v;
+
+  21: required TestUnion w;
+
+  22: required list<TestUnion> x;
 }
 
 struct TTextProtocolTestMsgUnion {
