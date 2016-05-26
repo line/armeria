@@ -41,6 +41,8 @@ import org.apache.tomcat.util.http.MimeHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Sets;
+
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
@@ -64,6 +66,9 @@ import io.netty.util.concurrent.Promise;
 class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatServiceInvocationHandler.class);
+
+    private static final Set<LifecycleState> TOMCAT_START_STATES = Sets.immutableEnumSet(
+            LifecycleState.STARTED, LifecycleState.STARTING, LifecycleState.STARTING_PREP);
 
     private static final Set<String> activeEngines = new HashSet<>();
 
@@ -141,7 +146,7 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
 
         server = service.getServer();
 
-        if (server.getState() != LifecycleState.STARTED) {
+        if (!TOMCAT_START_STATES.contains(server.getState())) {
             logger.info("Starting an embedded Tomcat: {}", TomcatService.toString(server));
             server.start();
             started = true;
