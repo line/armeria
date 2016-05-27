@@ -199,7 +199,7 @@ class StructContext extends PairContext {
                     elementMetaData = metaData.valueMetaData;
                 }
 
-                if (TType.ENUM == elementMetaData.type) {
+                if (elementMetaData instanceof EnumMetaData) {
                     classMap.put(fieldName, ((EnumMetaData) elementMetaData).enumClass);
                 } else if (elementMetaData instanceof StructMetaData) {
                     classMap.put(fieldName, ((StructMetaData) elementMetaData).structClass);
