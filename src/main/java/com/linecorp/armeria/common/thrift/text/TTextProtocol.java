@@ -92,6 +92,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * TODO(Alex Roetter): Also add a new TEXT_PROTOCOL field to ThriftCodec
  * <p>
  * TODO: Support map enum keys specified as strings.
+ * TODO: Support string values for enums that have been typedef'd.
  */
 public class TTextProtocol extends TProtocol {
 

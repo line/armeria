@@ -30,6 +30,8 @@ enum Letter {
   ECHO    = 5,
 }
 
+typedef Letter Moji
+
 union TestUnion {
   1: binary f1
   2: i32 f2
@@ -91,6 +93,8 @@ struct TTextProtocolTestMsg {
   21: required TestUnion w;
 
   22: required list<TestUnion> x;
+
+  23: Moji y;  // Does not support string values.
 }
 
 struct TTextProtocolTestMsgUnion {

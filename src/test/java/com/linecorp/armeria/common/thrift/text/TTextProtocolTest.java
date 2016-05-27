@@ -145,6 +145,7 @@ public class TTextProtocolTest {
                 .setV(Letter.BETA)
                 .setW(TestUnion.f2(4))
                 .setX(ImmutableList.of(TestUnion.f2(5), TestUnion.f1(base64Encoder.decode("SGVsbG8gV29ybGQ="))))
+                .setY(Letter.ALPHA)
                 ;
 
     }
