@@ -1,6 +1,6 @@
 .. _`Java 8`: http://java.oracle.com/
 .. _`Netty 4.1`: http://netty.io/
-.. _`HTTP/2`: http://http2/
+.. _`HTTP/2`: https://http2.github.io/
 .. _`Thrift`: http://thrift.apache.org/
 .. _`Apache License 2.0`: https://tldrlegal.com/license/apache-license-2.0-(apache-2.0)
 .. _`LINE Corporation`: http://linecorp.com/en/
@@ -27,7 +27,10 @@ Check out `the introductory slides and case study`_.
 
 .. raw:: html
 
-    <div style="max-width: 512px;"><script async class="speakerdeck-embed" data-id="8d645c29ce33400e8360e61fd0250f91" data-ratio="1.6" src="//speakerdeck.com/assets/embed.js"></script></div>
+    <div style="max-width: 512px; margin-bottom: 1em"><script async class="speakerdeck-embed" data-id="8d645c29ce33400e8360e61fd0250f91" data-ratio="1.6" src="//speakerdeck.com/assets/embed.js"></script></div>
+
+Features
+--------
 
 HTTP/2
 ^^^^^^
