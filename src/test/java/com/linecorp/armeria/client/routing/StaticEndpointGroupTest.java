@@ -29,50 +29,13 @@ import org.junit.rules.TestName;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
-public class StaticEndpointGroupTest {
+public class StaticEndpointGroupTest extends AbstractEndpointGroupTest {
     private static final HelloService.Iface HELLO_SERVICE_HANDLER_ONE = (dump) -> "host:127.0.0.1:1234";
     private static final HelloService.Iface HELLO_SERVICE_HANDLER_TWO = (dump) -> "host:127.0.0.1:2345";
     private static final HelloService.Iface HELLO_SERVICE_HANDLER_THREE = (dump) -> "host:127.0.0.1:3456";
 
     @Rule
     public TestName name = new TestName();
-
-    private class ServiceServer {
-        private Server server;
-        private HelloService.Iface handler;
-        private int port;
-
-        public ServiceServer(HelloService.Iface handler, int port) {
-            this.handler = handler;
-            this.port = port;
-        }
-
-        private void configureServer() throws Exception {
-            final ServerBuilder sb = new ServerBuilder();
-
-            ThriftService ipService = ThriftService.of(handler);
-
-            sb.serviceAt("/serverIp", ipService);
-            sb.port(this.port, SessionProtocol.HTTP);
-
-            server = sb.build();
-
-            try {
-                server.start().sync();
-            } catch (InterruptedException e) {
-                PlatformDependent.throwException(e);
-            }
-
-        }
-
-        public void start() throws Exception {
-            configureServer();
-        }
-
-        public void stop() {
-            server.stop();
-        }
-    }
 
     private String nodeAddress(Endpoint endpoint) {
         return endpoint.hostname() + ":" + endpoint.port();
