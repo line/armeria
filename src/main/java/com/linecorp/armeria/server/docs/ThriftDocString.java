@@ -19,12 +19,14 @@ package com.linecorp.armeria.server.docs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.reflections.Configuration;
 import org.reflections.Reflections;
 import org.reflections.scanners.ResourcesScanner;
 import org.reflections.util.ClasspathHelper;
@@ -98,13 +100,15 @@ final class ThriftDocString {
     }
 
     static Iterable<String> getAllThriftJsons(ClassLoader classLoader) {
-        final Reflections reflections = new Reflections(
-                new ConfigurationBuilder()
-                        .filterInputsBy(new FilterBuilder().includePackage(THRIFT_JSON_PATH))
-                        .setUrls(ClasspathHelper.forPackage(THRIFT_JSON_PATH))
-                        .addClassLoader(classLoader)
-                        .addScanners(new ResourcesScanner()));
-        return reflections.getResources(filename -> filename.endsWith(".json"));
+        final Configuration configuration = new ConfigurationBuilder()
+                .filterInputsBy(new FilterBuilder().includePackage(THRIFT_JSON_PATH))
+                .setUrls(ClasspathHelper.forPackage(THRIFT_JSON_PATH))
+                .addClassLoader(classLoader)
+                .addScanners(new ResourcesScanner());
+        if (configuration.getUrls() == null || configuration.getUrls().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return new Reflections(configuration).getResources(filename -> filename.endsWith(".json"));
     }
 
     /**
