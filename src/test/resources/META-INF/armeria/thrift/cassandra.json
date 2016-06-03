@@ -1545,7 +1545,7 @@
             "valueTypeId": "i32"
           },
           "oneway": false,
-          "doc": "Perform a get_count in parallel on the given list<binary> keys. The return value maps keys to the count found.\n",
+          "doc": "Perform a get_count in parallel on the given list<binary> keys. The return value maps keys to the count found.\n@param keys. this is test doc string.",
           "arguments": [
             {
               "key": 1,

@@ -14,7 +14,7 @@ $(function () {
   var previousFragmentPath = null;
 
   $.getJSON('specification.json', function (data) {
-    specification = data;
+    specification = escapeDocString(updateDocString(data));
 
     renderNav();
     $(window).trigger('hashchange');
@@ -23,6 +23,85 @@ $(function () {
   $(window).on('hashchange', function () {
     render(URI(window.location.href));
   });
+
+  function parseParametersDocString(docString) {
+    var parameters = {};
+    if (docString != null) {
+      var pattern = /@param\s+(\w+)[\s\.]+(({@|[^@])*)(?=(@[\w]+|$|\s))/gm;
+      var match = pattern.exec(docString);
+      while (match != null) {
+        parameters[match[1]] = match[2];
+        match = pattern.exec(docString);
+      }
+    }
+    return parameters;
+  }
+
+  function removeParamDocString(docString) {
+    if (docString == null) {
+      return null;
+    }
+    return docString.replace(/@param .*[\n\r]*/mig, '');
+  }
+
+  function updateDocString(specification) {
+    // hierachy
+    // services.SERVICE_NAME.functions.FUNCTION_NAME.docString
+    // services.SERVICE_NAME.functions.FUNCTION_NAME.parameters[i].name (simple_string)
+    // services.SERVICE_NAME.functions.FUNCTION_NAME.parameters[i].docString
+    // classes.CLASS_NAME.docString
+    // classes.CLASS_NAME.fields[i].name (simple_name)
+    // classes.CLASS_NAME.fields[i].docString
+
+    var services = specification.services;
+    var classes = specification.classes;
+
+    for (var serviceName in services) {
+      var svc = services[serviceName];
+      for (var functionName in svc.functions) {
+        var func = svc.functions[functionName];
+        var childDocStrings = parseParametersDocString(func.docString);
+        func.docString = removeParamDocString(func.docString);
+        for (var idx in func.parameters) {
+          var param = func.parameters[idx];
+          if (param.name in childDocStrings) {
+            param.docString = childDocStrings[param.name];
+          }
+        }
+      }
+    }
+
+    for (var className in classes) {
+      var cls = classes[className];
+      var childDocStrings = parseParametersDocString(cls.docString);
+      cls.docString = removeParamDocString(cls.docString);
+      for (var idx in cls.fields) {
+        var field = cls.fields[idx];
+        if (field.name in childDocStrings) {
+          field.docString = childDocStrings[field.name];
+        }
+      }
+    }
+
+    return specification;
+  }
+
+  function escapeDocString(node) {
+    if (node instanceof Array) {
+      for (var idx in node) {
+        escapeDocString(node[idx]);
+      }
+    } else if (node instanceof Object) {
+      var docString = node['docString'];
+      if (docString && typeof docString === 'string') {
+        node['docString'] = escapeHtml(docString).replace(/\n/g, '<br>');
+      }
+      for (var key in node) {
+        escapeDocString(node[key]);
+      }
+    }
+    return node;
+  }
 
   function render(uri) {
     var fragmentUri = uri.fragment(true);
@@ -187,6 +266,20 @@ $(function () {
                    return '<a href="#!class/' + encodeURIComponent(className) + '" title="' + className + '">' +
                           classInfo.simpleName + '</a>';
                  });
+  }
+
+  function escapeHtml(string) {
+    var htmlEscapes = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '/': '&#x2F;',
+      '`': '&#x60;',
+      '=': '&#x3D;'
+    };
+    return string.replace(/[&<>"'`=\/]/g, function(s) { return htmlEscapes[s]; });
   }
 
   function escapeTag(value) {
