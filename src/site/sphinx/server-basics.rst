@@ -69,7 +69,7 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
             ThriftService.of(helloHandler, SerializationFormat.THRIFT_BINARY)
                     .decorate(LoggingService::new)).build();
 
-    Server server= sb.build();
+    Server server = sb.build();
     server.start();
 
 In the example above, we created a new ``ServerBuilder`` and added a new ``ThriftService`` to it.
