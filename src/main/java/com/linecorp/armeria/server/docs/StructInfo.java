@@ -33,11 +33,12 @@ import org.apache.thrift.protocol.TType;
 class StructInfo extends TypeInfo implements ClassInfo {
 
     static StructInfo of(StructMetaData structMetaData) {
-        return of(structMetaData, null, Collections.emptyMap());
+        return of(structMetaData, Collections.emptyMap());
     }
 
-    static StructInfo of(StructMetaData structMetaData, @Nullable String namespace, Map<String, String> docStrings) {
+    static StructInfo of(StructMetaData structMetaData, Map<String, String> docStrings) {
         final Class<?> structClass = structMetaData.structClass;
+        final String name = structClass.getName();
 
         assert structMetaData.type == TType.STRUCT;
         assert !structMetaData.isBinary();
@@ -45,10 +46,9 @@ class StructInfo extends TypeInfo implements ClassInfo {
         final Map<?, FieldMetaData> metaDataMap =
                 FieldMetaData.getStructMetaDataMap(structMetaData.structClass);
         final List<FieldInfo> fields = metaDataMap.values().stream()
-                .map(fieldMetaData -> FieldInfo.of(fieldMetaData, namespace, docStrings))
+                .map(fieldMetaData -> FieldInfo.of(fieldMetaData, name, docStrings))
                 .collect(Collectors.toList());
 
-        final String name = structClass.getName();
         return new StructInfo(name, fields, docStrings.get(name));
     }
 

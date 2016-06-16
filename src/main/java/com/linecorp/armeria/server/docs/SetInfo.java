@@ -30,16 +30,16 @@ import org.apache.thrift.protocol.TType;
 class SetInfo extends TypeInfo implements CollectionInfo {
 
     static SetInfo of(SetMetaData setMetaData) {
-        return of(setMetaData, null, Collections.emptyMap());
+        return of(setMetaData, Collections.emptyMap());
     }
 
-    static SetInfo of(SetMetaData setMetaData, @Nullable String namespace, Map<String, String> docStrings) {
+    static SetInfo of(SetMetaData setMetaData, Map<String, String> docStrings) {
         requireNonNull(setMetaData, "setMetaData");
 
         assert setMetaData.type == TType.SET;
         assert !setMetaData.isBinary();
 
-        return new SetInfo(of(setMetaData.elemMetaData, namespace, docStrings));
+        return new SetInfo(of(setMetaData.elemMetaData, docStrings));
     }
 
     static SetInfo of(TypeInfo elementType) {

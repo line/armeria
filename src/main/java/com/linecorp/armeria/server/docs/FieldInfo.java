@@ -40,7 +40,7 @@ class FieldInfo {
         final String docStringKey = ThriftDocString.key(namespace, fieldMetaData.fieldName);
         return new FieldInfo(fieldMetaData.fieldName,
                              RequirementType.of(fieldMetaData.requirementType),
-                             TypeInfo.of(fieldMetaData.valueMetaData, namespace, docStrings),
+                             TypeInfo.of(fieldMetaData.valueMetaData, docStrings),
                              docStrings.get(docStringKey));
     }
 
