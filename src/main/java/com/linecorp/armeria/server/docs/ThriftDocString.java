@@ -158,7 +158,7 @@ final class ThriftDocString {
             if (name != null) {
                 childPrefix = (prefix != null ? prefix : "") + delimiter + name;
                 if (doc != null) {
-                    docStrings.put(childPrefix, doc);
+                    docStrings.put(childPrefix, doc.trim());
                 }
             } else {
                 childPrefix = prefix;

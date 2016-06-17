@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.Objects;
 
-import javax.annotation.Nullable;
-
 import org.apache.thrift.meta_data.EnumMetaData;
 import org.apache.thrift.meta_data.FieldValueMetaData;
 import org.apache.thrift.meta_data.ListMetaData;
@@ -35,10 +33,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 class TypeInfo {
     static final TypeInfo VOID = new TypeInfo(ValueType.VOID, false);
 
-    static TypeInfo of(FieldValueMetaData fieldValueMetaData, @Nullable String namespace,
-                       Map<String, String> docStrings) {
+    static TypeInfo of(FieldValueMetaData fieldValueMetaData, Map<String, String> docStrings) {
         if (fieldValueMetaData instanceof StructMetaData) {
-            return StructInfo.of((StructMetaData) fieldValueMetaData, namespace, docStrings);
+            return StructInfo.of((StructMetaData) fieldValueMetaData, docStrings);
         }
 
         if (fieldValueMetaData instanceof EnumMetaData) {
@@ -46,15 +43,15 @@ class TypeInfo {
         }
 
         if (fieldValueMetaData instanceof ListMetaData) {
-            return ListInfo.of((ListMetaData) fieldValueMetaData, namespace, docStrings);
+            return ListInfo.of((ListMetaData) fieldValueMetaData, docStrings);
         }
 
         if (fieldValueMetaData instanceof SetMetaData) {
-            return SetInfo.of((SetMetaData) fieldValueMetaData, namespace, docStrings);
+            return SetInfo.of((SetMetaData) fieldValueMetaData, docStrings);
         }
 
         if (fieldValueMetaData instanceof MapMetaData) {
-            return MapInfo.of((MapMetaData) fieldValueMetaData, namespace, docStrings);
+            return MapInfo.of((MapMetaData) fieldValueMetaData, docStrings);
         }
 
         return new TypeInfo(ValueType.of(fieldValueMetaData.type), fieldValueMetaData.isBinary());

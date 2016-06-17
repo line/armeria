@@ -119,7 +119,7 @@
   "structs": [
     {
       "name": "Column",
-      "doc": "Basic unit of data within a ColumnFamily.\n@param name, the name by which this column is set and retrieved.  Maximum 64KB long.\n@param value. The data associated with the name.  Maximum 2GB long, but in practice you should limit it to small numbers of MB (since Thrift must read the full value into memory to operate on it).\n@param timestamp. The timestamp is used for conflict detection\/resolution when two columns with same name need to be compared.\n@param ttl. An optional, positive delay (in seconds) after which the column will be automatically deleted.\n",
+      "doc": "Basic unit of data within a ColumnFamily.\n",
       "isException": false,
       "isUnion": false,
       "fields": [
@@ -127,31 +127,35 @@
           "key": 1,
           "name": "name",
           "typeId": "binary",
+          "doc": "the name by which this column is set and retrieved.  Maximum 64KB long.\n\n",
           "required": "required"
         },
         {
           "key": 2,
           "name": "value",
           "typeId": "binary",
+          "doc": "The data associated with the name.  Maximum 2GB long, but in practice you should limit it to small numbers of MB (since Thrift must read the full value into memory to operate on it).\n\n",
           "required": "optional"
         },
         {
           "key": 3,
           "name": "timestamp",
           "typeId": "i64",
+          "doc": "The timestamp is used for conflict detection\/resolution when two columns with same name need to be compared.\n\n",
           "required": "optional"
         },
         {
           "key": 4,
           "name": "ttl",
           "typeId": "i32",
+          "doc": "An optional, positive delay (in seconds) after which the column will be automatically deleted.\n\n",
           "required": "optional"
         }
       ]
     },
     {
       "name": "SuperColumn",
-      "doc": "A named list of columns.\n@param name. see Column.name.\n@param columns. A collection of standard Columns.  The columns within a super column are defined in an adhoc manner.\n                Columns within a super column do not have to have matching structures (similarly named child columns).\n",
+      "doc": "A named list of columns.\n",
       "isException": false,
       "isUnion": false,
       "fields": [
@@ -159,6 +163,7 @@
           "key": 1,
           "name": "name",
           "typeId": "binary",
+          "doc": "see Column.name.\n",
           "required": "required"
         },
         {
@@ -173,6 +178,7 @@
               "class": "Column"
             }
           },
+          "doc": "A collection of standard Columns.  The columns within a super column are defined in an adhoc manner.\nColumns within a super column do not have to have matching structures (similarly named child columns).\n",
           "required": "required"
         }
       ]
@@ -225,7 +231,7 @@
     },
     {
       "name": "ColumnOrSuperColumn",
-      "doc": "Methods for fetching rows\/records from Cassandra will return either a single instance of ColumnOrSuperColumn or a list\nof ColumnOrSuperColumns (get_slice()). If you're looking up a SuperColumn (or list of SuperColumns) then the resulting\ninstances of ColumnOrSuperColumn will have the requested SuperColumn in the attribute super_column. For queries resulting\nin Columns, those values will be in the attribute column. This change was made between 0.3 and 0.4 to standardize on\nsingle query methods that may return either a SuperColumn or Column.\n\nIf the query was on a counter column family, you will either get a counter_column (instead of a column) or a\ncounter_super_column (instead of a super_column)\n\n@param column. The Column returned by get() or get_slice().\n@param super_column. The SuperColumn returned by get() or get_slice().\n@param counter_column. The Counterolumn returned by get() or get_slice().\n@param counter_super_column. The CounterSuperColumn returned by get() or get_slice().\n",
+      "doc": "Methods for fetching rows\/records from Cassandra will return either a single instance of ColumnOrSuperColumn or a list\nof ColumnOrSuperColumns (get_slice()). If you're looking up a SuperColumn (or list of SuperColumns) then the resulting\ninstances of ColumnOrSuperColumn will have the requested SuperColumn in the attribute super_column. For queries resulting\nin Columns, those values will be in the attribute column. This change was made between 0.3 and 0.4 to standardize on\nsingle query methods that may return either a SuperColumn or Column.\n\nIf the query was on a counter column family, you will either get a counter_column (instead of a column) or a\ncounter_super_column (instead of a super_column)\n",
       "isException": false,
       "isUnion": false,
       "fields": [
@@ -237,6 +243,7 @@
             "typeId": "struct",
             "class": "Column"
           },
+          "doc": "The Column returned by get() or get_slice().\n\n",
           "required": "optional"
         },
         {
@@ -247,6 +254,7 @@
             "typeId": "struct",
             "class": "SuperColumn"
           },
+          "doc": "The SuperColumn returned by get() or get_slice().\n\n",
           "required": "optional"
         },
         {
@@ -257,6 +265,7 @@
             "typeId": "struct",
             "class": "CounterColumn"
           },
+          "doc": "The Counterolumn returned by get() or get_slice().\n\n",
           "required": "optional"
         },
         {
@@ -267,6 +276,7 @@
             "typeId": "struct",
             "class": "CounterSuperColumn"
           },
+          "doc": "The CounterSuperColumn returned by get() or get_slice().\n\n",
           "required": "optional"
         }
       ]
@@ -1144,7 +1154,7 @@
     {
       "name": "VERSION",
       "typeId": "string",
-      "value": "19.24.0"
+      "value": "19.24.0-ARMERIA"
     }
   ],
   "services": [
@@ -1223,7 +1233,7 @@
             "class": "ColumnOrSuperColumn"
           },
           "oneway": false,
-          "doc": "Get the Column or SuperColumn at the given column_path. If no value is present, NotFoundException is thrown. (This is\nthe only method that can throw an exception under non-failure conditions.)\n",
+          "doc": "Get the Column or SuperColumn at the given column_path. If no value is present, NotFoundException is thrown. (This is\nthe only method that can throw an exception under non-failure conditions.)\n\n@param key. key of column.\n",
           "arguments": [
             {
               "key": 1,
@@ -1545,7 +1555,7 @@
             "valueTypeId": "i32"
           },
           "oneway": false,
-          "doc": "Perform a get_count in parallel on the given list<binary> keys. The return value maps keys to the count found.\n@param keys. this is test doc string.",
+          "doc": "Perform a get_count in parallel on the given list<binary> keys. The return value maps keys to the count found.\n",
           "arguments": [
             {
               "key": 1,

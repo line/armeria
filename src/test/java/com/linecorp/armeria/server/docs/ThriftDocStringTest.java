@@ -34,9 +34,9 @@ public class ThriftDocStringTest {
         Map<String, String> docStrings = ThriftDocString.getDocStringsFromJsonResource(
                 getClass().getClassLoader(),
                 "META-INF/armeria/thrift/ThriftTest.json");
-        assertThat(docStrings.get("thrift.test.Numberz"), is("Docstring!\n"));
+        assertThat(docStrings.get("thrift.test.Numberz"), is("Docstring!"));
         assertThat(docStrings.get("thrift.test.ThriftTest#testVoid"),
-                   is("Prints \"testVoid()\" and returns nothing.\n"));
+                   is("Prints \"testVoid()\" and returns nothing."));
     }
 
     @Test
@@ -45,7 +45,7 @@ public class ThriftDocStringTest {
                 getClass().getClassLoader(),
                 "META-INF/armeria/thrift/cassandra.json");
         assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.Compression"),
-                   is("CQL query compression\n"));
+                   is("CQL query compression"));
         assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType"),
                    is(nullValue()));
     }

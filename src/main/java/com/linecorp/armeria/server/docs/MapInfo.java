@@ -32,17 +32,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 class MapInfo extends TypeInfo {
 
     static MapInfo of(MapMetaData mapMetaData) {
-        return of(mapMetaData, null, Collections.emptyMap());
+        return of(mapMetaData, Collections.emptyMap());
     }
 
-    static MapInfo of(MapMetaData mapMetaData, @Nullable String namespace, Map<String, String> docStrings) {
+    static MapInfo of(MapMetaData mapMetaData, Map<String, String> docStrings) {
         requireNonNull(mapMetaData, "mapMetaData");
 
         assert mapMetaData.type == TType.MAP;
         assert !mapMetaData.isBinary();
 
-        return new MapInfo(TypeInfo.of(mapMetaData.keyMetaData, namespace, docStrings),
-                           TypeInfo.of(mapMetaData.valueMetaData, namespace, docStrings));
+        return new MapInfo(TypeInfo.of(mapMetaData.keyMetaData, docStrings),
+                           TypeInfo.of(mapMetaData.valueMetaData, docStrings));
     }
 
     static MapInfo of(TypeInfo keyType, TypeInfo valueType) {

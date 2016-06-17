@@ -36,7 +36,7 @@ namespace java com.linecorp.armeria.service.test.thrift.cassandra
 #           for every edit that doesn't result in a change to major/minor.
 #
 # See the Semantic Versioning Specification (SemVer) http://semver.org.
-const string VERSION = "19.24.0"
+const string VERSION = "19.24.0-ARMERIA"
 
 
 #
@@ -44,25 +44,37 @@ const string VERSION = "19.24.0"
 #
 
 /** Basic unit of data within a ColumnFamily.
- * @param name, the name by which this column is set and retrieved.  Maximum 64KB long.
- * @param value. The data associated with the name.  Maximum 2GB long, but in practice you should limit it to small numbers of MB (since Thrift must read the full value into memory to operate on it).
- * @param timestamp. The timestamp is used for conflict detection/resolution when two columns with same name need to be compared.
- * @param ttl. An optional, positive delay (in seconds) after which the column will be automatically deleted.
  */
 struct Column {
+   /**
+    * the name by which this column is set and retrieved.  Maximum 64KB long.
+    **/
    1: required binary name,
+   /**
+    * The data associated with the name.  Maximum 2GB long, but in practice you should limit it to small numbers of MB (since Thrift must read the full value into memory to operate on it).
+    **/
    2: optional binary value,
+   /**
+    * The timestamp is used for conflict detection/resolution when two columns with same name need to be compared.
+    **/
    3: optional i64 timestamp,
+   /**
+    * An optional, positive delay (in seconds) after which the column will be automatically deleted.
+    **/
    4: optional i32 ttl,
 }
 
 /** A named list of columns.
- * @param name. see Column.name.
- * @param columns. A collection of standard Columns.  The columns within a super column are defined in an adhoc manner.
- *                 Columns within a super column do not have to have matching structures (similarly named child columns).
  */
 struct SuperColumn {
+   /**
+    * see Column.name.
+    */
    1: required binary name,
+   /**
+    * A collection of standard Columns.  The columns within a super column are defined in an adhoc manner.
+    * Columns within a super column do not have to have matching structures (similarly named child columns).
+    */
    2: required list<Column> columns,
 }
 
@@ -85,16 +97,23 @@ struct CounterSuperColumn {
 
     If the query was on a counter column family, you will either get a counter_column (instead of a column) or a
     counter_super_column (instead of a super_column)
-
-    @param column. The Column returned by get() or get_slice().
-    @param super_column. The SuperColumn returned by get() or get_slice().
-    @param counter_column. The Counterolumn returned by get() or get_slice().
-    @param counter_super_column. The CounterSuperColumn returned by get() or get_slice().
  */
 struct ColumnOrSuperColumn {
+    /**
+     * The Column returned by get() or get_slice().
+     **/
     1: optional Column column,
+    /**
+     * The SuperColumn returned by get() or get_slice().
+     **/
     2: optional SuperColumn super_column,
+    /**
+     * The Counterolumn returned by get() or get_slice().
+     **/
     3: optional CounterColumn counter_column,
+    /**
+     * The CounterSuperColumn returned by get() or get_slice().
+     **/
     4: optional CounterSuperColumn counter_super_column
 }
 
@@ -464,6 +483,8 @@ service Cassandra {
   /**
     Get the Column or SuperColumn at the given column_path. If no value is present, NotFoundException is thrown. (This is
     the only method that can throw an exception under non-failure conditions.)
+
+    @param key. key of column.
    */
   ColumnOrSuperColumn get(1:required binary key,
                           2:required ColumnPath column_path,
