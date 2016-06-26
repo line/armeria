@@ -1,0 +1,179 @@
+import org.gradle.internal.os.OperatingSystem
+import org.jruyi.gradle.thrift.plugin.CompileThrift
+import org.jruyi.gradle.thrift.plugin.ThriftPlugin
+
+buildscript {
+    repositories {
+        maven { url 'https://plugins.gradle.org/m2/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'gradle.plugin.org.jruyi.gradle:thrift-gradle-plugin:0.3.1'
+        classpath 'gradle.plugin.com.github.rzabini:gradle-jython:1.0.1'
+        classpath "gradle.plugin.com.github.mikanbako.gradle.sphinx:sphinx-gradle-plugin:0.1"
+        classpath 'net.davidecavestro:gradle-jxr-plugin:0.1.1'
+        classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.1.0'
+    }
+}
+
+group 'com.linecorp.armeria'
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'maven'
+apply plugin: 'jxr'
+apply plugin: 'com.github.rzabini.gradle-jython'
+apply plugin: 'nebula.optional-base'
+apply plugin: 'org.jruyi.thrift'
+
+archivesBaseName = 'armeria'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+project.plugins.withType(ThriftPlugin) {
+    tasks.compileThrift {
+        recurse true
+
+        // The gradle-apt-plugin has good integration with idea/eclipse plugins
+        // for adding generated sources to the IDE's classpath. So we take advantage
+        // of it by compiling our thrift files to there as well. Since the packages
+        // shouldn't collide, this is not a problem.
+        outputDir "$buildDir/generated/source/apt/main"
+        createGenFolder false
+
+        if (OperatingSystem.current().isMacOsX()) {
+            thriftExecutable "$rootDir/src/build/thrift.osx-x86_64"
+        } else {
+            thriftExecutable "$rootDir/src/build/thrift.linux-x86_64"
+        }
+    }
+    task testCompileThrift(type: CompileThrift) {
+        recurse true
+
+        sourceDir "src/test/thrift"
+        outputDir "$buildDir/generated/source/apt/test"
+        createGenFolder false
+
+        if (OperatingSystem.current().isMacOsX()) {
+            thriftExecutable "$rootDir/src/build/thrift.osx-x86_64"
+        } else {
+            thriftExecutable "$rootDir/src/build/thrift.linux-x86_64"
+        }
+    }
+    tasks.compileTestJava.dependsOn testCompileThrift
+}
+
+test {
+    exclude '**/Abstract.*'
+    exclude '**/TestUtil.*'
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadoc(type: Javadoc, overwrite: true) {
+    // Exclude the machine-generate code and the internal-only classes
+    excludes = ['**/thrift/v1/**','*.common.http/**']
+    // options.detectOfflineLinks = false
+    options.breakIterator = true
+    options.version = false
+    options.author = false
+    options.keyWords = true
+    options.stylesheetFile = new File("${rootDir}/src/site/apidocs/stylesheet.css")
+
+    // Enable all lints except the missing tag warnings
+    options.addStringOption('Xdoclint:all')
+    options.addStringOption('Xdoclint:-missing')
+
+    options.group('Server', ['com.linecorp.armeria.server'])
+    options.group('Client', ['com.linecorp.armeria.client'])
+    options.group('Common', ['com.linecorp.armeria.common'])
+
+    options.links = ['http://netty.io/4.1/api']
+}
+
+task installSphinx(type:jython.JythonTask) {
+    jython {
+        pypackage 'Sphinx:1.4.4', 'Babel:2.3.4', 'Jinja2:2.8',
+                  'six:1.10.0', 'Pygments:2.1.3', 'snowballstemmer:1.2.1',
+                  'docutils:0.12', 'pytz:2016.4', 'MarkupSafe:0.23',
+                  'alabaster:0.7.8', 'imagesize:0.7.1', 'requests:2.10.0'
+    }
+}
+
+task buildHtmlDocument(type:jython.JythonTask, dependsOn: installSphinx) {
+    script """
+from sphinx import build_main;
+build_main(['-v', '-W', '-n', '-b', 'html',
+            '${rootDir}/src/site/sphinx/', '${rootDir}/build/site/sphinx/'])
+"""
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+configurations {
+    deployerJars
+}
+
+// Jetty expects resourceDir is same as classDir.
+sourceSets {
+    test {
+        output.resourcesDir = output.classesDir
+    }
+}
+
+dependencies {
+    compile("io.netty:netty-transport:4.1.3.Final")
+    compile("io.netty:netty-transport-native-epoll:4.1.3.Final")
+    compile("io.netty:netty-codec-http2:4.1.3.Final")
+    compile("io.netty:netty-resolver-dns:4.1.3.Final")
+    runtime("org.javassist:javassist:3.20.0-GA")
+    compile("io.netty:netty-tcnative-boringssl-static:1.1.33.Fork19")
+    compileOnly("org.eclipse.jetty.alpn:alpn-api:1.1.3.v20160715")
+    compile("org.apache.thrift:libthrift:0.9.3") {
+        exclude group:"org.apache.httpcomponents", module:"httpclient"
+        exclude group:"org.apache.httpcomponents", module:"httpcore"
+    }
+    optional("org.apache.tomcat.embed:tomcat-embed-core:8.5.4")
+    optional("org.apache.tomcat.embed:tomcat-embed-jasper:8.5.4")
+    optional("org.apache.tomcat.embed:tomcat-embed-el:8.5.4")
+    optional("org.slf4j:log4j-over-slf4j:1.7.21")
+    optional("org.eclipse.jetty:jetty-server:9.3.10.v20160621")
+    compile("com.fasterxml.jackson.core:jackson-core:2.7.5")
+    compile("com.fasterxml.jackson.core:jackson-annotations:2.7.5")
+    compile("com.fasterxml.jackson.core:jackson-databind:2.7.5")
+    compile("org.reflections:reflections:0.9.10")
+    compile("io.dropwizard.metrics:metrics-core:3.1.2")
+    compile("org.slf4j:slf4j-api:1.7.21")
+    testCompile("ch.qos.logback:logback-classic:1.1.7")
+    optional("com.google.code.findbugs:jsr305:3.0.1")
+    testCompile("junit:junit:4.12")
+    testCompile("org.hamcrest:hamcrest-library:1.3")
+    testCompile("org.easymock:easymock:3.4")
+    testCompile("org.easymock:easymockclassextension:3.2")
+    testCompile("org.jmock:jmock-junit4:2.8.2") {
+        exclude group:"junit", module:"junit-dep"
+    }
+    testCompile("org.mockito:mockito-core:1.10.19")
+    testCompile("org.apache.httpcomponents:httpclient:4.5.2")
+    testCompile("net.javacrumbs.json-unit:json-unit:1.13.0")
+    testCompile("org.eclipse.jetty:jetty-webapp:9.3.10.v20160621")
+    testCompile("org.eclipse.jetty:jetty-annotations:9.3.10.v20160621")
+    testCompile("org.eclipse.jetty:apache-jsp:9.3.10.v20160621")
+    testCompile("org.eclipse.jetty:apache-jstl:9.3.10.v20160621")
+    testCompile("org.eclipse.jetty.http2:http2-server:9.3.10.v20160621")
+    compile("io.zipkin.brave:brave-core:3.9.0")
+    compile("io.zipkin.brave:brave-http:3.9.0")
+    compile("com.google.guava:guava:19.0")
+    testCompile("com.google.guava:guava-testlib:19.0")
+}
