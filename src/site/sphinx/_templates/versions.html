@@ -3,3 +3,24 @@
     <a href="https://github.com/line/armeria">Fork me on GitHub</a>
   </div>
 </div>
+<!-- Append the Slack invitation at the end of the menu. -->
+<script type="text/javascript">
+var menus = document.getElementsByClassName("wy-menu wy-menu-vertical");
+if (menus.length > 0) {
+  var menu = menus[0];
+  var lists = menu.getElementsByTagName('ul');
+  if (lists.length > 0) {
+    var li = document.createElement('li');
+    li.className = 'toctree-l1';
+    var div = document.createElement('div');
+    div.className = 'slack-invitation';
+    var script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://slackin-line-armeria.herokuapp.com/slackin.js';
+    div.appendChild(script);
+    li.appendChild(div);
+    lists[0].appendChild(li);
+  }
+}
+</script>
+
