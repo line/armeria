@@ -59,7 +59,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.OneTimeTask;
 
 final class HttpRemoteInvoker implements RemoteInvoker {
 
@@ -83,7 +82,7 @@ final class HttpRemoteInvoker implements RemoteInvoker {
         this.baseBootstrap = requireNonNull(baseBootstrap, "baseBootstrap");
         this.options = requireNonNull(options, "options");
 
-        assert baseBootstrap.group() == null;
+        assert baseBootstrap.config().group() == null;
     }
 
     @Override
@@ -245,7 +244,7 @@ final class HttpRemoteInvoker implements RemoteInvoker {
         });
     }
 
-    private static class TimeoutTask extends OneTimeTask {
+    private static class TimeoutTask implements Runnable {
 
         private final Promise<?> promise;
         private final long timeoutMillis;

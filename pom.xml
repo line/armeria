@@ -81,14 +81,14 @@
     <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
 
     <!-- Dependency versions -->
-    <jackson.version>2.7.3</jackson.version>
-    <jetty.version>9.3.8.v20160314</jetty.version>
+    <jackson.version>2.7.5</jackson.version>
+    <jetty.version>9.3.10.v20160621</jetty.version>
     <logback.version>1.1.7</logback.version>
     <metrics.version>3.1.2</metrics.version>
-    <netty.version>4.1.0.CR7</netty.version>
+    <netty.version>4.1.2.Final</netty.version>
     <slf4j.version>1.7.21</slf4j.version>
-    <tomcat.version>8.0.33</tomcat.version>
-    <jetty.alpnAgent.version>2.0.1</jetty.alpnAgent.version>
+    <tomcat.version>8.0.36</tomcat.version>
+    <jetty.alpnAgent.version>2.0.3</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
@@ -97,7 +97,7 @@
     <thrift.source.test>${project.basedir}/src/test/thrift</thrift.source.test>
     <thrift.generated.main>${project.build.directory}/generated-sources</thrift.generated.main>
     <thrift.generated.test>${project.build.directory}/generated-test-sources</thrift.generated.test>
-    <brave.version>3.5.0</brave.version>
+    <brave.version>3.9.0</brave.version>
     <guava.version>19.0</guava.version>
     <reflections.version>0.9.10</reflections.version>
   </properties>
@@ -136,7 +136,7 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-tcnative-boringssl-static</artifactId>
-      <version>1.1.33.Fork17</version>
+      <version>1.1.33.Fork18</version>
     </dependency>
 
     <!-- ALPN -->
@@ -347,12 +347,12 @@
 
     <!-- distributed tracing -->
     <dependency>
-      <groupId>com.github.kristofa</groupId>
+      <groupId>io.zipkin.brave</groupId>
       <artifactId>brave-core</artifactId>
       <version>${brave.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.github.kristofa</groupId>
+      <groupId>io.zipkin.brave</groupId>
       <artifactId>brave-http</artifactId>
       <version>${brave.version}</version>
     </dependency>

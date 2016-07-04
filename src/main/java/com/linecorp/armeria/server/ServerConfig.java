@@ -31,8 +31,8 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.TimeoutPolicy;
 
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.DomainMappingBuilder;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.concurrent.Promise;
 
 /**
@@ -118,7 +118,8 @@ public final class ServerConfig {
 
         // Set virtual host definitions and initialize their domain name mapping.
         defaultVirtualHost = normalizeDefaultVirtualHost(defaultVirtualHost, portsCopy);
-        final DomainMappingBuilder<VirtualHost> mappingBuilder = new DomainMappingBuilder<>(defaultVirtualHost);
+        final DomainNameMappingBuilder<VirtualHost> mappingBuilder =
+                new DomainNameMappingBuilder<>(defaultVirtualHost);
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
         for (VirtualHost h : virtualHosts) {
             if (h == null) {

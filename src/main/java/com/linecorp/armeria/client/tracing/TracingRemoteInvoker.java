@@ -30,6 +30,7 @@ import com.github.kristofa.brave.ClientRequestAdapter;
 import com.github.kristofa.brave.ClientResponseAdapter;
 import com.github.kristofa.brave.KeyValueAnnotation;
 import com.github.kristofa.brave.SpanId;
+import com.twitter.zipkin.gen.Endpoint;
 import com.twitter.zipkin.gen.Span;
 
 import com.linecorp.armeria.client.ClientCodec;
@@ -59,7 +60,8 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
                                       Method method, Object[] args) throws Exception {
 
         // create new request adapter to catch generated spanId
-        final InternalClientRequestAdapter requestAdapter = new InternalClientRequestAdapter(method.getName());
+        final InternalClientRequestAdapter requestAdapter = new InternalClientRequestAdapter(
+                Endpoint.create(uri.getAuthority(), 0, 0), method.getName());
 
         final Span span = clientInterceptor.openSpan(requestAdapter);
 
@@ -137,12 +139,19 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
      */
     private static class InternalClientRequestAdapter implements ClientRequestAdapter {
 
+        private final Endpoint endpoint;
         private final String spanName;
 
         private SpanId spanId;
 
-        InternalClientRequestAdapter(String spanName) {
+        InternalClientRequestAdapter(Endpoint endpoint, String spanName) {
+            this.endpoint = endpoint;
             this.spanName = spanName;
+        }
+
+        @Override
+        public Endpoint serverAddress() {
+            return endpoint;
         }
 
         @Nullable
@@ -164,12 +173,6 @@ public abstract class TracingRemoteInvoker extends DecoratingRemoteInvoker {
         public Collection<KeyValueAnnotation> requestAnnotations() {
             return Collections.emptyList();
         }
-
-        @Override
-        public String getClientServiceName() {
-            return null;
-        }
-
     }
 
 }

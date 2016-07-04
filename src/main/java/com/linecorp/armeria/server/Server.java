@@ -48,8 +48,8 @@ import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.DomainMappingBuilder;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -114,7 +114,8 @@ public final class Server implements AutoCloseable {
                 }
             }
         } else {
-            final DomainMappingBuilder<SslContext> mappingBuilder = new DomainMappingBuilder<>(lastSslContext);
+            final DomainNameMappingBuilder<SslContext>
+                    mappingBuilder = new DomainNameMappingBuilder<>(lastSslContext);
             for (VirtualHost h : config.virtualHosts()) {
                 final SslContext sslCtx = h.sslContext();
                 if (sslCtx != null) {

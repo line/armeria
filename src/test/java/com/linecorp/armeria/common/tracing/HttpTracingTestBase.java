@@ -8,7 +8,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 
 public abstract class HttpTracingTestBase {
 
-    public static final SpanId testSpanId = SpanId.create(1, 2, 3L);
+    public static final SpanId testSpanId = SpanId.builder().traceId(1).spanId(2).parentId(3L).build();
 
     public static HttpHeaders traceHeaders() {
         HttpHeaders httpHeader = new DefaultHttpHeaders();

@@ -35,10 +35,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
-import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.OneTimeTask;
 
 class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
@@ -49,7 +47,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
     HttpSessionChannelFactory(Bootstrap bootstrap, RemoteInvokerOptions options) {
         baseBootstrap = requireNonNull(bootstrap);
-        eventLoop = (EventLoop) bootstrap.group();
+        eventLoop = (EventLoop) bootstrap.config().group();
 
         bootstrapMap = Collections.synchronizedMap(new EnumMap<>(SessionProtocol.class));
         this.options = options;
@@ -117,12 +115,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         if (eventLoop.inEventLoop()) {
             watchSessionActive0(protocol, ch, sessionPromise);
         } else {
-            eventLoop.execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    watchSessionActive0(protocol, ch, sessionPromise);
-                }
-            });
+            eventLoop.execute(() -> watchSessionActive0(protocol, ch, sessionPromise));
         }
         return sessionPromise;
     }
@@ -132,13 +125,10 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
         assert ch.eventLoop().inEventLoop();
 
-        final ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(new OneTimeTask() {
-            @Override
-            public void run() {
-                if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
-                        protocol, "connection established, but session creation timed out: " + ch))) {
-                    ch.close();
-                }
+        final ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(() -> {
+            if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
+                    protocol, "connection established, but session creation timed out: " + ch))) {
+                ch.close();
             }
         }, options.connectTimeoutMillis(), TimeUnit.MILLISECONDS);
 
