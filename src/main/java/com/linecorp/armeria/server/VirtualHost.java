@@ -26,8 +26,8 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.DomainMappingBuilder;
 import io.netty.util.DomainNameMapping;
+import io.netty.util.DomainNameMappingBuilder;
 
 /**
  * A <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
@@ -127,7 +127,7 @@ public final class VirtualHost {
         // Pretty convoluted way to validate but it's done only once and
         // we don't need to duplicate the pattern matching logic.
         final DomainNameMapping<Boolean> mapping =
-                new DomainMappingBuilder<>(Boolean.FALSE).add(hostnamePattern, Boolean.TRUE).build();
+                new DomainNameMappingBuilder<>(Boolean.FALSE).add(hostnamePattern, Boolean.TRUE).build();
 
         if (!mapping.map(defaultHostname)) {
             throw new IllegalArgumentException(

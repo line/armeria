@@ -102,7 +102,10 @@ public class TracingServiceInvocationHandlerTest extends TracingTestBase {
 
         ServiceInvocationHandler serviceInvocationHandler = mock(ServiceInvocationHandler.class);
 
-        TraceData traceData = TraceData.builder().sample(sampled).spanId(SpanId.create(1, 2, 3L)).build();
+        TraceData traceData = TraceData.builder()
+                                       .sample(sampled)
+                                       .spanId(SpanId.builder().traceId(1).spanId(2).parentId(3L).build())
+                                       .build();
 
         TracingServiceInvocationHandlerImpl stub = new TracingServiceInvocationHandlerImpl(
                 serviceInvocationHandler, brave, traceData);

@@ -31,7 +31,6 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.OneTimeTask;
 
 /**
  * Default {@link KeyedChannelPool} implementation.
@@ -99,12 +98,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         if (eventLoop.inEventLoop()) {
             acquireHealthyFromPoolOrNew(key, promise);
         } else {
-            eventLoop.execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    acquireHealthyFromPoolOrNew(key, promise);
-                }
-            });
+            eventLoop.execute(() -> acquireHealthyFromPoolOrNew(key, promise));
         }
 
         return promise;
@@ -128,12 +122,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         if (loop.inEventLoop()) {
             doHealthCheck(key, ch, promise);
         } else {
-            loop.execute(new OneTimeTask() {
-                @Override
-                public void run() {
-                    doHealthCheck(key, ch, promise);
-                }
-            });
+            loop.execute(() -> doHealthCheck(key, ch, promise));
         }
 
         return promise;
@@ -164,12 +153,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         if (f.isDone()) {
             notifyHealthCheck(key, f, ch, promise);
         } else {
-            f.addListener(new FutureListener<Boolean>() {
-                @Override
-                public void operationComplete(Future<Boolean> future) throws Exception {
-                    notifyHealthCheck(key, future, ch, promise);
-                }
-            });
+            f.addListener((FutureListener<Boolean>) future -> notifyHealthCheck(key, future, ch, promise));
         }
     }
 
@@ -221,12 +205,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
             if (loop.inEventLoop()) {
                 doReleaseChannel(key, channel, promise);
             } else {
-                loop.execute(new OneTimeTask() {
-                    @Override
-                    public void run() {
-                        doReleaseChannel(key, channel, promise);
-                    }
-                });
+                loop.execute(() -> doReleaseChannel(key, channel, promise));
             }
         } catch (Throwable cause) {
             closeAndFail(channel, cause, promise);

@@ -3,7 +3,6 @@ package com.linecorp.armeria.common;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -11,7 +10,6 @@ import java.util.stream.Collectors;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerInvoker;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -40,11 +38,6 @@ final class ServiceInvocationContextAwareEventLoop implements EventLoop {
     @Override
     public EventLoop next() {
         return delegate.next();
-    }
-
-    @Override
-    public <E extends EventExecutor> Set<E> children() {
-        return delegate.children();
     }
 
     @Override
@@ -219,13 +212,14 @@ final class ServiceInvocationContextAwareEventLoop implements EventLoop {
     }
 
     @Override
-    public ChannelFuture register(Channel channel,
-                                  ChannelPromise channelPromise) {
-        return delegate.register(channel, channelPromise);
+    public ChannelFuture register(ChannelPromise channelPromise) {
+        return delegate.register(channelPromise);
     }
 
     @Override
-    public ChannelHandlerInvoker asInvoker() {
-        return delegate.asInvoker();
+    @Deprecated
+    public ChannelFuture register(Channel channel,
+                                  ChannelPromise channelPromise) {
+        return delegate.register(channel, channelPromise);
     }
 }

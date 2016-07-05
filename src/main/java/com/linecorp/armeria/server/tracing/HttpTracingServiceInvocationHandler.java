@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.server.ServiceInvocationHandler;
 
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 
 /**
@@ -40,11 +41,11 @@ class HttpTracingServiceInvocationHandler extends TracingServiceInvocationHandle
     @Override
     protected TraceData getTraceData(ServiceInvocationContext ctx) {
         final Object request = ctx.originalRequest();
-        if (request == null || !(request instanceof HttpRequest)) {
+        if (!(request instanceof HttpRequest)) {
             return TraceData.builder().build();
         }
 
-        final HttpHeaders headers = ((HttpRequest) request).headers();
+        final HttpHeaders headers = ((HttpMessage) request).headers();
 
         // The following HTTP trace header spec is based on
         // com.github.kristofa.brave.http.HttpServerRequestAdapter#getTraceData
@@ -70,10 +71,13 @@ class HttpTracingServiceInvocationHandler extends TracingServiceInvocationHandle
         final String parentSpanId = headers.get(BraveHttpHeaders.ParentSpanId.getName());
 
         // create new SpanId instance
-        final long traceIdLong = IdConversion.convertToLong(traceId);
-        final long spanIdLong = IdConversion.convertToLong(spanId);
-        final Long parentSpanIdLong = parentSpanId != null ? IdConversion.convertToLong(parentSpanId) : null;
-        final SpanId span = SpanId.create(traceIdLong, spanIdLong, parentSpanIdLong);
+        final SpanId span =
+                SpanId.builder()
+                      .traceId(IdConversion.convertToLong(traceId))
+                      .spanId(IdConversion.convertToLong(spanId))
+                      .parentId(parentSpanId == null ? null : IdConversion.convertToLong(parentSpanId))
+                      .sampled(true)
+                      .build();
 
         return TraceData.builder().sample(true).spanId(span).build();
     }
