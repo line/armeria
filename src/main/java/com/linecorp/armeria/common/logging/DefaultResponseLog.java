@@ -56,4 +56,5 @@ public final class DefaultResponseLog
     protected void append(ToStringHelper helper) {
         helper.add("statusCode", statusCode);
     }
+
 }

@@ -71,14 +71,15 @@ public abstract class UserClient<T> implements ClientOptionDerivable<T> {
 
     protected final <U extends Response> U execute(
             EventLoop eventLoop, String method, String path, Request req, Function<Throwable, U> fallback) {
-        try {
-            final ClientRequestContext ctx = new DefaultClientRequestContext(
-                    eventLoop, sessionProtocol, endpoint, method, path, options, req);
 
+        final ClientRequestContext ctx = new DefaultClientRequestContext(
+                eventLoop, sessionProtocol, endpoint, method, path, options, req);
+        try {
             @SuppressWarnings("unchecked")
             final U res = (U) delegate().execute(ctx, req);
             return res;
         } catch (Throwable cause) {
+            ctx.responseLogBuilder().end(cause);
             return fallback.apply(cause);
         }
     }

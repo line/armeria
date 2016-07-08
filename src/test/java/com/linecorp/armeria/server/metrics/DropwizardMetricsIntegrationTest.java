@@ -23,11 +23,12 @@ import org.junit.Test;
 import com.codahale.metrics.MetricRegistry;
 
 import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.metrics.MetricCollectingClient;
+import com.linecorp.armeria.client.logging.DropwizardMetricCollectingClient;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 
@@ -42,7 +43,7 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
                 return "success";
             }
             throw new IllegalArgumentException("bad argument");
-        }).decorate(MetricCollectingService.newDropwizardDecorator(
+        }).decorate(DropwizardMetricCollectingService.newDecorator(
                 metricRegistry, MetricRegistry.name("client", "HelloService"))));
     }
 
@@ -91,7 +92,7 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
     private void makeRequest(String name) {
         Iface client = new ClientBuilder("tbinary+" + uri("/helloservice"))
                 .decorator(ThriftCall.class, ThriftReply.class,
-                           MetricCollectingClient.newDropwizardDecorator(
+                           DropwizardMetricCollectingClient.newDecorator(
                                    metricRegistry, MetricRegistry.name("server", "HelloService")))
                 .build(Iface.class);
         try {

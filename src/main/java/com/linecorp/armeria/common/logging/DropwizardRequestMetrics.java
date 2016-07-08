@@ -1,4 +1,20 @@
-package com.linecorp.armeria.common.metrics;
+/*
+ * Copyright 2016 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.common.logging;
 
 import java.util.concurrent.TimeUnit;
 
@@ -8,12 +24,9 @@ import com.codahale.metrics.Metric;
 import com.codahale.metrics.Timer;
 
 /**
- * {@link Metric}s for a single request. Used by
- * {@link com.linecorp.armeria.client.metrics.MetricCollectingClient} and
- * {@link com.linecorp.armeria.server.metrics.MetricCollectingService} for tracking
- * request metrics. For internal use only.
+ * {@link Metric}s for a single request-response pair.
  */
-public final class DropwizardRequestMetrics {
+final class DropwizardRequestMetrics {
 
     private final String name;
     private final Timer timer;
@@ -23,9 +36,9 @@ public final class DropwizardRequestMetrics {
     private final Meter requestBytes;
     private final Meter responseBytes;
 
-    public DropwizardRequestMetrics(String name, Timer timer, Meter successes, Meter failures,
-                                    Counter activeRequests,
-                                    Meter requestBytes, Meter responseBytes) {
+    DropwizardRequestMetrics(String name, Timer timer, Meter successes, Meter failures,
+                             Counter activeRequests, Meter requestBytes, Meter responseBytes) {
+
         this.name = name;
         this.timer = timer;
         this.successes = successes;
@@ -35,35 +48,31 @@ public final class DropwizardRequestMetrics {
         this.responseBytes = responseBytes;
     }
 
-    public Timer.Context time() {
-        return timer.time();
-    }
-
-    public void updateTime(long durationNanos) {
+    void updateTime(long durationNanos) {
         timer.update(durationNanos, TimeUnit.NANOSECONDS);
     }
 
-    public void markSuccess() {
+    void markSuccess() {
         successes.mark();
     }
 
-    public void markFailure() {
+    void markFailure() {
         failures.mark();
     }
 
-    public void markStart() {
+    void markStart() {
         activeRequests.inc();
     }
 
-    public void markComplete() {
+    void markComplete() {
         activeRequests.dec();
     }
 
-    public void requestBytes(long requestBytes) {
+    void requestBytes(long requestBytes) {
         this.requestBytes.mark(requestBytes);
     }
 
-    public void responseBytes(long responseBytes) {
+    void responseBytes(long responseBytes) {
         this.responseBytes.mark(responseBytes);
     }
 

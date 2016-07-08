@@ -22,26 +22,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DecoratingClient;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.util.CompletionActions;
 
 /**
  * Decorates a {@link Client} to log invocation requests and responses.
  */
-public class LoggingClient extends DecoratingClient {
+public final class LoggingClient extends LogCollectingClient {
 
     private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
-
-    private static final String REQUEST_FORMAT = "{} Request: {}";
-    private static final String RESPONSE_FORMAT = "{} Response: {}";
-
-    private final LogLevel level;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
@@ -51,28 +43,31 @@ public class LoggingClient extends DecoratingClient {
     }
 
     public LoggingClient(Client delegate, LogLevel level) {
-        super(delegate);
-        this.level = requireNonNull(level, "level");
+        super(delegate, new LoggingConsumer(logger, level));
     }
 
-    @Override
-    public Response execute(ClientRequestContext ctx, Request req) throws Exception {
-        ctx.awaitRequestLog()
-           .thenAccept(log -> log(ctx, level, log))
-           .exceptionally(CompletionActions::log);
+    private static final class LoggingConsumer implements MessageLogConsumer {
 
-        ctx.awaitResponseLog()
-           .thenAccept(log -> log(ctx, level, log))
-           .exceptionally(CompletionActions::log);
+        private static final String REQUEST_FORMAT = "{} Request: {}";
+        private static final String RESPONSE_FORMAT = "{} Response: {}";
 
-        return delegate().execute(ctx, req);
-    }
+        private final Logger logger;
+        private final LogLevel level;
 
-    protected void log(ClientRequestContext ctx, LogLevel level, RequestLog log) {
-        level.log(logger, REQUEST_FORMAT, ctx, log);
-    }
+        LoggingConsumer(Logger logger, LogLevel level) {
+            this.logger = requireNonNull(logger, "logger");
+            this.level = requireNonNull(level, "level");
+        }
 
-    protected void log(ClientRequestContext ctx, LogLevel level, ResponseLog log) {
-        level.log(logger, RESPONSE_FORMAT, ctx, log);
+        @Override
+        public void onRequest(RequestContext ctx, RequestLog req) {
+            level.log(logger, REQUEST_FORMAT, ctx, req);
+
+        }
+
+        @Override
+        public void onResponse(RequestContext ctx, ResponseLog res) {
+            level.log(logger, RESPONSE_FORMAT, ctx, res);
+        }
     }
 }

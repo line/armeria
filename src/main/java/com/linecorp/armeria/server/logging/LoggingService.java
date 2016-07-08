@@ -18,53 +18,46 @@ package com.linecorp.armeria.server.logging;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A decorator {@link Service} that logs all requests and responses.
  */
-public class LoggingService extends DecoratingService {
-
-    private static final String REQUEST_FORMAT = "Request: {}";
-    private static final String RESPONSE_FORMAT = "Response: {}";
-
-    private final LogLevel level;
+public class LoggingService extends LogCollectingService {
 
     public LoggingService(Service delegate) {
         this(delegate, LogLevel.INFO);
     }
 
     public LoggingService(Service delegate, LogLevel level) {
-        super(delegate);
-        this.level = requireNonNull(level, "level");
+        super(delegate, new LoggingConsumer(level));
     }
 
-    @Override
-    public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
-        ctx.awaitRequestLog()
-           .thenAccept(log -> log(ctx, level, log))
-           .exceptionally(CompletionActions::log);
+    private static final class LoggingConsumer implements MessageLogConsumer {
 
-        ctx.awaitResponseLog()
-           .thenAccept(log -> log(ctx, level, log))
-           .exceptionally(CompletionActions::log);
+        private static final String REQUEST_FORMAT = "Request: {}";
+        private static final String RESPONSE_FORMAT = "Response: {}";
 
-        return delegate().serve(ctx, req);
-    }
+        private final LogLevel level;
 
-    protected void log(ServiceRequestContext ctx, LogLevel level, RequestLog log) {
-        level.log(ctx.logger(), REQUEST_FORMAT, log);
-    }
+        LoggingConsumer(LogLevel level) {
+            this.level = requireNonNull(level, "level");
+        }
 
-    protected void log(ServiceRequestContext ctx, LogLevel level, ResponseLog log) {
-        level.log(ctx.logger(), RESPONSE_FORMAT, log);
+        @Override
+        public void onRequest(RequestContext ctx, RequestLog req) {
+            level.log(((ServiceRequestContext) ctx).logger(), REQUEST_FORMAT, req);
+        }
+
+        @Override
+        public void onResponse(RequestContext ctx, ResponseLog res) {
+            level.log(((ServiceRequestContext) ctx).logger(), RESPONSE_FORMAT, res);
+        }
     }
 }
