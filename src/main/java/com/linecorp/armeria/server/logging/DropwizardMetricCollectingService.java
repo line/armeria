@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,28 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.metrics;
-
-import static java.util.Objects.requireNonNull;
+package com.linecorp.armeria.server.logging;
 
 import java.util.function.Function;
 
 import com.codahale.metrics.MetricRegistry;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.metrics.DropwizardMetricConsumer;
-import com.linecorp.armeria.common.metrics.MetricConsumer;
-import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.server.DecoratingService;
+import com.linecorp.armeria.common.logging.DropwizardMetricConsumer;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A decorator {@link Service} that collects metrics for every requests
  * Currently only HTTP-based session protocols are supported.
  */
-public final class MetricCollectingService extends DecoratingService {
+public final class DropwizardMetricCollectingService extends LogCollectingService {
 
     /**
      * A {@link Service} decorator that tracks request stats using the Dropwizard metrics library.
@@ -57,31 +49,16 @@ public final class MetricCollectingService extends DecoratingService {
      * <p>It is generally recommended to define your own name for the service instead of using something like
      * the Java class to make sure otherwise safe changes like renames don't break metrics.
      */
-    public static Function<Service, MetricCollectingService> newDropwizardDecorator(
+    public static Function<Service, DropwizardMetricCollectingService> newDecorator(
             MetricRegistry metricRegistry, String metricNamePrefix) {
 
-        return service -> new MetricCollectingService(
-                service,
-                new DropwizardMetricConsumer(metricRegistry, metricNamePrefix));
+        return service -> new DropwizardMetricCollectingService(
+                service, metricRegistry, metricNamePrefix);
     }
 
-    private final MetricConsumer consumer;
+    DropwizardMetricCollectingService(Service delegate,
+                                      MetricRegistry metricRegistry, String metricNamePrefix) {
 
-    public MetricCollectingService(Service delegate, MetricConsumer consumer) {
-        super(delegate);
-        this.consumer = requireNonNull(consumer, "consumer");
-    }
-
-    @Override
-    public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
-        ctx.awaitRequestLog()
-           .thenAccept(consumer::onRequest)
-           .exceptionally(CompletionActions::log);
-
-        ctx.awaitResponseLog()
-           .thenAccept(consumer::onResponse)
-           .exceptionally(CompletionActions::log);
-
-        return delegate().serve(ctx, req);
+        super(delegate, new DropwizardMetricConsumer(metricRegistry, metricNamePrefix));
     }
 }
