@@ -43,15 +43,12 @@ abstract class AbstractMessageLog<T extends MessageLog>
     private Throwable cause;
 
     boolean start0() {
-        if (isDone()) {
+        if (isDone() || startTimeNanosSet) {
             return false;
         }
 
-        if (!startTimeNanosSet) {
-            startTimeNanos = System.nanoTime();
-            startTimeNanosSet = true;
-        }
-
+        startTimeNanos = System.nanoTime();
+        startTimeNanosSet = true;
         return true;
     }
 
@@ -120,12 +117,10 @@ abstract class AbstractMessageLog<T extends MessageLog>
             return;
         }
 
-        if (!startTimeNanosSet) {
-            startTimeNanos = System.nanoTime();
-            startTimeNanosSet = true;
-        }
-
         this.cause = cause;
+
+        // Handle the case where end() was called without start()
+        start0();
 
         final Iterator<Attribute<?>> attrs = attrs();
         if (attrs.hasNext()) {

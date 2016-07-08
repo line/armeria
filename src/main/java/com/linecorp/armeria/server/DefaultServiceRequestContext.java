@@ -196,8 +196,7 @@ public final class DefaultServiceRequestContext extends AbstractRequestContext i
             buf.append(ch);
         }
 
-        buf.append(ch)
-           .append('[')
+        buf.append('[')
            .append(sessionProtocol().uriText())
            .append("://")
            .append(virtualHost().defaultHostname())
@@ -208,6 +207,10 @@ public final class DefaultServiceRequestContext extends AbstractRequestContext i
            .append(method())
            .append(']');
 
-        return this.strVal = buf.toString();
+        strVal = buf.toString();
+        if (hasChannel) {
+            this.strVal = strVal;
+        }
+        return strVal;
     }
 }

@@ -18,52 +18,39 @@ package com.linecorp.armeria.server.metrics;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Optional;
-
+import org.easymock.EasyMock;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.common.logging.DefaultResponseLog;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.metrics.MetricConsumer;
+import com.linecorp.armeria.common.logging.MessageLogConsumer;
 
-import io.netty.channel.embedded.EmbeddedChannel;
-
-public class MetricConsumerTest {
+public class MessageLogConsumerTest {
     @Test
-    public void testInfiniteRecursion() throws Exception {
+    public void testComposition() throws Exception {
         // Given
         final int[] executeCounters = { 0,   // for onRequest
                                         0 }; // for onResponse
 
-        MetricConsumer consumer = new MetricConsumer() {
+        MessageLogConsumer consumer = new MessageLogConsumer() {
             @Override
-            public void onRequest(RequestLog log) {
+            public void onRequest(RequestContext ctx, RequestLog req) {
                 executeCounters[0]++;
             }
 
             @Override
-            public void onResponse(ResponseLog log) {
+            public void onResponse(RequestContext ctx, ResponseLog res) {
                 executeCounters[1]++;
             }
         };
-        MetricConsumer finalConsumer = consumer.andThen(consumer).andThen(consumer);
 
-        final DefaultRequestLog reqLog = new DefaultRequestLog();
-        final DefaultResponseLog resLog = new DefaultResponseLog(reqLog);
-
-        reqLog.start(new EmbeddedChannel(), SessionProtocol.H2C, "localhost", "GET", "/");
-        reqLog.end();
-        resLog.start();
-        resLog.end();
+        MessageLogConsumer finalConsumer = consumer.andThen(consumer).andThen(consumer);
 
         // When
-        finalConsumer.onRequest(reqLog);
-        finalConsumer.onResponse(resLog);
+        final RequestContext ctx = EasyMock.mock(RequestContext.class);
+        finalConsumer.onRequest(ctx, EasyMock.mock(RequestLog.class));
+        finalConsumer.onResponse(ctx, EasyMock.mock(ResponseLog.class));
 
         // Then
         assertEquals("onRequest should be invoked 3 times", 3, executeCounters[0]);

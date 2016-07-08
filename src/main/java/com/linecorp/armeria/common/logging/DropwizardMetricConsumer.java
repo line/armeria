@@ -1,4 +1,20 @@
-package com.linecorp.armeria.common.metrics;
+/*
+ * Copyright 2016 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
@@ -8,17 +24,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.metrics.MetricCollectingClient;
+import com.linecorp.armeria.client.logging.DropwizardMetricCollectingClient;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.server.metrics.MetricCollectingService;
+import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
 
 /**
- * (Internal use only) {@link MetricConsumer} that accepts metric data from {@link MetricCollectingClient} or
- * {@link MetricCollectingService} and stores it into the {@link MetricRegistry}.
+ * (Internal use only) {@link MessageLogConsumer} that accepts metric data from {@link DropwizardMetricCollectingClient} or
+ * {@link DropwizardMetricCollectingService} and stores it into the {@link MetricRegistry}.
  */
-public class DropwizardMetricConsumer implements MetricConsumer {
+public class DropwizardMetricConsumer implements MessageLogConsumer {
 
     private final MetricRegistry metricRegistry;
     private final String metricNamePrefix;
@@ -33,8 +48,16 @@ public class DropwizardMetricConsumer implements MetricConsumer {
         methodRequestMetrics = new ConcurrentHashMap<>();
     }
 
+    protected final MetricRegistry registry() {
+        return metricRegistry;
+    }
+
+    protected final String namePrefix() {
+        return metricNamePrefix;
+    }
+
     @Override
-    public void onRequest(RequestLog req) {
+    public void onRequest(RequestContext ctx, RequestLog req) {
         final String metricName = MetricRegistry.name(metricNamePrefix, method(req));
         final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
         if (req.cause() == null) {
@@ -45,7 +68,7 @@ public class DropwizardMetricConsumer implements MetricConsumer {
     }
 
     @Override
-    public void onResponse(ResponseLog res) {
+    public void onResponse(RequestContext ctx, ResponseLog res) {
         final RequestLog req = res.request();
         final String metricName = MetricRegistry.name(metricNamePrefix, method(req));
         final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
@@ -62,7 +85,7 @@ public class DropwizardMetricConsumer implements MetricConsumer {
         }
     }
 
-    private static boolean isSuccess(ResponseLog res) {
+    protected boolean isSuccess(ResponseLog res) {
         if (res.cause() != null) {
             return false;
         }
@@ -81,7 +104,7 @@ public class DropwizardMetricConsumer implements MetricConsumer {
                res.attr(ResponseLog.RPC_RESPONSE).get().getCause() == null;
     }
 
-    private static String method(RequestLog log) {
+    protected String method(RequestLog log) {
         if (log.hasAttr(RequestLog.RPC_REQUEST)) {
             return log.attr(RequestLog.RPC_REQUEST).get().method();
         }
