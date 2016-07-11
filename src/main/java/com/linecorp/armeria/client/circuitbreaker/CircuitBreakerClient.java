@@ -113,7 +113,7 @@ public final class CircuitBreakerClient extends DecoratingClient {
                 throw cause;
             }
 
-            response.awaitClose().handle(voidFunction((res, cause) -> {
+            response.closeFuture().handle(voidFunction((res, cause) -> {
                 // Report whether the invocation has succeeded or failed.
                 if (cause == null) {
                     circuitBreaker.onSuccess();

@@ -24,7 +24,7 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
     Throwable getCause();
 
     @Override
-    default CompletableFuture<?> awaitClose() {
+    default CompletableFuture<?> closeFuture() {
         return toCompletableFuture();
     }
 }

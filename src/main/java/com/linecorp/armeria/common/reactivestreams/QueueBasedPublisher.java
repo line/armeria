@@ -160,7 +160,7 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
     }
 
     @Override
-    public CompletableFuture<Void> awaitDemand() {
+    public CompletableFuture<Void> awaitDemandAsync() {
         final AwaitDemandFuture f = new AwaitDemandFuture();
         if (!isOpen()) {
             f.completeExceptionally(ClosedPublisherException.get());
@@ -285,8 +285,7 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
 
     protected void onRemoval(T obj) {}
 
-    @Override
-    public CompletableFuture<Void> awaitClose() {
+    public CompletableFuture<Void> closeFuture() {
         return closeFuture;
     }
 

@@ -26,7 +26,11 @@ public interface Writer<T> {
     boolean write(T o);
     boolean write(Supplier<? extends T> o);
 
-    CompletableFuture<Void> awaitDemand();
+    CompletableFuture<Void> awaitDemandAsync();
+
+    default void awaitDemand() {
+        awaitDemandAsync().join();
+    }
 
     void close();
     void close(Throwable cause);

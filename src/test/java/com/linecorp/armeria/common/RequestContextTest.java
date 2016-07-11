@@ -268,12 +268,12 @@ public class RequestContextTest {
         }
 
         @Override
-        public CompletableFuture<RequestLog> awaitRequestLog() {
+        public CompletableFuture<RequestLog> requestLogFuture() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public CompletableFuture<ResponseLog> awaitResponseLog() {
+        public CompletableFuture<ResponseLog> responseLogFuture() {
             throw new UnsupportedOperationException();
         }
     }

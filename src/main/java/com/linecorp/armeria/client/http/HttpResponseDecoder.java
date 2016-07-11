@@ -172,8 +172,8 @@ abstract class HttpResponseDecoder {
         }
 
         @Override
-        public CompletableFuture<Void> awaitDemand() {
-            return delegate.awaitDemand();
+        public CompletableFuture<Void> awaitDemandAsync() {
+            return delegate.awaitDemandAsync();
         }
 
         @Override

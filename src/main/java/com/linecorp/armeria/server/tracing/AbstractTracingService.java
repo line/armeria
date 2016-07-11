@@ -79,8 +79,8 @@ public abstract class AbstractTracingService extends DecoratingService {
             final Response res = delegate().serve(ctx, req);
             if (sampled) {
 
-                ctx.awaitRequestLog().thenAcceptBoth(
-                        res.awaitClose(),
+                ctx.requestLogFuture().thenAcceptBoth(
+                        res.closeFuture(),
                         (log, unused) -> serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, log, res)))
                    .exceptionally(CompletionActions::log);
             }
@@ -124,7 +124,7 @@ public abstract class AbstractTracingService extends DecoratingService {
             annotations.add(KeyValueAnnotation.create("server.local", ctx.localAddress().toString()));
         }
 
-        final CompletableFuture<?> f = response.awaitClose();
+        final CompletableFuture<?> f = response.closeFuture();
         if (f.isDone()) {
             // Need to use a callback because CompletableFuture does not have a getter for the cause of failure.
             // The callback will be invoked immediately because the future is done already.

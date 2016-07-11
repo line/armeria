@@ -24,7 +24,7 @@ import org.reactivestreams.Subscriber;
 
 public interface RichPublisher<T> extends Publisher<T> {
     boolean isOpen();
-    CompletableFuture<Void> awaitClose();
+    CompletableFuture<Void> closeFuture();
 
     void subscribe(Subscriber<? super T> s, Executor executor);
     void abort();
