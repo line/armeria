@@ -61,8 +61,7 @@ public class PublisherWithCloseFuture<T> implements RichPublisher<T> {
         subscribe(AbortingSubscriber.INSTANCE);
     }
 
-    @Override
-    public CompletableFuture<Void> awaitClose() {
+    public CompletableFuture<Void> closeFuture() {
         return closeFuture;
     }
 

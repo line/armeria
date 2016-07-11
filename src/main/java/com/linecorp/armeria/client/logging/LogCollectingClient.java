@@ -45,10 +45,10 @@ public class LogCollectingClient extends DecoratingClient {
 
     @Override
     public Response execute(ClientRequestContext ctx, Request req) throws Exception {
-        ctx.awaitRequestLog()
+        ctx.requestLogFuture()
            .thenAccept(log -> invokeOnRequest(consumer, ctx, log))
            .exceptionally(CompletionActions::log);
-        ctx.awaitResponseLog()
+        ctx.responseLogFuture()
            .thenAccept(log -> invokeOnResponse(consumer, ctx, log))
            .exceptionally(CompletionActions::log);
 

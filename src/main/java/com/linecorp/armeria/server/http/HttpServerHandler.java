@@ -289,7 +289,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         // Account the number of unfinished requests and clean up the request stream when response stream ends.
         unfinishedRequests++;
-        res.awaitClose().handle(voidFunction((ret, cause) -> {
+        res.closeFuture().handle(voidFunction((ret, cause) -> {
             req.abort();
             if (cause == null) {
                 reqLogBuilder.end();

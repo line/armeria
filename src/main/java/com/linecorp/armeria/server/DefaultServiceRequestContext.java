@@ -171,12 +171,12 @@ public final class DefaultServiceRequestContext extends AbstractRequestContext i
     }
 
     @Override
-    public CompletableFuture<RequestLog> awaitRequestLog() {
+    public CompletableFuture<RequestLog> requestLogFuture() {
         return requestLog;
     }
 
     @Override
-    public CompletableFuture<ResponseLog> awaitResponseLog() {
+    public CompletableFuture<ResponseLog> responseLogFuture() {
         return responseLog;
     }
 

@@ -121,7 +121,7 @@ public class TracingServiceTest {
         ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         // AbstractTracingService prefers RpcRequest.method() to ctx.method(), so "POST" should be ignored.
         when(ctx.method()).thenReturn("POST");
-        when(ctx.awaitRequestLog()).thenReturn(reqLog);
+        when(ctx.requestLogFuture()).thenReturn(reqLog);
         ctx.onEnter(Matchers.isA(Runnable.class));
         ctx.onExit(Matchers.isA(Runnable.class));
 

@@ -28,9 +28,9 @@ public interface Response {
         return (T) this;
     }
 
-    default CompletableFuture<?> awaitClose() {
+    default CompletableFuture<?> closeFuture() {
         if (this instanceof RichPublisher) {
-            return ((RichPublisher<?>) this).awaitClose();
+            return ((RichPublisher<?>) this).closeFuture();
         }
 
         if (this instanceof CompletionStage) {

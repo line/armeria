@@ -141,13 +141,13 @@ public class ServiceRequestContextWrapper extends AbstractRequestContext impleme
     }
 
     @Override
-    public CompletableFuture<RequestLog> awaitRequestLog() {
-        return delegate.awaitRequestLog();
+    public CompletableFuture<RequestLog> requestLogFuture() {
+        return delegate.requestLogFuture();
     }
 
     @Override
-    public CompletableFuture<ResponseLog> awaitResponseLog() {
-        return delegate.awaitResponseLog();
+    public CompletableFuture<ResponseLog> responseLogFuture() {
+        return delegate.responseLogFuture();
     }
 
     @Override

@@ -176,7 +176,7 @@ final class HttpClientDelegate implements Client {
             if (sessionProtocol.isMultiplex()) {
                 pool.release(poolKey, channel);
             } else {
-                req.awaitClose()
+                req.closeFuture()
                    .handle((ret, cause) -> pool.release(poolKey, channel))
                    .exceptionally(CompletionActions::log);
             }

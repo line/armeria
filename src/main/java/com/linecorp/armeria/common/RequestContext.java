@@ -121,8 +121,8 @@ public interface RequestContext extends AttributeMap {
 
     RequestLogBuilder requestLogBuilder();
     ResponseLogBuilder responseLogBuilder();
-    CompletableFuture<RequestLog> awaitRequestLog();
-    CompletableFuture<ResponseLog> awaitResponseLog();
+    CompletableFuture<RequestLog> requestLogFuture();
+    CompletableFuture<ResponseLog> responseLogFuture();
 
     Iterator<Attribute<?>> attrs();
 

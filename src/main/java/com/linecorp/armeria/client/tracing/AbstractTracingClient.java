@@ -81,8 +81,8 @@ public abstract class AbstractTracingClient extends DecoratingClient {
 
         final Response res = delegate().execute(ctx, req);
 
-        ctx.awaitRequestLog().thenAcceptBoth(
-                res.awaitClose(),
+        ctx.requestLogFuture().thenAcceptBoth(
+                res.closeFuture(),
                 (log, unused) -> clientInterceptor.closeSpan(span, createResponseAdapter(ctx, log, res)))
            .exceptionally(CompletionActions::log);
 
@@ -104,7 +104,7 @@ public abstract class AbstractTracingClient extends DecoratingClient {
         final KeyValueAnnotation clientUriAnnotation = KeyValueAnnotation.create(
                 "client.uri", log.scheme().uriText() + "://" + log.host() + ctx.path() + '#' + log.method());
 
-        final CompletableFuture<?> f = res.awaitClose();
+        final CompletableFuture<?> f = res.closeFuture();
         if (!f.isDone()) {
             return Collections.singletonList(clientUriAnnotation);
         }

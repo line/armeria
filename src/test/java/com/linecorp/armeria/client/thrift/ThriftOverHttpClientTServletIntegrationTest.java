@@ -309,7 +309,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
         @Override
         public Response execute(ClientRequestContext ctx, Request req) throws Exception {
-            ctx.awaitRequestLog()
+            ctx.requestLogFuture()
                .thenAccept(log -> sessionProtocol.set(log.scheme().sessionProtocol()))
                .exceptionally(CompletionActions::log);
             return delegate().execute(ctx, req);

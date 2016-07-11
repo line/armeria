@@ -44,10 +44,10 @@ public class LogCollectingService extends DecoratingService {
 
     @Override
     public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
-        ctx.awaitRequestLog()
+        ctx.requestLogFuture()
            .thenAccept(log -> invokeOnRequest(consumer, ctx, log))
            .exceptionally(CompletionActions::log);
-        ctx.awaitResponseLog()
+        ctx.responseLogFuture()
            .thenAccept(log -> invokeOnResponse(consumer, ctx, log))
            .exceptionally(CompletionActions::log);
 

@@ -41,7 +41,7 @@ public interface HttpResponse extends Response, RichPublisher<HttpObject> {
     }
 
     @Override
-    CompletableFuture<Void> awaitClose();
+    CompletableFuture<Void> closeFuture();
 
     /**
      * Aggregates the response. The returned {@link CompletableFuture} will be notified when the content and

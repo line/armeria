@@ -440,7 +440,7 @@ public class HttpServerTest extends AbstractServerTest {
 
         res.subscribe(consumer);
 
-        res.awaitClose().get();
+        res.closeFuture().get();
         assertThat(status.get(), is(HttpStatus.OK));
         assertThat(consumer.numReceivedBytes(), is(STREAMING_CONTENT_LENGTH));
     }
@@ -458,7 +458,7 @@ public class HttpServerTest extends AbstractServerTest {
             return;
         }
 
-        writer.awaitDemand()
+        writer.awaitDemandAsync()
               .thenRun(() -> stream(writer, remaining, (int) Math.min(remaining, chunkSize)))
               .exceptionally(cause -> {
                   logger.warn("Unexpected exception:", cause);
