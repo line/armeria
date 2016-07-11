@@ -251,9 +251,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
             final Service service = serviceCfg.service();
             final ServiceCodec codec = service.codec();
             final Promise<Object> promise = ctx.executor().newPromise();
-            final DecodeResult decodeResult = codec.decodeRequest(
-                    serviceCfg, ctx.channel(), protocol,
-                    hostname, path, mappedPath, req.content(), req, promise);
+
+            final DecodeResult decodeResult;
+            try {
+                decodeResult = codec.decodeRequest(
+                        serviceCfg, ctx.channel(), protocol,
+                        hostname, path, mappedPath, req.content(), req, promise);
+            } catch (Exception e) {
+                logger.warn("{} Unexpected exception from a decoder:", ctx.channel(), e);
+                respond(ctx, reqSeq, req, HttpResponseStatus.BAD_REQUEST, e);
+                return;
+            }
 
             switch (decodeResult.type()) {
             case SUCCESS: {
