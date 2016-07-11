@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Constructor;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +45,8 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.net.MediaType;
+
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.ServiceInvocationContext;
@@ -56,6 +59,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -249,8 +253,7 @@ final class ThriftServiceCodec implements ServiceCodec {
         try {
             serializationFormat = validateRequestAndDetermineSerializationFormat(originalRequest);
         } catch (InvalidHttpRequestException e) {
-            return new DefaultDecodeResult(
-                    new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, e.httpResponseStatus), e.getCause());
+            return new DefaultDecodeResult(errorResponse(e.httpResponseStatus), e.getCause());
         }
 
         final TProtocol inProto = FORMAT_TO_THREAD_LOCAL_IN_PROTOCOL.get(serializationFormat).get();
@@ -259,7 +262,13 @@ final class ThriftServiceCodec implements ServiceCodec {
         inTransport.reset(in);
 
         try {
-            final TMessage header = inProto.readMessageBegin();
+            final TMessage header;
+            try {
+                header = inProto.readMessageBegin();
+            } catch (TException e) {
+                return new DefaultDecodeResult(errorResponse(HttpResponseStatus.BAD_REQUEST), e.getCause());
+            }
+
             final byte typeValue = header.type;
             final int seqId = header.seqid;
             final String methodName = header.name;
@@ -322,6 +331,15 @@ final class ThriftServiceCodec implements ServiceCodec {
         } finally {
             inTransport.clear();
         }
+    }
+
+    private static DefaultFullHttpResponse errorResponse(HttpResponseStatus status) {
+        final DefaultFullHttpResponse res = new DefaultFullHttpResponse(
+                HttpVersion.HTTP_1_1, status,
+                Unpooled.copiedBuffer(status.toString(), StandardCharsets.UTF_8));
+
+        res.headers().set(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8.toString());
+        return res;
     }
 
     @Override
