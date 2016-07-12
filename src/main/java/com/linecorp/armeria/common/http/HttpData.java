@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 public interface HttpData extends HttpObject {
 
@@ -61,9 +62,7 @@ public interface HttpData extends HttpObject {
     }
 
     static HttpData of(ByteBuf buf) {
-        final byte[] dataArray = new byte[buf.readableBytes()];
-        buf.getBytes(buf.readerIndex(), dataArray);
-        return of(dataArray);
+        return of(ByteBufUtil.getBytes(buf));
     }
 
     static HttpData of(Charset charset, String format, Object... args) {
