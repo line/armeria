@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -266,7 +267,7 @@ public final class HttpFileService extends AbstractHttpService {
      *
      * @param nextService the {@link HttpService} to try secondly
      */
-    public HttpService orElse(Service nextService) {
+    public HttpService orElse(Service<?, ? extends HttpResponse> nextService) {
         requireNonNull(nextService, "nextService");
         return new OrElseHttpService(this, nextService);
     }
@@ -274,11 +275,12 @@ public final class HttpFileService extends AbstractHttpService {
     private static final class OrElseHttpService extends AbstractHttpService {
 
         private final HttpFileService first;
-        private final Service second;
+        private final Service<Request, HttpResponse> second;
 
-        OrElseHttpService(HttpFileService first, Service second) {
+        @SuppressWarnings("unchecked")
+        OrElseHttpService(HttpFileService first, Service<?, ? extends HttpResponse> second) {
             this.first = first;
-            this.second = second;
+            this.second = (Service<Request, HttpResponse>) second;
         }
 
         @Override
@@ -287,7 +289,7 @@ public final class HttpFileService extends AbstractHttpService {
             if (firstEntry.lastModifiedMillis() != 0) {
                 return first.serve(ctx, req);
             } else {
-                return (HttpResponse) second.serve(ctx, req);
+                return second.serve(ctx, req);
             }
         }
     }

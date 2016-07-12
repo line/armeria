@@ -225,10 +225,7 @@ public class JettyService implements HttpService {
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx,
-                              com.linecorp.armeria.common.Request request) throws Exception {
-
-        final HttpRequest req = request.cast();
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final ArmeriaConnector connector = this.connector;
 
         final DefaultHttpResponse res = new DefaultHttpResponse();

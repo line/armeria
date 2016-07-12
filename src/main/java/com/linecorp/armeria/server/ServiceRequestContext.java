@@ -34,7 +34,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     VirtualHost virtualHost();
 
-    <T extends Service> T service();
+    <T extends Service<?, ?>> T service();
 
     ExecutorService blockingTaskExecutor();
 

@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Sets;
 import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -258,7 +259,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // Decode the request and create a new invocation context from it to perform an invocation.
         final String mappedPath = mapped.mappedPath();
         final ServiceConfig serviceCfg = mapped.value();
-        final Service service = serviceCfg.service();
+        final Service<Request, HttpResponse> service = serviceCfg.service();
 
         final Channel channel = ctx.channel();
         final ServiceRequestContext reqCtx = new DefaultServiceRequestContext(

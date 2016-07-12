@@ -281,7 +281,7 @@ public final class ServerConfig {
      * no match, an empty {@link List} is returned. Note that this is potentially an expensive operation and
      * thus should not be used in a performance-sensitive path.
      */
-    public List<VirtualHost> findVirtualHosts(Service service) {
+    public List<VirtualHost> findVirtualHosts(Service<?, ?> service) {
         requireNonNull(service, "service");
 
         @SuppressWarnings("rawtypes")
@@ -290,7 +290,7 @@ public final class ServerConfig {
         for (VirtualHost h : virtualHosts) {
             for (ServiceConfig c : h.serviceConfigs()) {
                 // Consider the case where the specified service is decorated before being added.
-                final Service s = c.service();
+                final Service<?, ?> s = c.service();
                 @SuppressWarnings("rawtypes")
                 Optional<? extends Service> sOpt = s.as(serviceType);
                 if (!sOpt.isPresent()) {

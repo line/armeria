@@ -28,9 +28,9 @@ import com.github.kristofa.brave.IdConversion;
 import com.github.kristofa.brave.SpanId;
 import com.github.kristofa.brave.TraceData;
 
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -40,22 +40,23 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * This decorator retrieves trace data from HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  */
-public class HttpTracingService extends AbstractTracingService {
+public class HttpTracingService extends AbstractTracingService<HttpRequest, HttpResponse> {
 
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Brave} instance.
      */
-    public static Function<Service, HttpTracingService> newDecorator(Brave brave) {
+    public static Function<Service<? super HttpRequest, ? extends HttpResponse>,
+                           HttpTracingService> newDecorator(Brave brave) {
         return service -> new HttpTracingService(service, brave);
     }
 
-    HttpTracingService(Service delegate, Brave brave) {
+    HttpTracingService(Service<? super HttpRequest, ? extends HttpResponse> delegate, Brave brave) {
         super(delegate, brave);
     }
 
     @Override
-    protected TraceData getTraceData(ServiceRequestContext ctx, Request req) {
-        final HttpHeaders headers = ((HttpRequest) req).headers();
+    protected TraceData getTraceData(ServiceRequestContext ctx, HttpRequest req) {
+        final HttpHeaders headers = req.headers();
 
         // The following HTTP trace header spec is based on
         // com.github.kristofa.brave.http.HttpServerRequestAdapter#getTraceData

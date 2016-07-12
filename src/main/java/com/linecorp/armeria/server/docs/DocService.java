@@ -32,6 +32,8 @@ import org.apache.thrift.TBase;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -48,7 +50,7 @@ import com.linecorp.armeria.server.thrift.THttpService;
  * {@link Server}. It does not require any configuration besides adding it to a {@link VirtualHost}; it
  * discovers all {@link THttpService}s in the {@link Server} automatically.
  */
-public class DocService extends AbstractCompositeService {
+public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 

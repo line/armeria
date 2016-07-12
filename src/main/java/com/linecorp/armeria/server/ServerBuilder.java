@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 import javax.net.ssl.SSLException;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.handler.ssl.SslContext;
@@ -119,7 +120,7 @@ public final class ServerBuilder {
     private Executor blockingTaskExecutor;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
-    private Function<Service, Service> decorator;
+    private Function<Service<Request, Response>, Service<Request, Response>> decorator;
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
@@ -344,7 +345,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceAt(String exactPath, Service service) {
+    public ServerBuilder serviceAt(String exactPath, Service<?, ?> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceAt(exactPath, service);
         return this;
@@ -356,7 +357,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceUnder(String pathPrefix, Service service) {
+    public ServerBuilder serviceUnder(String pathPrefix, Service<?, ?> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
         return this;
@@ -369,7 +370,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(PathMapping pathMapping, Service service) {
+    public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service);
         return this;
@@ -386,7 +387,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(PathMapping pathMapping, Service service, String loggerName) {
+    public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
         return this;
@@ -424,17 +425,22 @@ public final class ServerBuilder {
         return this;
     }
 
-    public ServerBuilder decorator(Function<? extends Service, ? extends Service> decorator) {
+    public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
+            R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response> ServerBuilder decorator(
+            Function<T, R> decorator) {
+
         requireNonNull(decorator, "decorator");
 
         @SuppressWarnings("unchecked")
-        Function<Service, Service> castDecorator = (Function<Service, Service>) decorator;
+        Function<Service<Request, Response>, Service<Request, Response>> castDecorator =
+                (Function<Service<Request, Response>, Service<Request, Response>>) decorator;
 
         if (this.decorator != null) {
             this.decorator = this.decorator.andThen(castDecorator);
         } else {
             this.decorator = castDecorator;
         }
+
         return this;
     }
 

@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 
@@ -66,10 +68,11 @@ import com.linecorp.armeria.server.Service;
  *
  * @see CompositeServiceEntry
  */
-public abstract class AbstractCompositeServiceBuilder<T extends AbstractCompositeServiceBuilder<T>> {
+public abstract class AbstractCompositeServiceBuilder<T extends AbstractCompositeServiceBuilder<T, I, O>,
+                                                      I extends Request, O extends Response> {
 
-    private final List<CompositeServiceEntry> services = new ArrayList<>();
-    private final List<CompositeServiceEntry> unmodifiableServices =
+    private final List<CompositeServiceEntry<? super I, ? extends O>> services = new ArrayList<>();
+    private final List<CompositeServiceEntry<? super I, ? extends O>> unmodifiableServices =
             Collections.unmodifiableList(services);
 
     /**
@@ -90,36 +93,39 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
      * {@link #serviceUnder(String, Service)}, {@link #service(PathMapping, Service)} and
      * {@link #service(CompositeServiceEntry)}.
      */
-    protected final List<CompositeServiceEntry> services() {
+    protected final List<CompositeServiceEntry<? super I, ? extends O>> services() {
         return unmodifiableServices;
     }
 
     /**
      * Binds the specified {@link Service} at the specified exact path.
      */
-    protected T serviceAt(String exactPath, Service service) {
+    protected T serviceAt(String exactPath, Service<? super I, ? extends O> service) {
         return service(CompositeServiceEntry.ofExact(exactPath, service));
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    protected T serviceUnder(String pathPrefix, Service service) {
+    protected T serviceUnder(String pathPrefix, Service<? super I, ? extends O> service) {
         return service(CompositeServiceEntry.ofPrefix(pathPrefix, service));
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    protected T service(PathMapping pathMapping, Service service) {
+    protected T service(PathMapping pathMapping, Service<? super I, ? extends O> service) {
         return service(CompositeServiceEntry.of(pathMapping, service));
     }
 
     /**
      * Binds the specified {@link CompositeServiceEntry}.
      */
-    protected T service(CompositeServiceEntry entry) {
-        services.add(requireNonNull(entry, "entry"));
+    protected T service(CompositeServiceEntry<? super I, ? extends O> entry) {
+        requireNonNull(entry, "entry");
+        @SuppressWarnings("unchecked")
+        CompositeServiceEntry<I, O> cast = (CompositeServiceEntry<I, O>) entry;
+        services.add(cast);
         return self();
     }
 

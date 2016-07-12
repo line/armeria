@@ -23,6 +23,8 @@ import java.util.EnumSet;
 import java.util.Set;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -85,8 +87,7 @@ public class ThriftService extends THttpService {
                                  defaultSerializationFormat, allowedSerializationFormatsSet);
     }
 
-    @SuppressWarnings("unchecked")
-    private ThriftService(Service delegate,
+    private ThriftService(Service<ThriftCall, ThriftReply> delegate,
                           SerializationFormat defaultSerializationFormat,
                           Set<SerializationFormat> allowedSerializationFormats) {
         super(delegate, defaultSerializationFormat, allowedSerializationFormats);

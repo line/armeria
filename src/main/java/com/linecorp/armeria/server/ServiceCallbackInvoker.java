@@ -26,7 +26,7 @@ public final class ServiceCallbackInvoker {
     /**
      * Invokes {@link Service#serviceAdded(ServiceConfig)}.
      */
-    public static void invokeServiceAdded(ServiceConfig cfg, Service service) {
+    public static void invokeServiceAdded(ServiceConfig cfg, Service<?, ?> service) {
         requireNonNull(cfg, "cfg");
         requireNonNull(service, "service");
 

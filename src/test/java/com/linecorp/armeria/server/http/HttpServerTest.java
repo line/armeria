@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -77,6 +78,7 @@ import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -246,14 +248,16 @@ public class HttpServerTest extends AbstractServerTest {
             }
         });
 
-        sb.decorator(delegate -> new DecoratingService(delegate) {
-            @Override
-            public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
-                ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
-                ctx.setMaxRequestLength(serverMaxRequestLength);
-                return delegate().serve(ctx, req);
-            }
-        });
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+                delegate -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(delegate) {
+                    @Override
+                    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                        ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
+                        ctx.setMaxRequestLength(serverMaxRequestLength);
+                        return delegate().serve(ctx, req);
+                    }
+                };
+        sb.decorator(decorator);
     }
 
     @AfterClass
