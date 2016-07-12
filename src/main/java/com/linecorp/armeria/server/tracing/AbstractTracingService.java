@@ -24,9 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.github.kristofa.brave.Brave;
 import com.github.kristofa.brave.KeyValueAnnotation;
 import com.github.kristofa.brave.ServerRequestAdapter;
@@ -48,19 +45,18 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * <p>
  * This class depends on <a href="https://github.com/openzipkin/brave">Brave</a> distributed tracing library.
  */
-public abstract class AbstractTracingService extends DecoratingService {
-
-    private static final Logger logger = LoggerFactory.getLogger(AbstractTracingService.class);
+public abstract class AbstractTracingService<I extends Request, O extends Response>
+        extends DecoratingService<I, O, I, O> {
 
     private final ServerTracingInterceptor serverInterceptor;
 
-    protected AbstractTracingService(Service delegate, Brave brave) {
+    protected AbstractTracingService(Service<? super I, ? extends O> delegate, Brave brave) {
         super(delegate);
         serverInterceptor = new ServerTracingInterceptor(brave);
     }
 
     @Override
-    public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
+    public O serve(ServiceRequestContext ctx, I req) throws Exception {
         final TraceData traceData = getTraceData(ctx, req);
         final String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method();
         final ServerRequestAdapter requestAdapter = new InternalServerRequestAdapter(method, traceData);
@@ -76,7 +72,7 @@ public abstract class AbstractTracingService extends DecoratingService {
         }
 
         try {
-            final Response res = delegate().serve(ctx, req);
+            final O res = delegate().serve(ctx, req);
             if (sampled) {
 
                 ctx.requestLogFuture().thenAcceptBoth(
@@ -95,24 +91,24 @@ public abstract class AbstractTracingService extends DecoratingService {
      *
      * @return the {@link TraceData}.
      */
-    protected abstract TraceData getTraceData(ServiceRequestContext ctx, Request request);
+    protected abstract TraceData getTraceData(ServiceRequestContext ctx, I req);
 
     /**
      * Returns server side annotations that should be added to span.
      */
     protected List<KeyValueAnnotation> annotations(
-            ServiceRequestContext ctx, RequestLog log, Response response) {
+            ServiceRequestContext ctx, RequestLog req, O res) {
 
         final List<KeyValueAnnotation> annotations = new ArrayList<>(5);
 
         final StringBuilder uriBuilder = new StringBuilder();
-        uriBuilder.append(log.scheme().uriText());
+        uriBuilder.append(req.scheme().uriText());
         uriBuilder.append("://");
-        uriBuilder.append(log.host());
+        uriBuilder.append(req.host());
         uriBuilder.append(ctx.path());
-        if (log.method() != null) {
+        if (req.method() != null) {
             uriBuilder.append('#');
-            uriBuilder.append(log.method());
+            uriBuilder.append(req.method());
         }
         annotations.add(KeyValueAnnotation.create("server.uri", uriBuilder.toString()));
 
@@ -124,7 +120,7 @@ public abstract class AbstractTracingService extends DecoratingService {
             annotations.add(KeyValueAnnotation.create("server.local", ctx.localAddress().toString()));
         }
 
-        final CompletableFuture<?> f = response.closeFuture();
+        final CompletableFuture<?> f = res.closeFuture();
         if (f.isDone()) {
             // Need to use a callback because CompletableFuture does not have a getter for the cause of failure.
             // The callback will be invoked immediately because the future is done already.
@@ -142,8 +138,8 @@ public abstract class AbstractTracingService extends DecoratingService {
     }
 
     protected ServerResponseAdapter createResponseAdapter(
-            ServiceRequestContext ctx, RequestLog log, Response response) {
-        final List<KeyValueAnnotation> annotations = annotations(ctx, log, response);
+            ServiceRequestContext ctx, RequestLog req, O res) {
+        final List<KeyValueAnnotation> annotations = annotations(ctx, req, res);
         return () -> annotations;
     }
 

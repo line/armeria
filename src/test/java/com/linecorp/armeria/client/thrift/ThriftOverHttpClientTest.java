@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -172,7 +173,8 @@ public class ThriftOverHttpClientTest {
 
             for (Handlers h : Handlers.values()) {
                 for (SerializationFormat defaultSerializationFormat : SerializationFormat.ofThrift()) {
-                    Service service = THttpService.of(h.handler(), defaultSerializationFormat);
+                    Service<HttpRequest, HttpResponse> service =
+                            THttpService.of(h.handler(), defaultSerializationFormat);
                     if (ENABLE_LOGGING_DECORATORS) {
                         service = service.decorate(LoggingService::new);
                     }

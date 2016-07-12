@@ -71,7 +71,7 @@ public class ServiceRequestContextWrapper extends AbstractRequestContext impleme
     }
 
     @Override
-    public <T extends Service> T service() {
+    public <T extends Service<?, ?>> T service() {
         return delegate().service();
     }
 

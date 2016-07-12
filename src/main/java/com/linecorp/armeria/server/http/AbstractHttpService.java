@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.http;
 
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
@@ -27,11 +26,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public abstract class AbstractHttpService implements HttpService {
 
     @Override
-    public final HttpResponse serve(ServiceRequestContext ctx, Request req) throws Exception {
-        return serve(ctx, (HttpRequest) req);
-    }
-
-    protected HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final DefaultHttpResponse res = new DefaultHttpResponse();
         switch (req.method()) {
             case OPTIONS:

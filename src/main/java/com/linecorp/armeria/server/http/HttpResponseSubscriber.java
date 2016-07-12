@@ -63,7 +63,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
 
     private final ChannelHandlerContext ctx;
     private final HttpObjectEncoder responseEncoder;
-    private final Service service;
+    private final Service<?, ?> service;
     private final DecodedHttpRequest req;
     private final long timeoutMillis;
     private final ResponseLogBuilder logBuilder;

@@ -29,7 +29,6 @@ import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.async.AsyncMethodCallback;
 
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.thrift.ThriftCall;
@@ -44,7 +43,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  *
  * @see THttpService
  */
-public class ThriftCallService implements Service {
+public class ThriftCallService implements Service<ThriftCall, ThriftReply> {
 
     /**
      * Creates a new instance with the specified service implementation.
@@ -84,9 +83,7 @@ public class ThriftCallService implements Service {
     }
 
     @Override
-    public ThriftReply serve(ServiceRequestContext ctx, Request req) throws Exception {
-        final ThriftCall call = req.cast();
-
+    public ThriftReply serve(ServiceRequestContext ctx, ThriftCall call) throws Exception {
         // Ensure that such a method exists.
         final ThriftFunction f = metadata.function(call.method());
         if (f == null) {

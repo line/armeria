@@ -33,17 +33,17 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A decorator {@link Service} that collects {@link RequestLog} and {@link ResponseLog} for every request.
  */
-public class LogCollectingService extends DecoratingService {
+public class LogCollectingService<I extends Request, O extends Response> extends DecoratingService<I, O, I, O> {
 
     private final MessageLogConsumer consumer;
 
-    public LogCollectingService(Service delegate, MessageLogConsumer consumer) {
+    public LogCollectingService(Service<? super I, ? extends O> delegate, MessageLogConsumer consumer) {
         super(delegate);
         this.consumer = requireNonNull(consumer, "consumer");
     }
 
     @Override
-    public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
+    public O serve(ServiceRequestContext ctx, I req) throws Exception {
         ctx.requestLogFuture()
            .thenAccept(log -> invokeOnRequest(consumer, ctx, log))
            .exceptionally(CompletionActions::log);

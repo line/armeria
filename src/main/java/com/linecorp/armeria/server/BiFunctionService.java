@@ -28,21 +28,20 @@ import com.linecorp.armeria.common.Response;
  *
  * @see Service#of(BiFunction)
  */
-final class BiFunctionService implements Service {
+final class BiFunctionService<I extends Request, O extends Response> implements Service<I, O> {
 
-    private final BiFunction<Object, Object, Response> function;
+    private final BiFunction<? super ServiceRequestContext, ? super I, ? extends O> function;
 
     /**
      * Creates a new instance with the specified function.
      */
-    @SuppressWarnings("unchecked")
-    BiFunctionService(BiFunction<?, ?, ? extends Response> function) {
+    BiFunctionService(BiFunction<? super ServiceRequestContext, ? super I, ? extends O> function) {
         requireNonNull(function, "function");
-        this.function = (BiFunction<Object, Object, Response>) function;
+        this.function = function;
     }
 
     @Override
-    public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
+    public O serve(ServiceRequestContext ctx, I req) throws Exception {
         return function.apply(ctx, req);
     }
 

@@ -34,6 +34,8 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
@@ -118,7 +120,7 @@ public final class VirtualHostBuilder {
     private final String hostnamePattern;
     private final List<ServiceConfig> services = new ArrayList<>();
     private SslContext sslContext;
-    private Function<Service, Service> decorator;
+    private Function<Service<Request, Response>, Service<Request, Response>> decorator;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -201,21 +203,21 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified {@link Service} at the specified exact path.
      */
-    public VirtualHostBuilder serviceAt(String exactPath, Service service) {
+    public VirtualHostBuilder serviceAt(String exactPath, Service<?, ?> service) {
         return service(PathMapping.ofExact(exactPath), service);
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    public VirtualHostBuilder serviceUnder(String pathPrefix, Service service) {
+    public VirtualHostBuilder serviceUnder(String pathPrefix, Service<?, ?> service) {
         return service(PathMapping.ofPrefix(pathPrefix), service);
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    public VirtualHostBuilder service(PathMapping pathMapping, Service service) {
+    public VirtualHostBuilder service(PathMapping pathMapping, Service<?, ?> service) {
         services.add(new ServiceConfig(pathMapping, service, null));
         return this;
     }
@@ -227,20 +229,27 @@ public final class VirtualHostBuilder {
      *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
      *                   such as a package name or a fully-qualified class name
      */
-    public VirtualHostBuilder service(PathMapping pathMapping, Service service, String loggerName) {
+    public VirtualHostBuilder service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
         services.add(new ServiceConfig(pathMapping, service, loggerName));
         return this;
     }
 
-    public VirtualHostBuilder decorator(Function<? extends Service, ? extends Service> decorator) {
+    public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
+            R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
+    VirtualHostBuilder decorator(Function<T, R> decorator) {
+
         requireNonNull(decorator, "decorator");
+
         @SuppressWarnings("unchecked")
-        final Function<Service, Service> castDecorator = (Function<Service, Service>) decorator;
-        if (this.decorator == null) {
-            this.decorator = castDecorator;
-        } else {
+        final Function<Service<Request, Response>, Service<Request, Response>> castDecorator =
+                (Function<Service<Request, Response>, Service<Request, Response>>) decorator;
+
+        if (this.decorator != null) {
             this.decorator = this.decorator.andThen(castDecorator);
+        } else {
+            this.decorator = castDecorator;
         }
+
         return this;
     }
 

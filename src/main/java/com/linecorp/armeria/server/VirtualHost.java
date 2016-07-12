@@ -29,6 +29,9 @@ import java.util.stream.Collectors;
 
 import com.github.kristofa.brave.internal.Nullable;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
+
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -214,7 +217,7 @@ public final class VirtualHost {
         return serviceMapping.apply(path);
     }
 
-    VirtualHost decorate(@Nullable Function<Service, Service> decorator) {
+    VirtualHost decorate(@Nullable Function<Service<Request, Response>, Service<Request, Response>> decorator) {
         if (decorator == null) {
             return this;
         }
@@ -222,7 +225,7 @@ public final class VirtualHost {
         final List<ServiceConfig> services =
                 this.services.stream().map(cfg -> {
                     final PathMapping pathMapping = cfg.pathMapping();
-                    final Service service = decorator.apply(cfg.service());
+                    final Service<Request, Response> service = decorator.apply(cfg.service());
                     final String loggerName = cfg.loggerNameWithoutPrefix();
                     return new ServiceConfig(pathMapping, service, loggerName);
                 }).collect(Collectors.toList());

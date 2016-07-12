@@ -176,7 +176,7 @@ public class THttpService extends AbstractHttpService {
      * Currently, the only way to specify a serialization format is by using the HTTP session
      * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
      */
-    public static Function<Service, THttpService> newDecorator() {
+    public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator() {
         return newDecorator(SerializationFormat.THRIFT_BINARY);
     }
 
@@ -189,7 +189,7 @@ public class THttpService extends AbstractHttpService {
      * @param defaultSerializationFormat the default serialization format to use when not specified by the
      *                                   client
      */
-    public static Function<Service, THttpService> newDecorator(
+    public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat) {
 
         return delegate -> new THttpService(delegate,
@@ -207,7 +207,7 @@ public class THttpService extends AbstractHttpService {
      * @param otherAllowedSerializationFormats other serialization formats that should be supported by this
      *                                         service in addition to the default
      */
-    public static Function<Service, THttpService> newDecorator(
+    public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat,
             SerializationFormat... otherAllowedSerializationFormats) {
 
@@ -226,7 +226,7 @@ public class THttpService extends AbstractHttpService {
      * @param otherAllowedSerializationFormats other serialization formats that should be supported by this
      *                                         service in addition to the default
      */
-    public static Function<Service, THttpService> newDecorator(
+    public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
@@ -238,14 +238,13 @@ public class THttpService extends AbstractHttpService {
                                             defaultSerializationFormat, allowedSerializationFormatsSet);
     }
 
-    private final Service delegate;
+    private final Service<ThriftCall, ThriftReply> delegate;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> allowedSerializationFormats;
     private final ThriftCallService thriftService;
 
     // TODO(trustin): Make this contructor private once we remove ThriftService.
-    @SuppressWarnings("unchecked")
-    THttpService(Service delegate,
+    THttpService(Service<ThriftCall, ThriftReply> delegate,
                  SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> allowedSerializationFormats) {
 
@@ -260,7 +259,7 @@ public class THttpService extends AbstractHttpService {
         this.allowedSerializationFormats = Sets.immutableEnumSet(allowedSerializationFormats);
     }
 
-    private static ThriftCallService findThriftService(Service delegate) {
+    private static ThriftCallService findThriftService(Service<? ,?> delegate) {
         return delegate.as(ThriftCallService.class).orElseThrow(
                     () -> new IllegalStateException("service being decorated is not a ThriftService: " +
                                                     delegate));
@@ -458,7 +457,7 @@ public class THttpService extends AbstractHttpService {
         ctx.requestLogBuilder().attr(RequestLog.RPC_REQUEST).set(call);
 
         try {
-            reply = (ThriftReply) delegate.serve(ctx, call);
+            reply = delegate.serve(ctx, call);
             ctx.responseLogBuilder().attr(ResponseLog.RPC_RESPONSE).set(reply);
         } catch (Throwable cause) {
             handleException(serializationFormat, seqId, func, cause, res);

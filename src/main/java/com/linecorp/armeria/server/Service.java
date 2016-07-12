@@ -29,13 +29,14 @@ import com.linecorp.armeria.common.Response;
  * Handles a request received by a {@link Server}.
  */
 @FunctionalInterface
-public interface Service {
+public interface Service<I extends Request, O extends Response> {
 
     /**
      * Creates a new {@link Service} with the specified {@link BiFunction}.
      */
-    static Service of(BiFunction<?, ?, ? extends Response> function) {
-        return new BiFunctionService(function);
+    static <I extends Request, O extends Response> Service<I, O> of(
+            BiFunction<? super ServiceRequestContext, ? super I, ? extends O> function) {
+        return new BiFunctionService<>(function);
     }
 
     /**
@@ -45,7 +46,7 @@ public interface Service {
      */
     default void serviceAdded(ServiceConfig cfg) throws Exception {}
 
-    Response serve(ServiceRequestContext ctx, Request req) throws Exception;
+    O serve(ServiceRequestContext ctx, I req) throws Exception;
 
     /**
      * Undecorates this {@link Service} to find the {@link Service} which is an instance of the specified
@@ -62,7 +63,7 @@ public interface Service {
      * @return the {@link Service} which is an instance of {@code serviceType} if this {@link Service}
      *         decorated such a {@link Service}. {@link Optional#empty()} otherwise.
      */
-    default <T extends Service> Optional<T> as(Class<T> serviceType) {
+    default <T extends Service<?, ?>> Optional<T> as(Class<T> serviceType) {
         requireNonNull(serviceType, "serviceType");
         return serviceType.isInstance(this) ? Optional.of(serviceType.cast(this))
                                             : Optional.empty();
@@ -71,9 +72,11 @@ public interface Service {
     /**
      * Creates a new {@link Service} that decorates this {@link Service} with the specified {@code decorator}.
      */
-    default <T extends Service, U extends Service> U decorate(Function<T, U> decorator) {
+    default <T extends Service<? super I, ? extends O>,
+             R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
+    R decorate(Function<T, R> decorator) {
         @SuppressWarnings("unchecked")
-        final U newService = decorator.apply((T) this);
+        final R newService = decorator.apply((T) this);
 
         if (newService == null) {
             throw new NullPointerException("decorator.apply() returned null: " + decorator);

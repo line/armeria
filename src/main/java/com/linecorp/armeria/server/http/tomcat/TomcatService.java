@@ -358,9 +358,7 @@ public final class TomcatService implements HttpService {
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx,
-                              com.linecorp.armeria.common.Request request) throws Exception {
-        final HttpRequest req = request.cast();
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Adapter coyoteAdapter = connector().getProtocolHandler().getAdapter();
         if (coyoteAdapter == null) {
             // Tomcat is not configured / stopped.

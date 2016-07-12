@@ -42,8 +42,6 @@ import com.github.kristofa.brave.TraceData;
 import com.twitter.zipkin.gen.Annotation;
 import com.twitter.zipkin.gen.Span;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -104,7 +102,8 @@ public class TracingServiceTest {
                 .traceSampler(Sampler.create(1.0f))
                 .build();
 
-        Service delegate = mock(Service.class);
+        @SuppressWarnings("unchecked")
+        Service<ThriftCall, ThriftReply> delegate = mock(Service.class);
 
         TraceData traceData = TraceData.builder()
                                        .sample(sampled)
@@ -135,23 +134,23 @@ public class TracingServiceTest {
         return spanCollector;
     }
 
-    private static class TracingServiceImpl extends AbstractTracingService {
+    private static class TracingServiceImpl extends AbstractTracingService<ThriftCall, ThriftReply> {
 
         private final TraceData traceData;
 
-        TracingServiceImpl(Service delegate, Brave brave, TraceData traceData) {
+        TracingServiceImpl(Service<ThriftCall, ThriftReply> delegate, Brave brave, TraceData traceData) {
             super(delegate, brave);
             this.traceData = traceData;
         }
 
         @Override
-        protected TraceData getTraceData(ServiceRequestContext ctx, Request request) {
+        protected TraceData getTraceData(ServiceRequestContext ctx, ThriftCall req) {
             return traceData;
         }
 
         @Override
-        protected List<KeyValueAnnotation> annotations(ServiceRequestContext ctx, RequestLog log,
-                                                       Response response) {
+        protected List<KeyValueAnnotation> annotations(ServiceRequestContext ctx, RequestLog req,
+                                                       ThriftReply res) {
             return Collections.emptyList();
         }
     }

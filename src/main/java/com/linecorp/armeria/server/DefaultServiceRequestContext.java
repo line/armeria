@@ -91,7 +91,7 @@ public final class DefaultServiceRequestContext extends AbstractRequestContext i
     }
 
     @Override
-    public <T extends Service> T service() {
+    public <T extends Service<?, ?>> T service() {
         return cfg.service();
     }
 

@@ -18,7 +18,9 @@ package com.linecorp.armeria.server.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -29,13 +31,13 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A decorator {@link Service} that logs all requests and responses.
  */
-public class LoggingService extends LogCollectingService {
+public class LoggingService<I extends Request, O extends Response> extends LogCollectingService<I, O> {
 
-    public LoggingService(Service delegate) {
+    public LoggingService(Service<? super I, ? extends O> delegate) {
         this(delegate, LogLevel.INFO);
     }
 
-    public LoggingService(Service delegate, LogLevel level) {
+    public LoggingService(Service<? super I, ? extends O> delegate, LogLevel level) {
         super(delegate, new LoggingConsumer(level));
     }
 

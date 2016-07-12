@@ -31,6 +31,7 @@ import org.junit.Test;
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.AbstractServerTest;
@@ -107,7 +108,7 @@ public class CompositeServiceTest extends AbstractServerTest {
         }
     }
 
-    private static final class TestCompositeService extends AbstractCompositeService {
+    private static final class TestCompositeService extends AbstractCompositeService<HttpRequest, HttpResponse> {
         TestCompositeService() {
             super(CompositeServiceEntry.ofPrefix("/foo/", serviceA),
                   CompositeServiceEntry.ofPrefix("/bar/", serviceB),

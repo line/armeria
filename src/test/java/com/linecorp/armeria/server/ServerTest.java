@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -40,10 +41,10 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -66,9 +67,9 @@ public class ServerTest extends AbstractServerTest {
     @Override
     protected void configureServer(ServerBuilder sb) {
 
-        final Service immediateResponseOnIoThread = new EchoService().decorate(LoggingService::new);
+        final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread = new EchoService().decorate(LoggingService::new);
 
-        final Service delayedResponseOnIoThread = new EchoService() {
+        final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
             @Override
             protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
                 try {
@@ -80,7 +81,7 @@ public class ServerTest extends AbstractServerTest {
             }
         }.decorate(LoggingService::new);
 
-        final Service lazyResponseNotOnIoThread = new EchoService() {
+        final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
             @Override
             protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
                 asyncExecutorGroup.schedule(
@@ -88,7 +89,7 @@ public class ServerTest extends AbstractServerTest {
             }
         }.decorate(LoggingService::new);
 
-        final Service buggy = new AbstractHttpService() {
+        final Service<HttpRequest, HttpResponse> buggy = new AbstractHttpService() {
             @Override
             protected void doPost(ServiceRequestContext ctx,
                                   HttpRequest req, HttpResponseWriter res) throws Exception {
@@ -104,14 +105,18 @@ public class ServerTest extends AbstractServerTest {
           .serviceAt("/buggy", buggy);
 
         // Disable request timeout for '/timeout-not' only.
-        sb.decorator(delegate -> new DecoratingService(delegate) {
-            @Override
-            public Response serve(ServiceRequestContext ctx, Request request) throws Exception {
-                final HttpRequest req = request.cast();
-                ctx.setRequestTimeoutMillis("/timeout-not".equals(req.path()) ? 0 : requestTimeoutMillis);
-                return delegate().serve(ctx, req);
-            }
-        });
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+                delegate -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(delegate) {
+                    @Override
+                    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                        ctx.setRequestTimeoutMillis(
+                                "/timeout-not".equals(ctx.path()) ? 0 : requestTimeoutMillis);
+                        return delegate().serve(ctx, req);
+                    }
+                };
+
+        sb.decorator(decorator);
+
         sb.idleTimeoutMillis(idleTimeoutMillis);
     }
 

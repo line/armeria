@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.server.http;
 
-import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 @FunctionalInterface
-public interface HttpService extends Service {
+public interface HttpService extends Service<HttpRequest, HttpResponse> {
     @Override
-    HttpResponse serve(ServiceRequestContext ctx, Request req) throws Exception;
+    HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception;
 }

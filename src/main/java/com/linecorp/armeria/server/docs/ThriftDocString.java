@@ -56,13 +56,14 @@ final class ThriftDocString {
 
     private static final String THRIFT_JSON_PATH;
 
-    private static final TypeReference JSON_VALUE_TYPE = new TypeReference<HashMap<String, Object>>() {};
+    private static final TypeReference<HashMap<String, Object>> JSON_VALUE_TYPE =
+            new TypeReference<HashMap<String, Object>>() {};
 
     private static final String FQCN_DELIM = ".";
 
     private static final String DELIM = "#";
 
-    private static Map<ClassLoader, Map<String, String>> cached = new ConcurrentHashMap<>();
+    private static final Map<ClassLoader, Map<String, String>> cached = new ConcurrentHashMap<>();
 
     static {
         final String propertyName = "com.linecorp.armeria.thrift.jsonDir";
@@ -136,9 +137,10 @@ final class ThriftDocString {
             final String packageName = (String) namespaces.get("java");
             json.forEach((key, children) -> {
                 if (children instanceof Collection) {
-                    ((Collection) children).forEach(grandChild -> {
-                        traverseChildren(docStrings, packageName, FQCN_DELIM, grandChild);
-                    });
+                    @SuppressWarnings("unchecked")
+                    Collection<Object> castChildren = (Collection<Object>) children;
+                    castChildren.forEach(
+                            grandChild -> traverseChildren(docStrings, packageName, FQCN_DELIM, grandChild));
                 }
             });
 

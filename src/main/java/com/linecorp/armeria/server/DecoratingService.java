@@ -28,14 +28,16 @@ import com.linecorp.armeria.common.Response;
  * A {@link Service} that decorates another {@link Service}. Do not use this class unless you want to define
  * a new dedicated {@link Service} type by extending this class; prefer {@link Service#decorate(Function)}.
  */
-public class DecoratingService implements Service {
+public abstract class DecoratingService<T_I extends Request, T_O extends Response,
+                                        R_I extends Request, R_O extends Response>
+        implements Service<R_I, R_O> {
 
-    private final Service delegate;
+    private final Service<? super T_I, ? extends T_O> delegate;
 
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected DecoratingService(Service delegate) {
+    protected DecoratingService(Service<? super T_I, ? extends T_O> delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
@@ -43,7 +45,7 @@ public class DecoratingService implements Service {
      * Returns the {@link Service} being decorated.
      */
     @SuppressWarnings("unchecked")
-    protected final <T extends Service> T delegate() {
+    protected final <T extends Service<? super T_I, ? extends T_O>> T delegate() {
         return (T) delegate;
     }
 
@@ -53,12 +55,7 @@ public class DecoratingService implements Service {
     }
 
     @Override
-    public Response serve(ServiceRequestContext ctx, Request req) throws Exception {
-        return delegate().serve(ctx, req);
-    }
-
-    @Override
-    public final <T extends Service> Optional<T> as(Class<T> serviceType) {
+    public final <T extends Service<?, ?>> Optional<T> as(Class<T> serviceType) {
         final Optional<T> result = Service.super.as(serviceType);
         return result.isPresent() ? result : delegate.as(serviceType);
     }
