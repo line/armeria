@@ -68,6 +68,7 @@ public interface HttpVfs {
     /**
      * Finds the file at the specified {@code path}.
      *
+     *
      * @param path an absolute path whose component separator is {@code '/'}
      *
      * @return the {@link Entry} of the file at the specified {@code path} if found.
@@ -214,23 +215,39 @@ public interface HttpVfs {
      */
     final class ByteArrayEntry extends AbstractEntry {
 
-        private final long lastModifiedMillis = System.currentTimeMillis();
+        private final long lastModifiedMillis;
         private final HttpData content;
 
         /**
          * Creates a new instance with the specified {@code path} and byte array.
          */
         public ByteArrayEntry(String path, byte[] content) {
+            this(path, content, System.currentTimeMillis());
+        }
+
+        /**
+         * Creates a new instance with the specified {@code path} and byte array.
+         */
+        public ByteArrayEntry(String path, byte[] content, long lastModifiedMillis) {
             super(path);
             this.content = HttpData.of(requireNonNull(content, "content"));
+            this.lastModifiedMillis = lastModifiedMillis;
         }
 
         /**
          * Creates a new instance with the specified {@code path}, {@code mediaType} and byte array.
          */
         public ByteArrayEntry(String path, MediaType mediaType, byte[] content) {
+            this(path, mediaType, content, System.currentTimeMillis());
+        }
+
+        /**
+         * Creates a new instance with the specified {@code path}, {@code mediaType} and byte array.
+         */
+        public ByteArrayEntry(String path, MediaType mediaType, byte[] content, long lastModifiedMillis) {
             super(path, mediaType);
             this.content = HttpData.of(requireNonNull(content, "content"));
+            this.lastModifiedMillis = lastModifiedMillis;
         }
 
         @Override

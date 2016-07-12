@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client.logging;
 
-import static com.linecorp.armeria.common.logging.MessageLogConsumer.invokeOnRequest;
-import static com.linecorp.armeria.common.logging.MessageLogConsumer.invokeOnResponse;
+import static com.linecorp.armeria.common.logging.MessageLogConsumerInvoker.invokeOnRequest;
+import static com.linecorp.armeria.common.logging.MessageLogConsumerInvoker.invokeOnResponse;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.Client;
