@@ -354,12 +354,12 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 120000)
     public void testStreamingRequestWithSlowService() throws Exception {
-        final int oldNumSuspendedReads = InboundTrafficController.numSuspendedReads();
+        final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
         testStreamingRequest("/slow_count");
         // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
         // If the number of deferred reads did not increase and the testStreaming() above did not fail,
         // it probably means the client failed to produce enough amount of traffic.
-        assertThat(InboundTrafficController.numSuspendedReads(), is(greaterThan(oldNumSuspendedReads)));
+        assertThat(InboundTrafficController.numDeferredReads(), is(greaterThan(oldNumDeferredReads)));
     }
 
     private void testStreamingRequest(String path) throws InterruptedException, ExecutionException {
@@ -398,12 +398,12 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 120000)
     public void testStreamingResponseWithSlowClient() throws Exception {
-        final int oldNumSuspendedReads = InboundTrafficController.numSuspendedReads();
+        final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
         testStreamingResponse(true);
         // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
         // If the number of deferred reads did not increase and the testStreaming() above did not fail,
         // it probably means the client failed to produce enough amount of traffic.
-        assertThat(InboundTrafficController.numSuspendedReads(), is(greaterThan(oldNumSuspendedReads)));
+        assertThat(InboundTrafficController.numDeferredReads(), is(greaterThan(oldNumDeferredReads)));
     }
 
 

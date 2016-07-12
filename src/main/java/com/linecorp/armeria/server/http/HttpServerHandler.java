@@ -287,7 +287,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final EventLoop eventLoop = channel.eventLoop();
 
-        // Account the number of unfinished requests and clean up the request stream when response stream ends.
+        // Keep track of the number of unfinished requests and
+        // clean up the request stream when response stream ends.
         unfinishedRequests++;
         res.closeFuture().handle(voidFunction((ret, cause) -> {
             req.abort();
@@ -415,7 +416,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             write(ctx, req, res).addListener(CLOSE_ON_FAILURE);
         } else {
             // Note that it is perfectly fine not to set the 'content-length' header to the last response
-            // of an HTTP/1 connection. We just set it to work around overly strict HTTP clients that always
+            // of an HTTP/1 connection. We set it anyway to work around overly strict HTTP clients that always
             // require a 'content-length' header for non-chunked responses.
             setContentLength(req, res);
             write(ctx, req, res).addListener(CLOSE);

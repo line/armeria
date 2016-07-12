@@ -18,17 +18,21 @@ package com.linecorp.armeria.server.http.file;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Clock;
+
 /**
  * {@link HttpFileService} configuration.
  */
 public final class HttpFileServiceConfig {
 
     private final HttpVfs vfs;
+    private final Clock clock;
     private final int maxCacheEntries;
     private final int maxCacheEntrySizeBytes;
 
-    HttpFileServiceConfig(HttpVfs vfs, int maxCacheEntries, int maxCacheEntrySizeBytes) {
+    HttpFileServiceConfig(HttpVfs vfs, Clock clock, int maxCacheEntries, int maxCacheEntrySizeBytes) {
         this.vfs = requireNonNull(vfs, "vfs");
+        this.clock = requireNonNull(clock, "clock");
         this.maxCacheEntries = validateMaxCacheEntries(maxCacheEntries);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
     }
@@ -56,6 +60,13 @@ public final class HttpFileServiceConfig {
     }
 
     /**
+     * Returns the {@link Clock} the provides the current date and time to an {@link HttpFileService}.
+     */
+    public Clock clock() {
+        return clock;
+    }
+
+    /**
      * Returns the maximum allowed number of cached file entries.
      */
     public int maxCacheEntries() {
@@ -72,13 +83,15 @@ public final class HttpFileServiceConfig {
 
     @Override
     public String toString() {
-        return toString(this, vfs(), maxCacheEntries(), maxCacheEntrySizeBytes());
+        return toString(this, vfs(), clock(), maxCacheEntries(), maxCacheEntrySizeBytes());
     }
 
-    static String toString(Object holder, HttpVfs vfs, int maxCacheEntries, int maxCacheEntrySizeBytes) {
+    static String toString(Object holder, HttpVfs vfs, Clock clock,
+                           int maxCacheEntries, int maxCacheEntrySizeBytes) {
 
         return holder.getClass().getSimpleName() +
                "(vfs: " + vfs +
+               ", clock: " + clock +
                ", maxCacheEntries: " + maxCacheEntries +
                ", maxCacheEntrySizeBytes: " + maxCacheEntrySizeBytes + ')';
     }

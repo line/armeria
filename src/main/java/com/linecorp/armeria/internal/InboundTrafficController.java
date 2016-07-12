@@ -31,7 +31,7 @@ public final class InboundTrafficController extends AtomicInteger {
 
     private static int numDeferredReads;
 
-    public static int numSuspendedReads() {
+    public static int numDeferredReads() {
         return numDeferredReads;
     }
 

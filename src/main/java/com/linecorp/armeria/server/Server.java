@@ -312,10 +312,9 @@ public final class Server implements AutoCloseable {
                 return;
             case STARTING:
                 // Wait until the start process is finished, and then try again.
-                state.future.handle((ret, cause) -> {
+                state.future.handle(voidFunction((ret, cause) -> {
                     stop(future);
-                    return null;
-                }).exceptionally(CompletionActions::log);
+                }));
                 return;
             }
         }
