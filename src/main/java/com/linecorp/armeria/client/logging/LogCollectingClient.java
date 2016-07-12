@@ -34,17 +34,17 @@ import com.linecorp.armeria.server.Service;
 /**
  * A decorator {@link Service} that collects {@link RequestLog} and {@link ResponseLog} for every request.
  */
-public class LogCollectingClient extends DecoratingClient {
+public class LogCollectingClient<I extends Request, O extends Response> extends DecoratingClient<I, O, I, O> {
 
     private final MessageLogConsumer consumer;
 
-    public LogCollectingClient(Client delegate, MessageLogConsumer consumer) {
+    public LogCollectingClient(Client<? super I, ? extends O> delegate, MessageLogConsumer consumer) {
         super(delegate);
         this.consumer = requireNonNull(consumer, "consumer");
     }
 
     @Override
-    public Response execute(ClientRequestContext ctx, Request req) throws Exception {
+    public O execute(ClientRequestContext ctx, I req) throws Exception {
         ctx.requestLogFuture()
            .thenAccept(log -> invokeOnRequest(consumer, ctx, log))
            .exceptionally(CompletionActions::log);

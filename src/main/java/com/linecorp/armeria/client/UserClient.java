@@ -25,15 +25,15 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.EventLoop;
 
-public abstract class UserClient<T> implements ClientOptionDerivable<T> {
+public abstract class UserClient<T, I extends Request, O extends Response> implements ClientOptionDerivable<T> {
 
-    private final Client delegate;
+    private final Client<I, O> delegate;
     private final Supplier<EventLoop> eventLoopSupplier;
     private final SessionProtocol sessionProtocol;
     private final ClientOptions options;
     private final Endpoint endpoint;
 
-    protected UserClient(Client delegate, Supplier<EventLoop> eventLoopSupplier,
+    protected UserClient(Client<I, O> delegate, Supplier<EventLoop> eventLoopSupplier,
                          SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
 
         this.delegate = delegate;
@@ -44,7 +44,7 @@ public abstract class UserClient<T> implements ClientOptionDerivable<T> {
     }
 
     @SuppressWarnings("unchecked")
-    protected final <U extends Client> U delegate() {
+    protected final <U extends Client<I, O>> U delegate() {
         return (U) delegate;
     }
 
@@ -64,20 +64,18 @@ public abstract class UserClient<T> implements ClientOptionDerivable<T> {
         return endpoint;
     }
 
-    protected final <U extends Response> U execute(
-            String method, String path, Request req, Function<Throwable, U> fallback) {
+    protected final O execute(
+            String method, String path, I req, Function<Throwable, O> fallback) {
         return execute(eventLoop(), method, path, req, fallback);
     }
 
-    protected final <U extends Response> U execute(
-            EventLoop eventLoop, String method, String path, Request req, Function<Throwable, U> fallback) {
+    protected final O execute(
+            EventLoop eventLoop, String method, String path, I req, Function<Throwable, O> fallback) {
 
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop, sessionProtocol, endpoint, method, path, options, req);
         try {
-            @SuppressWarnings("unchecked")
-            final U res = (U) delegate().execute(ctx, req);
-            return res;
+            return delegate().execute(ctx, req);
         } catch (Throwable cause) {
             ctx.responseLogBuilder().end(cause);
             return fallback.apply(cause);
@@ -96,6 +94,6 @@ public abstract class UserClient<T> implements ClientOptionDerivable<T> {
         return newInstance(delegate(), eventLoopSupplier, sessionProtocol(), options, endpoint());
     }
 
-    protected abstract T newInstance(Client delegate, Supplier<EventLoop> eventLoopSupplier,
+    protected abstract T newInstance(Client<I, O> delegate, Supplier<EventLoop> eventLoopSupplier,
                                      SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint);
 }

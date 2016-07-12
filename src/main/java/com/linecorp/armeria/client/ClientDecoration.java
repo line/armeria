@@ -17,76 +17,71 @@
 package com.linecorp.armeria.client;
 
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientDecoration.Entry;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
-public final class ClientDecoration implements Iterable<Entry> {
+public final class ClientDecoration {
 
     public static final ClientDecoration NONE = new ClientDecoration(Collections.emptyList());
 
-    public static ClientDecoration of(
-            Class<? extends Request> requestType, Class<? extends Response> responseType,
-            Function<? extends Client, ? extends Client> decorator) {
+    public static <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
+                   I extends Request, O extends Response>
+    ClientDecoration of(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
         return new ClientDecorationBuilder().add(requestType, responseType, decorator).build();
     }
 
-    private final List<Entry> entries;
+    private final List<Entry<?, ?>> entries;
 
-    ClientDecoration(List<Entry> entries) {
+    ClientDecoration(List<Entry<?, ?>> entries) {
         this.entries = Collections.unmodifiableList(entries);
     }
 
-    @Override
-    public Iterator<Entry> iterator() {
-        return entries.iterator();
-    }
+    public <I extends Request, O extends Response> Client<I, O> decorate(
+            Class<I> requestType, Class<O> responseType, Client<I, O> client) {
 
-    public Client decorate(Class<? extends Request> requestType,
-                           Class<? extends Response> responseType, Client client) {
-
-        for (Entry e : this) {
+        for (Entry<?, ?> e : entries) {
             if (!requestType.isAssignableFrom(e.requestType()) ||
                 !responseType.isAssignableFrom(e.responseType())) {
                 continue;
             }
 
-            final Function<Client, Client> decorator = e.decorator();
+            @SuppressWarnings("unchecked")
+            final Function<Client<? super I, ? extends O>, Client<I, O>> decorator = ((Entry<I, O>) e).decorator();
             client = decorator.apply(client);
         }
 
         return client;
     }
 
-    public static final class Entry {
-        private final Class<? extends Request> requestType;
-        private final Class<? extends Response> responseType;
-        private final Function<? extends Client, ? extends Client> decorator;
+    static final class Entry<I extends Request, O extends Response> {
+        private final Class<I> requestType;
+        private final Class<O> responseType;
+        private final Function<Client<? super I, ? extends O>, Client<I, O>> decorator;
 
-        Entry(Class<? extends Request> requestType, Class<? extends Response> responseType,
-              Function<? extends Client, ? extends Client> decorator) {
+        Entry(Class<I> requestType, Class<O> responseType,
+              Function<? extends Client<? super I, ? extends O>, ? extends Client<I, O>> decorator) {
             this.requestType = requestType;
             this.responseType = responseType;
-            this.decorator = decorator;
+
+            @SuppressWarnings("unchecked")
+            Function<Client<? super I, ? extends O>, Client<I, O>> castDecorator =
+                    (Function<Client<? super I, ? extends O>, Client<I, O>>) decorator;
+            this.decorator = castDecorator;
         }
 
-        @SuppressWarnings("unchecked")
-        public <I> Class<I> requestType() {
-            return (Class<I>) requestType;
+        public Class<I> requestType() {
+            return requestType;
         }
 
-        @SuppressWarnings("unchecked")
-        public <O> Class<O> responseType() {
-            return (Class<O>) responseType;
+        public Class<O> responseType() {
+            return responseType;
         }
 
-        @SuppressWarnings("unchecked")
-        public Function<Client, Client> decorator() {
-            return (Function<Client, Client>) decorator;
+        public Function<Client<? super I, ? extends O>, Client<I, O>> decorator() {
+            return decorator;
         }
 
         @Override

@@ -24,14 +24,15 @@ import com.linecorp.armeria.common.Response;
 /**
  * Decorates a {@link Client}.
  */
-public class DecoratingClient implements Client {
+public abstract class DecoratingClient<T_I extends Request, T_O extends Response,
+                                       R_I extends Request, R_O extends Response> implements Client<R_I, R_O> {
 
-    private final Client delegate;
+    private final Client<? super T_I, ? extends T_O> delegate;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected DecoratingClient(Client delegate) {
+    protected DecoratingClient(Client<? super T_I, ? extends T_O> delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
@@ -39,13 +40,8 @@ public class DecoratingClient implements Client {
      * Returns the {@link Client} being decorated.
      */
     @SuppressWarnings("unchecked")
-    protected final <T extends Client> T delegate() {
+    protected final <T extends Client<? super T_I, ? extends T_O>> T delegate() {
         return (T) delegate;
-    }
-
-    @Override
-    public Response execute(ClientRequestContext ctx, Request req) throws Exception {
-        return delegate().execute(ctx, req);
     }
 
     @Override

@@ -49,17 +49,18 @@ import com.linecorp.armeria.common.util.CompletionActions;
  * <p>
  * This class depends on <a href="https://github.com/openzipkin/brave">Brave</a> distributed tracing library.
  */
-public abstract class AbstractTracingClient extends DecoratingClient {
+public abstract class AbstractTracingClient<I extends Request, O extends Response>
+        extends DecoratingClient<I, O, I, O> {
 
     private final ClientTracingInterceptor clientInterceptor;
 
-    protected AbstractTracingClient(Client delegate, Brave brave) {
+    protected AbstractTracingClient(Client<? super I, ? extends O> delegate, Brave brave) {
         super(delegate);
         clientInterceptor = new ClientTracingInterceptor(brave);
     }
 
     @Override
-    public Response execute(ClientRequestContext ctx, Request req) throws Exception {
+    public O execute(ClientRequestContext ctx, I req) throws Exception {
         // create new request adapter to catch generated spanId
         final String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method();
         final InternalClientRequestAdapter requestAdapter =
@@ -79,7 +80,7 @@ public abstract class AbstractTracingClient extends DecoratingClient {
         // So we have to clear the span from current thread.
         clientInterceptor.clearSpan();
 
-        final Response res = delegate().execute(ctx, req);
+        final O res = delegate().execute(ctx, req);
 
         ctx.requestLogFuture().thenAcceptBoth(
                 res.closeFuture(),
@@ -99,10 +100,10 @@ public abstract class AbstractTracingClient extends DecoratingClient {
      * Returns client side annotations that should be added to span.
      */
     @SuppressWarnings("UnusedParameters")
-    protected List<KeyValueAnnotation> annotations(ClientRequestContext ctx, RequestLog log, Response res) {
+    protected List<KeyValueAnnotation> annotations(ClientRequestContext ctx, RequestLog req, O res) {
 
         final KeyValueAnnotation clientUriAnnotation = KeyValueAnnotation.create(
-                "client.uri", log.scheme().uriText() + "://" + log.host() + ctx.path() + '#' + log.method());
+                "client.uri", req.scheme().uriText() + "://" + req.host() + ctx.path() + '#' + req.method());
 
         final CompletableFuture<?> f = res.closeFuture();
         if (!f.isDone()) {
@@ -127,9 +128,9 @@ public abstract class AbstractTracingClient extends DecoratingClient {
     }
 
     protected ClientResponseAdapter createResponseAdapter(
-            ClientRequestContext ctx, RequestLog log, Response res) {
+            ClientRequestContext ctx, RequestLog req, O res) {
 
-        final List<KeyValueAnnotation> annotations = annotations(ctx, log, res);
+        final List<KeyValueAnnotation> annotations = annotations(ctx, req, res);
         return () -> annotations;
     }
 

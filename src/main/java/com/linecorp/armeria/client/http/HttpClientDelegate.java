@@ -32,7 +32,6 @@ import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandlerAdapter;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -47,7 +46,7 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
-final class HttpClientDelegate implements Client {
+final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     private static final KeyedChannelPoolHandlerAdapter<PoolKey> NOOP_POOL_HANDLER =
             new KeyedChannelPoolHandlerAdapter<>();
@@ -68,8 +67,7 @@ final class HttpClientDelegate implements Client {
     }
 
     @Override
-    public HttpResponse execute(ClientRequestContext ctx, Request request) throws Exception {
-        final HttpRequest req = request.cast();
+    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Endpoint endpoint = ctx.endpoint().resolve();
         autoFillHeaders(ctx, endpoint, req);
 

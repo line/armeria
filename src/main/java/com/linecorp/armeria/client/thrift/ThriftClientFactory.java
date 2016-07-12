@@ -33,6 +33,8 @@ import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 
@@ -76,7 +78,7 @@ public class ThriftClientFactory extends DecoratingClientFactory {
         final Scheme scheme = validate(uri, clientType, options);
         final SerializationFormat serializationFormat = scheme.serializationFormat();
 
-        final Client delegate = options.decoration().decorate(
+        final Client<ThriftCall, ThriftReply> delegate = options.decoration().decorate(
                 ThriftCall.class, ThriftReply.class,
                 new ThriftClientDelegate(newHttpClient(uri, scheme, options),
                                          uri.getPath(), serializationFormat));
@@ -98,12 +100,14 @@ public class ThriftClientFactory extends DecoratingClientFactory {
         }
     }
 
-    private Client newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
+    private Client<HttpRequest, HttpResponse> newHttpClient(URI uri, Scheme scheme, ClientOptions options) {
         try {
-            return delegate().newClient(
+            @SuppressWarnings("unchecked")
+            Client<HttpRequest, HttpResponse> client = delegate().newClient(
                     new URI(Scheme.of(SerializationFormat.NONE, scheme.sessionProtocol()).uriText(),
                             uri.getAuthority(), null, null, null),
                     Client.class, options);
+            return client;
         } catch (URISyntaxException e) {
             throw new Error(e); // Should never happen.
         }

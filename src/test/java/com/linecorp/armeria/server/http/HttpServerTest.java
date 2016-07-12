@@ -58,8 +58,6 @@ import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
@@ -481,9 +479,9 @@ public class HttpServerTest extends AbstractServerTest {
 
         builder.factory(clientFactory);
         builder.decorator(HttpRequest.class, HttpResponse.class,
-                          delegate -> new DecoratingClient(delegate) {
+                          delegate -> new DecoratingClient<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(delegate) {
             @Override
-            public Response execute(ClientRequestContext ctx, Request req) throws Exception {
+            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
                 ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
                 ctx.setResponseTimeoutMillis(clientResponseTimeoutMillis);
                 ctx.setMaxResponseLength(clientMaxResponseLength);

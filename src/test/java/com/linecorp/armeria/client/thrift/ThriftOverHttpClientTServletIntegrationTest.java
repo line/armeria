@@ -276,7 +276,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
         return new ClientBuilder(uri)
                 .decorator(ThriftCall.class, ThriftReply.class,
-                           c -> new SessionProtocolCapturer(c, sessionProtocol))
+                           c -> new SessionProtocolCapturer<>(c, sessionProtocol))
                 .build(HelloService.Iface.class);
     }
 
@@ -296,19 +296,20 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         return ((NetworkConnector) http2server.getConnectors()[0]).getLocalPort();
     }
 
-    private static class SessionProtocolCapturer extends DecoratingClient {
+    private static class SessionProtocolCapturer<I extends Request, O extends Response>
+            extends DecoratingClient<I, O, I, O> {
 
         private final AtomicReference<SessionProtocol> sessionProtocol;
 
         @SuppressWarnings("unchecked")
-        SessionProtocolCapturer(Client delegate,
+        SessionProtocolCapturer(Client<? super I, ? extends O> delegate,
                                 AtomicReference<SessionProtocol> sessionProtocol) {
             super(delegate);
             this.sessionProtocol = sessionProtocol;
         }
 
         @Override
-        public Response execute(ClientRequestContext ctx, Request req) throws Exception {
+        public O execute(ClientRequestContext ctx, I req) throws Exception {
             ctx.requestLogFuture()
                .thenAccept(log -> sessionProtocol.set(log.scheme().sessionProtocol()))
                .exceptionally(CompletionActions::log);

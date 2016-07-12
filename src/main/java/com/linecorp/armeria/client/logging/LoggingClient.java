@@ -22,7 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -31,18 +33,18 @@ import com.linecorp.armeria.common.logging.ResponseLog;
 /**
  * Decorates a {@link Client} to log invocation requests and responses.
  */
-public final class LoggingClient extends LogCollectingClient {
+public final class LoggingClient<I extends Request, O extends Response> extends LogCollectingClient<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    public LoggingClient(Client delegate) {
+    public LoggingClient(Client<? super I, ? extends O> delegate) {
         this(delegate, LogLevel.INFO);
     }
 
-    public LoggingClient(Client delegate, LogLevel level) {
+    public LoggingClient(Client<? super I, ? extends O> delegate, LogLevel level) {
         super(delegate, new LoggingConsumer(logger, level));
     }
 

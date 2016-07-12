@@ -89,11 +89,8 @@ public class CircuitBreakerClientTest {
         Function<String, CircuitBreaker> factory = (Function<String, CircuitBreaker>) mock(Function.class);
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
-        Function<Client, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newPerMethodDecorator(factory);
-
         final int COUNT = 2;
-        failFastInvocation(circuitBreaker, decorator, COUNT);
+        failFastInvocation(circuitBreaker, CircuitBreakerClient.newPerMethodDecorator(factory), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("methodA");
@@ -106,11 +103,8 @@ public class CircuitBreakerClientTest {
         Function<String, CircuitBreaker> factory = (Function<String, CircuitBreaker>) mock(Function.class);
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
-        Function<Client, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newPerHostDecorator(factory);
-
         final int COUNT = 2;
-        failFastInvocation(circuitBreaker, decorator, COUNT);
+        failFastInvocation(circuitBreaker, CircuitBreakerClient.newPerHostDecorator(factory), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("dummyhost:8080");
@@ -124,11 +118,8 @@ public class CircuitBreakerClientTest {
         Function<String, CircuitBreaker> factory = (Function<String, CircuitBreaker>) mock(Function.class);
         when(factory.apply(any())).thenReturn(circuitBreaker);
 
-        Function<Client, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newPerHostAndMethodDecorator(factory);
-
         final int COUNT = 2;
-        failFastInvocation(circuitBreaker, decorator, COUNT);
+        failFastInvocation(circuitBreaker, CircuitBreakerClient.newPerHostAndMethodDecorator(factory), COUNT);
 
         verify(circuitBreaker, times(COUNT)).canRequest();
         verify(factory, times(1)).apply("dummyhost:8080#methodA");
@@ -141,11 +132,12 @@ public class CircuitBreakerClientTest {
                 .ticker(ticker)
                 .build();
 
-        Client delegate = mock(Client.class);
+        @SuppressWarnings("unchecked")
+        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        CircuitBreakerClient stub = new CircuitBreakerClient(delegate, mapping);
+        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         stub.execute(ctx, req);
 
@@ -154,13 +146,14 @@ public class CircuitBreakerClientTest {
 
     @Test
     public void testDelegateIfFailToGetCircuitBreaker() throws Exception {
-        Client delegate = mock(Client.class);
+        @SuppressWarnings("unchecked")
+        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> {
             throw Exceptions.clearTrace(new IllegalArgumentException("bug!"));
         };
-        CircuitBreakerClient stub = new CircuitBreakerClient(delegate, mapping);
+        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         stub.execute(ctx, req);
 
@@ -185,12 +178,12 @@ public class CircuitBreakerClientTest {
                 .build();
 
         @SuppressWarnings("unchecked")
-        Client delegate = mock(Client.class);
+        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
         // return failed future
         when(delegate.execute(ctx, req)).thenReturn(failureRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        CircuitBreakerClient stub = new CircuitBreakerClient(delegate, mapping);
+        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -241,14 +234,15 @@ public class CircuitBreakerClientTest {
                 .ticker(ticker)
                 .build();
 
-        Client delegate = mock(Client.class);
+        @SuppressWarnings("unchecked")
+        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
         // Always return failed future for methodA
         when(delegate.execute(ctx, req)).thenReturn(failureRes);
         // Always return success future for methodB
         when(delegate.execute(ctxB, reqB)).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        CircuitBreakerClient stub = new CircuitBreakerClient(delegate, mapping);
+        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -290,14 +284,15 @@ public class CircuitBreakerClientTest {
                         .ticker(ticker)
                         .build();
 
-        Client delegate = mock(Client.class);
+        @SuppressWarnings("unchecked")
+        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
         // Always return failed future for methodA
         when(delegate.execute(ctx, req)).thenReturn(failureRes);
         // Always return success future for methodB
         when(delegate.execute(ctxB, reqB)).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = new KeyedCircuitBreakerMapping<>(KeySelector.METHOD, factory);
-        CircuitBreakerClient stub = new CircuitBreakerClient(delegate, mapping);
+        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         // CLOSED (methodA)
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -343,12 +338,13 @@ public class CircuitBreakerClientTest {
                 .ticker(ticker)
                 .build();
 
-        Client delegate = mock(Client.class);
+        @SuppressWarnings("unchecked")
+        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
         // return failed future
         when(delegate.execute(ctx, req)).thenReturn(failureRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        CircuitBreakerClient stub = new CircuitBreakerClient(delegate, mapping);
+        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -367,18 +363,20 @@ public class CircuitBreakerClientTest {
         assertThat(future1.getCause(), is(not(instanceOf(FailFastException.class))));
     }
 
-    private static void invoke(Function<Client, ? extends Client> decorator) throws Exception {
+    private static void invoke(Function<Client<? super ThriftCall, ? extends ThriftReply>,
+                                        ? extends Client<ThriftCall, ThriftReply>> decorator) throws Exception {
 
-        Client client = mock(Client.class);
-        Client decorated = decorator.apply(client);
+        @SuppressWarnings("unchecked")
+        Client<ThriftCall, ThriftReply> client = mock(Client.class);
+        Client<ThriftCall, ThriftReply> decorated = decorator.apply(client);
 
         decorated.execute(ctx, req);
     }
 
     private static void failFastInvocation(
             CircuitBreaker circuitBreaker,
-            Function<Client, ? extends Client> decorator,
-            int count) throws Exception {
+            Function<Client<? super ThriftCall, ? extends ThriftReply>,
+                     ? extends Client<ThriftCall, ThriftReply>> decorator, int count) throws Exception {
 
         for (int i = 0; i < count; i++) {
             try {
