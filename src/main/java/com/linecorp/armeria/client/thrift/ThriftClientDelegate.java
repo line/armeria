@@ -40,7 +40,6 @@ import org.apache.thrift.transport.TTransportException;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.InvalidResponseException;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
@@ -48,6 +47,7 @@ import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -59,16 +59,16 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
 
-final class ThriftClientDelegate implements Client {
+final class ThriftClientDelegate implements Client<ThriftCall, ThriftReply> {
 
-    private final Client httpClient;
+    private final Client<HttpRequest, HttpResponse> httpClient;
     private final String path;
     private final SerializationFormat serializationFormat;
     private final TProtocolFactory protocolFactory;
     private final String mediaType;
     private final Map<Class<?>, ThriftServiceMetadata> metadataMap = new ConcurrentHashMap<>();
 
-    ThriftClientDelegate(Client httpClient, String path,
+    ThriftClientDelegate(Client<HttpRequest, HttpResponse> httpClient, String path,
                          SerializationFormat serializationFormat) {
 
         this.httpClient = httpClient;
@@ -79,8 +79,7 @@ final class ThriftClientDelegate implements Client {
     }
 
     @Override
-    public ThriftReply execute(ClientRequestContext ctx, Request req) throws Exception {
-        final ThriftCall call = req.cast();
+    public ThriftReply execute(ClientRequestContext ctx, ThriftCall call) throws Exception {
         final int seqId = call.seqId();
         final String method = call.method();
         final List<Object> args = call.params();
@@ -119,7 +118,7 @@ final class ThriftClientDelegate implements Client {
             httpReq.close();
 
             final CompletableFuture<AggregatedHttpMessage> future =
-                    ((HttpResponse) httpClient.execute(ctx, httpReq)).aggregate();
+                    httpClient.execute(ctx, httpReq).aggregate();
 
             future.handle(voidFunction((res, cause) -> {
                 if (cause != null) {

@@ -154,9 +154,9 @@ public final class ClientBuilder {
     /**
      * Adds the specified {@code decorator}.
      */
-    public ClientBuilder decorator(Class<? extends Request> requestType,
-                                   Class<? extends Response> responseType,
-                                   Function<? extends Client, ? extends Client> decorator) {
+    public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
+            I extends Request, O extends Response>
+    ClientBuilder decorator(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
 
         if (options.containsKey(ClientOption.DECORATION)) {
             throw new IllegalArgumentException(

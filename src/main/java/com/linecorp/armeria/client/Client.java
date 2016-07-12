@@ -20,6 +20,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 @FunctionalInterface
-public interface Client {
-    Response execute(ClientRequestContext ctx, Request req) throws Exception;
+public interface Client<I extends Request, O extends Response> {
+    O execute(ClientRequestContext ctx, I req) throws Exception;
 }

@@ -29,11 +29,11 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 
 import io.netty.channel.EventLoop;
 
-final class DefaultThriftClient extends UserClient<ThriftClient> implements ThriftClient {
+final class DefaultThriftClient extends UserClient<ThriftClient, ThriftCall, ThriftReply> implements ThriftClient {
 
     private final AtomicInteger nextSeqId = new AtomicInteger();
 
-    DefaultThriftClient(Client delegate, Supplier<EventLoop> eventLoopSupplier,
+    DefaultThriftClient(Client<ThriftCall, ThriftReply> delegate, Supplier<EventLoop> eventLoopSupplier,
                         SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
 
         super(delegate, eventLoopSupplier, sessionProtocol, options, endpoint);
@@ -47,7 +47,7 @@ final class DefaultThriftClient extends UserClient<ThriftClient> implements Thri
 
     @Override
     protected ThriftClient newInstance(
-            Client delegate, Supplier<EventLoop> eventLoopSupplier,
+            Client<ThriftCall, ThriftReply> delegate, Supplier<EventLoop> eventLoopSupplier,
             SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
 
         return new DefaultThriftClient(delegate, eventLoopSupplier, sessionProtocol, options, endpoint);

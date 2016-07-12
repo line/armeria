@@ -112,10 +112,11 @@ public class TracingClientTest {
         ctx.requestLogBuilder().start(mock(Channel.class), SessionProtocol.H2C, "localhost", "POST", "/");
         ctx.requestLogBuilder().end();
 
-        Client delegate = mock(Client.class);
+        @SuppressWarnings("unchecked")
+        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
         when(delegate.execute(any(), any())).thenReturn(res);
 
-        AbstractTracingClient stub = new TracingClientImpl(delegate, brave);
+        TracingClientImpl stub = new TracingClientImpl(delegate, brave);
 
         // do invoke
         ThriftReply actualRes = stub.execute(ctx, req).cast();
@@ -127,9 +128,9 @@ public class TracingClientTest {
         return spanCollector;
     }
 
-    private static class TracingClientImpl extends AbstractTracingClient {
+    private static class TracingClientImpl extends AbstractTracingClient<ThriftCall, ThriftReply> {
 
-        TracingClientImpl(Client delegate, Brave brave) {
+        TracingClientImpl(Client<ThriftCall, ThriftReply> delegate, Brave brave) {
             super(delegate, brave);
         }
 

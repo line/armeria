@@ -35,7 +35,8 @@ import com.linecorp.armeria.common.util.CompletionActions;
 /**
  * A {@link Client} decorator that handles failures of remote invocation based on circuit breaker pattern.
  */
-public final class CircuitBreakerClient extends DecoratingClient {
+public final class CircuitBreakerClient<I extends Request, O extends Response>
+        extends DecoratingClient<I, O, I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(CircuitBreakerClient.class);
 
@@ -47,7 +48,9 @@ public final class CircuitBreakerClient extends DecoratingClient {
      *
      * @param circuitBreaker The {@link CircuitBreaker} instance to be used
      */
-    public static Function<Client, CircuitBreakerClient> newDecorator(CircuitBreaker circuitBreaker) {
+    public static <I extends Request, O extends Response>
+    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    newDecorator(CircuitBreaker circuitBreaker) {
         return newDecorator((ctx, req) -> circuitBreaker);
     }
 
@@ -56,7 +59,9 @@ public final class CircuitBreakerClient extends DecoratingClient {
      *
      * @param factory A function that takes a method name and creates a new {@link CircuitBreaker}.
      */
-    public static Function<Client, CircuitBreakerClient> newPerMethodDecorator(Function<String, CircuitBreaker> factory) {
+    public static <I extends Request, O extends Response>
+    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    newPerMethodDecorator(Function<String, CircuitBreaker> factory) {
         return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.METHOD, factory));
     }
 
@@ -65,7 +70,9 @@ public final class CircuitBreakerClient extends DecoratingClient {
      *
      * @param factory A function that takes a host name and creates a new {@link CircuitBreaker}.
      */
-    public static Function<Client, CircuitBreakerClient> newPerHostDecorator(Function<String, CircuitBreaker> factory) {
+    public static <I extends Request, O extends Response>
+    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    newPerHostDecorator(Function<String, CircuitBreaker> factory) {
         return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST, factory));
     }
 
@@ -74,27 +81,30 @@ public final class CircuitBreakerClient extends DecoratingClient {
      *
      * @param factory A function that takes a host+method name and creates a new {@link CircuitBreaker}.
      */
-    public static Function<Client, CircuitBreakerClient> newPerHostAndMethodDecorator(
-            Function<String, CircuitBreaker> factory) {
+    public static <I extends Request, O extends Response>
+    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory) {
         return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST_AND_METHOD, factory));
     }
 
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerMapping}.
      */
-    public static Function<Client, CircuitBreakerClient> newDecorator(CircuitBreakerMapping mapping) {
-        return delegate -> new CircuitBreakerClient(delegate, mapping);
+    public static <I extends Request, O extends Response>
+    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    newDecorator(CircuitBreakerMapping mapping) {
+        return delegate -> new CircuitBreakerClient<>(delegate, mapping);
     }
 
     private final CircuitBreakerMapping mapping;
 
-    CircuitBreakerClient(Client delegate, CircuitBreakerMapping mapping) {
+    CircuitBreakerClient(Client<? super I, ? extends O> delegate, CircuitBreakerMapping mapping) {
         super(delegate);
         this.mapping = requireNonNull(mapping, "mapping");
     }
 
     @Override
-    public Response execute(ClientRequestContext ctx, Request req) throws Exception {
+    public O execute(ClientRequestContext ctx, I req) throws Exception {
 
         final CircuitBreaker circuitBreaker;
         try {
@@ -105,7 +115,7 @@ public final class CircuitBreakerClient extends DecoratingClient {
         }
 
         if (circuitBreaker.canRequest()) {
-            final Response response;
+            final O response;
             try {
                 response = delegate().execute(ctx, req);
             } catch (Throwable cause) {

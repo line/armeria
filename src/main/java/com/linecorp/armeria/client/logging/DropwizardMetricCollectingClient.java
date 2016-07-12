@@ -21,9 +21,12 @@ import java.util.function.Function;
 import com.codahale.metrics.MetricRegistry;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.DropwizardMetricConsumer;
 
-public final class DropwizardMetricCollectingClient extends LogCollectingClient {
+public final class DropwizardMetricCollectingClient<I extends Request, O extends Response>
+        extends LogCollectingClient<I, O> {
 
     /**
      * A {@link Client} decorator that tracks request stats using the Dropwizard metrics library.
@@ -44,14 +47,16 @@ public final class DropwizardMetricCollectingClient extends LogCollectingClient 
      * <p>It is generally recommended to define your own name for the service instead of using something like
      * the Java class to make sure otherwise safe changes like renames don't break metrics.
      */
-    public static Function<Client, DropwizardMetricCollectingClient> newDecorator(
+    public static <I extends Request, O extends Response>
+    Function<Client<? super I, ? extends O>, DropwizardMetricCollectingClient<I, O>> newDecorator(
             MetricRegistry metricRegistry, String metricNamePrefix) {
 
-        return client -> new DropwizardMetricCollectingClient(
+        return client -> new DropwizardMetricCollectingClient<>(
                 client, metricRegistry, metricNamePrefix);
     }
 
-    DropwizardMetricCollectingClient(Client delegate, MetricRegistry metricRegistry, String metricNamePrefix) {
+    DropwizardMetricCollectingClient(Client<? super I, ? extends O> delegate,
+                                     MetricRegistry metricRegistry, String metricNamePrefix) {
         super(delegate, new DropwizardMetricConsumer(metricRegistry, metricNamePrefix));
     }
 }

@@ -28,17 +28,17 @@ import com.linecorp.armeria.common.Response;
 
 public final class ClientDecorationBuilder {
 
-    private final List<Entry> entries = new ArrayList<>();
+    private final List<Entry<?, ?>> entries = new ArrayList<>();
 
-    public ClientDecorationBuilder add(
-            Class<? extends Request> requestType, Class<? extends Response> responseType,
-            Function<? extends Client, ? extends Client> decorator) {
+    public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
+            I extends Request, O extends Response>
+    ClientDecorationBuilder add(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
 
         requireNonNull(requestType, "requestType");
         requireNonNull(responseType, "responseType");
         requireNonNull(decorator, "decorator");
 
-        entries.add(new Entry(requestType, responseType, decorator));
+        entries.add(new Entry<>(requestType, responseType, decorator));
         return this;
     }
 

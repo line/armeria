@@ -34,6 +34,8 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * A {@link Client} decorator that traces HTTP-based remote service invocations.
@@ -41,16 +43,17 @@ import com.linecorp.armeria.common.http.HttpHeaders;
  * This decorator puts trace data into HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  */
-public class HttpTracingClient extends AbstractTracingClient {
+public class HttpTracingClient extends AbstractTracingClient<HttpRequest, HttpResponse> {
 
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Brave} instance.
      */
-    public static Function<Client, HttpTracingClient> newDecorator(Brave brave) {
+    public static Function<Client<? super HttpRequest, ? extends HttpResponse>, HttpTracingClient>
+    newDecorator(Brave brave) {
         return delegate -> new HttpTracingClient(delegate, brave);
     }
 
-    HttpTracingClient(Client delegate, Brave brave) {
+    HttpTracingClient(Client<? super HttpRequest, ? extends HttpResponse> delegate, Brave brave) {
         super(delegate, brave);
     }
 

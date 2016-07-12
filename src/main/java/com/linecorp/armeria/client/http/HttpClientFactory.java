@@ -66,7 +66,7 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
 
         validateClientType(clientType);
 
-        final Client delegate = options.decoration().decorate(
+        final Client<HttpRequest, HttpResponse> delegate = options.decoration().decorate(
                 HttpRequest.class, HttpResponse.class, new HttpClientDelegate(baseBootstrap(), options()));
 
         if (clientType == Client.class) {

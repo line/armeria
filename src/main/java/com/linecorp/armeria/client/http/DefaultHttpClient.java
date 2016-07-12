@@ -34,9 +34,9 @@ import com.linecorp.armeria.common.http.HttpResponse;
 
 import io.netty.channel.EventLoop;
 
-final class DefaultHttpClient extends UserClient<HttpClient> implements HttpClient {
+final class DefaultHttpClient extends UserClient<HttpClient, HttpRequest, HttpResponse> implements HttpClient {
 
-    DefaultHttpClient(Client delegate, Supplier<EventLoop> eventLoopSupplier,
+    DefaultHttpClient(Client<HttpRequest, HttpResponse> delegate, Supplier<EventLoop> eventLoopSupplier,
                       SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
         super(delegate, eventLoopSupplier, sessionProtocol, options, endpoint);
     }
@@ -87,7 +87,7 @@ final class DefaultHttpClient extends UserClient<HttpClient> implements HttpClie
 
     @Override
     protected HttpClient newInstance(
-            Client delegate, Supplier<EventLoop> eventLoopSupplier,
+            Client<HttpRequest, HttpResponse> delegate, Supplier<EventLoop> eventLoopSupplier,
             SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
 
         return new DefaultHttpClient(delegate, eventLoopSupplier, sessionProtocol, options, endpoint);
