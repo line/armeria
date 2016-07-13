@@ -87,7 +87,7 @@
     <metrics.version>3.1.2</metrics.version>
     <netty.version>4.1.2.Final</netty.version>
     <slf4j.version>1.7.21</slf4j.version>
-    <tomcat.version>8.0.36</tomcat.version>
+    <tomcat.version>8.5.4</tomcat.version>
     <jetty.alpnAgent.version>2.0.3</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
@@ -181,12 +181,6 @@
     <dependency>
       <groupId>org.apache.tomcat.embed</groupId>
       <artifactId>tomcat-embed-el</artifactId>
-      <version>${tomcat.version}</version>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.tomcat.embed</groupId>
-      <artifactId>tomcat-embed-logging-log4j</artifactId>
       <version>${tomcat.version}</version>
       <optional>true</optional>
     </dependency>
@@ -550,6 +544,30 @@
             <exclude>**/package-info.java</exclude>
           </excludes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.gmaven</groupId>
+        <artifactId>groovy-maven-plugin</artifactId>
+        <version>2.0</version>
+        <executions>
+          <execution>
+            <id>tomcat80-compat</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <source>${basedir}/src/build/tomcat80-compat.groovy</source>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>5.1</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>

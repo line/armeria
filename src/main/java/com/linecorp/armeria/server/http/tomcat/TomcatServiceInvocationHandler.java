@@ -129,8 +129,7 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
             return;
         }
 
-        @SuppressWarnings("deprecation")
-        final Engine engine = (Engine) service.getContainer();
+        final Engine engine = TomcatUtil.engine(service);
         if (engine == null) {
             return;
         }
@@ -198,22 +197,7 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         coyoteRes.setRequest(coyoteReq);
 
         final ByteBuf resContent = ctx.alloc().ioBuffer();
-        coyoteRes.setOutputBuffer(new OutputBuffer() {
-            private long bytesWritten;
-
-            @Override
-            public int doWrite(ByteChunk chunk, Response response) {
-                final int length = chunk.getLength();
-                resContent.writeBytes(chunk.getBuffer(), chunk.getStart(), length);
-                bytesWritten += length;
-                return length;
-            }
-
-            @Override
-            public long getBytesWritten() {
-                return bytesWritten;
-            }
-        });
+        coyoteRes.setOutputBuffer(new OutputBufferImpl(resContent));
 
         blockingTaskExecutor.execute(() -> {
             if (promise.isDone()) {
@@ -272,36 +256,7 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         // Set the content.
         final ByteBuf content = req.content();
         if (content.isReadable()) {
-            coyoteReq.setInputBuffer(new InputBuffer() {
-                private boolean read;
-
-                @Override
-                public int doRead(ByteChunk chunk, Request request) {
-                    if (read) {
-                        // Read only once.
-                        return -1;
-                    }
-
-                    read = true;
-
-                    final int readableBytes = content.readableBytes();
-                    if (content.hasArray()) {
-                        // Note that we do not increase the reference count of the request (and thus its
-                        // content as well) in spite that setBytes() does not perform a deep copy,
-                        // because it will not be released until the invocation is handled completely.
-                        // See HttpServerHandler.handleInvocationResult() for more information.
-                        chunk.setBytes(content.array(),
-                                       content.arrayOffset() + content.readerIndex(),
-                                       readableBytes);
-                    } else {
-                        final byte[] buf = new byte[readableBytes];
-                        content.getBytes(content.readerIndex(), buf);
-                        chunk.setBytes(buf, 0, buf.length);
-                    }
-
-                    return readableBytes;
-                }
-            });
+            coyoteReq.setInputBuffer(new InputBufferImpl(content));
         }
 
         return coyoteReq;
@@ -374,6 +329,76 @@ class TomcatServiceInvocationHandler implements ServiceInvocationHandler {
         @Override
         public void serverStopped(Server server) throws Exception {
             stop();
+        }
+    }
+
+    private static class OutputBufferImpl implements OutputBuffer {
+        private final ByteBuf resContent;
+        private long bytesWritten;
+
+        OutputBufferImpl(ByteBuf resContent) {
+            this.resContent = resContent;
+        }
+
+        @Override
+        public int doWrite(ByteChunk chunk) {
+            final int length = chunk.getLength();
+            resContent.writeBytes(chunk.getBuffer(), chunk.getStart(), length);
+            bytesWritten += length;
+            return length;
+        }
+
+        // NB: Do not remove; required for Tomcat 8 or older.
+        @SuppressWarnings("unused")
+        public int doWrite(ByteChunk chunk, Response response) {
+            return doWrite(chunk);
+        }
+
+        @Override
+        public long getBytesWritten() {
+            return bytesWritten;
+        }
+    }
+
+    private static class InputBufferImpl implements InputBuffer {
+        private final ByteBuf content;
+        private boolean read;
+
+        InputBufferImpl(ByteBuf content) {
+            this.content = content;
+        }
+
+        @Override
+        public int doRead(ByteChunk chunk) {
+            if (read) {
+                // Read only once.
+                return -1;
+            }
+
+            read = true;
+
+            final int readableBytes = content.readableBytes();
+            if (content.hasArray()) {
+                // Note that we do not increase the reference count of the request (and thus its
+                // content as well) in spite that setBytes() does not perform a deep copy,
+                // because it will not be released until the invocation is handled completely.
+                // See HttpServerHandler.handleInvocationResult() for more information.
+                chunk.setBytes(content.array(),
+                               content.arrayOffset() + content.readerIndex(),
+                               readableBytes);
+            } else {
+                final byte[] buf = new byte[readableBytes];
+                content.getBytes(content.readerIndex(), buf);
+                chunk.setBytes(buf, 0, buf.length);
+            }
+
+            return readableBytes;
+        }
+
+        // NB: Do not remove; required for Tomcat 8 or older.
+        @SuppressWarnings("unused")
+        public int doRead(ByteChunk chunk, Request request) {
+            return doRead(chunk);
         }
     }
 }

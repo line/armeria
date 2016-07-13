@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server.http.tomcat;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,7 +26,10 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipFile;
 
+import org.apache.catalina.Container;
+import org.apache.catalina.Engine;
 import org.apache.catalina.LifecycleListener;
+import org.apache.catalina.Service;
 import org.apache.catalina.startup.Constants;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.startup.Tomcat.DefaultWebXmlListener;
@@ -61,6 +66,20 @@ final class TomcatUtil {
         // - The anonymous SecurityManager
         final Class<?>[] classContext = classContextRef.get();
         return Arrays.copyOfRange(classContext, 2, classContext.length);
+    }
+
+    /**
+     * The return type of {@link Service#getContainer()} has been changed from {@link Container} to
+     * {@link Engine} since 8.5. Calling it directly will cause {@link NoSuchMethodError}.
+     */
+    static Engine engine(Service service) {
+        try {
+            Method m = Service.class.getDeclaredMethod("getContainer");
+            return (Engine) m.invoke(service);
+
+        } catch (Exception e) {
+            throw new Error("failed to invoke Service.getContainer()", e);
+        }
     }
 
     static boolean isZip(Path path) {

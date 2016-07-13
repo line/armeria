@@ -45,29 +45,6 @@ public final class TomcatService extends HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(TomcatService.class);
 
-    private static final int TOMCAT_MAJOR_VERSION;
-
-    static {
-        final Pattern pattern = Pattern.compile("^([1-9][0-9]*)\\.");
-        final String version = ServerInfo.getServerNumber();
-        final Matcher matcher = pattern.matcher(version);
-        int tomcatMajorVersion = -1;
-        if (matcher.find()) {
-            try {
-                tomcatMajorVersion = Integer.parseInt(matcher.group(1));
-            } catch (NumberFormatException ignored) {
-                // Probably greater than Integer.MAX_VALUE
-            }
-        }
-
-        TOMCAT_MAJOR_VERSION = tomcatMajorVersion;
-        if (TOMCAT_MAJOR_VERSION > 0) {
-            logger.info("Tomcat version: {} (major: {})", version, TOMCAT_MAJOR_VERSION);
-        } else {
-            logger.info("Tomcat version: {} (major: unknown)", version);
-        }
-    }
-
     /**
      * Creates a new {@link TomcatService} with the web application at the root directory inside the
      * JAR/WAR/directory where the caller class is located at.
@@ -190,7 +167,7 @@ public final class TomcatService extends HttpService {
 
         buf.append("(serviceName: ");
         buf.append(serviceName);
-        if (TOMCAT_MAJOR_VERSION >= 8) {
+        if (TomcatVersion.major() >= 8) {
             buf.append(", catalinaBase: " + server.getCatalinaBase());
         }
         buf.append(')');
