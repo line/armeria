@@ -54,6 +54,10 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
     private final Bootstrap baseBootstrap;
 
     // FIXME(trustin): Reuse idle connections instead of creating a new connection for every event loop.
+    //                 Currently, when a client makes an invocation from a non-I/O thread, it simply chooses
+    //                 an event loop using eventLoopGroup.next(). This makes the client factory to create as
+    //                 many connections as the number of event loops. We don't really do this when there's an
+    //                 idle connection established already regardless of its event loop.
     private final Supplier<EventLoop> eventLoopSupplier =
             () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
 

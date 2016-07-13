@@ -141,7 +141,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                         final ByteBuf data = content.content();
                         final int dataLength = data.readableBytes();
-                        if (dataLength != 0) {
+                        if (dataLength > 0) {
                             final long maxContentLength = res.maxContentLength();
                             if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
                                 fail(ctx, ContentTooLargeException.get());
