@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
  * (Internal use only) {@link MessageLogConsumer} that accepts metric data from {@link DropwizardMetricCollectingClient} or
  * {@link DropwizardMetricCollectingService} and stores it into the {@link MetricRegistry}.
  */
-public class DropwizardMetricConsumer implements MessageLogConsumer {
+public final class DropwizardMetricConsumer implements MessageLogConsumer {
 
     private final MetricRegistry metricRegistry;
     private final String metricNamePrefix;
@@ -46,14 +46,6 @@ public class DropwizardMetricConsumer implements MessageLogConsumer {
         this.metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
         this.metricNamePrefix = requireNonNull(metricNamePrefix, "metricNamePrefix");
         methodRequestMetrics = new ConcurrentHashMap<>();
-    }
-
-    protected final MetricRegistry registry() {
-        return metricRegistry;
-    }
-
-    protected final String namePrefix() {
-        return metricNamePrefix;
     }
 
     @Override
@@ -85,7 +77,7 @@ public class DropwizardMetricConsumer implements MessageLogConsumer {
         }
     }
 
-    protected boolean isSuccess(ResponseLog res) {
+    private static boolean isSuccess(ResponseLog res) {
         if (res.cause() != null) {
             return false;
         }
@@ -104,7 +96,7 @@ public class DropwizardMetricConsumer implements MessageLogConsumer {
                res.attr(ResponseLog.RPC_RESPONSE).get().getCause() == null;
     }
 
-    protected String method(RequestLog log) {
+    private static String method(RequestLog log) {
         if (log.hasAttr(RequestLog.RPC_REQUEST)) {
             return log.attr(RequestLog.RPC_REQUEST).get().method();
         }

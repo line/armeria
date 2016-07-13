@@ -68,7 +68,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final Endpoint endpoint = ctx.endpoint().resolve();
+        final Endpoint endpoint = ctx.endpoint().resolve().withDefaultPort(ctx.sessionProtocol().defaultPort());
         autoFillHeaders(ctx, endpoint, req);
 
         final PoolKey poolKey = new PoolKey(

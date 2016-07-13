@@ -18,7 +18,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import javax.annotation.Nonnull;
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.client.routing.EndpointGroupRegistry;
 
@@ -30,29 +30,8 @@ public final class Endpoint {
             return ofGroup(authority.substring(6));
         }
 
-        final int lastColonIdx = authority.lastIndexOf(':');
-        if (lastColonIdx <= 0) {
-            throw parseFailure(authority);
-        }
-
-        final String host = authority.substring(0, lastColonIdx);
-        final int port;
-        try {
-            port = Integer.parseInt(authority.substring(lastColonIdx + 1));
-        } catch (NumberFormatException ignored) {
-            throw parseFailure(authority);
-        }
-
-        if (port <= 0 || port >= 65536) {
-            throw parseFailure(authority);
-        }
-
-        return of(host, port);
-    }
-
-    @Nonnull
-    private static IllegalArgumentException parseFailure(String authority) {
-        return new IllegalArgumentException("cannot find 'group:' nor valid ':<port>': " + authority);
+        final HostAndPort parsed = HostAndPort.fromString(authority);
+        return new Endpoint(parsed.getHostText(), parsed.hasPort() ? parsed.getPort() : 0, 1000);
     }
 
     public static Endpoint ofGroup(String name) {
@@ -64,11 +43,21 @@ public final class Endpoint {
         return of(host, port, 1000);
     }
 
+    public static Endpoint of(String host) {
+        return new Endpoint(host, 0, 1000);
+    }
+
     // TODO(trustin): Remove weight and make Endpoint a pure endpoint representation.
     //                We could specify an additional attributes such as weight/priority
     //                when adding an Endpoint to an EndpointGroup.
 
     public static Endpoint of(String host, int port, int weight) {
+        requireNonNull(host, "host");
+        validatePort("port", port);
+        if (weight <= 0) {
+            throw new IllegalArgumentException("weight: " + weight + " (expected: > 0)");
+        }
+
         return new Endpoint(host, port, weight);
     }
 
@@ -116,12 +105,45 @@ public final class Endpoint {
 
     public int port() {
         ensureSingle();
+        if (port == 0) {
+            throw new IllegalStateException("port not specified");
+        }
         return port;
+    }
+
+    public int port(int defaultPort) {
+        ensureSingle();
+        validatePort("defaultPort", defaultPort);
+        return port != 0 ? port : defaultPort;
+    }
+
+    public Endpoint withDefaultPort(int defaultPort) {
+        ensureSingle();
+        validatePort("defaultPort", defaultPort);
+
+        return port != 0 ? this : new Endpoint(host(), defaultPort, weight());
     }
 
     public int weight() {
         ensureSingle();
         return weight;
+    }
+
+    public String authority() {
+        String authority = this.authority;
+        if (authority != null) {
+            return authority;
+        }
+
+        if (isGroup()) {
+            authority = "group:" + groupName;
+        } else if (port != 0) {
+            authority = host() + ':' + port;
+        } else {
+            authority = host();
+        }
+
+        return this.authority = authority;
     }
 
     private void ensureGroup() {
@@ -136,19 +158,10 @@ public final class Endpoint {
         }
     }
 
-    public String authority() {
-        String authority = this.authority;
-        if (authority != null) {
-            return authority;
+    private static void validatePort(String name, int port) {
+        if (port <= 0 || port > 65535) {
+            throw new IllegalArgumentException(name + ": " + port + " (expected: 1-65535)");
         }
-
-        if (isGroup()) {
-            authority = "group:" + groupName;
-        } else {
-            authority = host() + ':' + port();
-        }
-
-        return this.authority = authority;
     }
 
     @Override
