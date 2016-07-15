@@ -30,8 +30,8 @@ public final class Endpoint {
             return ofGroup(authority.substring(6));
         }
 
-        final HostAndPort parsed = HostAndPort.fromString(authority);
-        return new Endpoint(parsed.getHostText(), parsed.hasPort() ? parsed.getPort() : 0, 1000);
+        final HostAndPort parsed = HostAndPort.fromString(authority).withDefaultPort(0);
+        return new Endpoint(parsed.getHostText(), parsed.getPort(), 1000);
     }
 
     public static Endpoint ofGroup(String name) {

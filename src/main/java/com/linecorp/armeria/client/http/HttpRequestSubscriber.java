@@ -108,7 +108,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         final EventLoop eventLoop = ctx.channel().eventLoop();
         if (timeoutMillis > 0) {
             timeoutFuture = eventLoop.schedule(
-                    () -> failAndRespond(WriteTimeoutException.get()),
+                    () -> {
+                        if (state != State.DONE) {
+                            failAndRespond(WriteTimeoutException.get());
+                        }
+                    },
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
 
