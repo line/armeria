@@ -172,8 +172,8 @@ abstract class HttpResponseDecoder {
         }
 
         @Override
-        public CompletableFuture<Void> awaitDemandAsync() {
-            return delegate.awaitDemandAsync();
+        public CompletableFuture<Void> onDemand(Runnable task) {
+            return delegate.onDemand(task);
         }
 
         @Override

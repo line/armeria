@@ -460,8 +460,7 @@ public class HttpServerTest extends AbstractServerTest {
             return;
         }
 
-        writer.awaitDemandAsync()
-              .thenRun(() -> stream(writer, remaining, (int) Math.min(remaining, chunkSize)))
+        writer.onDemand(() -> stream(writer, remaining, (int) Math.min(remaining, chunkSize)))
               .exceptionally(cause -> {
                   logger.warn("Unexpected exception:", cause);
                   writer.close(cause);

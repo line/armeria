@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.reactivestreams;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public interface Writer<T> {
@@ -26,11 +27,7 @@ public interface Writer<T> {
     boolean write(T o);
     boolean write(Supplier<? extends T> o);
 
-    CompletableFuture<Void> awaitDemandAsync();
-
-    default void awaitDemand() {
-        awaitDemandAsync().join();
-    }
+    CompletableFuture<Void> onDemand(Runnable task);
 
     void close();
     void close(Throwable cause);
