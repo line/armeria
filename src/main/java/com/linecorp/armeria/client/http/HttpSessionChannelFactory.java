@@ -74,17 +74,16 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
     }
 
     void connect(SocketAddress remoteAddress, SessionProtocol protocol, Promise<Channel> sessionPromise) {
-
         final Bootstrap bootstrap = bootstrap(protocol);
         final ChannelFuture connectFuture = bootstrap.connect(remoteAddress);
-        final Channel ch = connectFuture.channel();
 
-        if (connectFuture.isDone()) {
-            notifySessionPromise(protocol, ch, connectFuture, sessionPromise);
-        } else {
-            connectFuture.addListener(
-                    (Future<Void> future) -> notifySessionPromise(protocol, ch, future, sessionPromise));
-        }
+        connectFuture.addListener((ChannelFuture future) -> {
+            if (future.isSuccess()) {
+                initSession(protocol, future, sessionPromise);
+            } else {
+                sessionPromise.setFailure(future.cause());
+            }
+        });
     }
 
     private Bootstrap bootstrap(SessionProtocol sessionProtocol) {
@@ -100,35 +99,15 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         });
     }
 
-    private void notifySessionPromise(SessionProtocol protocol, Channel ch,
-                                      Future<Void> connectFuture, Promise<Channel> sessionPromise) {
-        assert connectFuture.isDone();
-        if (connectFuture.isSuccess()) {
-            watchSessionActive(protocol, ch, sessionPromise);
-        } else {
-            sessionPromise.setFailure(connectFuture.cause());
-        }
-    }
+    private void initSession(SessionProtocol protocol, ChannelFuture connectFuture,
+                             Promise<Channel> sessionPromise) {
+        assert connectFuture.isSuccess();
 
-    private Future<Channel> watchSessionActive(SessionProtocol protocol, Channel ch,
-                                               Promise<Channel> sessionPromise) {
+        final Channel ch = connectFuture.channel();
+        final EventLoop eventLoop = ch.eventLoop();
+        assert eventLoop.inEventLoop();
 
-        EventLoop eventLoop = ch.eventLoop();
-
-        if (eventLoop.inEventLoop()) {
-            watchSessionActive0(protocol, ch, sessionPromise);
-        } else {
-            eventLoop.execute(() -> watchSessionActive0(protocol, ch, sessionPromise));
-        }
-        return sessionPromise;
-    }
-
-    private void watchSessionActive0(SessionProtocol protocol, final Channel ch,
-                                     Promise<Channel> sessionPromise) {
-
-        assert ch.eventLoop().inEventLoop();
-
-        final ScheduledFuture<?> timeoutFuture = ch.eventLoop().schedule(() -> {
+        final ScheduledFuture<?> timeoutFuture = eventLoop.schedule(() -> {
             if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
                     protocol, "connection established, but session creation timed out: " + ch))) {
                 ch.close();

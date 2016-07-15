@@ -16,9 +16,4 @@
 
 package com.linecorp.armeria.common;
 
-public interface Request {
-    @SuppressWarnings("unchecked")
-    default <T extends Request> T cast() {
-        return (T) this;
-    }
-}
+public interface Request {}

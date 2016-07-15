@@ -187,7 +187,7 @@ public class CircuitBreakerClientTest {
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
-            ThriftReply future = stub.execute(ctx, req).cast();
+            ThriftReply future = stub.execute(ctx, req);
             // The future is `failureRes` itself
             assertThat(future.isCompletedExceptionally(), is(true));
             // This is not a CircuitBreakerException
@@ -210,11 +210,11 @@ public class CircuitBreakerClientTest {
         when(delegate.execute(ctx, req)).thenReturn(successRes);
 
         // HALF OPEN
-        ThriftReply future2 = stub.execute(ctx, req).cast();
+        ThriftReply future2 = stub.execute(ctx, req);
         assertThat(future2.get(), is(nullValue()));
 
         // CLOSED
-        ThriftReply future3 = stub.execute(ctx, req).cast();
+        ThriftReply future3 = stub.execute(ctx, req);
         assertThat(future3.get(), is(nullValue()));
     }
 
@@ -314,7 +314,7 @@ public class CircuitBreakerClientTest {
         }
 
         // CLOSED (methodB)
-        ThriftReply future2 = stub.execute(ctxB, reqB).cast();
+        ThriftReply future2 = stub.execute(ctxB, reqB);
         assertThat(future2.get(), is(nullValue()));
     }
 
@@ -348,7 +348,7 @@ public class CircuitBreakerClientTest {
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
-            ThriftReply future = stub.execute(ctx, req).cast();
+            ThriftReply future = stub.execute(ctx, req);
             // The future is `failedFuture` itself
             assertThat(future.isCompletedExceptionally(), is(true));
             // This is not a CircuitBreakerException
@@ -357,7 +357,7 @@ public class CircuitBreakerClientTest {
         }
 
         // OPEN
-        ThriftReply future1 = stub.execute(ctx, req).cast();
+        ThriftReply future1 = stub.execute(ctx, req);
         // The circuit is still CLOSED
         assertThat(future1.isCompletedExceptionally(), is(true));
         assertThat(future1.getCause(), is(not(instanceOf(FailFastException.class))));

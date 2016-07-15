@@ -26,7 +26,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -117,11 +116,6 @@ public class HttpServerIdleTimeoutHandlerTest {
         @Override
         public int unfinishedRequests() {
             return unfinishedRequests;
-        }
-
-        @Override
-        public ServerConfig config() {
-            return null;
         }
     }
 }

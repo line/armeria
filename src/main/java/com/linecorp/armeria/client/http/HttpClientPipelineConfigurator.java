@@ -157,7 +157,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 }
                 sslCtx = builder.build();
             } catch (SSLException e) {
-                throw new IllegalStateException("failed to create a SslContext", e);
+                throw new IllegalStateException("failed to create an SslContext", e);
             }
         } else {
             sslCtx = null;
@@ -368,7 +368,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             //       because they are filled by Http2ClientUpgradeCodec.
 
             final String host = HttpHeaderUtil.hostHeader(
-                    remoteAddress.getHostString(), remoteAddress.getPort(), sslCtx != null);
+                    remoteAddress.getHostString(), remoteAddress.getPort(), H1C.defaultPort());
 
             upgradeReq.headers().set(HttpHeaderNames.HOST, host);
             upgradeReq.headers().set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT);

@@ -48,5 +48,4 @@ interface HttpServer {
 
     SessionProtocol protocol();
     int unfinishedRequests();
-    ServerConfig config();
 }

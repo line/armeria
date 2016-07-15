@@ -237,6 +237,7 @@ public class JettyService implements HttpService {
                 return;
             }
 
+            boolean success = false;
             try {
                 final ArmeriaHttpTransport transport = new ArmeriaHttpTransport();
                 final HttpChannel httpChannel = new HttpChannel(
@@ -249,9 +250,11 @@ public class JettyService implements HttpService {
                 fillRequest(ctx, aReq, httpChannel.getRequest());
 
                 ctx.blockingTaskExecutor().execute(() -> invoke(ctx, res, transport, httpChannel));
-            } catch (Throwable t) {
-                logger.warn("{} Failed to invoke Jetty:", ctx, t);
-                res.close();
+                success = true;
+            } finally {
+                if (!success) {
+                    res.close();
+                }
             }
         })).exceptionally(CompletionActions::log);
 

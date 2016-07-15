@@ -119,7 +119,7 @@ public class TracingClientTest {
         TracingClientImpl stub = new TracingClientImpl(delegate, brave);
 
         // do invoke
-        ThriftReply actualRes = stub.execute(ctx, req).cast();
+        ThriftReply actualRes = stub.execute(ctx, req);
 
         assertThat(actualRes, is(res));
 

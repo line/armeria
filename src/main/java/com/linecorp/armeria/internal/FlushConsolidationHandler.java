@@ -69,7 +69,7 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
         if (readInprogess) {
-            // If there is still a read in compress we are sure we will see a channelReadComplete(...) call. Thus
+            // If there is still a read in progress we are sure we will see a channelReadComplete(...) call. Thus
             // we only need to flush if we reach the explicitFlushAfterFlushes limit.
             if (++flushPendingCount == explicitFlushAfterFlushes) {
                 flushPendingCount = 0;

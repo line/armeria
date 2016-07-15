@@ -22,12 +22,6 @@ import java.util.concurrent.CompletionStage;
 import com.linecorp.armeria.common.reactivestreams.RichPublisher;
 
 public interface Response {
-
-    @SuppressWarnings("unchecked")
-    default <T extends Response> T cast() {
-        return (T) this;
-    }
-
     default CompletableFuture<?> closeFuture() {
         if (this instanceof RichPublisher) {
             return ((RichPublisher<?>) this).closeFuture();

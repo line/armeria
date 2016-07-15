@@ -23,9 +23,7 @@ final class HttpHeaderUtil {
     // TODO(trustin): Add version information
     static final AsciiString USER_AGENT = AsciiString.of("Armeria");
 
-    static String hostHeader(String host, int port, boolean useTls) {
-        final int defaultPort = useTls ? 443 : 80;
-
+    static String hostHeader(String host, int port, int defaultPort) {
         if (port == defaultPort) {
             return host;
         }

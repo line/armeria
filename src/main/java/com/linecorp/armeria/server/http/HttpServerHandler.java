@@ -162,11 +162,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     @Override
-    public ServerConfig config() {
-        return config;
-    }
-
-    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (responseEncoder != null) {
             responseEncoder.close();
@@ -272,7 +267,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final HttpResponse res;
         try (PushHandle ignored = RequestContext.push(reqCtx)) {
             req.init(reqCtx);
-            res = (HttpResponse) service.serve(reqCtx, req);
+            res = service.serve(reqCtx, req);
         } catch (Throwable cause) {
             reqLogBuilder.end(cause);
             if (cause instanceof ResourceNotFoundException) {

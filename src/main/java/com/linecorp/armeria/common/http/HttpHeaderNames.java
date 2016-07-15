@@ -419,7 +419,8 @@ public final class HttpHeaderNames {
 
     public static AsciiString of(String name) {
         requireNonNull(name, "name");
-        final AsciiString asciiName = map.get(name.toLowerCase(Locale.US));
+        name = name.toLowerCase(Locale.US);
+        final AsciiString asciiName = map.get(name);
         return asciiName != null ? asciiName : new AsciiString(name);
     }
 
