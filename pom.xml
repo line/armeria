@@ -91,7 +91,9 @@
     <jetty.alpnAgent.version>2.0.3</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
+    <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+    <argLine.memOpts>-Xmx128m</argLine.memOpts>
     <thrift.executable>${project.basedir}/src/build/thrift.${os.detected.classifier}</thrift.executable>
     <thrift.source.main>${project.basedir}/src/main/thrift</thrift.source.main>
     <thrift.source.test>${project.basedir}/src/test/thrift</thrift.source.test>
@@ -564,7 +566,7 @@
             <exclude>**/TestUtil*</exclude>
           </excludes>
           <runOrder>random</runOrder>
-          <argLine>${argLine.alpnAgent} ${argLine.leak}</argLine>
+          <argLine>${argLine.memOpts} ${argLine.alpnAgent} ${argLine.coverage} ${argLine.leak}</argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -724,6 +726,40 @@
       <properties>
         <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid</argLine.leak>
       </properties>
+    </profile>
+    <profile>
+      <id>coverage</id>
+      <properties>
+        <argLine.memOpts>-Xmx384m</argLine.memOpts>
+        <argLine.coverage>@{jacoco.argLine}</argLine.coverage>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.7.7.201606060606</version>
+            <executions>
+              <execution>
+                <id>jacoco-prepare-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+                <configuration>
+                  <propertyName>jacoco.argLine</propertyName>
+                </configuration>
+              </execution>
+              <execution>
+                <id>jacoco-report</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>
