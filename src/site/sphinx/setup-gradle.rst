@@ -25,7 +25,7 @@ You might want to use the following  ``build.gradle`` as a starting point if you
         runtime group: 'ch.qos.logback', name: 'logback-classic', version: '\ |logback_version|\ '
 
         // Embedded Tomcat
-        [ "core", "jasper", "el", "logging-log4j" ].each { module ->
+        [ "core", "jasper", "el" ].each { module ->
             runtime group: 'org.apache.tomcat.embed', name: "tomcat-embed-$module", version: '\ |tomcat_version|\ '
         }
         runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: '\ |slf4j_version|\ '

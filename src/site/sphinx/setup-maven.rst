@@ -107,11 +107,6 @@ If you want to embed Tomcat into Armeria, you'll have to add the optional depend
           <version>${tomcat.version}</version>
         </dependency>
         <dependency>
-          <groupId>org.apache.tomcat.embed</groupId>
-          <artifactId>tomcat-embed-logging-log4j</artifactId>
-          <version>${tomcat.version}</version>
-        </dependency>
-        <dependency>
           <groupId>org.slf4j</groupId>
           <artifactId>log4j-over-slf4j</artifactId>
           <version>${slf4j.version}</version>

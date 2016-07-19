@@ -58,15 +58,21 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
 
         // Create the connector with our protocol handler. Tomcat will call ProtocolHandler.setAdapter()
         // on its startup with the Coyote Adapter which gives an access to Tomcat's HTTP service pipeline.
-        final Connector connector = new Connector(TomcatProtocolHandler.class.getName());
+        final Class<?> protocolType;
+        if (TomcatVersion.major() < 8 || TomcatVersion.major() == 8 && TomcatVersion.minor() < 5) {
+            protocolType = Tomcat80ProtocolHandler.class;
+        } else {
+            protocolType = Tomcat85ProtocolHandler.class;
+        }
+
+        final Connector connector = new Connector(protocolType.getName());
         connector.setPort(0); // We do not really open a port - just trying to stop the Connector from complaining.
 
-        StandardServer server = newServer(hostname, connector, config);
+        final StandardServer server = newServer(hostname, connector, config);
 
         // Retrieve the components configured by newServer(), so we can use it in checkConfiguration().
         final Service service = server.findServices()[0];
-        @SuppressWarnings("deprecation")
-        final Engine engine = (Engine) service.getContainer();
+        final Engine engine = TomcatUtil.engine(service);
         final StandardHost host = (StandardHost) engine.findChildren()[0];
         final Context context = (Context) host.findChildren()[0];
 
@@ -186,8 +192,7 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
         }
 
         // Check if the engine has not been changed.
-        @SuppressWarnings("deprecation")
-        final Container actualEngine = expectedService.getContainer();
+        final Container actualEngine = TomcatUtil.engine(expectedService);
         if (actualEngine != expectedEngine) {
             throw new TomcatServiceException(
                     "A configurator should never change the engine of the default service.");
