@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 
 final class ExactPathMapping extends AbstractPathMapping {
@@ -41,12 +43,17 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     protected String doApply(String path) {
-        return exactPath.equals(path) ? path : null;
+        return getRoutingVariables(path).equals(Optional.empty()) ? null : path;
     }
 
     @Override
     public Optional<String> exactPath() {
         return exactPathOpt;
+    }
+
+    @Override
+    public Optional<HashMap<String, List<String>>> getRoutingVariables(String uri) {
+        return Optional.ofNullable(getRoutingVariables(exactPath, uri));
     }
 
     @Override

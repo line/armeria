@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.http;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,10 +39,14 @@ final class HttpServiceInvocationContext extends ServiceInvocationContext implem
     private final int invocationId = nextInvocationId.incrementAndGet();
     private String invocationIdStr;
 
+    private Optional<HashMap<String, List<String>>> mappedVariables;
+
     HttpServiceInvocationContext(Channel ch, Scheme scheme, String host, String path, String mappedPath,
-                                 String loggerName, FullHttpRequest originalRequest) {
+                                 String loggerName, FullHttpRequest originalRequest,
+                                 Optional<HashMap<String, List<String>>> variables) {
 
         super(ch, scheme, host, path, mappedPath, loggerName, originalRequest);
+        mappedVariables = variables;
     }
 
     @Override
@@ -119,5 +124,22 @@ final class HttpServiceInvocationContext extends ServiceInvocationContext implem
     @Override
     public Optional<List<Object>> decodedParams() {
         return Optional.of(params());
+    }
+
+    public String getMappedVariables(String key) throws IllegalAccessException {
+        if (!mappedVariables.isPresent()) {
+            throw new IllegalAccessException("This http service does not support variable mapping: " + path());
+        }
+        if (mappedVariables.get().containsKey(key)) {
+            return mappedVariables.get().get(key).get(0);
+        }
+        throw new IllegalArgumentException("This routing rule does not contains a such variable name: " + key);
+    }
+
+    public List<String> getGlobStrings() throws IllegalAccessException {
+        if (!mappedVariables.isPresent()) {
+            throw new IllegalAccessException("This http service does not support variable mapping: " + path());
+        }
+        return mappedVariables.get().get("*");
     }
 }

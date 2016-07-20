@@ -53,7 +53,8 @@ final class HttpServiceCodec implements ServiceCodec {
 
         return new HttpServiceInvocationContext(
                 ch, Scheme.of(SerializationFormat.NONE, sessionProtocol),
-                hostname, path, mappedPath, cfg.loggerName(), (FullHttpRequest) originalRequest);
+                hostname, path, mappedPath, cfg.loggerName(), (FullHttpRequest) originalRequest,
+                cfg.pathMapping().getRoutingVariables(path));
     }
 
     @Override

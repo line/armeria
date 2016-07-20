@@ -22,6 +22,10 @@ import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+
 public class ExactPathMappingTest {
 
     @Test
@@ -32,5 +36,39 @@ public class ExactPathMappingTest {
     @Test
     public void shouldReturnExactPathOnMatch() {
         assertThat(new ExactPathMapping("/find/me").apply("/find/me"), is("/find/me"));
+    }
+
+    @Test
+    public void routingVariableMappingTest() {
+        Optional<HashMap<String, List<String>>> dict =
+                new ExactPathMapping("/hello/:variable").getRoutingVariables("/hello/world");
+        assert(!dict.equals(Optional.empty()));
+        assertThat(dict.get().size(), is(2));
+        assertThat(dict.get().containsKey("variable"), is(true));
+        assertThat(dict.get().get("variable").size(), is(1));
+        assertThat(dict.get().get("variable").get(0), is("world"));
+        assertThat(dict.get().containsKey("*"), is(true));
+
+        dict = new ExactPathMapping("/:variable/world").getRoutingVariables("/hello/world");
+        assert(!dict.equals(Optional.empty()));
+        assertThat(dict.get().size(), is(2));
+        assertThat(dict.get().containsKey("variable"), is(true));
+        assertThat(dict.get().get("variable").size(), is(1));
+        assertThat(dict.get().get("variable").get(0), is("hello"));
+        assertThat(dict.get().containsKey("*"), is(true));
+
+        dict = new ExactPathMapping("/p1/*/:variable/p2/*").getRoutingVariables("/p1/foo/bar/value/p2/tail");
+        assert(!dict.equals(Optional.empty()));
+        assertThat(dict.get().size(), is(2));
+        assertThat(dict.get().containsKey("variable"), is(true));
+        assertThat(dict.get().get("variable").size(), is(1));
+        assertThat(dict.get().get("variable").get(0), is("value"));
+        assertThat(dict.get().containsKey("*"), is(true));
+        assertThat(dict.get().get("*").size(), is(2));
+        assertThat(dict.get().get("*").get(0), is("foo/bar"));
+        assertThat(dict.get().get("*").get(1), is("tail"));
+
+        dict = new ExactPathMapping("/:variable/p1").getRoutingVariables("/hello/world/p1");
+        assertThat(dict, is(Optional.empty()));
     }
 }
