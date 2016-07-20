@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,11 +22,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.ProtocolHandler;
+import org.apache.coyote.UpgradeProtocol;
+import org.apache.tomcat.util.net.SSLHostConfig;
 
 /**
- * A Tomcat {@link ProtocolHandler}. Do not use; loaded and instantiated by Tomcat via reflection.
+ * A {@link ProtocolHandler} for Tomcat 8.0 and below.
+ * Do not use; loaded and instantiated by Tomcat via reflection.
  */
-public final class TomcatProtocolHandler implements ProtocolHandler {
+public final class Tomcat80ProtocolHandler implements ProtocolHandler {
 
     private static final AtomicInteger nextId = new AtomicInteger();
 
@@ -79,12 +82,14 @@ public final class TomcatProtocolHandler implements ProtocolHandler {
         return false;
     }
 
-    @Override
+    // NB: Do not remove; required for Tomcat 8.0 and older.
+    @SuppressWarnings("unused")
     public boolean isCometSupported() {
         return false;
     }
 
-    @Override
+    // NB: Do not remove; required for Tomcat 8.0 and older.
+    @SuppressWarnings("unused")
     public boolean isCometTimeoutSupported() {
         return false;
     }
@@ -92,5 +97,21 @@ public final class TomcatProtocolHandler implements ProtocolHandler {
     @Override
     public boolean isSendfileSupported() {
         return false;
+    }
+
+    @Override
+    public void addSslHostConfig(SSLHostConfig sslHostConfig) {}
+
+    @Override
+    public SSLHostConfig[] findSslHostConfigs() {
+        return null;
+    }
+
+    @Override
+    public void addUpgradeProtocol(UpgradeProtocol upgradeProtocol) {}
+
+    @Override
+    public UpgradeProtocol[] findUpgradeProtocols() {
+        return null;
     }
 }

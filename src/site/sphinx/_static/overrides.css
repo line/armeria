@@ -44,6 +44,17 @@ body {
   padding: 0;
 }
 
+.wy-menu.wy-menu-vertical .slack-invitation {
+  padding: 0.4em 1.45em;
+  display: block;
+  position: relative;
+}
+
+/* Make sure the invitation dialog appears on top of the menu whose z-index is 200. */
+.__slackin {
+  z-index: 1000;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-weight: inherit;
 }

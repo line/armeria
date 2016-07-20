@@ -41,10 +41,10 @@ final class ArmeriaWebResourceRoot extends StandardRoot {
     @Override
     protected WebResourceSet createMainResourceSet() {
         final Path docBase = config.docBase();
-        final String docBaseStr = docBase.toString();
-
         assert docBase.isAbsolute();
-        assert docBaseStr.equals(getContext().getDocBase());
+
+        final String docBaseStr = docBase.toString();
+        getContext().setDocBase(docBaseStr);
 
         if (Files.isDirectory(docBase)) {
             return new DirResourceSet(this, "/", docBaseStr, "/");

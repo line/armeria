@@ -30,5 +30,8 @@ install:
   - true
 
 script:
-  - mvn -V -B test site
+  - mvn -V -B -Pcoverage test site
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
 

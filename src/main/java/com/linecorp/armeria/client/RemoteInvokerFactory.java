@@ -18,16 +18,11 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -37,9 +32,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
@@ -49,16 +42,9 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.resolver.AddressResolver;
-import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
-import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.Promise;
 
 /**
  * Creates and manages {@link RemoteInvoker}s.
@@ -153,7 +139,7 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         baseBootstrap.channel(channelType());
         baseBootstrap.resolver(
                 options.addressResolverGroup()
-                       .orElseGet(() -> new DnsAddressResolverGroup5179(
+                       .orElseGet(() -> new DnsAddressResolverGroup(
                                datagramChannelType(), DnsServerAddresses.defaultAddresses())));
 
         baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
@@ -172,7 +158,7 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         final EnumMap<SessionProtocol, RemoteInvoker> remoteInvokers = new EnumMap<>(SessionProtocol.class);
         final HttpRemoteInvoker remoteInvoker = new HttpRemoteInvoker(baseBootstrap, options);
 
-        SessionProtocol.ofHttp().stream().forEach(
+        SessionProtocol.ofHttp().forEach(
                 protocol -> remoteInvokers.put(protocol, remoteInvoker));
 
         this.remoteInvokers = Collections.unmodifiableMap(remoteInvokers);
@@ -231,87 +217,6 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         remoteInvokers.forEach((k, v) -> v.close());
         if (closeEventLoopGroup) {
             eventLoopGroup.shutdownGracefully().syncUninterruptibly();
-        }
-    }
-
-    // TODO(trustin): Remove this once the upstream fixes the problem:
-    //                https://github.com/netty/netty/issues/5179
-    private static final class DnsAddressResolverGroup5179 extends DnsAddressResolverGroup {
-
-        private final Map<String, Promise<InetAddress>> resolveMap = new ConcurrentHashMap<>();
-        private final Map<String, Promise<List<InetAddress>>> resolveAllMap = new ConcurrentHashMap<>();
-
-        DnsAddressResolverGroup5179(Class<? extends DatagramChannel> channelType,
-                                    DnsServerAddresses nameServerAddresses) {
-            super(channelType, nameServerAddresses);
-        }
-
-        @Override
-        protected AddressResolver<InetSocketAddress> newResolver(
-                EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-                InetSocketAddress localAddress, DnsServerAddresses nameServerAddresses) throws Exception {
-
-            final InetNameResolver delegate = new DnsNameResolverBuilder(eventLoop)
-                    .channelFactory(channelFactory)
-                    .localAddress(localAddress)
-                    .nameServerAddresses(nameServerAddresses)
-                    .build();
-
-            return new DnsNameResolver5179(eventLoop, delegate).asAddressResolver();
-        }
-
-        private final class DnsNameResolver5179 extends InetNameResolver {
-
-            private final InetNameResolver delegate;
-
-            DnsNameResolver5179(EventExecutor executor, InetNameResolver delegate) {
-                super(executor);
-                this.delegate = delegate;
-            }
-
-            @Override
-            protected void doResolve(String inetHost, Promise<InetAddress> promise) throws Exception {
-                doResolve0(delegate::resolve, resolveMap, inetHost, promise);
-            }
-
-            @Override
-            protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) throws Exception {
-                doResolve0(delegate::resolveAll, resolveAllMap, inetHost, promise);
-            }
-
-            private <T> void doResolve0(
-                    BiConsumer<String, Promise<T>> resolver, Map<String, Promise<T>> resolveMap,
-                    String inetHost, Promise<T> promise) throws Exception {
-
-                final Promise<T> earlyPromise = resolveMap.putIfAbsent(inetHost, promise);
-                if (earlyPromise != null) {
-                    // Name resolution for the specified inetHost is in progress already.
-                    if (earlyPromise.isDone()) {
-                        transferResult(earlyPromise, promise);
-                    } else {
-                        earlyPromise.addListener((FutureListener<T>) f -> transferResult(f, promise));
-                    }
-                    return;
-                }
-
-                try {
-                    resolver.accept(inetHost, promise);
-                } finally {
-                    if (promise.isDone()) {
-                        resolveMap.remove(inetHost);
-                    } else {
-                        promise.addListener((FutureListener<T>) f -> resolveMap.remove(inetHost));
-                    }
-                }
-            }
-
-            private <T> void transferResult(Future<T> src, Promise<T> dst) {
-                if (src.isSuccess()) {
-                    dst.trySuccess(src.getNow());
-                } else {
-                    dst.tryFailure(src.cause());
-                }
-            }
         }
     }
 }
