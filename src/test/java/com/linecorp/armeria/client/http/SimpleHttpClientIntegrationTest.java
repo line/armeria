@@ -17,9 +17,12 @@
 package com.linecorp.armeria.client.http;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.nio.charset.StandardCharsets;
 
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cors.CorsConfigBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -51,7 +54,10 @@ public class SimpleHttpClientIntegrationTest {
 
         try {
             sb.port(0, SessionProtocol.HTTP);
-
+            sb.cors(CorsConfigBuilder.forOrigin("http://example.com")
+                    .allowedRequestMethods(HttpMethod.POST)
+                    .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                    .build());
             sb.serviceAt("/httptestbody", new HttpService(
                     (ctx, executor, promise) -> {
                         FullHttpRequest request = ctx.originalRequest();
@@ -80,6 +86,11 @@ public class SimpleHttpClientIntegrationTest {
             sb.serviceAt("/not200", new HttpService((ctx, executor, promise) -> {
                 DefaultFullHttpResponse response =
                         new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
+                promise.setSuccess(response);
+            }));
+            sb.serviceAt("/cors", new HttpService((ctx, executor, promise) -> {
+                DefaultFullHttpResponse response =
+                        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
                 promise.setSuccess(response);
             }));
         } catch (Exception e) {
@@ -139,5 +150,48 @@ public class SimpleHttpClientIntegrationTest {
         SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/not200").build();
         SimpleHttpResponse response = client.execute(request).get();
         assertEquals(HttpResponseStatus.NOT_FOUND, response.status());
+    }
+
+    @Test
+    public void testCORSPreflight() throws Exception {
+        SimpleHttpClient client = Clients.newClient(remoteInvokerFactory, "none+http://127.0.0.1:" + httpPort,
+                SimpleHttpClient.class);
+        // pre-flight request
+        SimpleHttpRequest request = SimpleHttpRequestBuilder.forOptions("/cors")
+                .header(HttpHeaderNames.ACCEPT, "utf-8")
+                .header(HttpHeaderNames.ORIGIN, "http://example.com")
+                .header(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.asciiName())
+                .build();
+        SimpleHttpResponse response = client.execute(request).get();
+        assertEquals(HttpResponseStatus.OK, response.status());
+        assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+        assertEquals("Hello CORS", response.headers().get("x-preflight-cors"));
+    }
+
+    @Test
+    public void testCORSAllowed() throws Exception {
+        SimpleHttpClient client = Clients.newClient(remoteInvokerFactory, "none+http://127.0.0.1:" + httpPort,
+                SimpleHttpClient.class);
+        SimpleHttpRequest request = SimpleHttpRequestBuilder.forPost("/cors")
+                .header(HttpHeaderNames.ACCEPT, "utf-8")
+                .header(HttpHeaderNames.ORIGIN, "http://example.com")
+                .header(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.asciiName())
+                .build();
+        SimpleHttpResponse response = client.execute(request).get();
+        assertEquals(HttpResponseStatus.OK, response.status());
+        assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+    }
+
+    @Test
+    public void testCORSForbidden() throws Exception {
+        SimpleHttpClient client = Clients.newClient(remoteInvokerFactory, "none+http://127.0.0.1:" + httpPort,
+                SimpleHttpClient.class);
+        SimpleHttpRequest request = SimpleHttpRequestBuilder.forOptions("/cors")
+                .header(HttpHeaderNames.ACCEPT, "utf-8")
+                .header(HttpHeaderNames.ORIGIN, "http://example.org")
+                .header(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.asciiName())
+                .build();
+        SimpleHttpResponse response = client.execute(request).get();
+        assertNull(response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
 }

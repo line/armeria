@@ -16,12 +16,17 @@
 
 package com.linecorp.armeria.server;
 
+import static io.netty.handler.codec.http.HttpMethod.OPTIONS;
+import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +74,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
     private static final AsciiString ERROR_CONTENT_TYPE = new AsciiString("text/plain; charset=UTF-8");
     private static final AsciiString ALLOWED_METHODS =
             new AsciiString("DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT,TRACE");
+    private static final String ANY_ORIGIN = "*";
+    private static final String NULL_ORIGIN = "null";
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -223,6 +230,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
 
+            if (config.corsConfig() != null && config.corsConfig().isCorsSupportEnabled()) {
+                if (isPreflightRequest(req)) {
+                    handleCorsPreflight(ctx, req, reqSeq);
+                    return;
+                }
+                if (config.corsConfig().isShortCircuit() && !validateOrigin(req)) {
+                    forbidden(ctx, req, reqSeq);
+                    return;
+                }
+            }
+
             final String path = stripQuery(req.uri());
             // Reject requests without a valid path, except for the special 'OPTIONS *' request.
             if (path.isEmpty() || path.charAt(0) != '/') {
@@ -299,6 +317,124 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
                 HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         res.headers().set(HttpHeaderNames.ALLOW, ALLOWED_METHODS);
         respond(ctx, reqSeq, req, res);
+    }
+
+    private boolean isPreflightRequest(final HttpRequest request) {
+        final HttpHeaders headers = request.headers();
+        return request.method().equals(OPTIONS) &&
+                headers.contains(HttpHeaderNames.ORIGIN) &&
+                headers.contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    }
+
+    private void handleCorsPreflight(final ChannelHandlerContext ctx, final FullHttpRequest req, int reqSeq) {
+        final FullHttpResponse res = new DefaultFullHttpResponse(req.protocolVersion(), OK, true, true);
+        if (setOrigin(req, res)) {
+            setAllowMethods(res);
+            setAllowHeaders(res);
+            setAllowCredentials(res);
+            setMaxAge(res);
+            setPreflightHeaders(res);
+        }
+        respond(ctx, reqSeq, req, res);
+    }
+
+    private boolean validateOrigin(final HttpRequest request) {
+        if (config.corsConfig().isAnyOriginSupported()) {
+            return true;
+        }
+        final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        return origin == null || "null".equals(origin) && config.corsConfig().isNullOriginAllowed() || config.corsConfig().origins().contains(origin);
+    }
+
+    private void forbidden(final ChannelHandlerContext ctx, final FullHttpRequest request, int reqSeq) {
+        final FullHttpResponse res = new DefaultFullHttpResponse(
+                request.protocolVersion(), HttpResponseStatus.FORBIDDEN, Unpooled.EMPTY_BUFFER);
+        respond(ctx, reqSeq, request, res);
+    }
+
+    private boolean setOrigin(final HttpRequest request, final HttpResponse response) {
+        if (config.corsConfig() == null) {
+            return false;
+        }
+        final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        if (origin != null) {
+            if (NULL_ORIGIN.equals(origin) && config.corsConfig().isNullOriginAllowed()) {
+                setNullOrigin(response);
+                return true;
+            }
+            if (config.corsConfig().isAnyOriginSupported()) {
+                if (config.corsConfig().isCredentialsAllowed()) {
+                    echoRequestOrigin(request, response);
+                    setVaryHeader(response);
+                } else {
+                    setAnyOrigin(response);
+                }
+                return true;
+            }
+            if (config.corsConfig().origins().contains(origin)) {
+                setOrigin(response, origin);
+                setVaryHeader(response);
+                return true;
+            }
+            logger.debug("Request origin [{}] was not among the configured origins [{}]",
+                    origin, config.corsConfig().origins());
+        }
+        return false;
+    }
+
+    private static void echoRequestOrigin(final HttpRequest request, final HttpResponse response) {
+        setOrigin(response, request.headers().get(HttpHeaderNames.ORIGIN));
+    }
+
+    private static void setVaryHeader(final HttpResponse response) {
+        response.headers().set(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN);
+    }
+
+    private static void setAnyOrigin(final HttpResponse response) {
+        setOrigin(response, ANY_ORIGIN);
+    }
+
+    private static void setNullOrigin(final HttpResponse response) {
+        setOrigin(response, NULL_ORIGIN);
+    }
+
+    private static void setOrigin(final HttpResponse response, final String origin) {
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+    }
+
+    private void setAllowCredentials(final HttpResponse response) {
+        if (config.corsConfig().isCredentialsAllowed()
+                && !response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN).equals(ANY_ORIGIN)) {
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        }
+    }
+
+    private void setExposeHeaders(final HttpResponse response) {
+        if (!config.corsConfig().exposedHeaders().isEmpty()) {
+            response.headers().set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, config.corsConfig().exposedHeaders());
+        }
+    }
+
+    private void setAllowMethods(final HttpResponse response) {
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, config.corsConfig().allowedRequestMethods());
+    }
+
+    private void setAllowHeaders(final HttpResponse response) {
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, config.corsConfig().allowedRequestHeaders());
+    }
+
+    private void setMaxAge(final HttpResponse response) {
+        response.headers().set(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, config.corsConfig().maxAge());
+    }
+
+    /**
+     * This is a non CORS specification feature which enables the setting of preflight
+     * response headers that might be required by intermediaries.
+     *
+     * @param response the HttpResponse to which the preflight response headers should be added.
+     */
+    private void setPreflightHeaders(final HttpResponse response) {
+        response.headers().add(config.corsConfig().preflightResponseHeaders());
     }
 
     private void handleNonExistentMapping(ChannelHandlerContext ctx, int reqSeq, FullHttpRequest req,
@@ -549,6 +685,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter {
         } else if (!handlePendingResponses(ctx, reqSeq, req, res)) {
             // HTTP/1 and the responses for the previous requests are not all ready.
             return;
+        }
+
+        if (config.corsConfig() != null && setOrigin(req, res)) {
+            setAllowCredentials(res);
+            setAllowHeaders(res);
+            setExposeHeaders(res);
         }
 
         if (!handledLastRequest) {

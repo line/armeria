@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TimeoutPolicy;
 
+import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Promise;
@@ -116,6 +117,7 @@ public final class ServerBuilder {
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
+    private CorsConfig corsConfig;
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
@@ -295,6 +297,16 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets a Cross-Origin Resource Sharing configuration
+     * @param corsConfig the Cross-Origin Resource Sharing configuration
+     * @return this server builder
+     */
+    public ServerBuilder cors(CorsConfig corsConfig) {
+        this.corsConfig = corsConfig;
+        return this;
+    }
+
+    /**
      * Sets the {@link SslContext} of the default {@link VirtualHost}.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
@@ -442,7 +454,7 @@ public final class ServerBuilder {
         return new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, numWorkers, maxPendingRequests, maxConnections,
                 requestTimeoutPolicy, idleTimeoutMillis, maxFrameLength, gracefulShutdownQuietPeriod,
-                gracefulShutdownTimeout, blockingTaskExecutor, serviceLoggerPrefix));
+                gracefulShutdownTimeout, blockingTaskExecutor, serviceLoggerPrefix, corsConfig));
     }
 
     @Override
@@ -451,6 +463,6 @@ public final class ServerBuilder {
                 getClass(), ports, defaultVirtualHost, virtualHosts,
                 numWorkers, maxPendingRequests, maxConnections, requestTimeoutPolicy, idleTimeoutMillis,
                 maxFrameLength, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
-                serviceLoggerPrefix);
+                serviceLoggerPrefix, corsConfig);
     }
 }

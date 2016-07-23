@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.TimeoutPolicy;
 
+import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -63,6 +64,8 @@ public final class ServerConfig {
 
     private final String serviceLoggerPrefix;
 
+    private final CorsConfig corsConfig;
+
     private String strVal;
 
     ServerConfig(
@@ -71,7 +74,8 @@ public final class ServerConfig {
             int numWorkers, int maxPendingRequests, int maxConnections,
             TimeoutPolicy requestTimeoutPolicy, long idleTimeoutMillis, int maxFrameLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, String serviceLoggerPrefix) {
+            Executor blockingTaskExecutor, String serviceLoggerPrefix,
+            CorsConfig corsConfig) {
 
         requireNonNull(ports, "ports");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -100,6 +104,8 @@ public final class ServerConfig {
         }
 
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
+
+        this.corsConfig = corsConfig;
 
         // Set localAddresses.
         final List<ServerPort> portsCopy = new ArrayList<>();
@@ -377,6 +383,15 @@ public final class ServerConfig {
         return serviceLoggerPrefix;
     }
 
+
+    /**
+     * Returns the  cross-origin resource sharing configuration, or null if not set.
+     * @return the cross-origin resource sharing configuration
+     */
+    public CorsConfig corsConfig() {
+        return corsConfig;
+    }
+
     @Override
     public String toString() {
         String strVal = this.strVal;
@@ -386,7 +401,7 @@ public final class ServerConfig {
                     numWorkers(), maxPendingRequests(), maxConnections(),
                     requestTimeoutPolicy(), idleTimeoutMillis(), maxFrameLength(),
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), serviceLoggerPrefix());
+                    blockingTaskExecutor(), serviceLoggerPrefix(), corsConfig());
         }
 
         return strVal;
@@ -398,7 +413,7 @@ public final class ServerConfig {
             int numWorkers, int maxPendingRequests, int maxConnections,
             TimeoutPolicy requestTimeoutPolicy, long idleTimeoutMillis, int maxFrameLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, String serviceLoggerPrefix) {
+            Executor blockingTaskExecutor, String serviceLoggerPrefix, CorsConfig corsConfig) {
 
         StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -462,6 +477,8 @@ public final class ServerConfig {
         buf.append(blockingTaskExecutor);
         buf.append(", serviceLoggerPrefix: ");
         buf.append(serviceLoggerPrefix);
+        buf.append(", corsConfig: ");
+        buf.append(corsConfig);
         buf.append(')');
 
         return buf.toString();
