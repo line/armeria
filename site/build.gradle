@@ -1,0 +1,18 @@
+apply plugin: 'com.github.rzabini.gradle-jython'
+
+task installSphinx(type:jython.JythonTask) {
+    jython {
+        pypackage 'Sphinx:1.4.4', 'Babel:2.3.4', 'Jinja2:2.8',
+                  'six:1.10.0', 'Pygments:2.1.3', 'snowballstemmer:1.2.1',
+                  'docutils:0.12', 'pytz:2016.4', 'MarkupSafe:0.23',
+                  'alabaster:0.7.8', 'imagesize:0.7.1', 'requests:2.10.0'
+    }
+}
+
+task buildHtmlDocument(type:jython.JythonTask, dependsOn: installSphinx) {
+    script """
+from sphinx import build_main;
+build_main(['-v', '-W', '-n', '-b', 'html',
+            '${rootDir}/src/site/sphinx/', '${rootDir}/build/site/sphinx/'])
+"""
+}
