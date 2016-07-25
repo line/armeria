@@ -1,0 +1,177 @@
+import org.gradle.internal.os.OperatingSystem
+import org.jruyi.gradle.thrift.plugin.CompileThrift
+import org.jruyi.gradle.thrift.plugin.ThriftPlugin
+
+def dependencyVersions = [
+  'io.netty:netty-transport:4.1.3.Final',
+  'io.netty:netty-transport-native-epoll:4.1.3.Final',
+  'io.netty:netty-codec-http2:4.1.3.Final',
+  'io.netty:netty-resolver-dns:4.1.3.Final',
+  'org.javassist:javassist:3.20.0-GA',
+  'io.netty:netty-tcnative-boringssl-static:1.1.33.Fork19',
+  'org.eclipse.jetty.alpn:alpn-api:1.1.3.v20160715',
+
+  'org.apache.thrift:libthrift:0.9.3',
+  'org.apache.tomcat.embed:tomcat-embed-core:8.5.4',
+  'org.apache.tomcat.embed:tomcat-embed-jasper:8.5.4',
+  'org.apache.tomcat.embed:tomcat-embed-el:8.5.4',
+
+  'org.slf4j:log4j-over-slf4j:1.7.21',
+
+  'org.eclipse.jetty:jetty-server:9.3.10.v20160621',
+  'org.eclipse.jetty:jetty-webapp:9.3.10.v20160621',
+  'org.eclipse.jetty:jetty-annotations:9.3.10.v20160621',
+  'org.eclipse.jetty:apache-jsp:9.3.10.v20160621',
+  'org.eclipse.jetty:apache-jstl:9.3.10.v20160621',
+  'org.eclipse.jetty.http2:http2-server:9.3.10.v20160621',
+
+  'com.fasterxml.jackson.core:jackson-core:2.7.5',
+  'com.fasterxml.jackson.core:jackson-annotations:2.7.5',
+  'com.fasterxml.jackson.core:jackson-databind:2.7.5',
+  'org.reflections:reflections:0.9.10',
+  'io.dropwizard.metrics:metrics-core:3.1.2',
+  'org.slf4j:slf4j-api:1.7.21',
+  'ch.qos.logback:logback-classic:1.1.7',
+  'com.google.code.findbugs:jsr305:3.0.1',
+
+  'junit:junit:4.12',
+  'org.hamcrest:hamcrest-library:1.3',
+  'org.easymock:easymock:3.4',
+  'org.easymock:easymockclassextension:3.2',
+  'org.jmock:jmock-junit4:2.8.2',
+  'org.mockito:mockito-core:1.10.19',
+  'org.apache.httpcomponents:httpclient:4.5.2',
+  'net.javacrumbs.json-unit:json-unit:1.13.0',
+
+  'io.zipkin.brave:brave-core:3.9.0',
+  'io.zipkin.brave:brave-http:3.9.0',
+  'com.google.guava:guava:19.0',
+  'com.google.guava:guava-testlib:19.0'
+];
+
+buildscript {
+  repositories {
+    maven { url 'https://plugins.gradle.org/m2/' }
+    mavenCentral()
+    mavenLocal()
+  }
+  dependencies {
+    classpath 'gradle.plugin.org.jruyi.gradle:thrift-gradle-plugin:0.3.1'
+    classpath 'gradle.plugin.com.github.rzabini:gradle-jython:1.0.1'
+    classpath 'net.davidecavestro:gradle-jxr-plugin:0.1.1'
+    classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.1.0'
+    classpath "io.spring.gradle:dependency-management-plugin:0.6.0.RELEASE"
+    classpath 'net.researchgate:gradle-release:2.4.0'
+  }
+}
+
+subprojects {
+  group 'com.linecorp.armeria'
+
+  buildscript {
+    repositories {
+      maven { url 'https://plugins.gradle.org/m2/' }
+      mavenCentral()
+      mavenLocal()
+    }
+    dependencies {
+      classpath 'gradle.plugin.org.jruyi.gradle:thrift-gradle-plugin:0.3.1'
+      classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.1.0'
+    }
+  }
+
+  project.plugins.withType(ThriftPlugin) {
+    task compileTestThrift(type: CompileThrift) {
+      recurse true
+
+      sourceDir "src/test/thrift"
+      // The gradle-apt-plugin has good integration with idea/eclipse plugins
+      // for adding generated sources to the IDE's classpath. So we take advantage
+      // of it by compiling our thrift files to there as well. Since the packages
+      // shouldn't collide, this is not a problem.
+      outputDir "$buildDir/generated/source/apt/test"
+      createGenFolder false
+
+      if (OperatingSystem.current().isMacOsX()) {
+        thriftExecutable "$projectDir/src/build/thrift.osx-x86_64"
+      } else {
+        thriftExecutable "$projectDir/src/build/thrift.linux-x86_64"
+      }
+    }
+    tasks.compileTestJava.dependsOn compileTestThrift
+  }
+
+  project.plugins.withType(JavaPlugin) {
+    task javadocJar(type: Jar, description: 'Creates javadoc jar') {}
+    javadocJar.dependsOn tasks.javadoc
+  }
+}
+
+allprojects {
+  repositories {
+    mavenCentral()
+  }
+
+  apply plugin: 'java'
+  apply plugin: 'eclipse'
+  apply plugin: 'idea'
+  apply plugin: 'maven'
+  apply plugin: 'jxr'
+  apply plugin: 'nebula.optional-base'
+  apply plugin: "io.spring.dependency-management"
+  apply plugin: 'net.researchgate.release'
+
+  sourceCompatibility = 1.8
+  targetCompatibility = 1.8
+
+  test {
+    exclude '**/Abstract.*'
+    exclude '**/TestUtil.*'
+  }
+
+  task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+  }
+
+  task javadoc(type: Javadoc, overwrite: true) {
+    // Exclude the machine-generate code and the internal-only classes
+    excludes = ['**/thrift/v1/**', '*.common.http/**']
+    options.breakIterator = true
+    options.version = false
+    options.author = false
+    options.keyWords = true
+    options.stylesheetFile = new File("${rootDir}/src/site/apidocs/stylesheet.css")
+
+    // Enable all lints except the missing tag warnings
+    options.addStringOption('Xdoclint:all')
+    options.addStringOption('Xdoclint:-missing')
+
+    options.group('Server', ['com.linecorp.armeria.server'])
+    options.group('Client', ['com.linecorp.armeria.client'])
+    options.group('Common', ['com.linecorp.armeria.common'])
+
+    options.links = ['http://netty.io/4.1/api']
+  }
+
+  artifacts {
+    archives sourcesJar
+  }
+
+  configurations {
+    deployerJars
+  }
+
+  // Jetty expects resourceDir is same as classDir.
+  sourceSets {
+    test {
+      output.resourcesDir = output.classesDir
+    }
+  }
+
+  dependencyManagement {
+    dependencies {
+      dependencyVersions.each { dependency it }
+    }
+  }
+}

@@ -1,0 +1,107 @@
+apply plugin: 'org.jruyi.thrift'
+apply plugin: 'maven-publish'
+
+archivesBaseName = 'armeria'
+
+dependencies {
+    compile "io.netty:netty-transport"
+    compile "io.netty:netty-transport-native-epoll"
+    compile "io.netty:netty-codec-http2"
+    compile "io.netty:netty-resolver-dns"
+    runtime "org.javassist:javassist"
+    compile "io.netty:netty-tcnative-boringssl-static"
+    compileOnly "org.eclipse.jetty.alpn:alpn-api"
+    compile("org.apache.thrift:libthrift") {
+        exclude group:"org.apache.httpcomponents", module:"httpclient"
+        exclude group:"org.apache.httpcomponents", module:"httpcore"
+    }
+    compile "org.apache.tomcat.embed:tomcat-embed-core", optional
+    compile "org.apache.tomcat.embed:tomcat-embed-jasper", optional
+    compile "org.apache.tomcat.embed:tomcat-embed-el", optional
+    compile "org.slf4j:log4j-over-slf4j", optional
+    compile "org.eclipse.jetty:jetty-server", optional
+    compile "com.fasterxml.jackson.core:jackson-core"
+    compile "com.fasterxml.jackson.core:jackson-annotations"
+    compile "com.fasterxml.jackson.core:jackson-databind"
+    compile "org.reflections:reflections"
+    compile "io.dropwizard.metrics:metrics-core"
+    compile "org.slf4j:slf4j-api"
+    testCompile "ch.qos.logback:logback-classic"
+    compileOnly "com.google.code.findbugs:jsr305"
+    testCompile "junit:junit"
+    testCompile "org.hamcrest:hamcrest-library"
+    testCompile "org.easymock:easymock"
+    testCompile "org.easymock:easymockclassextension"
+    testCompile("org.jmock:jmock-junit4"){
+        exclude group:"junit", module:"junit-dep"
+    }
+    testCompile "org.mockito:mockito-core"
+    testCompile "org.apache.httpcomponents:httpclient"
+    testCompile "net.javacrumbs.json-unit:json-unit"
+    testCompile "org.eclipse.jetty:jetty-webapp"
+    testCompile "org.eclipse.jetty:jetty-annotations"
+    testCompile "org.eclipse.jetty:apache-jsp"
+    testCompile "org.eclipse.jetty:apache-jstl"
+    testCompile "org.eclipse.jetty.http2:http2-server"
+    compile "io.zipkin.brave:brave-core"
+    compile "io.zipkin.brave:brave-http"
+    compile "com.google.guava:guava"
+    testCompile "com.google.guava:guava-testlib"
+}
+
+publishing {
+  publications {
+    armeria(MavenPublication) {
+      pom {
+        withXml {
+          asNode().with {
+            appendNode('groupId', 'com.linecorp.armeria')
+            appendNode('artifactId', 'armeria')
+            appendNode('version', version)
+            appendNode('packaging', 'jar')
+            appendNode('name', 'Armeria')
+            appendNode('description', 'Asynchronous RPC/API client/server library built on top of Java 8, Netty 4.1, HTTP/2, and Thrift')
+            appendNode('url', 'https://github.com/line/armeria')
+            appendNode('organization').with {
+              appendNode('name', 'LINE Corporation')
+              appendNode('url', 'http://linecorp.com/en/')
+            }
+            appendNode('licenses').with {
+              appendNode('license').with {
+                appendNode('name', 'Apache License, Version 2.0')
+                appendNode('url', 'http://www.apache.org/licenses/LICENSE-2.0')
+              }
+            }
+            appendNode('inceptionYear', '2015')
+            appendNode('scm').with {
+              appendNode('url', '${project.url}')
+              appendNode('connection', 'scm:git:https://github.com/line/armeria.git')
+              appendNode('developerConnection', 'scm:git:ssh://git@github.com/line/armeria.git')
+              appendNode('tag', 'HEAD')
+            }
+            appendNode('developers').with {
+              appendNode('developer').with {
+                appendNode('id', 'linecorp.com')
+                appendNode('name', 'LINE Corporation')
+                appendNode('email', 'trustin@linecorp.com')
+                appendNode('url', 'http://linecorp.com/en/')
+                appendNode('organization', 'LINE Corporation')
+                appendNode('organizationUrl', 'http://linecorp.com/en/')
+              }
+            }
+            it
+          }
+        }
+      }
+
+      from project.components.java
+
+      artifact(project.tasks.sourcesJar) {
+        classifier 'sources'
+      }
+      artifact(project.tasks.javadocJar) {
+        classifier "javadoc"
+      }
+    }
+  }
+}
