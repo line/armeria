@@ -40,8 +40,8 @@ public class SpecificationTest {
 
     @Test
     public void servicesTest() throws Exception {
-        final Specification specification =
-                Specification.forServiceConfigs(Arrays.asList(
+        final Specification specification = Specification.forServiceConfigs(
+                Arrays.asList(
                         new ServiceConfig(
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/hello"),
@@ -51,7 +51,8 @@ public class SpecificationTest {
                                 PathMapping.ofExact("/foo"),
                                 THttpService.ofFormats(mock(FooService.AsyncIface.class),
                                                        SerializationFormat.THRIFT_COMPACT))),
-                                                Collections.emptyMap());
+                Collections.emptyMap(),
+                Collections.emptyMap());
 
         final Map<String, ServiceInfo> services = specification.services();
         assertThat(services.size(), is(2));

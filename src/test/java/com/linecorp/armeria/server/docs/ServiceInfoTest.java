@@ -18,8 +18,10 @@ package com.linecorp.armeria.server.docs;
 
 import static net.javacrumbs.jsonunit.JsonAssert.assertJsonEquals;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
@@ -49,7 +51,8 @@ public class ServiceInfoTest {
                                                        EnumSet.of(SerializationFormat.THRIFT_BINARY)),
                                        EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
                                                        EnumSet.of(SerializationFormat.THRIFT_TEXT))),
-                               ImmutableMap.of(bar3_args.class, new bar3_args().setIntVal(10)));
+                               ImmutableMap.of(bar3_args.class, new bar3_args().setIntVal(10)),
+                               ImmutableMap.of("foobar", "barbaz"));
 
         assertThat(service.endpoints(), hasSize(2));
         // Should be sorted alphabetically
@@ -100,5 +103,9 @@ public class ServiceInfoTest {
         assertThat(bar5.returnType(), is(MapInfo.of(string, foo)));
         assertThat(bar5.exceptions().size(), is(1));
         assertEquals("", bar5.sampleJsonRequest());
+
+        final String sampleHttpHeaders = service.sampleHttpHeaders();
+        assertThat(sampleHttpHeaders, notNullValue());
+        assertThat(sampleHttpHeaders, equalTo("{\n  \"foobar\" : \"barbaz\"\n}"));
     }
 }

@@ -174,7 +174,7 @@ $(function () {
     }));
 
     var debugText = functionContainer.find('.debug-textarea').val(functionInfo.sampleJsonRequest);
-    var debugHttpHeadersText = functionContainer.find('.debug-httpheaders');
+    var debugHttpHeadersText = functionContainer.find('.debug-httpheaders').val(serviceInfo.sampleHttpHeaders);
     var debugResponse = functionContainer.find('.debug-response code');
 
     var submitDebugRequest = function () {

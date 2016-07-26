@@ -21,6 +21,7 @@ import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofEx
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -55,6 +56,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final Map<Class<?>, ? extends TBase<?, ?>> sampleRequests;
+    private final Map<Class<?>, Map<String, String>> sampleHttpHeaders;
 
     private Server server;
 
@@ -74,12 +76,27 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      * pre-populated (e.g., a populated hello_args object for the hello method on HelloService).
      */
     public DocService(Iterable<? extends TBase<?, ?>> sampleRequests) {
+        this(sampleRequests, Collections.emptyMap());
+    }
+
+    /**
+     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}
+     * and {@code sampleHttpHeaders}.
+     *
+     * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
+     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
+     * {@code sampleHttpHeaders} should be a map of Thrift Service class to String-String map. The Thrift
+     * Service class is like HelloService.class, and String-String map is HTTP Header name to value map.
+     */
+    public DocService(Iterable<? extends TBase<?, ?>> sampleRequests,
+                      Map<Class<?>, Map<String, String>> sampleHttpHeaders) {
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
         requireNonNull(sampleRequests, "sampleRequests");
         this.sampleRequests = StreamSupport.stream(sampleRequests.spliterator(), false)
-                .collect(Collectors.toMap(Object::getClass, Function.identity()));
+                                           .collect(Collectors.toMap(Object::getClass, Function.identity()));
+        this.sampleHttpHeaders = sampleHttpHeaders;
     }
 
     @Override
@@ -109,7 +126,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
                                              .writeValueAsBytes(Specification.forServiceConfigs(
-                                                     services, sampleRequests)));
+                                                     services, sampleRequests, sampleHttpHeaders)));
             }
         });
     }
