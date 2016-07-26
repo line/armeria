@@ -167,6 +167,13 @@ label {
   min-height: 256px;
 }
 
+.debug-httpheaders {
+  width: 100%;
+  max-width: 100%;
+  font-size: 90%;
+  min-height: 120px;
+}
+
 .debug-submit {
   margin-top: 8px;
 }

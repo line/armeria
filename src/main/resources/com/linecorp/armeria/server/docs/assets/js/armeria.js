@@ -174,11 +174,14 @@ $(function () {
     }));
 
     var debugText = functionContainer.find('.debug-textarea').val(functionInfo.sampleJsonRequest);
+    var debugHttpHeadersText = functionContainer.find('.debug-httpheaders');
     var debugResponse = functionContainer.find('.debug-response code');
 
     var submitDebugRequest = function () {
       var args;
+      var httpHeaders;
       try {
+        httpHeaders = JSON.parse(debugHttpHeadersText.val());
         args = JSON.parse(debugText.val());
       } catch (e) {
         debugResponse.text("Failed to parse a JSON object, please check your request:\n" + e);
@@ -193,6 +196,7 @@ $(function () {
         type: 'POST',
         url: serviceInfo.debugPath,
         data: JSON.stringify(request),
+        headers: httpHeaders,
         contentType: TTEXT_MIME_TYPE,
         success: function (response) {
           debugResponse.text(response);
