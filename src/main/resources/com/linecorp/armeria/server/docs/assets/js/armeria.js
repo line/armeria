@@ -179,9 +179,11 @@ $(function () {
 
     var submitDebugRequest = function () {
       var args;
-      var httpHeaders;
+      var httpHeaders = {};
       try {
-        httpHeaders = JSON.parse(debugHttpHeadersText.val());
+        if (debugHttpHeadersText.val()) {
+          httpHeaders = JSON.parse(debugHttpHeadersText.val());
+        }
         args = JSON.parse(debugText.val());
       } catch (e) {
         debugResponse.text("Failed to parse a JSON object, please check your request:\n" + e);
@@ -203,7 +205,10 @@ $(function () {
           hljs.highlightBlock(debugResponse.get(0));
           var uri = URI(window.location.href);
           var fragment = uri.fragment(true);
-          fragment.setQuery('req', debugText.val());
+          fragment.setQuery({
+            req: debugText.val(),
+            httpHeaders: debugHttpHeadersText.val()
+          });
           window.location.href = uri.toString();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -218,6 +223,9 @@ $(function () {
 
     var fragment = URI(window.location.href).fragment(true);
     var fragmentParams = fragment.query(true);
+    if ("httpHeaders" in fragmentParams) {
+      debugHttpHeadersText.val(fragmentParams.httpHeaders);
+    }
     if (fragmentParams.req) {
       debugText.val(fragmentParams.req);
       submitDebugRequest();
