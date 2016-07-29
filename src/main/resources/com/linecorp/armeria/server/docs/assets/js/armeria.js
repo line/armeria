@@ -177,6 +177,12 @@ $(function () {
     var debugHttpHeadersText = functionContainer.find('.debug-httpheaders').val(serviceInfo.sampleHttpHeaders);
     var debugResponse = functionContainer.find('.debug-response code');
 
+    // handle 'debug-httpheaders' section
+    var collapser = functionContainer.find('.debug-httpheaders-collapser');
+    collapser.click(function() {
+      $(this).next().collapse('toggle');
+    });
+
     var submitDebugRequest = function () {
       var args;
       var httpHeaders = {};
@@ -225,6 +231,9 @@ $(function () {
     var fragmentParams = fragment.query(true);
     if ("httpHeaders" in fragmentParams) {
       debugHttpHeadersText.val(fragmentParams.httpHeaders);
+      if (fragmentParams.httpHeaders) { // unhide by default when headers are given from URL
+        collapser.next().collapse('toggle');
+      }
     }
     if (fragmentParams.req) {
       debugText.val(fragmentParams.req);
