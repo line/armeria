@@ -287,7 +287,10 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                 if (channel == null) {
                     break;
                 }
-                channel.close();
+
+                if (channel.isOpen()) {
+                    channel.close();
+                }
             }
         });
     }

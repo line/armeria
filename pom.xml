@@ -81,15 +81,15 @@
     <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
 
     <!-- Dependency versions -->
-    <jackson.version>2.7.5</jackson.version>
-    <jetty.version>9.3.10.v20160621</jetty.version>
+    <jackson.version>2.7.6</jackson.version>
+    <jetty.version>9.3.11.v20160721</jetty.version>
     <logback.version>1.1.7</logback.version>
     <metrics.version>3.1.2</metrics.version>
-    <netty.version>4.1.3.Final</netty.version>
+    <netty.version>4.1.4.Final</netty.version>
     <reactive-streams.version>1.0.0</reactive-streams.version>
     <slf4j.version>1.7.21</slf4j.version>
     <tomcat.version>8.5.4</tomcat.version>
-    <jetty.alpnAgent.version>2.0.3</jetty.alpnAgent.version>
+    <jetty.alpnAgent.version>2.0.4</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
@@ -100,7 +100,7 @@
     <thrift.source.test>${project.basedir}/src/test/thrift</thrift.source.test>
     <thrift.generated.main>${project.build.directory}/generated-sources</thrift.generated.main>
     <thrift.generated.test>${project.build.directory}/generated-test-sources</thrift.generated.test>
-    <brave.version>3.9.0</brave.version>
+    <brave.version>3.9.1</brave.version>
     <guava.version>19.0</guava.version>
     <reflections.version>0.9.10</reflections.version>
   </properties>
@@ -277,7 +277,7 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
-      <version>3.5.1</version>
+      <version>3.5.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -524,7 +524,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.11</version>
+        <version>1.12</version>
         <executions>
           <execution>
             <id>add-thrift-main-sources</id>
@@ -693,7 +693,7 @@
           <additionalparam>-Xdoclint:all -Xdoclint:-missing</additionalparam>
 
           <!-- Exclude the machine-generate code and the internal-only classes -->
-          <excludePackageNames>*.thrift.v1,*.common.http</excludePackageNames>
+          <excludePackageNames>*.thrift.v1,*.internal</excludePackageNames>
 
           <groups>
             <group>
