@@ -81,7 +81,7 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     HttpHeaders scheme(String scheme);
 
     /**
-     * Sets the {@link HttpHeaderNames##AUTHORITY} header.
+     * Sets the {@link HttpHeaderNames#AUTHORITY} header.
      */
     HttpHeaders authority(String authority);
 
