@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,7 +30,10 @@ import java.util.stream.StreamSupport;
 import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -40,14 +43,14 @@ import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.http.HttpService;
 import com.linecorp.armeria.server.http.file.HttpFileService;
 import com.linecorp.armeria.server.http.file.HttpVfs;
-import com.linecorp.armeria.server.thrift.ThriftService;
+import com.linecorp.armeria.server.thrift.THttpService;
 
 /**
- * An {@link HttpService} that provides information about the {@link ThriftService}s running in a
+ * An {@link HttpService} that provides information about the {@link THttpService}s running in a
  * {@link Server}. It does not require any configuration besides adding it to a {@link VirtualHost}; it
- * discovers all {@link ThriftService}s in the {@link Server} automatically.
+ * discovers all {@link THttpService}s in the {@link Server} automatically.
  */
-public class DocService extends AbstractCompositeService {
+public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -56,9 +59,9 @@ public class DocService extends AbstractCompositeService {
     private Server server;
 
     /**
-     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}.
+     * Creates a new instance, pre-populating debug forms with the provided {@code sampleRequests}.
      * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
-     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
+     * pre-populated (e.g., a populated hello_args object for the hello method on HelloService).
      */
     @SafeVarargs
     public <T extends TBase<?, ?>> DocService(T... sampleRequests) {
@@ -66,9 +69,9 @@ public class DocService extends AbstractCompositeService {
     }
 
     /**
-     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}.
+     * Creates a new instance, pre-populating debug forms with the provided {@code sampleRequests}.
      * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
-     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
+     * pre-populated (e.g., a populated hello_args object for the hello method on HelloService).
      */
     public DocService(Iterable<? extends TBase<?, ?>> sampleRequests) {
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
@@ -126,7 +129,7 @@ public class DocService extends AbstractCompositeService {
 
         void setSpecification(byte[] content) {
             assert entry == Entry.NONE;
-            entry = new ByteArrayEntry("/", "application/json", content);
+            entry = new ByteArrayEntry("/", MediaType.JSON_UTF_8, content);
         }
     }
 }

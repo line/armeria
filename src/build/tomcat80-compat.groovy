@@ -23,10 +23,11 @@ import org.objectweb.asm.Opcodes
 import java.nio.file.Files
 import java.nio.file.Paths
 
-// This script removes the methods that did not exist until Tomcat 8.5 from the ProtocolHandler implementation.
-// We need the methods to exist during compilation time since we compile the ProtocolHandler implementation
-// against Tomcat 8.5, but want to make sure the methods do not exist because otherwise JVM will fail to load
-// the ProtocolHandler due to the references to the non-existent classes in the method signatures.
+// This script removes the methods that did not exist until Tomcat 8.5 from the ProtocolHandler implementation
+// using bytecode manipulation. We need the methods to exist during compilation time since we compile the
+// ProtocolHandler implementation against Tomcat 8.5, but want to make sure the methods do not exist because
+// otherwise JVM will fail to load the ProtocolHandler due to the references to the non-existent classes in the
+// method signatures.
 
 path = Paths.get("target", "classes", "com", "linecorp", "armeria", "server", "http", "tomcat",
                  "Tomcat80ProtocolHandler.class")

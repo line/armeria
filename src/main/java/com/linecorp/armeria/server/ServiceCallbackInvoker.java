@@ -19,56 +19,23 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A helper class that invokes the callback methods in {@link Service}, {@link ServiceCodec} and
- * {@link ServiceInvocationHandler}.
+ * A helper class that invokes the callback methods in {@link Service}.
  */
 public final class ServiceCallbackInvoker {
 
     /**
      * Invokes {@link Service#serviceAdded(ServiceConfig)}.
      */
-    public static void invokeServiceAdded(ServiceConfig cfg, Service service) {
+    public static void invokeServiceAdded(ServiceConfig cfg, Service<?, ?> service) {
         requireNonNull(cfg, "cfg");
         requireNonNull(service, "service");
 
         try {
             service.serviceAdded(cfg);
         } catch (Exception e) {
-            fail("serviceAdded", service, e);
+            throw new IllegalStateException(
+                    "failed to invoke serviceAdded() on: " + service, e);
         }
-    }
-
-    /**
-     * Invokes {@link ServiceCodec#codecAdded(ServiceConfig)}.
-     */
-    public static void invokeCodecAdded(ServiceConfig cfg, ServiceCodec codec) {
-        requireNonNull(cfg, "cfg");
-        requireNonNull(codec, "codec");
-
-        try {
-            codec.codecAdded(cfg);
-        } catch (Exception e) {
-            fail("codecAdded", codec, e);
-        }
-    }
-
-    /**
-     * Invokes {@link ServiceInvocationHandler#handlerAdded(ServiceConfig)}.
-     */
-    public static void invokeHandlerAdded(ServiceConfig cfg, ServiceInvocationHandler handler) {
-        requireNonNull(cfg, "cfg");
-        requireNonNull(handler, "handler");
-
-        try {
-            handler.handlerAdded(cfg);
-        } catch (Exception e) {
-            fail("handlerAdded", handler, e);
-        }
-    }
-
-    private static <T> void fail(String operationName, T component, Exception e) {
-        throw new IllegalStateException(
-                "failed to invoke " + operationName + "() on: " + component, e);
     }
 
     private ServiceCallbackInvoker() {}

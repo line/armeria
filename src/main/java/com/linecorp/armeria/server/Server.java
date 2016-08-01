@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -23,8 +24,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,14 +38,15 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.NativeLibraries;
+import com.linecorp.armeria.server.http.HttpServerPipelineConfigurator;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -54,7 +58,6 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
 
 /**
  * Listens to {@link ServerPort}s and delegates client requests to {@link Service}s.
@@ -64,18 +67,6 @@ import io.netty.util.concurrent.Promise;
 public final class Server implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
-
-    private static final ThreadFactory DEFAULT_THREAD_FACTORY_BOSS_NIO =
-            new DefaultThreadFactory("armeria-server-boss-nio", false);
-
-    private static final ThreadFactory DEFAULT_THREAD_FACTORY_NIO =
-            new DefaultThreadFactory("armeria-server-nio", false);
-
-    private static final ThreadFactory DEFAULT_THREAD_FACTORY_BOSS_EPOLL =
-            new DefaultThreadFactory("armeria-server-boss-epoll", false);
-
-    private static final ThreadFactory DEFAULT_THREAD_FACTORY_EPOLL =
-            new DefaultThreadFactory("armeria-server-epoll", false);
 
     private final ServerConfig config;
     private final DomainNameMapping<SslContext> sslContexts;
@@ -125,19 +116,9 @@ public final class Server implements AutoCloseable {
             sslContexts = mappingBuilder.build();
         }
 
-        // Invoke the service/codec/handlerAdded() methods in Service/ServiceCodec/ServiceInvocationHandler
-        // so that it can keep the reference to this Server or add a listener to it.
-        config.serviceConfigs().forEach(Server::initService);
-    }
-
-    private static void initService(ServiceConfig serviceCfg) {
-        final Service service = serviceCfg.service();
-        final ServiceCodec codec = service.codec();
-        final ServiceInvocationHandler handler = service.handler();
-
-        ServiceCallbackInvoker.invokeServiceAdded(serviceCfg, service);
-        ServiceCallbackInvoker.invokeCodecAdded(serviceCfg, codec);
-        ServiceCallbackInvoker.invokeHandlerAdded(serviceCfg, handler);
+        // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
+        // add a listener to it.
+        config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
     }
 
     /**
@@ -215,57 +196,48 @@ public final class Server implements AutoCloseable {
     /**
      * Starts this {@link Server} to listen to the {@link ServerPort}s specified in the {@link ServerConfig}.
      * Note that the startup procedure is asynchronous and thus this method returns immediately. To wait until
-     * this {@link Server} is fully started up, wait for the returned {@link Future}:
+     * this {@link Server} is fully started up, wait for the returned {@link CompletableFuture}:
      * <pre>{@code
      * ServerBuilder builder = new ServerBuilder();
      * ...
      * Server server = builder.build();
-     * server.start().sync();
+     * server.start().get();
      * }</pre>
      */
-    public Future<Void> start() {
-        return start(GlobalEventExecutor.INSTANCE.newPromise());
+    public CompletableFuture<Void> start() {
+        final CompletableFuture<Void> future = new CompletableFuture<>();
+        start(future);
+        return future;
     }
 
-    /**
-     * Starts this {@link Server} to listen to the {@link ServerPort}s specified in the {@link ServerConfig}.
-     * Note that the startup procedure is asynchronous and thus this method returns immediately. To wait until
-     * this {@link Server} is fully started up, wait for the returned {@link Future}:
-     * <pre>{@code
-     * ServerBuilder builder = new ServerBuilder();
-     * ...
-     * Server server = builder.build();
-     * server.start().sync();
-     * }</pre>
-     *
-     * @param promise the {@link Promise} to notify when the startup procedure is finished
-     * @return {@code promise}
-     */
-    public Future<Void> start(Promise<Void> promise) {
-        requireNonNull(promise, "promise");
-
+    private void start(CompletableFuture<Void> future) {
         final State state = stateManager.state();
         switch (state.type) {
         case STOPPING:
             // A user called start() to restart the server, but the server is not stopped completely.
             // Try again after stopping.
-            state.future.addListener(future -> start(promise));
-            return promise;
+            state.future.handle(voidFunction((ret, cause) -> start(future)))
+                        .exceptionally(CompletionActions::log);
+            return;
         }
 
-        if (!stateManager.enterStarting(promise, this::stop0)) {
-            assert promise.cause() != null;
-            return promise;
+        if (!stateManager.enterStarting(future, this::stop0)) {
+            assert future.isCompletedExceptionally();
+            return;
         }
 
         try {
             // Initialize the event loop groups.
             if (NativeLibraries.isEpollAvailable()) {
-                bossGroup = new EpollEventLoopGroup(1, DEFAULT_THREAD_FACTORY_BOSS_EPOLL);
-                workerGroup = new EpollEventLoopGroup(config.numWorkers(), DEFAULT_THREAD_FACTORY_EPOLL);
+                final ThreadFactory bossThreadFactory = new DefaultThreadFactory("armeria-server-boss-epoll", false);
+                final ThreadFactory workerThreadFactory = new DefaultThreadFactory("armeria-server-epoll", false);
+                bossGroup = new EpollEventLoopGroup(1, bossThreadFactory);
+                workerGroup = new EpollEventLoopGroup(config.numWorkers(), workerThreadFactory);
             } else {
-                bossGroup = new NioEventLoopGroup(1, DEFAULT_THREAD_FACTORY_BOSS_NIO);
-                workerGroup = new NioEventLoopGroup(config.numWorkers(), DEFAULT_THREAD_FACTORY_NIO);
+                final ThreadFactory bossThreadFactory = new DefaultThreadFactory("armeria-server-boss-nio", false);
+                final ThreadFactory workerThreadFactory = new DefaultThreadFactory("armeria-server-nio", false);
+                bossGroup = new NioEventLoopGroup(1, bossThreadFactory);
+                workerGroup = new NioEventLoopGroup(config.numWorkers(), workerThreadFactory);
             }
 
             // Initialize the server sockets asynchronously.
@@ -280,22 +252,21 @@ public final class Server implements AutoCloseable {
             }
 
             for (ServerPort p: ports) {
-                start(p).addListener(new ServerPortStartListener(remainingPorts, promise, p));
+                start(p).addListener(new ServerPortStartListener(remainingPorts, future, p));
             }
         } catch (Throwable t) {
-            promise.setFailure(t);
+            completeFutureExceptionally(future, t);
         }
-
-        return promise;
     }
 
     private ChannelFuture start(ServerPort port) {
         ServerBootstrap b = new ServerBootstrap();
 
         b.group(bossGroup, workerGroup);
-        b.channel(Epoll.isAvailable()? EpollServerSocketChannel.class : NioServerSocketChannel.class);
-        b.childHandler(new ServerInitializer(config, port, sslContexts,
-                                             Optional.ofNullable(gracefulShutdownHandler)));
+        b.channel(NativeLibraries.isEpollAvailable() ? EpollServerSocketChannel.class
+                                                     : NioServerSocketChannel.class);
+        b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
+                                                          Optional.ofNullable(gracefulShutdownHandler)));
 
         return b.bind(port.localAddress());
     }
@@ -303,56 +274,47 @@ public final class Server implements AutoCloseable {
     /**
      * Stops this {@link Server} to close all active {@link ServerPort}s. Note that the shutdown procedure is
      * asynchronous and thus this method returns immediately. To wait until this {@link Server} is fully
-     * shut down, wait for the returned {@link Future}:
+     * shut down, wait for the returned {@link CompletableFuture}:
      * <pre>{@code
      * Server server = ...;
-     * server.stop().sync();
+     * server.stop().get();
      * }</pre>
      */
-    public Future<Void> stop() {
-        return stop(GlobalEventExecutor.INSTANCE.newPromise());
+    public CompletableFuture<Void> stop() {
+        final CompletableFuture<Void> future = new CompletableFuture<>();
+        stop(future);
+        return future;
     }
 
-    /**
-     * Stops this {@link Server} to close all active {@link ServerPort}s. Note that the shutdown procedure is
-     * asynchronous and thus this method returns immediately. To wait until this {@link Server} is fully
-     * shut down, wait for the returned {@link Future}:
-     * <pre>{@code
-     * Server server = ...;
-     * server.stop().sync();
-     * }</pre>
-     *
-     * @param promise the {@link Promise} to notify when the shutdown procedure is finished
-     * @return {@code promise}
-     */
-    public Future<Void> stop(Promise<Void> promise) {
-        requireNonNull(promise, "promise");
-
+    private void stop(CompletableFuture<Void> future) {
         for (;;) {
             final State state = stateManager.state();
             switch (state.type) {
             case STOPPED:
-                return promise.setSuccess(null);
+                completeFuture(future);
+                return;
             case STOPPING:
-                state.future.addListener(f -> {
-                    if (f.isSuccess()) {
-                        promise.setSuccess(null);
+                state.future.handle(voidFunction((ret, cause) -> {
+                    if (cause == null) {
+                        completeFuture(future);
                     } else {
-                        promise.setFailure(f.cause());
+                        completeFutureExceptionally(future, cause);
                     }
-                });
-                return promise;
+                })).exceptionally(CompletionActions::log);
+                return;
             case STARTED:
-                if (!stateManager.enterStopping(state, promise)) {
+                if (!stateManager.enterStopping(state, future)) {
                     // Someone else changed the state meanwhile; try again.
                     continue;
                 }
 
-                return stop0(promise);
+                stop0(future);
+                return;
             case STARTING:
                 // Wait until the start process is finished, and then try again.
-                state.future.addListener(f -> stop(promise));
-                return promise;
+                state.future.handle(voidFunction((ret, cause) -> stop(future)))
+                            .exceptionally(CompletionActions::log);
+                return;
             }
         }
     }
@@ -370,32 +332,32 @@ public final class Server implements AutoCloseable {
         return workerGroup.next();
     }
 
-    private Future<Void> stop0(Promise<Void> promise) {
-        assert promise != null;
+    private void stop0(CompletableFuture<Void> future) {
+        assert future != null;
 
         final EventLoopGroup bossGroup = this.bossGroup;
         final GracefulShutdownHandler gracefulShutdownHandler = this.gracefulShutdownHandler;
 
         if (gracefulShutdownHandler == null) {
-            return stop1(promise, bossGroup);
+            stop1(future, bossGroup);
+            return;
         }
 
         // Check every 100 ms for the server to have completed processing
         // requests.
         bossGroup.scheduleAtFixedRate(() -> {
             if (gracefulShutdownHandler.completedQuietPeriod()) {
-                stop1(promise, bossGroup);
+                stop1(future, bossGroup);
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
 
         // Make sure the event loop stops after the timeout, regardless of what
         // the GracefulShutdownHandler says.
-        bossGroup.schedule(() -> stop1(promise, bossGroup),
+        bossGroup.schedule(() -> stop1(future, bossGroup),
                            config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
-        return promise;
     }
 
-    private Future<Void> stop1(Promise<Void> promise, EventLoopGroup bossGroup) {
+    private void stop1(CompletableFuture<Void> future, EventLoopGroup bossGroup) {
         // FIXME(trustin): Shutdown and terminate the blockingTaskExecutor.
         //                 Could be fixed while fixing https://github.com/line/armeria/issues/46
 
@@ -424,19 +386,33 @@ public final class Server implements AutoCloseable {
 
             workerShutdownFuture.addListener(f2 -> {
                 stateManager.enter(State.STOPPED);
-                promise.setSuccess(null);
+                completeFuture(future);
             });
         });
-
-        return promise;
     }
 
     /**
-     * A shortcut to {@link #stop() stop().syncUninterruptibly()}.
+     * A shortcut to {@link #stop() stop().get()}.
      */
     @Override
     public void close() {
-        stop().syncUninterruptibly();
+        final CompletableFuture<Void> f = stop();
+        boolean interrupted = false;
+        for (;;) {
+            try {
+                f.get();
+                break;
+            } catch (InterruptedException ignored) {
+                interrupted = true;
+            } catch (ExecutionException e) {
+                logger.warn("Failed to stop a server", e);
+                break;
+            }
+        }
+
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     enum StateType {
@@ -451,9 +427,9 @@ public final class Server implements AutoCloseable {
         static final State STOPPED = new State(StateType.STOPPED, null);
 
         final StateType type;
-        final Future<Void> future;
+        final CompletableFuture<Void> future;
 
-        State(StateType type, Future<Void> future) {
+        State(StateType type, CompletableFuture<Void> future) {
             this.type = type;
             this.future = future;
         }
@@ -480,10 +456,12 @@ public final class Server implements AutoCloseable {
             notifyState(state);
         }
 
-        boolean enterStarting(Promise<Void> promise, Consumer<Promise<Void>> rollbackTask) {
-            final State startingState = new State(StateType.STARTING, promise);
+        boolean enterStarting(CompletableFuture<Void> future, Consumer<CompletableFuture<Void>> rollbackTask) {
+            final State startingState = new State(StateType.STARTING, future);
             if (!ref.compareAndSet(State.STOPPED, startingState)) {
-                promise.setFailure(new IllegalStateException("must be stopped to start: " + this));
+                completeFutureExceptionally(
+                        future,
+                        new IllegalStateException("must be stopped to start: " + this));
                 return false;
             }
 
@@ -492,32 +470,34 @@ public final class Server implements AutoCloseable {
             //   actually occurred.
             // - before notifyState() below so that the listener is invoked when listener notification fails.
 
-            promise.addListener(f -> {
-                if (f.isSuccess()) {
+            future.handle(voidFunction((ret, cause) -> {
+                if (cause == null) {
                     enter(State.STARTED);
                 } else {
-                    rollbackTask.accept(stateManager.enterStopping(GlobalEventExecutor.INSTANCE.newPromise()));
+                    rollbackTask.accept(stateManager.enterStopping(new CompletableFuture<>()));
                 }
-            });
+            })).exceptionally(CompletionActions::log);
 
             if (!notifyState(startingState)) {
-                promise.setFailure(new IllegalStateException("failed to notify all server listeners"));
+                completeFutureExceptionally(
+                        future,
+                        new IllegalStateException("failed to notify all server listeners"));
                 return false;
             }
 
             return true;
         }
 
-        Promise<Void> enterStopping(Promise<Void> promise) {
-            final State update = new State(StateType.STOPPING, promise);
+        CompletableFuture<Void> enterStopping(CompletableFuture<Void> future) {
+            final State update = new State(StateType.STOPPING, future);
             ref.set(update);
 
             notifyState(update);
-            return promise;
+            return future;
         }
 
-        boolean enterStopping(State expect, Promise<Void> promise) {
-            final State update = new State(StateType.STOPPING, promise);
+        boolean enterStopping(State expect, CompletableFuture<Void> future) {
+            final State update = new State(StateType.STOPPING, future);
             if (expect != null) {
                 if (!ref.compareAndSet(expect, update)) {
                     return false;
@@ -568,18 +548,20 @@ public final class Server implements AutoCloseable {
     private final class ServerPortStartListener implements ChannelFutureListener {
 
         private final AtomicInteger remainingPorts;
-        private final Promise<Void> startPromise;
+        private final CompletableFuture<Void> startFuture;
         private final ServerPort port;
 
-        ServerPortStartListener(AtomicInteger remainingPorts, Promise<Void> startPromise, ServerPort port) {
+        ServerPortStartListener(
+                AtomicInteger remainingPorts, CompletableFuture<Void> startFuture, ServerPort port) {
+
             this.remainingPorts = requireNonNull(remainingPorts, "remainingPorts");
-            this.startPromise = requireNonNull(startPromise, "startPromise");
+            this.startFuture = requireNonNull(startFuture, "startFuture");
             this.port = requireNonNull(port, "port");
         }
 
         @Override
         public void operationComplete(ChannelFuture f) throws Exception {
-            if (startPromise.isDone()) {
+            if (startFuture.isDone()) {
                 return;
             }
 
@@ -595,11 +577,27 @@ public final class Server implements AutoCloseable {
                 }
 
                 if (remainingPorts.decrementAndGet() == 0) {
-                    startPromise.setSuccess(null);
+                    completeFuture(startFuture);
                 }
             } else {
-                startPromise.setFailure(f.cause());
+                completeFutureExceptionally(startFuture, f.cause());
             }
+        }
+    }
+
+    private static void completeFuture(CompletableFuture<Void> future) {
+        if (GlobalEventExecutor.INSTANCE.inEventLoop()) {
+            future.complete(null);
+        } else {
+            GlobalEventExecutor.INSTANCE.execute(() -> future.complete(null));
+        }
+    }
+
+    private static void completeFutureExceptionally(CompletableFuture<Void> future, Throwable cause) {
+        if (GlobalEventExecutor.INSTANCE.inEventLoop()) {
+            future.completeExceptionally(cause);
+        } else {
+            GlobalEventExecutor.INSTANCE.execute(() -> future.completeExceptionally(cause));
         }
     }
 }

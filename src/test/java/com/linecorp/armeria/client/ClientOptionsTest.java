@@ -19,50 +19,48 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 
 import java.util.Optional;
 
 import org.junit.Test;
 
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpHeaderNames;
+import com.linecorp.armeria.common.http.HttpHeaders;
+
+import io.netty.util.AsciiString;
 
 public class ClientOptionsTest {
 
     @Test
-    public void testDefaultOptions() {
-        ClientOptions config = ClientOptions.DEFAULT;
-
-        assertThat(config.responseTimeoutPolicy(), is(not(nullValue())));
-        assertThat(config.writeTimeoutPolicy(), is(not(nullValue())));
-    }
-
-    @Test
     public void testSetHttpHeader() {
-        HttpHeaders httpHeader = new DefaultHttpHeaders();
-        httpHeader.add((CharSequence) "X-USER-DEFINED", "HEADER_VALUE");
+        HttpHeaders httpHeader = HttpHeaders.of(AsciiString.of("x-user-defined"), "HEADER_VALUE");
 
         ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
         assertThat(options.get(ClientOption.HTTP_HEADERS), is(Optional.of(httpHeader)));
 
         ClientOptions options2 = ClientOptions.DEFAULT;
-        assertThat(options2.get(ClientOption.HTTP_HEADERS), is(Optional.empty()));
+        assertThat(options2.get(ClientOption.HTTP_HEADERS), is(Optional.of(HttpHeaders.EMPTY_HEADERS)));
 
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testSetBlackListHeader() {
-        HttpHeaders httpHeader = new DefaultHttpHeaders();
-        httpHeader.add(HttpHeaderNames.HOST, "localhost");
-
-        ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
+        ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(
+                HttpHeaders.of(HttpHeaderNames.HOST, "localhost")));
     }
 
     @Test(expected = NullPointerException.class)
-    public void testInvalidOption() {
-        ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_POLICY.newValue(null));
+    public void testInvalidDefaultWriteTimeoutMillis() {
+        ClientOptions.of(ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS.newValue(null));
     }
 
+    @Test(expected = NullPointerException.class)
+    public void testInvalidDefaultResponseTimeoutMillis() {
+        ClientOptions.of(ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(null));
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testInvalidDefaultMaxResponseLength() {
+        ClientOptions.of(ClientOption.DEFAULT_MAX_RESPONSE_LENGTH.newValue(null));
+    }
 }

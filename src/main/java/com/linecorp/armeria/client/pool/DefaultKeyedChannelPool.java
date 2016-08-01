@@ -282,7 +282,7 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     @Override
     public void close() {
         pool.forEach((k, v) -> {
-            for (; ; ) {
+            for (;;) {
                 Channel channel = pollChannel(k);
                 if (channel == null) {
                     break;
