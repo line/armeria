@@ -91,7 +91,7 @@
     <tomcat.version>8.5.4</tomcat.version>
     <jetty.alpnAgent.version>2.0.4</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
-    <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}</argLine.alpnAgent>
+    <argLine.alpnAgent>-javaagent:"${jetty.alpnAgent.path}"</argLine.alpnAgent>
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.memOpts>-Xmx128m</argLine.memOpts>
