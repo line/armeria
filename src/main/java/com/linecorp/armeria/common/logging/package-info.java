@@ -15,7 +15,15 @@
  */
 
 /**
- * Distributed tracing client decorators based on <a href="https://github.com/openzipkin/brave">Brave</a>,
- * a Java tracing library compatible with <a href="http://zipkin.io/">Zipkin</a>.
+ * Common types used for collecting the information about {@link com.linecorp.armeria.common.Request}s and
+ * {@link com.linecorp.armeria.common.Response}s.
+ *
+ * <h2>Starting points</h2>
+ * <ul>
+ *   <li>{@link com.linecorp.armeria.common.logging.RequestLog}</li>
+ *   <li>{@link com.linecorp.armeria.common.logging.RequestLogBuilder}</li>
+ *   <li>{@link com.linecorp.armeria.common.logging.ResponseLog}</li>
+ *   <li>{@link com.linecorp.armeria.common.logging.ResponseLogBuilder}</li>
+ * </ul>
  */
-package com.linecorp.armeria.client.tracing;
+package com.linecorp.armeria.common.logging;

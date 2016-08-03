@@ -15,7 +15,7 @@
  */
 
 /**
- * Provides a failure detection and fallback mechanism based of
+ * Failure detection and fallback mechanism based on
  * <a href="http://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker pattern</a>.
  *
  * <h1>Setup Client with Circuit Breaker</h1>

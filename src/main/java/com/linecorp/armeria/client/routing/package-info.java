@@ -15,7 +15,12 @@
  */
 
 /**
- * Distributed tracing client decorators based on <a href="https://github.com/openzipkin/brave">Brave</a>,
- * a Java tracing library compatible with <a href="http://zipkin.io/">Zipkin</a>.
+ * {@link com.linecorp.armeria.client.Endpoint} groups and their registry.
+ *
+ * <h2>Starting points</h2>
+ * <ul>
+ *   <li>{@link com.linecorp.armeria.client.routing.EndpointGroupRegistry}</li>
+ *   <li>{@link com.linecorp.armeria.client.routing.StaticEndpointGroup}</li>
+ * </ul>
  */
-package com.linecorp.armeria.client.tracing;
+package com.linecorp.armeria.client.routing;
