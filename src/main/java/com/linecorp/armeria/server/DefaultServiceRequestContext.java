@@ -78,6 +78,10 @@ public final class DefaultServiceRequestContext extends AbstractRequestContext i
         requestLog = new DefaultRequestLog();
         requestLog.start(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method, path);
         responseLog = new DefaultResponseLog(requestLog);
+
+        final ServerConfig serverCfg = cfg.server().config();
+        requestTimeoutMillis = serverCfg.defaultRequestTimeoutMillis();
+        maxRequestLength = serverCfg.defaultMaxRequestLength();
     }
 
     @Override
