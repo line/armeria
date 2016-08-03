@@ -20,19 +20,31 @@ import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.isContentAlways
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Formatter;
 import java.util.Locale;
 
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.common.reactivestreams.Writer;
 
+/**
+ * A {@link Writer} of an {@link HttpResponse}.
+ */
 public interface HttpResponseWriter extends Writer<HttpObject> {
     // TODO(trustin): Add lots of convenience methods for easier response construction.
 
+    /**
+     * Writes the HTTP response of the specified {@code statusCode} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     */
     default void respond(int statusCode) {
         respond(HttpStatus.valueOf(statusCode));
     }
 
+    /**
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     */
     default void respond(HttpStatus status) {
         requireNonNull(status, "status");
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
@@ -45,6 +57,13 @@ public interface HttpResponseWriter extends Writer<HttpObject> {
         }
     }
 
+    /**
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
     default void respond(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(status, "status");
         requireNonNull(content, "content");
@@ -53,6 +72,16 @@ public interface HttpResponseWriter extends Writer<HttpObject> {
                 mediaType, content.getBytes(mediaType.charset().or(StandardCharsets.UTF_8)));
     }
 
+    /**
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
+     * {@linkplain Locale#ENGLISH English locale}.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
     default void respond(HttpStatus status, MediaType mediaType, String format, Object... args) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
@@ -64,16 +93,39 @@ public interface HttpResponseWriter extends Writer<HttpObject> {
                         mediaType.charset().or(StandardCharsets.UTF_8)));
     }
 
+    /**
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
     default void respond(HttpStatus status, MediaType mediaType, byte[] content) {
         requireNonNull(content, "content");
         respond(status, mediaType, HttpData.of(content));
     }
 
+    /**
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     * @param offset the start offset of {@code content}
+     * @param length the length of {@code content}
+     */
     default void respond(HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
         requireNonNull(content, "content");
         respond(status, mediaType, HttpData.of(content, offset, length));
     }
 
+    /**
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
     default void respond(HttpStatus status, MediaType mediaType, HttpData content) {
         requireNonNull(status, "status");
         requireNonNull(content, "content");
@@ -99,6 +151,9 @@ public interface HttpResponseWriter extends Writer<HttpObject> {
         close();
     }
 
+    /**
+     * Writes the specified HTTP response and closes the stream.
+     */
     default void respond(AggregatedHttpMessage res) {
         final HttpHeaders headers = res.headers();
         write(headers);

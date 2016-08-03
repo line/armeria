@@ -29,6 +29,10 @@ public final class RequestTimeoutException extends TimeoutException {
     private static final RequestTimeoutException INSTANCE =
             Exceptions.clearTrace(new RequestTimeoutException());
 
+    /**
+     * Returns a {@link RequestTimeoutException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
     public static RequestTimeoutException get() {
         return Exceptions.isVerbose() ? new RequestTimeoutException() : INSTANCE;
     }

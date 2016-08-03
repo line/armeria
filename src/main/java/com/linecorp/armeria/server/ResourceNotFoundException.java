@@ -28,6 +28,10 @@ public final class ResourceNotFoundException extends RuntimeException {
     private static final ResourceNotFoundException INSTANCE =
             Exceptions.clearTrace(new ResourceNotFoundException());
 
+    /**
+     * Returns a {@link ResourceNotFoundException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
     public static ResourceNotFoundException get() {
         return Exceptions.isVerbose() ? new ResourceNotFoundException() : INSTANCE;
     }

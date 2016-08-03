@@ -16,38 +16,60 @@
 
 package com.linecorp.armeria.common.http;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Iterator;
 import java.util.Map.Entry;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
+/**
+ * HTTP/2 headers.
+ */
 public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, HttpHeaders> {
 
+    /**
+     * An immutable empty HTTP/2 headers.
+     */
     HttpHeaders EMPTY_HEADERS = new DefaultHttpHeaders(false, 0).asImmutable();
 
+    /**
+     * Returns new HTTP request headers.
+     */
     static HttpHeaders of(HttpMethod method, String path) {
         return new DefaultHttpHeaders().method(method).path(path);
     }
 
+    /**
+     * Returns new HTTP response headers.
+     */
     static HttpHeaders of(int statusCode) {
         return of(HttpStatus.valueOf(statusCode));
     }
 
+    /**
+     * Returns new HTTP response headers.
+     */
     static HttpHeaders of(HttpStatus status) {
         return new DefaultHttpHeaders().status(status);
     }
 
+    /**
+     * Returns new HTTP headers with a single entry.
+     */
     static HttpHeaders of(AsciiString name, String value) {
         return new DefaultHttpHeaders().add(name, value);
     }
 
+    /**
+     * Returns new HTTP headers with two entries.
+     */
     static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2) {
         return new DefaultHttpHeaders().add(name1, value1).add(name2, value2);
     }
 
+    /**
+     * Returns new HTTP headers with three entries.
+     */
     static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2,
                           AsciiString name3, String value3) {
 
@@ -55,6 +77,9 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
                                        .add(name3, value3);
     }
 
+    /**
+     * Returns new HTTP headers with four entries.
+     */
     static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2,
                           AsciiString name3, String value3, AsciiString name4, String value4) {
 
@@ -125,6 +150,9 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
      */
     HttpStatus status();
 
+    /**
+     * Returns the immutable view of this headers.
+     */
     default HttpHeaders asImmutable() {
         return new ImmutableHttpHeaders(this);
     }

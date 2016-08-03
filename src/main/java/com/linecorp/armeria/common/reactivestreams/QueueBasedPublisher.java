@@ -33,6 +33,36 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
+/**
+ * A {@link RichPublisher} which buffers the elements to be signaled into a {@link Queue}.
+ *
+ * <p>This class implements the {@link Writer} interface as well. A written element will be buffered into the
+ * {@link Queue} until a {@link Subscriber} consumes it. Use {@link Writer#onDemand(Runnable)} to control the
+ * rate of production so that the {@link Queue} does not grow up infinitely.
+ *
+ * <pre>{@code
+ * void stream(QueueBasedPublished<Integer> pub, int start, int end) {
+ *     // Write 100 integers at most.
+ *     int actualEnd = (int) Math.min(end, start + 100L);
+ *     int i;
+ *     for (i = start; i < actualEnd; i++) {
+ *         pub.write(i);
+ *     }
+ *
+ *     if (i == end) {
+ *         // Wrote the last element.
+ *         return;
+ *     }
+ *
+ *     pub.onDemand(() -> stream(pub, i, end));
+ * }
+ *
+ * final QueueBasedPublisher<Integer> myPub = new QueueBasedPublisher<>();
+ * stream(myPub, 0, Integer.MAX_VALUE);
+ * }</pre>
+ *
+ * @param <T> the type of element signaled
+ */
 public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
 
     private enum State {
@@ -87,10 +117,16 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
     @SuppressWarnings("FieldMayBeFinal")
     private volatile State state = State.OPEN;
 
+    /**
+     * Creates a new instance with a new {@link ConcurrentLinkedQueue}.
+     */
     public QueueBasedPublisher() {
         this(new ConcurrentLinkedQueue<>());
     }
 
+    /**
+     * Creates a new instance with the specified {@link Queue}.
+     */
     public QueueBasedPublisher(Queue<Object> queue) {
         this.queue = requireNonNull(queue, "queue");
     }
@@ -178,7 +214,7 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
         notifySubscriber();
     }
 
-    protected void notifySubscriber() {
+    final void notifySubscriber() {
         final SubscriptionImpl subscription = this.subscription;
         if (subscription == null) {
             return;
@@ -285,6 +321,12 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
         return false;
     }
 
+    /**
+     * Invoked after an element is removed from the {@link Queue} and before {@link Subscriber#onNext(Object)}
+     * is invoked.
+     *
+     * @param obj the removed element
+     */
     protected void onRemoval(T obj) {}
 
     @Override

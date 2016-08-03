@@ -26,10 +26,22 @@ import com.linecorp.armeria.client.ClientDecoration.Entry;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
+/**
+ * Creates a new {@link ClientDecoration} using the builder pattern.
+ */
 public final class ClientDecorationBuilder {
 
     private final List<Entry<?, ?>> entries = new ArrayList<>();
 
+    /**
+     * Adds a new decorator {@link Function}.
+     *
+     * @param requestType the type of the {@link Request} that the {@code decorator} is interested in
+     * @param responseType the type of the {@link Response} that the {@code decorator} is interested in
+     * @param decorator the {@link Function} that transforms a {@link Client} to another
+     * @param <T> the type of the {@link Client} being decorated
+     * @param <R> the type of the {@link Client} produced by the {@code decorator}
+     */
     public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
             I extends Request, O extends Response>
     ClientDecorationBuilder add(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
@@ -42,6 +54,10 @@ public final class ClientDecorationBuilder {
         return this;
     }
 
+    /**
+     * Creates a new {@link ClientDecoration} with the decorators added so far via
+     * {@link #add(Class, Class, Function)}.
+     */
     public ClientDecoration build() {
         return new ClientDecoration(entries);
     }

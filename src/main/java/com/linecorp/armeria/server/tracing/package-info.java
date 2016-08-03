@@ -15,7 +15,7 @@
  */
 
 /**
- * Distributed tracing service decorators based on <a href="https://github.com/openzipkin/brave">Brave</a>,
+ * Distributed tracing services based on <a href="https://github.com/openzipkin/brave">Brave</a>,
  * a Java tracing library compatible with <a href="http://zipkin.io/">Zipkin</a>.
  */
 package com.linecorp.armeria.server.tracing;

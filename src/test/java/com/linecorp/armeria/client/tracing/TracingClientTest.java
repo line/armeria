@@ -135,6 +135,6 @@ public class TracingClientTest {
         }
 
         @Override
-        protected void putTraceData(ClientRequestContext ctx, Request req, @Nullable SpanId spanId) {}
+        protected void putTraceData(ClientRequestContext ctx, ThriftCall req, @Nullable SpanId spanId) {}
     }
 }

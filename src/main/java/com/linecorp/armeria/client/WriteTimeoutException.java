@@ -28,6 +28,10 @@ public final class WriteTimeoutException extends TimeoutException {
 
     private static final WriteTimeoutException INSTANCE = Exceptions.clearTrace(new WriteTimeoutException());
 
+    /**
+     * Returns a {@link WriteTimeoutException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
     public static WriteTimeoutException get() {
         return Exceptions.isVerbose() ? new WriteTimeoutException() : INSTANCE;
     }

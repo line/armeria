@@ -16,4 +16,7 @@
 
 package com.linecorp.armeria.common.http;
 
+/**
+ * The common interface for HTTP/2 message objects, {@link HttpHeaders} and {@link HttpData}.
+ */
 public interface HttpObject {}

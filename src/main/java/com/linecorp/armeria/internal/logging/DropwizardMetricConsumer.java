@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.internal.logging;
 
 import static java.util.Objects.requireNonNull;
 
@@ -24,14 +24,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.logging.DropwizardMetricCollectingClient;
+import com.linecorp.armeria.client.logging.LogCollectingClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
+import com.linecorp.armeria.common.logging.MessageLogConsumer;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.server.logging.LogCollectingService;
 
 /**
- * (Internal use only) {@link MessageLogConsumer} that accepts metric data from {@link DropwizardMetricCollectingClient} or
- * {@link DropwizardMetricCollectingService} and stores it into the {@link MetricRegistry}.
+ * (Internal use only) {@link MessageLogConsumer} that accepts metric data from {@link LogCollectingClient} or
+ * {@link LogCollectingService} and stores it into the {@link MetricRegistry}.
  */
 public final class DropwizardMetricConsumer implements MessageLogConsumer {
 

@@ -21,6 +21,8 @@ import io.netty.channel.Channel;
 /**
  * A skeletal {@link KeyedChannelPoolHandler} implementation to minimize the effort to implement this interface.
  * Extend this class to implement only few of the provided handler methods.
+ *
+ * @param <K> the key type
  */
 public class KeyedChannelPoolHandlerAdapter<K> implements KeyedChannelPoolHandler<K> {
 

@@ -27,7 +27,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
 /**
- * Default {@link RequestContext} implementation.
+ * A skeletal {@link RequestContext} implementation.
  */
 public abstract class AbstractRequestContext implements RequestContext {
 

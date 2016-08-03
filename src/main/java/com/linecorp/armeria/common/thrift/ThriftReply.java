@@ -19,25 +19,41 @@ package com.linecorp.armeria.common.thrift;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AbstractRpcResponse;
+import com.linecorp.armeria.common.RpcResponse;
 
+/**
+ * A Thrift {@link RpcResponse}.
+ */
 public final class ThriftReply extends AbstractRpcResponse {
 
     private final int seqId;
 
+    /**
+     * Creates a new incomplete instance.
+     */
     public ThriftReply(int seqId) {
         this.seqId = seqId;
     }
 
+    /**
+     * Creates a new successfully complete instance.
+     */
     public ThriftReply(int seqId, Object result) {
         super(result);
         this.seqId = seqId;
     }
 
+    /**
+     * Creates a new exceptionally complete instance.
+     */
     public ThriftReply(int seqId, Throwable cause) {
         super(cause);
         this.seqId = seqId;
     }
 
+    /**
+     * Returns the {@code seqId} of the reply.
+     */
     public int seqId() {
         return seqId;
     }

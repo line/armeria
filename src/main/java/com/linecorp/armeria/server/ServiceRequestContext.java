@@ -22,6 +22,9 @@ import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 
+import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 
 /**
@@ -30,12 +33,26 @@ import com.linecorp.armeria.common.RequestContext;
  */
 public interface ServiceRequestContext extends RequestContext {
 
+    /**
+     * Returns the {@link Server} that is handling the current {@link Request}.
+     */
     Server server();
 
+    /**
+     * Returns the {@link VirtualHost} that is handling the current {@link Request}.
+     */
     VirtualHost virtualHost();
 
+    /**
+     * Returns the {@link Service} that is handling the current {@link Request}.
+     */
     <T extends Service<?, ?>> T service();
 
+    /**
+     * Returns the {@link ExecutorService} that could be used for executing a potentially long-running task.
+     * Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)} may
+     * block the {@link Server}'s I/O event loop and thus should be executed in other threads.
+     */
     ExecutorService blockingTaskExecutor();
 
     /**
@@ -64,10 +81,37 @@ public interface ServiceRequestContext extends RequestContext {
      */
     Logger logger();
 
+    /**
+     * Returns the amount of time allowed until receiving the current {@link Request} completely.
+     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     */
     long requestTimeoutMillis();
+
+    /**
+     * Sets the amount of time allowed until receiving the current {@link Request} completely.
+     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     */
     void setRequestTimeoutMillis(long requestTimeoutMillis);
+
+    /**
+     * Sets the amount of time allowed until receiving the current {@link Request} completely.
+     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     */
     void setRequestTimeout(Duration requestTimeout);
 
+    /**
+     * Returns the maximum length of the current {@link Request}.
+     * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     *
+     * @see ContentTooLargeException
+     */
     long maxRequestLength();
+
+    /**
+     * Sets the maximum length of the current {@link Request}.
+     * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     *
+     * @see ContentTooLargeException
+     */
     void setMaxRequestLength(long maxRequestLength);
 }

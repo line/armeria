@@ -19,6 +19,8 @@ import io.netty.channel.Channel;
 
 /**
  * Handles the events produced by {@link KeyedChannelPool}.
+ *
+ * @param <K> the key type
  */
 public interface KeyedChannelPoolHandler<K> {
 

@@ -32,6 +32,9 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.Http2StreamVisitor;
 
+/**
+ * An {@link Http2ConnectionHandler} with some workarounds and additional extension points.
+ */
 public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHandler {
 
     /**
@@ -48,11 +51,17 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     private boolean closing;
     private boolean handlingConnectionError;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractHttp2ConnectionHandler(
             Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings) {
         super(decoder, encoder, initialSettings);
     }
 
+    /**
+     * Returns {@code true} if {@link ChannelHandlerContext#close()} has been called.
+     */
     public boolean isClosing() {
         return closing;
     }
@@ -114,5 +123,9 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         super.close(ctx, promise);
     }
 
+    /**
+     * Invoked when a close request has been issued by {@link ChannelHandlerContext#close()} and all active
+     * streams have been closed.
+     */
     protected abstract void onCloseRequest(ChannelHandlerContext ctx) throws Exception;
 }

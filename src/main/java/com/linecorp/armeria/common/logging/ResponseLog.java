@@ -16,15 +16,38 @@
 
 package com.linecorp.armeria.common.logging;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 import io.netty.util.AttributeKey;
 
+/**
+ * Information collected while processing a {@link Response}.
+ *
+ * @see ResponseLogBuilder
+ */
 public interface ResponseLog extends MessageLog {
+    /**
+     * The {@link AttributeKey} of the {@link HttpHeaders} of the processed {@link HttpResponse}.
+     */
     AttributeKey<HttpHeaders> HTTP_HEADERS = AttributeKey.valueOf(RequestLog.class, "HTTP_HEADERS");
+
+    /**
+     * The {@link AttributeKey} of the processed {@link RpcResponse}.
+     */
     AttributeKey<RpcResponse> RPC_RESPONSE = AttributeKey.valueOf(RequestLog.class, "RPC_RESPONSE");
 
+    /**
+     * Returns the {@link RequestLog} of the corresponding {@link Request}.
+     */
     RequestLog request();
+
+    /**
+     * Returns the status code specific to the current {@link SessionProtocol}.
+     */
     int statusCode();
 }

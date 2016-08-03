@@ -34,6 +34,9 @@ import com.linecorp.armeria.common.util.CompletionActions;
 
 /**
  * A {@link Client} decorator that handles failures of remote invocation based on circuit breaker pattern.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public final class CircuitBreakerClient<I extends Request, O extends Response>
         extends DecoratingClient<I, O, I, O> {

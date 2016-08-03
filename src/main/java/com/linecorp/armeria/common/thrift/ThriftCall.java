@@ -32,19 +32,32 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AbstractRpcRequest;
+import com.linecorp.armeria.common.RpcRequest;
 
+/**
+ * A Thrift {@link RpcRequest}.
+ */
 public final class ThriftCall extends AbstractRpcRequest {
 
     private final int seqId;
 
+    /**
+     * Creates a new instance.
+     */
     public ThriftCall(int seqId, Class<?> serviceType, String method, Iterable<?> args) {
         this(seqId, serviceType, method, ImmutableList.copyOf(args));
     }
 
+    /**
+     * Creates a new instance.
+     */
     public ThriftCall(int seqId, Class<?> serviceType, String method, Object... args) {
         this(seqId, serviceType, method, ImmutableList.copyOf(args));
     }
 
+    /**
+     * Creates a new instance.
+     */
     public ThriftCall(int seqId, Class<?> serviceType, String method, TBase<?, ?> thriftArgs) {
         this(seqId, serviceType, method, toList(thriftArgs));
     }
@@ -65,6 +78,9 @@ public final class ThriftCall extends AbstractRpcRequest {
         this.seqId = seqId;
     }
 
+    /**
+     * Returns the {@code seqId} of this call.
+     */
     public int seqId() {
         return seqId;
     }

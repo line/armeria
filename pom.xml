@@ -732,6 +732,10 @@
           <!-- Exclude the machine-generate code and the internal-only classes -->
           <excludePackageNames>*.thrift.v1,*.internal</excludePackageNames>
 
+          <sourceFileExcludes>
+            <sourceFileExclude>**/Tomcat*ProtocolHandler.java</sourceFileExclude>
+          </sourceFileExcludes>
+
           <groups>
             <group>
               <title>Server</title>

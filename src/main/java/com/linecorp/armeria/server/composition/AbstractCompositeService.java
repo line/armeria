@@ -41,7 +41,7 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
  * A skeletal {@link Service} implementation that enables composing multiple {@link Service}s into one.
  * Extend this class to build your own composite {@link Service}. e.g.
  * <pre>{@code
- * public class MyService extends AbstractCompositeService {
+ * public class MyService extends AbstractCompositeService<HttpRequest, HttpResponse> {
  *     public MyService() {
  *         super(CompositeServiceEntry.ofPrefix("/foo/"), new FooService()),
  *               CompositeServiceEntry.ofPrefix("/bar/"), new BarService()),
@@ -49,6 +49,9 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
  *     }
  * }
  * }</pre>
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  *
  * @see AbstractCompositeServiceBuilder
  * @see CompositeServiceEntry

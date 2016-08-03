@@ -35,7 +35,8 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A {@link Service} decorator that traces HTTP-based service invocations.
+ * Decorates a {@link Service} to trace inbound {@link HttpRequest}s using
+ * <a href="http://zipkin.io/">Zipkin</a>.
  * <p>
  * This decorator retrieves trace data from HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.

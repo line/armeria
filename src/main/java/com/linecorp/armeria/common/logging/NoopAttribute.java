@@ -14,18 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal;
+package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
-public final class NoopAttribute<T> implements Attribute<T> {
+final class NoopAttribute<T> implements Attribute<T> {
 
     private final AttributeKey<T> key;
 
-    public NoopAttribute(AttributeKey<T> key) {
+    NoopAttribute(AttributeKey<T> key) {
         this.key = requireNonNull(key, "key");
     }
 

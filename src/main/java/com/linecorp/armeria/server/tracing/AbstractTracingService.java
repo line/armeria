@@ -41,15 +41,21 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * An abstract {@link DecoratingService} that traces service invocations.
+ * An abstract {@link DecoratingService} that traces incoming {@link Request}s.
  * <p>
- * This class depends on <a href="https://github.com/openzipkin/brave">Brave</a> distributed tracing library.
+ * This class depends on <a href="https://github.com/openzipkin/brave">Brave</a>, a distributed tracing library.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public abstract class AbstractTracingService<I extends Request, O extends Response>
         extends DecoratingService<I, O, I, O> {
 
     private final ServerTracingInterceptor serverInterceptor;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractTracingService(Service<? super I, ? extends O> delegate, Brave brave) {
         super(delegate);
         serverInterceptor = new ServerTracingInterceptor(brave);
@@ -86,14 +92,14 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
     }
 
     /**
-     * Gets a {@link TraceData} from the specified {@link ServiceRequestContext} and request.
+     * Gets a {@link TraceData} from the specified {@link Request} or {@link ServiceRequestContext}.
      *
      * @return the {@link TraceData}.
      */
     protected abstract TraceData getTraceData(ServiceRequestContext ctx, I req);
 
     /**
-     * Returns server side annotations that should be added to span.
+     * Returns the server-side annotations that should be added to a Zipkin span.
      */
     protected List<KeyValueAnnotation> annotations(
             ServiceRequestContext ctx, RequestLog req, O res) {
@@ -143,6 +149,9 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
         serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, req, res));
     }
 
+    /**
+     * Creates a new {@link ServerResponseAdapter} from the specified request-response information.
+     */
     protected ServerResponseAdapter createResponseAdapter(
             ServiceRequestContext ctx, RequestLog req, O res) {
         final List<KeyValueAnnotation> annotations = annotations(ctx, req, res);

@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.FlushConsolidationHandler;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.http.Http2GoAwayListener;
-import com.linecorp.armeria.server.GracefulShutdownHandler;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerPort;
 
@@ -59,6 +58,9 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 
+/**
+ * Configures Netty {@link ChannelPipeline} to serve HTTP/1 and 2 requests.
+ */
 public final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private static final AsciiString SCHEME_HTTP = AsciiString.of("http");
@@ -69,12 +71,15 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
     private final ServerConfig config;
     private final ServerPort port;
     private final DomainNameMapping<SslContext> sslContexts;
-    private final Optional<GracefulShutdownHandler> gracefulShutdownHandler;
+    private final Optional<? extends ChannelHandler> gracefulShutdownHandler;
 
+    /**
+     * Creates a new instance.
+     */
     public HttpServerPipelineConfigurator(
             ServerConfig config, ServerPort port,
             DomainNameMapping<SslContext> sslContexts,
-            Optional<GracefulShutdownHandler> gracefulShutdownHandler) {
+            Optional<? extends ChannelHandler> gracefulShutdownHandler) {
 
         this.config = requireNonNull(config, "config");
         this.port = requireNonNull(port, "port");
@@ -106,10 +111,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
         if (config.idleTimeoutMillis() > 0) {
             p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis()));
         }
-        gracefulShutdownHandler.ifPresent(h -> {
-            h.reset();
-            p.addLast(h);
-        });
+        gracefulShutdownHandler.ifPresent(p::addLast);
     }
 
     private void configureHttps(ChannelPipeline p) {

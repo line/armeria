@@ -65,6 +65,8 @@ import com.linecorp.armeria.server.Service;
  * }</pre>
  *
  * @param <T> the self type
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  *
  * @see CompositeServiceEntry
  */

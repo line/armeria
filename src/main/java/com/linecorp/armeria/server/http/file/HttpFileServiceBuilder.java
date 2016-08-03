@@ -99,6 +99,9 @@ public final class HttpFileServiceBuilder {
         return this;
     }
 
+    /**
+     * Creates a new {@link HttpFileService}.
+     */
     public HttpFileService build() {
         return new HttpFileService(new HttpFileServiceConfig(
                 vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes));

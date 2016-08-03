@@ -19,8 +19,10 @@ import com.linecorp.armeria.common.util.AbstractOptionValue;
 
 /**
  * A value of a {@link SessionOption}.
+ *
+ * @param <T> the type of the option value
  */
-public class SessionOptionValue<T> extends AbstractOptionValue<SessionOption<T>, T> {
+public final class SessionOptionValue<T> extends AbstractOptionValue<SessionOption<T>, T> {
 
     SessionOptionValue(SessionOption<T> constant, T value) {
         super(constant, value);

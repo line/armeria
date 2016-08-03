@@ -21,7 +21,17 @@ import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.reactivestreams.RichPublisher;
 
+/**
+ * A response stream or a holder of the future result value.
+ * It must implement {@link RichPublisher} or {@link CompletionStage}, but not both.
+ */
 public interface Response {
+
+    /**
+     * Returns a {@link CompletableFuture} which completes when
+     * 1) the response stream has been closed (the {@link RichPublisher} has terminated) or
+     * 2) the result value is set (the {@link CompletionStage} has completed.)
+     */
     default CompletableFuture<?> closeFuture() {
         if (this instanceof RichPublisher) {
             return ((RichPublisher<?>) this).closeFuture();

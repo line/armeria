@@ -18,12 +18,20 @@ package com.linecorp.armeria.common.logging;
 
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+/**
+ * Default {@link ResponseLog} implementation.
+ */
 public final class DefaultResponseLog
         extends AbstractMessageLog<ResponseLog> implements ResponseLog, ResponseLogBuilder {
 
     private final RequestLog request;
     private int statusCode;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param request the {@link RequestLog} of the corresponding request
+     */
     public DefaultResponseLog(RequestLog request) {
         this.request = request;
     }

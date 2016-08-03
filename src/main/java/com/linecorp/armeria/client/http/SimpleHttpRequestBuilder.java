@@ -33,7 +33,7 @@ import io.netty.handler.codec.http.HttpMethod;
 /**
  * Creates a new {@link SimpleHttpRequest}.
  *
- * @deprecated Use {@link HttpRequest} or {@link AggregatedHttpMessage} instead.
+ * @deprecated Use {@link AggregatedHttpMessage} instead.
  */
 @Deprecated
 public class SimpleHttpRequestBuilder {

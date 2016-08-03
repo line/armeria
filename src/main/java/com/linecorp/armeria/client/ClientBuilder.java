@@ -173,6 +173,10 @@ public final class ClientBuilder {
 
     /**
      * Creates a new client which implements the specified {@code clientType}.
+     *
+     * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
+     *                                  {@link #ClientBuilder(String)} or the specified {@code clientType} is
+     *                                  unsupported for the scheme
      */
     @SuppressWarnings("unchecked")
     public <T> T build(Class<T> clientType) {

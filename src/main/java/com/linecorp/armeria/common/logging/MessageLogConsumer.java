@@ -18,8 +18,14 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.Objects;
 
+import com.linecorp.armeria.client.logging.LogCollectingClient;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.logging.LogCollectingService;
 
+/**
+ * Consumes {@link RequestLog} and {@link ResponseLog} collected by {@link LogCollectingService} or
+ * {@link LogCollectingClient}.
+ */
 public interface MessageLogConsumer {
 
     /**
@@ -32,6 +38,9 @@ public interface MessageLogConsumer {
      */
     void onResponse(RequestContext ctx, ResponseLog res) throws Exception;
 
+    /**
+     * Returns a composed consumer that calls this consumer first and then the specified one.
+     */
     default MessageLogConsumer andThen(MessageLogConsumer other) {
         Objects.requireNonNull(other, "other");
 

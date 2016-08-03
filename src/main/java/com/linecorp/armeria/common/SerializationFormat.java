@@ -140,6 +140,9 @@ public enum SerializationFormat {
         return uriText;
     }
 
+    /**
+     * Returns the {@link MediaType} of this format.
+     */
     public MediaType mediaType() {
         return mediaType;
     }

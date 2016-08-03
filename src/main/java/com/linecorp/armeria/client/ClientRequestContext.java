@@ -18,30 +18,92 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 
+import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.server.ServerConfig;
 
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
- * Provides information about an invocation and related utilities. Every client request has its own
- * {@link ClientRequestContext} instance.
+ * Provides information about a {@link Request}, its {@link Response} and its related utilities.
+ * Every client request has its own {@link ClientRequestContext} instance.
  */
 public interface ClientRequestContext extends RequestContext {
 
+    /**
+     * The {@link AttributeKey} of the {@link HttpHeaders} to include when a {@link Client} sends an
+     * {@link HttpRequest}. This {@link Attribute} is initially populated from
+     * {@link ClientOption#HTTP_HEADERS} and can be modified by a {@link DecoratingClient}.
+     */
     AttributeKey<HttpHeaders> HTTP_HEADERS = AttributeKey.valueOf(ClientRequestContext.class, "HTTP_HEADERS");
 
+    /**
+     * Returns the remote {@link Endpoint} of the current {@link Request}.
+     */
     Endpoint endpoint();
+
+    /**
+     * Returns the {@link ClientOptions} of the current {@link Request}.
+     */
     ClientOptions options();
 
+    /**
+     * Returns the amount of time allowed until sending out the current {@link Request} completely.
+     * This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     */
     long writeTimeoutMillis();
+
+    /**
+     * Sets the amount of time allowed until sending out the current {@link Request} completely.
+     * This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     */
     void setWriteTimeoutMillis(long writeTimeoutMillis);
+
+    /**
+     * Sets the amount of time allowed until sending out the current {@link Request} completely.
+     * This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     */
     void setWriteTimeout(Duration writeTimeout);
 
+    /**
+     * Returns the amount of time allowed until receiving the {@link Response} completely
+     * since the transfer of the {@link Response} started. This value is initially set from
+     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     */
     long responseTimeoutMillis();
+
+    /**
+     * Sets the amount of time allowed until receiving the {@link Response} completely
+     * since the transfer of the {@link Response} started. This value is initially set from
+     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     */
     void setResponseTimeoutMillis(long responseTimeoutMillis);
+
+    /**
+     * Sets the amount of time allowed until receiving the {@link Response} completely
+     * since the transfer of the {@link Response} started. This value is initially set from
+     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     */
     void setResponseTimeout(Duration responseTimeout);
 
+    /**
+     * Returns the maximum length of the received {@link Response}.
+     * This value is initially set from {@link ClientOption#DEFAULT_MAX_RESPONSE_LENGTH}.
+     *
+     * @see ContentTooLargeException
+     */
     long maxResponseLength();
+
+    /**
+     * Sets the maximum length of the received {@link Response}.
+     * This value is initially set from {@link ClientOption#DEFAULT_MAX_RESPONSE_LENGTH}.
+     *
+     * @see ContentTooLargeException
+     */
     void setMaxResponseLength(long maxResponseLength);
 }

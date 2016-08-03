@@ -29,6 +29,10 @@ public final class ResponseTimeoutException extends TimeoutException {
     private static final ResponseTimeoutException INSTANCE =
             Exceptions.clearTrace(new ResponseTimeoutException());
 
+    /**
+     * Returns a {@link ResponseTimeoutException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
     public static ResponseTimeoutException get() {
         return Exceptions.isVerbose() ? new ResponseTimeoutException() : INSTANCE;
     }

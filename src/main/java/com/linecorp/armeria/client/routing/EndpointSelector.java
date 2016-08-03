@@ -17,19 +17,24 @@ package com.linecorp.armeria.client.routing;
 
 import com.linecorp.armeria.client.Endpoint;
 
+/**
+ * Selects an {@link Endpoint} from an {@link EndpointGroup}.
+ */
 public interface EndpointSelector {
     /**
-     * Return the {@link EndpointGroup} held by this selector.
+     * Returns the {@link EndpointGroup} held by this selector.
      */
     EndpointGroup group();
 
     /**
-     * Return the {@link EndpointSelectionStrategy} used by this selector to select endpoints.
+     * Returns the {@link EndpointSelectionStrategy} used by this selector to select an {@link Endpoint}.
      */
     EndpointSelectionStrategy strategy();
 
     /**
-     * Return a selected endpoint.
+     * Selects an {@link Endpoint} from the {@link EndpointGroup}.
+     *
+     * @return the {@link Endpoint} selected by this {@link EndpointSelector}'s selection strategy
      */
     Endpoint select();
 }

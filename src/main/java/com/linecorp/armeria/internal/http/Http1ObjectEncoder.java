@@ -47,6 +47,7 @@ import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -114,11 +115,13 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         // Convert leading headers.
         final HttpResponse res;
         final boolean informational = status.codeClass() == HttpStatusClass.INFORMATIONAL;
+        final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(status.code());
 
         if (endStream || informational) {
 
             res = new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, status.toNettyStatus(), Unpooled.EMPTY_BUFFER, false);
+                    HttpVersion.HTTP_1_1, nettyStatus,
+                    Unpooled.EMPTY_BUFFER, false);
 
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
             convert(streamId, headers, outHeaders, false);
@@ -135,7 +138,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                 outHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
             }
         } else {
-            res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status.toNettyStatus(), false);
+            res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
             // Perform conversion.
             convert(streamId, headers, res.headers(), false);
             setTransferEncoding(res);
@@ -154,7 +157,9 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
         // Convert leading headers.
         final HttpRequest req = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, method.toNettyMethod(), headers.path(), false);
+                HttpVersion.HTTP_1_1,
+                io.netty.handler.codec.http.HttpMethod.valueOf(method.name()),
+                headers.path(), false);
 
         convert(streamId, headers, req.headers(), false);
         if (HttpUtil.getContentLength(req, -1L) >= 0) {

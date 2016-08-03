@@ -21,6 +21,11 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * An HTTP/2 {@link Service}.
+ *
+ * <p>This interface is merely a shortcut to {@code Service<HttpRequest, HttpResponse>} at the moment.
+ */
 @FunctionalInterface
 public interface HttpService extends Service<HttpRequest, HttpResponse> {
     @Override

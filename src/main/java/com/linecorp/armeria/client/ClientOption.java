@@ -27,6 +27,8 @@ import io.netty.util.ConstantPool;
 
 /**
  * A client option.
+ *
+ * @param <T> the type of the option value
  */
 public final class ClientOption<T> extends AbstractOption<T> {
 

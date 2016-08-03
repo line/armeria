@@ -31,12 +31,21 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A decorator {@link Service} that collects {@link RequestLog} and {@link ResponseLog} for every request.
+ * Decorates a {@link Service} to collects {@link RequestLog} and {@link ResponseLog} for every {@link Request}.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public class LogCollectingService<I extends Request, O extends Response> extends DecoratingService<I, O, I, O> {
 
     private final MessageLogConsumer consumer;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param delegate the {@link Service} being decorated
+     * @param consumer the consumer of the collected {@link RequestLog}s and {@link ResponseLog}s
+     */
     public LogCollectingService(Service<? super I, ? extends O> delegate, MessageLogConsumer consumer) {
         super(delegate);
         this.consumer = requireNonNull(consumer, "consumer");

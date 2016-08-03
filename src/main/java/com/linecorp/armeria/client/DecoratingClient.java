@@ -23,6 +23,11 @@ import com.linecorp.armeria.common.Response;
 
 /**
  * Decorates a {@link Client}.
+ *
+ * @param <T_I> the {@link Request} type of the {@link Client} being decorated
+ * @param <T_O> the {@link Response} type of the {@link Client} being decorated
+ * @param <R_I> the {@link Request} type of this {@link Client}
+ * @param <R_O> the {@link Response} type of this {@link Client}
  */
 public abstract class DecoratingClient<T_I extends Request, T_O extends Response,
                                        R_I extends Request, R_O extends Response> implements Client<R_I, R_O> {

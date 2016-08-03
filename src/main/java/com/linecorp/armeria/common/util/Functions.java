@@ -174,6 +174,9 @@ public final class Functions {
                                        .andThen(requireNonNull(f9, "f9"));
     }
 
+    /**
+     * Converts the specified {@link Consumer} into a {@link Function} that returns {@code null}.
+     */
     public static <T> Function<T, Void> voidFunction(Consumer<T> consumer) {
         return v -> {
             consumer.accept(v);
@@ -181,6 +184,9 @@ public final class Functions {
         };
     }
 
+    /**
+     * Converts the specified {@link BiConsumer} into a {@link BiFunction} that returns {@code null}.
+     */
     public static <T, U> BiFunction<T, U, Void> voidFunction(BiConsumer<T, U> consumer) {
         return (a, b) -> {
             consumer.accept(a, b);

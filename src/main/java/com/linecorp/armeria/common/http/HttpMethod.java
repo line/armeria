@@ -93,8 +93,4 @@ public enum HttpMethod {
      * switch to being a tunnel
      */
     CONNECT;
-
-    public io.netty.handler.codec.http.HttpMethod toNettyMethod() {
-        return io.netty.handler.codec.http.HttpMethod.valueOf(name());
-    }
 }

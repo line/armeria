@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.internal.logging;
 
 import java.util.concurrent.TimeUnit;
 

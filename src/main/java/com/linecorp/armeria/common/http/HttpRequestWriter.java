@@ -18,6 +18,9 @@ package com.linecorp.armeria.common.http;
 
 import com.linecorp.armeria.common.reactivestreams.Writer;
 
+/**
+ * A {@link Writer} of an {@link HttpRequest}.
+ */
 public interface HttpRequestWriter extends Writer<HttpObject> {
     // TODO(trustin): Add lots of convenience methods for easier response construction.
 }

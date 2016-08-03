@@ -28,10 +28,19 @@ import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 
+/**
+ * An HTTP client.
+ */
 public interface HttpClient extends ClientOptionDerivable<HttpClient> {
 
+    /**
+     * Sends the specified HTTP request.
+     */
     HttpResponse execute(HttpRequest req);
 
+    /**
+     * Sends the specified HTTP request.
+     */
     default HttpResponse execute(AggregatedHttpMessage aggregatedReq) {
         final HttpHeaders headers = aggregatedReq.headers();
         final DefaultHttpRequest req = new DefaultHttpRequest(headers);
@@ -53,90 +62,156 @@ public interface HttpClient extends ClientOptionDerivable<HttpClient> {
         return execute(req);
     }
 
+    /**
+     * Sends an empty HTTP request with the specified headers.
+     */
     default HttpResponse execute(HttpHeaders headers) {
         return execute(AggregatedHttpMessage.of(headers));
     }
 
+    /**
+     * Sends an HTTP request with the specified headers and content.
+     */
     default HttpResponse execute(HttpHeaders headers, HttpData content) {
         return execute(AggregatedHttpMessage.of(headers, content));
     }
 
+    /**
+     * Sends an HTTP request with the specified headers and content.
+     */
     default HttpResponse execute(HttpHeaders headers, byte[] content) {
         return execute(AggregatedHttpMessage.of(headers, HttpData.of(content)));
     }
 
+    /**
+     * Sends an HTTP request with the specified headers and content.
+     */
     default HttpResponse execute(HttpHeaders headers, String content) {
         return execute(AggregatedHttpMessage.of(headers, HttpData.ofUtf8(content)));
     }
 
+    /**
+     * Sends an HTTP request with the specified headers and content.
+     */
     default HttpResponse execute(HttpHeaders headers, String content, Charset charset) {
         return execute(AggregatedHttpMessage.of(headers, HttpData.of(charset, content)));
     }
 
+    /**
+     * Sends an HTTP OPTIONS request.
+     */
     default HttpResponse options(String path) {
         return execute(HttpHeaders.of(HttpMethod.OPTIONS, path));
     }
 
+    /**
+     * Sends an HTTP GET request.
+     */
     default HttpResponse get(String path) {
         return execute(HttpHeaders.of(HttpMethod.GET, path));
     }
 
+    /**
+     * Sends an HTTP HEAD request.
+     */
     default HttpResponse head(String path) {
         return execute(HttpHeaders.of(HttpMethod.HEAD, path));
     }
 
+    /**
+     * Sends an HTTP POST request with the specified content.
+     */
     default HttpResponse post(String path, HttpData content) {
         return execute(HttpHeaders.of(HttpMethod.POST, path), content);
     }
 
+    /**
+     * Sends an HTTP POST request with the specified content.
+     */
     default HttpResponse post(String path, byte[] content) {
         return execute(HttpHeaders.of(HttpMethod.POST, path), content);
     }
 
+    /**
+     * Sends an HTTP POST request with the specified content.
+     */
     default HttpResponse post(String path, String content) {
         return execute(HttpHeaders.of(HttpMethod.POST, path), HttpData.ofUtf8(content));
     }
 
+    /**
+     * Sends an HTTP POST request with the specified content.
+     */
     default HttpResponse post(String path, String content, Charset charset) {
         return execute(HttpHeaders.of(HttpMethod.POST, path), content, charset);
     }
 
+    /**
+     * Sends an HTTP PUT request with the specified content.
+     */
     default HttpResponse put(String path, HttpData content) {
         return execute(HttpHeaders.of(HttpMethod.PUT, path), content);
     }
 
+    /**
+     * Sends an HTTP PUT request with the specified content.
+     */
     default HttpResponse put(String path, byte[] content) {
         return execute(HttpHeaders.of(HttpMethod.PUT, path), content);
     }
 
+    /**
+     * Sends an HTTP PUT request with the specified content.
+     */
     default HttpResponse put(String path, String content) {
         return execute(HttpHeaders.of(HttpMethod.PUT, path), HttpData.ofUtf8(content));
     }
 
+    /**
+     * Sends an HTTP PUT request with the specified content.
+     */
     default HttpResponse put(String path, String content, Charset charset) {
         return execute(HttpHeaders.of(HttpMethod.PUT, path), content, charset);
     }
 
+    /**
+     * Sends an HTTP PATCH request with the specified content.
+     */
     default HttpResponse patch(String path, HttpData content) {
         return execute(HttpHeaders.of(HttpMethod.PATCH, path), content);
     }
 
+    /**
+     * Sends an HTTP PATCH request with the specified content.
+     */
     default HttpResponse patch(String path, byte[] content) {
         return execute(HttpHeaders.of(HttpMethod.PATCH, path), content);
     }
 
+    /**
+     * Sends an HTTP PATCH request with the specified content.
+     */
     default HttpResponse patch(String path, String content) {
         return execute(HttpHeaders.of(HttpMethod.PATCH, path), HttpData.ofUtf8(content));
     }
 
+    /**
+     * Sends an HTTP PATCH request with the specified content.
+     */
     default HttpResponse patch(String path, String content, Charset charset) {
         return execute(HttpHeaders.of(HttpMethod.PATCH, path), content, charset);
     }
 
+    /**
+     * Sends an HTTP DELETE request.
+     */
     default HttpResponse delete(String path) {
         return execute(HttpHeaders.of(HttpMethod.DELETE, path));
     }
 
+    /**
+     * Sends an HTTP TRACE request.
+     */
     default HttpResponse trace(String path) {
         return execute(HttpHeaders.of(HttpMethod.TRACE, path));
     }

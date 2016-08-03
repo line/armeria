@@ -59,7 +59,7 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
 
-final class ThriftClientDelegate implements Client<ThriftCall, ThriftReply> {
+final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
 
     private final Client<HttpRequest, HttpResponse> httpClient;
     private final String path;
@@ -68,8 +68,8 @@ final class ThriftClientDelegate implements Client<ThriftCall, ThriftReply> {
     private final String mediaType;
     private final Map<Class<?>, ThriftServiceMetadata> metadataMap = new ConcurrentHashMap<>();
 
-    ThriftClientDelegate(Client<HttpRequest, HttpResponse> httpClient, String path,
-                         SerializationFormat serializationFormat) {
+    THttpClientDelegate(Client<HttpRequest, HttpResponse> httpClient, String path,
+                        SerializationFormat serializationFormat) {
 
         this.httpClient = httpClient;
         this.path = path;
@@ -157,7 +157,7 @@ final class ThriftClientDelegate implements Client<ThriftCall, ThriftReply> {
 
     private Object decodeResponse(ThriftFunction method, HttpData content) throws TException {
         if (content.isEmpty()) {
-            if (method.isOneway()) {
+            if (method.isOneWay()) {
                 return null;
             }
             throw new TApplicationException(TApplicationException.MISSING_RESULT);

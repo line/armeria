@@ -18,13 +18,34 @@ package com.linecorp.armeria.common.logging;
 
 import org.slf4j.Logger;
 
+/**
+ * Log level
+ */
 public enum LogLevel {
+    /**
+     * TRACE log level
+     */
     TRACE,
+    /**
+     * DEBUG log level
+     */
     DEBUG,
+    /**
+     * INFO log level
+     */
     INFO,
+    /**
+     * WARN log level
+     */
     WARN,
+    /**
+     * ERROR log level
+     */
     ERROR;
 
+    /**
+     * Logs a message at this level.
+     */
     @SuppressWarnings("MethodParameterNamingConvention")
     public void log(Logger logger, String format, Object arg1) {
         switch (this) {
@@ -48,6 +69,9 @@ public enum LogLevel {
         }
     }
 
+    /**
+     * Logs a message at this level.
+     */
     @SuppressWarnings("MethodParameterNamingConvention")
     public void log(Logger logger, String format, Object arg1, Object arg2) {
         switch (this) {

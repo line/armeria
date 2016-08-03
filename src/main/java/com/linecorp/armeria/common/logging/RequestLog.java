@@ -16,20 +16,53 @@
 
 package com.linecorp.armeria.common.logging;
 
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
 
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 
+/**
+ * Information collected while processing a {@link Request}.
+ *
+ * @see RequestLogBuilder
+ */
 public interface RequestLog extends MessageLog {
+    /**
+     * The {@link AttributeKey} of the {@link HttpHeaders} of the processed {@link HttpRequest}.
+     */
     AttributeKey<HttpHeaders> HTTP_HEADERS = AttributeKey.valueOf(RequestLog.class, "HTTP_HEADERS");
+
+    /**
+     * The {@link AttributeKey} of the processed {@link RpcRequest}.
+     */
     AttributeKey<RpcRequest> RPC_REQUEST = AttributeKey.valueOf(RequestLog.class, "RPC_REQUEST");
 
+    /**
+     * Returns the Netty {@link Channel} which handled the {@link Request}.
+     */
     Channel channel();
+
+    /**
+     * Returns the {@link Scheme} of the {@link Request}.
+     */
     Scheme scheme();
+
+    /**
+     * Returns the host name of the {@link Request}.
+     */
     String host();
+
+    /**
+     * Returns the method of the {@link Request}.
+     */
     String method();
+
+    /**
+     * Returns the path of the {@link Request}.
+     */
     String path();
 }

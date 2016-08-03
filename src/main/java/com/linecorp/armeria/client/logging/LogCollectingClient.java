@@ -29,15 +29,23 @@ import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.server.Service;
 
 /**
- * A decorator {@link Service} that collects {@link RequestLog} and {@link ResponseLog} for every request.
+ * Decorates a {@link Client} to collects {@link RequestLog} and {@link ResponseLog} for every {@link Request}.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public class LogCollectingClient<I extends Request, O extends Response> extends DecoratingClient<I, O, I, O> {
 
     private final MessageLogConsumer consumer;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param delegate the {@link Client} being decorated
+     * @param consumer the consumer of the collected {@link RequestLog}s and {@link ResponseLog}s
+     */
     public LogCollectingClient(Client<? super I, ? extends O> delegate, MessageLogConsumer consumer) {
         super(delegate);
         this.consumer = requireNonNull(consumer, "consumer");

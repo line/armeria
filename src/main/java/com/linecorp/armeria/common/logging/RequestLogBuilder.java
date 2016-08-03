@@ -21,7 +21,25 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
 
+/**
+ * Updates a {@link RequestLog} with newly available information.
+ */
 public interface RequestLogBuilder extends MessageLogBuilder {
+    /**
+     * Starts the collection of information. This method will update the following properties:
+     * <ul>
+     *   <li>{@link MessageLog#startTimeNanos()}</li>
+     *   <li>{@link RequestLog#scheme()} with {@link SerializationFormat#UNKNOWN}</li>
+     *   <li>{@link RequestLog#host()}</li>
+     *   <li>{@link RequestLog#method()}</li>
+     *   <li>{@link RequestLog#path()}</li>
+     * </ul>
+     * This method will do nothing if called twice.
+     */
     void start(Channel channel, SessionProtocol sessionProtocol, String host, String method, String path);
+
+    /**
+     * Updates the {@link SerializationFormat}.
+     */
     void serializationFormat(SerializationFormat serializationFormat);
 }

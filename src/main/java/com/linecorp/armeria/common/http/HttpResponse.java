@@ -24,14 +24,20 @@ import org.reactivestreams.Publisher;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.reactivestreams.RichPublisher;
 
+/**
+ * A streamed HTTP/2 {@link Response}.
+ */
 public interface HttpResponse extends Response, RichPublisher<HttpObject> {
 
+    /**
+     * Creates a new instance from an existing {@link Publisher}.
+     */
     static HttpResponse of(Publisher<? extends HttpObject> publisher) {
         return new PublisherBasedHttpResponse(publisher);
     }
 
     /**
-     * Aggregates the response. The returned {@link CompletableFuture} will be notified when the content and
+     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the response are received fully.
      */
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
@@ -44,7 +50,7 @@ public interface HttpResponse extends Response, RichPublisher<HttpObject> {
     CompletableFuture<Void> closeFuture();
 
     /**
-     * Aggregates the response. The returned {@link CompletableFuture} will be notified when the content and
+     * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the response are received fully.
      */
     default CompletableFuture<AggregatedHttpMessage> aggregate(Executor executor) {

@@ -33,7 +33,7 @@ import io.netty.handler.codec.http.HttpMethod;
  * A container for information to send in an HTTP request. This is a simpler version of {@link FullHttpRequest}
  * which only uses a byte array to avoid callers having to worry about memory management.
  *
- * @deprecated Use {@link HttpRequest} or {@link AggregatedHttpMessage} instead.
+ * @deprecated Use {@link AggregatedHttpMessage} instead.
  */
 @Deprecated
 public class SimpleHttpRequest {

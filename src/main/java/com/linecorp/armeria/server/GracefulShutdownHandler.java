@@ -20,7 +20,7 @@ import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import com.linecorp.armeria.common.util.Ticker;
+import com.google.common.base.Ticker;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -34,7 +34,7 @@ import io.netty.handler.codec.http.LastHttpContent;
  * after a fixed quiet period passes after the last one.
  */
 @Sharable
-public final class GracefulShutdownHandler extends ChannelDuplexHandler {
+final class GracefulShutdownHandler extends ChannelDuplexHandler {
 
     private final long quietPeriodNanos;
     private final Ticker ticker;
@@ -65,6 +65,13 @@ public final class GracefulShutdownHandler extends ChannelDuplexHandler {
 
     boolean isResponseEnd(Object msg) {
         return msg instanceof LastHttpContent;
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // Reset the shutdown start time, because this handler will be added to a pipeline
+        // when a new connection is accepted.
+        shutdownStartTimeNanos = null;
     }
 
     @Override
@@ -118,9 +125,5 @@ public final class GracefulShutdownHandler extends ChannelDuplexHandler {
 
         final ThreadPoolExecutor threadPool = (ThreadPoolExecutor) blockingTaskExecutor;
         return threadPool.getQueue().isEmpty() && threadPool.getActiveCount() == 0;
-    }
-
-    public void reset() {
-        shutdownStartTimeNanos = null;
     }
 }

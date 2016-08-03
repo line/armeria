@@ -22,12 +22,14 @@ import com.codahale.metrics.MetricRegistry;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.DropwizardMetricConsumer;
+import com.linecorp.armeria.internal.logging.DropwizardMetricConsumer;
 import com.linecorp.armeria.server.Service;
 
 /**
- * A decorator {@link Service} that collects metrics for every requests
- * Currently only HTTP-based session protocols are supported.
+ * Decorates a {@link Service} to collect metrics into Dropwizard {@link MetricRegistry}.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public final class DropwizardMetricCollectingService<I extends Request, O extends Response>
         extends LogCollectingService<I, O> {

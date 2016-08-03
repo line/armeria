@@ -29,6 +29,10 @@ public final class ServiceUnavailableException extends RuntimeException {
     private static final ServiceUnavailableException INSTANCE =
             Exceptions.clearTrace(new ServiceUnavailableException());
 
+    /**
+     * Returns a {@link ServiceUnavailableException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
     public static ServiceUnavailableException get() {
         return Exceptions.isVerbose() ? new ServiceUnavailableException() : INSTANCE;
     }

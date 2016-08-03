@@ -25,15 +25,26 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+/**
+ * Adapts a {@link Publisher} into a {@link RichPublisher}.
+ *
+ * @param <T> the type of element signaled
+ */
 public class PublisherWithCloseFuture<T> implements RichPublisher<T> {
 
     private final Publisher<? extends T> publisher;
     private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
 
+    /**
+     * Creates a new instance with the specified delegate {@link Publisher}.
+     */
     public PublisherWithCloseFuture(Publisher<? extends T> publisher) {
         this.publisher = publisher;
     }
 
+    /**
+     * Returns the delegate {@link Publisher}.
+     */
     protected Publisher<? extends T> delegate() {
         return publisher;
     }

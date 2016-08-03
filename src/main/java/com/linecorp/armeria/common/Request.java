@@ -16,4 +16,19 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.reactivestreams.RichPublisher;
+import com.linecorp.armeria.common.thrift.ThriftCall;
+
+/**
+ * A request. It is usually one of the following:
+ * <ul>
+ *   <li>A {@link RichPublisher} with some initial information (if necessary)
+ *     <ul>
+ *       <li>e.g. {@link HttpRequest} whose initial information is its initial HTTP headers</li>
+ *     </ul>
+ *   </li>
+ *   <li>A simple object whose content is readily available. e.g. {@link ThriftCall}</li>
+ * </ul>
+ */
 public interface Request {}

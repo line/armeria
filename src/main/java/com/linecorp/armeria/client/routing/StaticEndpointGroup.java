@@ -23,16 +23,25 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
+/**
+ * A static immutable {@link EndpointGroup}.
+ */
 public final class StaticEndpointGroup implements EndpointGroup {
 
     private final List<Endpoint> endpoints;
 
+    /**
+     * Creates a new instace.
+     */
     public StaticEndpointGroup(Endpoint... endpoints) {
         requireNonNull(endpoints, "endpoints");
 
         this.endpoints = ImmutableList.copyOf(endpoints);
     }
 
+    /**
+     * Creates a new instace.
+     */
     public StaticEndpointGroup(Iterable<Endpoint> endpoints) {
         requireNonNull(endpoints, "endpoints");
 

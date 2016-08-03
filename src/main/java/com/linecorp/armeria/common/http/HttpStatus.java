@@ -17,7 +17,6 @@
 
 package com.linecorp.armeria.common.http;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
@@ -412,12 +411,12 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         return codeClass;
     }
 
+    /**
+     * Returns the {@link HttpData} whose content is {@code "<code> <reasonPhrase>"} encoded in UTF-8.
+     * Do not modify the content of the returned {@link HttpData}; it will be reused.
+     */
     public HttpData toHttpData() {
         return httpData;
-    }
-
-    public HttpResponseStatus toNettyStatus() {
-        return HttpResponseStatus.valueOf(code());
     }
 
     @Override
@@ -426,8 +425,10 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     }
 
     /**
-     * Equality of {@link HttpStatus} only depends on {@link #code()}. The
-     * reason phrase is not considered for equality.
+     * Returns whether the specified object is "equal to" this status.
+     *
+     * <p>Equality of {@link HttpStatus} only depends on {@link #code()}. The reason phrase is not considered
+     * for equality.
      */
     @Override
     public boolean equals(Object o) {
@@ -439,8 +440,10 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     }
 
     /**
-     * Equality of {@link HttpStatus} only depends on {@link #code()}. The
-     * reason phrase is not considered for equality.
+     * Compares this status to the specified status.
+     *
+     * <p>Equality of {@link HttpStatus} only depends on {@link #code()}. The reason phrase is not considered
+     * for equality.
      */
     @Override
     public int compareTo(HttpStatus o) {
