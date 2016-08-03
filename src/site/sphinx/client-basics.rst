@@ -20,6 +20,8 @@ Making a call starts from creating a client:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.Clients;
+
     HelloService.Iface helloService = Clients.newClient(
             "tbinary+http://127.0.0.1:8080/hello",
             HelloService.Iface.class); // or AsyncIface.class
@@ -28,13 +30,16 @@ Making a call starts from creating a client:
     assert greeting.equals("Hello, Armerian World!");
 
 Note that we added the serialization format of the call using the ``+`` operator in the scheme part of the URI.
-Because we are calling a Thrift server, we should choose: ``tbinary``, ``tcompact``, or ``tjson``.
+Because we are calling a Thrift server, we should choose: ``tbinary``, ``tcompact``, ``tjson`` or ``ttext``.
 
 Since we specified ``HelloService.Iface`` as the client type, ``Clients.newClient()`` will return a synchronous
 client implementation.  If we had specified ``HelloService.AsyncIface``, the calling code would have looked
 like the following:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.client.Clients;
+    import org.apache.thrift.async.AsyncMethodCallback;
 
     HelloService.AsyncIface helloService = Clients.newClient(
             "tbinary+http://127.0.0.1:8080/hello",
@@ -56,9 +61,12 @@ You can also use the builder pattern for client construction:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.common.http.HttpRequest;
+    import com.linecorp.armeria.common.http.HttpResponse;
+
     HelloService.Iface helloService = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
-            .responseTimeoutMillis(10000)
-            .decorator(LoggingClient::new)
+            .defaultResponseTimeoutMillis(10000)
+            .decorator(HttpRequest.class, HttpResponse.class LoggingClient::new)
             .build(HelloService.Iface.class); // or AsyncIface.class
 
     String greeting = helloService.hello("Armerian World");

@@ -8,6 +8,9 @@ You can make Armeria serve your JEE web application on the same JVM and TCP/IP p
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.http.tomcat.TomcatService;
+
     ServerBuilder sb = new ServerBuilder();
     sb.serviceUnder("/api/rest/v2/",
                     TomcatService.forCurrentClassPath());

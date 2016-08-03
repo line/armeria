@@ -23,6 +23,9 @@ noteworthy one is ``HelloService.java`` which defines the service interfaces we 
 
 .. code-block:: java
 
+    import org.apache.thrift.TException;
+    import org.apache.thrift.async.AsyncMethodCallback;
+
     public class HelloService {
         public interface Iface {
             public String hello(String name) throws TException;
@@ -38,6 +41,9 @@ If you are interested in going fully asynchronous, it is recommended to implemen
 while it is slightly easier to implement the synchronous ``Iface`` interface:
 
 .. code-block:: java
+
+    import org.apache.thrift.TException;
+    import org.apache.thrift.async.AsyncMethodCallback;
 
     public class MyHelloService implements HelloService.AsyncIface {
         @Override
@@ -60,14 +66,19 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
 
 .. code-block:: java
 
+    import com.linecorp.armeria.common.SessionProtocol;
+    import com.linecorp.armeria.server.Server;
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.thrift.THttpService;
+
     HelloService.AsyncIface helloHandler = new MyHelloService();
 
     ServerBuilder sb = new ServerBuilder();
     sb.port(8080, SessionProtocol.HTTP);
     sb.serviceAt(
             "/hello",
-            ThriftService.of(helloHandler, SerializationFormat.THRIFT_BINARY)
-                    .decorate(LoggingService::new)).build();
+            THttpService.of(helloHandler, SerializationFormat.THRIFT_BINARY)
+                        .decorate(LoggingService::new)).build();
 
     Server server = sb.build();
     server.start();
@@ -91,9 +102,13 @@ and lets you browse the available service operations and structs:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.docs.DocService;
+    import com.linecorp.armeria.server.thrift.THttpService;
+
     ServerBuilder sb = new ServerBuilder();
-    sb.serviceAt("/foo/", ThriftService.of(...))
-      .serviceAt("/bar/", ThriftService.of(...))
+    sb.serviceAt("/foo/", THttpService.of(...))
+      .serviceAt("/bar/", THttpService.of(...))
       .serviceUnder("/docs/", new DocService());
 
 Note that we used ``serviceUnder()`` for ``DocService`` unlike the other services. ``serviceUnder()`` binds
