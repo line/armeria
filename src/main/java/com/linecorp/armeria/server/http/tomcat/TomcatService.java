@@ -430,6 +430,7 @@ public final class TomcatService implements HttpService {
         coyoteReq.localName().setString(hostname);
         coyoteReq.serverName().setString(hostname);
         coyoteReq.setLocalPort(localAddr.getPort());
+        coyoteReq.setServerPort(localAddr.getPort());
 
         // Set the method.
         final HttpMethod method = req.method();
