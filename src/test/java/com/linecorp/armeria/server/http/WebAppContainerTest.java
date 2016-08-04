@@ -64,6 +64,27 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
     }
 
     @Test
+    public void testJapanesePath() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/jsp/日本語/index.jsp")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("text/html"));
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+                assertThat(actualContent, is(
+                        "<html><body>" +
+                        "<p>Hello, Armerian World!</p>" +
+                        "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
+                        "<p>Context path: </p>" + // ROOT context path
+                        "<p>Request URI: /%E6%97%A5%E6%9C%AC%E8%AA%9E/index.jsp</p>" +
+                        "<p>Servlet Path: /日本語/index.jsp</p>" +
+                        "</body></html>"));
+            }
+        }
+    }
+
+    @Test
     public void testGetQueryString() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
