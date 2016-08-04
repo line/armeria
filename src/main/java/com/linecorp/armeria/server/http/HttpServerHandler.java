@@ -240,6 +240,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
+        if (headers.authority() == null) {
+            // HTTP/1.1 requests require a host header.
+            respond(ctx, req, HttpStatus.BAD_REQUEST);
+            return;
+        }
+
         final String hostname = hostname(headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
@@ -334,9 +340,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static String hostname(HttpHeaders headers) {
         final CharSequence hostname = headers.authority();
-        if (hostname == null) {
-            return "";
-        }
 
         final String hostnameStr = hostname.toString();
         final int hostnameColonIdx = hostnameStr.lastIndexOf(':');

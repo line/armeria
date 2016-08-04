@@ -33,6 +33,8 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import org.apache.catalina.Engine;
 import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Service;
@@ -374,6 +376,10 @@ public final class TomcatService implements HttpService {
 
             try {
                 final Request coyoteReq = convertRequest(ctx, aReq);
+                if (coyoteReq == null) {
+                    res.respond(HttpStatus.BAD_REQUEST);
+                    return;
+                }
                 final Response coyoteRes = new Response();
                 coyoteReq.setResponse(coyoteRes);
                 coyoteRes.setRequest(coyoteReq);
@@ -413,6 +419,7 @@ public final class TomcatService implements HttpService {
         return res;
     }
 
+    @Nullable
     private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage req) {
         final String mappedPath = ctx.mappedPath();
 
@@ -428,9 +435,21 @@ public final class TomcatService implements HttpService {
         final InetSocketAddress localAddr = ctx.localAddress();
         coyoteReq.localAddr().setString(localAddr.getAddress().getHostAddress());
         coyoteReq.localName().setString(hostname);
-        coyoteReq.serverName().setString(hostname);
         coyoteReq.setLocalPort(localAddr.getPort());
-        coyoteReq.setServerPort(localAddr.getPort());
+
+        final String hostHeader = req.headers().authority();
+        int colonPos = hostHeader.indexOf(':');
+        if (colonPos < 0) {
+            coyoteReq.serverName().setString(hostHeader);
+        } else {
+            coyoteReq.serverName().setString(hostHeader.substring(0, colonPos));
+            try {
+                int port = Integer.parseInt(hostHeader.substring(colonPos + 1));
+                coyoteReq.setServerPort(port);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
 
         // Set the method.
         final HttpMethod method = req.method();

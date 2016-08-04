@@ -106,7 +106,7 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
     }
 
     @Test
-    public void testAddressesAndPorts() throws Exception {
+    public void testAddressesAndPorts_127001() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/jsp/addrs_and_ports.jsp")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
@@ -123,7 +123,35 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
                         "<p>LocalAddr: (?!null)[^<]+</p>" +
                         "<p>LocalName: " + server().defaultHostname() + "</p>" +
                         "<p>LocalPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
+                        "<p>ServerName: 127\\.0\\.0\\.1</p>" +
                         "<p>ServerPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
+                        "</body></html>"));
+            }
+        }
+    }
+
+    @Test
+    public void testAddressesAndPorts_localhost() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet(uri("/jsp/addrs_and_ports.jsp"));
+            request.setHeader("Host", "localhost:1111");
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("text/html"));
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+
+                assertTrue(actualContent, actualContent.matches(
+                        "<html><body>" +
+                        "<p>RemoteAddr: 127\\.0\\.0\\.1</p>" +
+                        "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
+                        "<p>RemotePort: [1-9][0-9]+</p>" +
+                        "<p>LocalAddr: (?!null)[^<]+</p>" +
+                        "<p>LocalName: " + server().defaultHostname() + "</p>" +
+                        "<p>LocalPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
+                        "<p>ServerName: localhost</p>" +
+                        "<p>ServerPort: 1111</p>" +
                         "</body></html>"));
             }
         }
