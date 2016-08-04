@@ -81,28 +81,36 @@
     <maven.compiler.showWarnings>true</maven.compiler.showWarnings>
 
     <!-- Dependency versions -->
+    <brave.version>3.9.1</brave.version>
+    <guava.version>19.0</guava.version>
     <jackson.version>2.7.6</jackson.version>
     <jetty.version>9.3.11.v20160721</jetty.version>
     <logback.version>1.1.7</logback.version>
     <metrics.version>3.1.2</metrics.version>
     <netty.version>4.1.4.Final</netty.version>
     <reactive-streams.version>1.0.0</reactive-streams.version>
+    <reflections.version>0.9.10</reflections.version>
     <slf4j.version>1.7.21</slf4j.version>
     <tomcat.version>8.5.4</tomcat.version>
+
+    <!-- JVM options -->
     <jetty.alpnAgent.version>2.0.4</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.alpnAgent>-javaagent:"${jetty.alpnAgent.path}"</argLine.alpnAgent>
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.memOpts>-Xmx128m</argLine.memOpts>
+
+    <!-- Checkstyle -->
+    <checkstyle.config.location>${project.basedir}/settings/checkstyle/checkstyle.xml</checkstyle.config.location>
+    <checkstyle.suppressions.location>${project.basedir}/settings/checkstyle/checkstyle-suppressions.xml</checkstyle.suppressions.location>
+
+    <!-- Thrift compiler -->
     <thrift.executable>${project.basedir}/src/build/thrift.${os.detected.classifier}</thrift.executable>
     <thrift.source.main>${project.basedir}/src/main/thrift</thrift.source.main>
     <thrift.source.test>${project.basedir}/src/test/thrift</thrift.source.test>
     <thrift.generated.main>${project.build.directory}/generated-sources</thrift.generated.main>
     <thrift.generated.test>${project.build.directory}/generated-test-sources</thrift.generated.test>
-    <brave.version>3.9.1</brave.version>
-    <guava.version>19.0</guava.version>
-    <reflections.version>0.9.10</reflections.version>
   </properties>
 
   <dependencies>
@@ -430,6 +438,35 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.17</version>
+        <executions>
+          <execution>
+            <id>validate</id>
+            <phase>validate</phase>
+            <configuration>
+              <encoding>UTF-8</encoding>
+              <!-- TODO(trustin): Enable once we fix all violations.
+              <consoleOutput>true</consoleOutput>
+              -->
+              <failsOnError>true</failsOnError>
+              <includeTestSourceDirectory>true</includeTestSourceDirectory>
+            </configuration>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>7.1</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>

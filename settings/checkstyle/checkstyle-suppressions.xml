@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!--
+  ~ Copyright (c) 2015 LINE Corporation. All rights reserved.
+  ~ LINE Corporation PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
+  -->
+<!DOCTYPE suppressions PUBLIC
+  "-//Puppy Crawl//DTD Suppressions 1.1//EN"
+  "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
+
+<suppressions>
+  <!-- Suppress Javadoc-related checks in test directories -->
+  <suppress checks="JavadocPackage" files="[\\/](test|internal)[\\/]" />
+  <suppress checks="JavadocMethod" files="[\\/](test|internal)[\\/]" />
+</suppressions>
