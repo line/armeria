@@ -39,6 +39,7 @@ import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.util.ServerInfo;
+import org.apache.catalina.util.URLEncoder;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.InputBuffer;
 import org.apache.coyote.OutputBuffer;
@@ -437,7 +438,8 @@ public final class TomcatService implements HttpService {
         coyoteReq.method().setString(method.name());
 
         // Set the request URI.
-        final byte[] uriBytes = mappedPath.getBytes(StandardCharsets.US_ASCII);
+        final byte[] uriBytes = URLEncoder.DEFAULT.encode(mappedPath)
+                                                  .getBytes(StandardCharsets.US_ASCII);
         coyoteReq.requestURI().setBytes(uriBytes, 0, uriBytes.length);
 
         // Set the query string if any.

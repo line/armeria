@@ -30,6 +30,7 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.servlet.DispatcherType;
 
@@ -47,6 +48,9 @@ import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.thread.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
+import com.google.common.net.UrlEscapers;
 
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
@@ -74,6 +78,8 @@ import io.netty.util.AsciiString;
 public class JettyService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(JettyService.class);
+
+    private static final Splitter PATH_SPLITTER = Splitter.on('/');
 
     /**
      * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
@@ -317,7 +323,10 @@ public class JettyService implements HttpService {
         uriBuf.append(aHeaders.path());
 
         final HttpURI uri = new HttpURI(uriBuf.toString());
-        uri.setPath(ctx.mappedPath());
+        final String encoded = PATH_SPLITTER.splitToList(ctx.mappedPath()).stream()
+                                            .map(UrlEscapers.urlPathSegmentEscaper()::escape)
+                                            .collect(Collectors.joining("/"));
+        uri.setPath(encoded);
 
         // Convert HttpHeaders to HttpFields
         final HttpFields jHeaders = new HttpFields(aHeaders.size());
