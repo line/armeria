@@ -74,7 +74,6 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
         try {
             final O res = delegate().serve(ctx, req);
             if (sampled) {
-
                 ctx.requestLogFuture().thenAcceptBoth(
                         res.closeFuture(),
                         (log, unused) -> serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, log, res)))

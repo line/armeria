@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.common.AbstractRequestContext;
+import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -38,7 +38,8 @@ import io.netty.channel.EventLoop;
 /**
  * Default {@link ClientRequestContext} implementation.
  */
-public final class DefaultClientRequestContext extends AbstractRequestContext implements ClientRequestContext {
+public final class DefaultClientRequestContext extends NonWrappingRequestContext
+        implements ClientRequestContext {
 
     private final EventLoop eventLoop;
     private final ClientOptions options;

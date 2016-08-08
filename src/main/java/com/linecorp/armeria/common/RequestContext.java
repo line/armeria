@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -91,13 +89,68 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * (Do not use; internal use only) Sets the invocation context of the current thread.
+     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * {@link PushHandle#close()}, which can be done using a {@code try-finally} block:
+     * <pre>{@code
+     * try (PushHandler ignored = RequestContext.push(ctx)) {
+     *     ...
+     * }
+     * }</pre>
+     *
+     * <p>The callbacks added by {@link #onEnter(Runnable)} and {@link #onExit(Runnable)} will be invoked
+     * when the context is pushed to and removed from the thread-local stack respectively.
+     *
+     * <p>NOTE: In case of re-entrance, the callbacks will never run.
      */
     static PushHandle push(RequestContext ctx) {
-        requireNonNull(ctx, "ctx");
+        return push(ctx, true);
+    }
+
+    /**
+     * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
+     * {@link PushHandle#close()}, which can be done using a {@code try-finally} block:
+     * <pre>{@code
+     * try (PushHandler ignored = RequestContext.push(ctx, true)) {
+     *     ...
+     * }
+     * }</pre>
+     *
+     * <p>NOTE: This method is only useful when it is undesirable to invoke the callbacks, such as replacing
+     *          the current context with another. Prefer {@link #push(RequestContext)} otherwise.
+     *
+     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Runnable)} and
+     *                     {@link #onExit(Runnable)} will be invoked when the context is pushed to and
+     *                     removed from the thread-local stack respectively.
+     *                     If {@code false}, no callbacks will be executed.
+     *                     NOTE: In case of re-entrance, the callbacks will never run.
+     */
+    static PushHandle push(RequestContext ctx, boolean runCallbacks) {
         final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(ctx);
-        return oldCtx != null ? () -> RequestContextThreadLocal.set(oldCtx)
-                              : RequestContextThreadLocal::remove;
+        if (oldCtx == ctx) {
+            // Reentrance
+            return () -> {};
+        }
+
+        if (runCallbacks) {
+            ctx.invokeOnEnterCallbacks();
+            if (oldCtx != null) {
+                return () -> {
+                    ctx.invokeOnExitCallbacks();
+                    RequestContextThreadLocal.set(oldCtx);
+                };
+            } else {
+                return () -> {
+                    ctx.invokeOnExitCallbacks();
+                    RequestContextThreadLocal.remove();
+                };
+            }
+        } else {
+            if (oldCtx != null) {
+                return () -> RequestContextThreadLocal.set(oldCtx);
+            } else {
+                return RequestContextThreadLocal::remove;
+            }
+        }
     }
 
     /**
@@ -201,6 +254,20 @@ public interface RequestContext extends AttributeMap {
      * associated with this context should be reset by this callback.
      */
     void onExit(Runnable callback);
+
+    /**
+     * Invokes all {@link #onEnter(Runnable)} callbacks. It is discouraged to use this method directly.
+     * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
+     * the callbacks are invoked automatically.
+     */
+    void invokeOnEnterCallbacks();
+
+    /**
+     * Invokes all {@link #onExit(Runnable)} callbacks. It is discouraged to use this method directly.
+     * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
+     * the callbacks are invoked automatically.
+     */
+    void invokeOnExitCallbacks();
 
     /**
      * Resolves the specified {@code promise} with the specified {@code result} so that the {@code promise} is

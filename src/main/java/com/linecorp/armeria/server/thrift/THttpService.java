@@ -46,6 +46,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
@@ -456,7 +458,7 @@ public class THttpService extends AbstractHttpService {
         final ThriftReply reply;
         ctx.requestLogBuilder().attr(RequestLog.RPC_REQUEST).set(call);
 
-        try {
+        try (PushHandle ignored = RequestContext.push(ctx)) {
             reply = delegate.serve(ctx, call);
             ctx.responseLogBuilder().attr(ResponseLog.RPC_RESPONSE).set(reply);
         } catch (Throwable cause) {

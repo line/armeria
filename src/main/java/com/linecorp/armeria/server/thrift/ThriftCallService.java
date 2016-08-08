@@ -117,23 +117,21 @@ public class ThriftCallService implements Service<ThriftCall, ThriftReply> {
             ThriftFunction func, TBase<TBase<?, ?>, TFieldIdEnum> args, ThriftReply reply) throws TException {
 
         final AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object> f = func.asyncFunc();
-        try (PushHandle ignored = RequestContext.push(ctx)) {
-            f.start(implementation, args, new AsyncMethodCallback<Object>() {
-                @Override
-                public void onComplete(Object response) {
-                    if (func.isOneway()) {
-                        reply.complete(null);
-                    } else {
-                        reply.complete(response);
-                    }
+        f.start(implementation, args, new AsyncMethodCallback<Object>() {
+            @Override
+            public void onComplete(Object response) {
+                if (func.isOneway()) {
+                    reply.complete(null);
+                } else {
+                    reply.complete(response);
                 }
+            }
 
-                @Override
-                public void onError(Exception e) {
-                    reply.completeExceptionally(e);
-                }
-            });
-        }
+            @Override
+            public void onError(Exception e) {
+                reply.completeExceptionally(e);
+            }
+        });
     }
 
     private void invokeSynchronously(

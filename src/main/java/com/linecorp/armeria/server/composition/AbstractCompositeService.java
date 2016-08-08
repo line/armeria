@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.List;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
@@ -121,8 +123,10 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
             throw ResourceNotFoundException.get();
         }
 
-        ctx = new CompositeServiceRequestContext(ctx, mapped.mappedPath());
-        return mapped.value().serve(ctx, req);
+        final ServiceRequestContext newCtx = new CompositeServiceRequestContext(ctx, mapped.mappedPath());
+        try (PushHandle ignored = RequestContext.push(newCtx, false)) {
+            return mapped.value().serve(newCtx, req);
+        }
     }
 
     private static final class CompositeServiceRequestContext extends ServiceRequestContextWrapper {

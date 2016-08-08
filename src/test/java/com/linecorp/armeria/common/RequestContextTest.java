@@ -78,7 +78,6 @@ public class RequestContextTest {
     private final AtomicBoolean entered = new AtomicBoolean();
 
     @Test
-    @Ignore("Ignore until https://github.com/netty/netty/issues/5507 is fixed.")
     public void contextAwareEventExecutor() throws Exception {
         EventLoop eventLoop = new DefaultEventLoop();
         when(channel.eventLoop()).thenReturn(eventLoop);
@@ -183,7 +182,7 @@ public class RequestContextTest {
     @Test
     public void contextPropagationSameContextAlreadySet() {
         final RequestContext context = createContext();
-        try (PushHandle ignored = RequestContext.push(context)) {
+        try (PushHandle ignored = RequestContext.push(context, false)) {
             context.makeContextAware(() -> {
                 assertEquals(context, RequestContext.current());
                 // Context was already correct, so handlers were not run (in real code they would already be
@@ -247,7 +246,7 @@ public class RequestContextTest {
         return ctx;
     }
 
-    private class DummyRequestContext extends AbstractRequestContext {
+    private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(SessionProtocol.HTTP, "GET", "/", new DefaultHttpRequest());
         }

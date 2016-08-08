@@ -16,48 +16,19 @@
 
 package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 
-import com.linecorp.armeria.common.AbstractRequestContext;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
+import com.linecorp.armeria.common.RequestContextWrapper;
 
-import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
-
-public class ServiceRequestContextWrapper extends AbstractRequestContext implements ServiceRequestContext {
-
-    private final ServiceRequestContext delegate;
+public class ServiceRequestContextWrapper
+        extends RequestContextWrapper<ServiceRequestContext> implements ServiceRequestContext {
 
     protected ServiceRequestContextWrapper(ServiceRequestContext delegate) {
-        super(requireNonNull(delegate, "delegate").sessionProtocol(),
-              delegate.method(), delegate.path(), delegate.request());
-
-        this.delegate = delegate;
-    }
-
-    protected final ServiceRequestContext delegate() {
-        return delegate;
-    }
-
-    @Override
-    public ExecutorService blockingTaskExecutor() {
-        return delegate().blockingTaskExecutor();
-    }
-
-    @Override
-    public String mappedPath() {
-        return delegate().mappedPath();
+        super(delegate);
     }
 
     @Override
@@ -76,6 +47,11 @@ public class ServiceRequestContextWrapper extends AbstractRequestContext impleme
     }
 
     @Override
+    public ExecutorService blockingTaskExecutor() {
+        return delegate().blockingTaskExecutor();
+    }
+
+    @Override
     public <A extends SocketAddress> A remoteAddress() {
         return delegate().remoteAddress();
     }
@@ -83,6 +59,11 @@ public class ServiceRequestContextWrapper extends AbstractRequestContext impleme
     @Override
     public <A extends SocketAddress> A localAddress() {
         return delegate().localAddress();
+    }
+
+    @Override
+    public String mappedPath() {
+        return delegate().mappedPath();
     }
 
     @Override
@@ -113,45 +94,5 @@ public class ServiceRequestContextWrapper extends AbstractRequestContext impleme
     @Override
     public void setMaxRequestLength(long maxRequestLength) {
         delegate().setMaxRequestLength(maxRequestLength);
-    }
-
-    @Override
-    public EventLoop eventLoop() {
-        return delegate().eventLoop();
-    }
-
-    @Override
-    public <T> Attribute<T> attr(AttributeKey<T> key) {
-        return delegate().attr(key);
-    }
-
-    @Override
-    public <T> boolean hasAttr(AttributeKey<T> key) {
-        return delegate().hasAttr(key);
-    }
-
-    @Override
-    public RequestLogBuilder requestLogBuilder() {
-        return delegate.requestLogBuilder();
-    }
-
-    @Override
-    public ResponseLogBuilder responseLogBuilder() {
-        return delegate.responseLogBuilder();
-    }
-
-    @Override
-    public CompletableFuture<RequestLog> requestLogFuture() {
-        return delegate.requestLogFuture();
-    }
-
-    @Override
-    public CompletableFuture<ResponseLog> responseLogFuture() {
-        return delegate.responseLogFuture();
-    }
-
-    @Override
-    public String toString() {
-        return delegate().toString();
     }
 }
