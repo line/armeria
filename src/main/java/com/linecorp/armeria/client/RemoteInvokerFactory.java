@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -32,17 +33,22 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.resolver.NameResolver;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
+import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
@@ -139,8 +145,7 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         baseBootstrap.channel(channelType());
         baseBootstrap.resolver(
                 options.addressResolverGroup()
-                       .orElseGet(() -> new DnsAddressResolverGroup(
-                               datagramChannelType(), DnsServerAddresses.defaultAddresses())));
+                       .orElseGet(DnsAddressResolverGroup5657::new));
 
         baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
                              ConvertUtils.safeLongToInt(options.connectTimeoutMillis()));
@@ -217,6 +222,30 @@ public final class RemoteInvokerFactory implements AutoCloseable {
         remoteInvokers.forEach((k, v) -> v.close());
         if (closeEventLoopGroup) {
             eventLoopGroup.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    private static class DnsAddressResolverGroup5657 extends DnsAddressResolverGroup {
+
+        DnsAddressResolverGroup5657() {
+            super(datagramChannelType(), DnsServerAddresses.defaultAddresses());
+        }
+
+        @Override
+        protected NameResolver<InetAddress> newNameResolver(
+                EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
+                DnsServerAddresses nameServerAddresses) throws Exception {
+
+            final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
+            builder.channelFactory(channelFactory);
+            builder.nameServerAddresses(nameServerAddresses);
+            if (Boolean.getBoolean("java.net.preferIPv4Stack")) {
+                // Resolve IPv4 addresses only when -Djava.net.preferIPv4Stack is enabled,
+                // because JDK will fail or refuse connecting to an IPv6 address at all.
+                // See: https://github.com/netty/netty/issues/5657
+                builder.resolvedAddressTypes(InternetProtocolFamily.IPv4);
+            }
+            return builder.build();
         }
     }
 }
