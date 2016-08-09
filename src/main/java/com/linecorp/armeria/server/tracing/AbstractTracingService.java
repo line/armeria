@@ -76,7 +76,7 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
             if (sampled) {
                 ctx.requestLogFuture().thenAcceptBoth(
                         res.closeFuture(),
-                        (log, unused) -> serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, log, res)))
+                        (log, unused) -> closeSpan(ctx, serverSpan, log, res))
                    .exceptionally(CompletionActions::log);
             }
             return res;
@@ -136,6 +136,13 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
         return annotations;
     }
 
+    private void closeSpan(ServiceRequestContext ctx, ServerSpan serverSpan, RequestLog req, O res) {
+        if (req.hasAttr(RequestLog.RPC_REQUEST)) {
+            serverSpan.getSpan().setName(req.attr(RequestLog.RPC_REQUEST).get().method());
+        }
+        serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, req, res));
+    }
+
     protected ServerResponseAdapter createResponseAdapter(
             ServiceRequestContext ctx, RequestLog req, O res) {
         final List<KeyValueAnnotation> annotations = annotations(ctx, req, res);
@@ -171,5 +178,4 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
             return Collections.emptyList();
         }
     }
-
 }
