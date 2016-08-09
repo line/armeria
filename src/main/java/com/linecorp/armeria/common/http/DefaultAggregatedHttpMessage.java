@@ -73,4 +73,31 @@ final class DefaultAggregatedHttpMessage implements AggregatedHttpMessage {
 
         return helper.toString();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof AggregatedHttpMessage)) {
+            return false;
+        }
+
+        final DefaultAggregatedHttpMessage that = (DefaultAggregatedHttpMessage) obj;
+
+        return informationals.equals(that.informationals)
+                && headers.equals(that.headers)
+                && content.equals(that.content)
+                && trailingHeaders.equals(that.trailingHeaders);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = informationals.hashCode();
+        result = 31 * result + headers.hashCode();
+        result = 31 * result + content.hashCode();
+        result = 31 * result + trailingHeaders.hashCode();
+        return result;
+    }
 }
