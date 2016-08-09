@@ -144,6 +144,9 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
         assertThat(spans[3].getAnnotations()).allMatch(a -> "service/bar".equals(a.host.service_name));
         assertThat(spans[4].getAnnotations()).allMatch(a -> "client/qux".equals(a.host.service_name));
         assertThat(spans[5].getAnnotations()).allMatch(a -> "service/qux".equals(a.host.service_name));
+
+        // Check the span names.
+        assertThat(spans).allMatch(s -> "hello".equals(s.getName()));
     }
 
     @Test(timeout = 10000)
@@ -178,6 +181,9 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
         assertThat(spans[2].getAnnotations()).allMatch(a -> "service/bar".equals(a.host.service_name));
         assertThat(spans[3].getAnnotations()).allMatch(a -> "client/qux".equals(a.host.service_name));
         assertThat(spans[4].getAnnotations()).allMatch(a -> "service/qux".equals(a.host.service_name));
+
+        // Check the span names.
+        assertThat(spans).allMatch(s -> "hello".equals(s.getName()));
     }
 
     private static class DelegatingCallback implements AsyncMethodCallback<String> {

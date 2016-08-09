@@ -84,7 +84,7 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
 
         ctx.requestLogFuture().thenAcceptBoth(
                 res.closeFuture(),
-                (log, unused) -> clientInterceptor.closeSpan(span, createResponseAdapter(ctx, log, res)))
+                (log, unused) -> closeSpan(ctx, span, log, res))
            .exceptionally(CompletionActions::log);
 
         return res;
@@ -125,6 +125,14 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
         })).exceptionally(CompletionActions::log);
 
         return annotations;
+    }
+
+
+    private void closeSpan(ClientRequestContext ctx, Span span, RequestLog req, O res) {
+        if (req.hasAttr(RequestLog.RPC_REQUEST)) {
+            span.setName(req.attr(RequestLog.RPC_REQUEST).get().method());
+        }
+        clientInterceptor.closeSpan(span, createResponseAdapter(ctx, req, res));
     }
 
     protected ClientResponseAdapter createResponseAdapter(
@@ -174,5 +182,4 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
             return Collections.emptyList();
         }
     }
-
 }
