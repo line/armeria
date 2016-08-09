@@ -20,6 +20,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -74,7 +76,7 @@ public abstract class UserClient<T, I extends Request, O extends Response> imple
 
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop, sessionProtocol, endpoint, method, path, options, req);
-        try {
+        try (PushHandle ignored = RequestContext.push(ctx)) {
             return delegate().execute(ctx, req);
         } catch (Throwable cause) {
             ctx.responseLogBuilder().end(cause);

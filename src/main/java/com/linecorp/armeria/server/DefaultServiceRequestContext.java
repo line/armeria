@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 
-import com.linecorp.armeria.common.AbstractRequestContext;
+import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.DefaultResponseLog;
@@ -41,7 +41,8 @@ import io.netty.channel.EventLoop;
 /**
  * Default {@link ServiceRequestContext} implementation.
  */
-public final class DefaultServiceRequestContext extends AbstractRequestContext implements ServiceRequestContext {
+public final class DefaultServiceRequestContext extends NonWrappingRequestContext
+        implements ServiceRequestContext {
 
     private final Channel ch;
     private final ServiceConfig cfg;

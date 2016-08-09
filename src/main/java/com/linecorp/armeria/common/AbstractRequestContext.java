@@ -16,12 +16,8 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-
-import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
@@ -33,49 +29,7 @@ import io.netty.util.concurrent.Promise;
 /**
  * Default {@link RequestContext} implementation.
  */
-public abstract class AbstractRequestContext extends DefaultAttributeMap implements RequestContext {
-
-    private final SessionProtocol sessionProtocol;
-    private final String method;
-    private final String path;
-    private final Object request;
-    private List<Runnable> onEnterCallbacks;
-    private List<Runnable> onExitCallbacks;
-
-    /**
-     * Creates a new instance.
-     *
-     * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param request the request associated with this context
-     */
-    protected AbstractRequestContext(
-            SessionProtocol sessionProtocol, String method, String path, Object request) {
-        this.sessionProtocol = sessionProtocol;
-        this.method = method;
-        this.path = path;
-        this.request = request;
-    }
-
-    @Override
-    public final SessionProtocol sessionProtocol() {
-        return sessionProtocol;
-    }
-
-    @Override
-    public final String method() {
-        return method;
-    }
-
-    @Override
-    public final String path() {
-        return path;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public final <T> T request() {
-        return (T) request;
-    }
+public abstract class AbstractRequestContext implements RequestContext {
 
     @Override
     public final EventLoop contextAwareEventLoop() {
@@ -139,36 +93,7 @@ public abstract class AbstractRequestContext extends DefaultAttributeMap impleme
                         "sure you are not saving callbacks into shared state.");
             }
             return () -> {};
-        }, () -> {
-            final PushHandle handle = RequestContext.push(this);
-            final List<Runnable> onEnterCallbacks = this.onEnterCallbacks;
-            if (onEnterCallbacks != null) {
-                onEnterCallbacks.forEach(Runnable::run);
-            }
-            return (PushHandle) () -> {
-                handle.close();
-                final List<Runnable> onExitCallbacks = this.onExitCallbacks;
-                if (onExitCallbacks != null) {
-                    onExitCallbacks.forEach(Runnable::run);
-                }
-            };
-        });
-    }
-
-    @Override
-    public final void onEnter(Runnable callback) {
-        if (onEnterCallbacks == null) {
-            onEnterCallbacks = new ArrayList<>(4);
-        }
-        onEnterCallbacks.add(callback);
-    }
-
-    @Override
-    public final void onExit(Runnable callback) {
-        if (onExitCallbacks == null) {
-            onExitCallbacks = new ArrayList<>(4);
-        }
-        onExitCallbacks.add(callback);
+        }, () -> RequestContext.push(this, true));
     }
 
     @Override

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.thrift;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
@@ -587,6 +588,10 @@ public class ThriftServiceTest {
         expect(ctx.blockingTaskExecutor()).andReturn(ImmediateEventExecutor.INSTANCE).anyTimes();
         expect(ctx.requestLogBuilder()).andReturn(reqLogBuilder).anyTimes();
         expect(ctx.responseLogBuilder()).andReturn(resLogBuilder).anyTimes();
+        ctx.invokeOnEnterCallbacks();
+        expectLastCall().anyTimes();
+        ctx.invokeOnExitCallbacks();
+        expectLastCall().anyTimes();
         replay(ctx);
 
         final DefaultHttpRequest req = new DefaultHttpRequest(
