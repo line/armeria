@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpStatusClass;
 import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBuf;
@@ -94,11 +93,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers);
-        if (converted.status().codeClass() != HttpStatusClass.INFORMATIONAL) {
-            res.scheduleTimeout(ctx);
-        }
-
         try {
+            res.scheduleTimeout(ctx);
             res.write(converted);
         } catch (Throwable t) {
             res.close(t);
