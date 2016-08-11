@@ -95,7 +95,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         final HttpObject converted;
         try {
             converted = server ? convertServerHeaders(streamId, headers, endStream)
-                               : convertClientHeaders(streamId, headers);
+                               : convertClientHeaders(streamId, headers, endStream);
 
             return write(ctx, id, converted, endStream);
         } catch (Throwable t) {
@@ -147,7 +147,8 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         return res;
     }
 
-    private HttpObject convertClientHeaders(int streamId, HttpHeaders headers) throws Http2Exception {
+    private HttpObject convertClientHeaders(int streamId, HttpHeaders headers, boolean endStream)
+            throws Http2Exception {
 
         // Leading headers will always have :method, trailers will never have it.
         final HttpMethod method = headers.method();
@@ -162,7 +163,11 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                 headers.path(), false);
 
         convert(streamId, headers, req.headers(), false);
-        if (HttpUtil.getContentLength(req, -1L) >= 0) {
+
+        if (endStream) {
+            req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+            req.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
+        } else if (HttpUtil.getContentLength(req, -1L) >= 0) {
             // Avoid the case where both 'content-length' and 'transfer-encoding' are set.
             req.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
         } else {

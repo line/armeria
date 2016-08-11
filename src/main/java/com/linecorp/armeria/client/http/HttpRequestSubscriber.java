@@ -139,7 +139,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                          host, firstHeaders.method().name(), firstHeaders.path());
         logBuilder.attr(RequestLog.HTTP_HEADERS).set(firstHeaders);
 
-        write0(firstHeaders, false, true);
+        if (request.isEmpty()) {
+            setDone();
+            write0(firstHeaders, true, true);
+        } else {
+            write0(firstHeaders, false, true);
+        }
     }
 
     @Override

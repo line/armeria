@@ -117,6 +117,8 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
     @SuppressWarnings("FieldMayBeFinal")
     private volatile State state = State.OPEN;
 
+    private volatile boolean wroteAny;
+
     /**
      * Creates a new instance with a new {@link ConcurrentLinkedQueue}.
      */
@@ -134,6 +136,11 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
     @Override
     public boolean isOpen() {
         return state == State.OPEN;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return !isOpen() && !wroteAny;
     }
 
     @Override
@@ -186,6 +193,7 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
             return false;
         }
 
+        wroteAny = true;
         pushObject(obj);
         return true;
     }

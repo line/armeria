@@ -41,6 +41,16 @@ public interface HttpRequest extends Request, RichPublisher<HttpObject> {
     }
 
     /**
+     * Returns a new {@link HttpRequest} with empty content.
+     */
+    static HttpRequest of(HttpHeaders headers) {
+        // TODO(trustin): Use no-op Queue implementation for QueueBasedPublisher?
+        final DefaultHttpRequest req = new DefaultHttpRequest(headers);
+        req.close();
+        return req;
+    }
+
+    /**
      * Returns the initial HTTP/2 headers of this request.
      */
     HttpHeaders headers();

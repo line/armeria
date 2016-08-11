@@ -35,6 +35,13 @@ public interface RichPublisher<T> extends Publisher<T> {
     boolean isOpen();
 
     /**
+     * Returns {@code true} if this stream has been closed and did not publish any elements.
+     * Note that this method will not return {@code true} when the stream is open even if it has not
+     * published anything so far, because it may publish something later.
+     */
+    boolean isEmpty();
+
+    /**
      * Returns a {@link CompletableFuture} that completes when this publisher is complete,
      * either successfully or exceptionally.
      */
