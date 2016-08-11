@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.http;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 
+import java.net.URI;
 import java.util.Arrays;
 
 import com.linecorp.armeria.client.ClientOptionValue;
@@ -47,9 +48,19 @@ final class DefaultSimpleHttpClient implements SimpleHttpClient {
         final EventLoop eventLoop = client.eventLoop0();
         final Promise<SimpleHttpResponse> promise = eventLoop.newPromise();
         try {
+            URI uri = sReq.uri();
+            StringBuilder uriBuilder = new StringBuilder(uri.getPath());
+            if (uri.getQuery() != null) {
+                uriBuilder.append('?');
+                uriBuilder.append(uri.getQuery());
+            }
+            if (uri.getFragment() != null) {
+                uriBuilder.append('#');
+                uriBuilder.append(uri.getFragment());
+            }
             final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
                     HttpMethod.valueOf(sReq.method().name()),
-                    sReq.uri().getPath(),
+                    uriBuilder.toString(),
                     HttpData.of(sReq.content()));
 
             // Convert the headers.
