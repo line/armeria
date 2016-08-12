@@ -25,6 +25,9 @@ import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.util.AsciiString;
 
+/**
+ * Default {@link HttpHeaders} implementation.
+ */
 public final class DefaultHttpHeaders
         extends DefaultHeaders<AsciiString, String, HttpHeaders> implements HttpHeaders {
 
@@ -48,14 +51,28 @@ public final class DefaultHttpHeaders
     private HttpMethod method;
     private HttpStatus status;
 
+    /**
+     * Creates a new instance.
+     */
     public DefaultHttpHeaders() {
         this(true);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param validate whether to validate the header names and values
+     */
     public DefaultHttpHeaders(boolean validate) {
         this(validate, 16);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param validate whether to validate the header names and values
+     * @param initialCapacity the initial capacity of the internal data structure
+     */
     public DefaultHttpHeaders(boolean validate, int initialCapacity) {
         super(ArmeriaHttpUtil.HTTP2_HEADER_NAME_HASHER,
               StringValueConverter.INSTANCE,

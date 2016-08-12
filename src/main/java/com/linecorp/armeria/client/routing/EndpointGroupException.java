@@ -15,12 +15,17 @@
  */
 package com.linecorp.armeria.client.routing;
 
+/**
+ * A {@link RuntimeException} raised when the registration or resolution of an {@link EndpointGroup} fails.
+ */
 public class EndpointGroupException extends RuntimeException {
+
+    private static final long serialVersionUID = -1027414271521488397L;
+
     /**
      * Creates a new instance.
      */
-    public EndpointGroupException() {
-    }
+    public EndpointGroupException() {}
 
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.

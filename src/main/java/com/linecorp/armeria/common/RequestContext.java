@@ -27,11 +27,13 @@ import javax.annotation.Nullable;
 
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFutureListener;
@@ -47,13 +49,14 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 
 /**
- * Provides information about an invocation and related utilities. Every remote invocation, regardless of if
- * it's client side or server side, has its own {@link RequestContext} instance.
+ * Provides information about a {@link Request}, its {@link Response} and related utilities.
+ * A server-side {@link Request} has a {@link ServiceRequestContext} and
+ * a client-side {@link Request} has a {@link ClientRequestContext}.
  */
 public interface RequestContext extends AttributeMap {
 
     /**
-     * Returns the context of the invocation that is being handled in the current thread.
+     * Returns the context of the {@link Request} that is being handled in the current thread.
      *
      * @throws IllegalStateException if the context is unavailable in the current thread
      */
@@ -66,9 +69,9 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Maps the context of the invocation that is being handled in the current thread.
+     * Maps the context of the {@link Request} that is being handled in the current thread.
      *
-     * @param mapper the {@link Function} that maps the invocation
+     * @param mapper the {@link Function} that maps the {@link RequestContext}
      * @param defaultValueSupplier the {@link Supplier} that provides the value when the context is unavailable
      *                             in the current thread. If {@code null}, the {@code null} will be returned
      *                             when the context is unavailable in the current thread.
@@ -154,104 +157,123 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Returns the {@link SessionProtocol} of this request.
+     * Returns the {@link SessionProtocol} of the current {@link Request}.
      */
     SessionProtocol sessionProtocol();
 
+    /**
+     * Returns the session-layer method name of the current {@link Request}. e.g. "GET" or "POST" for HTTP
+     */
     String method();
 
     /**
-     * Returns the absolute path part of this invocation, as defined in
+     * Returns the absolute path part of the current {@link Request}, as defined in
      * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2">the
      * section 5.1.2 of RFC2616</a>.
      */
     String path();
 
     /**
-     * Returns the request associated with this context.
+     * Returns the {@link Request} associated with this context.
      */
     <T> T request();
 
+    /**
+     * Returns the {@link RequestLogBuilder} that collects the information about the current {@link Request}.
+     */
     RequestLogBuilder requestLogBuilder();
+
+    /**
+     * Returns the {@link ResponseLogBuilder} that collects the information about the current {@link Response}.
+     */
     ResponseLogBuilder responseLogBuilder();
+
+    /**
+     * Returns the {@link CompletableFuture} that completes when the {@link #requestLogBuilder()} finished
+     * collecting the {@link Request} information.
+     */
     CompletableFuture<RequestLog> requestLogFuture();
+
+    /**
+     * Returns the {@link CompletableFuture} that completes when the {@link #responseLogBuilder()} finished
+     * collecting the {@link Response} information.
+     */
     CompletableFuture<ResponseLog> responseLogFuture();
 
+    /**
+     * Returns all {@link Attribute}s set in this context.
+     */
     Iterator<Attribute<?>> attrs();
 
     /**
-     * Returns the {@link EventLoop} that is handling this invocation.
+     * Returns the {@link EventLoop} that is handling the current {@link Request}.
      */
     EventLoop eventLoop();
 
     /**
-     * Returns an {@link EventLoop} that will make sure this invocation is set
-     * as the current invocation before executing any callback. This should
-     * almost always be used for executing asynchronous callbacks in service
-     * code to make sure features that require the invocation context work
-     * properly. Most asynchronous libraries like
-     * {@link CompletableFuture} provide methods that
-     * accept an {@link Executor} to run callbacks on.
+     * Returns an {@link EventLoop} that will make sure this {@link RequestContext} is set as the current
+     * context before executing any callback. This should almost always be used for executing asynchronous
+     * callbacks in service code to make sure features that require the {@link RequestContext} work properly.
+     * Most asynchronous libraries like {@link CompletableFuture} provide methods that accept an
+     * {@link Executor} to run callbacks on.
      */
     default EventLoop contextAwareEventLoop() {
         return new RequestContextAwareEventLoop(this, eventLoop());
     }
 
     /**
-     * Returns an {@link Executor} that will execute callbacks in the given
-     * {@code executor}, making sure to propagate the current invocation context
-     * into the callback execution. It is generally preferred to use
-     * {@link #contextAwareEventLoop()} to ensure the callback stays on the
-     * same thread as well.
+     * Returns an {@link Executor} that will execute callbacks in the given {@code executor}, making sure to
+     * propagate the current {@link RequestContext} into the callback execution. It is generally preferred to
+     * use {@link #contextAwareEventLoop()} to ensure the callback stays on the same thread as well.
      */
     default Executor makeContextAware(Executor executor) {
         return runnable -> executor.execute(makeContextAware(runnable));
     }
 
     /**
-     * Returns a {@link Callable} that makes sure the current invocation context
-     * is set and then invokes the input {@code callable}.
+     * Returns a {@link Callable} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code callable}.
      */
     <T> Callable<T> makeContextAware(Callable<T> callable);
 
     /**
-     * Returns a {@link Runnable} that makes sure the current invocation context
-     * is set and then invokes the input {@code runnable}.
+     * Returns a {@link Runnable} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code runnable}.
      */
     Runnable makeContextAware(Runnable runnable);
 
     /**
-     * Returns a {@link FutureListener} that makes sure the current invocation
-     * context is set and then invokes the input {@code listener}.
+     * Returns a {@link FutureListener} that makes sure the current {@link RequestContext} is set and then
+     * invokes the input {@code listener}.
      */
     @Deprecated
     <T> FutureListener<T> makeContextAware(FutureListener<T> listener);
 
     /**
-     * Returns a {@link ChannelFutureListener} that makes sure the current invocation
-     * context is set and then invokes the input {@code listener}.
+     * Returns a {@link ChannelFutureListener} that makes sure the current {@link RequestContext} is set and
+     * then invokes the input {@code listener}.
      */
     @Deprecated
     ChannelFutureListener makeContextAware(ChannelFutureListener listener);
 
     /**
-     * Returns a {@link GenericFutureListener} that makes sure the current invocation
-     * context is set and then invokes the input {@code listener}.
+     * Returns a {@link GenericFutureListener} that makes sure the current {@link RequestContext} is set and
+     * then invokes the input {@code listener}.
      */
     @Deprecated
     <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener);
 
     /**
-     * Registers {@code callback} to be run when re-entering this {@link RequestContext},
-     * usually when using the {@link #makeContextAware} family of methods. Any thread-local state
-     * associated with this context should be restored by this callback.
+     * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
+     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
+     * should be restored by this callback.
      */
     void onEnter(Runnable callback);
 
     /**
-     * Registers {@code callback} to be run when re-exiting this {@link RequestContext},
-     * usually when using the {@link #makeContextAware} family of methods. Any thread-local state
-     * associated with this context should be reset by this callback.
+     * Registers {@code callback} to be run when re-exiting this {@link RequestContext}, usually when using
+     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
+     * should be reset by this callback.
      */
     void onExit(Runnable callback);
 
@@ -291,6 +313,8 @@ public interface RequestContext extends AttributeMap {
      *     </ul>
      *   </li>
      * </ul>
+     *
+     * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
     default void resolvePromise(Promise<?> promise, Object result) {
@@ -329,6 +353,8 @@ public interface RequestContext extends AttributeMap {
      *     </ul>
      *   </li>
      * </ul>
+     *
+     * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
     default void rejectPromise(Promise<?> promise, Throwable cause) {
@@ -353,6 +379,11 @@ public interface RequestContext extends AttributeMap {
                 "Failed to reject a completed promise ({}) with {}", promise, cause, cause);
     }
 
+    /**
+     * An {@link AutoCloseable} that automatically pops the context stack when it is closed.
+     *
+     * @see #push(RequestContext)
+     */
     @FunctionalInterface
     interface PushHandle extends AutoCloseable {
         @Override

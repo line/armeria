@@ -22,24 +22,41 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.reactivestreams.QueueBasedPublisher;
 
+/**
+ * Default {@link HttpRequest} implementation.
+ */
 public class DefaultHttpRequest
         extends QueueBasedPublisher<HttpObject> implements HttpRequest, HttpRequestWriter {
 
     private final HttpHeaders headers;
     private final boolean keepAlive;
 
+    /**
+     * Creates a new instance with empty headers.
+     */
     public DefaultHttpRequest() {
         this(new DefaultHttpHeaders());
     }
 
+    /**
+     * Creates a new instance with the specified headers.
+     */
     public DefaultHttpRequest(HttpHeaders headers) {
         this(headers, true);
     }
 
+    /**
+     * Creates a new instance with the specified {@link HttpMethod} and path.
+     */
     public DefaultHttpRequest(HttpMethod method, String path) {
         this(HttpHeaders.of(method, path));
     }
 
+    /**
+     * Creates a new instance with the specified headers.
+     *
+     * @param keepAlive whether to keep the connection alive after this request is handled
+     */
     public DefaultHttpRequest(HttpHeaders headers, boolean keepAlive) {
         this.headers = requireNonNull(headers, "headers");
         this.keepAlive = keepAlive;

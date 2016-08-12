@@ -18,8 +18,22 @@ package com.linecorp.armeria.common;
 
 import java.util.List;
 
+/**
+ * An RPC {@link Request}.
+ */
 public interface RpcRequest extends Request {
+    /**
+     * Returns the type of the service this {@link RpcRequest} is called upon.
+     */
     Class<?> serviceType();
+
+    /**
+     * Returns the method name.
+     */
     String method();
+
+    /**
+     * Returns the parameters.
+     */
     List<Object> params();
 }

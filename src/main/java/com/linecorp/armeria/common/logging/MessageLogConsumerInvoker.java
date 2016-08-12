@@ -21,10 +21,18 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.RequestContext;
 
+/**
+ * Utility methods that invokes the callback methods of {@link MessageLogConsumer} safely.
+ *
+ * <p>They catch the exceptions raised by the callback methods and log them at WARN level.
+ */
 public final class MessageLogConsumerInvoker {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageLogConsumerInvoker.class);
 
+    /**
+     * Invokes {@link MessageLogConsumer#onRequest(RequestContext, RequestLog)}.
+     */
     public static void invokeOnRequest(MessageLogConsumer consumer, RequestContext ctx, RequestLog req) {
         try {
             consumer.onRequest(ctx, req);
@@ -33,6 +41,9 @@ public final class MessageLogConsumerInvoker {
         }
     }
 
+    /**
+     * Invokes {@link MessageLogConsumer#onResponse(RequestContext, ResponseLog)}.
+     */
     public static void invokeOnResponse(MessageLogConsumer consumer, RequestContext ctx, ResponseLog res) {
         try {
             consumer.onResponse(ctx, res);

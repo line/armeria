@@ -28,7 +28,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * {@link FullHttpResponse} which only uses a byte array to avoid callers having to worry about memory
  * management.
  *
- * @deprecated Use {@link HttpResponse} or {@link AggregatedHttpMessage} instead.
+ * @deprecated Use {@link AggregatedHttpMessage} instead.
  */
 @Deprecated
 public class SimpleHttpResponse {

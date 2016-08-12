@@ -417,6 +417,11 @@ public final class HttpHeaderNames {
         map = builder.build();
     }
 
+    /**
+     * Lower-cases and converts the specified header name into an {@link AsciiString}. If {@code name} is
+     * a known header name, this method will return a pre-instantiated {@link AsciiString} to reduce
+     * the allocation rate of {@link AsciiString}.
+     */
     public static AsciiString of(String name) {
         requireNonNull(name, "name");
         name = name.toLowerCase(Locale.US);

@@ -24,9 +24,10 @@ import java.util.Set;
 
 import com.linecorp.armeria.common.Scheme;
 
+/**
+ * A skeletal {@link ClientFactory} implementation.
+ */
 public abstract class AbstractClientFactory implements ClientFactory {
-
-    protected AbstractClientFactory() {}
 
     @Override
     public final <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
@@ -47,10 +48,17 @@ public abstract class AbstractClientFactory implements ClientFactory {
         return newClient(uri, clientType, ClientOptions.of(options));
     }
 
-    protected final Scheme validate(URI uri, Class<?> clientType, ClientOptions options) {
+    /**
+     * Makes sure the scheme of the specified {@link URI} is supported by this {@link ClientFactory}.
+     *
+     * @param uri the {@link URI} of the server endpoint
+     * @return the parsed {@link Scheme}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@link URI} is not supported by this
+     *                                  {@link ClientFactory}
+     */
+    protected final Scheme validateScheme(URI uri) {
         requireNonNull(uri, "uri");
-        requireNonNull(clientType, "clientType");
-        requireNonNull(options, "options");
 
         final String scheme = uri.getScheme();
         if (scheme == null) {
@@ -76,6 +84,11 @@ public abstract class AbstractClientFactory implements ClientFactory {
         return parsedScheme;
     }
 
+    /**
+     * Creates a new {@link Endpoint} from the authority part of the specified {@link URI}.
+     *
+     * @param uri the {@link URI} of the server endpoint
+     */
     protected static Endpoint newEndpoint(URI uri) {
         return Endpoint.parse(uri.getAuthority());
     }

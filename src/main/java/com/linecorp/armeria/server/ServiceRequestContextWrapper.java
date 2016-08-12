@@ -24,9 +24,15 @@ import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.RequestContextWrapper;
 
+/**
+ * Wraps an existing {@link ServiceRequestContext}.
+ */
 public class ServiceRequestContextWrapper
         extends RequestContextWrapper<ServiceRequestContext> implements ServiceRequestContext {
 
+    /**
+     * Creates a new instance.
+     */
     protected ServiceRequestContextWrapper(ServiceRequestContext delegate) {
         super(delegate);
     }

@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptionDerivable;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
+import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -38,7 +39,10 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 
-public class ThriftClientFactory extends DecoratingClientFactory {
+/**
+ * A {@link DecoratingClientFactory} that creates a Thrift-over-HTTP client.
+ */
+public class THttpClientFactory extends DecoratingClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES;
 
@@ -52,7 +56,13 @@ public class ThriftClientFactory extends DecoratingClientFactory {
         SUPPORTED_SCHEMES = builder.build();
     }
 
-    public ThriftClientFactory(ClientFactory httpClientFactory) {
+    /**
+     * Creates a new instance from the specified {@link ClientFactory} that supports HTTP, such as
+     * {@link HttpClientFactory}.
+     *
+     * @throws IllegalArgumentException if the specified {@link ClientFactory} does not support HTTP
+     */
+    public THttpClientFactory(ClientFactory httpClientFactory) {
         super(validate(httpClientFactory));
     }
 
@@ -75,18 +85,18 @@ public class ThriftClientFactory extends DecoratingClientFactory {
 
     @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        final Scheme scheme = validate(uri, clientType, options);
+        final Scheme scheme = validateScheme(uri);
         final SerializationFormat serializationFormat = scheme.serializationFormat();
 
         final Client<ThriftCall, ThriftReply> delegate = options.decoration().decorate(
                 ThriftCall.class, ThriftReply.class,
-                new ThriftClientDelegate(newHttpClient(uri, scheme, options),
-                                         uri.getPath(), serializationFormat));
+                new THttpClientDelegate(newHttpClient(uri, scheme, options),
+                                        uri.getPath(), serializationFormat));
 
-        final ThriftClient thriftClient = new DefaultThriftClient(
+        final THttpClient thriftClient = new DefaultTHttpClient(
                 delegate, eventLoopSupplier(), scheme.sessionProtocol(), options, newEndpoint(uri));
 
-        if (clientType == ThriftClient.class) {
+        if (clientType == THttpClient.class) {
             @SuppressWarnings("unchecked")
             final T client = (T) thriftClient;
             return client;
@@ -95,7 +105,7 @@ public class ThriftClientFactory extends DecoratingClientFactory {
             T client = (T) Proxy.newProxyInstance(
                     clientType.getClassLoader(),
                     new Class<?>[] { clientType, ClientOptionDerivable.class },
-                    new ThriftClientInvocationHandler(thriftClient, uri.getPath(), clientType));
+                    new THttpClientInvocationHandler(thriftClient, uri.getPath(), clientType));
             return client;
         }
     }

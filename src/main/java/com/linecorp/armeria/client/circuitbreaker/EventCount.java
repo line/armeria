@@ -21,12 +21,18 @@ package com.linecorp.armeria.client.circuitbreaker;
  */
 public final class EventCount {
 
+    /**
+     * An {@link EventCount} without any successes and failures.
+     */
     public static final EventCount ZERO = new EventCount(0, 0);
 
     private final long success;
 
     private final long failure;
 
+    /**
+     * Creates a new instance with the specified number of successes and failures.
+     */
     public EventCount(long success, long failure) {
         this.success = success;
         this.failure = failure;
@@ -34,14 +40,23 @@ public final class EventCount {
         assert 0 <= failure;
     }
 
+    /**
+     * Returns the number of success events.
+     */
     public long success() {
         return success;
     }
 
+    /**
+     * Returns the number of failure events.
+     */
     public long failure() {
         return failure;
     }
 
+    /**
+     * Returns the total number of events.
+     */
     public long total() {
         return success + failure;
     }
@@ -76,6 +91,11 @@ public final class EventCount {
         }
         final double percentageOfSuccess = 100 * successRate();
         return String.format("success%% = %.2f%% (%d/%d)", percentageOfSuccess, success(), total);
+    }
+
+    @Override
+    public int hashCode() {
+        return (int) (31 * success + failure);
     }
 
     @Override

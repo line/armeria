@@ -234,6 +234,13 @@ public final class VirtualHostBuilder {
         return this;
     }
 
+    /**
+     * Decorates all {@link Service}s with the specified {@code decorator}.
+     *
+     * @param decorator the {@link Function} that decorates a {@link Service}
+     * @param <T> the type of the {@link Service} being decorated
+     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     */
     public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
             R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
     VirtualHostBuilder decorator(Function<T, R> decorator) {

@@ -29,14 +29,24 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A decorator {@link Service} that logs all requests and responses.
+ * Decorates a {@link Service} to log {@link Request}s and {@link Response}s.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public class LoggingService<I extends Request, O extends Response> extends LogCollectingService<I, O> {
 
+    /**
+     * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
+     */
     public LoggingService(Service<? super I, ? extends O> delegate) {
         this(delegate, LogLevel.INFO);
     }
 
+    /**
+     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
+     * {@link LogLevel}.
+     */
     public LoggingService(Service<? super I, ? extends O> delegate, LogLevel level) {
         super(delegate, new LoggingConsumer(level));
     }

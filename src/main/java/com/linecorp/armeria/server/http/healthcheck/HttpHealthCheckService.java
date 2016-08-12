@@ -79,6 +79,11 @@ public class HttpHealthCheckService extends AbstractHttpService {
 
     private Server server;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param healthCheckers the additional {@link HealthChecker}s
+     */
     public HttpHealthCheckService(HealthChecker... healthCheckers) {
         this.healthCheckers = Collections.unmodifiableList(Arrays.asList(healthCheckers));
         serverHealth = new SettableHealthChecker();

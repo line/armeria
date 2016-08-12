@@ -22,8 +22,25 @@ import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.client.routing.EndpointGroupRegistry;
 
+/**
+ * A remote endpoint that refers to a single host or a group of multiple hosts.
+ *
+ * <p>A host endpoint has {@link #host()} and optional {@link #port()} and it can be represented as
+ * {@code "<host>"} or {@code "<host>:<port>"} in the authority part of a URI.
+ *
+ * <p>A group endpoint has {@link #groupName()} and it can be represented as {@code "group:<groupName>"}
+ * in the authority part of a URI. It can be resolved into a host endpoint with {@link #resolve()}.
+ */
 public final class Endpoint {
 
+    /**
+     * Parse the authority part of a URI. The authority part may have one of the following formats:
+     * <ul>
+     *   <li>{@code "group:<groupName>"} for a group endpoint</li>
+     *   <li>{@code "<host>:<port>"} for a host endpoint</li>
+     *   <li>{@code "<host>"} for a host endpoint with no port number specified</li>
+     * </ul>
+     */
     public static Endpoint parse(String authority) {
         requireNonNull(authority, "authority");
         if (authority.startsWith("group:")) {
@@ -34,15 +51,24 @@ public final class Endpoint {
         return new Endpoint(parsed.getHostText(), parsed.getPort(), 1000);
     }
 
+    /**
+     * Creates a new group {@link Endpoint}.
+     */
     public static Endpoint ofGroup(String name) {
         requireNonNull(name, "name");
         return new Endpoint(name);
     }
 
+    /**
+     * Creates a new host {@link Endpoint}.
+     */
     public static Endpoint of(String host, int port) {
         return of(host, port, 1000);
     }
 
+    /**
+     * Creates a new host {@link Endpoint} with unspecified port number.
+     */
     public static Endpoint of(String host) {
         return new Endpoint(host, 0, 1000);
     }
@@ -51,6 +77,9 @@ public final class Endpoint {
     //                We could specify an additional attributes such as weight/priority
     //                when adding an Endpoint to an EndpointGroup.
 
+    /**
+     * Creates a new host {@link Endpoint}.
+     */
     public static Endpoint of(String host, int port, int weight) {
         requireNonNull(host, "host");
         validatePort("port", port);
@@ -81,10 +110,19 @@ public final class Endpoint {
         groupName = null;
     }
 
+    /**
+     * Returns {@code true} if this endpoint refers to a group.
+     */
     public boolean isGroup() {
         return groupName != null;
     }
 
+    /**
+     * Resolves this endpoint into a host endpoint.
+     *
+     * @return the {@link Endpoint} resolved by {@link EndpointGroupRegistry}.
+     *         {@code this} if this endpoint is already a host endpoint.
+     */
     public Endpoint resolve() {
         if (isGroup()) {
             return EndpointGroupRegistry.selectNode(groupName);
@@ -93,16 +131,32 @@ public final class Endpoint {
         }
     }
 
+    /**
+     * Returns the group name of this endpoint.
+     *
+     * @throws IllegalStateException if this endpoint is not a group endpoint
+     */
     public String groupName() {
         ensureGroup();
         return groupName;
     }
 
+    /**
+     * Returns the host name of this endpoint.
+     *
+     * @throws IllegalStateException if this endpoint is not a host endpoint
+     */
     public String host() {
         ensureSingle();
         return host;
     }
 
+    /**
+     * Returns the port number of this endpoint.
+     *
+     * @throws IllegalStateException if this endpoint is not a host endpoint or
+     *                                  this endpoint does not have its port specified.
+     */
     public int port() {
         ensureSingle();
         if (port == 0) {
@@ -111,12 +165,27 @@ public final class Endpoint {
         return port;
     }
 
+    /**
+     * Returns the port number of this endpoint.
+     *
+     * @param defaultPort the default port number to use when this endpoint does not have its port specified
+     *
+     * @throws IllegalStateException if this endpoint is not a host endpoint
+     */
     public int port(int defaultPort) {
         ensureSingle();
         validatePort("defaultPort", defaultPort);
         return port != 0 ? port : defaultPort;
     }
 
+    /**
+     * Returns a new host endpoint with the specified default port number.
+     *
+     * @return the new endpoint whose port is {@code defaultPort} if this endpoint does not have its port
+     *         specified. {@code this} if this endpoint already has its port specified.
+     *
+     * @throws IllegalStateException if this endpoint is not a host endpoint
+     */
     public Endpoint withDefaultPort(int defaultPort) {
         ensureSingle();
         validatePort("defaultPort", defaultPort);
@@ -124,11 +193,19 @@ public final class Endpoint {
         return port != 0 ? this : new Endpoint(host(), defaultPort, weight());
     }
 
+    /**
+     * Returns the weight of this endpoint.
+     */
     public int weight() {
         ensureSingle();
         return weight;
     }
 
+    /**
+     * Converts this endpoint into the authority part of a URI.
+     *
+     * @return the authority string
+     */
     public String authority() {
         String authority = this.authority;
         if (authority != null) {

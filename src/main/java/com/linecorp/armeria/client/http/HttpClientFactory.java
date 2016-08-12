@@ -22,6 +22,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.NonDecoratingClientFactory;
@@ -32,6 +33,11 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 
+import io.netty.bootstrap.Bootstrap;
+
+/**
+ * A {@link ClientFactory} that creates an HTTP client.
+ */
 public class HttpClientFactory extends NonDecoratingClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES;
@@ -46,13 +52,19 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
 
     private final HttpClientDelegate delegate;
 
+    /**
+     * Creates a new instance with the default {@link SessionOptions}.
+     */
     public HttpClientFactory() {
         this(SessionOptions.DEFAULT);
     }
 
+    /**
+     * Creates a new instance with the specified {@link SessionOptions}.
+     */
     public HttpClientFactory(SessionOptions options) {
         super(options);
-        delegate = new HttpClientDelegate(baseBootstrap(), options);
+        delegate = new HttpClientDelegate(this);
     }
 
     @Override
@@ -61,13 +73,18 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
     }
 
     @Override
+    protected Bootstrap newBootstrap() {
+        return super.newBootstrap();
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        final Scheme scheme = validate(uri, clientType, options);
+        final Scheme scheme = validateScheme(uri);
 
         validateClientType(clientType);
 
         final Client<HttpRequest, HttpResponse> delegate = options.decoration().decorate(
-                HttpRequest.class, HttpResponse.class, new HttpClientDelegate(baseBootstrap(), options()));
+                HttpRequest.class, HttpResponse.class, new HttpClientDelegate(this));
 
         if (clientType == Client.class) {
             @SuppressWarnings("unchecked")

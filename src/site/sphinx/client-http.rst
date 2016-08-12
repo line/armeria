@@ -1,19 +1,25 @@
-.. _`SimpleHttpClient`: apidocs/index.html?com/linecorp/armeria/client/http/SimpleHttpClient.html
-.. _`SimpleHttpRequestBuilder`: apidocs/index.html?com/linecorp/armeria/client/http/SimpleHttpRequestBuilder.html
+.. _`com.linecorp.armeria.client.http`: apidocs/index.html?com/linecorp/armeria/client/http/package-summary.html
 
 Using Armeria as an HTTP client
 ===============================
-For more information, please refer to the API documentation of `SimpleHttpClient`_ and `SimpleHttpRequestBuilder`_.
+For more information, please refer to the API documentation of the `com.linecorp.armeria.client.http`_ package.
 
 .. code-block:: java
 
-    SimpleHttpClient httpClient = Clients.newClient(
-            "none+http://example.com/", SimpleHttpClient.class);
+    import com.linecorp.armeria.client.Clients;
+    import com.linecorp.armeria.client.http.HttpClient;
+    import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+    import com.linecorp.armeria.common.http.HttpHeaderNames;
+    import com.linecorp.armeria.common.http.HttpHeaders;
+    import com.linecorp.armeria.common.http.HttpMethod;
 
-    SimpleHttpRequest req =
-            SimpleHttpRequestBuilder.forGet("/foo/bar.json")
-                                    .header("Accept", "application/json")
-                                    .build();
+    HttpClient httpClient = Clients.newClient(
+            "none+http://example.com/", HttpClient.class);
 
-    Future<SimpleHttpResponse> f = httpClient.execute(req);
-    SimpleHttpResponse res = f.sync().getNow()
+    AggregatedHttpMessage textResponse = httpClient.get("/foo/bar.txt").aggregate().join();
+
+    AggregatedHttpMessage getJson = AggregatedHttpMessage.of(
+            HttpHeaders.of(HttpMethod.GET, "/foo/bar.json")
+                       .set(HttpHeaderNames.ACCEPT, "application/json"));
+
+    AggregatedHttpMessage jsonResponse = httpClient.execute(getJson).aggregate().join();

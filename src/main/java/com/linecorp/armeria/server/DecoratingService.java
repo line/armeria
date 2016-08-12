@@ -21,12 +21,18 @@ import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
  * A {@link Service} that decorates another {@link Service}. Do not use this class unless you want to define
  * a new dedicated {@link Service} type by extending this class; prefer {@link Service#decorate(Function)}.
+ *
+ * @param <T_I> the {@link Request} type of the {@link Client} being decorated
+ * @param <T_O> the {@link Response} type of the {@link Client} being decorated
+ * @param <R_I> the {@link Request} type of this {@link Client}
+ * @param <R_O> the {@link Response} type of this {@link Client}
  */
 public abstract class DecoratingService<T_I extends Request, T_O extends Response,
                                         R_I extends Request, R_O extends Response>

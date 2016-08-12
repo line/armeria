@@ -29,6 +29,9 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
         return newClient(ClientFactory.DEFAULT, uri, clientType, options);
@@ -41,6 +44,9 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptions options) {
         return newClient(ClientFactory.DEFAULT, uri, clientType, options);
@@ -54,6 +60,9 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, String uri,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
@@ -70,6 +79,9 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, String uri,
                                   Class<T> clientType, ClientOptions options) {
@@ -84,6 +96,9 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
         return newClient(ClientFactory.DEFAULT, uri, clientType, options);
@@ -96,6 +111,9 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         return newClient(ClientFactory.DEFAULT, uri, clientType, options);
@@ -109,6 +127,9 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
@@ -124,6 +145,9 @@ public final class Clients {
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType,
                                   ClientOptions options) {

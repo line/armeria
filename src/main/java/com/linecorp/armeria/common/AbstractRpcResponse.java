@@ -26,6 +26,9 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
+/**
+ * A skeletal {@link RpcResponse} implementation.
+ */
 public class AbstractRpcResponse extends CompletableFuture<Object> implements RpcResponse {
 
     private static final CancellationException CANCELLED = Exceptions.clearTrace(new CancellationException());
@@ -35,12 +38,25 @@ public class AbstractRpcResponse extends CompletableFuture<Object> implements Rp
 
     private volatile Throwable cause;
 
+    /**
+     * Creates a new incomplete response.
+     */
     protected AbstractRpcResponse() {}
 
+    /**
+     * Creates a new successfully complete response.
+     *
+     * @param result the result or an RPC call
+     */
     protected AbstractRpcResponse(Object result) {
         complete(result);
     }
 
+    /**
+     * Creates a new exceptionally complete response.
+     *
+     * @param cause the cause of failure
+     */
     protected AbstractRpcResponse(Throwable cause) {
         requireNonNull(cause, "cause");
         completeExceptionally(cause);

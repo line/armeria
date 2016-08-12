@@ -472,7 +472,7 @@ public class THttpService extends AbstractHttpService {
                 return;
             }
 
-            if (func.isOneway()) {
+            if (func.isOneWay()) {
                 respond(serializationFormat, HttpData.EMPTY_DATA, res);
                 return;
             }

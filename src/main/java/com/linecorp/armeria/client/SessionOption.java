@@ -34,6 +34,8 @@ import io.netty.util.ConstantPool;
 
 /**
  * An option that affects the session management of a {@link ClientFactory}.
+ *
+ * @param <T> the type of the option value
  */
 public class SessionOption<T> extends AbstractOption<T> {
 

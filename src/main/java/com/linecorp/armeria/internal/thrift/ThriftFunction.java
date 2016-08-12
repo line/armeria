@@ -35,6 +35,9 @@ import org.apache.thrift.protocol.TMessageType;
 
 import com.google.common.collect.ImmutableMap;
 
+/**
+ * Provides the metadata of a Thrift service function.
+ */
 public final class ThriftFunction {
 
     private enum Type {
@@ -52,12 +55,12 @@ public final class ThriftFunction {
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
     private final Class<?>[] declaredExceptions;
 
-    public ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func) throws Exception {
+    ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func) throws Exception {
         this(serviceType, func.getMethodName(), func, Type.SYNC,
              getArgFields(func), getResult(func), getDeclaredExceptions(func));
     }
 
-    public ThriftFunction(Class<?> serviceType, AsyncProcessFunction<?, ?, ?> func) throws Exception {
+    ThriftFunction(Class<?> serviceType, AsyncProcessFunction<?, ?, ?> func) throws Exception {
         this(serviceType, func.getMethodName(), func, Type.ASYNC,
              getArgFields(func), getResult(func), getDeclaredExceptions(func));
     }
@@ -109,48 +112,87 @@ public final class ThriftFunction {
         exceptionFields = exceptionFieldsBuilder.build();
     }
 
-    public boolean isOneway() {
+    /**
+     * Returns {@code true} if this function is a one-way.
+     */
+    public boolean isOneWay() {
         return result == null;
     }
 
+    /**
+     * Returns {@code true} if this function is asynchronous.
+     */
     public boolean isAsync() {
         return type == Type.ASYNC;
     }
 
+    /**
+     * Returns the type of this function.
+     *
+     * @return {@link TMessageType#CALL} or {@link TMessageType#ONEWAY}
+     */
     public byte messageType() {
-        return isOneway() ? TMessageType.ONEWAY : TMessageType.CALL;
+        return isOneWay() ? TMessageType.ONEWAY : TMessageType.CALL;
     }
 
+    /**
+     * Returns the {@link ProcessFunction}.
+     *
+     * @throws ClassCastException if this function is asynchronous
+     */
     @SuppressWarnings("unchecked")
     public ProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>> syncFunc() {
         return (ProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>>) func;
     }
 
+    /**
+     * Returns the {@link AsyncProcessFunction}.
+     *
+     * @throws ClassCastException if this function is synchronous
+     */
     @SuppressWarnings("unchecked")
     public AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object> asyncFunc() {
         return (AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object>) func;
     }
 
+    /**
+     * Returns the Thrift service interface this function belongs to.
+     */
     public Class<?> serviceType() {
         return serviceType;
     }
 
+    /**
+     * Returns the name of this function.
+     */
     public String name() {
         return name;
     }
 
+    /**
+     * Returns the field that holds the successful result.
+     */
     public TFieldIdEnum successField() {
         return successField;
     }
 
+    /**
+     * Returns the field that holds the exception.
+     */
     public Collection<TFieldIdEnum> exceptionFields() {
         return exceptionFields.values();
     }
 
+    /**
+     * Returns the exceptions declared by this function.
+     */
     public Class<?>[] declaredExceptions() {
         return declaredExceptions;
     }
 
+    /**
+     * Returns a new empty arguments instance.
+     */
     public TBase<TBase<?, ?>, TFieldIdEnum> newArgs() {
         if (isAsync()) {
             return asyncFunc().getEmptyArgsInstance();
@@ -159,6 +201,9 @@ public final class ThriftFunction {
         }
     }
 
+    /**
+     * Returns a new arguments instance.
+     */
     public TBase<TBase<?, ?>, TFieldIdEnum> newArgs(List<Object> args) {
         requireNonNull(args, "args");
         final TBase<TBase<?, ?>, TFieldIdEnum> newArgs = newArgs();
@@ -169,16 +214,25 @@ public final class ThriftFunction {
         return newArgs;
     }
 
+    /**
+     * Returns a new empty result instance.
+     */
     public TBase<TBase<?, ?>, TFieldIdEnum> newResult() {
         return result.deepCopy();
     }
 
+    /**
+     * Sets the success field of the specified {@code result} to the specified {@code value}.
+     */
     public void setSuccess(TBase<?, TFieldIdEnum> result, Object value) {
         if (successField != null) {
             result.setFieldValue(successField, value);
         }
     }
 
+    /**
+     * Converts the specified {@code result} into a Java object.
+     */
     public Object getResult(TBase<TBase<?, ?>, TFieldIdEnum> result) throws TException {
         for (TFieldIdEnum fieldIdEnum : exceptionFields()) {
             if (result.isSet(fieldIdEnum)) {
@@ -198,6 +252,9 @@ public final class ThriftFunction {
         }
     }
 
+    /**
+     * Sets the exception field of the specified {@code result} to the specified {@code cause}.
+     */
     public boolean setException(TBase<?, TFieldIdEnum> result, Throwable cause) {
         Class<?> causeType = cause.getClass();
         for (Entry<Class<Throwable>, TFieldIdEnum> e: exceptionFields.entrySet()) {

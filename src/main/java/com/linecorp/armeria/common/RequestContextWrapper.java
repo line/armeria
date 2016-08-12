@@ -30,14 +30,25 @@ import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
+/**
+ * Wraps an existing {@link RequestContext}.
+ *
+ * @param <T> the self type
+ */
 public abstract class RequestContextWrapper<T extends RequestContext> extends AbstractRequestContext {
 
     private final T delegate;
 
+    /**
+     * Creates a new instance.
+     */
     protected RequestContextWrapper(T delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
+    /**
+     * Returns the delegate context.
+     */
     protected final T delegate() {
         return delegate;
     }

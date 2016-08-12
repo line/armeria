@@ -240,13 +240,13 @@ public class ThriftOverHttpClientTest {
                         ENABLE_LOGGING_DECORATORS ? KeyedChannelPoolLoggingHandler::new
                                                   : Function.identity());
 
-        clientFactoryWithUseHttp2Preface = new ThriftClientFactory(
+        clientFactoryWithUseHttp2Preface = new THttpClientFactory(
                 new HttpClientFactory(SessionOptions.of(
                         trustManagerFactoryOptVal,
                         poolHandlerDecoratorOptVal,
                         SessionOption.USE_HTTP2_PREFACE.newValue(true))));
 
-        clientFactoryWithoutUseHttp2Preface = new ThriftClientFactory(
+        clientFactoryWithoutUseHttp2Preface = new THttpClientFactory(
                 new HttpClientFactory(SessionOptions.of(
                         trustManagerFactoryOptVal,
                         poolHandlerDecoratorOptVal,

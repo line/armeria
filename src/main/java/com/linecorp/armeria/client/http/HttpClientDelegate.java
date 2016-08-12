@@ -56,14 +56,10 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> map = new ConcurrentHashMap<>();
 
-    private final Bootstrap baseBootstrap;
-    private final SessionOptions options;
+    private final HttpClientFactory factory;
 
-    HttpClientDelegate(Bootstrap baseBootstrap, SessionOptions options) {
-        this.baseBootstrap = requireNonNull(baseBootstrap, "baseBootstrap");
-        this.options = requireNonNull(options, "options");
-
-        assert baseBootstrap.config().group() == null;
+    HttpClientDelegate(HttpClientFactory factory) {
+        this.factory = requireNonNull(factory, "factory");
     }
 
     @Override
@@ -136,17 +132,20 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
 
         return map.computeIfAbsent(eventLoop, e -> {
-            final Bootstrap bootstrap = baseBootstrap.clone();
+            final Bootstrap bootstrap = factory.newBootstrap();
+            final SessionOptions options = factory.options();
+
             bootstrap.group(eventLoop);
 
-            Function<PoolKey, Future<Channel>> factory = new HttpSessionChannelFactory(bootstrap, options);
+            Function<PoolKey, Future<Channel>> channelFactory =
+                    new HttpSessionChannelFactory(bootstrap, options);
 
             final KeyedChannelPoolHandler<PoolKey> handler =
                     options.poolHandlerDecorator().apply(NOOP_POOL_HANDLER);
 
             //TODO(inch772) handle options.maxConcurrency();
             final KeyedChannelPool<PoolKey> newPool = new DefaultKeyedChannelPool<>(
-                    eventLoop, factory, POOL_HEALTH_CHECKER, handler, true);
+                    eventLoop, channelFactory, POOL_HEALTH_CHECKER, handler, true);
 
             eventLoop.terminationFuture().addListener((FutureListener<Object>) f -> {
                 map.remove(eventLoop);

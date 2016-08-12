@@ -19,7 +19,26 @@ package com.linecorp.armeria.client;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
+/**
+ * Sends a {@link Request} to a remote {@link Endpoint}.
+ *
+ * <p>Note that this interface is not a user's entry point for sending a {@link Request}. It is rather
+ * a generic request processor interface implemented by a {@link DecoratingClient}, which intercepts
+ * a {@link Request}. A user is supposed to make his or her {@link Request} via the object returned by
+ * a {@link ClientBuilder} or {@link Clients}, which usually does not implement this interface.
+ *
+ * @param <I> the type of the outgoing {@link Request}
+ * @param <O> the type of the incoming {@link Response}
+ *
+ * @see UserClient
+ */
 @FunctionalInterface
 public interface Client<I extends Request, O extends Response> {
+    /**
+     * Sends a {@link Request} to a remote {@link Endpoint}, as specified in
+     * {@link ClientRequestContext#endpoint()}.
+     *
+     * @return the {@link Response} to the specified {@link Request}
+     */
     O execute(ClientRequestContext ctx, I req) throws Exception;
 }

@@ -26,6 +26,10 @@ public final class ClosedSessionException extends RuntimeException {
 
     private static final ClosedSessionException INSTANCE = Exceptions.clearTrace(new ClosedSessionException());
 
+    /**
+     * Returns a {@link ClosedSessionException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
     public static ClosedSessionException get() {
         return Exceptions.isVerbose() ? new ClosedSessionException() : INSTANCE;
     }

@@ -15,6 +15,6 @@
  */
 
 /**
- * Logging and metric-collecting decorator clients.
+ * Logging and metric-collecting client decorators.
  */
 package com.linecorp.armeria.client.logging;

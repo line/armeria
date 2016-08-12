@@ -26,6 +26,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
 
+/**
+ * Default {@link RequestLog} implementation.
+ */
 public final class DefaultRequestLog
         extends AbstractMessageLog<RequestLog> implements RequestLog, RequestLogBuilder {
 

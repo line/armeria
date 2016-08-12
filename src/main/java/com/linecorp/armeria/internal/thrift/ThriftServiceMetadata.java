@@ -32,6 +32,9 @@ import org.apache.thrift.TBaseProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Provides the metadata of a Thrift service interface or implementation.
+ */
 public final class ThriftServiceMetadata {
 
     private static final Logger logger = LoggerFactory.getLogger(ThriftServiceMetadata.class);
@@ -43,11 +46,18 @@ public final class ThriftServiceMetadata {
      */
     private final Map<String, ThriftFunction> functions = new HashMap<>();
 
+    /**
+     * Creates a new instance from a Thrift service implementation that implements one or more Thrift service
+     * interfaces.
+     */
     public ThriftServiceMetadata(Object implementation) {
         requireNonNull(implementation, "implementation");
         interfaces = init(implementation);
     }
 
+    /**
+     * Creates a new instance from a single Thrift service interface.
+     */
     public ThriftServiceMetadata(Class<?> serviceType) {
         requireNonNull(serviceType, "serviceType");
         interfaces = init(null, Collections.singleton(serviceType));
@@ -197,10 +207,18 @@ public final class ThriftServiceMetadata {
         }
     }
 
+    /**
+     * Returns the Thrift service interfaces implemented.
+     */
     public Set<Class<?>> interfaces() {
         return interfaces;
     }
 
+    /**
+     * Returns the {@link ThriftFunction} that provides the metadata of the specified Thrift function.
+     *
+     * @return the {@link ThriftFunction}. {@code null} if there's no such function.
+     */
     public ThriftFunction function(String method) {
         return functions.get(method);
     }

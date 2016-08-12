@@ -18,6 +18,10 @@ package com.linecorp.armeria.common.reactivestreams;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
+/**
+ * A {@link RuntimeException} that is raised when a {@link Writer} attempts to write an object to a terminated
+ * {@link RichPublisher}.
+ */
 public final class ClosedPublisherException extends RuntimeException {
 
     private static final long serialVersionUID = -7665826869012452735L;
@@ -25,6 +29,10 @@ public final class ClosedPublisherException extends RuntimeException {
     private static final ClosedPublisherException INSTANCE =
             Exceptions.clearTrace(new ClosedPublisherException());
 
+    /**
+     * Returns a {@link ClosedPublisherException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
     public static ClosedPublisherException get() {
         return Exceptions.isVerbose() ? new ClosedPublisherException() : INSTANCE;
     }

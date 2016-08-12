@@ -20,6 +20,9 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.reactivestreams.QueueBasedPublisher;
 
+/**
+ * Default {@link HttpResponse} instance.
+ */
 public class DefaultHttpResponse
         extends QueueBasedPublisher<HttpObject> implements HttpResponse, HttpResponseWriter {
 

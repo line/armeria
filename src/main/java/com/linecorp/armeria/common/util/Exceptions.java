@@ -56,6 +56,14 @@ public final class Exceptions {
         logger.info("com.linecorp.armeria.verboseExceptions: {}", VERBOSE);
     }
 
+    /**
+     * Returns whether the verbose mode is enabled. When enabled, the exceptions frequently thrown by Armeria
+     * will have full stack trace. When disabled, such exceptions will have empty stack trace to eliminate the
+     * cost of capturing the stack trace.
+     *
+     * <p>The verbose mode is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.verboseExceptions=true} JVM option to enable it.
+     */
     public static boolean isVerbose() {
         return VERBOSE;
     }

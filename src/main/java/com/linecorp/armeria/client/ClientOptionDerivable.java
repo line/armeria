@@ -21,6 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.util.Arrays;
 
+/**
+ * A client that allows creating a new client with alternative {@link ClientOption}s.
+ *
+ * @param <T> self type
+ */
+@FunctionalInterface
 public interface ClientOptionDerivable<T> {
 
     /**

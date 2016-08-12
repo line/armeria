@@ -21,6 +21,9 @@ import java.util.Map;
 
 /**
  * LRU (Least Recently Used) cache {@link Map}.
+ *
+ * @param <T> the key type
+ * @param <U> the value type
  */
 public class LruMap<T, U> extends LinkedHashMap<T, U> {
     private static final long serialVersionUID = 5358379908010214089L;

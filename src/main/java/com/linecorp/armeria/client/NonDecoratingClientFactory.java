@@ -41,12 +41,16 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.NameResolver;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
+/**
+ * A skeletal {@link ClientFactory} that does not decorate other {@link ClientFactory}.
+ */
 public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
 
     private enum TransportType {
@@ -66,10 +70,16 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
     private final Supplier<EventLoop> eventLoopSupplier =
             () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
 
+    /**
+     * Creates a new instance with the default {@link SessionOptions}.
+     */
     protected NonDecoratingClientFactory() {
         this(SessionOptions.DEFAULT);
     }
 
+    /**
+     * Creates a new instance with the specified {@link SessionOptions}.
+     */
     protected NonDecoratingClientFactory(SessionOptions options) {
         this(options, type -> {
             switch (type) {
@@ -137,8 +147,12 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
         return options;
     }
 
-    protected final Bootstrap baseBootstrap() {
-        return baseBootstrap;
+    /**
+     * Returns a new {@link Bootstrap} whose {@link ChannelFactory}, {@link AddressResolverGroup} and
+     * socket options are pre-configured.
+     */
+    protected Bootstrap newBootstrap() {
+        return baseBootstrap.clone();
     }
 
     @Override

@@ -19,6 +19,9 @@ import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
 
+/**
+ * A list of {@link Endpoint}s.
+ */
 @FunctionalInterface
 public interface EndpointGroup {
     /**

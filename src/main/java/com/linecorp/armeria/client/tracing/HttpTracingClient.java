@@ -31,14 +31,14 @@ import com.github.kristofa.brave.SpanId;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
- * A {@link Client} decorator that traces HTTP-based remote service invocations.
+ * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
+ * <a href="http://zipkin.io/">Zipkin</a>.
  * <p>
  * This decorator puts trace data into HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
@@ -58,7 +58,7 @@ public class HttpTracingClient extends AbstractTracingClient<HttpRequest, HttpRe
     }
 
     @Override
-    protected void putTraceData(ClientRequestContext ctx, Request req, @Nullable SpanId spanId) {
+    protected void putTraceData(ClientRequestContext ctx, HttpRequest req, @Nullable SpanId spanId) {
         final HttpHeaders headers;
         if (ctx.hasAttr(ClientRequestContext.HTTP_HEADERS)) {
             headers = ctx.attr(ClientRequestContext.HTTP_HEADERS).get();

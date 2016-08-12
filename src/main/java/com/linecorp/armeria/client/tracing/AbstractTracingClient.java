@@ -35,7 +35,6 @@ import com.twitter.zipkin.gen.Endpoint;
 import com.twitter.zipkin.gen.Span;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.common.Request;
@@ -45,15 +44,21 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.CompletionActions;
 
 /**
- * An abstract {@link DecoratingClient} that traces remote service invocations.
+ * An abstract {@link DecoratingClient} that traces outgoing {@link Request}s.
  * <p>
- * This class depends on <a href="https://github.com/openzipkin/brave">Brave</a> distributed tracing library.
+ * This class depends on <a href="https://github.com/openzipkin/brave">Brave</a>, a distributed tracing library.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public abstract class AbstractTracingClient<I extends Request, O extends Response>
         extends DecoratingClient<I, O, I, O> {
 
     private final ClientTracingInterceptor clientInterceptor;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractTracingClient(Client<? super I, ? extends O> delegate, Brave brave) {
         super(delegate);
         clientInterceptor = new ClientTracingInterceptor(brave);
@@ -91,13 +96,12 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
     }
 
     /**
-     * Puts trace data into the specified base {@link ClientOptions}, returning new instance of
-     * {@link ClientOptions}.
+     * Puts trace data into the specified {@link Request} or {@link ClientRequestContext}.
      */
-    protected abstract void putTraceData(ClientRequestContext ctx, Request req, @Nullable SpanId spanId);
+    protected abstract void putTraceData(ClientRequestContext ctx, I req, @Nullable SpanId spanId);
 
     /**
-     * Returns client side annotations that should be added to span.
+     * Returns the client-side annotations that should be added to a Zipkin span.
      */
     @SuppressWarnings("UnusedParameters")
     protected List<KeyValueAnnotation> annotations(ClientRequestContext ctx, RequestLog req, O res) {
@@ -127,7 +131,6 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
         return annotations;
     }
 
-
     private void closeSpan(ClientRequestContext ctx, Span span, RequestLog req, O res) {
         if (req.hasAttr(RequestLog.RPC_REQUEST)) {
             span.setName(req.attr(RequestLog.RPC_REQUEST).get().method());
@@ -135,6 +138,9 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
         clientInterceptor.closeSpan(span, createResponseAdapter(ctx, req, res));
     }
 
+    /**
+     * Creates a new {@link ClientResponseAdapter} from the specified request-response information.
+     */
     protected ClientResponseAdapter createResponseAdapter(
             ClientRequestContext ctx, RequestLog req, O res) {
 

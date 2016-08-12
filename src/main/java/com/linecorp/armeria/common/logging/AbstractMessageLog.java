@@ -190,5 +190,5 @@ abstract class AbstractMessageLog<T extends MessageLog>
                      .add("attrs", attrs).toString();
     }
 
-    protected abstract void append(MoreObjects.ToStringHelper helper);
+    abstract void append(MoreObjects.ToStringHelper helper);
 }

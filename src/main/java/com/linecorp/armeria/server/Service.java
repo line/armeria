@@ -26,7 +26,10 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * Handles a request received by a {@link Server}.
+ * Handles a {@link Request} received by a {@link Server}.
+ *
+ * @param <I> the type of incoming {@link Request}
+ * @param <O> the type of outgoing {@link Response}
  */
 @FunctionalInterface
 public interface Service<I extends Request, O extends Response> {
@@ -46,6 +49,14 @@ public interface Service<I extends Request, O extends Response> {
      */
     default void serviceAdded(ServiceConfig cfg) throws Exception {}
 
+    /**
+     * Serves an incoming {@link Request}.
+     *
+     * @param ctx the context of the received {@link Request}
+     * @param req the received {@link Request}
+     *
+     * @return the {@link Response}
+     */
     O serve(ServiceRequestContext ctx, I req) throws Exception;
 
     /**

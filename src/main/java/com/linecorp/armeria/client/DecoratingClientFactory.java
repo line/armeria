@@ -27,14 +27,23 @@ import com.linecorp.armeria.common.Scheme;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
+/**
+ * A {@link ClientFactory} that delegates the creation of {@link Client}s to another {@link ClientFactory}.
+ */
 public class DecoratingClientFactory extends AbstractClientFactory {
 
     private final ClientFactory delegate;
 
+    /**
+     * Creates a new instance.
+     */
     protected DecoratingClientFactory(ClientFactory delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
+    /**
+     * Returns the delegate {@link ClientFactory}.
+     */
     protected ClientFactory delegate() {
         return delegate;
     }

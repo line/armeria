@@ -127,6 +127,11 @@ public final class ClientOptions extends AbstractOptions {
         return new ClientOptions(baseOptions, options);
     }
 
+    /**
+     * Merges the specified two {@link ClientOptions} into one.
+     *
+     * @return the merged {@link ClientOptions}
+     */
     public static ClientOptions of(ClientOptions baseOptions, ClientOptions options) {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");

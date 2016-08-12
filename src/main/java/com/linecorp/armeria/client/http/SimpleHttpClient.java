@@ -17,13 +17,14 @@
 package com.linecorp.armeria.client.http;
 
 import com.linecorp.armeria.client.ClientOptionDerivable;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 
 import io.netty.util.concurrent.Future;
 
 /**
  * A simple HTTP client that can send a {@link SimpleHttpRequest} to an HTTP/1 or 2 server.
  *
- * @deprecated Use {@link HttpClient} instead.
+ * @deprecated Use {@link HttpClient#execute(AggregatedHttpMessage)} instead.
  * @see SimpleHttpRequestBuilder
  */
 @Deprecated

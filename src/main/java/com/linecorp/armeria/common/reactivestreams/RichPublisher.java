@@ -21,11 +21,33 @@ import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
+/**
+ * A <a href="http://www.reactive-streams.org/">Reactive Streams</a> {@link Publisher} with extra functionality.
+ *
+ * @param <T> the type of element signaled
+ */
 public interface RichPublisher<T> extends Publisher<T> {
+    /**
+     * Returns {@code true} if this publisher is not terminated yet.
+     */
     boolean isOpen();
+
+    /**
+     * Returns a {@link CompletableFuture} that completes when this publisher is complete,
+     * either successfully or exceptionally.
+     */
     CompletableFuture<Void> closeFuture();
 
+    /**
+     * Request {@link Publisher} to start streaming data, invoking the specified {@link Subscriber} from
+     * the specified {@link Executor}.
+     */
     void subscribe(Subscriber<? super T> s, Executor executor);
+
+    /**
+     * Cancels all {@link Subscription}s and terminates this publisher.
+     */
     void abort();
 }

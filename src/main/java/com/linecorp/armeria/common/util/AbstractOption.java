@@ -18,7 +18,7 @@ package com.linecorp.armeria.common.util;
 import io.netty.util.AbstractConstant;
 
 /**
- * A configuration option
+ * A configuration option.
  *
  * @param <T> the type of the value of the option
  *
@@ -28,6 +28,12 @@ import io.netty.util.AbstractConstant;
 @SuppressWarnings({ "rawtypes", "UnusedDeclaration" })
 public abstract class AbstractOption<T> extends AbstractConstant {
 
+    /**
+     * Creates a new instance.
+     *
+     * @param id the integral ID of this option
+     * @param name the name of this option
+     */
     protected AbstractOption(int id, String name) {
         super(id, name);
     }

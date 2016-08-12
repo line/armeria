@@ -19,10 +19,17 @@ package com.linecorp.armeria.client;
 import java.time.Duration;
 
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * Wraps an existing {@link ServiceRequestContext}.
+ */
 public class ClientRequestContextWrapper
         extends RequestContextWrapper<ClientRequestContext> implements ClientRequestContext {
 
+    /**
+     * Creates a new instance.
+     */
     protected ClientRequestContextWrapper(ClientRequestContext delegate) {
         super(delegate);
     }

@@ -20,58 +20,106 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.reactivestreams.RichPublisher;
 
+/**
+ * A streamed HTTP/2 {@link Request}.
+ *
+ * <p>Note: The initial {@link HttpHeaders} is not signaled to {@link Subscriber}s. It is readily available
+ * via {@link #headers()}.
+ */
 public interface HttpRequest extends Request, RichPublisher<HttpObject> {
 
+    /**
+     * Creates a new instance from an existing {@link HttpHeaders} and {@link Publisher}.
+     */
     static HttpRequest of(HttpHeaders headers, Publisher<? extends HttpObject> publisher) {
         return new PublisherBasedHttpRequest(headers, true, publisher);
     }
 
+    /**
+     * Returns the initial HTTP/2 headers of this request.
+     */
     HttpHeaders headers();
 
+    /**
+     * Returns whether to keep the connection alive after this request is handled.
+     */
     boolean isKeepAlive();
 
+    /**
+     * Returns the scheme of this request. This method is a shortcut of {@code headers().scheme()}.
+     */
     default String scheme() {
         return headers().scheme();
     }
 
+    /**
+     * Sets the scheme of this request. This method is a shortcut of {@code headers().scheme(...)}.
+     *
+     * @return {@code this}
+     */
     default HttpRequest scheme(String scheme) {
         headers().scheme(scheme);
         return this;
     }
 
+    /**
+     * Returns the method of this request. This method is a shortcut of {@code headers().method()}.
+     */
     default HttpMethod method() {
         return headers().method();
     }
 
+    /**
+     * Sets the method of this request. This method is a shortcut of {@code headers().method(...)}.
+     *
+     * @return {@code this}
+     */
     default HttpRequest method(HttpMethod method) {
         headers().method(method);
         return this;
     }
 
+    /**
+     * Returns the path of this request. This method is a shortcut of {@code headers().path()}.
+     */
     default String path() {
         return headers().path();
     }
 
+    /**
+     * Sets the path of this request. This method is a shortcut of {@code headers().path(...)}.
+     *
+     * @return {@code this}
+     */
     default HttpRequest path(String path) {
         headers().path(path);
         return this;
     }
 
+    /**
+     * Returns the authority of this request. This method is a shortcut of {@code headers().authority()}.
+     */
     default String authority() {
         return headers().authority();
     }
 
+    /**
+     * Sets the authority of this request. This method is a shortcut of {@code headers().authority(...)}.
+     *
+     * @return {@code this}
+     */
     default HttpRequest authority(String authority) {
         headers().authority(authority);
         return this;
     }
 
     /**
-     * Aggregates the request. The returned {@link CompletableFuture} will be notified when the content and
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the request is received fully.
      */
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
@@ -81,7 +129,7 @@ public interface HttpRequest extends Request, RichPublisher<HttpObject> {
     }
 
     /**
-     * Aggregates the request. The returned {@link CompletableFuture} will be notified when the content and
+     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the request is received fully.
      */
     default CompletableFuture<AggregatedHttpMessage> aggregate(Executor executor) {

@@ -31,19 +31,26 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
 
 /**
- * Decorates a {@link Client} to log invocation requests and responses.
+ * Decorates a {@link Client} to log {@link Request}s and {@link Response}s.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public final class LoggingClient<I extends Request, O extends Response> extends LogCollectingClient<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
      */
     public LoggingClient(Client<? super I, ? extends O> delegate) {
         this(delegate, LogLevel.INFO);
     }
 
+    /**
+     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
+     * {@link LogLevel}.
+     */
     public LoggingClient(Client<? super I, ? extends O> delegate, LogLevel level) {
         super(delegate, new LoggingConsumer(logger, level));
     }

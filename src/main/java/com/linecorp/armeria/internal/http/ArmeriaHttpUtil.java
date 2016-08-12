@@ -71,6 +71,9 @@ import io.netty.util.HashingStrategy;
  */
 public final class ArmeriaHttpUtil {
 
+    /**
+     * The default case-sensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
+     */
     public static final HashingStrategy<AsciiString> HTTP2_HEADER_NAME_HASHER =
             new HashingStrategy<AsciiString>() {
                 @Override
@@ -119,6 +122,10 @@ public final class ArmeriaHttpUtil {
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
     }
 
+    /**
+     * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
+     * be always empty (1xx, 204, 205 and 304 responses.)
+     */
     public static boolean isContentAlwaysEmpty(HttpStatus status) {
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
             return true;
@@ -132,6 +139,9 @@ public final class ArmeriaHttpUtil {
         return false;
     }
 
+    /**
+     * Converts the specified Netty HTTP/2 into Armeria HTTP/2 headers.
+     */
     public static HttpHeaders toArmeria(Http2Headers headers) {
         final HttpHeaders converted = new DefaultHttpHeaders(false, headers.size());
         for (Entry<CharSequence, CharSequence> e : headers) {
@@ -141,7 +151,7 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Converts the given HTTP/1.x headers into HTTP/2 headers.
+     * Converts the headers of the given Netty HTTP/1.x message into Armeria HTTP/2 headers.
      * The following headers are only used if they can not be found in the {@code HOST} header or the
      * {@code Request-Line} as defined by <a href="https://tools.ietf.org/html/rfc7230">rfc7230</a>
      * <ul>
@@ -174,6 +184,9 @@ public final class ArmeriaHttpUtil {
         return out;
     }
 
+    /**
+     * Converts the specified Netty HTTP/1 headers into Armeria HTTP/2 headers.
+     */
     public static HttpHeaders toArmeria(io.netty.handler.codec.http.HttpHeaders inHeaders) {
         if (inHeaders.isEmpty()) {
             return HttpHeaders.EMPTY_HEADERS;
@@ -184,6 +197,9 @@ public final class ArmeriaHttpUtil {
         return out;
     }
 
+    /**
+     * Converts the specified Netty HTTP/1 headers into Armeria HTTP/2 headers.
+     */
     public static void toArmeria(io.netty.handler.codec.http.HttpHeaders inHeaders, HttpHeaders out) {
         final Iterator<Entry<CharSequence, CharSequence>> i = inHeaders.iteratorCharSequence();
         while (i.hasNext()) {
@@ -253,6 +269,9 @@ public final class ArmeriaHttpUtil {
         }
     }
 
+    /**
+     * Converts the specified Armeria HTTP/2 headers into Netty HTTP/2 headers.
+     */
     public static Http2Headers toNettyHttp2(HttpHeaders inputHeaders) {
         final Http2Headers outputHeaders = new DefaultHttp2Headers(false, inputHeaders.size());
         outputHeaders.set(inputHeaders);
@@ -261,6 +280,9 @@ public final class ArmeriaHttpUtil {
         return outputHeaders;
     }
 
+    /**
+     * Converts the specified Armeria HTTP/2 headers into Netty HTTP/1 headers.
+     */
     public static io.netty.handler.codec.http.HttpHeaders toNettyHttp1(HttpHeaders inputHeaders) {
         final io.netty.handler.codec.http.DefaultHttpHeaders outputHeaders =
                 new io.netty.handler.codec.http.DefaultHttpHeaders();

@@ -169,22 +169,37 @@ public class SessionOptions extends AbstractOptions {
         return asMap0();
     }
 
+    /**
+     * Returns the {@link SessionOption#CONNECT_TIMEOUT} value.
+     */
     public Duration connectTimeout() {
         return getOrElse(CONNECT_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT);
     }
 
+    /**
+     * Returns the {@link SessionOption#CONNECT_TIMEOUT} value as milliseconds.
+     */
     public long connectTimeoutMillis() {
         return connectTimeout().toMillis();
     }
 
+    /**
+     * Returns the {@link SessionOption#EVENT_LOOP_GROUP} if non-default was specified.
+     */
     public Optional<EventLoopGroup> eventLoopGroup() {
         return get(EVENT_LOOP_GROUP);
     }
 
+    /**
+     * Returns the {@link SessionOption#TRUST_MANAGER_FACTORY} if non-default was specified.
+     */
     public Optional<TrustManagerFactory> trustManagerFactory() {
         return get(TRUST_MANAGER_FACTORY);
     }
 
+    /**
+     * Returns the {@link SessionOption#ADDRESS_RESOLVER_GROUP} if non-default was specified.
+     */
     public Optional<AddressResolverGroup<InetSocketAddress>> addressResolverGroup() {
         final Optional<AddressResolverGroup<? extends InetSocketAddress>> value = get(ADDRESS_RESOLVER_GROUP);
 
@@ -195,22 +210,37 @@ public class SessionOptions extends AbstractOptions {
         return castValue;
     }
 
+    /**
+     * Returns the {@link SessionOption#IDLE_TIMEOUT} value.
+     */
     public Duration idleTimeout() {
         return getOrElse(IDLE_TIMEOUT, DEFAULT_IDLE_TIMEOUT);
     }
 
+    /**
+     * Returns the {@link SessionOption#IDLE_TIMEOUT} value as milliseconds.
+     */
     public long idleTimeoutMillis() {
         return idleTimeout().toMillis();
     }
 
+    /**
+     * Returns the {@link SessionOption#MAX_CONCURRENCY} value.
+     */
     public int maxConcurrency() {
         return getOrElse(MAX_CONCURRENCY, DEFAULT_MAX_CONCURRENCY);
     }
 
+    /**
+     * Returns the {@link SessionOption#POOL_HANDLER_DECORATOR}.
+     */
     public Function<KeyedChannelPoolHandler<PoolKey>, KeyedChannelPoolHandler<PoolKey>> poolHandlerDecorator() {
         return getOrElse(POOL_HANDLER_DECORATOR, Function.identity());
     }
 
+    /**
+     * Returns whether {@link SessionOption#USE_HTTP2_PREFACE} is enabled or not.
+     */
     public boolean useHttp2Preface() {
         return getOrElse(USE_HTTP2_PREFACE, DEFAULT_USE_HTTP2_PREFACE);
     }

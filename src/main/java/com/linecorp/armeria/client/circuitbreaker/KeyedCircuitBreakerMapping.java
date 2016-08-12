@@ -28,8 +28,10 @@ import com.linecorp.armeria.common.RpcRequest;
 
 /**
  * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to its key. {@link KeySelector} is used
- * to resolve the key from remote invocation parameters. If there is no circuit breaker bound to the key,
- * A new one is created by using the given circuit breaker factory.
+ * to resolve the key from a {@link Request}. If there is no circuit breaker bound to the key, a new one is
+ * created by using the given circuit breaker factory.
+ *
+ * @param <K> the key type
  */
 public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
 
@@ -43,7 +45,7 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
      * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link KeySelector} and
      * {@link CircuitBreaker} factory.
      *
-     * @param keySelector A function that returns the key of the given remote invocation parameters.
+     * @param keySelector A function that returns the key of the given {@link Request}.
      * @param factory A function that takes a key and creates a new {@link CircuitBreaker} for the key.
      */
     public KeyedCircuitBreakerMapping(KeySelector<K> keySelector, Function<K, CircuitBreaker> factory) {
@@ -62,7 +64,7 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
     }
 
     /**
-     * Returns the mapping key of the given remote invocation parameters.
+     * Returns the mapping key of the given {@link Request}.
      */
     @FunctionalInterface
     public interface KeySelector<K> {
@@ -85,6 +87,9 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
         KeySelector<String> HOST_AND_METHOD =
                 (ctx, req) -> HOST.get(ctx, req) + '#' + METHOD.get(ctx, req);
 
+        /**
+         * Returns the mapping key of the given {@link Request}.
+         */
         K get(ClientRequestContext ctx, Request req) throws Exception;
     }
 }

@@ -30,7 +30,10 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.tracing.HttpTracingTestBase;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -39,15 +42,14 @@ import io.netty.channel.DefaultEventLoop;
 
 public class HttpTracingClientTest extends HttpTracingTestBase {
 
+    @SuppressWarnings("unchecked")
     private static final HttpTracingClient client =
             new HttpTracingClient(mock(Client.class), mock(Brave.class));
 
     @Test
     public void testPutTraceData() {
-        final ThriftCall req = new ThriftCall(0, HelloService.Iface.class, "hello", "Armeria");
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
-                "POST", "/", ClientOptions.DEFAULT, req);
+        final HttpRequest req = newRequest();
+        final ClientRequestContext ctx = newClientContext(req);
 
         ctx.attr(ClientRequestContext.HTTP_HEADERS).set(otherHeaders());
 
@@ -59,14 +61,24 @@ public class HttpTracingClientTest extends HttpTracingTestBase {
 
     @Test
     public void testPutTraceDataIfSpanIsNull() {
-        final ThriftCall req = new ThriftCall(0, HelloService.Iface.class, "hello", "Armeria");
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
-                "POST", "/", ClientOptions.DEFAULT, req);
+        final HttpRequest req = newRequest();
+        final ClientRequestContext ctx = newClientContext(req);
 
         client.putTraceData(ctx, req, null);
 
         HttpHeaders expectedHeaders = traceHeadersNotSampled();
         assertThat(ctx.attr(ClientRequestContext.HTTP_HEADERS).get(), is(expectedHeaders));
+    }
+
+    private static HttpRequest newRequest() {
+        final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.POST, "/hello");
+        req.close();
+        return req;
+    }
+
+    private static ClientRequestContext newClientContext(HttpRequest req) {
+        return new DefaultClientRequestContext(
+                new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
+                req.method().toString(), req.path(), ClientOptions.DEFAULT, req);
     }
 }

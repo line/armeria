@@ -20,9 +20,22 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 
+/**
+ * An RPC {@link Response}. It is a {@link CompletionStage} whose result signifies the return value of an RPC
+ * call.
+ */
 public interface RpcResponse extends Response, Future<Object>, CompletionStage<Object> {
+    /**
+     * Returns the cause of the failure if this {@link RpcResponse} completed exceptionally.
+     *
+     * @return the cause, or
+     *         {@code null} if this {@link RpcResponse} completed successfully or did not complete yet.
+     */
     Throwable getCause();
 
+    /**
+     * Returns a {@link CompletableFuture} which completes when this {@link RpcResponse} completes.
+     */
     @Override
     default CompletableFuture<?> closeFuture() {
         return toCompletableFuture();

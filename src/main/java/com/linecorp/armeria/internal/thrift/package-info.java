@@ -14,11 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.thrift;
-
-import com.linecorp.armeria.client.ClientOptionDerivable;
-import com.linecorp.armeria.common.thrift.ThriftReply;
-
-public interface ThriftClient extends ClientOptionDerivable<ThriftClient> {
-    ThriftReply execute(String path, Class<?> serviceType, String method, Object... args);
-}
+/**
+ * Various classes used internally. Anything in this package can be changed or removed at any time.
+ */
+package com.linecorp.armeria.internal.thrift;

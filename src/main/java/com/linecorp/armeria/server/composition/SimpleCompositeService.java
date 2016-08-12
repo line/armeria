@@ -26,15 +26,24 @@ import com.linecorp.armeria.server.Service;
 /**
  * A general purpose {@link AbstractCompositeService} implementation. Useful when you do not want to define
  * a new dedicated {@link Service} type.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public class SimpleCompositeService<I extends Request, O extends Response>
         extends AbstractCompositeService<I, O> {
 
+    /**
+     * Creates a new instance that is composed of the specified entries.
+     */
     @SafeVarargs
     public SimpleCompositeService(CompositeServiceEntry<? super I, ? extends O>... services) {
         super(services);
     }
 
+    /**
+     * Creates a new instance that is composed of the specified entries.
+     */
     public SimpleCompositeService(Iterable<CompositeServiceEntry<? super I, ? extends O>> services) {
         super(services);
     }

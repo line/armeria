@@ -34,7 +34,7 @@ import io.netty.channel.EventLoopGroup;
  * <p>
  * {@link Clients} or {@link ClientBuilder} uses {@link #DEFAULT}, the default {@link ClientFactory},
  * unless you specified a {@link ClientFactory} explicitly. Calling {@link #close()} on the default
- * {@link ClientFactory} won't terminate its I/O threads and release other related resources unlike
+ * {@link ClientFactory} will neither terminate its I/O threads nor release other related resources unlike
  * other {@link ClientFactory} to protect itself from accidental premature termination.
  * </p><p>
  * Instead, when the current {@link ClassLoader} is {@linkplain ClassLoader#getSystemClassLoader() the system
@@ -61,16 +61,27 @@ public interface ClientFactory extends AutoCloseable {
         ((AllInOneClientFactory) DEFAULT).doClose();
     }
 
+    /**
+     * Returns the {@link Scheme}s supported by this {@link ClientFactory}.
+     */
     Set<Scheme> supportedSchemes();
 
+    /**
+     * Returns the session-layer options of the connections created by this {@link ClientFactory}.
+     */
     SessionOptions options();
 
     /**
      * Returns the {@link EventLoopGroup} being used by this {@link ClientFactory}. Can be used to, e.g.,
-     * schedule a periodic task without creating a separate event loop.
+     * schedule a periodic task without creating a separate event loop. Use {@link #eventLoopSupplier()}
+     * instead if what you need is an {@link EventLoop} rather than an {@link EventLoopGroup}.
      */
     EventLoopGroup eventLoopGroup();
 
+    /**
+     * Returns a {@link Supplier} that provides one of the {@link EventLoop}s being used by this
+     * {@link ClientFactory}.
+     */
     Supplier<EventLoop> eventLoopSupplier();
 
     /**

@@ -32,21 +32,21 @@ import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
 
-final class ThriftClientInvocationHandler implements InvocationHandler {
+final class THttpClientInvocationHandler implements InvocationHandler {
 
     private static final Object[] NO_ARGS = new Object[0];
 
-    private final ThriftClient thriftClient;
+    private final THttpClient thriftClient;
     private final String path;
     private final Class<?> clientType;
 
-    ThriftClientInvocationHandler(ThriftClient thriftClient, String path, Class<?> clientType) {
+    THttpClientInvocationHandler(THttpClient thriftClient, String path, Class<?> clientType) {
         this.thriftClient = thriftClient;
         this.path = path;
         this.clientType = clientType;
     }
 
-    private ThriftClientInvocationHandler(ThriftClientInvocationHandler handler, ThriftClient thriftClient) {
+    private THttpClientInvocationHandler(THttpClientInvocationHandler handler, THttpClient thriftClient) {
         this.thriftClient = thriftClient;
         path = handler.path;
         clientType = handler.clientType;
@@ -95,13 +95,13 @@ final class ThriftClientInvocationHandler implements InvocationHandler {
                     return Proxy.newProxyInstance(
                             clientType.getClassLoader(),
                             new Class<?>[] { clientType, ClientOptionDerivable.class },
-                            new ThriftClientInvocationHandler(this, thriftClient.withOptions(options)));
+                            new THttpClientInvocationHandler(this, thriftClient.withOptions(options)));
                 } else if (arg instanceof ClientOptionValue[]) {
                     final ClientOptionValue<?>[] options = (ClientOptionValue<?>[]) arg;
                     return Proxy.newProxyInstance(
                             clientType.getClassLoader(),
                             new Class<?>[] { clientType, ClientOptionDerivable.class },
-                            new ThriftClientInvocationHandler(this, thriftClient.withOptions(options)));
+                            new THttpClientInvocationHandler(this, thriftClient.withOptions(options)));
                 } else {
                     throw new Error("unknown argument: " + arg);
                 }

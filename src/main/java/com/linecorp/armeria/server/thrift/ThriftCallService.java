@@ -120,7 +120,7 @@ public class ThriftCallService implements Service<ThriftCall, ThriftReply> {
         f.start(implementation, args, new AsyncMethodCallback<Object>() {
             @Override
             public void onComplete(Object response) {
-                if (func.isOneway()) {
+                if (func.isOneWay()) {
                     reply.complete(null);
                 } else {
                     reply.complete(response);
@@ -148,7 +148,7 @@ public class ThriftCallService implements Service<ThriftCall, ThriftReply> {
             try (PushHandle ignored = RequestContext.push(ctx)) {
                 @SuppressWarnings("unchecked")
                 TBase<TBase<?, ?>, TFieldIdEnum> result = f.getResult(implementation, args);
-                if (func.isOneway()) {
+                if (func.isOneWay()) {
                     reply.complete(null);
                 } else {
                     reply.complete(func.getResult(result));

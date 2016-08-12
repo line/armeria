@@ -27,6 +27,9 @@ import com.linecorp.armeria.server.Service;
 
 /**
  * A pair of a {@link PathMapping} and a {@link Service} bound to it.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
 public final class CompositeServiceEntry<I extends Request, O extends Response> {
 

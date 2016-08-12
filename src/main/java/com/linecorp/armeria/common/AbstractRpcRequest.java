@@ -23,20 +23,32 @@ import java.util.List;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
+/**
+ * A skeletal {@link RpcRequest} implementation.
+ */
 public class AbstractRpcRequest implements RpcRequest {
 
     private final Class<?> serviceType;
     private final String method;
     private final List<Object> args;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractRpcRequest(Class<?> serviceType, String method, Iterable<?> args) {
         this(serviceType, method, ImmutableList.copyOf(args));
     }
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractRpcRequest(Class<?> serviceType, String method, Object... args) {
         this(serviceType, method, ImmutableList.copyOf(args));
     }
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractRpcRequest(Class<?> serviceType, String method, List<Object> args) {
         this.serviceType = requireNonNull(serviceType, "serviceType");
         this.method = requireNonNull(method, "method");
@@ -86,6 +98,9 @@ public class AbstractRpcRequest implements RpcRequest {
                           .add("args", params()).toString();
     }
 
+    /**
+     * Returns the simplified name of the {@link #serviceType()}.
+     */
     protected final String simpleServiceName() {
         final Class<?> serviceType = serviceType();
         final String fqcn = serviceType.getName();

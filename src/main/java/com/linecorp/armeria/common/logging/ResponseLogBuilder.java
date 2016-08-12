@@ -16,13 +16,19 @@
 
 package com.linecorp.armeria.common.logging;
 
-import com.linecorp.armeria.internal.NoopAttribute;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
+/**
+ * Updates a {@link ResponseLog} with newly available information.
+ */
 public interface ResponseLogBuilder extends MessageLogBuilder {
 
+    /**
+     * A dummy {@link ResponseLogBuilder} that discards everything it collected.
+     */
     ResponseLogBuilder NOOP = new ResponseLogBuilder() {
         @Override
         public void statusCode(int statusCode) {}
@@ -53,7 +59,14 @@ public interface ResponseLogBuilder extends MessageLogBuilder {
         public void end(Throwable cause) {}
     };
 
+    /**
+     * Starts the collection of information. This method will update the {@link MessageLog#startTimeNanos()}
+     * property. This method will do nothing if called twice.
+     */
     void start();
-    void statusCode(int statusCode);
 
+    /**
+     * Updates the status code specific to the current {@link SessionProtocol}.
+     */
+    void statusCode(int statusCode);
 }

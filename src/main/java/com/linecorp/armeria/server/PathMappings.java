@@ -31,6 +31,8 @@ import com.linecorp.armeria.server.composition.SimpleCompositeService;
 /**
  * Maps a request path to a value associated with a matching {@link PathMapping}. Useful when building a
  * service that delegates some or all of its requests to other services. e.g. {@link SimpleCompositeService}.
+ *
+ * @param <T> the type of the mapped value
  */
 public class PathMappings<T> implements Function<String, PathMapped<T>> {
 

@@ -18,13 +18,43 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.Iterator;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
+
 import io.netty.util.Attribute;
 import io.netty.util.AttributeMap;
 
+/**
+ * Information collected while processing a {@link Request} or a {@link Response}.
+ *
+ * @see MessageLogBuilder
+ */
 public interface MessageLog extends AttributeMap {
+
+    /**
+     * Returns the length of the message content.
+     */
     long contentLength();
+
+    /**
+     * Returns the {@link System#nanoTime() nanoTime} of when the processing of the message started.
+     */
     long startTimeNanos();
+
+    /**
+     * Returns the {@link System#nanoTime() nanoTime} of when the processing of the message ended.
+     */
     long endTimeNanos();
+
+    /**
+     * Returns the cause of message processing failure.
+     *
+     * @return the cause. {@code null} if the message was processed completely.
+     */
     Throwable cause(); // non-null if failed without sending a full message.
+
+    /**
+     * Returns all {@link Attribute}s of this log.
+     */
     Iterator<Attribute<?>> attrs();
 }

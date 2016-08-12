@@ -16,11 +16,36 @@
 
 package com.linecorp.armeria.common.logging;
 
+import com.linecorp.armeria.common.RequestContext;
+
 import io.netty.util.AttributeMap;
 
+/**
+ * Updates a {@link MessageLog} with newly available information.
+ */
 public interface MessageLogBuilder extends AttributeMap {
+
+    /**
+     * Increases the {@link MessageLog#contentLength()} by {@code deltaBytes}.
+     */
     void increaseContentLength(long deltaBytes);
+
+    /**
+     * Sets the {@link MessageLog#contentLength()} to the specified {@code contentLength}.
+     */
     void contentLength(long contentLength);
+
+    /**
+     * Sets {@link MessageLog#endTimeNanos()} and finishes the collection of the information, completing
+     * {@link RequestContext#requestLogFuture()} or {@link RequestContext#responseLogFuture()} successfully.
+     * This method will do nothing if called twice.
+     */
     void end();
+
+    /**
+     * Sets {@link MessageLog#endTimeNanos()} and finishes the collection of the information, completing
+     * {@link RequestContext#requestLogFuture()} or {@link RequestContext#responseLogFuture()} exceptionally.
+     * This method will do nothing if called twice.
+     */
     void end(Throwable cause);
 }

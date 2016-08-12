@@ -28,12 +28,20 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.http.HttpClientFactory;
-import com.linecorp.armeria.client.thrift.ThriftClientFactory;
+import com.linecorp.armeria.client.thrift.THttpClientFactory;
 import com.linecorp.armeria.common.Scheme;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
+/**
+ * A {@link ClientFactory} which combines all known official {@link ClientFactory} implementations.
+ * It currently combines the following {@link ClientFactory}s:
+ * <ul>
+ *   <li>{@link HttpClientFactory}</li>
+ *   <li>{@link THttpClientFactory}</li>
+ * </ul>
+ */
 public class AllInOneClientFactory extends AbstractClientFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(AllInOneClientFactory.class);
@@ -47,15 +55,21 @@ public class AllInOneClientFactory extends AbstractClientFactory {
     private final ClientFactory mainFactory;
     private final Map<Scheme, ClientFactory> clientFactories;
 
+    /**
+     * Creates a new instance with the default {@link SessionOptions}.
+     */
     public AllInOneClientFactory() {
         this(SessionOptions.DEFAULT);
     }
 
+    /**
+     * Creates a new instance with the specified {@link SessionOptions}.
+     */
     public AllInOneClientFactory(SessionOptions options) {
         // TODO(trustin): Allow specifying different options for different session protocols.
         //                We have only one session protocol at the moment, so this is OK so far.
         final HttpClientFactory httpClientFactory = new HttpClientFactory(options);
-        final ThriftClientFactory thriftClientFactory = new ThriftClientFactory(httpClientFactory);
+        final THttpClientFactory thriftClientFactory = new THttpClientFactory(httpClientFactory);
 
         final ImmutableMap.Builder<Scheme, ClientFactory> builder = ImmutableMap.builder();
         for (ClientFactory f : Arrays.asList(httpClientFactory, thriftClientFactory)) {
@@ -88,7 +102,7 @@ public class AllInOneClientFactory extends AbstractClientFactory {
 
     @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        final Scheme scheme = validate(uri, clientType, options);
+        final Scheme scheme = validateScheme(uri);
         return clientFactories.get(scheme).newClient(uri, clientType, options);
     }
 

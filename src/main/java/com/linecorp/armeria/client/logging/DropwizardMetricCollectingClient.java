@@ -23,8 +23,14 @@ import com.codahale.metrics.MetricRegistry;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.DropwizardMetricConsumer;
+import com.linecorp.armeria.internal.logging.DropwizardMetricConsumer;
 
+/**
+ * Decorates a {@link Client} to collect metrics into Dropwizard {@link MetricRegistry}.
+ *
+ * @param <I> the request type
+ * @param <O> the response type
+ */
 public final class DropwizardMetricCollectingClient<I extends Request, O extends Response>
         extends LogCollectingClient<I, O> {
 
