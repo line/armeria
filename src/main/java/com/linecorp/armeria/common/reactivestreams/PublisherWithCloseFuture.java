@@ -18,7 +18,9 @@ package com.linecorp.armeria.common.reactivestreams;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
@@ -34,6 +36,9 @@ public class PublisherWithCloseFuture<T> implements RichPublisher<T> {
 
     private final Publisher<? extends T> publisher;
     private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+    private final Queue<SubscriberImpl<T>> subscribers = new ConcurrentLinkedQueue<>();
+    private volatile boolean publishedAny;
+    private volatile boolean aborted;
 
     /**
      * Creates a new instance with the specified delegate {@link Publisher}.
@@ -55,23 +60,46 @@ public class PublisherWithCloseFuture<T> implements RichPublisher<T> {
     }
 
     @Override
+    public boolean isEmpty() {
+        return !isOpen() && !publishedAny;
+    }
+
+    @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        publisher.subscribe(new SubscriberImpl<T>(subscriber, null));
+        subscribe0(subscriber, null);
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        publisher.subscribe(new SubscriberImpl<T>(subscriber, executor));
+        subscribe0(subscriber, executor);
+    }
+
+    private void subscribe0(Subscriber<? super T> subscriber, Executor executor) {
+        if (aborted) {
+            throw new IllegalStateException("cannot subscribe to an aborted publisher");
+        }
+        final SubscriberImpl<T> s = new SubscriberImpl<T>(subscriber, executor);
+        publisher.subscribe(s);
+        subscribers.add(s);
     }
 
     @Override
     public void abort() {
-        subscribe(AbortingSubscriber.INSTANCE);
+        aborted = true;
+        for (;;) {
+            SubscriberImpl<T> s = subscribers.poll();
+            if (s == null) {
+                break;
+            }
+
+            s.abort();
+        }
     }
 
+    @Override
     public CompletableFuture<Void> closeFuture() {
         return closeFuture;
     }
@@ -79,6 +107,7 @@ public class PublisherWithCloseFuture<T> implements RichPublisher<T> {
     private final class SubscriberImpl<V> implements Subscriber<V> {
         private final Subscriber<? super V> subscriber;
         private final Executor executor;
+        private volatile Subscription subscription;
 
         SubscriberImpl(Subscriber<? super V> subscriber, Executor executor) {
             this.subscriber = subscriber;
@@ -88,6 +117,7 @@ public class PublisherWithCloseFuture<T> implements RichPublisher<T> {
         @Override
         public void onSubscribe(Subscription s) {
             final Executor executor = this.executor;
+            subscription = s;
             if (executor == null) {
                 subscriber.onSubscribe(s);
             } else {
@@ -96,8 +126,18 @@ public class PublisherWithCloseFuture<T> implements RichPublisher<T> {
 
         }
 
+        void abort() {
+            final Subscription subscription = this.subscription;
+            if (subscription == null) {
+                return;
+            }
+
+            subscription.cancel();
+        }
+
         @Override
         public void onNext(V obj) {
+            publishedAny = true;
             final Executor executor = this.executor;
             if (executor == null) {
                 subscriber.onNext(obj);

@@ -26,11 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.WriteTimeoutException;
+import com.linecorp.armeria.client.http.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpObject;
-import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.reactivestreams.ClosedPublisherException;
@@ -56,8 +57,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private final ChannelHandlerContext ctx;
     private final HttpObjectEncoder encoder;
     private final int id;
-    private final HttpHeaders firstHeaders;
-    private final HttpResponseWriter response;
+    private final HttpRequest request;
+    private final HttpResponseWrapper response;
     private final RequestLogBuilder logBuilder;
     private final long timeoutMillis;
     private Subscription subscription;
@@ -65,14 +66,14 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private State state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
 
     HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
-                          int id, HttpHeaders firstHeaders, HttpResponseWriter response,
+                          int id, HttpRequest request, HttpResponseWrapper response,
                           RequestLogBuilder logBuilder, long timeoutMillis) {
 
         ctx = ch.pipeline().lastContext();
 
         this.encoder = encoder;
         this.id = id;
-        this.firstHeaders = firstHeaders;
+        this.request = request;
         this.response = response;
         this.logBuilder = logBuilder;
         this.timeoutMillis = timeoutMillis;
@@ -84,7 +85,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
         if (future.isSuccess()) {
-            if (state != State.DONE) {
+            if (state == State.DONE) {
+                // Successfully sent the request; schedule the response timeout.
+                response.scheduleTimeout(ctx);
+            } else {
                 subscription.request(1);
             }
             return;
@@ -124,7 +128,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void writeFirstHeader() {
         final Channel ch = ctx.channel();
-        final HttpHeaders firstHeaders = this.firstHeaders;
+        final HttpHeaders firstHeaders = request.headers();
 
         String host = firstHeaders.authority();
         if (host == null) {
@@ -135,8 +139,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                          host, firstHeaders.method().name(), firstHeaders.path());
         logBuilder.attr(RequestLog.HTTP_HEADERS).set(firstHeaders);
 
-        encoder.writeHeaders(ctx, id, streamId(), firstHeaders, false).addListener(this);
-        ctx.flush();
+        if (request.isEmpty()) {
+            setDone();
+            write0(firstHeaders, true, true);
+        } else {
+            write0(firstHeaders, false, true);
+        }
     }
 
     @Override

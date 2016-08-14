@@ -17,8 +17,14 @@
 package com.linecorp.armeria.client.http;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 
+import java.io.InputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +34,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Throwables;
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Closeables;
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -138,6 +146,46 @@ public class HttpClientIntegrationTest {
             clientFactory.close();
             server.stop();
         });
+    }
+
+    /**
+     * When the content of a request is empty, the encoded request should never have 'content-length' or
+     * 'transfer-encoding' header.
+     */
+    @Test
+    public void testRequestNoBodyWithoutExtraHeaders() throws Exception {
+        ServerSocket ss = null;
+        Socket s = null;
+        try {
+            ss = new ServerSocket(0);
+            final int httpPort = ss.getLocalPort();
+            final HttpClient client = Clients.newClient(
+                    clientFactory, "none+h1c://127.0.0.1:" + httpPort, HttpClient.class);
+
+            client.get("/foo"); // Not interested in the result but only in what the client sends.
+
+            final String expected =
+                    "GET /foo HTTP/1.1\r\nuser-agent: Armeria\r\nhost: 127.0.0.1:" + httpPort + "\r\n\r\n";
+
+            ss.setSoTimeout(10000);
+            s = ss.accept();
+            final byte[] buf = new byte[expected.length()];
+            final InputStream in = s.getInputStream();
+
+            // Read the encoded request.
+            s.setSoTimeout(10000);
+            ByteStreams.readFully(in, buf);
+
+            // Should not send anything more.
+            s.setSoTimeout(1000);
+            assertThatThrownBy(in::read).isInstanceOf(SocketTimeoutException.class);
+
+            // Ensure that the encoded request matches.
+            assertThat(new String(buf, StandardCharsets.US_ASCII)).isEqualTo(expected);
+        } finally {
+            Closeables.close(s, true);
+            Closeables.close(ss, true);
+        }
     }
 
     @Test

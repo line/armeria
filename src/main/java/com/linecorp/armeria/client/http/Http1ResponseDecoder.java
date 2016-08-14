@@ -115,9 +115,9 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             state = State.NEED_INFORMATIONAL_DATA;
                         } else {
                             state = State.NEED_DATA_OR_TRAILING_HEADERS;
-                            res.scheduleTimeout(ctx);
                         }
 
+                        res.scheduleTimeout(ctx);
                         res.write(ArmeriaHttpUtil.toArmeria(nettyRes));
                     } else {
                         failWithUnexpectedMessageType(ctx, msg);

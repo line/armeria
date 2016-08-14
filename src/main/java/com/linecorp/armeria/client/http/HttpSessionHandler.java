@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
+import com.linecorp.armeria.client.http.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -117,11 +118,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         final long maxContentLength = ctx.maxResponseLength();
 
         final int numRequestsSent = ++this.numRequestsSent;
-        responseDecoder.addResponse(numRequestsSent, res, ctx.responseLogBuilder(),
-                                    responseTimeoutMillis, maxContentLength);
+        final HttpResponseWrapper wrappedRes =
+                responseDecoder.addResponse(numRequestsSent, res, ctx.responseLogBuilder(),
+                                            responseTimeoutMillis, maxContentLength);
         req.subscribe(
                 new HttpRequestSubscriber(channel, requestEncoder,
-                                          numRequestsSent, req.headers(), res, ctx.requestLogBuilder(),
+                                          numRequestsSent, req, wrappedRes, ctx.requestLogBuilder(),
                                           writeTimeoutMillis),
                 channel.eventLoop());
 

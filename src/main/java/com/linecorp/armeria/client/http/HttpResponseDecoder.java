@@ -59,14 +59,17 @@ abstract class HttpResponseDecoder {
         return inboundTrafficController;
     }
 
-    final void addResponse(int id, DecodedHttpResponse res, ResponseLogBuilder logBuilder,
+    final HttpResponseWrapper addResponse(int id, DecodedHttpResponse res, ResponseLogBuilder logBuilder,
                            long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpResponseWriter oldRes = responses.put(
-                id, new HttpResponseWrapper(res, logBuilder, responseTimeoutMillis, maxContentLength));
+        final HttpResponseWrapper newRes =
+                new HttpResponseWrapper(res, logBuilder, responseTimeoutMillis, maxContentLength);
+        final HttpResponseWriter oldRes = responses.put(id, newRes);
 
         assert oldRes == null :
                "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " + oldRes;
+
+        return newRes;
     }
 
     final HttpResponseWrapper getResponse(int id) {
@@ -120,7 +123,11 @@ abstract class HttpResponseDecoder {
         }
 
         void scheduleTimeout(ChannelHandlerContext ctx) {
-            if (responseTimeoutMillis <= 0) {
+            if (responseTimeoutFuture != null || responseTimeoutMillis <= 0 || !isOpen()) {
+                // No need to schedule a response timeout if:
+                // - the timeout has been scheduled already,
+                // - the timeout has been disabled or
+                // - the response stream has been closed already.
                 return;
             }
 
