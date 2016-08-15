@@ -22,12 +22,12 @@ import java.util.concurrent.Executor;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.reactivestreams.RichPublisher;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A streamed HTTP/2 {@link Response}.
  */
-public interface HttpResponse extends Response, RichPublisher<HttpObject> {
+public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new instance from an existing {@link Publisher}.

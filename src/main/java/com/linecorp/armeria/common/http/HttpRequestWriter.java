@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.common.http;
 
-import com.linecorp.armeria.common.reactivestreams.Writer;
+import com.linecorp.armeria.common.stream.StreamWriter;
 
 /**
- * A {@link Writer} of an {@link HttpRequest}.
+ * A {@link StreamWriter} of an {@link HttpRequest}.
  */
-public interface HttpRequestWriter extends Writer<HttpObject> {
+public interface HttpRequestWriter extends StreamWriter<HttpObject> {
     // TODO(trustin): Add lots of convenience methods for easier response construction.
 }

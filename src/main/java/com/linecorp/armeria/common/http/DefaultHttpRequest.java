@@ -20,13 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.reactivestreams.QueueBasedPublisher;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 
 /**
  * Default {@link HttpRequest} implementation.
  */
 public class DefaultHttpRequest
-        extends QueueBasedPublisher<HttpObject> implements HttpRequest, HttpRequestWriter {
+        extends DefaultStreamMessage<HttpObject> implements HttpRequest, HttpRequestWriter {
 
     private final HttpHeaders headers;
     private final boolean keepAlive;

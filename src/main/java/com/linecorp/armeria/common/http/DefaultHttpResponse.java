@@ -18,13 +18,13 @@ package com.linecorp.armeria.common.http;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.reactivestreams.QueueBasedPublisher;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 
 /**
  * Default {@link HttpResponse} instance.
  */
 public class DefaultHttpResponse
-        extends QueueBasedPublisher<HttpObject> implements HttpResponse, HttpResponseWriter {
+        extends DefaultStreamMessage<HttpObject> implements HttpResponse, HttpResponseWriter {
 
     @Override
     public String toString() {

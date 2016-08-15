@@ -25,12 +25,12 @@ import java.util.Locale;
 
 import com.google.common.net.MediaType;
 
-import com.linecorp.armeria.common.reactivestreams.Writer;
+import com.linecorp.armeria.common.stream.StreamWriter;
 
 /**
- * A {@link Writer} of an {@link HttpResponse}.
+ * A {@link StreamWriter} of an {@link HttpResponse}.
  */
-public interface HttpResponseWriter extends Writer<HttpObject> {
+public interface HttpResponseWriter extends StreamWriter<HttpObject> {
     // TODO(trustin): Add lots of convenience methods for easier response construction.
 
     /**

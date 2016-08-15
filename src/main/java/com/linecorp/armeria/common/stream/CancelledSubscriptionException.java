@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.reactivestreams;
+package com.linecorp.armeria.common.stream;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -22,7 +22,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A {@link RuntimeException} that is raised to notify {@link RichPublisher#closeFuture()} when a
+ * A {@link RuntimeException} that is raised to notify {@link StreamMessage#closeFuture()} when a
  * {@link Subscriber} has cancelled its {@link Subscription}.
  */
 public final class CancelledSubscriptionException extends RuntimeException {

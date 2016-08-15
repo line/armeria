@@ -19,22 +19,22 @@ package com.linecorp.armeria.common;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import com.linecorp.armeria.common.reactivestreams.RichPublisher;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A response stream or a holder of the future result value.
- * It must implement {@link RichPublisher} or {@link CompletionStage}, but not both.
+ * It must implement {@link StreamMessage} or {@link CompletionStage}, but not both.
  */
 public interface Response {
 
     /**
      * Returns a {@link CompletableFuture} which completes when
-     * 1) the response stream has been closed (the {@link RichPublisher} has terminated) or
+     * 1) the response stream has been closed (the {@link StreamMessage} has been closed) or
      * 2) the result value is set (the {@link CompletionStage} has completed.)
      */
     default CompletableFuture<?> closeFuture() {
-        if (this instanceof RichPublisher) {
-            return ((RichPublisher<?>) this).closeFuture();
+        if (this instanceof StreamMessage) {
+            return ((StreamMessage<?>) this).closeFuture();
         }
 
         if (this instanceof CompletionStage) {
@@ -42,7 +42,7 @@ public interface Response {
         }
 
         throw new IllegalStateException(
-                "response must be a " + RichPublisher.class.getSimpleName() + " or a " +
+                "response must be a " + StreamMessage.class.getSimpleName() + " or a " +
                 CompletionStage.class.getSimpleName() + ": " + getClass().getName());
     }
 }
