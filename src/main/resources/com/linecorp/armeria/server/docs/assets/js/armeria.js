@@ -174,15 +174,18 @@ $(function () {
     }));
 
     var debugText = functionContainer.find('.debug-textarea').val(functionInfo.sampleJsonRequest);
-    var debugHttpHeadersText = functionContainer.find('.debug-httpheaders').val(serviceInfo.sampleHttpHeaders);
+    var debugHttpHeadersText = functionContainer.find('.debug-http-headers').val(serviceInfo.sampleHttpHeaders);
     var debugResponse = functionContainer.find('.debug-response code');
 
-    // handle 'debug-httpheaders' section
-    var collapser = functionContainer.find('.debug-httpheaders-collapser');
+    // Sets 'debug-http-headers' section
+    var collapser = functionContainer.find('.debug-http-headers-collapser');
+    var toggleCollapser = function() {
+      collapser.toggleClass('opened');
+      collapser.next().collapse('toggle');
+    }
     collapser.click(function() {
-      $(this).next().collapse('toggle');
+      toggleCollapser();
     });
-
     var submitDebugRequest = function () {
       var args;
       var httpHeaders = {};
@@ -209,11 +212,18 @@ $(function () {
         success: function (response) {
           debugResponse.text(response);
           hljs.highlightBlock(debugResponse.get(0));
+
+          // Set the URL with request
           var uri = URI(window.location.href);
           var fragment = uri.fragment(true);
+          var req = {
+            args: debugText.val()
+          }
+          if (debugHttpHeadersText.val()) { // Includes when a value is set
+            req.http_headers = debugHttpHeadersText.val();
+          }
           fragment.setQuery({
-            req: debugText.val(),
-            httpHeaders: debugHttpHeadersText.val()
+            req: JSON.stringify(req)
           });
           window.location.href = uri.toString();
         },
@@ -229,15 +239,23 @@ $(function () {
 
     var fragment = URI(window.location.href).fragment(true);
     var fragmentParams = fragment.query(true);
-    if ("httpHeaders" in fragmentParams) {
-      debugHttpHeadersText.val(fragmentParams.httpHeaders);
-      if (fragmentParams.httpHeaders) { // unhide by default when headers are given from URL
-        collapser.next().collapse('toggle');
-      }
-    }
     if (fragmentParams.req) {
-      debugText.val(fragmentParams.req);
+      var req = JSON.parse(fragmentParams.req);
+
+      debugText.val(req.args);
+
+      if ('http_headers' in req) {
+        debugHttpHeadersText.val(req.http_headers);
+      } else {
+        debugHttpHeadersText.val(''); // Remove the default value if set
+      }
+
       submitDebugRequest();
+    }
+
+    // Open debug-http-headers section when a value is set
+    if (debugHttpHeadersText.val()) {
+      toggleCollapser();
     }
   }
 

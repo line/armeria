@@ -167,11 +167,15 @@ label {
   min-height: 256px;
 }
 
-.debug-httpheaders {
+.debug-http-headers {
   width: 100%;
   max-width: 100%;
   font-size: 90%;
-  min-height: 120px;
+  min-height: 140px;
+}
+
+.debug-http-headers-collapser.opened:after {
+  content: ': ';
 }
 
 .debug-submit {
