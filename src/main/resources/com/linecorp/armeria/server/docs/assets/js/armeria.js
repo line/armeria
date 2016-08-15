@@ -250,7 +250,7 @@ $(function () {
         debugHttpHeadersText.val(''); // Remove the default value if set
       }
 
-      submitDebugRequest();
+      functionContainer.find('.debug-submit').focus();
     }
 
     // Open debug-http-headers section when a value is set
