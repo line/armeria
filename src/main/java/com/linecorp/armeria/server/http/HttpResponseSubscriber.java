@@ -149,7 +149,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
                 logBuilder.statusCode(statusCode);
                 logBuilder.attr(ResponseLog.HTTP_HEADERS).set(headers);
 
-                if (req.method() == HttpMethod.HEAD) {
+                if (req.method() == HttpMethod.HEAD || headers.isEndOfStream()) {
                     endOfStream = true;
                     break;
                 }

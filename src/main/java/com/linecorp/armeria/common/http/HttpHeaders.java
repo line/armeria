@@ -151,6 +151,11 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     HttpHeaders status(HttpStatus status);
 
     /**
+     * Gets whether the stream should be ended when writing the headers (useful for Headers-only responses).
+     */
+    boolean isEndOfStream();
+
+    /**
      * Returns the immutable view of this headers.
      */
     default HttpHeaders asImmutable() {

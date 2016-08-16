@@ -65,6 +65,11 @@ by Adobe Systems Incorporated:
 Modified redistributions
 ========================
 
+This product contains a modified part of GRPC, distributed by Google:
+
+  * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
+  * Homepage: http://www.grpc.io/
+
 This product contains a modified part of Netty, distributed by Netty.io:
 
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
@@ -94,6 +99,11 @@ This product depends on FindBugs-JSR305, distributed by
 
   * License: licenses/LICENSE.jsr305.al20.txt (Apache License v2.0)
   * Homepage: http://findbugs.sourceforge.net/
+
+This product depends on GRPC, distributed by Google:
+
+  * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
+  * Homepage: http://www.grpc.io/
 
 This product depends on Guava, distributed by Google:
 
