@@ -88,7 +88,11 @@ final class MimeTypeUtil {
 
         final String extension = path.substring(dotIdx + 1).toLowerCase(Locale.US);
         final MediaType mediaType = EXTENSION_TO_MEDIA_TYPE.get(extension);
-        return mediaType != null ? mediaType : MediaType.parse(URLConnection.guessContentTypeFromName(path));
+        if (mediaType != null) {
+            return mediaType;
+        }
+        final String guessedContentType = URLConnection.guessContentTypeFromName(path);
+        return guessedContentType != null ? MediaType.parse(guessedContentType) : null;
     }
 
     private MimeTypeUtil() {}
