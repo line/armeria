@@ -119,7 +119,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
         final int numRequestsSent = ++this.numRequestsSent;
         final HttpResponseWrapper wrappedRes =
-                responseDecoder.addResponse(numRequestsSent, res, ctx.responseLogBuilder(),
+                responseDecoder.addResponse(numRequestsSent, req, res, ctx.responseLogBuilder(),
                                             responseTimeoutMillis, maxContentLength);
         req.subscribe(
                 new HttpRequestSubscriber(channel, requestEncoder,

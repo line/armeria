@@ -256,6 +256,8 @@ public class HttpServerTest extends AbstractServerTest {
                     }
                 };
         sb.decorator(decorator);
+
+        sb.defaultMaxRequestLength(MAX_CONTENT_LENGTH);
     }
 
     @AfterClass
@@ -347,6 +349,14 @@ public class HttpServerTest extends AbstractServerTest {
         assertThat(res.status(), is(HttpStatus.REQUEST_ENTITY_TOO_LARGE));
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
         assertThat(res.content().toStringUtf8(), is("413 Request Entity Too Large"));
+    }
+
+    @Test(timeout = 10000)
+    public void testTooLargeContentToNonExistentService() throws Exception {
+        final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
+        final AggregatedHttpMessage res = client().post("/non-existent", content).aggregate().get();
+        assertThat(res.headers().status(), is(HttpStatus.NOT_FOUND));
+        assertThat(res.content().toStringUtf8(), is("404 Not Found"));
     }
 
     @Test(timeout = 60000)

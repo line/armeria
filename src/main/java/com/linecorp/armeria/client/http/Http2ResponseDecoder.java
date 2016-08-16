@@ -20,11 +20,13 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBuf;
@@ -41,8 +43,13 @@ import io.netty.handler.codec.http2.Http2Stream;
 final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Connection.Listener,
                                                                         Http2FrameListener {
 
-    Http2ResponseDecoder(Channel channel) {
+    private static final Logger logger = LoggerFactory.getLogger(Http2ResponseDecoder.class);
+
+    private final Http2Connection conn;
+
+    Http2ResponseDecoder(Http2Connection conn, Channel channel) {
         super(channel);
+        this.conn = conn;
     }
 
     @Override
@@ -149,10 +156,18 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-        final HttpResponseWriter res = removeResponse(id(streamId));
+        final HttpResponseWrapper res = removeResponse(id(streamId));
         if (res == null) {
-            throw connectionError(PROTOCOL_ERROR,
-                                  "received a RST_STREAM frame for an unknown stream: %d", streamId);
+            if (conn.streamMayHaveExisted(streamId)) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("{} Received a late RST_STREAM frame for a closed stream: {}",
+                                 ctx.channel(), streamId);
+                }
+            } else {
+                throw connectionError(PROTOCOL_ERROR,
+                                      "received a RST_STREAM frame for an unknown stream: %d", streamId);
+            }
+            return;
         }
 
         res.close(ClosedSessionException.get());

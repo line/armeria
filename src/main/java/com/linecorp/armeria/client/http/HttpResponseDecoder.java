@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpObject;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.http.HttpStatusClass;
@@ -59,11 +60,12 @@ abstract class HttpResponseDecoder {
         return inboundTrafficController;
     }
 
-    final HttpResponseWrapper addResponse(int id, DecodedHttpResponse res, ResponseLogBuilder logBuilder,
-                           long responseTimeoutMillis, long maxContentLength) {
+    final HttpResponseWrapper addResponse(
+            int id, HttpRequest req, DecodedHttpResponse res, ResponseLogBuilder logBuilder,
+            long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
-                new HttpResponseWrapper(res, logBuilder, responseTimeoutMillis, maxContentLength);
+                new HttpResponseWrapper(req, res, logBuilder, responseTimeoutMillis, maxContentLength);
         final HttpResponseWriter oldRes = responses.put(id, newRes);
 
         assert oldRes == null :
@@ -107,15 +109,16 @@ abstract class HttpResponseDecoder {
     }
 
     static final class HttpResponseWrapper implements HttpResponseWriter, Runnable {
+        private final HttpRequest request;
         private final DecodedHttpResponse delegate;
         private final ResponseLogBuilder logBuilder;
         private final long responseTimeoutMillis;
         private final long maxContentLength;
         private ScheduledFuture<?> responseTimeoutFuture;
 
-        HttpResponseWrapper(DecodedHttpResponse delegate, ResponseLogBuilder logBuilder,
+        HttpResponseWrapper(HttpRequest request, DecodedHttpResponse delegate, ResponseLogBuilder logBuilder,
                             long responseTimeoutMillis, long maxContentLength) {
-
+            this.request = request;
             this.delegate = delegate;
             this.logBuilder = logBuilder;
             this.responseTimeoutMillis = responseTimeoutMillis;
@@ -185,6 +188,10 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void close() {
+            if (request != null) {
+                request.abort();
+            }
+
             if (cancelTimeout()) {
                 delegate.close();
                 logBuilder.end();
@@ -193,6 +200,10 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void close(Throwable cause) {
+            if (request != null) {
+                request.abort();
+            }
+
             if (cancelTimeout()) {
                 delegate.close(cause);
                 logBuilder.end(cause);

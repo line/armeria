@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
+import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -51,12 +52,14 @@ import io.netty.util.collection.IntObjectMap;
 
 final class Http2RequestDecoder extends Http2EventAdapter {
 
+    private final ServerConfig cfg;
     private final Http2ConnectionEncoder writer;
     private final InboundTrafficController inboundTrafficController;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
 
-    Http2RequestDecoder(Channel channel, Http2ConnectionEncoder writer) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer) {
+        this.cfg = cfg;
         this.writer = writer;
         inboundTrafficController = new InboundTrafficController(channel);
     }
@@ -82,7 +85,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId, convertedHeaders,
-                                         true, inboundTrafficController);
+                                         true, inboundTrafficController, cfg.defaultMaxRequestLength());
 
             requests.put(streamId, req);
             ctx.fireChannelRead(req);
@@ -108,7 +111,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     }
 
     @Override
-    public void onStreamRemoved(Http2Stream stream) {}
+    public void onStreamRemoved(Http2Stream stream) {
+        requests.remove(stream.id());
+    }
 
     @Override
     public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
@@ -121,30 +126,39 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
 
         final int dataLength = data.readableBytes();
+        if (dataLength == 0) {
+            // Received an empty DATA frame
+            if (endOfStream) {
+                req.close();
+            }
+            return padding;
+        }
 
-        if (req.isOpen()) {
-            final long maxContentLength = req.maxRequestLength();
-            if (maxContentLength > 0 && req.writtenBytes() > maxContentLength - dataLength) {
-                if (isWritable(streamId)) {
-                    writeErrorResponse(ctx, streamId, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
-                    req.close(ContentTooLargeException.get());
-                } else {
-                    req.close(ContentTooLargeException.get());
-                    throw connectionError(INTERNAL_ERROR,
-                                          "content length too large: %d + %d > %d (stream: %d)",
-                                          req.writtenBytes(), dataLength, maxContentLength, streamId);
-                }
+        req.increaseTransferredBytes(dataLength);
+
+        final long maxContentLength = req.maxRequestLength();
+        if (maxContentLength > 0 && req.transferredBytes() > maxContentLength) {
+            if (req.isOpen()) {
+                req.close(ContentTooLargeException.get());
+            }
+
+            if (isWritable(streamId)) {
+                writeErrorResponse(ctx, streamId, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
             } else {
-                try {
-                    req.write(HttpData.of(data));
-                } catch (Throwable t) {
-                    req.close(t);
-                    throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");
-                }
+                // Cannot write to the stream. Just close it.
+                final Http2Stream stream = writer.connection().stream(streamId);
+                stream.close();
+            }
+        } else if (req.isOpen()) {
+            try {
+                req.write(HttpData.of(data));
+            } catch (Throwable t) {
+                req.close(t);
+                throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");
+            }
 
-                if (endOfStream) {
-                    req.close();
-                }
+            if (endOfStream) {
+                req.close();
             }
         }
 

@@ -34,11 +34,12 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     private final int id;
     private final int streamId;
     private final InboundTrafficController inboundTrafficController;
+    private final long defaultMaxRequestLength;
     private ServiceRequestContext ctx;
-    private long writtenBytes;
+    private long transferredBytes;
 
     DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, HttpHeaders headers, boolean keepAlive,
-                       InboundTrafficController inboundTrafficController) {
+                       InboundTrafficController inboundTrafficController, long defaultMaxRequestLength) {
 
         super(headers, keepAlive);
 
@@ -46,6 +47,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
         this.id = id;
         this.streamId = streamId;
         this.inboundTrafficController = inboundTrafficController;
+        this.defaultMaxRequestLength = defaultMaxRequestLength;
     }
 
     void init(ServiceRequestContext ctx) {
@@ -62,12 +64,19 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     }
 
     long maxRequestLength() {
-        final ServiceRequestContext ctx = context();
-        return ctx.maxRequestLength();
+        return ctx != null ? ctx.maxRequestLength() : defaultMaxRequestLength;
     }
 
-    long writtenBytes() {
-        return writtenBytes;
+    long transferredBytes() {
+        return transferredBytes;
+    }
+
+    void increaseTransferredBytes(long delta) {
+        if (transferredBytes > Long.MAX_VALUE - delta) {
+            transferredBytes = Long.MAX_VALUE;
+        } else {
+            transferredBytes += delta;
+        }
     }
 
     @Override
@@ -81,7 +90,8 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
         if (published && obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             inboundTrafficController.inc(length);
-            context().requestLogBuilder().contentLength(writtenBytes += length);
+            assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
+            ctx.requestLogBuilder().contentLength(transferredBytes);
         }
         return published;
     }
@@ -92,11 +102,5 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
             final int length = ((HttpData) obj).length();
             inboundTrafficController.dec(length);
         }
-    }
-
-    private ServiceRequestContext context() {
-        final ServiceRequestContext ctx = this.ctx;
-        assert ctx != null : "invoked before init()";
-        return ctx;
     }
 }
