@@ -70,7 +70,7 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.common.reactivestreams.Writer;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.server.AbstractServerTest;
@@ -447,7 +447,7 @@ public class HttpServerTest extends AbstractServerTest {
         assertThat(consumer.numReceivedBytes(), is(STREAMING_CONTENT_LENGTH));
     }
 
-    private static void stream(Writer<HttpObject> writer, long size, int chunkSize) {
+    private static void stream(StreamWriter<HttpObject> writer, long size, int chunkSize) {
         if (!writer.write(HttpData.of(new byte[chunkSize]))) {
             return;
         }

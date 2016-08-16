@@ -14,13 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.reactivestreams;
+package com.linecorp.armeria.common.stream;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A {@link RuntimeException} that is raised when a {@link Writer} attempts to write an object to a terminated
- * {@link RichPublisher}.
+ * A {@link RuntimeException} that is raised when a {@link StreamWriter} attempts to write an object to a
+ * closed {@link StreamMessage}.
  */
 public final class ClosedPublisherException extends RuntimeException {
 

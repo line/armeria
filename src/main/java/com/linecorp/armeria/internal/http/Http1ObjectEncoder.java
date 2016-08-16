@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.http.HttpStatusClass;
-import com.linecorp.armeria.common.reactivestreams.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedPublisherException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

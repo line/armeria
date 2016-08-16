@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.reactivestreams;
+package com.linecorp.armeria.common.stream;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -22,25 +22,25 @@ import java.util.function.Supplier;
 import org.reactivestreams.Subscriber;
 
 /**
- * Produces the objects to be published by a {@link QueueBasedPublisher}.
+ * Produces the objects to be published by a {@link StreamMessage}.
  *
  * @param <T> the type of the stream element
  */
-public interface Writer<T> {
+public interface StreamWriter<T> {
 
     /**
-     * Returns {@code true} if the {@link RichPublisher} is open.
+     * Returns {@code true} if the {@link StreamMessage} is open.
      */
     boolean isOpen();
 
     /**
-     * Writes the specified object to the {@link RichPublisher}. The written object will be transferred to the
+     * Writes the specified object to the {@link StreamMessage}. The written object will be transferred to the
      * {@link Subscriber}.
      */
     boolean write(T o);
 
     /**
-     * Writes the specified object {@link Supplier} to the {@link RichPublisher}. The object provided by the
+     * Writes the specified object {@link Supplier} to the {@link StreamMessage}. The object provided by the
      * {@link Supplier} will be transferred to the {@link Subscriber}.
      */
     boolean write(Supplier<? extends T> o);
@@ -49,18 +49,18 @@ public interface Writer<T> {
      * Performs the specified {@code task} when there's enough demans from the {@link Subscriber}.
      *
      * @return the future that completes successfully when the {@code task} finishes or
-     *         exceptionally when the {@link RichPublisher} terminates unexpectedly.
+     *         exceptionally when the {@link StreamMessage} is closed unexpectedly.
      */
     CompletableFuture<Void> onDemand(Runnable task);
 
     /**
-     * Closes the {@link RichPublisher} successfully. {@link Subscriber#onComplete()} will be invoked to
+     * Closes the {@link StreamMessage} successfully. {@link Subscriber#onComplete()} will be invoked to
      * signal that the {@link Subscriber} has consumed the stream completely.
      */
     void close();
 
     /**
-     * Closes the {@link RichPublisher} exceptionally. {@link Subscriber#onError(Throwable)} will be invoked to
+     * Closes the {@link StreamMessage} exceptionally. {@link Subscriber#onError(Throwable)} will be invoked to
      * signal that the {@link Subscriber} did not consume the stream completely.
      */
     void close(Throwable cause);

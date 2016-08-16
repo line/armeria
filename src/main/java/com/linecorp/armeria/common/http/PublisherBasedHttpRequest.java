@@ -18,9 +18,9 @@ package com.linecorp.armeria.common.http;
 
 import org.reactivestreams.Publisher;
 
-import com.linecorp.armeria.common.reactivestreams.PublisherWithCloseFuture;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 
-final class PublisherBasedHttpRequest extends PublisherWithCloseFuture<HttpObject> implements HttpRequest {
+final class PublisherBasedHttpRequest extends PublisherBasedStreamMessage<HttpObject> implements HttpRequest {
 
     private final HttpHeaders headers;
     private final boolean keepAlive;

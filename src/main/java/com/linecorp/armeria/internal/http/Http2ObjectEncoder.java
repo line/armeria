@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.reactivestreams.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedPublisherException;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;

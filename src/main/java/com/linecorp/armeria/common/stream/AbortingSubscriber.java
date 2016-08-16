@@ -14,13 +14,28 @@
  * under the License.
  */
 
-/**
- * <a href="http://www.reactive-streams.org/">Reactive Streams</a> support.
- *
- * <h2>Starting points</h2>
- * <ul>
- *   <li>{@link com.linecorp.armeria.common.reactivestreams.RichPublisher}</li>
- *   <li>{@link com.linecorp.armeria.common.reactivestreams.Writer}</li>
- * </ul>
- */
-package com.linecorp.armeria.common.reactivestreams;
+package com.linecorp.armeria.common.stream;
+
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
+final class AbortingSubscriber implements Subscriber<Object> {
+
+    static final AbortingSubscriber INSTANCE = new AbortingSubscriber();
+
+    private AbortingSubscriber() {}
+
+    @Override
+    public void onSubscribe(Subscription s) {
+        s.cancel();
+    }
+
+    @Override
+    public void onNext(Object o) {}
+
+    @Override
+    public void onError(Throwable t) {}
+
+    @Override
+    public void onComplete() {}
+}

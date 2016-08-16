@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.reactivestreams.ClosedPublisherException;
+import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.http.HttpObjectEncoder;
 

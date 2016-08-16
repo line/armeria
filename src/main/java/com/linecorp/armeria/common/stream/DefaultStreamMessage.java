@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.reactivestreams;
+package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -34,10 +34,10 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A {@link RichPublisher} which buffers the elements to be signaled into a {@link Queue}.
+ * A {@link StreamMessage} which buffers the elements to be signaled into a {@link Queue}.
  *
- * <p>This class implements the {@link Writer} interface as well. A written element will be buffered into the
- * {@link Queue} until a {@link Subscriber} consumes it. Use {@link Writer#onDemand(Runnable)} to control the
+ * <p>This class implements the {@link StreamWriter} interface as well. A written element will be buffered into the
+ * {@link Queue} until a {@link Subscriber} consumes it. Use {@link StreamWriter#onDemand(Runnable)} to control the
  * rate of production so that the {@link Queue} does not grow up infinitely.
  *
  * <pre>{@code
@@ -63,7 +63,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  *
  * @param <T> the type of element signaled
  */
-public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
+public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T> {
 
     private enum State {
         /**
@@ -94,16 +94,16 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
             Exceptions.clearTrace(CancelledSubscriptionException.get()));
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<QueueBasedPublisher, SubscriptionImpl> subscriptionUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(QueueBasedPublisher.class, SubscriptionImpl.class, "subscription");
+    private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, SubscriptionImpl> subscriptionUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, SubscriptionImpl.class, "subscription");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicLongFieldUpdater<QueueBasedPublisher> demandUpdater =
-            AtomicLongFieldUpdater.newUpdater(QueueBasedPublisher.class, "demand");
+    private static final AtomicLongFieldUpdater<DefaultStreamMessage> demandUpdater =
+            AtomicLongFieldUpdater.newUpdater(DefaultStreamMessage.class, "demand");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<QueueBasedPublisher, State> stateUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(QueueBasedPublisher.class, State.class, "state");
+    private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, State> stateUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
 
     private final Queue<Object> queue;
     private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
@@ -122,14 +122,14 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
     /**
      * Creates a new instance with a new {@link ConcurrentLinkedQueue}.
      */
-    public QueueBasedPublisher() {
+    public DefaultStreamMessage() {
         this(new ConcurrentLinkedQueue<>());
     }
 
     /**
      * Creates a new instance with the specified {@link Queue}.
      */
-    public QueueBasedPublisher(Queue<Object> queue) {
+    public DefaultStreamMessage(Queue<Object> queue) {
         this.queue = requireNonNull(queue, "queue");
     }
 
@@ -392,12 +392,12 @@ public class QueueBasedPublisher<T> implements RichPublisher<T>, Writer<T> {
 
     private static final class SubscriptionImpl implements Subscription {
 
-        private final QueueBasedPublisher<?> publisher;
+        private final DefaultStreamMessage<?> publisher;
         private final Subscriber<Object> subscriber;
         private final Executor executor;
 
         @SuppressWarnings("unchecked")
-        SubscriptionImpl(QueueBasedPublisher<?> publisher, Subscriber<?> subscriber, Executor executor) {
+        SubscriptionImpl(DefaultStreamMessage<?> publisher, Subscriber<?> subscriber, Executor executor) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;

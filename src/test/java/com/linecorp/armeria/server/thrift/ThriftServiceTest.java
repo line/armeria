@@ -17,13 +17,13 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
-import static org.easymock.EasyMock.replay;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -41,7 +41,6 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
-import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -581,18 +580,15 @@ public class ThriftServiceTest {
                                    .blockingTaskExecutor(ImmediateExecutor.INSTANCE).build()
                                    .config().serviceConfigs().get(0);
 
-        final ServiceRequestContext ctx = EasyMock.createMock(ServiceRequestContext.class);
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final DefaultRequestLog reqLogBuilder = new DefaultRequestLog();
         final DefaultResponseLog resLogBuilder = new DefaultResponseLog(reqLogBuilder);
 
-        expect(ctx.blockingTaskExecutor()).andReturn(ImmediateEventExecutor.INSTANCE).anyTimes();
-        expect(ctx.requestLogBuilder()).andReturn(reqLogBuilder).anyTimes();
-        expect(ctx.responseLogBuilder()).andReturn(resLogBuilder).anyTimes();
-        ctx.invokeOnEnterCallbacks();
-        expectLastCall().anyTimes();
-        ctx.invokeOnExitCallbacks();
-        expectLastCall().anyTimes();
-        replay(ctx);
+        when(ctx.blockingTaskExecutor()).thenReturn(ImmediateEventExecutor.INSTANCE);
+        when(ctx.requestLogBuilder()).thenReturn(reqLogBuilder);
+        when(ctx.responseLogBuilder()).thenReturn(resLogBuilder);
+        doNothing().when(ctx).invokeOnEnterCallbacks();
+        doNothing().when(ctx).invokeOnExitCallbacks();
 
         final DefaultHttpRequest req = new DefaultHttpRequest(
                 HttpHeaders.of(HttpMethod.POST, "/"), false);

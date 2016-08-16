@@ -23,7 +23,7 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.reactivestreams.RichPublisher;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A streamed HTTP/2 {@link Request}.
@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.reactivestreams.RichPublisher;
  * <p>Note: The initial {@link HttpHeaders} is not signaled to {@link Subscriber}s. It is readily available
  * via {@link #headers()}.
  */
-public interface HttpRequest extends Request, RichPublisher<HttpObject> {
+public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Creates a new instance from an existing {@link HttpHeaders} and {@link Publisher}.
