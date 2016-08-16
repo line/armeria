@@ -17,8 +17,8 @@
 package com.linecorp.armeria.server.metrics;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
 
-import org.easymock.EasyMock;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -48,9 +48,9 @@ public class MessageLogConsumerTest {
         MessageLogConsumer finalConsumer = consumer.andThen(consumer).andThen(consumer);
 
         // When
-        final RequestContext ctx = EasyMock.mock(RequestContext.class);
-        finalConsumer.onRequest(ctx, EasyMock.mock(RequestLog.class));
-        finalConsumer.onResponse(ctx, EasyMock.mock(ResponseLog.class));
+        final RequestContext ctx = mock(RequestContext.class);
+        finalConsumer.onRequest(ctx, mock(RequestLog.class));
+        finalConsumer.onResponse(ctx, mock(ResponseLog.class));
 
         // Then
         assertEquals("onRequest should be invoked 3 times", 3, executeCounters[0]);

@@ -412,13 +412,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, AggregatedHttpMessage res) {
         if (!handledLastRequest) {
             addKeepAliveHeaders(req, res);
-            write(ctx, req, res).addListener(CLOSE_ON_FAILURE);
+            respond0(ctx, req, res).addListener(CLOSE_ON_FAILURE);
         } else {
             // Note that it is perfectly fine not to set the 'content-length' header to the last response
             // of an HTTP/1 connection. We set it anyway to work around overly strict HTTP clients that always
             // require a 'content-length' header for non-chunked responses.
             setContentLength(req, res);
-            write(ctx, req, res).addListener(CLOSE);
+            respond0(ctx, req, res).addListener(CLOSE);
         }
 
         if (!isReading) {
@@ -426,7 +426,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ChannelFuture write(ChannelHandlerContext ctx, DecodedHttpRequest req, AggregatedHttpMessage res) {
+    private ChannelFuture respond0(ChannelHandlerContext ctx, DecodedHttpRequest req, AggregatedHttpMessage res) {
+        // No need to consume further since the response is ready.
+        req.abort();
+
         final boolean trailingHeadersEmpty = res.trailingHeaders().isEmpty();
         final boolean contentAndTrailingHeadersEmpty = res.content().isEmpty() && trailingHeadersEmpty;
         ChannelFuture future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), res.headers(), contentAndTrailingHeadersEmpty);
