@@ -378,6 +378,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 final Throwable closeCause = ((CloseEvent) e).cause();
                 if (closeCause != null) {
                     closeFuture.completeExceptionally(closeCause);
+                } else {
+                    closeFuture.complete(null);
                 }
                 continue;
             }

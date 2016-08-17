@@ -67,21 +67,12 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
     private volatile boolean abortPending;
 
     /**
-     * Returns the delegate {@link HttpResponse} which will publish the stream actually.
-     *
-     * @return the delegate, or {@code null} if not set yet
-     */
-    @SuppressWarnings("unchecked")
-    protected final <U extends StreamMessage<T>> U delegate() {
-        return (U) delegate;
-    }
-
-    /**
      * Sets the delegate {@link HttpResponse} which will publish the stream actually.
      *
-     * @throws IllegalStateException if the delegate has been set already
+     * @throws IllegalStateException if the delegate has been set already or
+     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
-    protected void setDelegate(StreamMessage<T> delegate) {
+    protected void delegate(StreamMessage<T> delegate) {
         requireNonNull(delegate, "delegate");
         if (!delegateUpdater.compareAndSet(this, null, delegate)) {
             throw new IllegalStateException("delegate set already");
@@ -104,6 +95,31 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         if (abortPending) {
             delegate.abort();
         }
+    }
+
+    /**
+     * Closes the deferred stream without setting a delegate.
+     *
+     * @throws IllegalStateException if the delegate has been set already or
+     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
+     */
+    public void close() {
+        final DefaultStreamMessage<T> m = new DefaultStreamMessage<>();
+        m.close();
+        delegate(m);
+    }
+
+    /**
+     * Closes the deferred stream without setting a delegate.
+     *
+     * @throws IllegalStateException if the delegate has been set already or
+     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
+     */
+    public void close(Throwable cause) {
+        requireNonNull(cause, "cause");
+        final DefaultStreamMessage<T> m = new DefaultStreamMessage<>();
+        m.close(cause);
+        delegate(m);
     }
 
     @Override

@@ -39,13 +39,13 @@ import com.linecorp.armeria.common.stream.DeferredStreamMessage;
  * }</pre>
  */
 public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
-
     /**
      * Sets the delegate {@link HttpResponse} which will publish the stream actually.
      *
-     * @throws IllegalStateException if the delegate has been set already
+     * @throws IllegalStateException if the delegate has been set already or
+     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
-    public void setDelegate(HttpResponse delegate) {
-        super.setDelegate(delegate);
+    public void delegate(HttpResponse delegate) {
+        super.delegate(delegate);
     }
 }
