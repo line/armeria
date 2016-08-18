@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -240,13 +241,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
-        if (headers.authority() == null) {
-            // HTTP/1.1 requests require a host header.
-            respond(ctx, req, HttpStatus.BAD_REQUEST);
-            return;
-        }
-
-        final String hostname = hostname(headers);
+        final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
         // Find the service that matches the path.
@@ -338,16 +333,23 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         respond(ctx, req, HttpStatus.NOT_FOUND);
     }
 
-    private static String hostname(HttpHeaders headers) {
-        final CharSequence hostname = headers.authority();
-
-        final String hostnameStr = hostname.toString();
-        final int hostnameColonIdx = hostnameStr.lastIndexOf(':');
-        if (hostnameColonIdx < 0) {
-            return hostnameStr;
+    private String hostname(ChannelHandlerContext ctx, HttpHeaders headers) {
+        final String hostname = headers.authority();
+        if (hostname == null) {
+            // Fill the authority with the default host name and current port, just in case the client did not
+            // send it.
+            final String defaultHostname = config.defaultVirtualHost().defaultHostname();
+            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
+            headers.authority(defaultHostname + ':' + port);
+            return defaultHostname;
         }
 
-        return hostnameStr.substring(0, hostnameColonIdx);
+        final int hostnameColonIdx = hostname.lastIndexOf(':');
+        if (hostnameColonIdx < 0) {
+            return hostname;
+        }
+
+        return hostname.substring(0, hostnameColonIdx);
     }
 
     private static String validatePathAndStripQuery(String path) {

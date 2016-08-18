@@ -23,6 +23,8 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
+
 /**
  * A complete HTTP message whose content is readily available as a single {@link HttpData}. It can be an
  * HTTP request or an HTTP response depending on what header values it contains. For example, having a
@@ -124,6 +126,15 @@ public interface AggregatedHttpMessage {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
+
+        // Set the 'content-length' header if possible, but do not overwrite because a response to
+        // a HEAD request will have no content but still have non-zero content-length header.
+        final HttpStatus status = headers.status();
+        if (status != null && !ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
+            if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                headers.setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+            }
+        }
 
         return new DefaultAggregatedHttpMessage(ImmutableList.copyOf(informationals),
                                                 headers, content, trailingHeaders);
