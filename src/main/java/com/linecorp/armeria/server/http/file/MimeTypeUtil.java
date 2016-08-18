@@ -77,8 +77,13 @@ final class MimeTypeUtil {
         }
     }
 
-    static MediaType guessFromPath(String path) {
+    static MediaType guessFromPath(String path, boolean preCompressed) {
         requireNonNull(path, "path");
+        // If the path is for a precompressed file, it will have an additional extension indicating the
+        // encoding, which we don't want to use when determining content type.
+        if (preCompressed) {
+            path = path.substring(0, path.lastIndexOf('.'));
+        }
         final int dotIdx = path.lastIndexOf('.');
         final int slashIdx = path.lastIndexOf('/');
         if (dotIdx < 0 || slashIdx > dotIdx) {

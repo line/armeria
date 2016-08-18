@@ -70,11 +70,12 @@ public interface HttpVfs {
      *
      *
      * @param path an absolute path whose component separator is {@code '/'}
+     * @param contentEncoding the content encoding of the file. Will be non-null for precompressed resources
      *
      * @return the {@link Entry} of the file at the specified {@code path} if found.
      *         {@link Entry#NONE} if not found.
      */
-    Entry get(String path);
+    Entry get(String path, @Nullable String contentEncoding);
 
     /**
      * A file entry in an {@link HttpVfs}.
@@ -87,6 +88,12 @@ public interface HttpVfs {
             @Override
             public MediaType mediaType() {
                 throw new IllegalStateException();
+            }
+
+            @Nullable
+            @Override
+            public String contentEncoding() {
+                return null;
             }
 
             @Override
@@ -113,6 +120,14 @@ public interface HttpVfs {
         MediaType mediaType();
 
         /**
+         * The content encoding of the entry. Will be set for precompressed files.
+         *
+         * @return {code null} if not compressed
+         */
+        @Nullable
+        String contentEncoding();
+
+        /**
          * Returns the modification time of the entry.
          *
          * @return {@code 0} if the entry does not exist.
@@ -132,25 +147,34 @@ public interface HttpVfs {
 
         private final String path;
         private final MediaType mediaType;
+        @Nullable
+        private final String contentEncoding;
 
         /**
          * Creates a new instance with the specified {@code path}.
          */
-        protected AbstractEntry(String path) {
-            this(path, MimeTypeUtil.guessFromPath(path));
+        protected AbstractEntry(String path, @Nullable String contentEncoding) {
+            this(path, MimeTypeUtil.guessFromPath(path, contentEncoding != null), contentEncoding);
         }
 
         /**
          * Creates a new instance with the specified {@code path} and {@code mediaType}.
          */
-        protected AbstractEntry(String path, @Nullable MediaType mediaType) {
+        protected AbstractEntry(String path, @Nullable MediaType mediaType, @Nullable String contentEncoding) {
             this.path = requireNonNull(path, "path");
             this.mediaType = mediaType;
+            this.contentEncoding = contentEncoding;
         }
 
         @Override
         public MediaType mediaType() {
             return mediaType;
+        }
+
+        @Override
+        @Nullable
+        public String contentEncoding() {
+            return contentEncoding;
         }
 
         @Override
@@ -229,7 +253,7 @@ public interface HttpVfs {
          * Creates a new instance with the specified {@code path} and byte array.
          */
         public ByteArrayEntry(String path, byte[] content, long lastModifiedMillis) {
-            super(path);
+            super(path, null);
             this.content = HttpData.of(requireNonNull(content, "content"));
             this.lastModifiedMillis = lastModifiedMillis;
         }
@@ -245,7 +269,7 @@ public interface HttpVfs {
          * Creates a new instance with the specified {@code path}, {@code mediaType} and byte array.
          */
         public ByteArrayEntry(String path, MediaType mediaType, byte[] content, long lastModifiedMillis) {
-            super(path, mediaType);
+            super(path, mediaType, null);
             this.content = HttpData.of(requireNonNull(content, "content"));
             this.lastModifiedMillis = lastModifiedMillis;
         }
