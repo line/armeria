@@ -37,6 +37,7 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SerializationFormat;
@@ -56,6 +57,9 @@ public class DocServiceTest extends AbstractServerTest {
             (name, resultHandler) -> resultHandler.onComplete("Hello " + name);
 
     private static final hello_args SAMPLE_HELLO = new hello_args().setName("sample user");
+    private static final Map<Class<?>, Map<String, String>> SAMPLE_HTTP_HEADERS = ImmutableMap.of(
+            HelloService.class, ImmutableMap.of("foobar", "barbaz"),
+            FooService.class, ImmutableMap.of("barbaz", "barbar"));
 
     @Override
     protected void configureServer(ServerBuilder sb) {
@@ -74,7 +78,9 @@ public class DocServiceTest extends AbstractServerTest {
         sb.serviceAt("/cassandra/debug", cassandraServiceDebug);
         sb.serviceAt("/hbase", hbaseService);
 
-        sb.serviceUnder("/docs/", new DocService(SAMPLE_HELLO).decorate(LoggingService::new));
+        sb.serviceUnder("/docs/",
+                        new DocService(ImmutableList.of(SAMPLE_HELLO), SAMPLE_HTTP_HEADERS)
+                                .decorate(LoggingService::new));
     }
 
     @Test
@@ -91,7 +97,9 @@ public class DocServiceTest extends AbstractServerTest {
                 EndpointInfo.of("*", "/hbase", THRIFT_BINARY, SerializationFormat.ofThrift())));
 
         final String expected = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(
-                Specification.forServiceClasses(serviceMap, ImmutableMap.of(hello_args.class, SAMPLE_HELLO)));
+                Specification.forServiceClasses(serviceMap,
+                                                ImmutableMap.of(hello_args.class, SAMPLE_HELLO),
+                                                SAMPLE_HTTP_HEADERS));
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpGet req = new HttpGet(specificationUri());

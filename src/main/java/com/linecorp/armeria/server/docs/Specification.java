@@ -38,7 +38,8 @@ import com.linecorp.armeria.server.thrift.THttpService;
 class Specification {
 
     static Specification forServiceConfigs(Iterable<ServiceConfig> serviceConfigs,
-                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) {
+                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
+                                           Map<Class<?>, Map<String, String>> sampleHttpHeaders) {
 
         final Map<Class<?>, Iterable<EndpointInfo>> map = new LinkedHashMap<>();
 
@@ -58,18 +59,20 @@ class Specification {
             });
         }
 
-        return forServiceClasses(map, sampleRequests);
+        return forServiceClasses(map, sampleRequests, sampleHttpHeaders);
     }
 
     static Specification forServiceClasses(Map<Class<?>, Iterable<EndpointInfo>> map,
-                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) {
+                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
+                                           Map<Class<?>, Map<String, String>> sampleHttpHeaders) {
         requireNonNull(map, "map");
 
         final List<ServiceInfo> services = new ArrayList<>(map.size());
         final Set<ClassInfo> classes = new HashSet<>();
         map.forEach((serviceClass, endpoints) -> {
             try {
-                final ServiceInfo service = ServiceInfo.of(serviceClass, endpoints, sampleRequests);
+                final ServiceInfo service = ServiceInfo.of(
+                        serviceClass, endpoints, sampleRequests, sampleHttpHeaders.get(serviceClass));
                 services.add(service);
                 classes.addAll(service.classes().values());
             } catch (ClassNotFoundException e) {

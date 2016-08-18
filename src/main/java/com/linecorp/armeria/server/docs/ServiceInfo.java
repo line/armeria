@@ -34,13 +34,17 @@ import javax.annotation.Nullable;
 import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ServiceInfo {
 
+    private static final ObjectMapper mapper = new ObjectMapper();
+
     static ServiceInfo of(
             Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
-            Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) throws ClassNotFoundException {
-
+            Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
+            Map<String, String> sampleHttpHeaders) throws ClassNotFoundException {
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -64,7 +68,16 @@ class ServiceInfo {
             });
         }
 
-        return new ServiceInfo(name, functions, classes, endpoints, docStrings.get(name));
+        String httpHeaders = "";
+        if (sampleHttpHeaders != null) {
+            try {
+                httpHeaders = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(sampleHttpHeaders);
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("Failed to serialize the given httpHeaders", e);
+            }
+        }
+
+        return new ServiceInfo(name, functions, classes, endpoints, docStrings.get(name), httpHeaders);
     }
 
     private static void addClassIfPossible(Set<ClassInfo> classes, TypeInfo typeInfo) {
@@ -86,9 +99,14 @@ class ServiceInfo {
     private final Map<String, ClassInfo> classes;
     private final Map<String, EndpointInfo> endpoints;
     private final String docString;
+    private final String sampleHttpHeaders;
 
-    private ServiceInfo(String name, List<FunctionInfo> functions, Collection<ClassInfo> classes,
-                        Iterable<EndpointInfo> endpoints, @Nullable String docString) {
+    private ServiceInfo(String name,
+                        List<FunctionInfo> functions,
+                        Collection<ClassInfo> classes,
+                        Iterable<EndpointInfo> endpoints,
+                        @Nullable String docString,
+                        @Nullable String sampleHttpHeaders) {
 
         this.name = requireNonNull(name, "name");
 
@@ -115,6 +133,7 @@ class ServiceInfo {
         this.endpoints = Collections.unmodifiableMap(endpoints0);
 
         this.docString = docString;
+        this.sampleHttpHeaders = sampleHttpHeaders;
     }
 
     @JsonProperty
@@ -147,6 +166,11 @@ class ServiceInfo {
         return docString;
     }
 
+    @JsonProperty
+    public String sampleHttpHeaders() {
+        return sampleHttpHeaders;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) { return true; }
@@ -170,6 +194,8 @@ class ServiceInfo {
                ", functions=" + functions() +
                ", classes=" + classes() +
                ", endpoints=" + endpoints() +
+               ", docString=" + docString() +
+               ", sampleHttpHeaders=" + sampleHttpHeaders() +
                '}';
     }
 }
