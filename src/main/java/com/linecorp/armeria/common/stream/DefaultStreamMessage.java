@@ -385,9 +385,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             }
 
             if (e instanceof CompletableFuture) {
-                @SuppressWarnings("unchecked")
-                final CompletableFuture<Void> f = (CompletableFuture<Void>) e;
-                f.completeExceptionally(cause);
+                ((CompletableFuture<?>) e).completeExceptionally(cause);
             }
 
             @SuppressWarnings("unchecked")

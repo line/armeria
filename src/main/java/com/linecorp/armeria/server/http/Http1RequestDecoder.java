@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
+import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -66,6 +67,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private static final Http2Settings DEFAULT_HTTP2_SETTINGS = new Http2Settings();
 
+    private final ServerConfig cfg;
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
 
@@ -75,7 +77,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private int sentResponses;
     private boolean discarding;
 
-    Http1RequestDecoder(Channel channel, AsciiString scheme) {
+    Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme) {
+        this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = new InboundTrafficController(channel);
     }
@@ -128,7 +131,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             id, 1,
                             ArmeriaHttpUtil.toArmeria(nettyReq),
                             HttpUtil.isKeepAlive(nettyReq),
-                            inboundTrafficController);
+                            inboundTrafficController,
+                            cfg.defaultMaxRequestLength());
 
                     ctx.fireChannelRead(req);
                 } else {
@@ -149,14 +153,17 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 final ByteBuf data = content.content();
                 final int dataLength = data.readableBytes();
                 if (dataLength != 0) {
+                    req.increaseTransferredBytes(dataLength);
                     final long maxContentLength = req.maxRequestLength();
-                    if (maxContentLength > 0 && req.writtenBytes() > maxContentLength - dataLength) {
+                    if (maxContentLength > 0 && req.transferredBytes() > maxContentLength) {
                         fail(ctx, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
                         req.close(ContentTooLargeException.get());
                         return;
                     }
 
-                    req.write(HttpData.of(data));
+                    if (req.isOpen()) {
+                        req.write(HttpData.of(data));
+                    }
                 }
 
                 if (msg instanceof LastHttpContent) {

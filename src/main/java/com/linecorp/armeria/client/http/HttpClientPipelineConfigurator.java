@@ -410,7 +410,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             });
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, ResponseLogBuilder.NOOP, 0, UPGRADE_RESPONSE_MAX_LENGTH);
+            responseDecoder.addResponse(0, null, res, ResponseLogBuilder.NOOP, 0, UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();
         }
 
@@ -560,8 +560,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
         Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
-        final Http2ResponseDecoder listener = new Http2ResponseDecoder(
-                ch);
+        final Http2ResponseDecoder listener = new Http2ResponseDecoder(conn, ch);
 
         final Http2ClientConnectionHandler handler =
                 new Http2ClientConnectionHandler(decoder, encoder, new Http2Settings(), listener);

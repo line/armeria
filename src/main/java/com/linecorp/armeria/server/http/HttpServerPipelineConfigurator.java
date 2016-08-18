@@ -133,7 +133,8 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
                 new Http2ServerConnectionHandler(decoder, encoder, new Http2Settings());
 
         // Setup post build options
-        final Http2RequestDecoder listener = new Http2RequestDecoder(pipeline.channel(), handler.encoder());
+        final Http2RequestDecoder listener =
+                new Http2RequestDecoder(config, pipeline.channel(), handler.encoder());
 
         handler.connection().addListener(listener);
         handler.decoder().frameListener(listener);
@@ -174,7 +175,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(new HttpServerCodec());
-            p.addLast(new Http1RequestDecoder(ctx.channel(), SCHEME_HTTPS));
+            p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
             configureRequestCountingHandlers(p);
             p.addLast(new HttpServerHandler(config, SessionProtocol.H1));
         }
@@ -225,7 +226,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
                     },
                     UPGRADE_REQUEST_MAX_LENGTH));
 
-            addAfter(p, baseName, new Http1RequestDecoder(ctx.channel(), SCHEME_HTTP));
+            addAfter(p, baseName, new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP));
         }
 
         private void configureHttp2(ChannelHandlerContext ctx) {
