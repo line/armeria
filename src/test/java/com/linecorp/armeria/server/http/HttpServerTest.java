@@ -23,8 +23,12 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
+import java.io.EOFException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -34,6 +38,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.InflaterInputStream;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,7 +52,9 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.io.ByteStreams;
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -78,6 +86,7 @@ import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
 
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -246,6 +255,54 @@ public class HttpServerTest extends AbstractServerTest {
             }
         });
 
+        sb.serviceAt("/strings", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain"));
+
+                res.write(HttpData.ofUtf8("Armeria "));
+                res.write(HttpData.ofUtf8("is "));
+                res.write(HttpData.ofUtf8("awesome!"));
+                res.close();
+            }
+        }.decorate(HttpEncodingService::new));
+
+        sb.serviceAt("/images", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "image/png"));
+
+                res.write(HttpData.ofUtf8("Armeria "));
+                res.write(HttpData.ofUtf8("is "));
+                res.write(HttpData.ofUtf8("awesome!"));
+                res.close();
+            }
+        }.decorate(HttpEncodingService::new));
+
+        sb.serviceAt("/small", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                String response = Strings.repeat("a", 1023);
+                res.write(HttpHeaders.of(HttpStatus.OK)
+                                     .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                                     .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
+                res.write(HttpData.ofUtf8(response));
+                res.close();
+            }
+        }.decorate(HttpEncodingService::new));
+
+        sb.serviceAt("/large", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                String response = Strings.repeat("a", 1024);
+                res.write(HttpHeaders.of(HttpStatus.OK)
+                                     .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                                     .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
+                res.write(HttpData.ofUtf8(response));
+                res.close();
+            }
+        }.decorate(HttpEncodingService::new));
+
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
                 delegate -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(delegate) {
                     @Override
@@ -362,6 +419,127 @@ public class HttpServerTest extends AbstractServerTest {
         // If the number of deferred reads did not increase and the testStreaming() above did not fail,
         // it probably means the client failed to produce enough amount of traffic.
         assertThat(InboundTrafficController.numDeferredReads(), is(greaterThan(oldNumDeferredReads)));
+    }
+
+    @Test(timeout = 10000)
+    public void testStrings_noAcceptEncoding() throws Exception {
+        final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.GET, "/strings");
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
+        assertThat(res.content().toStringUtf8(), is("Armeria is awesome!"));
+    }
+
+    @Test(timeout = 10000)
+    public void testStrings_acceptEncodingGzip() throws Exception {
+        final DefaultHttpRequest req = new DefaultHttpRequest(
+                HttpHeaders.of(HttpMethod.GET, "/strings")
+                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().get(HttpHeaderNames.VARY), is("accept-encoding"));
+
+        byte[] decoded;
+        try (GZIPInputStream unzipper = new GZIPInputStream(new ByteArrayInputStream(res.content().array()))) {
+            decoded = ByteStreams.toByteArray(unzipper);
+        } catch (EOFException e) {
+            throw new IllegalArgumentException(e);
+        }
+        assertThat(new String(decoded, StandardCharsets.UTF_8), is("Armeria is awesome!"));
+    }
+
+    @Test(timeout = 10000)
+    public void testStrings_acceptEncodingGzip_imageContentType() throws Exception {
+        final DefaultHttpRequest req = new DefaultHttpRequest(
+                HttpHeaders.of(HttpMethod.GET, "/images")
+                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
+        assertThat(res.content().toStringUtf8(), is("Armeria is awesome!"));
+    }
+
+    @Test(timeout = 10000)
+    public void testStrings_acceptEncodingGzip_smallFixedContent() throws Exception {
+        final DefaultHttpRequest req = new DefaultHttpRequest(
+                HttpHeaders.of(HttpMethod.GET, "/small")
+                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
+        assertThat(res.content().toStringUtf8(), is(Strings.repeat("a", 1023)));
+    }
+
+    @Test(timeout = 10000)
+    public void testStrings_acceptEncodingGzip_largeFixedContent() throws Exception {
+        final DefaultHttpRequest req = new DefaultHttpRequest(
+                HttpHeaders.of(HttpMethod.GET, "/large")
+                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("gzip"));
+        assertThat(res.headers().get(HttpHeaderNames.VARY), is("accept-encoding"));
+
+        byte[] decoded;
+        try (GZIPInputStream unzipper = new GZIPInputStream(new ByteArrayInputStream(res.content().array()))) {
+            decoded = ByteStreams.toByteArray(unzipper);
+        }
+        assertThat(new String(decoded, StandardCharsets.UTF_8), is(Strings.repeat("a", 1024)));
+    }
+
+    @Test(timeout = 10000)
+    public void testStrings_acceptEncodingDeflate() throws Exception {
+        final DefaultHttpRequest req = new DefaultHttpRequest(
+                HttpHeaders.of(HttpMethod.GET, "/strings")
+                           .set(HttpHeaderNames.ACCEPT_ENCODING, "deflate"));
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("deflate"));
+        assertThat(res.headers().get(HttpHeaderNames.VARY), is("accept-encoding"));
+
+        byte[] decoded;
+        try (InflaterInputStream unzipper =
+                     new InflaterInputStream(new ByteArrayInputStream(res.content().array()))) {
+            decoded = ByteStreams.toByteArray(unzipper);
+        }
+        assertThat(new String(decoded, StandardCharsets.UTF_8), is("Armeria is awesome!"));
+    }
+
+    @Test(timeout = 10000)
+    public void testStrings_acceptEncodingUnknown() throws Exception {
+        final DefaultHttpRequest req = new DefaultHttpRequest(
+                HttpHeaders.of(HttpMethod.GET, "/strings")
+                           .set(HttpHeaderNames.ACCEPT_ENCODING, "piedpiper"));
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
+        assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
+        assertThat(res.content().toStringUtf8(), is("Armeria is awesome!"));
     }
 
     private void testStreamingRequest(String path) throws InterruptedException, ExecutionException {
