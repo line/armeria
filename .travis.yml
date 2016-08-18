@@ -11,6 +11,7 @@ branches:
 
 notifications:
   email: false
+  slack: line-armeria:vLZppggTRH02hwY2eOACIzCG
 
 cache:
   directories:
