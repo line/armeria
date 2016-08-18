@@ -107,10 +107,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean invoke(ClientRequestContext ctx, HttpRequest req, DecodedHttpResponse res) {
-        final SessionProtocol sessionProtocol = protocol();
-        if (sessionProtocol == null) {
-            res.close(ClosedSessionException.get());
-            return false;
+        if (!res.isOpen()) {
+            // The response has been closed even before its request is sent.
+            req.abort();
+            return true;
         }
 
         final long writeTimeoutMillis = ctx.writeTimeoutMillis();

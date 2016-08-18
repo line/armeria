@@ -18,10 +18,8 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.SessionOption.CONNECT_TIMEOUT;
 import static com.linecorp.armeria.client.SessionOption.EVENT_LOOP_GROUP;
 import static com.linecorp.armeria.client.SessionOption.IDLE_TIMEOUT;
-import static com.linecorp.armeria.client.SessionOption.MAX_CONCURRENCY;
 import static com.linecorp.armeria.client.SessionOption.TRUST_MANAGER_FACTORY;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.mock;
@@ -43,7 +41,6 @@ public class SessionOptionsTest {
         assertThat(options.connectTimeout(), is(notNullValue()));
         assertThat(options.idleTimeout(), is(notNullValue()));
         assertThat(options.trustManagerFactory(), is(Optional.empty()));
-        assertThat(options.maxConcurrency(), greaterThan(0));
     }
 
     @Test
@@ -58,15 +55,12 @@ public class SessionOptionsTest {
                 CONNECT_TIMEOUT.newValue(connectionTimeout),
                 IDLE_TIMEOUT.newValue(idleTimeout),
                 EVENT_LOOP_GROUP.newValue(eventLoop),
-                TRUST_MANAGER_FACTORY.newValue(trustManagerFactory),
-                MAX_CONCURRENCY.newValue(maxConcurrency)
+                TRUST_MANAGER_FACTORY.newValue(trustManagerFactory)
         );
 
         assertThat(options.get(CONNECT_TIMEOUT),is(Optional.of(connectionTimeout)));
         assertThat(options.get(IDLE_TIMEOUT),is(Optional.of(idleTimeout)));
         assertThat(options.get(EVENT_LOOP_GROUP),is(Optional.of(eventLoop)));
-        assertThat(options.get(MAX_CONCURRENCY), is(Optional.of(maxConcurrency)));
-
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -77,11 +71,6 @@ public class SessionOptionsTest {
     @Test(expected = IllegalArgumentException.class)
     public void testValidateFailIdleTimeout(){
         SessionOptions.of(IDLE_TIMEOUT.newValue(Duration.ofMillis(-1)));
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testValidateMaxConcurrency(){
-        SessionOptions.of(MAX_CONCURRENCY.newValue(0));
     }
 }
 

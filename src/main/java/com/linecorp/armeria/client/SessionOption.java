@@ -59,11 +59,6 @@ public class SessionOption<T> extends AbstractOption<T> {
     public static final SessionOption<Duration> IDLE_TIMEOUT = valueOf("IDLE_TIMEOUT");
 
     /**
-     * The maximum number of concurrent in-progress invocations.
-     */
-    public static final SessionOption<Integer> MAX_CONCURRENCY = valueOf("MAX_CONCURRENCY");
-
-    /**
      * The {@link TrustManagerFactory} of a TLS connection.
      */
     public static final SessionOption<TrustManagerFactory> TRUST_MANAGER_FACTORY =

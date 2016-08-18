@@ -19,7 +19,6 @@ import static com.linecorp.armeria.client.SessionOption.ADDRESS_RESOLVER_GROUP;
 import static com.linecorp.armeria.client.SessionOption.CONNECT_TIMEOUT;
 import static com.linecorp.armeria.client.SessionOption.EVENT_LOOP_GROUP;
 import static com.linecorp.armeria.client.SessionOption.IDLE_TIMEOUT;
-import static com.linecorp.armeria.client.SessionOption.MAX_CONCURRENCY;
 import static com.linecorp.armeria.client.SessionOption.POOL_HANDLER_DECORATOR;
 import static com.linecorp.armeria.client.SessionOption.TRUST_MANAGER_FACTORY;
 import static com.linecorp.armeria.client.SessionOption.USE_HTTP2_PREFACE;
@@ -52,7 +51,6 @@ public class SessionOptions extends AbstractOptions {
 
     private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofMillis(3200);
     private static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(10);
-    private static final Integer DEFAULT_MAX_CONCURRENCY = Integer.MAX_VALUE;
     private static final Boolean DEFAULT_USE_HTTP2_PREFACE =
             "true".equals(System.getProperty("com.linecorp.armeria.defaultUseHttp2Preface", "false"));
 
@@ -63,7 +61,6 @@ public class SessionOptions extends AbstractOptions {
     private static final SessionOptionValue<?>[] DEFAULT_OPTION_VALUES = {
             CONNECT_TIMEOUT.newValue(DEFAULT_CONNECTION_TIMEOUT),
             IDLE_TIMEOUT.newValue(DEFAULT_IDLE_TIMEOUT),
-            MAX_CONCURRENCY.newValue(DEFAULT_MAX_CONCURRENCY),
             USE_HTTP2_PREFACE.newValue(DEFAULT_USE_HTTP2_PREFACE)
     };
 
@@ -96,8 +93,6 @@ public class SessionOptions extends AbstractOptions {
             validateConnectionTimeout((Duration) value);
         } else if (option == IDLE_TIMEOUT) {
             validateIdleTimeout((Duration) value);
-        } else if (option == MAX_CONCURRENCY) {
-            validateMaxConcurrency((Integer) value);
         }
 
         return optionValue;
@@ -119,13 +114,6 @@ public class SessionOptions extends AbstractOptions {
                     "idleTimeout: " + idleTimeout + " (expected: >= 0)");
         }
         return idleTimeout;
-    }
-
-    private static int validateMaxConcurrency(int maxConcurrency) {
-        if (maxConcurrency <= 0) {
-            throw new IllegalArgumentException("maxConcurrency: " + maxConcurrency + " (expected: > 0)");
-        }
-        return maxConcurrency;
     }
 
     private SessionOptions(SessionOptionValue<?>... options) {
@@ -222,13 +210,6 @@ public class SessionOptions extends AbstractOptions {
      */
     public long idleTimeoutMillis() {
         return idleTimeout().toMillis();
-    }
-
-    /**
-     * Returns the {@link SessionOption#MAX_CONCURRENCY} value.
-     */
-    public int maxConcurrency() {
-        return getOrElse(MAX_CONCURRENCY, DEFAULT_MAX_CONCURRENCY);
     }
 
     /**

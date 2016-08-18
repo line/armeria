@@ -39,16 +39,16 @@ public class DeferredStreamMessageTest {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         assertThat(m.isOpen()).isTrue();
         assertThat(m.isEmpty()).isFalse();
-        assertThat(m.closeFuture()).isNotCompleted();
+        assertThat(m.closeFuture()).isNotDone();
     }
 
     @Test
     public void testSetDelegate() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        m.setDelegate(new DefaultStreamMessage<>());
-        assertThatThrownBy(() -> m.setDelegate(new DefaultStreamMessage<>()))
+        m.delegate(new DefaultStreamMessage<>());
+        assertThatThrownBy(() -> m.delegate(new DefaultStreamMessage<>()))
                 .isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(() -> m.setDelegate(null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> m.delegate(null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -67,7 +67,7 @@ public class DeferredStreamMessageTest {
         assertAborted(m);
 
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
-        m.setDelegate(d);
+        m.delegate(d);
         assertAborted(d);
     }
 
@@ -76,7 +76,7 @@ public class DeferredStreamMessageTest {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
 
-        m.setDelegate(d);
+        m.delegate(d);
         m.abort();
 
         assertAborted(m);
@@ -91,7 +91,7 @@ public class DeferredStreamMessageTest {
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
         m.subscribe(subscriber);
-        m.setDelegate(d);
+        m.delegate(d);
         verify(subscriber).onSubscribe(any());
 
         m.abort();
@@ -111,7 +111,7 @@ public class DeferredStreamMessageTest {
         m.subscribe(subscriber);
         assertThatThrownBy(() -> m.subscribe(mock(Subscriber.class))).isInstanceOf(IllegalStateException.class);
 
-        m.setDelegate(d);
+        m.delegate(d);
         verify(subscriber).onSubscribe(any());
     }
 
@@ -120,7 +120,7 @@ public class DeferredStreamMessageTest {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
 
-        m.setDelegate(d);
+        m.delegate(d);
 
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
@@ -143,7 +143,7 @@ public class DeferredStreamMessageTest {
     public void testStreaming() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
-        m.setDelegate(d);
+        m.delegate(d);
 
         final List<Object> streamed = new ArrayList<>();
         m.subscribe(new Subscriber<Object>() {
