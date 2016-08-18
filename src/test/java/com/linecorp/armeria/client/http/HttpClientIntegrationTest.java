@@ -176,12 +176,12 @@ public class HttpClientIntegrationTest {
             s.setSoTimeout(10000);
             ByteStreams.readFully(in, buf);
 
+            // Ensure that the encoded request matches.
+            assertThat(new String(buf, StandardCharsets.US_ASCII)).isEqualTo(expected);
+
             // Should not send anything more.
             s.setSoTimeout(1000);
             assertThatThrownBy(in::read).isInstanceOf(SocketTimeoutException.class);
-
-            // Ensure that the encoded request matches.
-            assertThat(new String(buf, StandardCharsets.US_ASCII)).isEqualTo(expected);
         } finally {
             Closeables.close(s, true);
             Closeables.close(ss, true);

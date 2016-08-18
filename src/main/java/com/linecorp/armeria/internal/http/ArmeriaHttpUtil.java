@@ -343,11 +343,7 @@ public final class ArmeriaHttpUtil {
         static {
             RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
                                              HttpHeaderNames.HOST);
-            RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.SCHEME.value(),
-                                             ExtensionHeaderNames.SCHEME.text());
             REQUEST_HEADER_TRANSLATIONS.add(RESPONSE_HEADER_TRANSLATIONS);
-            RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.PATH.value(),
-                                             ExtensionHeaderNames.PATH.text());
         }
 
         private final io.netty.handler.codec.http.HttpHeaders output;

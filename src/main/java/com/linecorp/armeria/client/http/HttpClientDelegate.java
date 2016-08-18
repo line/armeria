@@ -119,6 +119,10 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             headers.authority(authority);
         }
 
+        if (headers.scheme() == null) {
+            headers.scheme(ctx.sessionProtocol().isTls() ? "https" : "http");
+        }
+
         // Add the handlers specified in ClientOptions.
         if (ctx.hasAttr(ClientRequestContext.HTTP_HEADERS)) {
             headers.setAll(ctx.attr(ClientRequestContext.HTTP_HEADERS).get());
