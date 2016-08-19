@@ -26,7 +26,7 @@ import org.reactivestreams.Subscription;
 
 /**
  * A {@link StreamMessage} that filters objects as they are published. The filtering
- * will happen from an IO thread, meaning the order of the filtering will match the
+ * will happen from an I/O thread, meaning the order of the filtering will match the
  * order that the {@code delegate} processes the objects in.
  */
 public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
@@ -49,20 +49,24 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     protected abstract U filter(T obj);
 
     /**
+     * A callback executed just before calling {@link Subscriber#onSubscribe(Subscription)} on
+     * {@code subscriber}. Override this method to execute any initialization logic that may be needed.
+     */
+    protected void beforeSubscribe(Subscriber<? super U> subscriber, Subscription subscription) {}
+
+    /**
      * A callback executed just before calling {@link Subscriber#onComplete()} on {@code subscriber}.
      * Override this method to execute any cleanup logic that may be needed before completing the
      * subscription.
      */
-    protected void beforeComplete(Subscriber<? super U> subscriber) {
-    }
+    protected void beforeComplete(Subscriber<? super U> subscriber) {}
 
     /**
      * A callback executed just before calling {@link Subscriber#onError(Throwable)} on {@code subscriber}.
      * Override this method to execute any cleanup logic that may be needed before failing the
      * subscription.
      */
-    protected void beforeError(Subscriber<? super U> subscriber, Throwable t) {
-    }
+    protected void beforeError(Subscriber<? super U> subscriber, Throwable cause) {}
 
     @Override
     public boolean isOpen() {
@@ -107,6 +111,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onSubscribe(Subscription s) {
+            beforeSubscribe(delegate, s);
             delegate.onSubscribe(s);
         }
 
