@@ -46,6 +46,31 @@ public enum LogLevel {
     /**
      * Logs a message at this level.
      */
+    public void log(Logger logger, String message) {
+        switch (this) {
+            case TRACE:
+                logger.trace(message);
+                break;
+            case DEBUG:
+                logger.debug(message);
+                break;
+            case INFO:
+                logger.info(message);
+                break;
+            case WARN:
+                logger.warn(message);
+                break;
+            case ERROR:
+                logger.error(message);
+                break;
+            default:
+                throw new Error();
+        }
+    }
+
+    /**
+     * Logs a message at this level.
+     */
     @SuppressWarnings("MethodParameterNamingConvention")
     public void log(Logger logger, String format, Object arg1) {
         switch (this) {

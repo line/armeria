@@ -29,6 +29,7 @@ import org.reactivestreams.Subscriber;
 
 import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.http.FilteredHttpResponse;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -36,12 +37,11 @@ import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatusClass;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
-import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A {@link FilteredStreamMessage} that applies HTTP encoding to {@link HttpObject}s as they are published.
  */
-class HttpEncodedResponse extends FilteredStreamMessage<HttpObject, HttpObject> implements HttpResponse {
+class HttpEncodedResponse extends FilteredHttpResponse {
 
     private final HttpEncodingType encodingType;
     private final Predicate<MediaType> encodableContentTypePredicate;
@@ -56,7 +56,7 @@ class HttpEncodedResponse extends FilteredStreamMessage<HttpObject, HttpObject> 
     private boolean headersSent;
 
     HttpEncodedResponse(
-            StreamMessage<HttpObject> delegate,
+            HttpResponse delegate,
             HttpEncodingType encodingType,
             Predicate<MediaType> encodableContentTypePredicate,
             int minBytesToForceChunkedAndEncoding) {
@@ -132,7 +132,7 @@ class HttpEncodedResponse extends FilteredStreamMessage<HttpObject, HttpObject> 
     }
 
     @Override
-    protected void beforeError(Subscriber<? super HttpObject> subscriber, Throwable t) {
+    protected void beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
         closeEncoder();
     }
 
