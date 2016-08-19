@@ -92,8 +92,10 @@ public final class TomcatService implements HttpService {
             LifecycleState.STARTED, LifecycleState.STARTING, LifecycleState.STARTING_PREP);
 
     private static final int TOMCAT_MAJOR_VERSION;
+    private static final URLEncoder TOMCAT_URL_ENCODER;
 
     static {
+        // Detect Tomcat version.
         final Pattern pattern = Pattern.compile("^([1-9][0-9]*)\\.");
         final String version = ServerInfo.getServerNumber();
         final Matcher matcher = pattern.matcher(version);
@@ -112,6 +114,16 @@ public final class TomcatService implements HttpService {
         } else {
             logger.info("Tomcat version: {} (major: unknown)", version);
         }
+
+        // Initialize the default URLEncoder.
+        // NB: We could have used URLEncoder.DEFAULT, but it's not available in pre-8.5.
+        TOMCAT_URL_ENCODER = new URLEncoder();
+        TOMCAT_URL_ENCODER.addSafeCharacter('~');
+        TOMCAT_URL_ENCODER.addSafeCharacter('-');
+        TOMCAT_URL_ENCODER.addSafeCharacter('_');
+        TOMCAT_URL_ENCODER.addSafeCharacter('.');
+        TOMCAT_URL_ENCODER.addSafeCharacter('*');
+        TOMCAT_URL_ENCODER.addSafeCharacter('/');
     }
 
     private static final Set<String> activeEngines = new HashSet<>();
@@ -457,7 +469,7 @@ public final class TomcatService implements HttpService {
         coyoteReq.method().setString(method.name());
 
         // Set the request URI.
-        final byte[] uriBytes = URLEncoder.DEFAULT.encode(mappedPath)
+        final byte[] uriBytes = TOMCAT_URL_ENCODER.encode(mappedPath)
                                                   .getBytes(StandardCharsets.US_ASCII);
         coyoteReq.requestURI().setBytes(uriBytes, 0, uriBytes.length);
 
