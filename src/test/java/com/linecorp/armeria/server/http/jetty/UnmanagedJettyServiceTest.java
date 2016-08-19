@@ -29,6 +29,7 @@ public class UnmanagedJettyServiceTest extends WebAppContainerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
+        super.configureServer(sb);
         jetty = new Server(0);
         jetty.setHandler(JettyServiceTest.newWebAppContext());
         jetty.start();

@@ -35,13 +35,31 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.SessionOption;
+import com.linecorp.armeria.client.SessionOptions;
+import com.linecorp.armeria.client.http.HttpClient;
+import com.linecorp.armeria.client.http.HttpClientFactory;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.server.AbstractServerTest;
+import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public abstract class WebAppContainerTest extends AbstractServerTest {
 
     private static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
+
+    @Override
+    protected void configureServer(ServerBuilder sb) throws Exception {
+        sb.port(0, SessionProtocol.HTTP);
+        sb.port(0, SessionProtocol.HTTPS);
+        SelfSignedCertificate certificate = new SelfSignedCertificate();
+        sb.sslContext(SessionProtocol.HTTPS, certificate.certificate(), certificate.privateKey());
+    }
 
     @Test
     public void testJsp() throws Exception {
@@ -58,6 +76,7 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
                         "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
                         "<p>Context path: </p>" + // ROOT context path
                         "<p>Request URI: /index.jsp</p>" +
+                        "<p>Scheme: http</p>" +
                         "</body></html>"));
             }
         }
@@ -82,6 +101,25 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
                         "</body></html>"));
             }
         }
+    }
+
+    @Test
+    public void testHttps() throws Exception {
+        ClientFactory clientFactory =
+                new HttpClientFactory(SessionOptions.of(
+                        SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE)));
+        HttpClient client = clientFactory.newClient("none+" + httpsUri("/"), HttpClient.class);
+        AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
+        final String actualContent = CR_OR_LF.matcher(response.content().toStringUtf8())
+                                             .replaceAll("");
+        assertThat(actualContent, is(
+                "<html><body>" +
+                "<p>Hello, Armerian World!</p>" +
+                "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
+                "<p>Context path: </p>" + // ROOT context path
+                "<p>Request URI: /index.jsp</p>" +
+                "<p>Scheme: https</p>" +
+                "</body></html>"));
     }
 
     @Test

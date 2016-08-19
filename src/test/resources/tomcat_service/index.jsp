@@ -9,5 +9,6 @@
 <%-- Print some request properties for testing purpose. --%>
 <p>Context path: <%= request.getContextPath() %></p>
 <p>Request URI: <%= request.getRequestURI() %></p>
+<p>Scheme: <%= request.getScheme() %></p>
 </body>
 </html>

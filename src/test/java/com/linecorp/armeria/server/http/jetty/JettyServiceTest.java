@@ -56,6 +56,7 @@ public class JettyServiceTest extends WebAppContainerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
+        super.configureServer(sb);
         sb.serviceUnder(
                 "/jsp/",
                 new JettyServiceBuilder()
