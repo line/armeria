@@ -45,7 +45,8 @@ public class TomcatServiceTest extends WebAppContainerTest {
     private final List<Service> tomcatServices = new ArrayList<>();
 
     @Override
-    protected void configureServer(ServerBuilder sb) {
+    protected void configureServer(ServerBuilder sb) throws Exception {
+        super.configureServer(sb);
         sb.serviceUnder(
                 "/jsp/",
                 TomcatServiceBuilder.forCurrentClassPath("tomcat_service")

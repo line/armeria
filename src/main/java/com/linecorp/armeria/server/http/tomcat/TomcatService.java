@@ -438,6 +438,8 @@ public final class TomcatService implements HttpService {
 
         final Request coyoteReq = new Request();
 
+        coyoteReq.scheme().setString(req.scheme());
+
         // Set the remote host/address.
         final InetSocketAddress remoteAddr = ctx.remoteAddress();
         coyoteReq.remoteAddr().setString(remoteAddr.getAddress().getHostAddress());
