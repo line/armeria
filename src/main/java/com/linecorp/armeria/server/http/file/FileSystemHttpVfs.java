@@ -25,6 +25,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.http.HttpData;
 
 final class FileSystemHttpVfs implements HttpVfs {
@@ -41,7 +43,7 @@ final class FileSystemHttpVfs implements HttpVfs {
     }
 
     @Override
-    public Entry get(String path) {
+    public Entry get(String path, @Nullable String contentEncoding) {
         // Replace '/' with the platform dependent file separator if necessary.
         if (FILE_SEPARATOR_IS_NOT_SLASH) {
             path = path.replace(File.separatorChar, '/');
@@ -52,7 +54,7 @@ final class FileSystemHttpVfs implements HttpVfs {
             return Entry.NONE;
         }
 
-        return new FileSystemEntry(f, path);
+        return new FileSystemEntry(f, path, contentEncoding);
     }
 
     @Override
@@ -64,8 +66,8 @@ final class FileSystemHttpVfs implements HttpVfs {
 
         private final File file;
 
-        FileSystemEntry(File file, String path) {
-            super(path);
+        FileSystemEntry(File file, String path, @Nullable String contentEncoding) {
+            super(path, contentEncoding);
             this.file = file;
         }
 

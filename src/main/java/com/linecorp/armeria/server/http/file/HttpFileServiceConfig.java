@@ -29,12 +29,15 @@ public final class HttpFileServiceConfig {
     private final Clock clock;
     private final int maxCacheEntries;
     private final int maxCacheEntrySizeBytes;
+    private final boolean serveCompressedFiles;
 
-    HttpFileServiceConfig(HttpVfs vfs, Clock clock, int maxCacheEntries, int maxCacheEntrySizeBytes) {
+    HttpFileServiceConfig(HttpVfs vfs, Clock clock, int maxCacheEntries, int maxCacheEntrySizeBytes,
+                          boolean serveCompressedFiles) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.maxCacheEntries = validateMaxCacheEntries(maxCacheEntries);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
+        this.serveCompressedFiles = serveCompressedFiles;
     }
 
     static int validateMaxCacheEntries(int maxCacheEntries) {
@@ -79,6 +82,13 @@ public final class HttpFileServiceConfig {
      */
     public int maxCacheEntrySizeBytes() {
         return maxCacheEntrySizeBytes;
+    }
+
+    /**
+     * Whether pre-compressed files should be served.
+     */
+    public boolean serveCompressedFiles() {
+        return serveCompressedFiles;
     }
 
     @Override

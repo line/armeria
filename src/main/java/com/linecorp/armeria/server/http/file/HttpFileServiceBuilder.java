@@ -68,6 +68,7 @@ public final class HttpFileServiceBuilder {
     private Clock clock = Clock.systemUTC();
     private int maxCacheEntries = 1024;
     private int maxCacheEntrySizeBytes = 65536;
+    private boolean serveCompressedFiles;
 
     private HttpFileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -90,6 +91,20 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
+     * Whether pre-compressed files should be served. {@link HttpFileService} supports serving files
+     * compressed with gzip, with the extension ".gz", and brotli, with the extension ".br". The extension
+     * should be appended to the original file. For example, to serve index.js either raw, gzip-compressed, or
+     * brotli-compressed, there should be three files, index.js, index.js.gz, and index.js.br.
+     * <p>
+     * Some tools for precompressing resources during a build process include gulp-zopfli and gulp-brotli,
+     * which by default create files with the correct extension.
+     */
+    public HttpFileServiceBuilder serveCompressedFiles(boolean serveCompressedFiles) {
+        this.serveCompressedFiles = serveCompressedFiles;
+        return this;
+    }
+
+    /**
      * Returns the maximum allowed size of a cached file entry. The file bigger than this value will not be
      * cached.
      */
@@ -104,7 +119,7 @@ public final class HttpFileServiceBuilder {
      */
     public HttpFileService build() {
         return new HttpFileService(new HttpFileServiceConfig(
-                vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes));
+                vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes, serveCompressedFiles));
     }
 
     @Override

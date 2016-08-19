@@ -28,6 +28,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -140,7 +142,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         private volatile Entry entry = Entry.NONE;
 
         @Override
-        public Entry get(String path) {
+        public Entry get(String path, @Nullable String contentEncoding) {
             return entry;
         }
 

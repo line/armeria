@@ -23,11 +23,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Map;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Splitter;
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.common.Request;
@@ -53,6 +57,8 @@ import com.linecorp.armeria.server.http.file.HttpVfs.Entry;
 public final class HttpFileService extends AbstractHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpFileService.class);
+
+    private static final Splitter COMMA_SPLITTER = Splitter.on(',');
 
     /**
      * Creates a new {@link HttpFileService} for the specified {@code rootDir} in an O/S file system.
@@ -114,7 +120,7 @@ public final class HttpFileService extends AbstractHttpService {
 
     @Override
     protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-        final Entry entry = getEntry(ctx);
+        final Entry entry = getEntry(ctx, req);
         final long lastModifiedMillis = entry.lastModifiedMillis();
 
         if (lastModifiedMillis == 0) {
@@ -162,23 +168,47 @@ public final class HttpFileService extends AbstractHttpService {
             return;
         }
 
-        res.write(HttpHeaders.of(HttpStatus.OK)
-                             .set(HttpHeaderNames.CONTENT_TYPE, entry.mediaType().toString())
-                             .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
-                             .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
-                             .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis));
+        HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
+                   .set(HttpHeaderNames.CONTENT_TYPE, entry.mediaType().toString())
+                   .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
+                   .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
+                   .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis);
+        if (entry.contentEncoding() != null) {
+            headers.set(HttpHeaderNames.CONTENT_ENCODING, entry.contentEncoding());
+        }
+        res.write(headers);
         res.write(data);
         res.close();
     }
 
-    private Entry getEntry(ServiceRequestContext ctx) {
+    private Entry getEntry(ServiceRequestContext ctx, HttpRequest req) {
         final String path = ctx.mappedPath();
-        final Entry entry = getEntry(path);
+
+        EnumSet<FileServiceContentEncoding> supportedEncodings =
+                EnumSet.noneOf(FileServiceContentEncoding.class);
+
+        if (config.serveCompressedFiles()) {
+            // We do a simple parse of the accept-encoding header, without worrying about star values
+            // or priorities.
+            String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
+            if (acceptEncoding != null) {
+                for (String encoding : COMMA_SPLITTER.split(acceptEncoding)) {
+                    for (FileServiceContentEncoding possibleEncoding : FileServiceContentEncoding.values()) {
+                        if (encoding.contains(possibleEncoding.headerValue)) {
+                            supportedEncodings.add(possibleEncoding);
+                        }
+                    }
+                }
+            }
+        }
+
+        final Entry entry = getEntryWithSupportedEncodings(path, supportedEncodings);
 
         if (entry.lastModifiedMillis() == 0) {
             if (path.charAt(path.length() - 1) == '/') {
                 // Try index.html if it was a directory access.
-                final Entry indexEntry = getEntry(path + "index.html");
+                final Entry indexEntry = getEntryWithSupportedEncodings(
+                        path + "index.html", supportedEncodings);
                 if (indexEntry.lastModifiedMillis() != 0) {
                     return indexEntry;
                 }
@@ -188,11 +218,22 @@ public final class HttpFileService extends AbstractHttpService {
         return entry;
     }
 
-    private Entry getEntry(String path) {
+    private Entry getEntryWithSupportedEncodings(String path,
+                                                 EnumSet<FileServiceContentEncoding> supportedEncodings) {
+        for (FileServiceContentEncoding encoding : supportedEncodings) {
+            final Entry entry = getEntry(path + encoding.extension, encoding.headerValue);
+            if (entry.lastModifiedMillis() != 0) {
+                return entry;
+            }
+        }
+        return getEntry(path, null);
+    }
+
+    private Entry getEntry(String path, @Nullable String contentEncoding) {
         assert path != null;
 
         if (cache == null) {
-            return config.vfs().get(path);
+            return config.vfs().get(path, contentEncoding);
         }
 
         CachedEntry e = cache.get(path);
@@ -200,7 +241,7 @@ public final class HttpFileService extends AbstractHttpService {
             return e;
         }
 
-        e = new CachedEntry(config.vfs().get(path), config.maxCacheEntrySizeBytes());
+        e = new CachedEntry(config.vfs().get(path, contentEncoding), config.maxCacheEntrySizeBytes());
         cache.put(path, e);
         return e;
     }
@@ -221,6 +262,12 @@ public final class HttpFileService extends AbstractHttpService {
         @Override
         public MediaType mediaType() {
             return e.mediaType();
+        }
+
+        @Nullable
+        @Override
+        public String contentEncoding() {
+            return e.contentEncoding();
         }
 
         @Override
@@ -285,12 +332,34 @@ public final class HttpFileService extends AbstractHttpService {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            final Entry firstEntry = first.getEntry(ctx);
+            final Entry firstEntry = first.getEntry(ctx, req);
             if (firstEntry.lastModifiedMillis() != 0) {
                 return first.serve(ctx, req);
             } else {
                 return second.serve(ctx, req);
             }
+        }
+    }
+
+    /**
+     * Content encodings supported by {@link HttpFileService}. Will generally support more formats than
+     * {@link com.linecorp.armeria.server.http.encoding.HttpEncodingService} because new formats can be
+     * added as soon as browsers and build tools support them, without having to implement on-the-fly
+     * compression.
+     */
+    private enum FileServiceContentEncoding {
+        // Order matters, we use the enum ordinal as the priority to pick an encoding in. Encodings should
+        // be ordered by priority.
+        BROTLI(".br", "br"),
+        GZIP(".gz", "gzip")
+        ;
+
+        private final String extension;
+        private final String headerValue;
+
+        FileServiceContentEncoding(String extension, String headerValue) {
+            this.extension = extension;
+            this.headerValue = headerValue;
         }
     }
 }
