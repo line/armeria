@@ -61,6 +61,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
         DONE,
     }
 
+    private final HttpServerHandler serverHandler;
     private final ChannelHandlerContext ctx;
     private final HttpObjectEncoder responseEncoder;
     private final Service<?, ?> service;
@@ -72,8 +73,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_HEADERS;
 
-    HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
+    HttpResponseSubscriber(HttpServerHandler serverHandler, ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
                            ServiceRequestContext reqCtx, DecodedHttpRequest req) {
+        this.serverHandler = serverHandler;
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
@@ -240,7 +242,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
             future = responseEncoder.writeData(ctx, req.id(), req.streamId(), data, endOfStream);
             logBuilder.increaseContentLength(data.length());
         } else if (o instanceof HttpHeaders) {
-            future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
+            HttpHeaders headers = (HttpHeaders) o;
+            serverHandler.handleCorsResponseHeaders(req, headers);
+            future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), headers, endOfStream);
         } else {
             // Should never reach here because we did validation in onNext().
             throw new Error();

@@ -494,29 +494,20 @@ public final class ServerBuilder {
 
         return new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, numWorkers, maxPendingRequests, maxConnections,
-<<<<<<< HEAD
-                requestTimeoutPolicy, idleTimeoutMillis, maxFrameLength, gracefulShutdownQuietPeriod,
-                gracefulShutdownTimeout, blockingTaskExecutor, serviceLoggerPrefix, corsConfig));
-=======
                 idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix));
->>>>>>> master
+                blockingTaskExecutor, serviceLoggerPrefix,
+                corsConfig));
     }
 
     @Override
     public String toString() {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts,
-<<<<<<< HEAD
-                numWorkers, maxPendingRequests, maxConnections, requestTimeoutPolicy, idleTimeoutMillis,
-                maxFrameLength, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
-                serviceLoggerPrefix, corsConfig);
-=======
                 numWorkers, maxPendingRequests, maxConnections, idleTimeoutMillis,
                 defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix);
->>>>>>> master
+                blockingTaskExecutor, serviceLoggerPrefix,
+                corsConfig);
     }
 }
