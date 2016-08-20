@@ -15,12 +15,22 @@
  */
 package com.linecorp.armeria.client.routing;
 
+import com.linecorp.armeria.client.Endpoint;
+
 /**
- * A factory interface of {@link EndpointSelector}
+ * {@link Endpoint} selection strategy that creates a {@link EndpointSelector}.
  */
-public interface EndpointSelectionStrategy<T extends Endpoint> {
-    EndpointSelectionStrategy<WeightedEndpoint> WEIGHTED_ROUND_ROBIN = new WeightedRoundRobinStrategy();
+@FunctionalInterface
+public interface EndpointSelectionStrategy {
 
-    EndpointSelector<T> newSelector(EndpointGroup<? extends T> endpointGroup);
+    /**
+     * Weighted round-robin strategy.
+     */
+    EndpointSelectionStrategy WEIGHTED_ROUND_ROBIN = new WeightedRoundRobinStrategy();
 
+    /**
+     * Creates a new {@link EndpointSelector} that selects an {@link Endpoint} from the specified
+     * {@link EndpointGroup}.
+     */
+    EndpointSelector newSelector(EndpointGroup endpointGroup);
 }

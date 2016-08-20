@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,15 +16,19 @@
 
 package com.linecorp.armeria.client.http;
 
+import com.linecorp.armeria.client.ClientOptionDerivable;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+
 import io.netty.util.concurrent.Future;
 
 /**
  * A simple HTTP client that can send a {@link SimpleHttpRequest} to an HTTP/1 or 2 server.
  *
+ * @deprecated Use {@link HttpClient#execute(AggregatedHttpMessage)} instead.
  * @see SimpleHttpRequestBuilder
  */
-@FunctionalInterface
-public interface SimpleHttpClient {
+@Deprecated
+public interface SimpleHttpClient extends ClientOptionDerivable<SimpleHttpClient> {
     /**
      * Sends the specified {@code request} to the HTTP server asynchronously.
      *

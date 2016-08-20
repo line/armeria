@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,46 +17,28 @@
 package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A {@link TimeoutException} raised when a received request has not been processed within timeout.
+ * A {@link TimeoutException} raised when a request has not been received from a client within timeout.
  */
-public class RequestTimeoutException extends TimeoutException {
+public final class RequestTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2556616197251937869L;
+
+    private static final RequestTimeoutException INSTANCE =
+            Exceptions.clearTrace(new RequestTimeoutException());
+
+    /**
+     * Returns a {@link RequestTimeoutException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
+    public static RequestTimeoutException get() {
+        return Exceptions.isVerbose() ? new RequestTimeoutException() : INSTANCE;
+    }
 
     /**
      * Creates a new instance.
      */
-    public RequestTimeoutException() {}
-
-    /**
-     * Creates a new instance with the specified {@code message} and {@code cause}.
-     */
-    public RequestTimeoutException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}.
-     */
-    public RequestTimeoutException(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code cause}.
-     */
-    public RequestTimeoutException(Throwable cause) {
-        super(cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
-     * disabled, and writable stack trace enabled or disabled.
-     */
-    protected RequestTimeoutException(String message, Throwable cause, boolean enableSuppression,
-                                      boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
+    private RequestTimeoutException() {}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,17 +33,18 @@ import org.apache.thrift.TBase;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.thrift.ThriftService;
+import com.linecorp.armeria.server.thrift.THttpService;
 
 class Specification {
 
     static Specification forServiceConfigs(Iterable<ServiceConfig> serviceConfigs,
-                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) {
+                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
+                                           Map<Class<?>, Map<String, String>> sampleHttpHeaders) {
 
         final Map<Class<?>, Iterable<EndpointInfo>> map = new LinkedHashMap<>();
 
         for (ServiceConfig c : serviceConfigs) {
-            c.service().as(ThriftService.class).ifPresent(service -> {
+            c.service().as(THttpService.class).ifPresent(service -> {
                 for (Class<?> iface : service.interfaces()) {
                     final Class<?> serviceClass = iface.getEnclosingClass();
                     final List<EndpointInfo> endpoints =
@@ -58,18 +59,20 @@ class Specification {
             });
         }
 
-        return forServiceClasses(map, sampleRequests);
+        return forServiceClasses(map, sampleRequests, sampleHttpHeaders);
     }
 
     static Specification forServiceClasses(Map<Class<?>, Iterable<EndpointInfo>> map,
-                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests) {
+                                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
+                                           Map<Class<?>, Map<String, String>> sampleHttpHeaders) {
         requireNonNull(map, "map");
 
         final List<ServiceInfo> services = new ArrayList<>(map.size());
         final Set<ClassInfo> classes = new HashSet<>();
         map.forEach((serviceClass, endpoints) -> {
             try {
-                final ServiceInfo service = ServiceInfo.of(serviceClass, endpoints, sampleRequests);
+                final ServiceInfo service = ServiceInfo.of(
+                        serviceClass, endpoints, sampleRequests, sampleHttpHeaders.get(serviceClass));
                 services.add(service);
                 classes.addAll(service.classes().values());
             } catch (ClassNotFoundException e) {
@@ -87,8 +90,8 @@ class Specification {
         final Map<String, ServiceInfo> serviceMap = new TreeMap<>();
         final Map<String, ClassInfo> classMap = new TreeMap<>();
 
-        services.stream().forEach(s -> serviceMap.put(s.name(), s));
-        classes.stream().forEach(c -> classMap.put(c.name(), c));
+        services.forEach(s -> serviceMap.put(s.name(), s));
+        classes.forEach(c -> classMap.put(c.name(), c));
 
         this.services = Collections.unmodifiableMap(serviceMap);
         this.classes = Collections.unmodifiableMap(classMap);

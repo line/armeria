@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -45,7 +45,8 @@ public class TomcatServiceTest extends WebAppContainerTest {
     private final List<Service> tomcatServices = new ArrayList<>();
 
     @Override
-    protected void configureServer(ServerBuilder sb) {
+    protected void configureServer(ServerBuilder sb) throws Exception {
+        super.configureServer(sb);
         sb.serviceUnder(
                 "/jsp/",
                 TomcatServiceBuilder.forCurrentClassPath("tomcat_service")

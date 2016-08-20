@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -60,27 +61,34 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ClientCodec;
-import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.DecoratingClientCodec;
+import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Processor;
-
-import io.netty.buffer.ByteBuf;
 
 /**
  * Test to verify interaction between armeria client and official thrift
  * library's {@link TServlet}.
  */
 public class ThriftOverHttpClientTServletIntegrationTest {
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(ThriftOverHttpClientTServletIntegrationTest.class);
 
     private static final String TSERVLET_PATH = "/thrift";
 
@@ -170,12 +178,22 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
     @AfterClass
     public static void destroyServer() throws Exception {
-        if (http1server != null) {
-            http1server.stop();
-        }
-        if (http2server != null) {
-            http2server.stop();
-        }
+        CompletableFuture.runAsync(() -> {
+            if (http1server != null) {
+                try {
+                    http1server.stop();
+                } catch (Exception e) {
+                    logger.warn("Failed to stop HTTP/1 server", e);
+                }
+            }
+            if (http2server != null) {
+                try {
+                    http2server.stop();
+                } catch (Exception e) {
+                    logger.warn("Failed to stop HTTP/2 server", e);
+                }
+            }
+        });
     }
 
     @Before
@@ -186,11 +204,11 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
     @Test
     public void sendHelloViaHttp1() throws Exception {
-        final AtomicReference<Scheme> scheme = new AtomicReference<>();
-        final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), scheme);
+        final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
+        final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), sessionProtocol);
 
         assertEquals("Hello, old world!", client.hello("old world"));
-        assertThat(scheme.get().sessionProtocol(), is(H1C));
+        assertThat(sessionProtocol.get(), is(H1C));
     }
 
     /**
@@ -201,20 +219,20 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     public void sendHelloViaHttp1WithConnectionClose() throws Exception {
         sendConnectionClose.set(true);
 
-        final AtomicReference<Scheme> scheme = new AtomicReference<>();
-        final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), scheme);
+        final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
+        final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), sessionProtocol);
 
         assertEquals("Hello, ancient world!", client.hello("ancient world"));
-        assertThat(scheme.get().sessionProtocol(), is(H1C));
+        assertThat(sessionProtocol.get(), is(H1C));
     }
 
     @Test
     public void sendHelloViaHttp2() throws Exception {
-        final AtomicReference<Scheme> scheme = new AtomicReference<>();
-        final HelloService.Iface client = newSchemeCapturingClient(http2uri(HTTP), scheme);
+        final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
+        final HelloService.Iface client = newSchemeCapturingClient(http2uri(HTTP), sessionProtocol);
 
         assertEquals("Hello, new world!", client.hello("new world"));
-        assertThat(scheme.get().sessionProtocol(), is(H2C));
+        assertThat(sessionProtocol.get(), is(H2C));
     }
 
     /**
@@ -253,11 +271,13 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         }
     }
 
-    private static HelloService.Iface newSchemeCapturingClient(String uri, AtomicReference<Scheme> scheme) {
-        return Clients.newClient(
-                uri, HelloService.Iface.class,
-                ClientOption.DECORATOR.newValue(
-                        c -> c.decorateCodec(codec -> new SchemeCapturer(codec, scheme))));
+    private static HelloService.Iface newSchemeCapturingClient(
+            String uri, AtomicReference<SessionProtocol> sessionProtocol) {
+
+        return new ClientBuilder(uri)
+                .decorator(ThriftCall.class, ThriftReply.class,
+                           c -> new SessionProtocolCapturer<>(c, sessionProtocol))
+                .build(HelloService.Iface.class);
     }
 
     private static String http1uri(SessionProtocol protocol) {
@@ -276,23 +296,24 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         return ((NetworkConnector) http2server.getConnectors()[0]).getLocalPort();
     }
 
-    private static class SchemeCapturer extends DecoratingClientCodec {
+    private static class SessionProtocolCapturer<I extends Request, O extends Response>
+            extends DecoratingClient<I, O, I, O> {
 
-        private final AtomicReference<Scheme> scheme;
+        private final AtomicReference<SessionProtocol> sessionProtocol;
 
-        SchemeCapturer(ClientCodec delegate, AtomicReference<Scheme> scheme) {
+        @SuppressWarnings("unchecked")
+        SessionProtocolCapturer(Client<? super I, ? extends O> delegate,
+                                AtomicReference<SessionProtocol> sessionProtocol) {
             super(delegate);
-            this.scheme = scheme;
+            this.sessionProtocol = sessionProtocol;
         }
 
         @Override
-        public <T> T decodeResponse(ServiceInvocationContext ctx,
-                                    ByteBuf content, Object originalResponse) throws Exception {
-            if (!scheme.compareAndSet(null, ctx.scheme())) {
-                throw new IllegalStateException("decoded more than one response");
-            }
-
-            return super.decodeResponse(ctx, content, originalResponse);
+        public O execute(ClientRequestContext ctx, I req) throws Exception {
+            ctx.requestLogFuture()
+               .thenAccept(log -> sessionProtocol.set(log.scheme().sessionProtocol()))
+               .exceptionally(CompletionActions::log);
+            return delegate().execute(ctx, req);
         }
     }
 

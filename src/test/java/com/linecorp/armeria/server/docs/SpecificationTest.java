@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHostBuilder;
-import com.linecorp.armeria.server.thrift.ThriftService;
+import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
@@ -40,18 +40,19 @@ public class SpecificationTest {
 
     @Test
     public void servicesTest() throws Exception {
-        final Specification specification =
-                Specification.forServiceConfigs(Arrays.asList(
+        final Specification specification = Specification.forServiceConfigs(
+                Arrays.asList(
                         new ServiceConfig(
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/hello"),
-                                ThriftService.of(mock(HelloService.AsyncIface.class))),
+                                THttpService.of(mock(HelloService.AsyncIface.class))),
                         new ServiceConfig(
                                 new VirtualHostBuilder().build(),
                                 PathMapping.ofExact("/foo"),
-                                ThriftService.ofFormats(mock(FooService.AsyncIface.class),
-                                                        SerializationFormat.THRIFT_COMPACT))),
-                                                Collections.emptyMap());
+                                THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                       SerializationFormat.THRIFT_COMPACT))),
+                Collections.emptyMap(),
+                Collections.emptyMap());
 
         final Map<String, ServiceInfo> services = specification.services();
         assertThat(services.size(), is(2));

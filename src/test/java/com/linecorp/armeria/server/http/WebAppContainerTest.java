@@ -35,13 +35,31 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.SessionOption;
+import com.linecorp.armeria.client.SessionOptions;
+import com.linecorp.armeria.client.http.HttpClient;
+import com.linecorp.armeria.client.http.HttpClientFactory;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.server.AbstractServerTest;
+import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public abstract class WebAppContainerTest extends AbstractServerTest {
 
     private static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
+
+    @Override
+    protected void configureServer(ServerBuilder sb) throws Exception {
+        sb.port(0, SessionProtocol.HTTP);
+        sb.port(0, SessionProtocol.HTTPS);
+        SelfSignedCertificate certificate = new SelfSignedCertificate();
+        sb.sslContext(SessionProtocol.HTTPS, certificate.certificate(), certificate.privateKey());
+    }
 
     @Test
     public void testJsp() throws Exception {
@@ -58,9 +76,50 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
                         "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
                         "<p>Context path: </p>" + // ROOT context path
                         "<p>Request URI: /index.jsp</p>" +
+                        "<p>Scheme: http</p>" +
                         "</body></html>"));
             }
         }
+    }
+
+    @Test
+    public void testJapanesePath() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/jsp/日本語/index.jsp")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("text/html"));
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+                assertThat(actualContent, is(
+                        "<html><body>" +
+                        "<p>Hello, Armerian World!</p>" +
+                        "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
+                        "<p>Context path: </p>" + // ROOT context path
+                        "<p>Request URI: /%E6%97%A5%E6%9C%AC%E8%AA%9E/index.jsp</p>" +
+                        "<p>Servlet Path: /日本語/index.jsp</p>" +
+                        "</body></html>"));
+            }
+        }
+    }
+
+    @Test
+    public void testHttps() throws Exception {
+        ClientFactory clientFactory =
+                new HttpClientFactory(SessionOptions.of(
+                        SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE)));
+        HttpClient client = clientFactory.newClient("none+" + httpsUri("/"), HttpClient.class);
+        AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
+        final String actualContent = CR_OR_LF.matcher(response.content().toStringUtf8())
+                                             .replaceAll("");
+        assertThat(actualContent, is(
+                "<html><body>" +
+                "<p>Hello, Armerian World!</p>" +
+                "<p>Have you heard about the class 'io.netty.buffer.ByteBuf'?</p>" +
+                "<p>Context path: </p>" + // ROOT context path
+                "<p>Request URI: /index.jsp</p>" +
+                "<p>Scheme: https</p>" +
+                "</body></html>"));
     }
 
     @Test
@@ -106,7 +165,7 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
     }
 
     @Test
-    public void testAddressesAndPorts() throws Exception {
+    public void testAddressesAndPorts_127001() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/jsp/addrs_and_ports.jsp")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
@@ -123,6 +182,35 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
                         "<p>LocalAddr: (?!null)[^<]+</p>" +
                         "<p>LocalName: " + server().defaultHostname() + "</p>" +
                         "<p>LocalPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
+                        "<p>ServerName: 127\\.0\\.0\\.1</p>" +
+                        "<p>ServerPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
+                        "</body></html>"));
+            }
+        }
+    }
+
+    @Test
+    public void testAddressesAndPorts_localhost() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet(uri("/jsp/addrs_and_ports.jsp"));
+            request.setHeader("Host", "localhost:1111");
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("text/html"));
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+
+                assertTrue(actualContent, actualContent.matches(
+                        "<html><body>" +
+                        "<p>RemoteAddr: 127\\.0\\.0\\.1</p>" +
+                        "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
+                        "<p>RemotePort: [1-9][0-9]+</p>" +
+                        "<p>LocalAddr: (?!null)[^<]+</p>" +
+                        "<p>LocalName: " + server().defaultHostname() + "</p>" +
+                        "<p>LocalPort: " + server().activePort().get().localAddress().getPort() + "</p>" +
+                        "<p>ServerName: localhost</p>" +
+                        "<p>ServerPort: 1111</p>" +
                         "</body></html>"));
             }
         }

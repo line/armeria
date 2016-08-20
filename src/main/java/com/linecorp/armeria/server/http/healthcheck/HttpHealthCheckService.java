@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,26 +16,22 @@
 
 package com.linecorp.armeria.server.http.healthcheck;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Executor;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.ServiceInvocationHandler;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.http.HttpService;
-
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.util.concurrent.Promise;
 
 /**
  * An {@link HttpService} that responds with HTTP status {@code "200 OK"} if the server is healthy and can
@@ -43,8 +39,8 @@ import io.netty.util.concurrent.Promise;
  * accept requests. The default behavior is to respond healthy after the server is started and unhealthy
  * after it started to stop.
  *
- * <p>Subclasses can override {@link #newHealthyResponse(ServiceInvocationContext)} or
- * {@link #newUnhealthyResponse(ServiceInvocationContext)} if they need to customize the response.</p>
+ * <p>Subclasses can override {@link #newHealthyResponse(ServiceRequestContext)} or
+ * {@link #newUnhealthyResponse(ServiceRequestContext)} if they need to customize the response.</p>
  *
  * <h2>Example:</h2>
  * <pre>{@code
@@ -56,9 +52,8 @@ import io.netty.util.concurrent.Promise;
  *         .build();
  * }</pre>
  *
- * <p>You can also specify additional {@link HealthChecker}s when constructing an
- * {@link HttpHealthCheckHandler}. It will respond with a unhealthy response if the
- * {@link HealthChecker#isHealthy()} method returns {@code false} for any of them.
+ * <p>You can also specify additional {@link HealthChecker}s at construction time. It will respond with a
+ * unhealthy response if the {@link HealthChecker#isHealthy()} method returns {@code false} for any of them.
  * This can be useful when you want to stop receiving requests from a load balancer without stopping a
  * {@link Server}. e.g. the backend got unhealthy.</p>
  *
@@ -72,48 +67,45 @@ import io.netty.util.concurrent.Promise;
  *         .build();
  * }</pre>
  */
-public class HttpHealthCheckService extends HttpService {
+public class HttpHealthCheckService extends AbstractHttpService {
 
-    private static final byte[] RES_OK = "ok".getBytes(StandardCharsets.US_ASCII);
-    private static final byte[] RES_NOT_OK = "not ok".getBytes(StandardCharsets.US_ASCII);
+    private static final HttpData RES_OK = HttpData.ofAscii("ok");
+    private static final HttpData RES_NOT_OK = HttpData.ofAscii("not ok");
 
     private final List<HealthChecker> healthCheckers;
     private final ServerListener serverHealthUpdater;
-    private final ServiceInvocationHandler handler;
 
     final SettableHealthChecker serverHealth;
 
     private Server server;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param healthCheckers the additional {@link HealthChecker}s
+     */
     public HttpHealthCheckService(HealthChecker... healthCheckers) {
         this.healthCheckers = Collections.unmodifiableList(Arrays.asList(healthCheckers));
         serverHealth = new SettableHealthChecker();
         serverHealthUpdater = new ServerHealthUpdater();
-        handler = new HttpHealthCheckHandler();
     }
 
     /**
      * Creates a new response which is sent when the {@link Server} is healthy.
      */
-    protected FullHttpResponse newHealthyResponse(
-            @SuppressWarnings("UnusedParameters") ServiceInvocationContext ctx) {
+    protected AggregatedHttpMessage newHealthyResponse(
+            @SuppressWarnings("UnusedParameters") ServiceRequestContext ctx) {
 
-        return new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1,
-                HttpResponseStatus.OK,
-                Unpooled.wrappedBuffer(RES_OK));
+        return AggregatedHttpMessage.of(HttpStatus.OK, RES_OK);
     }
 
     /**
      * Creates a new response which is sent when the {@link Server} is unhealthy.
      */
-    protected FullHttpResponse newUnhealthyResponse(
-            @SuppressWarnings("UnusedParameters") ServiceInvocationContext ctx) {
+    protected AggregatedHttpMessage newUnhealthyResponse(
+            @SuppressWarnings("UnusedParameters") ServiceRequestContext ctx) {
 
-        return new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1,
-                HttpResponseStatus.SERVICE_UNAVAILABLE,
-                Unpooled.wrappedBuffer(RES_NOT_OK));
+        return AggregatedHttpMessage.of(HttpStatus.SERVICE_UNAVAILABLE, RES_NOT_OK);
     }
 
     @Override
@@ -133,8 +125,24 @@ public class HttpHealthCheckService extends HttpService {
     }
 
     @Override
-    public ServiceInvocationHandler handler() {
-        return handler;
+    protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+        final AggregatedHttpMessage response;
+        if (isHealthy()) {
+            response = newHealthyResponse(ctx);
+        } else {
+            response = newUnhealthyResponse(ctx);
+        }
+
+        res.respond(response);
+    }
+
+    private boolean isHealthy() {
+        for (HealthChecker healthChecker : healthCheckers) {
+            if (!healthChecker.isHealthy()) {
+                return false;
+            }
+        }
+        return serverHealth.isHealthy();
     }
 
     final class ServerHealthUpdater extends ServerListenerAdapter {
@@ -146,31 +154,6 @@ public class HttpHealthCheckService extends HttpService {
         @Override
         public void serverStopping(Server server) throws Exception {
             serverHealth.setHealthy(false);
-        }
-    }
-
-    final class HttpHealthCheckHandler implements ServiceInvocationHandler {
-        @Override
-        public void invoke(ServiceInvocationContext ctx,
-                           Executor blockingTaskExecutor, Promise<Object> promise) throws Exception {
-
-            FullHttpResponse response;
-            if (isHealthy()) {
-                response = newHealthyResponse(ctx);
-            } else {
-                response = newUnhealthyResponse(ctx);
-            }
-
-            ctx.resolvePromise(promise, response);
-        }
-
-        private boolean isHealthy() {
-            for (HealthChecker healthChecker : healthCheckers) {
-                if (!healthChecker.isHealthy()) {
-                    return false;
-                }
-            }
-            return serverHealth.isHealthy();
         }
     }
 }

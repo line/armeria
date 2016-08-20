@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,8 +21,6 @@ import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.nio.charset.StandardCharsets;
-
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -30,16 +28,17 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
+import com.google.common.net.MediaType;
+
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.VirtualHostBuilder;
-import com.linecorp.armeria.server.http.HttpService;
-
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.http.AbstractHttpService;
 
 public class CompositeServiceTest extends AbstractServerTest {
 
@@ -77,7 +76,6 @@ public class CompositeServiceTest extends AbstractServerTest {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("C:/qux/Z:/Z"));
             }
-
         }
     }
 
@@ -110,7 +108,7 @@ public class CompositeServiceTest extends AbstractServerTest {
         }
     }
 
-    private static final class TestCompositeService extends AbstractCompositeService {
+    private static final class TestCompositeService extends AbstractCompositeService<HttpRequest, HttpResponse> {
         TestCompositeService() {
             super(CompositeServiceEntry.ofPrefix("/foo/", serviceA),
                   CompositeServiceEntry.ofPrefix("/bar/", serviceB),
@@ -118,12 +116,18 @@ public class CompositeServiceTest extends AbstractServerTest {
         }
     }
 
-    private static final class TestService extends HttpService {
+    private static final class TestService extends AbstractHttpService {
+
+        private final String name;
+
         TestService(String name) {
-            super((ctx, blockingTaskExecutor, promise) -> promise.setSuccess(new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                    Unpooled.copiedBuffer(name + ':' + ctx.path() + ':' + ctx.mappedPath(),
-                                          StandardCharsets.UTF_8))));
+            this.name = name;
+        }
+
+        @Override
+        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                        "%s:%s:%s", name, ctx.path(), ctx.mappedPath());
         }
     }
 }

@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.util.LruMap;
@@ -32,6 +31,8 @@ import com.linecorp.armeria.server.composition.SimpleCompositeService;
 /**
  * Maps a request path to a value associated with a matching {@link PathMapping}. Useful when building a
  * service that delegates some or all of its requests to other services. e.g. {@link SimpleCompositeService}.
+ *
+ * @param <T> the type of the mapped value
  */
 public class PathMappings<T> implements Function<String, PathMapped<T>> {
 

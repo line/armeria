@@ -15,12 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.net.URI;
-import java.util.function.Function;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -29,111 +24,135 @@ public final class Clients {
 
     /**
      * Creates a new client that connects to the specified {@code uri} using the default
-     * {@link RemoteInvokerFactory}.
+     * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
-     * @param interfaceClass the type of the new client
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
-    public static <T> T newClient(String uri, Class<T> interfaceClass, ClientOptionValue<?>... options) {
-        return newClient(RemoteInvokerFactory.DEFAULT, uri, interfaceClass, options);
+    public static <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
+        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
     }
 
     /**
      * Creates a new client that connects to the specified {@code uri} using the default
-     * {@link RemoteInvokerFactory}.
+     * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
-     * @param interfaceClass the type of the new client
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
-    public static <T> T newClient(String uri, Class<T> interfaceClass, ClientOptions options) {
-        return newClient(RemoteInvokerFactory.DEFAULT, uri, interfaceClass, options);
+    public static <T> T newClient(String uri, Class<T> clientType, ClientOptions options) {
+        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
     }
 
     /**
      * Creates a new client that connects to the specified {@code uri} using an alternative
-     * {@link RemoteInvokerFactory}.
+     * {@link ClientFactory}.
      *
-     * @param remoteInvokerFactory an alternative {@link RemoteInvokerFactory}
+     * @param factory an alternative {@link ClientFactory}
      * @param uri the URI of the server endpoint
-     * @param interfaceClass the type of the new client
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
-    public static <T> T newClient(RemoteInvokerFactory remoteInvokerFactory, String uri,
-                                  Class<T> interfaceClass, ClientOptionValue<?>... options) {
+    public static <T> T newClient(ClientFactory factory, String uri,
+                                  Class<T> clientType, ClientOptionValue<?>... options) {
 
-        return new ClientBuilder(uri).remoteInvokerFactory(remoteInvokerFactory).options(options)
-                                     .build(interfaceClass);
+        return new ClientBuilder(uri).factory(factory).options(options)
+                                     .build(clientType);
     }
 
     /**
      * Creates a new client that connects to the specified {@code uri} using an alternative
-     * {@link RemoteInvokerFactory}.
+     * {@link ClientFactory}.
      *
-     * @param remoteInvokerFactory an alternative {@link RemoteInvokerFactory}
+     * @param factory an alternative {@link ClientFactory}
      * @param uri the URI of the server endpoint
-     * @param interfaceClass the type of the new client
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
-    public static <T> T newClient(RemoteInvokerFactory remoteInvokerFactory, String uri,
-                                  Class<T> interfaceClass, ClientOptions options) {
-        return new ClientBuilder(uri).remoteInvokerFactory(remoteInvokerFactory).options(options)
-                                     .build(interfaceClass);
+    public static <T> T newClient(ClientFactory factory, String uri,
+                                  Class<T> clientType, ClientOptions options) {
+        return new ClientBuilder(uri).factory(factory).options(options)
+                                     .build(clientType);
     }
 
     /**
      * Creates a new client that connects to the specified {@link URI} using the default
-     * {@link RemoteInvokerFactory}.
+     * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
-     * @param interfaceClass the type of the new client
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
-    public static <T> T newClient(URI uri, Class<T> interfaceClass, ClientOptionValue<?>... options) {
-        return newClient(RemoteInvokerFactory.DEFAULT, uri, interfaceClass, options);
+    public static <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
+        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
     }
 
     /**
      * Creates a new client that connects to the specified {@link URI} using the default
-     * {@link RemoteInvokerFactory}.
+     * {@link ClientFactory}.
      *
      * @param uri the URI of the server endpoint
-     * @param interfaceClass the type of the new client
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
-    public static <T> T newClient(URI uri, Class<T> interfaceClass, ClientOptions options) {
-        return newClient(RemoteInvokerFactory.DEFAULT, uri, interfaceClass, options);
+    public static <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
+        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
     }
 
     /**
      * Creates a new client that connects to the specified {@link URI} using an alternative
-     * {@link RemoteInvokerFactory}.
+     * {@link ClientFactory}.
      *
-     * @param remoteInvokerFactory an alternative {@link RemoteInvokerFactory}
+     * @param factory an alternative {@link ClientFactory}
      * @param uri the URI of the server endpoint
-     * @param interfaceClass the type of the new client
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
-    public static <T> T newClient(RemoteInvokerFactory remoteInvokerFactory, URI uri, Class<T> interfaceClass,
+    public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
-        return new ClientBuilder(uri).remoteInvokerFactory(remoteInvokerFactory).options(options)
-                                     .build(interfaceClass);
+        return new ClientBuilder(uri).factory(factory).options(options)
+                                     .build(clientType);
     }
 
     /**
      * Creates a new client that connects to the specified {@link URI} using an alternative
-     * {@link RemoteInvokerFactory}.
+     * {@link ClientFactory}.
      *
-     * @param remoteInvokerFactory an alternative {@link RemoteInvokerFactory}
+     * @param factory an alternative {@link ClientFactory}
      * @param uri the URI of the server endpoint
-     * @param interfaceClass the type of the new client
+     * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
+     *                                     the specified {@code clientType} is unsupported for the scheme
      */
-    public static <T> T newClient(RemoteInvokerFactory remoteInvokerFactory, URI uri, Class<T> interfaceClass,
+    public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType,
                                   ClientOptions options) {
-        return new ClientBuilder(uri).remoteInvokerFactory(remoteInvokerFactory).options(options)
-                                     .build(interfaceClass);
+        return new ClientBuilder(uri).factory(factory).options(options)
+                                     .build(clientType);
     }
 
     /**
@@ -142,9 +161,7 @@ public final class Clients {
      * the specified {@code client} unless specified in {@code additionalOptions}.
      */
     public static <T> T newDerivedClient(T client, ClientOptionValue<?>... additionalOptions) {
-        requireNonNull(additionalOptions, "additionalOptions");
-        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
-        return newDerivedClient(client, baseOptions -> ClientOptions.of(baseOptions, additionalOptions));
+        return asDerivable(client).withOptions(additionalOptions);
     }
 
     /**
@@ -153,44 +170,18 @@ public final class Clients {
      * the specified {@code client} unless specified in {@code additionalOptions}.
      */
     public static <T> T newDerivedClient(T client, Iterable<ClientOptionValue<?>> additionalOptions) {
-        requireNonNull(additionalOptions, "additionalOptions");
-        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
-        return newDerivedClient(client, baseOptions -> ClientOptions.of(baseOptions, additionalOptions));
+        return asDerivable(client).withOptions(additionalOptions);
     }
 
-    private static <T> T newDerivedClient(T client,
-                                          Function<ClientOptions, ClientOptions> optionFactory) {
-
-        requireNonNull(client, "client");
-
-        ClientInvocationHandler parent = null;
-        try {
-            InvocationHandler ih = Proxy.getInvocationHandler(client);
-            if (ih instanceof ClientInvocationHandler) {
-                parent = (ClientInvocationHandler) ih;
-            }
-        } catch (IllegalArgumentException expected) {
-            // Will reach here when 'client' is not a proxy object.
+    private static <T> ClientOptionDerivable<T> asDerivable(T client) {
+        if (!(client instanceof ClientOptionDerivable)) {
+            throw new IllegalArgumentException("client does not support derivation: " + client);
         }
-
-        if (parent == null) {
-            throw new IllegalArgumentException("not a client: " + client);
-        }
-
-        final Class<?> interfaceClass = parent.interfaceClass();
 
         @SuppressWarnings("unchecked")
-        final T derived = (T) Proxy.newProxyInstance(
-                interfaceClass.getClassLoader(),
-                new Class[] { interfaceClass },
-                new ClientInvocationHandler(parent.eventLoopGroup(),
-                                            parent.uri(), interfaceClass, parent.client(),
-                                            optionFactory.apply(parent.options())));
-
-        return derived;
+        final ClientOptionDerivable<T> derivable = (ClientOptionDerivable<T>) client;
+        return derivable;
     }
 
     private Clients() {}
 }
-
-

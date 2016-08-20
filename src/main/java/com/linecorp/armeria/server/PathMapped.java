@@ -22,6 +22,8 @@ import javax.annotation.Nullable;
 
 /**
  * A value mapped by {@link PathMappings}.
+ *
+ * @param <T> the type of the mapped value
  */
 public final class PathMapped<T> {
 

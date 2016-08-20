@@ -15,6 +15,6 @@
  */
 
 /**
- * Logging service.
+ * Logging and metric-collecting service decorators.
  */
 package com.linecorp.armeria.server.logging;

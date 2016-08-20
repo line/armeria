@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Function;
@@ -43,27 +44,34 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import com.linecorp.armeria.client.ClientDecoration;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.RemoteInvokerFactory;
-import com.linecorp.armeria.client.RemoteInvokerOption;
-import com.linecorp.armeria.client.RemoteInvokerOptionValue;
-import com.linecorp.armeria.client.RemoteInvokerOptions;
+import com.linecorp.armeria.client.SessionOption;
+import com.linecorp.armeria.client.SessionOptionValue;
+import com.linecorp.armeria.client.SessionOptions;
+import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.ServiceInvocationContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.server.thrift.ThriftService;
+import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.FileService;
 import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
@@ -72,11 +80,9 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.TimeService;
 
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
 @RunWith(Parameterized.class)
@@ -88,8 +94,8 @@ public class ThriftOverHttpClientTest {
 
     private static int httpPort;
     private static int httpsPort;
-    private static RemoteInvokerFactory remoteInvokerFactoryWithUseHttp2Preface;
-    private static RemoteInvokerFactory remoteInvokerFactoryWithoutUseHttp2Preface;
+    private static ClientFactory clientFactoryWithUseHttp2Preface;
+    private static ClientFactory clientFactoryWithoutUseHttp2Preface;
     private static ClientOptions clientOptions;
 
     private static final BlockingQueue<String> serverReceivedNames = new LinkedBlockingQueue<>();
@@ -115,8 +121,8 @@ public class ThriftOverHttpClientTest {
 
     private static final HeaderService.AsyncIface headerServiceHandler =
             (name, resultHandler) -> {
-                final FullHttpRequest req = ServiceInvocationContext.current().originalRequest();
-                resultHandler.onComplete(req.headers().get(name, ""));
+                final HttpRequest req = RequestContext.current().request();
+                resultHandler.onComplete(req.headers().get(AsciiString.of(name), ""));
             };
 
     private enum Handlers {
@@ -167,10 +173,12 @@ public class ThriftOverHttpClientTest {
 
             for (Handlers h : Handlers.values()) {
                 for (SerializationFormat defaultSerializationFormat : SerializationFormat.ofThrift()) {
-                    final Service service = ThriftService.of(h.handler(), defaultSerializationFormat);
-                    sb.serviceAt(h.getPath(defaultSerializationFormat),
-                                 ENABLE_LOGGING_DECORATORS ? service.decorate(LoggingService::new)
-                                                           : service);
+                    Service<HttpRequest, HttpResponse> service =
+                            THttpService.of(h.handler(), defaultSerializationFormat);
+                    if (ENABLE_LOGGING_DECORATORS) {
+                        service = service.decorate(LoggingService::new);
+                    }
+                    sb.serviceAt(h.getPath(defaultSerializationFormat), service);
                 }
             }
         } catch (Exception e) {
@@ -214,7 +222,7 @@ public class ThriftOverHttpClientTest {
 
     @BeforeClass
     public static void init() throws Exception {
-        server.start().sync();
+        server.start().get();
 
         httpPort = server.activePorts().values().stream()
                          .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress()
@@ -223,35 +231,43 @@ public class ThriftOverHttpClientTest {
                           .filter(p -> p.protocol() == SessionProtocol.HTTPS).findAny().get().localAddress()
                           .getPort();
 
-        final RemoteInvokerOptionValue<TrustManagerFactory> trustManagerFactoryOptVal =
-                RemoteInvokerOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE);
+        final SessionOptionValue<TrustManagerFactory> trustManagerFactoryOptVal =
+                SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE);
 
-        final RemoteInvokerOptionValue<Function<KeyedChannelPoolHandler<PoolKey>,
-                                                KeyedChannelPoolHandler<PoolKey>>> poolHandlerDecoratorOptVal =
-                RemoteInvokerOption.POOL_HANDLER_DECORATOR.newValue(
+        final SessionOptionValue<Function<KeyedChannelPoolHandler<PoolKey>,
+                                                        KeyedChannelPoolHandler<PoolKey>>> poolHandlerDecoratorOptVal =
+                SessionOption.POOL_HANDLER_DECORATOR.newValue(
                         ENABLE_LOGGING_DECORATORS ? KeyedChannelPoolLoggingHandler::new
                                                   : Function.identity());
 
-        remoteInvokerFactoryWithUseHttp2Preface = new RemoteInvokerFactory(RemoteInvokerOptions.of(
-                trustManagerFactoryOptVal,
-                poolHandlerDecoratorOptVal,
-                RemoteInvokerOption.USE_HTTP2_PREFACE.newValue(true)));
+        clientFactoryWithUseHttp2Preface = new THttpClientFactory(
+                new HttpClientFactory(SessionOptions.of(
+                        trustManagerFactoryOptVal,
+                        poolHandlerDecoratorOptVal,
+                        SessionOption.USE_HTTP2_PREFACE.newValue(true))));
 
-        remoteInvokerFactoryWithoutUseHttp2Preface = new RemoteInvokerFactory(RemoteInvokerOptions.of(
-                trustManagerFactoryOptVal,
-                poolHandlerDecoratorOptVal,
-                RemoteInvokerOption.USE_HTTP2_PREFACE.newValue(false)));
+        clientFactoryWithoutUseHttp2Preface = new THttpClientFactory(
+                new HttpClientFactory(SessionOptions.of(
+                        trustManagerFactoryOptVal,
+                        poolHandlerDecoratorOptVal,
+                        SessionOption.USE_HTTP2_PREFACE.newValue(false))));
 
-        clientOptions =
-                ENABLE_LOGGING_DECORATORS ? ClientOptions.of(ClientOption.DECORATOR.newValue(LoggingClient::new))
-                                          : ClientOptions.DEFAULT;
+        if (ENABLE_LOGGING_DECORATORS) {
+            clientOptions = ClientOptions.of(
+                    ClientOption.DECORATION.newValue(
+                            ClientDecoration.of(ThriftCall.class, ThriftReply.class, LoggingClient::new)));
+        } else {
+            clientOptions = ClientOptions.DEFAULT;
+        }
     }
 
     @AfterClass
     public static void destroy() throws Exception {
-        remoteInvokerFactoryWithUseHttp2Preface.close();
-        remoteInvokerFactoryWithoutUseHttp2Preface.close();
-        server.stop();
+        CompletableFuture.runAsync(() -> {
+            clientFactoryWithUseHttp2Preface.close();
+            clientFactoryWithoutUseHttp2Preface.close();
+            server.stop();
+        });
     }
 
     @Before
@@ -259,15 +275,15 @@ public class ThriftOverHttpClientTest {
         serverReceivedNames.clear();
     }
 
-    private RemoteInvokerFactory remoteInvokerFactory() {
-        return useHttp2Preface ? remoteInvokerFactoryWithUseHttp2Preface
-                               : remoteInvokerFactoryWithoutUseHttp2Preface;
+    private ClientFactory clientFactory() {
+        return useHttp2Preface ? clientFactoryWithUseHttp2Preface
+                               : clientFactoryWithoutUseHttp2Preface;
     }
 
     @Test
     public void testHelloServiceSync() throws Exception {
 
-        HelloService.Iface client = Clients.newClient(remoteInvokerFactory(), getURI(Handlers.HELLO),
+        HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
                                                       Handlers.HELLO.Iface(), clientOptions);
         assertEquals("Hello, kukuman!", client.hello("kukuman"));
 
@@ -279,10 +295,10 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testHelloServiceAsync() throws Exception {
         HelloService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.HELLO), Handlers.HELLO.AsyncIface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.HELLO), Handlers.HELLO.AsyncIface(),
                                   clientOptions);
 
-        int testCount = 10;
+        final int testCount = 10;
         final BlockingQueue<AbstractMap.SimpleEntry<Integer, ?>> resultQueue =
                 new LinkedBlockingDeque<>(testCount);
         for (int i = 0; i < testCount; i++) {
@@ -303,13 +319,12 @@ public class ThriftOverHttpClientTest {
             AbstractMap.SimpleEntry<Integer, ?> pair = resultQueue.take();
             assertEquals("Hello, kukuman" + pair.getKey() + '!', pair.getValue());
         }
-
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 10000)
     public void testOnewayHelloServiceSync() throws Exception {
         OnewayHelloService.Iface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.ONEWAYHELLO),
+                Clients.newClient(clientFactory(), getURI(Handlers.ONEWAYHELLO),
                                   Handlers.ONEWAYHELLO.Iface(), clientOptions);
         client.hello("kukuman");
         client.hello("kukuman2");
@@ -317,10 +332,10 @@ public class ThriftOverHttpClientTest {
         assertEquals("kukuman2", serverReceivedNames.take());
     }
 
-    @Test(timeout = 1000)
+    @Test(timeout = 10000)
     public void testOnewayHelloServiceAsync() throws Exception {
         OnewayHelloService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.ONEWAYHELLO),
+                Clients.newClient(clientFactory(), getURI(Handlers.ONEWAYHELLO),
                                   Handlers.ONEWAYHELLO.AsyncIface(), clientOptions);
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -341,7 +356,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testDevNullServiceSync() throws Exception {
         DevNullService.Iface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.DEVNULL), Handlers.DEVNULL.Iface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.DEVNULL), Handlers.DEVNULL.Iface(),
                                   clientOptions);
         client.consume("kukuman");
         client.consume("kukuman2");
@@ -352,7 +367,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testDevNullServiceAsync() throws Exception {
         DevNullService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.DEVNULL),
+                Clients.newClient(clientFactory(), getURI(Handlers.DEVNULL),
                                   Handlers.DEVNULL.AsyncIface(), clientOptions);
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
@@ -373,7 +388,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testTimeServiceSync() throws Exception {
         TimeService.Iface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.TIME), Handlers.TIME.Iface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.TIME), Handlers.TIME.Iface(),
                                   clientOptions);
 
         long serverTime = client.getServerTime();
@@ -383,7 +398,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testTimeServiceAsync() throws Exception {
         TimeService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.TIME), Handlers.TIME.AsyncIface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.TIME), Handlers.TIME.AsyncIface(),
                                   clientOptions);
 
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -394,10 +409,10 @@ public class ThriftOverHttpClientTest {
         assertThat((Long) result, lessThanOrEqualTo(System.currentTimeMillis()));
     }
 
-    @Test(timeout = 1000, expected = FileServiceException.class)
+    @Test(timeout = 10000, expected = FileServiceException.class)
     public void testFileServiceSync() throws Exception {
         FileService.Iface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.FILE), Handlers.FILE.Iface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.FILE), Handlers.FILE.Iface(),
                                   clientOptions);
 
         client.create("test");
@@ -406,7 +421,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testFileServiceAsync() throws Exception {
         FileService.AsyncIface client =
-                Clients.newClient(remoteInvokerFactory(), getURI(Handlers.FILE), Handlers.FILE.AsyncIface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.FILE), Handlers.FILE.AsyncIface(),
                                   clientOptions);
 
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -417,21 +432,21 @@ public class ThriftOverHttpClientTest {
 
     @Test(timeout = 10000)
     public void testDerivedClient() throws Exception {
-        final String AUTHORIZATION = "Authorization";
+        final String AUTHORIZATION = "authorization";
         final String NO_TOKEN = "";
         final String TOKEN_A = "token 1234";
         final String TOKEN_B = "token 5678";
 
-        final HeaderService.Iface client = Clients.newClient(remoteInvokerFactory(), getURI(Handlers.HEADER),
+        final HeaderService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HEADER),
                                                              Handlers.HEADER.Iface(), clientOptions);
 
         assertThat(client.header(AUTHORIZATION), is(NO_TOKEN));
 
         final HeaderService.Iface clientA =
-                Clients.newDerivedClient(client, newHttpHeaderOption(AUTHORIZATION, TOKEN_A));
+                Clients.newDerivedClient(client, newHttpHeaderOption(AsciiString.of(AUTHORIZATION), TOKEN_A));
 
         final HeaderService.Iface clientB =
-                Clients.newDerivedClient(client, newHttpHeaderOption(AUTHORIZATION, TOKEN_B));
+                Clients.newDerivedClient(client, newHttpHeaderOption(AsciiString.of(AUTHORIZATION), TOKEN_B));
 
         assertThat(clientA.header(AUTHORIZATION), is(TOKEN_A));
         assertThat(clientB.header(AUTHORIZATION), is(TOKEN_B));
@@ -440,8 +455,8 @@ public class ThriftOverHttpClientTest {
         assertThat(client.header(AUTHORIZATION), is(NO_TOKEN));
     }
 
-    private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(String name, String value) {
-        return ClientOption.HTTP_HEADERS.newValue(new DefaultHttpHeaders().set(name, value));
+    private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(AsciiString name, String value) {
+        return ClientOption.HTTP_HEADERS.newValue(HttpHeaders.of(name, value));
     }
 
     private String getURI(Handlers handler) {

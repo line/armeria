@@ -16,50 +16,29 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.util.Exceptions;
+
 /**
  * A {@link RuntimeException} that is raised when a requested invocation cannot be served.
  */
-public class ServiceUnavailableException extends RuntimeException {
+public final class ServiceUnavailableException extends RuntimeException {
 
     private static final long serialVersionUID = -9092895165959388396L;
 
-    /**
-     * Creates a new exception.
-     */
-    public ServiceUnavailableException() {}
+
+    private static final ServiceUnavailableException INSTANCE =
+            Exceptions.clearTrace(new ServiceUnavailableException());
 
     /**
-     * Creates a new instance with the specified {@code message}.
+     * Returns a {@link ServiceUnavailableException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
      */
-    public ServiceUnavailableException(String message) {
-        super(message);
+    public static ServiceUnavailableException get() {
+        return Exceptions.isVerbose() ? new ServiceUnavailableException() : INSTANCE;
     }
 
     /**
-     * Creates a new instance with the specified {@code message} and {@code cause}.
+     * Creates a new instance.
      */
-    public ServiceUnavailableException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code cause}.
-     */
-    public ServiceUnavailableException(Throwable cause) {
-        super(cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
-     * disabled, and writable stack trace enabled or disabled.
-     */
-    protected ServiceUnavailableException(String message, Throwable cause, boolean enableSuppression,
-                                          boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
-
-    @Override
-    public Throwable fillInStackTrace() {
-        return this;
-    }
+    private ServiceUnavailableException() {}
 }

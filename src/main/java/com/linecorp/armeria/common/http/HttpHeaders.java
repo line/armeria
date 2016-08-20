@@ -1,0 +1,159 @@
+/*
+ * Copyright 2016 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.common.http;
+
+import java.util.Iterator;
+import java.util.Map.Entry;
+
+import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
+
+/**
+ * HTTP/2 headers.
+ */
+public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, HttpHeaders> {
+
+    /**
+     * An immutable empty HTTP/2 headers.
+     */
+    HttpHeaders EMPTY_HEADERS = new DefaultHttpHeaders(false, 0).asImmutable();
+
+    /**
+     * Returns new HTTP request headers.
+     */
+    static HttpHeaders of(HttpMethod method, String path) {
+        return new DefaultHttpHeaders().method(method).path(path);
+    }
+
+    /**
+     * Returns new HTTP response headers.
+     */
+    static HttpHeaders of(int statusCode) {
+        return of(HttpStatus.valueOf(statusCode));
+    }
+
+    /**
+     * Returns new HTTP response headers.
+     */
+    static HttpHeaders of(HttpStatus status) {
+        return new DefaultHttpHeaders().status(status);
+    }
+
+    /**
+     * Returns new HTTP headers with a single entry.
+     */
+    static HttpHeaders of(AsciiString name, String value) {
+        return new DefaultHttpHeaders().add(name, value);
+    }
+
+    /**
+     * Returns new HTTP headers with two entries.
+     */
+    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2) {
+        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2);
+    }
+
+    /**
+     * Returns new HTTP headers with three entries.
+     */
+    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2,
+                          AsciiString name3, String value3) {
+
+        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2)
+                                       .add(name3, value3);
+    }
+
+    /**
+     * Returns new HTTP headers with four entries.
+     */
+    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2,
+                          AsciiString name3, String value3, AsciiString name4, String value4) {
+
+        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2)
+                                       .add(name3, value3).add(name4, value4);
+    }
+
+    /**
+     * Returns an iterator over all HTTP/2 headers. The iteration order is as follows:
+     *   1. All pseudo headers (order not specified).
+     *   2. All non-pseudo headers (in insertion order).
+     */
+    @Override
+    Iterator<Entry<AsciiString, String>> iterator();
+
+    /**
+     * Sets the {@link HttpHeaderNames#METHOD} header.
+     */
+    HttpHeaders method(HttpMethod method);
+
+    /**
+     * Sets the {@link HttpHeaderNames#SCHEME} header.
+     */
+    HttpHeaders scheme(String scheme);
+
+    /**
+     * Sets the {@link HttpHeaderNames#AUTHORITY} header.
+     */
+    HttpHeaders authority(String authority);
+
+    /**
+     * Sets the {@link HttpHeaderNames#PATH} header.
+     */
+    HttpHeaders path(String path);
+
+    /**
+     * Sets the {@link HttpHeaderNames#STATUS} header.
+     */
+    HttpHeaders status(int statusCode);
+
+    /**
+     * Sets the {@link HttpHeaderNames#STATUS} header.
+     */
+    HttpHeaders status(HttpStatus status);
+
+    /**
+     * Gets the {@link HttpHeaderNames#METHOD} header or {@code null} if there is no such header.
+     */
+    HttpMethod method();
+
+    /**
+     * Gets the {@link HttpHeaderNames#SCHEME} header or {@code null} if there is no such header.
+     */
+    String scheme();
+
+    /**
+     * Gets the {@link HttpHeaderNames#AUTHORITY} header or {@code null} if there is no such header.
+     */
+    String authority();
+
+    /**
+     * Gets the {@link HttpHeaderNames#PATH} header or {@code null} if there is no such header.
+     */
+    String path();
+
+    /**
+     * Gets the {@link HttpHeaderNames#STATUS} header or {@code null} if there is no such header.
+     */
+    HttpStatus status();
+
+    /**
+     * Returns the immutable view of this headers.
+     */
+    default HttpHeaders asImmutable() {
+        return new ImmutableHttpHeaders(this);
+    }
+}

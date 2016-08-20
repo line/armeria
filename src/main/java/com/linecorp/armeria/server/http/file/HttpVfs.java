@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,12 +23,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import com.google.common.net.MediaType;
+
+import com.linecorp.armeria.common.http.HttpData;
 
 /**
  * A virtual file system that provides the files requested by {@link HttpFileService}.
@@ -67,12 +68,14 @@ public interface HttpVfs {
     /**
      * Finds the file at the specified {@code path}.
      *
+     *
      * @param path an absolute path whose component separator is {@code '/'}
+     * @param contentEncoding the content encoding of the file. Will be non-null for precompressed resources
      *
      * @return the {@link Entry} of the file at the specified {@code path} if found.
      *         {@link Entry#NONE} if not found.
      */
-    Entry get(String path);
+    Entry get(String path, @Nullable String contentEncoding);
 
     /**
      * A file entry in an {@link HttpVfs}.
@@ -83,8 +86,14 @@ public interface HttpVfs {
          */
         Entry NONE = new Entry() {
             @Override
-            public String mimeType() {
+            public MediaType mediaType() {
                 throw new IllegalStateException();
+            }
+
+            @Nullable
+            @Override
+            public String contentEncoding() {
+                return null;
             }
 
             @Override
@@ -93,7 +102,7 @@ public interface HttpVfs {
             }
 
             @Override
-            public ByteBuf readContent(ByteBufAllocator alloc) throws IOException {
+            public HttpData readContent() throws IOException {
                 throw new FileNotFoundException();
             }
 
@@ -108,7 +117,15 @@ public interface HttpVfs {
          *
          * @return {@code null} if unknown
          */
-        String mimeType();
+        MediaType mediaType();
+
+        /**
+         * The content encoding of the entry. Will be set for precompressed files.
+         *
+         * @return {code null} if not compressed
+         */
+        @Nullable
+        String contentEncoding();
 
         /**
          * Returns the modification time of the entry.
@@ -120,7 +137,7 @@ public interface HttpVfs {
         /**
          * Reads the content of the entry into a new buffer.
          */
-        ByteBuf readContent(ByteBufAllocator alloc) throws IOException;
+        HttpData readContent() throws IOException;
     }
 
     /**
@@ -129,26 +146,35 @@ public interface HttpVfs {
     abstract class AbstractEntry implements Entry {
 
         private final String path;
-        private final String mimeType;
+        private final MediaType mediaType;
+        @Nullable
+        private final String contentEncoding;
 
         /**
          * Creates a new instance with the specified {@code path}.
          */
-        protected AbstractEntry(String path) {
-            this(path, MimeTypeUtil.guessFromPath(path));
+        protected AbstractEntry(String path, @Nullable String contentEncoding) {
+            this(path, MimeTypeUtil.guessFromPath(path, contentEncoding != null), contentEncoding);
         }
 
         /**
-         * Creates a new instance with the specified {@code path} and {@code mimeType}.
+         * Creates a new instance with the specified {@code path} and {@code mediaType}.
          */
-        protected AbstractEntry(String path, @Nullable String mimeType) {
+        protected AbstractEntry(String path, @Nullable MediaType mediaType, @Nullable String contentEncoding) {
             this.path = requireNonNull(path, "path");
-            this.mimeType = mimeType;
+            this.mediaType = mediaType;
+            this.contentEncoding = contentEncoding;
         }
 
         @Override
-        public String mimeType() {
-            return mimeType;
+        public MediaType mediaType() {
+            return mediaType;
+        }
+
+        @Override
+        @Nullable
+        public String contentEncoding() {
+            return contentEncoding;
         }
 
         @Override
@@ -158,67 +184,53 @@ public interface HttpVfs {
 
         /**
          * Reads the content of the entry into a new buffer.
-         * Use {@link #readContent(ByteBufAllocator, InputStream, int)} when the length of the stream is known.
+         * Use {@link #readContent(InputStream, int)} when the length of the stream is known.
          */
-        protected ByteBuf readContent(ByteBufAllocator alloc, InputStream in) throws IOException {
-            ByteBuf buf = null;
-            boolean success = false;
-            try {
-                buf = alloc.directBuffer();
-                for (;;) {
-                    if (buf.writeBytes(in, 8192) < 0) {
-                        break;
-                    }
+        protected HttpData readContent(InputStream in) throws IOException {
+            byte[] buf = new byte[Math.max(in.available(), 1024)];
+            int endOffset = 0;
+
+            for (;;) {
+                final int readBytes = in.read(buf, endOffset, buf.length - endOffset);
+                if (readBytes < 0) {
+                    break;
                 }
 
-                success = true;
-
-                if (buf.isReadable()) {
-                    return buf;
-                } else {
-                    buf.release();
-                    return Unpooled.EMPTY_BUFFER;
-                }
-            } finally {
-                if (!success && buf != null) {
-                    buf.release();
+                endOffset += readBytes;
+                if (endOffset == buf.length) {
+                    buf = Arrays.copyOf(buf, buf.length << 1);
                 }
             }
+
+            return endOffset != 0 ? HttpData.of(buf, 0, endOffset) : HttpData.EMPTY_DATA;
         }
 
         /**
          * Reads the content of the entry into a new buffer.
-         * Use {@link #readContent(ByteBufAllocator, InputStream)} when the length of the stream is unknown.
+         * Use {@link #readContent(InputStream)} when the length of the stream is unknown.
          */
-        protected ByteBuf readContent(ByteBufAllocator alloc, InputStream in, int length) throws IOException {
+        protected HttpData readContent(InputStream in, int length) throws IOException {
+
             if (length == 0) {
-                return Unpooled.EMPTY_BUFFER;
+                return HttpData.EMPTY_DATA;
             }
 
-            ByteBuf buf = null;
-            boolean success = false;
-            try {
-                buf = alloc.directBuffer(length);
+            byte[] buf = new byte[length];
+            int endOffset = 0;
 
-                int remaining = length;
-                for (;;) {
-                    final int readBytes = buf.writeBytes(in, remaining);
-                    if (readBytes < 0) {
-                        break;
-                    }
-                    remaining -= readBytes;
-                    if (remaining <= 0) {
-                        break;
-                    }
+            for (;;) {
+                final int readBytes = in.read(buf, endOffset, buf.length - endOffset);
+                if (readBytes < 0) {
+                    break;
                 }
 
-                success = true;
-                return buf;
-            } finally {
-                if (!success && buf != null) {
-                    buf.release();
+                endOffset += readBytes;
+                if (endOffset == buf.length) {
+                    break;
                 }
             }
+
+            return HttpData.of(buf, 0, endOffset);
         }
     }
 
@@ -227,23 +239,39 @@ public interface HttpVfs {
      */
     final class ByteArrayEntry extends AbstractEntry {
 
-        private final long lastModifiedMillis = System.currentTimeMillis();
-        private final byte[] content;
+        private final long lastModifiedMillis;
+        private final HttpData content;
 
         /**
          * Creates a new instance with the specified {@code path} and byte array.
          */
         public ByteArrayEntry(String path, byte[] content) {
-            super(path);
-            this.content = requireNonNull(content, "content");
+            this(path, content, System.currentTimeMillis());
         }
 
         /**
-         * Creates a new instance with the specified {@code path}, {@code mimeType} and byte array.
+         * Creates a new instance with the specified {@code path} and byte array.
          */
-        public ByteArrayEntry(String path, String mimeType, byte[] content) {
-            super(path, mimeType);
-            this.content = requireNonNull(content, "content");
+        public ByteArrayEntry(String path, byte[] content, long lastModifiedMillis) {
+            super(path, null);
+            this.content = HttpData.of(requireNonNull(content, "content"));
+            this.lastModifiedMillis = lastModifiedMillis;
+        }
+
+        /**
+         * Creates a new instance with the specified {@code path}, {@code mediaType} and byte array.
+         */
+        public ByteArrayEntry(String path, MediaType mediaType, byte[] content) {
+            this(path, mediaType, content, System.currentTimeMillis());
+        }
+
+        /**
+         * Creates a new instance with the specified {@code path}, {@code mediaType} and byte array.
+         */
+        public ByteArrayEntry(String path, MediaType mediaType, byte[] content, long lastModifiedMillis) {
+            super(path, mediaType, null);
+            this.content = HttpData.of(requireNonNull(content, "content"));
+            this.lastModifiedMillis = lastModifiedMillis;
         }
 
         @Override
@@ -252,8 +280,8 @@ public interface HttpVfs {
         }
 
         @Override
-        public ByteBuf readContent(ByteBufAllocator alloc) {
-            return Unpooled.wrappedBuffer(content);
+        public HttpData readContent() {
+            return content;
         }
     }
 }

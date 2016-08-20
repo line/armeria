@@ -34,8 +34,15 @@ import java.util.stream.StreamSupport;
  */
 public abstract class AbstractOptions {
 
-    protected Map<AbstractOption<Object>, AbstractOptionValue<AbstractOption<Object>, Object>> valueMap;
+    private final Map<AbstractOption<Object>, AbstractOptionValue<AbstractOption<Object>, Object>> valueMap;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param <T> the type of the {@link AbstractOptionValue}
+     * @param valueFilter the {@link Function} to apply to the elements of the specified {@code values}
+     * @param values the option values
+     */
     @SafeVarargs
     protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter, T... values) {
         requireNonNull(valueFilter, "valueFilter");
@@ -45,9 +52,15 @@ public abstract class AbstractOptions {
         putAll(valueFilter, Stream.of(values));
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param <T> the type of the {@link AbstractOptionValue}
+     * @param valueFilter the {@link Function} to apply to the elements of the specified {@code values}
+     * @param values the option values
+     */
     protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
                                                                     Iterable<T> values) {
-
         requireNonNull(valueFilter, "valueFilter");
         requireNonNull(values, "values");
 
@@ -55,10 +68,17 @@ public abstract class AbstractOptions {
         putAll(valueFilter, StreamSupport.stream(values.spliterator(), false));
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param <T> the type of the {@link AbstractOptionValue}
+     * @param valueFilter the {@link Function} to apply to the elements of the specified {@code values}
+     * @param baseOptions the base options to merge
+     * @param values the option values
+     */
     @SafeVarargs
     protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
                                                                     AbstractOptions baseOptions, T... values) {
-
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(valueFilter, "valueFilter");
         requireNonNull(values, "values");
@@ -67,16 +87,38 @@ public abstract class AbstractOptions {
         putAll(valueFilter, Stream.of(values));
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param <T> the type of the {@link AbstractOptionValue}
+     * @param valueFilter the {@link Function} to apply to the elements of the specified {@code values}
+     * @param baseOptions the base options to merge
+     * @param values the option values
+     */
     protected <T extends AbstractOptionValue<?, ?>> AbstractOptions(Function<T, T> valueFilter,
                                                                     AbstractOptions baseOptions,
                                                                     Iterable<T> values) {
-
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(valueFilter, "valueFilter");
         requireNonNull(values, "values");
 
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
         putAll(valueFilter, StreamSupport.stream(values.spliterator(), false));
+    }
+
+    /**
+     * Creates a new instance by merging two options.
+     *
+     * @param baseOptions the base options to merge
+     * @param options the additional options to merge
+     */
+    protected AbstractOptions(AbstractOptions baseOptions, AbstractOptions options) {
+
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+
+        valueMap = new IdentityHashMap<>(baseOptions.valueMap);
+        valueMap.putAll(options.valueMap);
     }
 
     @SuppressWarnings("unchecked")
@@ -86,21 +128,40 @@ public abstract class AbstractOptions {
                                          (AbstractOptionValue<AbstractOption<Object>, Object>) v));
     }
 
+    /**
+     * Returns the value of the specified {@code option}.
+     *
+     * @param <O> the type of the option
+     * @param <V> the type of the value
+     */
     @SuppressWarnings("unchecked")
-    protected <O extends AbstractOption<V>, V> Optional<V> get0(AbstractOption<V> option) {
+    protected final <O extends AbstractOption<V>, V> Optional<V> get0(AbstractOption<V> option) {
         @SuppressWarnings("rawtypes")
         AbstractOptionValue<O, V> optionValue =
                 (AbstractOptionValue<O, V>) (AbstractOptionValue) valueMap.get(option);
         return optionValue == null ? Optional.empty() : Optional.of(optionValue.value());
     }
 
+    /**
+     * Returns the value of the specified {@code option}.
+     *
+     * @param <O> the type of the option
+     * @param <V> the type of the value
+     * @return the value of the specified {@code option}. {@code defaultValue} if there's no such option.
+     */
     @SuppressWarnings("unchecked")
-    protected <O extends AbstractOption<V>, V> V getOrElse0(O option, V defaultValue) {
+    protected final <O extends AbstractOption<V>, V> V getOrElse0(O option, V defaultValue) {
         return get0(option).orElse(defaultValue);
     }
 
+    /**
+     * Returns the {@link Map} whose key is {@link AbstractOption} and value is {@link AbstractOptionValue}.
+     *
+     * @param <K> the type of the options
+     * @param <V> the type of the option values
+     */
     @SuppressWarnings("unchecked")
-    protected <K, V> Map<K, V> asMap0() {
+    protected final <K extends AbstractOption<?>, V extends AbstractOptionValue<K, ?>> Map<K, V> asMap0() {
         return Collections.unmodifiableMap((Map<? extends K, ? extends V>) valueMap);
     }
 

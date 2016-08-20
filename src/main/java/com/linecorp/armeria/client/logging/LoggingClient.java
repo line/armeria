@@ -16,30 +16,67 @@
 
 package com.linecorp.armeria.client.logging;
 
-import java.util.function.Function;
+import static java.util.Objects.requireNonNull;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.DecoratingClient;
-import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.MessageLogConsumer;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.ResponseLog;
 
 /**
- * Decorates a {@link Client} to log invocation requests and responses.
+ * Decorates a {@link Client} to log {@link Request}s and {@link Response}s.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
-public class LoggingClient extends DecoratingClient {
+public final class LoggingClient<I extends Request, O extends Response> extends LogCollectingClient<I, O> {
+
+    private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
+     * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
      */
-    public LoggingClient(Client client) {
-        super(client, codec -> new LoggingClientCodec(codec, Ticker.systemTicker()), Function.identity());
+    public LoggingClient(Client<? super I, ? extends O> delegate) {
+        this(delegate, LogLevel.INFO);
     }
 
     /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     *
-     * @param ticker an alternative {@link Ticker}
+     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
+     * {@link LogLevel}.
      */
-    public LoggingClient(Client client, Ticker ticker) {
-        super(client, codec -> new LoggingClientCodec(codec, ticker), Function.identity());
+    public LoggingClient(Client<? super I, ? extends O> delegate, LogLevel level) {
+        super(delegate, new LoggingConsumer(logger, level));
+    }
+
+    private static final class LoggingConsumer implements MessageLogConsumer {
+
+        private static final String REQUEST_FORMAT = "{} Request: {}";
+        private static final String RESPONSE_FORMAT = "{} Response: {}";
+
+        private final Logger logger;
+        private final LogLevel level;
+
+        LoggingConsumer(Logger logger, LogLevel level) {
+            this.logger = requireNonNull(logger, "logger");
+            this.level = requireNonNull(level, "level");
+        }
+
+        @Override
+        public void onRequest(RequestContext ctx, RequestLog req) {
+            level.log(logger, REQUEST_FORMAT, ctx, req);
+
+        }
+
+        @Override
+        public void onResponse(RequestContext ctx, ResponseLog res) {
+            level.log(logger, RESPONSE_FORMAT, ctx, res);
+        }
     }
 }

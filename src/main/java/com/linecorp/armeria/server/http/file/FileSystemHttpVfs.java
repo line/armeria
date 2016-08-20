@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -25,8 +25,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.http.HttpData;
 
 final class FileSystemHttpVfs implements HttpVfs {
 
@@ -42,7 +43,7 @@ final class FileSystemHttpVfs implements HttpVfs {
     }
 
     @Override
-    public Entry get(String path) {
+    public Entry get(String path, @Nullable String contentEncoding) {
         // Replace '/' with the platform dependent file separator if necessary.
         if (FILE_SEPARATOR_IS_NOT_SLASH) {
             path = path.replace(File.separatorChar, '/');
@@ -53,7 +54,7 @@ final class FileSystemHttpVfs implements HttpVfs {
             return Entry.NONE;
         }
 
-        return new FileSystemEntry(f, path);
+        return new FileSystemEntry(f, path, contentEncoding);
     }
 
     @Override
@@ -65,8 +66,8 @@ final class FileSystemHttpVfs implements HttpVfs {
 
         private final File file;
 
-        FileSystemEntry(File file, String path) {
-            super(path);
+        FileSystemEntry(File file, String path, @Nullable String contentEncoding) {
+            super(path, contentEncoding);
             this.file = file;
         }
 
@@ -76,14 +77,14 @@ final class FileSystemHttpVfs implements HttpVfs {
         }
 
         @Override
-        public ByteBuf readContent(ByteBufAllocator alloc) throws IOException {
+        public HttpData readContent() throws IOException {
             final long fileLength = file.length();
             if (fileLength > Integer.MAX_VALUE) {
                 throw new IOException("file too large: " + file + " (" + fileLength + " bytes)");
             }
 
             try (InputStream in = new FileInputStream(file)) {
-                return readContent(alloc, in, (int) fileLength);
+                return readContent(in, (int) fileLength);
             }
         }
     }

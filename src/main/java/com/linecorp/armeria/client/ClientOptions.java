@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.ClientOption.DECORATOR;
+import static com.linecorp.armeria.client.ClientOption.DECORATION;
+import static com.linecorp.armeria.client.ClientOption.DEFAULT_MAX_RESPONSE_LENGTH;
+import static com.linecorp.armeria.client.ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS;
+import static com.linecorp.armeria.client.ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
-import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_POLICY;
-import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_POLICY;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -30,13 +31,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.TimeoutPolicy;
-import com.linecorp.armeria.common.http.ImmutableHttpHeaders;
+import com.linecorp.armeria.common.http.DefaultHttpHeaders;
+import com.linecorp.armeria.common.http.HttpHeaderNames;
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
 
@@ -45,28 +44,22 @@ import io.netty.util.AsciiString;
  */
 public final class ClientOptions extends AbstractOptions {
 
-    private static final TimeoutPolicy DEFAULT_WRITE_TIMEOUT_POLICY =
-            TimeoutPolicy.ofFixed(Duration.ofSeconds(1));
-    private static final TimeoutPolicy DEFAULT_RESPONSE_TIMEOUT_POLICY =
-            TimeoutPolicy.ofFixed(Duration.ofSeconds(10));
-
-    private static final ClientOptionValue<?>[] DEFAULT_OPTIONS = {
-            WRITE_TIMEOUT_POLICY.newValue(DEFAULT_WRITE_TIMEOUT_POLICY),
-            RESPONSE_TIMEOUT_POLICY.newValue(DEFAULT_RESPONSE_TIMEOUT_POLICY)
-    };
-
-    /**
-     * The default {@link ClientOptions}.
-     */
-    public static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
+    private static final Long DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS = Duration.ofSeconds(1).toMillis();
+    private static final Long DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
+    private static final Long DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH = 10L * 1024 * 1024; // 10 MB
 
     @SuppressWarnings("deprecation")
     private static final Collection<AsciiString> BLACKLISTED_HEADER_NAMES =
             Collections.unmodifiableCollection(Arrays.asList(
+                    HttpHeaderNames.AUTHORITY,
                     HttpHeaderNames.CONNECTION,
                     HttpHeaderNames.HOST,
                     HttpHeaderNames.KEEP_ALIVE,
+                    HttpHeaderNames.METHOD,
+                    HttpHeaderNames.PATH,
                     HttpHeaderNames.PROXY_CONNECTION,
+                    HttpHeaderNames.SCHEME,
+                    HttpHeaderNames.STATUS,
                     HttpHeaderNames.TRANSFER_ENCODING,
                     HttpHeaderNames.UPGRADE,
                     HttpHeaderNames.USER_AGENT,
@@ -75,6 +68,19 @@ public final class ClientOptions extends AbstractOptions {
                     ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(),
                     ExtensionHeaderNames.STREAM_ID.text(),
                     ExtensionHeaderNames.STREAM_PROMISE_ID.text()));
+
+    private static final ClientOptionValue<?>[] DEFAULT_OPTIONS = {
+            DEFAULT_WRITE_TIMEOUT_MILLIS.newValue(DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS),
+            DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS),
+            DEFAULT_MAX_RESPONSE_LENGTH.newValue(DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH),
+            DECORATION.newValue(ClientDecoration.NONE),
+            HTTP_HEADERS.newValue(HttpHeaders.EMPTY_HEADERS)
+    };
+
+    /**
+     * The default {@link ClientOptions}.
+     */
+    public static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
 
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
@@ -100,6 +106,7 @@ public final class ClientOptions extends AbstractOptions {
      * @return the merged {@link ClientOptions}
      */
     public static ClientOptions of(ClientOptions baseOptions, ClientOptionValue<?>... options) {
+        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(options, "options");
         if (options.length == 0) {
@@ -114,6 +121,19 @@ public final class ClientOptions extends AbstractOptions {
      * @return the merged {@link ClientOptions}
      */
     public static ClientOptions of(ClientOptions baseOptions, Iterable<ClientOptionValue<?>> options) {
+        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+        return new ClientOptions(baseOptions, options);
+    }
+
+    /**
+     * Merges the specified two {@link ClientOptions} into one.
+     *
+     * @return the merged {@link ClientOptions}
+     */
+    public static ClientOptions of(ClientOptions baseOptions, ClientOptions options) {
+        // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(options, "options");
         return new ClientOptions(baseOptions, options);
@@ -138,12 +158,13 @@ public final class ClientOptions extends AbstractOptions {
 
     private static HttpHeaders filterHttpHeaders(HttpHeaders headers) {
         requireNonNull(headers, "headers");
-        BLACKLISTED_HEADER_NAMES.stream().filter(headers::contains).anyMatch(h -> {
-            throw new IllegalArgumentException("unallowed header name: " + h);
-        });
+        for (AsciiString name : BLACKLISTED_HEADER_NAMES) {
+            if (headers.contains(name)) {
+                throw new IllegalArgumentException("unallowed header name: " + name);
+            }
+        }
 
-        // Create an immutable copy to prevent further modification.
-        return new ImmutableHttpHeaders(new DefaultHttpHeaders(false).add(headers));
+        return new DefaultHttpHeaders().add(headers).asImmutable();
     }
 
     private ClientOptions(ClientOptionValue<?>... options) {
@@ -156,6 +177,10 @@ public final class ClientOptions extends AbstractOptions {
 
     private ClientOptions(ClientOptions clientOptions, Iterable<ClientOptionValue<?>> options) {
         super(ClientOptions::filterValue, clientOptions, options);
+    }
+
+    private ClientOptions(ClientOptions clientOptions, ClientOptions options) {
+        super(clientOptions, options);
     }
 
     /**
@@ -187,24 +212,32 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     /**
-     * Returns the {@link TimeoutPolicy} for a server reply to a client call.
+     * Returns the default timeout of a server reply to a client call.
      */
-    public TimeoutPolicy responseTimeoutPolicy() {
-        return getOrElse(RESPONSE_TIMEOUT_POLICY, DEFAULT_RESPONSE_TIMEOUT_POLICY);
+    public long defaultResponseTimeoutMillis() {
+        return getOrElse(DEFAULT_RESPONSE_TIMEOUT_MILLIS, DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS);
     }
 
     /**
-     * Returns the {@link TimeoutPolicy} for a socket write.
+     * Returns the default timeout of a socket write.
      */
-    public TimeoutPolicy writeTimeoutPolicy() {
-        return getOrElse(WRITE_TIMEOUT_POLICY, DEFAULT_WRITE_TIMEOUT_POLICY);
+    public long defaultWriteTimeoutMillis() {
+        return getOrElse(DEFAULT_WRITE_TIMEOUT_MILLIS, DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS);
     }
 
     /**
-     * Returns the {@link Function} that decorates the components of a client.
+     * Returns the maximum allowed length of a server response.
      */
-    public Function<Client, Client> decorator() {
-        return getOrElse(DECORATOR, Function.identity());
+    @SuppressWarnings("unchecked")
+    public long defaultMaxResponseLength() {
+        return getOrElse(DEFAULT_MAX_RESPONSE_LENGTH, DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH);
+    }
+
+    /**
+     * Returns the {@link Function}s that decorate the components of a client.
+     */
+    public ClientDecoration decoration() {
+        return getOrElse(DECORATION, ClientDecoration.NONE);
     }
 }
 

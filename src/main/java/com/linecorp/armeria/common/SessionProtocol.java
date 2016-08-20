@@ -27,27 +27,27 @@ public enum SessionProtocol {
     /**
      * HTTP (cleartext, HTTP/2 preferred)
      */
-    HTTP(false, "http", false),
+    HTTP(false, "http", false, 80),
     /**
      * HTTP over TLS (over TLS, HTTP/2 preferred)
      */
-    HTTPS(true, "https", false),
+    HTTPS(true, "https", false, 443),
     /**
      * HTTP/1 (over TLS)
      */
-    H1(true, "h1", false),
+    H1(true, "h1", false, 443),
     /**
      * HTTP/1 (cleartext)
      */
-    H1C(false, "h1c", false),
+    H1C(false, "h1c", false, 80),
     /**
      * HTTP/2 (over TLS)
      */
-    H2(true, "h2", true),
+    H2(true, "h2", true, 443),
     /**
      * HTTP/2 (cleartext)
      */
-    H2C(false, "h2c", true);
+    H2C(false, "h2c", true, 80);
 
     private static final Set<SessionProtocol> HTTP_PROTOCOLS = Collections.unmodifiableSet(
             EnumSet.of(HTTP, HTTPS, H1, H1C, H2, H2C));
@@ -64,11 +64,13 @@ public enum SessionProtocol {
     private final boolean useTls;
     private final String uriText;
     private final boolean isMultiplex;
+    private final int defaultPort;
 
-    SessionProtocol(boolean useTls, String uriText, boolean isMultiplex) {
+    SessionProtocol(boolean useTls, String uriText, boolean isMultiplex, int defaultPort) {
         this.useTls = useTls;
         this.uriText = uriText;
         this.isMultiplex = isMultiplex;
+        this.defaultPort = defaultPort;
     }
 
     /**
@@ -91,5 +93,12 @@ public enum SessionProtocol {
      */
     public boolean isMultiplex() {
         return isMultiplex;
+    }
+
+    /**
+     * Returns the default INET port number of this protocol.
+     */
+    public int defaultPort() {
+        return defaultPort;
     }
 }

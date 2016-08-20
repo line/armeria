@@ -34,6 +34,8 @@ import io.netty.util.concurrent.Promise;
 
 /**
  * Default {@link KeyedChannelPool} implementation.
+ *
+ * @param <K> the key type
  */
 public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
@@ -261,6 +263,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         }
     }
 
+    /**
+     * Removes a {@link Channel} that matches the specified {@code key} from this pool.
+     *
+     * @return the removed {@link Channel}. {@code null} if there's no matching {@link Channel}.
+     */
     protected Channel pollChannel(K key) {
         final Deque<Channel> queue = pool.get(key);
         final Channel ch;
@@ -275,6 +282,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         return ch;
     }
 
+    /**
+     * Adds a {@link Channel} to this pool.
+     *
+     * @return whether adding the {@link Channel} has succeeded or not
+     */
     protected boolean offerChannel(K key, Channel channel) {
         return pool.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>()).offer(channel);
     }
@@ -282,12 +294,15 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     @Override
     public void close() {
         pool.forEach((k, v) -> {
-            for (; ; ) {
+            for (;;) {
                 Channel channel = pollChannel(k);
                 if (channel == null) {
                     break;
                 }
-                channel.close();
+
+                if (channel.isOpen()) {
+                    channel.close();
+                }
             }
         });
     }

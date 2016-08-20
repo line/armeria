@@ -20,10 +20,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ticker;
+
 import com.linecorp.armeria.client.pool.DecoratingKeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
-import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.common.util.UnitFormatter;
 
 import io.netty.channel.Channel;

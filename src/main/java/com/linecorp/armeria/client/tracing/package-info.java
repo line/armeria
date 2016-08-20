@@ -15,8 +15,7 @@
  */
 
 /**
- * Provides distributed tracing decorators for armeria clients using
- * <a href="https://github.com/openzipkin/brave">Brave</a>, a Java tracing library compatible with
- * <a href="http://zipkin.io/">Zipkin</a>.
+ * Distributed tracing clients based on <a href="https://github.com/openzipkin/brave">Brave</a>,
+ * a Java tracing library compatible with <a href="http://zipkin.io/">Zipkin</a>.
  */
 package com.linecorp.armeria.client.tracing;

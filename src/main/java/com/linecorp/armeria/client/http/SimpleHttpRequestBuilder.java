@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,6 +22,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.HttpRequest;
+
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -29,7 +32,10 @@ import io.netty.handler.codec.http.HttpMethod;
 
 /**
  * Creates a new {@link SimpleHttpRequest}.
+ *
+ * @deprecated Use {@link AggregatedHttpMessage} instead.
  */
+@Deprecated
 public class SimpleHttpRequestBuilder {
 
     private static final byte[] EMPTY = new byte[0];

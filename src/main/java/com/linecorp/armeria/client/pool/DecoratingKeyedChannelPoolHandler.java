@@ -22,6 +22,8 @@ import io.netty.channel.Channel;
 
 /**
  * A {@link KeyedChannelPoolHandler} that decorates an existing {@link KeyedChannelPoolHandler}.
+ *
+ * @param <K> the key type
  */
 public class DecoratingKeyedChannelPoolHandler<K> implements KeyedChannelPoolHandler<K> {
 

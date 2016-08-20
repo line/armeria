@@ -7,6 +7,9 @@ For more information, please refer to the API documentation of `HttpFileService`
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.http.file.HttpFileService;
+
     ServerBuilder sb = new ServerBuilder();
     sb.serviceUnder("/images/",
                     HttpFileService.forFileSystem("/var/lib/www/images"));

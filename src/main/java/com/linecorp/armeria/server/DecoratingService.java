@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,101 +21,54 @@ import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
+
 /**
  * A {@link Service} that decorates another {@link Service}. Do not use this class unless you want to define
- * a new dedicated {@link Service} type by extending this class; prefer:
- * <ul>
- *   <li>{@link Service#decorate(Function)}</li>
- *   <li>{@link Service#decorateHandler(Function)}</li>
- *   <li>{@link Service#decorateCodec(Function)}</li>
- *   <li>{@link Service#newDecorator(Function, Function)}</li>
- * </ul>
+ * a new dedicated {@link Service} type by extending this class; prefer {@link Service#decorate(Function)}.
  *
- * @see DecoratingServiceCodec
- * @see DecoratingServiceInvocationHandler
+ * @param <T_I> the {@link Request} type of the {@link Service} being decorated
+ * @param <T_O> the {@link Response} type of the {@link Service} being decorated
+ * @param <R_I> the {@link Request} type of this {@link Service}
+ * @param <R_O> the {@link Response} type of this {@link Service}
  */
-public class DecoratingService implements Service {
+public abstract class DecoratingService<T_I extends Request, T_O extends Response,
+                                        R_I extends Request, R_O extends Response>
+        implements Service<R_I, R_O> {
 
-    private final Service service;
-    private final ServiceCodec codec;
-    private final ServiceInvocationHandler handler;
+    private final Service<? super T_I, ? extends T_O> delegate;
 
     /**
-     * Creates a new instance that decorates the specified {@link Service} and its {@link ServiceCodec} and
-     * {@link ServiceInvocationHandler} using the specified {@code codecDecorator} and {@code handlerDecorator}.
+     * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected <T extends ServiceCodec, U extends ServiceCodec,
-            V extends ServiceInvocationHandler, W extends ServiceInvocationHandler>
-    DecoratingService(Service service, Function<T, U> codecDecorator, Function<V, W> handlerDecorator) {
-
-        this.service = requireNonNull(service, "service");
-        codec = decorateCodec(service, codecDecorator);
-        handler = decorateHandler(service, handlerDecorator);
-    }
-
-    private static <T extends ServiceCodec, U extends ServiceCodec>
-    ServiceCodec decorateCodec(Service service, Function<T, U> codecDecorator) {
-
-        requireNonNull(codecDecorator, "codecDecorator");
-
-        @SuppressWarnings("unchecked")
-        final T codec = (T) service.codec();
-        final U decoratedCodec = codecDecorator.apply(codec);
-        if (decoratedCodec == null) {
-            throw new NullPointerException("codecDecorator.apply() returned null: " + codecDecorator);
-        }
-
-        return decoratedCodec;
-    }
-
-    private static <T extends ServiceInvocationHandler, U extends ServiceInvocationHandler>
-    ServiceInvocationHandler decorateHandler(Service service, Function<T, U> handlerDecorator) {
-
-        requireNonNull(handlerDecorator, "handlerDecorator");
-
-        @SuppressWarnings("unchecked")
-        final T handler = (T) service.handler();
-        final U decoratedHandler = handlerDecorator.apply(handler);
-        if (decoratedHandler == null) {
-            throw new NullPointerException("handlerDecorator.apply() returned null: " + handlerDecorator);
-        }
-
-        return decoratedHandler;
+    protected DecoratingService(Service<? super T_I, ? extends T_O> delegate) {
+        this.delegate = requireNonNull(delegate, "delegate");
     }
 
     /**
      * Returns the {@link Service} being decorated.
      */
     @SuppressWarnings("unchecked")
-    protected final <T extends Service> T delegate() {
-        return (T) service;
+    protected final <T extends Service<? super T_I, ? extends T_O>> T delegate() {
+        return (T) delegate;
     }
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
-        ServiceCallbackInvoker.invokeServiceAdded(cfg, delegate());
+        ServiceCallbackInvoker.invokeServiceAdded(cfg, delegate);
     }
 
     @Override
-    public ServiceCodec codec() {
-        return codec;
-    }
-
-    @Override
-    public ServiceInvocationHandler handler() {
-        return handler;
-    }
-
-    @Override
-    public final <T extends Service> Optional<T> as(Class<T> serviceType) {
+    public final <T extends Service<?, ?>> Optional<T> as(Class<T> serviceType) {
         final Optional<T> result = Service.super.as(serviceType);
-        return result.isPresent() ? result : delegate().as(serviceType);
+        return result.isPresent() ? result : delegate.as(serviceType);
     }
 
     @Override
     public String toString() {
         final String simpleName = getClass().getSimpleName();
         final String name = simpleName.isEmpty() ? getClass().getName() : simpleName;
-        return name + '(' + delegate() + ')';
+        return name + '(' + delegate + ')';
     }
 }

@@ -174,11 +174,25 @@ $(function () {
     }));
 
     var debugText = functionContainer.find('.debug-textarea').val(functionInfo.sampleJsonRequest);
+    var debugHttpHeadersText = functionContainer.find('.debug-http-headers').val(serviceInfo.sampleHttpHeaders);
     var debugResponse = functionContainer.find('.debug-response code');
 
+    // Sets 'debug-http-headers' section
+    var collapser = functionContainer.find('.debug-http-headers-collapser');
+    var toggleCollapser = function() {
+      collapser.toggleClass('opened');
+      collapser.next().collapse('toggle');
+    }
+    collapser.click(function() {
+      toggleCollapser();
+    });
     var submitDebugRequest = function () {
       var args;
+      var httpHeaders = {};
       try {
+        if (debugHttpHeadersText.val()) {
+          httpHeaders = JSON.parse(debugHttpHeadersText.val());
+        }
         args = JSON.parse(debugText.val());
       } catch (e) {
         debugResponse.text("Failed to parse a JSON object, please check your request:\n" + e);
@@ -193,13 +207,24 @@ $(function () {
         type: 'POST',
         url: serviceInfo.debugPath,
         data: JSON.stringify(request),
+        headers: httpHeaders,
         contentType: TTEXT_MIME_TYPE,
         success: function (response) {
           debugResponse.text(response);
           hljs.highlightBlock(debugResponse.get(0));
+
+          // Set the URL with request
           var uri = URI(window.location.href);
           var fragment = uri.fragment(true);
-          fragment.setQuery('req', debugText.val());
+          var req = {
+            args: debugText.val()
+          }
+          if (debugHttpHeadersText.val()) { // Includes when a value is set
+            req.http_headers = debugHttpHeadersText.val();
+          }
+          fragment.setQuery({
+            req: JSON.stringify(req)
+          });
           window.location.href = uri.toString();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -215,8 +240,22 @@ $(function () {
     var fragment = URI(window.location.href).fragment(true);
     var fragmentParams = fragment.query(true);
     if (fragmentParams.req) {
-      debugText.val(fragmentParams.req);
-      submitDebugRequest();
+      var req = JSON.parse(fragmentParams.req);
+
+      debugText.val(req.args);
+
+      if ('http_headers' in req) {
+        debugHttpHeadersText.val(req.http_headers);
+      } else {
+        debugHttpHeadersText.val(''); // Remove the default value if set
+      }
+
+      functionContainer.find('.debug-textarea').focus();
+    }
+
+    // Open debug-http-headers section when a value is set
+    if (debugHttpHeadersText.val()) {
+      toggleCollapser();
     }
   }
 

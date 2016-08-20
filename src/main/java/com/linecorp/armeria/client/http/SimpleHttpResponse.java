@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client.http;
 
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.HttpResponse;
+
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -24,7 +27,10 @@ import io.netty.handler.codec.http.HttpResponseStatus;
  * A container for information returned in an HTTP response. This is a simpler version of
  * {@link FullHttpResponse} which only uses a byte array to avoid callers having to worry about memory
  * management.
+ *
+ * @deprecated Use {@link AggregatedHttpMessage} instead.
  */
+@Deprecated
 public class SimpleHttpResponse {
 
     private final HttpResponseStatus status;

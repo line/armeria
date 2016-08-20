@@ -16,17 +16,58 @@
 
 package com.linecorp.armeria.server.http.jetty;
 
+import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import javax.servlet.DispatcherType;
+
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpURI;
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.http.MetaData;
+import org.eclipse.jetty.io.AbstractEndPoint;
+import org.eclipse.jetty.server.HttpChannel;
+import org.eclipse.jetty.server.HttpInput.Content;
+import org.eclipse.jetty.server.HttpTransport;
+import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.util.Callback;
+import org.eclipse.jetty.util.thread.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Splitter;
+import com.google.common.net.UrlEscapers;
+
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.DefaultHttpResponse;
+import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.http.HttpHeaderNames;
+import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.server.ServerListenerAdapter;
+import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.HttpService;
+
+import io.netty.util.AsciiString;
 
 /**
  * An {@link HttpService} that dispatches its requests to a web application running in an embedded
@@ -34,9 +75,11 @@ import com.linecorp.armeria.server.http.HttpService;
  *
  * @see JettyServiceBuilder
  */
-public class JettyService extends HttpService {
+public class JettyService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(JettyService.class);
+
+    private static final Splitter PATH_SPLITTER = Splitter.on('/');
 
     /**
      * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
@@ -103,13 +146,337 @@ public class JettyService extends HttpService {
         return new JettyService(config.hostname().orElse(null), serverFactory, postStopTask);
     }
 
+    private final Function<ExecutorService, Server> serverFactory;
+    private final Consumer<Server> postStopTask;
+    private final Configurator configurator;
+
+    private String hostname;
+    private Server server;
+    private ArmeriaConnector connector;
+    private com.linecorp.armeria.server.Server armeriaServer;
+    private boolean startedServer;
+
     private JettyService(String hostname, Function<ExecutorService, Server> serverSupplier) {
         this(hostname, serverSupplier, unused -> {});
     }
 
     private JettyService(String hostname,
-                         Function<ExecutorService, Server> serverSupplier,
+                         Function<ExecutorService, Server> serverFactory,
                          Consumer<Server> postStopTask) {
-        super(new JettyServiceInvocationHandler(hostname, serverSupplier, postStopTask));
+
+        this.hostname = hostname;
+        this.serverFactory = serverFactory;
+        this.postStopTask = postStopTask;
+        configurator = new Configurator();
+    }
+
+
+    @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        if (armeriaServer != null) {
+            if (armeriaServer != cfg.server()) {
+                throw new IllegalStateException("cannot be added to more than one server");
+            } else {
+                return;
+            }
+        }
+
+        armeriaServer = cfg.server();
+        armeriaServer.addListener(configurator);
+        if (hostname == null) {
+            hostname = armeriaServer.defaultHostname();
+        }
+    }
+
+    void start() throws Exception {
+        boolean success = false;
+        try {
+            server = serverFactory.apply(armeriaServer.config().blockingTaskExecutor());
+            connector = new ArmeriaConnector(server);
+            server.addConnector(connector);
+
+            if (!server.isStarted()) {
+                logger.info("Starting an embedded Jetty: {}", server);
+                server.start();
+                startedServer = true;
+            } else {
+                startedServer = false;
+            }
+            success = true;
+        } finally {
+            if (!success) {
+                server = null;
+                connector = null;
+            }
+        }
+    }
+
+    void stop() throws Exception {
+        final Server server = this.server;
+        this.server = null;
+        connector = null;
+
+        if (server == null || !startedServer) {
+            return;
+        }
+
+        try {
+            logger.info("Stopping an embedded Jetty: {}", server);
+            server.stop();
+        } catch (Exception e) {
+            logger.warn("Failed to stop an embedded Jetty: {}", server, e);
+        }
+
+        postStopTask.accept(server);
+    }
+
+    @Override
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final ArmeriaConnector connector = this.connector;
+
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+
+        req.aggregate().handle(voidFunction((aReq, cause) -> {
+            if (cause != null) {
+                logger.warn("{} Failed to aggregate a request:", ctx, cause);
+                res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
+                return;
+            }
+
+            boolean success = false;
+            try {
+                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport();
+                final HttpChannel httpChannel = new HttpChannel(
+                        connector,
+                        connector.getHttpConfiguration(),
+                        new ArmeriaEndPoint(hostname, connector.getScheduler(),
+                                            ctx.localAddress(), ctx.remoteAddress()),
+                        transport);
+
+                fillRequest(ctx, aReq, httpChannel.getRequest());
+
+                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, res, transport, httpChannel));
+                success = true;
+            } finally {
+                if (!success) {
+                    res.close();
+                }
+            }
+        })).exceptionally(CompletionActions::log);
+
+        return res;
+    }
+
+    private void invoke(ServiceRequestContext ctx, HttpResponseWriter res,
+                        ArmeriaHttpTransport transport, HttpChannel httpChannel) {
+
+        final Queue<HttpData> out = transport.out;
+        try {
+            server.handle(httpChannel);
+            httpChannel.getResponse().getHttpOutput().flush();
+
+            final Throwable cause = transport.cause;
+            if (cause != null) {
+                throw cause;
+            }
+
+            final HttpHeaders headers = toResponseHeaders(transport);
+            res.write(headers);
+            for (;;) {
+                final HttpData data = out.poll();
+                if (data == null) {
+                    break;
+                }
+                res.write(data);
+            }
+            res.close();
+        } catch (Throwable t) {
+            logger.warn("{} Failed to produce a response:", ctx, t);
+            res.close();
+        }
+    }
+
+    private static void fillRequest(
+            ServiceRequestContext ctx, AggregatedHttpMessage aReq, Request jReq) {
+
+        jReq.setDispatcherType(DispatcherType.REQUEST);
+        jReq.setAsyncSupported(true, "armeria");
+        jReq.setSecure(ctx.sessionProtocol().isTls());
+        jReq.setMetaData(toRequestMetadata(ctx, aReq));
+
+        final HttpData content = aReq.content();
+        if (!content.isEmpty()) {
+            jReq.getHttpInput().addContent(new Content(ByteBuffer.wrap(
+                    content.array(), content.offset(), content.length())));
+        }
+        jReq.getHttpInput().eof();
+    }
+
+    private static MetaData.Request toRequestMetadata(ServiceRequestContext ctx, AggregatedHttpMessage aReq) {
+        // Construct the HttpURI
+        final StringBuilder uriBuf = new StringBuilder();
+        final HttpHeaders aHeaders = aReq.headers();
+
+        uriBuf.append(ctx.sessionProtocol().isTls() ? "https" : "http");
+        uriBuf.append("://");
+        uriBuf.append(aHeaders.authority());
+        uriBuf.append(aHeaders.path());
+
+        final HttpURI uri = new HttpURI(uriBuf.toString());
+        final String encoded = PATH_SPLITTER.splitToList(ctx.mappedPath()).stream()
+                                            .map(UrlEscapers.urlPathSegmentEscaper()::escape)
+                                            .collect(Collectors.joining("/"));
+        uri.setPath(encoded);
+
+        // Convert HttpHeaders to HttpFields
+        final HttpFields jHeaders = new HttpFields(aHeaders.size());
+        aHeaders.forEach(e -> {
+            final AsciiString key = e.getKey();
+            if (!key.isEmpty() && key.byteAt(0) != ':') {
+                jHeaders.add(key.toString(), e.getValue());
+            }
+        });
+
+        return new MetaData.Request(
+                aHeaders.method().name(), uri, HttpVersion.HTTP_1_1, jHeaders, aReq.content().length());
+    }
+
+    private static HttpHeaders toResponseHeaders(ArmeriaHttpTransport transport) {
+        final MetaData.Response info = transport.info;
+        if (info == null) {
+            throw new IllegalStateException("response metadata unavailable");
+        }
+
+        final HttpHeaders headers = HttpHeaders.of(HttpStatus.valueOf(info.getStatus()));
+        info.getFields().forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
+        return headers;
+    }
+
+    private static final class ArmeriaHttpTransport implements HttpTransport {
+
+        final Queue<HttpData> out = new ArrayDeque<>();
+        MetaData.Response info;
+        Throwable cause;
+
+        @Override
+        public void send(MetaData.Response info, boolean head,
+                         ByteBuffer content, boolean lastContent, Callback callback) {
+
+            if (info != null) {
+                this.info = info;
+            }
+
+            final int length = content.remaining();
+            if (length == 0) {
+                callback.succeeded();
+                return;
+            }
+
+            if (content.hasArray()) {
+                final int from = content.arrayOffset();
+                out.add(HttpData.of(Arrays.copyOfRange(content.array(), from, from + length)));
+                content.position(content.position() + length);
+            } else {
+                final byte[] data = new byte[length];
+                content.get(data);
+                out.add(HttpData.of(data));
+            }
+
+            callback.succeeded();
+        }
+
+        @Override
+        public boolean isPushSupported() {
+            return false;
+        }
+
+        @Override
+        public void push(MetaData.Request request) {}
+
+        @Override
+        public void onCompleted() {}
+
+        @Override
+        public void abort(Throwable failure) {
+            cause = failure;
+        }
+
+        @Override
+        public boolean isOptimizedForDirectBuffers() {
+            return false;
+        }
+    }
+
+    private static final class ArmeriaEndPoint extends AbstractEndPoint {
+        ArmeriaEndPoint(String hostname, Scheduler scheduler, SocketAddress local, SocketAddress remote) {
+            super(scheduler, addHostname((InetSocketAddress) local, hostname), (InetSocketAddress) remote);
+
+            setIdleTimeout(getIdleTimeout());
+        }
+
+        /**
+         * Adds the hostname string to the specified {@link InetSocketAddress} so that
+         * Jetty's {@code ServletRequest.getLocalName()} implementation returns the configured hostname.
+         */
+        private static InetSocketAddress addHostname(InetSocketAddress address, String hostname) {
+            try {
+                return new InetSocketAddress(InetAddress.getByAddress(
+                        hostname, address.getAddress().getAddress()), address.getPort());
+            } catch (UnknownHostException e) {
+                throw new Error(e); // Should never happen
+            }
+        }
+
+
+        @Override
+        protected void onIncompleteFlush() {}
+
+        @Override
+        protected void needsFillInterest() {}
+
+        @Override
+        public void shutdownOutput() {}
+
+        @Override
+        public boolean isOutputShutdown() {
+            return false;
+        }
+
+        @Override
+        public boolean isInputShutdown() {
+            return false;
+        }
+
+        @Override
+        public int fill(ByteBuffer buffer) {
+            return 0;
+        }
+
+        @Override
+        public boolean flush(ByteBuffer... buffer) {
+            return true;
+        }
+
+        @Override
+        public Object getTransport() {
+            return null;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return true;
+        }
+    }
+
+    private final class Configurator extends ServerListenerAdapter {
+        @Override
+        public void serverStarting(com.linecorp.armeria.server.Server server) throws Exception {
+            start();
+        }
+
+        @Override
+        public void serverStopped(com.linecorp.armeria.server.Server server) throws Exception {
+            stop();
+        }
     }
 }

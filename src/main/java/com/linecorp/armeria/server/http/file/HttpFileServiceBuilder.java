@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.http.file;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
+import java.time.Clock;
 
 /**
  * Builds a new {@link HttpFileService} and its {@link HttpFileServiceConfig}. Use the factory methods in
@@ -64,11 +65,21 @@ public final class HttpFileServiceBuilder {
     }
 
     private final HttpVfs vfs;
+    private Clock clock = Clock.systemUTC();
     private int maxCacheEntries = 1024;
     private int maxCacheEntrySizeBytes = 65536;
+    private boolean serveCompressedFiles;
 
     private HttpFileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
+    }
+
+    /**
+     * Sets the {@link Clock} that provides the current date and time.
+     */
+    public HttpFileServiceBuilder clock(Clock clock) {
+        this.clock = requireNonNull(clock, "clock");
+        return this;
     }
 
     /**
@@ -76,6 +87,20 @@ public final class HttpFileServiceBuilder {
      */
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
         this.maxCacheEntries = HttpFileServiceConfig.validateMaxCacheEntries(maxCacheEntries);
+        return this;
+    }
+
+    /**
+     * Whether pre-compressed files should be served. {@link HttpFileService} supports serving files
+     * compressed with gzip, with the extension ".gz", and brotli, with the extension ".br". The extension
+     * should be appended to the original file. For example, to serve index.js either raw, gzip-compressed, or
+     * brotli-compressed, there should be three files, index.js, index.js.gz, and index.js.br.
+     * <p>
+     * Some tools for precompressing resources during a build process include gulp-zopfli and gulp-brotli,
+     * which by default create files with the correct extension.
+     */
+    public HttpFileServiceBuilder serveCompressedFiles(boolean serveCompressedFiles) {
+        this.serveCompressedFiles = serveCompressedFiles;
         return this;
     }
 
@@ -89,12 +114,16 @@ public final class HttpFileServiceBuilder {
         return this;
     }
 
+    /**
+     * Creates a new {@link HttpFileService}.
+     */
     public HttpFileService build() {
-        return new HttpFileService(new HttpFileServiceConfig(vfs, maxCacheEntries, maxCacheEntrySizeBytes));
+        return new HttpFileService(new HttpFileServiceConfig(
+                vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes, serveCompressedFiles));
     }
 
     @Override
     public String toString() {
-        return HttpFileServiceConfig.toString(this, vfs, maxCacheEntries, maxCacheEntrySizeBytes);
+        return HttpFileServiceConfig.toString(this, vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes);
     }
 }

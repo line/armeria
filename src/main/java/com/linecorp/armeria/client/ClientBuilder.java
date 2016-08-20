@@ -17,26 +17,14 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.routing.EndpointGroup;
-import com.linecorp.armeria.client.routing.EndpointGroupInvoker;
-import com.linecorp.armeria.client.routing.EndpointGroupUtil;
-import org.apache.thrift.protocol.TProtocolFactory;
-
-import com.linecorp.armeria.client.http.SimpleHttpClientCodec;
-import com.linecorp.armeria.client.thrift.ThriftClientCodec;
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TimeoutPolicy;
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -47,8 +35,8 @@ public final class ClientBuilder {
     private final URI uri;
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
 
-    private RemoteInvokerFactory remoteInvokerFactory = RemoteInvokerFactory.DEFAULT;
-    private Function<Client, Client> decorator;
+    private ClientFactory factory = ClientFactory.DEFAULT;
+    private ClientDecorationBuilder decoration;
 
     /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
@@ -65,10 +53,10 @@ public final class ClientBuilder {
     }
 
     /**
-     * Sets the {@link RemoteInvokerFactory} of the client. The default is {@link RemoteInvokerFactory#DEFAULT}.
+     * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#DEFAULT}.
      */
-    public ClientBuilder remoteInvokerFactory(RemoteInvokerFactory remoteInvokerFactory) {
-        this.remoteInvokerFactory = requireNonNull(remoteInvokerFactory, "remoteInvokerFactory");
+    public ClientBuilder factory(ClientFactory factory) {
+        this.factory = requireNonNull(factory, "factory");
         return this;
     }
 
@@ -98,9 +86,9 @@ public final class ClientBuilder {
                 throw new NullPointerException("options[" + i + ']');
             }
 
-            if (o.option() == ClientOption.DECORATOR && decorator != null) {
+            if (o.option() == ClientOption.DECORATION && decoration != null) {
                 throw new IllegalArgumentException(
-                        "options[" + i + "]: option(" + ClientOption.DECORATOR +
+                        "options[" + i + "]: option(" + ClientOption.DECORATION +
                         ") and decorator() are mutually exclusive.");
             }
 
@@ -120,171 +108,84 @@ public final class ClientBuilder {
 
     private void validateOption(ClientOption<?> option) {
         requireNonNull(option, "option");
-        if (option == ClientOption.DECORATOR && decorator != null) {
+        if (option == ClientOption.DECORATION && decoration != null) {
             throw new IllegalArgumentException(
-                    "option(" + ClientOption.DECORATOR + ") and decorator() are mutually exclusive.");
+                    "option(" + ClientOption.DECORATION + ") and decorator() are mutually exclusive.");
         }
     }
 
     /**
-     * Sets the timeout of a socket write attempt in milliseconds.
+     * Sets the default timeout of a socket write attempt in milliseconds.
      *
-     * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * @param defaultWriteTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public ClientBuilder writeTimeoutMillis(long writeTimeoutMillis) {
-        return writeTimeout(Duration.ofMillis(writeTimeoutMillis));
+    public ClientBuilder defaultWriteTimeoutMillis(long defaultWriteTimeoutMillis) {
+        return option(ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS, defaultWriteTimeoutMillis);
     }
 
     /**
-     * Sets the timeout of a socket write attempt.
+     * Sets the default timeout of a socket write attempt.
      *
-     * @param writeTimeout the timeout. {@code 0} disables the timeout.
+     * @param defaultWriteTimeout the timeout. {@code 0} disables the timeout.
      */
-    public ClientBuilder writeTimeout(Duration writeTimeout) {
-        return writeTimeout(TimeoutPolicy.ofFixed(requireNonNull(writeTimeout, "writeTimeout")));
+    public ClientBuilder defaultWriteTimeout(Duration defaultWriteTimeout) {
+        return defaultWriteTimeoutMillis(requireNonNull(defaultWriteTimeout, "defaultWriteTimeout").toMillis());
     }
 
     /**
-     * Sets the {@link TimeoutPolicy} of a socket write attempt.
-     */
-    public ClientBuilder writeTimeout(TimeoutPolicy writeTimeoutPolicy) {
-        return option(ClientOption.WRITE_TIMEOUT_POLICY,
-                      requireNonNull(writeTimeoutPolicy, "writeTimeoutPolicy"));
-    }
-
-    /**
-     * Sets the timeout of a response in milliseconds.
+     * Sets the default timeout of a response in milliseconds.
      *
-     * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * @param defaultResponseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public ClientBuilder responseTimeoutMillis(long responseTimeoutMillis) {
-        return responseTimeout(Duration.ofMillis(responseTimeoutMillis));
+    public ClientBuilder defaultResponseTimeoutMillis(long defaultResponseTimeoutMillis) {
+        return option(ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS, defaultResponseTimeoutMillis);
     }
 
     /**
-     * Sets the timeout of a response.
+     * Sets the default timeout of a response.
      *
-     * @param responseTimeout the timeout. {@code 0} disables the timeout.
+     * @param defaultResponseTimeout the timeout. {@code 0} disables the timeout.
      */
-    public ClientBuilder responseTimeout(Duration responseTimeout) {
-        return responseTimeout(TimeoutPolicy.ofFixed(requireNonNull(responseTimeout, "responseTimeout")));
-    }
-
-    /**
-     * Sets the {@link TimeoutPolicy} of a response.
-     */
-    public ClientBuilder responseTimeout(TimeoutPolicy responseTimeoutPolicy) {
-        return option(ClientOption.RESPONSE_TIMEOUT_POLICY,
-                      requireNonNull(responseTimeoutPolicy, "responseTimeoutPolicy"));
+    public ClientBuilder defaultResponseTimeout(Duration defaultResponseTimeout) {
+        return defaultResponseTimeoutMillis(
+                requireNonNull(defaultResponseTimeout, "defaultResponseTimeout").toMillis());
     }
 
     /**
      * Adds the specified {@code decorator}.
      */
-    public ClientBuilder decorator(Function<Client, Client> decorator) {
-        requireNonNull(decorator, "decorator");
+    public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
+            I extends Request, O extends Response>
+    ClientBuilder decorator(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
 
-        if (options.containsKey(ClientOption.DECORATOR)) {
+        if (options.containsKey(ClientOption.DECORATION)) {
             throw new IllegalArgumentException(
-                    "decorator() and option(" + ClientOption.DECORATOR + ") are mutually exclusive.");
+                    "decorator() and option(" + ClientOption.DECORATION + ") are mutually exclusive.");
         }
 
-        if (this.decorator == null) {
-            this.decorator = decorator;
-        } else {
-            this.decorator = this.decorator.andThen(decorator);
+        if (decoration == null) {
+            decoration = new ClientDecorationBuilder();
         }
 
+        decoration.add(requestType, responseType, decorator);
         return this;
     }
 
     /**
-     * Adds the specified {@code invokerDecorator} that decorates a {@link RemoteInvoker}.
-     */
-    public ClientBuilder invokerDecorator(
-            Function<? extends RemoteInvoker, ? extends RemoteInvoker> invokerDecorator) {
-        requireNonNull(invokerDecorator, "invokerDecorator");
-
-        @SuppressWarnings("unchecked")
-        final Function<RemoteInvoker, RemoteInvoker> castInvokerDecorator =
-                (Function<RemoteInvoker, RemoteInvoker>) invokerDecorator;
-
-        return decorator(d -> d.decorateInvoker(castInvokerDecorator));
-    }
-
-    /**
-     * Adds the specified {@code codecDecorator} that decorates an {@link ClientCodec}.
-     */
-    public ClientBuilder codecDecorator(
-            Function<? extends ClientCodec, ? extends ClientCodec> codecDecorator) {
-        requireNonNull(codecDecorator, "codecDecorator");
-
-        @SuppressWarnings("unchecked")
-        final Function<ClientCodec, ClientCodec> castCodecDecorator =
-                (Function<ClientCodec, ClientCodec>) codecDecorator;
-
-        return decorator(d -> d.decorateCodec(castCodecDecorator));
-    }
-
-    /**
-     * Creates a new client which implements the specified {@code interfaceClass}.
+     * Creates a new client which implements the specified {@code clientType}.
+     *
+     * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
+     *                                  {@link #ClientBuilder(String)} or the specified {@code clientType} is
+     *                                  unsupported for the scheme
      */
     @SuppressWarnings("unchecked")
-    public <T> T build(Class<T> interfaceClass) {
-        requireNonNull(interfaceClass, "interfaceClass");
+    public <T> T build(Class<T> clientType) {
+        requireNonNull(clientType, "clientType");
 
-        if (decorator != null) {
-            options.put(ClientOption.DECORATOR, ClientOption.DECORATOR.newValue(decorator));
+        if (decoration != null) {
+            options.put(ClientOption.DECORATION, ClientOption.DECORATION.newValue(decoration.build()));
         }
 
-        final ClientOptions options = ClientOptions.of(this.options.values());
-
-        final Client client = options.decorator().apply(newClient(interfaceClass));
-
-        final InvocationHandler handler = new ClientInvocationHandler(
-                remoteInvokerFactory.eventLoopGroup(), uri, interfaceClass, client, options);
-
-        return (T) Proxy.newProxyInstance(interfaceClass.getClassLoader(),
-                                          new Class[] { interfaceClass },
-                                          handler);
-    }
-
-    private Client newClient(Class<?> interfaceClass) {
-        final Scheme scheme = Scheme.parse(uri.getScheme());
-        final SessionProtocol sessionProtocol = scheme.sessionProtocol();
-        URI codecURI = this.uri;
-
-        RemoteInvoker remoteInvoker = remoteInvokerFactory.getInvoker(sessionProtocol);
-        if (remoteInvoker == null) {
-            throw new IllegalArgumentException("unsupported scheme: " + scheme);
-        }
-
-        final String groupName = EndpointGroupUtil.getEndpointGroupName(this.uri);
-        if (groupName != null) {
-            remoteInvoker = new EndpointGroupInvoker(remoteInvoker, groupName);
-            // Ensure a valid URL is returned in business logic that accesses it
-            // through the ServiceInvocationContext by stripping out our custom markers.
-            codecURI = URI.create(EndpointGroupUtil.removeGroupMark(this.uri));
-        }
-
-        final ClientCodec codec = createCodec(codecURI, scheme, interfaceClass);
-
-        return new SimpleClient(codec, remoteInvoker);
-    }
-
-    private static ClientCodec createCodec(URI uri, Scheme scheme, Class<?> interfaceClass) {
-        SessionProtocol sessionProtocol = scheme.sessionProtocol();
-        SerializationFormat serializationFormat = scheme.serializationFormat();
-        if (SerializationFormat.ofThrift().contains(serializationFormat)) {
-            TProtocolFactory protocolFactory = ThriftProtocolFactories.get(serializationFormat);
-            return new ThriftClientCodec(uri, interfaceClass, protocolFactory);
-        }
-
-        if (SessionProtocol.ofHttp().contains(sessionProtocol) &&
-                   serializationFormat == SerializationFormat.NONE) {
-            return new SimpleHttpClientCodec(uri.getHost());
-        }
-
-        throw new IllegalArgumentException("unsupported scheme:" + scheme);
+        return factory.newClient(uri, clientType, ClientOptions.of(options.values()));
     }
 }

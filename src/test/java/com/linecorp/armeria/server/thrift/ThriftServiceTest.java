@@ -16,17 +16,22 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nonnull;
@@ -34,23 +39,28 @@ import javax.annotation.Nonnull;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TProtocol;
-import org.junit.AfterClass;
+import org.apache.thrift.transport.TMemoryBuffer;
+import org.apache.thrift.transport.TMemoryInputTransport;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.ServiceInvocationContext;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.DefaultHttpRequest;
+import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.DefaultResponseLog;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceCodec;
-import com.linecorp.armeria.server.ServiceCodec.DecodeResult;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.FileService;
 import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
@@ -60,18 +70,11 @@ import com.linecorp.armeria.service.test.thrift.main.NameService;
 import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.ImmediateExecutor;
 
 /**
- * Tests {@link ThriftService}.
+ * Tests {@link ThriftCallService} and {@link THttpService}.
  * <p>
  * The test methods have the following naming convention:
  *
@@ -97,11 +100,6 @@ import io.netty.util.concurrent.Promise;
 @RunWith(Parameterized.class)
 public class ThriftServiceTest {
 
-    private static final Channel CH = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
-    private static final SessionProtocol PROTO = SessionProtocol.HTTP;
-    private static final String HOST = "localhost";
-    private static final String PATH = "/service";
-
     private static final Name NAME_A = new Name("a", "a", "a");
     private static final Name NAME_B = new Name("b", "b", "b");
     private static final Name NAME_C = new Name("c", "c", "c");
@@ -109,12 +107,6 @@ public class ThriftServiceTest {
     private static final String FOO = "foo";
     private static final String BAR = "bar";
     private static final String BAZ = "baz";
-
-    private static final TByteBufTransport inTransport = new TByteBufTransport();
-    private static final TByteBufTransport outTransport = new TByteBufTransport();
-
-    private static final ByteBuf in = Unpooled.buffer();
-    private static final ByteBuf out = Unpooled.buffer();
 
     @Parameters(name = "{0}")
     public static Collection<Object[]> parameters() throws Exception {
@@ -128,51 +120,40 @@ public class ThriftServiceTest {
     }
 
     private final SerializationFormat defaultSerializationFormat;
-    private final TProtocol inProto;
-    private final TProtocol outProto;
 
-    private Promise<ByteBuf> promise;
-    private Promise<ByteBuf> promise2;
+    private TProtocol inProto;
+    private TProtocol outProto;
+    private TMemoryInputTransport in;
+    private TMemoryBuffer out;
+
+    private CompletableFuture<HttpData> promise;
+    private CompletableFuture<HttpData> promise2;
 
     public ThriftServiceTest(SerializationFormat defaultSerializationFormat) {
         this.defaultSerializationFormat = defaultSerializationFormat;
-        inProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(inTransport);
-        outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(outTransport);
-    }
-
-    @BeforeClass
-    public static void beforeClass() {
-        inTransport.reset(in);
-        outTransport.reset(out);
     }
 
     @Before
     public void before() {
-        in.clear();
-        out.clear();
-        promise = ImmediateEventExecutor.INSTANCE.newPromise();
-        promise2 = ImmediateEventExecutor.INSTANCE.newPromise();
-    }
+        in = new TMemoryInputTransport();
+        out = new TMemoryBuffer(128);
+        inProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(in);
+        outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
 
-    @AfterClass
-    public static void afterClass() {
-        in.release();
-        out.release();
+        promise = new CompletableFuture<>();
+        promise2 = new CompletableFuture<>();
     }
 
     @Test
     public void testSync_HelloService_hello() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of(
+        THttpService service = THttpService.of(
                 (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         assertThat(client.recv_hello(), is("Hello, foo!"));
     }
@@ -181,16 +162,13 @@ public class ThriftServiceTest {
     public void testAsync_HelloService_hello() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of(
+        THttpService service = THttpService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete("Hello, " + name + '!'), defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         assertThat(client.recv_hello(), is("Hello, foo!"));
     }
@@ -199,19 +177,16 @@ public class ThriftServiceTest {
     public void testIdentity_HelloService_hello() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService syncService = ThriftService.of(
+        THttpService syncService = THttpService.of(
                 (HelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
 
-        ThriftService asyncService = ThriftService.of(
+        THttpService asyncService = THttpService.of(
                 (HelloService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete("Hello, " + name + '!'), defaultSerializationFormat);
 
-        invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
-        invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
-        promise.sync();
-        promise2.sync();
+        invokeTwice(syncService, asyncService);
 
         assertThat(promise.get(), is(promise2.get()));
     }
@@ -222,15 +197,14 @@ public class ThriftServiceTest {
 
         OnewayHelloService.Client client = new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of(
+        THttpService service = THttpService.of(
                 (OnewayHelloService.Iface) actualName::set, defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
+        invoke(service);
 
-        assertThat(promise.get(), is(nullValue()));
+        assertThat(promise.get().isEmpty(), is(true));
         assertThat(actualName.get(), is(FOO));
     }
 
@@ -240,17 +214,16 @@ public class ThriftServiceTest {
 
         OnewayHelloService.Client client = new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
+        THttpService service = THttpService.of((OnewayHelloService.AsyncIface) (name, resultHandler) -> {
             actualName.set(name);
             resultHandler.onComplete(null);
         }, defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
+        invoke(service);
 
-        assertThat(promise.get(), is(nullValue()));
+        assertThat(promise.get().isEmpty(), is(true));
         assertThat(actualName.get(), is(FOO));
     }
 
@@ -260,15 +233,12 @@ public class ThriftServiceTest {
 
         DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume(FOO);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of(
+        THttpService service = THttpService.of(
                 (DevNullService.Iface) consumed::set, defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         assertThat(consumed.get(), is(FOO));
 
@@ -281,17 +251,14 @@ public class ThriftServiceTest {
 
         DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume("bar");
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of((DevNullService.AsyncIface) (value, resultHandler) -> {
+        THttpService service = THttpService.of((DevNullService.AsyncIface) (value, resultHandler) -> {
             consumed.set(value);
             resultHandler.onComplete(null);
         }, defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         assertThat(consumed.get(), is("bar"));
 
@@ -302,20 +269,17 @@ public class ThriftServiceTest {
     public void testIdentity_DevNullService_consume() throws Exception {
         DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
         client.send_consume(FOO);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService syncService = ThriftService.of((DevNullService.Iface) value -> {
+        THttpService syncService = THttpService.of((DevNullService.Iface) value -> {
             // NOOP
         }, defaultSerializationFormat);
 
-        ThriftService asyncService = ThriftService.of(
+        THttpService asyncService = THttpService.of(
                 (DevNullService.AsyncIface) (value, resultHandler) ->
                         resultHandler.onComplete(null), defaultSerializationFormat);
 
-        invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
-        invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
-        promise.sync();
-        promise2.sync();
+        invokeTwice(syncService, asyncService);
 
         assertThat(promise.get(), is(promise2.get()));
     }
@@ -324,16 +288,13 @@ public class ThriftServiceTest {
     public void testSync_FileService_create_reply() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of((FileService.Iface) path -> {
+        THttpService service = THttpService.of((FileService.Iface) path -> {
             throw newFileServiceException();
         }, defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         try {
             client.recv_create();
@@ -347,16 +308,13 @@ public class ThriftServiceTest {
     public void testAsync_FileService_create_reply() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of(
+        THttpService service = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
                         resultHandler.onError(newFileServiceException()), defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         try {
             client.recv_create();
@@ -370,20 +328,17 @@ public class ThriftServiceTest {
     public void testIdentity_FileService_create_reply() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAR);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService syncService = ThriftService.of((FileService.Iface) path -> {
+        THttpService syncService = THttpService.of((FileService.Iface) path -> {
             throw newFileServiceException();
         }, defaultSerializationFormat);
 
-        ThriftService asyncService = ThriftService.of(
+        THttpService asyncService = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
                         resultHandler.onError(newFileServiceException()), defaultSerializationFormat);
 
-        invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
-        invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
-        promise.sync();
-        promise2.sync();
+        invokeTwice(syncService, asyncService);
 
         assertThat(promise.get(), is(promise2.get()));
     }
@@ -392,17 +347,14 @@ public class ThriftServiceTest {
     public void testSync_FileService_create_exception() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        RuntimeException exception = new RuntimeException();
-        ThriftService service = ThriftService.of((FileService.Iface) path -> {
+        RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
+        THttpService service = THttpService.of((FileService.Iface) path -> {
             throw exception;
         }, defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         try {
             client.recv_create();
@@ -417,17 +369,14 @@ public class ThriftServiceTest {
     public void testAsync_FileService_create_exception() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        RuntimeException exception = new RuntimeException();
-        ThriftService service = ThriftService.of(
+        RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
+        THttpService service = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
                         resultHandler.onError(exception), defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         try {
             client.recv_create();
@@ -442,21 +391,18 @@ public class ThriftServiceTest {
     public void testIdentity_FileService_create_exception() throws Exception {
         FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
         client.send_create(BAZ);
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        RuntimeException exception = new RuntimeException();
-        ThriftService syncService = ThriftService.of((FileService.Iface) path -> {
+        RuntimeException exception = Exceptions.clearTrace(new RuntimeException());
+        THttpService syncService = THttpService.of((FileService.Iface) path -> {
             throw exception;
         }, defaultSerializationFormat);
 
-        ThriftService asyncService = ThriftService.of(
+        THttpService asyncService = THttpService.of(
                 (FileService.AsyncIface) (path, resultHandler) ->
                         resultHandler.onError(exception), defaultSerializationFormat);
 
-        invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
-        invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
-        promise.sync();
-        promise2.sync();
+        invokeTwice(syncService, asyncService);
 
         assertThat(promise.get(), is(promise2.get()));
     }
@@ -465,15 +411,12 @@ public class ThriftServiceTest {
     public void testSync_NameService_removeMiddle() throws Exception {
         NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of(
+        THttpService service = THttpService.of(
                 (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         assertThat(client.recv_removeMiddle(), is(new Name(BAZ, null, FOO)));
     }
@@ -482,17 +425,14 @@ public class ThriftServiceTest {
     public void testAsync_NameService_removeMiddle() throws Exception {
         NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of(
+        THttpService service = THttpService.of(
                 (NameService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete(new Name(name.first, null, name.last)),
                 defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         assertThat(client.recv_removeMiddle(), is(new Name(BAZ, null, FOO)));
     }
@@ -501,20 +441,17 @@ public class ThriftServiceTest {
     public void testIdentity_NameService_removeMiddle() throws Exception {
         NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
         client.send_removeMiddle(new Name(FOO, BAZ, BAR));
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService syncService = ThriftService.of(
+        THttpService syncService = THttpService.of(
                 (NameService.Iface) name -> new Name(name.first, null, name.last), defaultSerializationFormat);
 
-        ThriftService asyncService = ThriftService.of(
+        THttpService asyncService = THttpService.of(
                 (NameService.AsyncIface) (name, resultHandler) ->
                         resultHandler.onComplete(new Name(name.first, null, name.last)),
                 defaultSerializationFormat);
 
-        invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
-        invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
-        promise.sync();
-        promise2.sync();
+        invokeTwice(syncService, asyncService);
 
         assertThat(promise.get(), is(promise2.get()));
     }
@@ -523,18 +460,15 @@ public class ThriftServiceTest {
     public void testSync_NameSortService_sort() throws Exception {
         NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of((NameSortService.Iface) names -> {
+        THttpService service = THttpService.of((NameSortService.Iface) names -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             return sorted;
         }, defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         assertThat(client.recv_sort(), is(Arrays.asList(NAME_A, NAME_B, NAME_C)));
     }
@@ -543,18 +477,15 @@ public class ThriftServiceTest {
     public void testAsync_NameSortService_sort() throws Exception {
         NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
+        THttpService service = THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             resultHandler.onComplete(sorted);
         }, defaultSerializationFormat);
 
-        invoke(service, CH, PROTO, HOST, PATH, out, promise);
-        promise.sync();
-
-        in.writeBytes(promise.get());
+        invoke(service);
 
         assertThat(client.recv_sort(), is(Arrays.asList(NAME_A, NAME_B, NAME_C)));
     }
@@ -563,24 +494,21 @@ public class ThriftServiceTest {
     public void testIdentity_NameSortService_sort() throws Exception {
         NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
-        assertThat(out.readableBytes(), is(greaterThan(0)));
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService syncService = ThriftService.of((NameSortService.Iface) names -> {
+        THttpService syncService = THttpService.of((NameSortService.Iface) names -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             return sorted;
         }, defaultSerializationFormat);
 
-        ThriftService asyncService = ThriftService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
+        THttpService asyncService = THttpService.of((NameSortService.AsyncIface) (names, resultHandler) -> {
             ArrayList<Name> sorted = new ArrayList<>(names);
             Collections.sort(sorted);
             resultHandler.onComplete(sorted);
         }, defaultSerializationFormat);
 
-        invoke(syncService, CH, PROTO, HOST, PATH, out.duplicate(), promise);
-        invoke(asyncService, CH, PROTO, HOST, PATH, out.duplicate(), promise2);
-        promise.sync();
-        promise2.sync();
+        invokeTwice(syncService, asyncService);
 
         assertThat(promise.get(), is(promise2.get()));
     }
@@ -589,27 +517,31 @@ public class ThriftServiceTest {
     public void testMultipleInheritance() throws Exception {
         NameService.Client client1 = new NameService.Client.Factory().getClient(inProto, outProto);
         client1.send_removeMiddle(new Name(BAZ, BAR, FOO));
-        assertThat(out.readableBytes(), is(greaterThan(0)));
-        ByteBuf out1 = out.copy();
-        out.clear();
+        assertThat(out.length(), is(greaterThan(0)));
+
+        final HttpData req1 = HttpData.of(out.getArray(), 0, out.length());
+
+        out = new TMemoryBuffer(128);
+        outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
 
         NameSortService.Client client2 = new NameSortService.Client.Factory().getClient(inProto, outProto);
         client2.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
-        assertThat(out.readableBytes(), is(greaterThan(0)));
-        ByteBuf out2 = out.copy();
-        out.clear();
+        assertThat(out.length(), is(greaterThan(0)));
 
-        ThriftService service = ThriftService.of(new UberNameService(), defaultSerializationFormat);
+        final HttpData req2 = HttpData.of(out.getArray(), 0, out.length());
 
-        invoke(service, CH, PROTO, HOST, PATH, out1, promise);
-        invoke(service, CH, PROTO, HOST, PATH, out2, promise2);
-        promise.sync();
-        promise2.sync();
+        THttpService service = THttpService.of(new UberNameService(), defaultSerializationFormat);
 
-        in.writeBytes(promise.get());
+        invoke(service, req1, promise);
+        invoke(service, req2, promise2);
+
+        final HttpData res1 = promise.get();
+        final HttpData res2 = promise2.get();
+
+        in.reset(res1.array(), res1.offset(), res1.length());
         assertThat(client1.recv_removeMiddle(), is(new Name(BAZ, null, FOO)));
 
-        in.writeBytes(promise2.get());
+        in.reset(res2.array(), res2.offset(), res2.length());
         assertThat(client2.recv_sort(), is(Arrays.asList(NAME_A, NAME_B, NAME_C)));
     }
 
@@ -627,36 +559,57 @@ public class ThriftServiceTest {
         }
     }
 
-    private static void invoke(ThriftService service,
-                               Channel ch, SessionProtocol protocol, String hostname, String path,
-                               ByteBuf in, Promise<ByteBuf> promise) throws Exception {
+    private void invoke(THttpService service) throws Exception {
+        invoke(service, HttpData.of(out.getArray(), 0, out.length()), promise);
+
+        final HttpData res = promise.get();
+        in.reset(res.array(), res.offset(), res.length());
+    }
+
+    private void invokeTwice(THttpService service1, THttpService service2) throws Exception {
+        final HttpData content = HttpData.of(out.getArray(), 0, out.length());
+        invoke(service1, content, promise);
+        invoke(service2, content, promise2);
+    }
+
+    private static void invoke(THttpService service, HttpData content,
+                               CompletableFuture<HttpData> promise) throws Exception {
 
         final ServiceConfig cfg =
-                new ServerBuilder().serviceAt("/", service).build().config().serviceConfigs().get(0);
+                new ServerBuilder().serviceAt("/", service)
+                                   .blockingTaskExecutor(ImmediateExecutor.INSTANCE).build()
+                                   .config().serviceConfigs().get(0);
 
-        final ServiceCodec codec = service.codec();
-        final Promise<Object> objPromise = ch.eventLoop().newPromise();
-        final DecodeResult result = codec.decodeRequest(
-                cfg, ch, protocol, hostname, path, path, in, null, objPromise);
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final DefaultRequestLog reqLogBuilder = new DefaultRequestLog();
+        final DefaultResponseLog resLogBuilder = new DefaultResponseLog(reqLogBuilder);
 
-        switch (result.type()) {
-        case SUCCESS:
-            final ServiceInvocationContext ctx = result.invocationContext();
-            cfg.service().handler().invoke(ctx, GlobalEventExecutor.INSTANCE, objPromise);
-            objPromise.addListener((Future<Object> future) -> {
-                if (future.isSuccess()) {
-                    promise.setSuccess(codec.encodeResponse(ctx, future.getNow()));
+        when(ctx.blockingTaskExecutor()).thenReturn(ImmediateEventExecutor.INSTANCE);
+        when(ctx.requestLogBuilder()).thenReturn(reqLogBuilder);
+        when(ctx.responseLogBuilder()).thenReturn(resLogBuilder);
+        doNothing().when(ctx).invokeOnEnterCallbacks();
+        doNothing().when(ctx).invokeOnExitCallbacks();
+
+        final DefaultHttpRequest req = new DefaultHttpRequest(
+                HttpHeaders.of(HttpMethod.POST, "/"), false);
+
+        req.write(content);
+        req.close();
+
+        final HttpResponse res = service.serve(ctx, req);
+        res.aggregate().handle(voidFunction((aReq, cause) -> {
+            if (cause == null) {
+                if (aReq.headers().status().code() == 200) {
+                    promise.complete(aReq.content());
                 } else {
-                    promise.setSuccess(codec.encodeFailureResponse(ctx, future.cause()));
+                    promise.completeExceptionally(new AssertionError(
+                            aReq.headers().status() + ", " +
+                            aReq.content().toString(StandardCharsets.UTF_8)));
                 }
-            });
-            break;
-        case FAILURE:
-            promise.setSuccess((ByteBuf) result.errorResponse());
-            break;
-        default:
-            promise.setFailure(new IllegalStateException("unexpected decode result type: " + result.type()));
-        }
+            } else {
+                promise.completeExceptionally(cause);
+            }
+        })).exceptionally(CompletionActions::log);
     }
 
     @Nonnull

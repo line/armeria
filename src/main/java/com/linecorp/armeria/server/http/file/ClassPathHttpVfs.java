@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,8 +24,9 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.http.HttpData;
 
 final class ClassPathHttpVfs implements HttpVfs {
 
@@ -51,7 +52,7 @@ final class ClassPathHttpVfs implements HttpVfs {
     }
 
     @Override
-    public Entry get(String path) {
+    public Entry get(String path, @Nullable String contentEncoding) {
         final String resourcePath = rootDir.isEmpty() ? path.substring(1) : rootDir + path;
         final URL url = classLoader.getResource(resourcePath);
         if (url == null || url.getPath().endsWith("/")) {
@@ -68,9 +69,9 @@ final class ClassPathHttpVfs implements HttpVfs {
                 f = new File(url.getPath());
             }
 
-            entry = new FileSystemHttpVfs.FileSystemEntry(f, path);
+            entry = new FileSystemHttpVfs.FileSystemEntry(f, path, contentEncoding);
         } else {
-            entry = new ClassPathEntry(url, path);
+            entry = new ClassPathEntry(url, path, contentEncoding);
         }
 
         return entry;
@@ -86,8 +87,8 @@ final class ClassPathHttpVfs implements HttpVfs {
         private final URL url;
         private final long lastModifiedMillis = System.currentTimeMillis();
 
-        ClassPathEntry(URL url, String path) {
-            super(path);
+        ClassPathEntry(URL url, String path, @Nullable String contentEncoding) {
+            super(path, contentEncoding);
             this.url = url;
         }
 
@@ -97,9 +98,9 @@ final class ClassPathHttpVfs implements HttpVfs {
         }
 
         @Override
-        public ByteBuf readContent(ByteBufAllocator alloc) throws IOException {
+        public HttpData readContent() throws IOException {
             try (InputStream in = url.openStream()) {
-                return readContent(alloc, in);
+                return readContent(in);
             }
         }
     }

@@ -20,14 +20,15 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TimeoutPolicy;
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.util.AbstractOption;
 
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.ConstantPool;
 
 /**
  * A client option.
+ *
+ * @param <T> the type of the option value
  */
 public final class ClientOption<T> extends AbstractOption<T> {
 
@@ -40,15 +41,21 @@ public final class ClientOption<T> extends AbstractOption<T> {
     };
 
     /**
-     * The {@link TimeoutPolicy} for a socket write
+     * The default timeout of a socket write
      */
-    public static final ClientOption<TimeoutPolicy> WRITE_TIMEOUT_POLICY = valueOf("WRITE_TIMEOUT_POLICY");
+    public static final ClientOption<Long> DEFAULT_WRITE_TIMEOUT_MILLIS =
+            valueOf("DEFAULT_WRITE_TIMEOUT_MILLIS");
 
     /**
-     * The {@link TimeoutPolicy} for a server reply to a client call.
+     * The default timeout of a server reply to a client call.
      */
-    public static final ClientOption<TimeoutPolicy> RESPONSE_TIMEOUT_POLICY = valueOf(
-            "RESPONSE_TIMEOUT_POLICY");
+    public static final ClientOption<Long> DEFAULT_RESPONSE_TIMEOUT_MILLIS =
+            valueOf("DEFAULT_RESPONSE_TIMEOUT_MILLIS");
+
+    /**
+     * The default maximum allowed length of a server response.
+     */
+    public static final ClientOption<Long> DEFAULT_MAX_RESPONSE_LENGTH = valueOf("DEFAULT_MAX_RESPONSE_LENGTH");
 
     /**
      * The additional HTTP headers to send with requests. Used only when the underlying
@@ -57,10 +64,9 @@ public final class ClientOption<T> extends AbstractOption<T> {
     public static final ClientOption<HttpHeaders> HTTP_HEADERS = valueOf("HTTP_HEADERS");
 
     /**
-     * The {@link Function} that decorates the client components provided by {@link Client}.
+     * The {@link Function} that decorates the client components.
      */
-    public static final ClientOption<Function<Client, Client>> DECORATOR = valueOf(
-            "DECORATOR");
+    public static final ClientOption<ClientDecoration> DECORATION = valueOf("DECORATION");
 
     /**
      * Returns the {@link ClientOption} of the specified name.

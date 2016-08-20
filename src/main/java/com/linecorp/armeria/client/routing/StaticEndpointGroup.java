@@ -15,30 +15,41 @@
  */
 package com.linecorp.armeria.client.routing;
 
-import com.google.common.collect.ImmutableList;
-
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
-public final class StaticEndpointGroup<T extends Endpoint> implements EndpointGroup<T> {
+import com.google.common.collect.ImmutableList;
 
-    private final List<T> endpoints;
+import com.linecorp.armeria.client.Endpoint;
 
-    public StaticEndpointGroup(T... endpoints) {
+/**
+ * A static immutable {@link EndpointGroup}.
+ */
+public final class StaticEndpointGroup implements EndpointGroup {
+
+    private final List<Endpoint> endpoints;
+
+    /**
+     * Creates a new instace.
+     */
+    public StaticEndpointGroup(Endpoint... endpoints) {
         requireNonNull(endpoints, "endpoints");
 
         this.endpoints = ImmutableList.copyOf(endpoints);
     }
 
-    public StaticEndpointGroup(Iterable<? extends T> endpoints) {
+    /**
+     * Creates a new instace.
+     */
+    public StaticEndpointGroup(Iterable<Endpoint> endpoints) {
         requireNonNull(endpoints, "endpoints");
 
         this.endpoints = ImmutableList.copyOf(endpoints);
     }
 
     @Override
-    public List<T> endpoints() {
+    public List<Endpoint> endpoints() {
         return endpoints;
     }
 
@@ -47,11 +58,10 @@ public final class StaticEndpointGroup<T extends Endpoint> implements EndpointGr
         StringBuilder buf = new StringBuilder();
         buf.append("StaticEndpointGroup(");
         for (Endpoint endpoint : endpoints) {
-            buf.append(endpoint.toString()).append(",");
+            buf.append(endpoint).append(',');
         }
         buf.setCharAt(buf.length() - 1, ')');
 
         return buf.toString();
     }
-
 }

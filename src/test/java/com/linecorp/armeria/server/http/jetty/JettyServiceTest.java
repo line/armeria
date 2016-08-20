@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.http.jetty;
 
 import static org.hamcrest.Matchers.greaterThan;
@@ -55,6 +56,7 @@ public class JettyServiceTest extends WebAppContainerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
+        super.configureServer(sb);
         sb.serviceUnder(
                 "/jsp/",
                 new JettyServiceBuilder()

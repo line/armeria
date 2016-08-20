@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.net.MediaType.create;
+
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -26,6 +28,8 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.google.common.net.MediaType;
+
 /**
  * Serialization format of a remote procedure call and its reply.
  */
@@ -34,34 +38,34 @@ public enum SerializationFormat {
     /**
      * No serialization format. Used when no serialization/deserialization is desired.
      */
-    NONE("none", "application/x-none"),
+    NONE("none", create("application", "x-none")),
 
     /**
      * Unknown serialization format. Used when some serialization format is desired but the server
      * failed to understand/recognize it.
      */
-    UNKNOWN("unknown", "application/x-unknown"),
+    UNKNOWN("unknown", create("application", "x-unknown")),
 
     /**
      * Thrift TBinary serialization format
      */
-    THRIFT_BINARY("tbinary", "application/x-thrift; protocol=TBINARY"),
+    THRIFT_BINARY("tbinary", create("application", "x-thrift").withParameter("protocol", "TBINARY")),
 
     /**
      * Thrift TCompact serialization format
      */
-    THRIFT_COMPACT("tcompact", "application/x-thrift; protocol=TCOMPACT"),
+    THRIFT_COMPACT("tcompact", create("application", "x-thrift").withParameter("protocol", "TCOMPACT")),
 
     /**
      * Thrift TJSON serialization format
      */
-    THRIFT_JSON("tjson", "application/x-thrift; protocol=TJSON"),
+    THRIFT_JSON("tjson", create("application", "x-thrift").withParameter("protocol", "TJSON")),
 
     /**
      * Thrift TText serialization format. This format is not optimized for performance or backwards
      * compatibility and should only be used in non-production use cases like debugging.
      */
-    THRIFT_TEXT("ttext", "application/x-thrift; protocol=TTEXT");
+    THRIFT_TEXT("ttext", create("application", "x-thrift").withParameter("protocol", "TTEXT"));
 
     private static final Set<SerializationFormat> THRIFT_FORMATS = Collections.unmodifiableSet(
             EnumSet.of(THRIFT_BINARY, THRIFT_COMPACT, THRIFT_JSON, THRIFT_TEXT));
@@ -86,47 +90,47 @@ public enum SerializationFormat {
     }
 
     /**
-     * Returns the serialization format corresponding to the passed in {@code mimeType}, or
-     * {@link Optional#empty} if the mimetype is not recognized. {@code null} is treated as an unknown
+     * Returns the serialization format corresponding to the passed in {@code mediaType}, or
+     * {@link Optional#empty} if the media type is not recognized. {@code null} is treated as an unknown
      * mimetype.
      */
-    public static Optional<SerializationFormat> fromMimeType(@Nullable String mimeType) {
-        if (mimeType == null || mimeType.isEmpty()) {
+    public static Optional<SerializationFormat> fromMediaType(@Nullable String mediaType) {
+        if (mediaType == null || mediaType.isEmpty()) {
             return Optional.empty();
         }
 
-        final int semicolonIdx = mimeType.indexOf(';');
+        final int semicolonIdx = mediaType.indexOf(';');
         final String paramPart;
         if (semicolonIdx >= 0) {
-            paramPart = mimeType.substring(semicolonIdx).toLowerCase(Locale.US);
-            mimeType = mimeType.substring(0, semicolonIdx).toLowerCase(Locale.US).trim();
+            paramPart = mediaType.substring(semicolonIdx).toLowerCase(Locale.US);
+            mediaType = mediaType.substring(0, semicolonIdx).toLowerCase(Locale.US).trim();
         } else {
             paramPart = null;
-            mimeType = mimeType.toLowerCase(Locale.US).trim();
+            mediaType = mediaType.toLowerCase(Locale.US).trim();
         }
 
-        if ("application/x-thrift".equals(mimeType)) {
-            return fromThriftMimeType(paramPart);
+        if ("application/x-thrift".equals(mediaType)) {
+            return fromThriftMediaType(paramPart);
         }
 
-        if (NONE.mimeType().equals(mimeType)) {
+        if (NONE.mediaType().toString().equals(mediaType)) {
             return Optional.of(NONE);
         }
 
         return Optional.empty();
     }
 
-    private static Optional<SerializationFormat> fromThriftMimeType(String params) {
+    private static Optional<SerializationFormat> fromThriftMediaType(String params) {
         final String protocol = MimeTypeParams.find(params, "protocol");
         return PROTOCOL_TO_THRIFT_FORMATS.getOrDefault(protocol, Optional.empty());
     }
 
     private final String uriText;
-    private final String mimeType;
+    private final MediaType mediaType;
 
-    SerializationFormat(String uriText, String mimeType) {
+    SerializationFormat(String uriText, MediaType mediaType) {
         this.uriText = uriText;
-        this.mimeType = mimeType;
+        this.mediaType = mediaType;
     }
 
     /**
@@ -137,9 +141,9 @@ public enum SerializationFormat {
     }
 
     /**
-     * Returns the MIME type of this format.
+     * Returns the {@link MediaType} of this format.
      */
-    public String mimeType() {
-        return mimeType;
+    public MediaType mediaType() {
+        return mediaType;
     }
 }

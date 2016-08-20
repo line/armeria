@@ -27,14 +27,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-import com.linecorp.armeria.common.ServiceInvocationContext;
-import com.linecorp.armeria.common.TimeoutPolicy;
+import com.linecorp.armeria.common.Request;
 
 import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
-import io.netty.util.concurrent.Promise;
 
 /**
  * {@link Server} configuration.
@@ -53,9 +51,9 @@ public final class ServerConfig {
     private final int numWorkers;
     private final int maxPendingRequests;
     private final int maxConnections;
-    private final TimeoutPolicy requestTimeoutPolicy;
+    private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
-    private final int maxFrameLength;
+    private final long defaultMaxRequestLength;
 
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
@@ -72,7 +70,8 @@ public final class ServerConfig {
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
             int numWorkers, int maxPendingRequests, int maxConnections,
-            TimeoutPolicy requestTimeoutPolicy, long idleTimeoutMillis, int maxFrameLength,
+            long idleTimeoutMillis, long defaultRequestTimeoutMillis,
+            long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, String serviceLoggerPrefix,
             CorsConfig corsConfig) {
@@ -85,9 +84,9 @@ public final class ServerConfig {
         this.numWorkers = validateNumWorkers(numWorkers);
         this.maxPendingRequests = validateMaxPendingRequests(maxPendingRequests);
         this.maxConnections = validateMaxConnections(maxConnections);
-        this.requestTimeoutPolicy = requireNonNull(requestTimeoutPolicy, "requestTimeoutPolicy");
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
-        this.maxFrameLength = validateMaxFrameLength(maxFrameLength);
+        this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
+        this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
         this.gracefulShutdownQuietPeriod = validateNonNegative(requireNonNull(
                 gracefulShutdownQuietPeriod), "gracefulShutdownQuietPeriod");
         this.gracefulShutdownTimeout = validateNonNegative(requireNonNull(
@@ -183,11 +182,20 @@ public final class ServerConfig {
         return idleTimeoutMillis;
     }
 
-    static int validateMaxFrameLength(int maxFrameLength) {
-        if (maxFrameLength <= 0) {
-            throw new IllegalArgumentException("maxFrameLength: " + maxFrameLength + " (expected: > 0)");
+    static long validateDefaultRequestTimeoutMillis(long defaultRequestTimeoutMillis) {
+        if (defaultRequestTimeoutMillis < 0) {
+            throw new IllegalArgumentException(
+                    "defaultRequestTimeoutMillis: " + defaultRequestTimeoutMillis + " (expected: >= 0)");
         }
-        return maxFrameLength;
+        return defaultRequestTimeoutMillis;
+    }
+
+    static long validateDefaultMaxRequestLength(long defaultMaxRequestLength) {
+        if (defaultMaxRequestLength < 0) {
+            throw new IllegalArgumentException(
+                    "defaultMaxRequestLength: " + defaultMaxRequestLength + " (expected: >= 0)");
+        }
+        return defaultMaxRequestLength;
     }
 
     static Duration validateNonNegative(Duration duration, String fieldName) {
@@ -279,15 +287,18 @@ public final class ServerConfig {
      * no match, an empty {@link List} is returned. Note that this is potentially an expensive operation and
      * thus should not be used in a performance-sensitive path.
      */
-    public List<VirtualHost> findVirtualHosts(Service service) {
+    public List<VirtualHost> findVirtualHosts(Service<?, ?> service) {
         requireNonNull(service, "service");
 
+        @SuppressWarnings("rawtypes")
         final Class<? extends Service> serviceType = service.getClass();
         final List<VirtualHost> res = new ArrayList<>();
         for (VirtualHost h : virtualHosts) {
             for (ServiceConfig c : h.serviceConfigs()) {
                 // Consider the case where the specified service is decorated before being added.
-                Optional<? extends Service> sOpt = c.service().as(serviceType);
+                final Service<?, ?> s = c.service();
+                @SuppressWarnings("rawtypes")
+                Optional<? extends Service> sOpt = s.as(serviceType);
                 if (!sOpt.isPresent()) {
                     continue;
                 }
@@ -311,7 +322,7 @@ public final class ServerConfig {
 
     /**
      * Returns the number of worker threads that perform socket I/O and run
-     * {@link ServiceInvocationHandler#invoke(ServiceInvocationContext, Executor, Promise)}.
+     * {@link Service#serve(ServiceRequestContext, Request)}.
      */
     public int numWorkers() {
         return numWorkers;
@@ -332,13 +343,6 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the {@link TimeoutPolicy} of a request.
-     */
-    public TimeoutPolicy requestTimeoutPolicy() {
-        return requestTimeoutPolicy;
-    }
-
-    /**
      * Returns the idle timeout of a connection in milliseconds.
      */
     public long idleTimeoutMillis() {
@@ -346,11 +350,18 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the maximum allowed length of the frame (or the content) decoded at the session layer. e.g. the
-     * content of an HTTP request.
+     * Returns the default timeout of a request.
      */
-    public int maxFrameLength() {
-        return maxFrameLength;
+    public long defaultRequestTimeoutMillis() {
+        return defaultRequestTimeoutMillis;
+    }
+
+    /**
+     * Returns the default maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     */
+    public long defaultMaxRequestLength() {
+        return defaultMaxRequestLength;
     }
 
     /**
@@ -377,7 +388,7 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the prefix of {@linkplain ServiceInvocationContext#logger() service logger}'s names.
+     * Returns the prefix of {@linkplain ServiceRequestContext#logger() service logger}'s names.
      */
     public String serviceLoggerPrefix() {
         return serviceLoggerPrefix;
@@ -399,7 +410,7 @@ public final class ServerConfig {
             this.strVal = strVal = toString(
                     getClass(), ports(), null, virtualHosts(),
                     numWorkers(), maxPendingRequests(), maxConnections(),
-                    requestTimeoutPolicy(), idleTimeoutMillis(), maxFrameLength(),
+                    idleTimeoutMillis(), defaultRequestTimeoutMillis, defaultMaxRequestLength,
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), serviceLoggerPrefix(), corsConfig());
         }
@@ -410,8 +421,8 @@ public final class ServerConfig {
     static String toString(
             Class<?> type,
             Iterable<ServerPort> ports, VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
-            int numWorkers, int maxPendingRequests, int maxConnections,
-            TimeoutPolicy requestTimeoutPolicy, long idleTimeoutMillis, int maxFrameLength,
+            int numWorkers, int maxPendingRequests, int maxConnections, long idleTimeoutMillis,
+            long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, String serviceLoggerPrefix, CorsConfig corsConfig) {
 
@@ -463,13 +474,13 @@ public final class ServerConfig {
         buf.append(maxPendingRequests);
         buf.append(", maxConnections: ");
         buf.append(maxConnections);
-        buf.append(", requestTimeout: ");
-        buf.append(requestTimeoutPolicy);
         buf.append(", idleTimeout: ");
         buf.append(idleTimeoutMillis);
-        buf.append("ms, maxFrameLength: ");
-        buf.append(maxFrameLength);
-        buf.append(", gracefulShutdownQuietPeriod: ");
+        buf.append("ms, defaultRequestTimeout: ");
+        buf.append(defaultRequestTimeoutMillis);
+        buf.append("ms, defaultMaxRequestLength: ");
+        buf.append(defaultMaxRequestLength);
+        buf.append("B, gracefulShutdownQuietPeriod: ");
         buf.append(gracefulShutdownQuietPeriod);
         buf.append(", gracefulShutdownTimeout: ");
         buf.append(gracefulShutdownTimeout);

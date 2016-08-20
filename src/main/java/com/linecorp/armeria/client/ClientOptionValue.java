@@ -19,6 +19,8 @@ import com.linecorp.armeria.common.util.AbstractOptionValue;
 
 /**
  * A value of a {@link ClientOption}.
+ *
+ * @param <T> the type of the option value
  */
 public final class ClientOptionValue<T> extends AbstractOptionValue<ClientOption<T>, T> {
 

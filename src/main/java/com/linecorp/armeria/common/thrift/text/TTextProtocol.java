@@ -127,6 +127,7 @@ public class TTextProtocol extends TProtocol {
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     public Class<? extends IScheme> getScheme() {
         return StandardScheme.class;
     }
@@ -231,8 +232,6 @@ public class TTextProtocol extends TProtocol {
     /**
      * Helper to write out the end of a Thrift type (either struct or map),
      * both of which are written as JsonObjects.
-     *
-     * @throws TException
      */
     private void writeJsonObjectEnd() throws TException {
         try {
@@ -292,8 +291,6 @@ public class TTextProtocol extends TProtocol {
 
     /**
      * Helper shared by write{List/Set}End
-     *
-     * @throws TException
      */
     private void writeSequenceEnd() throws TException {
         try {
@@ -740,6 +737,8 @@ public class TTextProtocol extends TProtocol {
      * Factory
      */
     public static class Factory implements TProtocolFactory {
+        private static final long serialVersionUID = -5607714914895109618L;
+
         @Override
         public TProtocol getProtocol(TTransport trans) {
             return new TTextProtocol(trans);
@@ -773,7 +772,7 @@ public class TTextProtocol extends TProtocol {
             }
             // Clears the internal memory buffer, since we've already
             // written it out.
-            super.reset();
+            reset();
         }
     }
 }

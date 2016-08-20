@@ -17,46 +17,28 @@
 package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link TimeoutException} raised when a response has not been received from a server within timeout.
  */
-public class ResponseTimeoutException extends TimeoutException {
+public final class ResponseTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2556616197251937869L;
+
+    private static final ResponseTimeoutException INSTANCE =
+            Exceptions.clearTrace(new ResponseTimeoutException());
+
+    /**
+     * Returns a {@link ResponseTimeoutException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
+    public static ResponseTimeoutException get() {
+        return Exceptions.isVerbose() ? new ResponseTimeoutException() : INSTANCE;
+    }
 
     /**
      * Creates a new instance.
      */
-    public ResponseTimeoutException() {}
-
-    /**
-     * Creates a new instance with the specified {@code message} and {@code cause}.
-     */
-    public ResponseTimeoutException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}.
-     */
-    public ResponseTimeoutException(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code cause}.
-     */
-    public ResponseTimeoutException(Throwable cause) {
-        super(cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
-     * disabled, and writable stack trace enabled or disabled.
-     */
-    protected ResponseTimeoutException(String message, Throwable cause, boolean enableSuppression,
-                                       boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
+    private ResponseTimeoutException() {}
 }

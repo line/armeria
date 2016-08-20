@@ -17,46 +17,27 @@
 package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link TimeoutException} raised when a client failed to send a request to the wire within timeout.
  */
-public class WriteTimeoutException extends TimeoutException {
+public final class WriteTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2556616197251937869L;
+
+    private static final WriteTimeoutException INSTANCE = Exceptions.clearTrace(new WriteTimeoutException());
+
+    /**
+     * Returns a {@link WriteTimeoutException} which may be a singleton or a new instance, depending on
+     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     */
+    public static WriteTimeoutException get() {
+        return Exceptions.isVerbose() ? new WriteTimeoutException() : INSTANCE;
+    }
 
     /**
      * Creates a new instance.
      */
-    public WriteTimeoutException() {}
-
-    /**
-     * Creates a new instance with the specified {@code message} and {@code cause}.
-     */
-    public WriteTimeoutException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}.
-     */
-    public WriteTimeoutException(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code cause}.
-     */
-    public WriteTimeoutException(Throwable cause) {
-        super(cause);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
-     * disabled, and writable stack trace enabled or disabled.
-     */
-    protected WriteTimeoutException(String message, Throwable cause, boolean enableSuppression,
-                                    boolean writableStackTrace) {
-        super(message, cause, enableSuppression, writableStackTrace);
-    }
+    private WriteTimeoutException() {}
 }

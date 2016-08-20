@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,16 +21,22 @@ import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofEx
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -40,25 +46,26 @@ import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.http.HttpService;
 import com.linecorp.armeria.server.http.file.HttpFileService;
 import com.linecorp.armeria.server.http.file.HttpVfs;
-import com.linecorp.armeria.server.thrift.ThriftService;
+import com.linecorp.armeria.server.thrift.THttpService;
 
 /**
- * An {@link HttpService} that provides information about the {@link ThriftService}s running in a
+ * An {@link HttpService} that provides information about the {@link THttpService}s running in a
  * {@link Server}. It does not require any configuration besides adding it to a {@link VirtualHost}; it
- * discovers all {@link ThriftService}s in the {@link Server} automatically.
+ * discovers all {@link THttpService}s in the {@link Server} automatically.
  */
-public class DocService extends AbstractCompositeService {
+public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final Map<Class<?>, ? extends TBase<?, ?>> sampleRequests;
+    private final Map<Class<?>, Map<String, String>> sampleHttpHeaders;
 
     private Server server;
 
     /**
-     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}.
+     * Creates a new instance, pre-populating debug forms with the provided {@code sampleRequests}.
      * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
-     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
+     * pre-populated (e.g., a populated hello_args object for the hello method on HelloService).
      */
     @SafeVarargs
     public <T extends TBase<?, ?>> DocService(T... sampleRequests) {
@@ -66,17 +73,32 @@ public class DocService extends AbstractCompositeService {
     }
 
     /**
-     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}.
+     * Creates a new instance, pre-populating debug forms with the provided {@code sampleRequests}.
      * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
-     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
+     * pre-populated (e.g., a populated hello_args object for the hello method on HelloService).
      */
     public DocService(Iterable<? extends TBase<?, ?>> sampleRequests) {
+        this(sampleRequests, Collections.emptyMap());
+    }
+
+    /**
+     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}
+     * and {@code sampleHttpHeaders}.
+     *
+     * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
+     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
+     * {@code sampleHttpHeaders} should be a map of Thrift Service class to String-String map. The Thrift
+     * Service class is like HelloService.class, and String-String map is HTTP Header name to value map.
+     */
+    public DocService(Iterable<? extends TBase<?, ?>> sampleRequests,
+                      Map<Class<?>, Map<String, String>> sampleHttpHeaders) {
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
         requireNonNull(sampleRequests, "sampleRequests");
         this.sampleRequests = StreamSupport.stream(sampleRequests.spliterator(), false)
-                .collect(Collectors.toMap(Object::getClass, Function.identity()));
+                                           .collect(Collectors.toMap(Object::getClass, Function.identity()));
+        this.sampleHttpHeaders = sampleHttpHeaders;
     }
 
     @Override
@@ -106,7 +128,7 @@ public class DocService extends AbstractCompositeService {
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
                                              .writeValueAsBytes(Specification.forServiceConfigs(
-                                                     services, sampleRequests)));
+                                                     services, sampleRequests, sampleHttpHeaders)));
             }
         });
     }
@@ -120,13 +142,13 @@ public class DocService extends AbstractCompositeService {
         private volatile Entry entry = Entry.NONE;
 
         @Override
-        public Entry get(String path) {
+        public Entry get(String path, @Nullable String contentEncoding) {
             return entry;
         }
 
         void setSpecification(byte[] content) {
             assert entry == Entry.NONE;
-            entry = new ByteArrayEntry("/", "application/json", content);
+            entry = new ByteArrayEntry("/", MediaType.JSON_UTF_8, content);
         }
     }
 }

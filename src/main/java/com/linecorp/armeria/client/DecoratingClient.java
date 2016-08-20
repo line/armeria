@@ -18,49 +18,41 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Function;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 
 /**
- * A {@link Client} that decorates another {@link Client}.
+ * Decorates a {@link Client}.
+ *
+ * @param <T_I> the {@link Request} type of the {@link Client} being decorated
+ * @param <T_O> the {@link Response} type of the {@link Client} being decorated
+ * @param <R_I> the {@link Request} type of this {@link Client}
+ * @param <R_O> the {@link Response} type of this {@link Client}
  */
-public class DecoratingClient extends SimpleClient {
+public abstract class DecoratingClient<T_I extends Request, T_O extends Response,
+                                       R_I extends Request, R_O extends Response> implements Client<R_I, R_O> {
+
+    private final Client<? super T_I, ? extends T_O> delegate;
 
     /**
-     * Creates a new instance that decorates the specified {@link Client} and its {@link ClientCodec} and
-     * {@link RemoteInvoker} using the specified {@code codecDecorator} and {@code invokerDecorator}.
+     * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected <T extends ClientCodec, U extends ClientCodec, V extends RemoteInvoker, W extends RemoteInvoker>
-    DecoratingClient(Client client, Function<T, U> codecDecorator, Function<V, W> invokerDecorator) {
-        super(decorateCodec(client, codecDecorator), decorateInvoker(client, invokerDecorator));
+    protected DecoratingClient(Client<? super T_I, ? extends T_O> delegate) {
+        this.delegate = requireNonNull(delegate, "delegate");
     }
 
-    private static <T extends ClientCodec, U extends ClientCodec>
-    ClientCodec decorateCodec(Client client, Function<T, U> codecDecorator) {
-
-        requireNonNull(codecDecorator, "codecDecorator");
-
-        @SuppressWarnings("unchecked")
-        final T codec = (T) client.codec();
-        final U decoratedCodec = codecDecorator.apply(codec);
-        if (decoratedCodec == null) {
-            throw new NullPointerException("codecDecorator.apply() returned null: " + codecDecorator);
-        }
-
-        return decoratedCodec;
+    /**
+     * Returns the {@link Client} being decorated.
+     */
+    @SuppressWarnings("unchecked")
+    protected final <T extends Client<? super T_I, ? extends T_O>> T delegate() {
+        return (T) delegate;
     }
 
-    private static <T extends RemoteInvoker, U extends RemoteInvoker>
-    RemoteInvoker decorateInvoker(Client client, Function<T, U> invokerDecorator) {
-
-        requireNonNull(invokerDecorator, "invokerDecorator");
-
-        @SuppressWarnings("unchecked")
-        final T invoker = (T) client.invoker();
-        final U decoratedInvoker = invokerDecorator.apply(invoker);
-        if (decoratedInvoker == null) {
-            throw new NullPointerException("invokerDecorator.apply() returned null: " + invokerDecorator);
-        }
-
-        return decoratedInvoker;
+    @Override
+    public String toString() {
+        final String simpleName = getClass().getSimpleName();
+        final String name = simpleName.isEmpty() ? getClass().getName() : simpleName;
+        return name + '(' + delegate + ')';
     }
 }

@@ -19,14 +19,15 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.channels.ClosedChannelException;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.ClosedSessionException;
+import com.google.common.base.Throwables;
+
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
@@ -38,6 +39,8 @@ import io.netty.handler.codec.http2.Http2Exception;
  */
 public final class Exceptions {
 
+    private static final Logger logger = LoggerFactory.getLogger(Exceptions.class);
+
     private static final Pattern IGNORABLE_SOCKET_ERROR_MESSAGE = Pattern.compile(
             "(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe)", Pattern.CASE_INSENSITIVE);
 
@@ -45,6 +48,48 @@ public final class Exceptions {
             "(?:stream closed)", Pattern.CASE_INSENSITIVE);
 
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
+
+    private static final boolean VERBOSE =
+            "true".equals(System.getProperty("com.linecorp.armeria.verboseExceptions", "false"));
+
+    static {
+        logger.info("com.linecorp.armeria.verboseExceptions: {}", VERBOSE);
+    }
+
+    /**
+     * Returns whether the verbose mode is enabled. When enabled, the exceptions frequently thrown by Armeria
+     * will have full stack trace. When disabled, such exceptions will have empty stack trace to eliminate the
+     * cost of capturing the stack trace.
+     *
+     * <p>The verbose mode is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.verboseExceptions=true} JVM option to enable it.
+     */
+    public static boolean isVerbose() {
+        return VERBOSE;
+    }
+
+    /**
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     */
+    public static void logIfUnexpected(Logger logger, Channel ch, Throwable cause) {
+        if (!logger.isWarnEnabled() || isExpected(cause)) {
+            return;
+        }
+
+        logger.warn("{} Unexpected exception:", ch, cause);
+    }
+
+    /**
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     */
+    public static void logIfUnexpected(Logger logger, Channel ch, String debugData, Throwable cause) {
+
+        if (!logger.isWarnEnabled() || isExpected(cause)) {
+            return;
+        }
+
+        logger.warn("{} Unexpected exception: {}", ch, debugData, cause);
+    }
 
     /**
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
@@ -87,6 +132,10 @@ public final class Exceptions {
      * </ul>
      */
     public static boolean isExpected(Throwable cause) {
+        if (VERBOSE) {
+            return true;
+        }
+
         // We do not need to log every exception because some exceptions are expected to occur.
 
         if (cause instanceof ClosedChannelException || cause instanceof ClosedSessionException) {
@@ -121,15 +170,13 @@ public final class Exceptions {
     }
 
     /**
-     * Returns the stack trace of the specified {@code exception} as a {@link String}.
+     * Returns the stack trace of the specified {@code exception} as a {@link String} instead.
+     *
+     * @deprecated Use {@link Throwables#getStackTraceAsString(Throwable)}.
      */
+    @Deprecated
     public static String traceText(Throwable exception) {
-        requireNonNull(exception, "exception");
-        final StringWriter out = new StringWriter(256);
-        final PrintWriter pout = new PrintWriter(out);
-        exception.printStackTrace(pout);
-        pout.flush();
-        return out.toString();
+        return Throwables.getStackTraceAsString(exception);
     }
 
     private Exceptions() {}

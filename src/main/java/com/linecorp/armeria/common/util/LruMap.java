@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,6 +21,9 @@ import java.util.Map;
 
 /**
  * LRU (Least Recently Used) cache {@link Map}.
+ *
+ * @param <T> the key type
+ * @param <U> the value type
  */
 public class LruMap<T, U> extends LinkedHashMap<T, U> {
     private static final long serialVersionUID = 5358379908010214089L;

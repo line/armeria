@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Date;
+import java.util.zip.GZIPInputStream;
 
 import org.apache.http.HttpHeaders;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -41,6 +42,9 @@ import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Resources;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
@@ -73,6 +77,12 @@ public class HttpFileServiceTest {
                     HttpFileService.forFileSystem(tmpDir.toPath()).decorate(LoggingService::new));
 
             sb.serviceUnder(
+                    "/compressed/",
+                    HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
+                                          .serveCompressedFiles(true)
+                                          .build());
+
+            sb.serviceUnder(
                     "/",
                     HttpFileService.forClassPath(baseResourceDir + "foo")
                                    .orElse(HttpFileService.forClassPath(baseResourceDir + "bar"))
@@ -85,7 +95,7 @@ public class HttpFileServiceTest {
 
     @BeforeClass
     public static void init() throws Exception {
-        server.start().sync();
+        server.start().get();
 
         httpPort = server.activePorts().values().stream()
                 .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress().getPort();
@@ -136,6 +146,72 @@ public class HttpFileServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal();
              CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.txt")))) {
             assert200Ok(res, "text/plain", "bar");
+        }
+    }
+
+    @Test
+    public void testGetPreCompressedSupportsNone() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getFirstHeader("Content-Encoding"), is(nullValue()));
+                assertThat(res.getFirstHeader("Content-Type").getValue(), is("text/plain; charset=utf-8"));
+                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                assertThat(new String(content, StandardCharsets.UTF_8), is("foo"));
+            }
+        }
+    }
+
+    @Test
+    public void testGetPreCompressedSupportsGzip() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            request.setHeader("Accept-Encoding", "gzip");
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getFirstHeader("Content-Encoding").getValue(), is("gzip"));
+                assertThat(res.getFirstHeader("Content-Type").getValue(), is("text/plain; charset=utf-8"));
+                final byte[] content;
+                try (GZIPInputStream unzipper = new GZIPInputStream(res.getEntity().getContent())) {
+                    content = ByteStreams.toByteArray(unzipper);
+                }
+                assertThat(new String(content, StandardCharsets.UTF_8), is("foo"));
+            }
+        }
+    }
+
+    @Test
+    public void testGetPreCompressedSupportsBrotli() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            request.setHeader("Accept-Encoding", "br");
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getFirstHeader("Content-Encoding").getValue(), is("br"));
+                assertThat(res.getFirstHeader("Content-Type").getValue(), is("text/plain; charset=utf-8"));
+                // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
+                // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
+                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                assertThat(content,
+                           is(Resources.toByteArray(Resources.getResource(
+                                   baseResourceDir + "foo/foo.txt.br"))));
+            }
+        }
+    }
+
+    @Test
+    public void testGetPreCompressedSupportsBothPrefersBrotli() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            request.setHeader("Accept-Encoding", "gzip, br");
+            try (CloseableHttpResponse res = hc.execute(request)) {
+                assertThat(res.getFirstHeader("Content-Encoding").getValue(), is("br"));
+                assertThat(res.getFirstHeader("Content-Type").getValue(), is("text/plain; charset=utf-8"));
+                // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
+                // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
+                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                assertThat(content,
+                           is(Resources.toByteArray(Resources.getResource(
+                                   baseResourceDir + "foo/foo.txt.br"))));
+            }
         }
     }
 

@@ -16,76 +16,29 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.function.Function;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 
 /**
- * A set of components required for invoking a remote service.
+ * Sends a {@link Request} to a remote {@link Endpoint}.
+ *
+ * <p>Note that this interface is not a user's entry point for sending a {@link Request}. It is rather
+ * a generic request processor interface implemented by a {@link DecoratingClient}, which intercepts
+ * a {@link Request}. A user is supposed to make his or her {@link Request} via the object returned by
+ * a {@link ClientBuilder} or {@link Clients}, which usually does not implement this interface.
+ *
+ * @param <I> the type of the outgoing {@link Request}
+ * @param <O> the type of the incoming {@link Response}
+ *
+ * @see UserClient
  */
-public interface Client {
-
+@FunctionalInterface
+public interface Client<I extends Request, O extends Response> {
     /**
-     * Creates a new function that decorates a {@link Client} with the specified {@code codecDecorator}
-     * and {@code invokerDecorator}.
-     * <p>
-     * This factory method is useful when you want to write a reusable factory method that returns
-     * a decorator function and the returned decorator function is expected to be consumed by
-     * {@link #decorate(Function)}. For example, this may be a factory which combines multiple decorators,
-     * any of which could be decorating a codec and/or a handler.
-     * </p><p>
-     * Consider using {@link #decorateCodec(Function)} or {@link #decorateInvoker(Function)}
-     * instead for simplicity unless you are writing a factory method of a decorator function.
-     * </p><p>
-     * If you need a function that decorates only a codec or an invoker, use {@link Function#identity()} for
-     * the non-decorated property. e.g:
-     * </p><pre>{@code
-     * newDecorator(Function.identity(), (handler) -> { ... });
-     * }</pre>
+     * Sends a {@link Request} to a remote {@link Endpoint}, as specified in
+     * {@link ClientRequestContext#endpoint()}.
+     *
+     * @return the {@link Response} to the specified {@link Request}
      */
-    @SuppressWarnings("unchecked")
-    static <T extends ClientCodec, U extends ClientCodec,
-            V extends RemoteInvoker, W extends RemoteInvoker>
-    Function<Client, Client> newDecorator(Function<T, U> codecDecorator, Function<V, W> invokerDecorator) {
-        return client -> new DecoratingClient(client, codecDecorator, invokerDecorator);
-    }
-
-    /**
-     * Returns the {@link ClientCodec}.
-     */
-    ClientCodec codec();
-
-    /**
-     * Returns the {@link RemoteInvoker}.
-     */
-    RemoteInvoker invoker();
-
-    /**
-     * Creates a new {@link Client} that decorates this {@link Client} with the specified {@code decorator}.
-     */
-    default Client decorate(Function<Client, Client> decorator) {
-        @SuppressWarnings("unchecked")
-        final Client newClient = decorator.apply(this);
-        if (newClient == null) {
-            throw new NullPointerException("decorator.apply() returned null: " + decorator);
-        }
-
-        return newClient;
-    }
-
-    /**
-     * Creates a new {@link Client} that decorates the {@link ClientCodec} of this {@link Client} with the
-     * specified {@code codecDecorator}.
-     */
-    default <T extends ClientCodec, U extends ClientCodec>
-    Client decorateCodec(Function<T, U> codecDecorator) {
-        return new DecoratingClient(this, codecDecorator, Function.identity());
-    }
-
-    /**
-     * Creates a new {@link Client} that decorates the {@link RemoteInvoker} of this
-     * {@link Client} with the specified {@code invokerDecorator}.
-     */
-    default <T extends RemoteInvoker, U extends RemoteInvoker>
-    Client decorateInvoker(Function<T, U> invokerDecorator) {
-        return new DecoratingClient(this, Function.identity(), invokerDecorator);
-    }
+    O execute(ClientRequestContext ctx, I req) throws Exception;
 }

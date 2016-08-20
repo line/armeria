@@ -18,6 +18,9 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -169,6 +172,26 @@ public final class Functions {
                                        .andThen(requireNonNull(f7, "f7"))
                                        .andThen(requireNonNull(f8, "f8"))
                                        .andThen(requireNonNull(f9, "f9"));
+    }
+
+    /**
+     * Converts the specified {@link Consumer} into a {@link Function} that returns {@code null}.
+     */
+    public static <T> Function<T, Void> voidFunction(Consumer<T> consumer) {
+        return v -> {
+            consumer.accept(v);
+            return null;
+        };
+    }
+
+    /**
+     * Converts the specified {@link BiConsumer} into a {@link BiFunction} that returns {@code null}.
+     */
+    public static <T, U> BiFunction<T, U, Void> voidFunction(BiConsumer<T, U> consumer) {
+        return (a, b) -> {
+            consumer.accept(a, b);
+            return null;
+        };
     }
 
     private Functions() {}

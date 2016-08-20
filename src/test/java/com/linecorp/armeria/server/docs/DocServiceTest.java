@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -37,13 +37,14 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.server.thrift.ThriftService;
+import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
 import com.linecorp.armeria.service.test.thrift.hbase.Hbase;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
@@ -56,17 +57,20 @@ public class DocServiceTest extends AbstractServerTest {
             (name, resultHandler) -> resultHandler.onComplete("Hello " + name);
 
     private static final hello_args SAMPLE_HELLO = new hello_args().setName("sample user");
+    private static final Map<Class<?>, Map<String, String>> SAMPLE_HTTP_HEADERS = ImmutableMap.of(
+            HelloService.class, ImmutableMap.of("foobar", "barbaz"),
+            FooService.class, ImmutableMap.of("barbaz", "barbar"));
 
     @Override
     protected void configureServer(ServerBuilder sb) {
-        final ThriftService helloService = ThriftService.of(HELLO_SERVICE_HANDLER);
-        final ThriftService fooService = ThriftService.ofFormats(mock(FooService.AsyncIface.class),
-                                                                 THRIFT_COMPACT);
-        final ThriftService cassandraService = ThriftService.ofFormats(mock(Cassandra.AsyncIface.class),
-                                                                       THRIFT_BINARY);
-        final ThriftService cassandraServiceDebug =
-                ThriftService.ofFormats(mock(Cassandra.AsyncIface.class), THRIFT_TEXT);
-        final ThriftService hbaseService = ThriftService.of(mock(Hbase.AsyncIface.class));
+        final THttpService helloService = THttpService.of(HELLO_SERVICE_HANDLER);
+        final THttpService fooService = THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                               THRIFT_COMPACT);
+        final THttpService cassandraService = THttpService.ofFormats(mock(Cassandra.AsyncIface.class),
+                                                                     THRIFT_BINARY);
+        final THttpService cassandraServiceDebug =
+                THttpService.ofFormats(mock(Cassandra.AsyncIface.class), THRIFT_TEXT);
+        final THttpService hbaseService = THttpService.of(mock(Hbase.AsyncIface.class));
 
         sb.serviceAt("/hello", helloService);
         sb.serviceAt("/foo", fooService);
@@ -74,7 +78,9 @@ public class DocServiceTest extends AbstractServerTest {
         sb.serviceAt("/cassandra/debug", cassandraServiceDebug);
         sb.serviceAt("/hbase", hbaseService);
 
-        sb.serviceUnder("/docs/", new DocService(SAMPLE_HELLO).decorate(LoggingService::new));
+        sb.serviceUnder("/docs/",
+                        new DocService(ImmutableList.of(SAMPLE_HELLO), SAMPLE_HTTP_HEADERS)
+                                .decorate(LoggingService::new));
     }
 
     @Test
@@ -91,7 +97,9 @@ public class DocServiceTest extends AbstractServerTest {
                 EndpointInfo.of("*", "/hbase", THRIFT_BINARY, SerializationFormat.ofThrift())));
 
         final String expected = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(
-                Specification.forServiceClasses(serviceMap, ImmutableMap.of(hello_args.class, SAMPLE_HELLO)));
+                Specification.forServiceClasses(serviceMap,
+                                                ImmutableMap.of(hello_args.class, SAMPLE_HELLO),
+                                                SAMPLE_HTTP_HEADERS));
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpGet req = new HttpGet(specificationUri());
