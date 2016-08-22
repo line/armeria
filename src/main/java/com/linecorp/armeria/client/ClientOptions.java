@@ -21,6 +21,7 @@ import static com.linecorp.armeria.client.ClientOption.DEFAULT_MAX_RESPONSE_LENG
 import static com.linecorp.armeria.client.ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
+import static com.linecorp.armeria.client.ClientOption.TMULTIPLEX;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -47,6 +48,7 @@ public final class ClientOptions extends AbstractOptions {
     private static final Long DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS = Duration.ofSeconds(1).toMillis();
     private static final Long DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
     private static final Long DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH = 10L * 1024 * 1024; // 10 MB
+    private static final Boolean DEFAULT_TMULTIPLEX = false;
 
     @SuppressWarnings("deprecation")
     private static final Collection<AsciiString> BLACKLISTED_HEADER_NAMES =
@@ -74,7 +76,8 @@ public final class ClientOptions extends AbstractOptions {
             DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS),
             DEFAULT_MAX_RESPONSE_LENGTH.newValue(DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH),
             DECORATION.newValue(ClientDecoration.NONE),
-            HTTP_HEADERS.newValue(HttpHeaders.EMPTY_HEADERS)
+            HTTP_HEADERS.newValue(HttpHeaders.EMPTY_HEADERS),
+            TMULTIPLEX.newValue(DEFAULT_TMULTIPLEX)
     };
 
     /**
@@ -238,6 +241,11 @@ public final class ClientOptions extends AbstractOptions {
      */
     public ClientDecoration decoration() {
         return getOrElse(DECORATION, ClientDecoration.NONE);
+    }
+
+
+    public Boolean tMultiplex() {
+        return getOrElse(TMULTIPLEX, DEFAULT_TMULTIPLEX);
     }
 }
 

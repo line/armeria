@@ -152,6 +152,15 @@ public final class ClientBuilder {
     }
 
     /**
+     * Sets the default compatible with TMultiplex Protocol
+     * @param tMultiplex
+     * @return
+     */
+    public ClientBuilder tMultiplex(Boolean tMultiplex) {
+        return option(ClientOption.TMULTIPLEX, tMultiplex);
+    }
+
+    /**
      * Adds the specified {@code decorator}.
      */
     public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
