@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.junit.Test;
-import org.mockito.Matchers;
+import org.mockito.ArgumentMatchers;
 
 import com.github.kristofa.brave.Brave;
 import com.github.kristofa.brave.KeyValueAnnotation;
@@ -121,8 +121,8 @@ public class TracingServiceTest {
         // AbstractTracingService prefers RpcRequest.method() to ctx.method(), so "POST" should be ignored.
         when(ctx.method()).thenReturn("POST");
         when(ctx.requestLogFuture()).thenReturn(reqLog);
-        ctx.onEnter(Matchers.isA(Runnable.class));
-        ctx.onExit(Matchers.isA(Runnable.class));
+        ctx.onEnter(ArgumentMatchers.isA(Runnable.class));
+        ctx.onExit(ArgumentMatchers.isA(Runnable.class));
 
         ThriftReply res = new ThriftReply(0, "Hello, trustin!");
         when(delegate.serve(ctx, req)).thenReturn(res);

@@ -265,7 +265,7 @@ public class HttpServerTest extends AbstractServerTest {
                 res.write(HttpData.ofUtf8("awesome!"));
                 res.close();
             }
-        }.decorate(HttpEncodingService::new));
+        }.decorate(HttpEncodingService.class));
 
         sb.serviceAt("/images", new AbstractHttpService() {
             @Override
@@ -277,7 +277,7 @@ public class HttpServerTest extends AbstractServerTest {
                 res.write(HttpData.ofUtf8("awesome!"));
                 res.close();
             }
-        }.decorate(HttpEncodingService::new));
+        }.decorate(HttpEncodingService.class));
 
         sb.serviceAt("/small", new AbstractHttpService() {
             @Override
@@ -289,7 +289,7 @@ public class HttpServerTest extends AbstractServerTest {
                 res.write(HttpData.ofUtf8(response));
                 res.close();
             }
-        }.decorate(HttpEncodingService::new));
+        }.decorate(HttpEncodingService.class));
 
         sb.serviceAt("/large", new AbstractHttpService() {
             @Override
@@ -301,7 +301,7 @@ public class HttpServerTest extends AbstractServerTest {
                 res.write(HttpData.ofUtf8(response));
                 res.close();
             }
-        }.decorate(HttpEncodingService::new));
+        }.decorate(HttpEncodingService.class));
 
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
                 delegate -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(delegate) {
