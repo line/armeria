@@ -646,6 +646,7 @@
           <arguments>-P sonatype-oss-release -D skipTests</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
+          <localCheckout>true</localCheckout>
           <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat>
         </configuration>
         <dependencies>
