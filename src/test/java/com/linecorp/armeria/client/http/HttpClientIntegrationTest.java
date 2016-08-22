@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -28,6 +29,7 @@ import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.IntFunction;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -154,38 +156,9 @@ public class HttpClientIntegrationTest {
      */
     @Test
     public void testRequestNoBodyWithoutExtraHeaders() throws Exception {
-        ServerSocket ss = null;
-        Socket s = null;
-        try {
-            ss = new ServerSocket(0);
-            final int httpPort = ss.getLocalPort();
-            final HttpClient client = Clients.newClient(
-                    clientFactory, "none+h1c://127.0.0.1:" + httpPort, HttpClient.class);
-
-            client.get("/foo"); // Not interested in the result but only in what the client sends.
-
-            final String expected =
-                    "GET /foo HTTP/1.1\r\nuser-agent: Armeria\r\nhost: 127.0.0.1:" + httpPort + "\r\n\r\n";
-
-            ss.setSoTimeout(10000);
-            s = ss.accept();
-            final byte[] buf = new byte[expected.length()];
-            final InputStream in = s.getInputStream();
-
-            // Read the encoded request.
-            s.setSoTimeout(10000);
-            ByteStreams.readFully(in, buf);
-
-            // Ensure that the encoded request matches.
-            assertThat(new String(buf, StandardCharsets.US_ASCII)).isEqualTo(expected);
-
-            // Should not send anything more.
-            s.setSoTimeout(1000);
-            assertThatThrownBy(in::read).isInstanceOf(SocketTimeoutException.class);
-        } finally {
-            Closeables.close(s, true);
-            Closeables.close(ss, true);
-        }
+        testSocketOutput(
+                "/foo",
+                port -> "GET /foo HTTP/1.1\r\nuser-agent: Armeria\r\nhost: 127.0.0.1:" + port + "\r\n\r\n");
     }
 
     @Test
@@ -268,5 +241,53 @@ public class HttpClientIntegrationTest {
         SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/not200").build();
         SimpleHttpResponse response = client.execute(request).get();
         assertEquals(HttpResponseStatus.NOT_FOUND, response.status());
+    }
+
+    /**
+     * When the request path contains double slashes, they should be replaced with sigle slashes.
+     */
+    @Test
+    public void testDoubleSlashSuppression() throws Exception {
+        testDoubleSlashSuppression("/double//slashes", "/double/slashes");
+        // The double slashes in the query string should not be normalized.
+        testDoubleSlashSuppression("/double//slashes?slashed//query", "/double/slashes?slashed//query");
+    }
+
+    private static void testDoubleSlashSuppression(String path, String normalizedPath) throws IOException {
+        testSocketOutput(path,
+                         port -> "GET " + normalizedPath + " HTTP/1.1\r\n" +
+                                 "user-agent: Armeria\r\n" +
+                                 "host: 127.0.0.1:" + port + "\r\n\r\n");
+    }
+
+    private static void testSocketOutput(String path,
+                                         IntFunction<String> expectedResponse) throws IOException {
+        Socket s = null;
+        try (ServerSocket ss = new ServerSocket(0)) {
+            final int port = ss.getLocalPort();
+            final String expected = expectedResponse.apply(port);
+
+            // Send a request. Note that we do not wait for a response anywhere because we are only interested
+            // in testing what client sends.
+            Clients.newClient(clientFactory, "none+h1c://127.0.0.1:" + port, HttpClient.class).get(path);
+            ss.setSoTimeout(10000);
+            s = ss.accept();
+
+            final byte[] buf = new byte[expected.length()];
+            final InputStream in = s.getInputStream();
+
+            // Read the encoded request.
+            s.setSoTimeout(10000);
+            ByteStreams.readFully(in, buf);
+
+            // Ensure that the encoded request matches.
+            assertThat(new String(buf, StandardCharsets.US_ASCII)).isEqualTo(expected);
+
+            // Should not send anything more.
+            s.setSoTimeout(1000);
+            assertThatThrownBy(in::read).isInstanceOf(SocketTimeoutException.class);
+        } finally {
+            Closeables.close(s, true);
+        }
     }
 }

@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -54,6 +55,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
             ch -> ch.eventLoop().newSucceededFuture(HttpSession.get(ch).isActive());
 
+    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
+
     final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> map = new ConcurrentHashMap<>();
 
     private final HttpClientFactory factory;
@@ -66,6 +69,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Endpoint endpoint = ctx.endpoint().resolve().withDefaultPort(ctx.sessionProtocol().defaultPort());
         autoFillHeaders(ctx, endpoint, req);
+        sanitizePath(req);
 
         final PoolKey poolKey = new PoolKey(
                 InetSocketAddress.createUnresolved(endpoint.host(), endpoint.port()),
@@ -129,6 +133,26 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
     }
 
+    private static void sanitizePath(HttpRequest req) {
+        final String path = req.path();
+        if (path == null || path.isEmpty()) {
+            req.path("/");
+            return;
+        }
+
+        // Remove consecutive slashes from the path.
+        final int queryStart = path.indexOf('?');
+        if (queryStart < 0) {
+            final String newPath = CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/");
+            if (newPath != path) {
+                req.path(newPath);
+            }
+        } else {
+            req.path(CONSECUTIVE_SLASHES_PATTERN.matcher(path.substring(0, queryStart)).replaceAll("/") +
+                     path.substring(queryStart));
+        }
+    }
+
     private KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {
         KeyedChannelPool<PoolKey> pool = map.get(eventLoop);
         if (pool != null) {
@@ -147,7 +171,6 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             final KeyedChannelPoolHandler<PoolKey> handler =
                     options.poolHandlerDecorator().apply(NOOP_POOL_HANDLER);
 
-            //TODO(inch772) handle options.maxConcurrency();
             final KeyedChannelPool<PoolKey> newPool = new DefaultKeyedChannelPool<>(
                     eventLoop, channelFactory, POOL_HEALTH_CHECKER, handler, true);
 
