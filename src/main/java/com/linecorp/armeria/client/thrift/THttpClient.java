@@ -46,4 +46,16 @@ public interface THttpClient extends ClientOptionDerivable<THttpClient> {
      * @param args the arguments of the call
      */
     ThriftReply execute(String path, Class<?> serviceType, String method, Object... args);
+
+    /**
+     * Executes the specified multiplexed Thrift call.
+     *
+     * @param path the path of the Thrift service
+     * @param serviceType the Thrift service interface
+     * @param serviceName the Thrift service name
+     * @param method the method name
+     * @param args the arguments of the call
+     */
+    ThriftReply executeMultiplexed(
+            String path, Class<?> serviceType, String serviceName, String method, Object... args);
 }

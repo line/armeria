@@ -103,7 +103,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         try {
             final TMemoryBuffer outTransport = new TMemoryBuffer(128);
             final TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
-            final TMessage tMessage = new TMessage(method, func.messageType(), seqId);
+            final TMessage tMessage = new TMessage(fullMethod(ctx, method), func.messageType(), seqId);
 
             tProtocol.writeMessageBegin(tMessage);
             @SuppressWarnings("rawtypes")
@@ -144,6 +144,15 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         }
 
         return reply;
+    }
+
+    private static String fullMethod(ClientRequestContext ctx, String method) {
+        final String service = ctx.fragment();
+        if (service.isEmpty()) {
+            return method;
+        } else {
+            return service + ':' + method;
+        }
     }
 
     private ThriftServiceMetadata metadata(Class<?> serviceType) {

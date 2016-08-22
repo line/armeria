@@ -44,6 +44,7 @@ public final class DefaultClientRequestContext extends NonWrappingRequestContext
     private final EventLoop eventLoop;
     private final ClientOptions options;
     private final Endpoint endpoint;
+    private final String fragment;
 
     private final DefaultRequestLog requestLog;
     private final DefaultResponseLog responseLog;
@@ -61,14 +62,15 @@ public final class DefaultClientRequestContext extends NonWrappingRequestContext
      * @param request the request associated with this context
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, SessionProtocol sessionProtocol,
-            Endpoint endpoint, String method, String path, ClientOptions options, Object request) {
+            EventLoop eventLoop, SessionProtocol sessionProtocol, Endpoint endpoint,
+            String method, String path, String fragment, ClientOptions options, Object request) {
 
         super(sessionProtocol, method, path, request);
 
-        this.eventLoop = eventLoop;
-        this.options = options;
-        this.endpoint = endpoint;
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
+        this.options = requireNonNull(options, "options");
+        this.endpoint = requireNonNull(endpoint, "endpoint");
+        this.fragment = requireNonNull(fragment, "fragment");
 
         requestLog = new DefaultRequestLog();
         responseLog = new DefaultResponseLog(requestLog);
@@ -100,6 +102,11 @@ public final class DefaultClientRequestContext extends NonWrappingRequestContext
     @Override
     public Endpoint endpoint() {
         return endpoint;
+    }
+
+    @Override
+    public String fragment() {
+        return fragment;
     }
 
     @Override

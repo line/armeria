@@ -34,9 +34,7 @@ import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.tracing.HttpTracingTestBase;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
 import io.netty.channel.DefaultEventLoop;
 
@@ -79,6 +77,6 @@ public class HttpTracingClientTest extends HttpTracingTestBase {
     private static ClientRequestContext newClientContext(HttpRequest req) {
         return new DefaultClientRequestContext(
                 new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
-                req.method().toString(), req.path(), ClientOptions.DEFAULT, req);
+                req.method().toString(), req.path(), "", ClientOptions.DEFAULT, req);
     }
 }

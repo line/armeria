@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Proxy;
@@ -105,7 +106,11 @@ public class THttpClientFactory extends DecoratingClientFactory {
             T client = (T) Proxy.newProxyInstance(
                     clientType.getClassLoader(),
                     new Class<?>[] { clientType, ClientOptionDerivable.class },
-                    new THttpClientInvocationHandler(thriftClient, uri.getPath(), clientType));
+                    new THttpClientInvocationHandler(
+                            thriftClient,
+                            firstNonNull(uri.getPath(), "/"),
+                            firstNonNull(uri.getFragment(), ""),
+                            clientType));
             return client;
         }
     }

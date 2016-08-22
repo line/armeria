@@ -38,17 +38,20 @@ final class THttpClientInvocationHandler implements InvocationHandler {
 
     private final THttpClient thriftClient;
     private final String path;
+    private final String fragment;
     private final Class<?> clientType;
 
-    THttpClientInvocationHandler(THttpClient thriftClient, String path, Class<?> clientType) {
+    THttpClientInvocationHandler(THttpClient thriftClient, String path, String fragment, Class<?> clientType) {
         this.thriftClient = thriftClient;
         this.path = path;
+        this.fragment = fragment;
         this.clientType = clientType;
     }
 
     private THttpClientInvocationHandler(THttpClientInvocationHandler handler, THttpClient thriftClient) {
         this.thriftClient = thriftClient;
         path = handler.path;
+        fragment = handler.fragment;
         clientType = handler.clientType;
     }
 
@@ -128,7 +131,8 @@ final class THttpClientInvocationHandler implements InvocationHandler {
         }
 
         try {
-            final ThriftReply reply = thriftClient.execute(path, clientType, method.getName(), args);
+            final ThriftReply reply = thriftClient.executeMultiplexed(
+                    path, clientType, fragment, method.getName(), args);
 
             if (callback != null) {
                 reply.handle(voidFunction((result, cause) -> {

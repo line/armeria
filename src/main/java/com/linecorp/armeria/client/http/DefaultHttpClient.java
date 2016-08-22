@@ -52,7 +52,7 @@ final class DefaultHttpClient extends UserClient<HttpClient, HttpRequest, HttpRe
     }
 
     private HttpResponse execute(EventLoop eventLoop, HttpRequest req) {
-        return execute(eventLoop, req.method().name(), req.path(), req, cause -> {
+        return execute(eventLoop, req.method().name(), req.path(), "", req, cause -> {
             final DefaultHttpResponse res = new DefaultHttpResponse();
             res.close(cause);
             return res;

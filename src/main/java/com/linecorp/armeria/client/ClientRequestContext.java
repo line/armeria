@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -51,6 +50,14 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the {@link ClientOptions} of the current {@link Request}.
      */
     ClientOptions options();
+
+    /**
+     * Returns the fragment part of the URI of the current {@link Request}, as defined in
+     * <a href="https://tools.ietf.org/html/rfc3986#section-3.5">the section 3.5 of RFC3986</a>.
+     *
+     * @return the fragment part of the request URI, or an empty string if no fragment was specified
+     */
+    String fragment();
 
     /**
      * Returns the amount of time allowed until sending out the current {@link Request} completely.
