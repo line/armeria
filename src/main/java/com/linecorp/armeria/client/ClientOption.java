@@ -69,6 +69,11 @@ public final class ClientOption<T> extends AbstractOption<T> {
     public static final ClientOption<ClientDecoration> DECORATION = valueOf("DECORATION");
 
     /**
+     * Compatible with TMultiplexedProtocol
+     */
+    public static final ClientOption<Boolean> TMULTIPLEX = valueOf("TMULTIPLEX");
+
+    /**
      * Returns the {@link ClientOption} of the specified name.
      */
     @SuppressWarnings("unchecked")

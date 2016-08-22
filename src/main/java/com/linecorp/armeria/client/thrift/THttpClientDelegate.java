@@ -31,6 +31,7 @@ import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TMultiplexedProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TMemoryBuffer;
@@ -78,6 +79,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         mediaType = serializationFormat.mediaType().toString();
     }
 
+
     @Override
     public ThriftReply execute(ClientRequestContext ctx, ThriftCall call) throws Exception {
         final int seqId = call.seqId();
@@ -101,8 +103,13 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         }
 
         try {
+
             final TMemoryBuffer outTransport = new TMemoryBuffer(128);
-            final TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
+            TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
+            if (ctx.options().tMultiplex()) {
+                final String serviceName = this.path.substring(1);
+                tProtocol = new TMultiplexedProtocol(tProtocol, serviceName);
+            }
             final TMessage tMessage = new TMessage(method, func.messageType(), seqId);
 
             tProtocol.writeMessageBegin(tMessage);
