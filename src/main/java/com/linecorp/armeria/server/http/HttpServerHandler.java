@@ -87,7 +87,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             ALLOWED_METHODS.stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
     private static final Pattern PROHIBITED_PATH_PATTERN =
-            Pattern.compile("(?:[:<>|?*\\\\]|/\\.\\.|\\.\\.$|\\.\\./|//+)");
+            Pattern.compile("(?:[:<>|?*\\\\]|/\\.\\.|\\.\\.$|\\.\\./)");
+
+    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -379,7 +381,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return null;
         }
 
-        return path;
+        // Work around the case where a client sends a path such as '/path//with///consecutive////slashes'.
+        return CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/");
     }
 
     private void redirect(ChannelHandlerContext ctx, DecodedHttpRequest req, String location) {
