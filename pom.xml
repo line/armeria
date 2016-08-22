@@ -643,7 +643,7 @@
         <version>2.4.2</version>
         <configuration>
           <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P sonatype-oss-release</arguments>
+          <arguments>-P sonatype-oss-release -D skipTests</arguments>
           <autoVersionSubmodules>true</autoVersionSubmodules>
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat>
