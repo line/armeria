@@ -44,10 +44,21 @@ body {
   padding: 0;
 }
 
-.wy-menu.wy-menu-vertical .slack-invitation {
-  padding: 0.4em 1.45em;
+.wy-menu.wy-menu-vertical .slack-invitation,
+.wy-menu.wy-menu-vertical .project-badges {
+  padding: 0.4em 1.45em 0 1.45em;
   display: block;
   position: relative;
+  line-height: 1em;
+}
+
+.wy-menu.wy-menu-vertical .project-badges a {
+  display: inline;
+  padding: 0;
+}
+
+.wy-menu.wy-menu-vertical .project-badges a:hover {
+  background: inherit;
 }
 
 /* Make sure the invitation dialog appears on top of the menu whose z-index is 200. */
