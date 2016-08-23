@@ -40,7 +40,7 @@ public class ServiceTest {
         // Test if Service.as() works as expected.
         assertThat(outer.as(serviceType(inner))).containsSame(inner);
         assertThat(outer.as(serviceType(outer))).containsSame(outer);
-        //assertThat(outer.as(String.class)).isNotPresent();
+        assertThat(outer.as(String.class)).isNotPresent();
 
         // Test if FooService.serviceAdded() is invoked.
         final ServiceConfig cfg = new ServiceConfig(PathMapping.ofCatchAll(), outer, "foo");

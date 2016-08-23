@@ -66,7 +66,7 @@ public interface Service<I extends Request, O extends Response> {
      * @return the {@link Service} which is an instance of {@code serviceType} if this {@link Service}
      *         decorated such a {@link Service}. {@link Optional#empty()} otherwise.
      */
-    default <T extends Service<?, ?>> Optional<T> as(Class<T> serviceType) {
+    default <T> Optional<T> as(Class<T> serviceType) {
         requireNonNull(serviceType, "serviceType");
         return serviceType.isInstance(this) ? Optional.of(serviceType.cast(this))
                                             : Optional.empty();

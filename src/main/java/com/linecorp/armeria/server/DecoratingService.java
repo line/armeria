@@ -60,7 +60,7 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
     }
 
     @Override
-    public final <T extends Service<?, ?>> Optional<T> as(Class<T> serviceType) {
+    public final <T> Optional<T> as(Class<T> serviceType) {
         final Optional<T> result = Service.super.as(serviceType);
         return result.isPresent() ? result : delegate.as(serviceType);
     }
