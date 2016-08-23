@@ -18,8 +18,8 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Constructor;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.Request;
@@ -33,14 +33,6 @@ import com.linecorp.armeria.common.Response;
  */
 @FunctionalInterface
 public interface Service<I extends Request, O extends Response> {
-
-    /**
-     * Creates a new {@link Service} with the specified {@link BiFunction}.
-     */
-    static <I extends Request, O extends Response> Service<I, O> of(
-            BiFunction<? super ServiceRequestContext, ? super I, ? extends O> function) {
-        return new BiFunctionService<>(function);
-    }
 
     /**
      * Invoked when this {@link Service} has been added to a {@link Server} with the specified configuration.
@@ -74,10 +66,40 @@ public interface Service<I extends Request, O extends Response> {
      * @return the {@link Service} which is an instance of {@code serviceType} if this {@link Service}
      *         decorated such a {@link Service}. {@link Optional#empty()} otherwise.
      */
-    default <T extends Service<?, ?>> Optional<T> as(Class<T> serviceType) {
+    default <T> Optional<T> as(Class<T> serviceType) {
         requireNonNull(serviceType, "serviceType");
         return serviceType.isInstance(this) ? Optional.of(serviceType.cast(this))
                                             : Optional.empty();
+    }
+
+    /**
+     * Creates a new {@link Service} that decorates this {@link Service} with a new {@link Service} instance
+     * of the specified {@code serviceType}. The specified {@link Class} must have a single-parameter
+     * constructor which accepts this {@link Service}.
+     */
+    default <R extends Service<?, ?>> R decorate(Class<R> serviceType) {
+        requireNonNull(serviceType, "serviceType");
+
+        Constructor<?> constructor = null;
+        for (Constructor<?> c : serviceType.getConstructors()) {
+            if (c.getParameterCount() != 1) {
+                continue;
+            }
+            if (c.getParameterTypes()[0].isAssignableFrom(getClass())) {
+                constructor = c;
+                break;
+            }
+        }
+
+        if (constructor == null) {
+            throw new IllegalArgumentException("cannot find a matching constructor: " + serviceType.getName());
+        }
+
+        try {
+            return (R) constructor.newInstance(this);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to instantiate: " + serviceType.getName(), e);
+        }
     }
 
     /**
@@ -94,5 +116,13 @@ public interface Service<I extends Request, O extends Response> {
         }
 
         return newService;
+    }
+
+    /**
+     * Creates a new {@link Service} that decorates this {@link Service} with the specified
+     * {@link DecoratingServiceFunction}.
+     */
+    default Service<I, O> decorate(DecoratingServiceFunction<? super I, ? extends O> function) {
+        return new FunctionalDecoratingService<>(this, function);
     }
 }

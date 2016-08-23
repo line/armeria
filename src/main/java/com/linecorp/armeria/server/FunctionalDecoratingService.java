@@ -18,35 +18,36 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.BiFunction;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * A {@link Service} which uses a {@link BiFunction} as its implementation.
+ * A decorating {@link Service} which implements its {@link #serve(ServiceRequestContext, Request)} method
+ * using a given function.
  *
- * @see Service#of(BiFunction)
+ * @see Service#decorate(DecoratingServiceFunction)
  */
-final class BiFunctionService<I extends Request, O extends Response> implements Service<I, O> {
+final class FunctionalDecoratingService<I extends Request, O extends Response>
+        extends DecoratingService<I, O, I, O> {
 
-    private final BiFunction<? super ServiceRequestContext, ? super I, ? extends O> function;
+    private final DecoratingServiceFunction<? super I, ? extends O> function;
 
     /**
      * Creates a new instance with the specified function.
      */
-    BiFunctionService(BiFunction<? super ServiceRequestContext, ? super I, ? extends O> function) {
-        requireNonNull(function, "function");
-        this.function = function;
+    FunctionalDecoratingService(Service<? super I, ? extends O> delegate,
+                                DecoratingServiceFunction<? super I, ? extends O> function) {
+        super(delegate);
+        this.function = requireNonNull(function, "function");
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        return function.apply(ctx, req);
+        return function.serve(delegate(), ctx, req);
     }
 
     @Override
     public String toString() {
-        return "BiFunctionService(" + function + ')';
+        return FunctionalDecoratingService.class.getSimpleName() + '(' + delegate() + ", " + function + ')';
     }
 }
