@@ -85,6 +85,7 @@
     <guava.version>19.0</guava.version>
     <jackson.version>2.7.6</jackson.version>
     <jetty.version>9.3.11.v20160721</jetty.version>
+    <jsonunit.version>1.15.0</jsonunit.version>
     <logback.version>1.1.7</logback.version>
     <metrics.version>3.1.2</metrics.version>
     <netty.version>4.1.4.Final</netty.version>
@@ -303,7 +304,13 @@
     <dependency>
       <groupId>net.javacrumbs.json-unit</groupId>
       <artifactId>json-unit</artifactId>
-      <version>1.13.0</version>
+      <version>${jsonunit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.javacrumbs.json-unit</groupId>
+      <artifactId>json-unit-fluent</artifactId>
+      <version>${jsonunit.version}</version>
       <scope>test</scope>
     </dependency>
 
