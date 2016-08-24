@@ -16,14 +16,8 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static net.javacrumbs.jsonunit.JsonAssert.assertJsonEquals;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -54,58 +48,55 @@ public class ServiceInfoTest {
                                ImmutableMap.of(bar3_args.class, new bar3_args().setIntVal(10)),
                                ImmutableMap.of("foobar", "barbaz"));
 
-        assertThat(service.endpoints(), hasSize(2));
+        assertThat(service.endpoints()).hasSize(2);
         // Should be sorted alphabetically
-        assertThat(service.endpoints(),
-                   contains(EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
-                                            EnumSet.of(SerializationFormat.THRIFT_TEXT)),
-                            EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_BINARY,
-                                            EnumSet.of(SerializationFormat.THRIFT_BINARY))));
+        assertThat(service.endpoints()).containsExactlyInAnyOrder(
+                EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
+                                EnumSet.of(SerializationFormat.THRIFT_TEXT)),
+                EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_BINARY,
+                                EnumSet.of(SerializationFormat.THRIFT_BINARY)));
 
         final Map<String, FunctionInfo> functions = service.functions();
-        assertThat(functions.size(), is(5));
+        assertThat(functions).hasSize(5);
 
         final FunctionInfo bar1 = functions.get("bar1");
-        assertThat(bar1.parameters().isEmpty(), is(true));
-        assertThat(bar1.returnType(), is(TypeInfo.VOID));
-        assertThat(bar1.exceptions().size(), is(1));
-        assertEquals("", bar1.sampleJsonRequest());
+        assertThat(bar1.parameters()).isEmpty();
+        assertThat(bar1.returnType()).isEqualTo(TypeInfo.VOID);
+        assertThat(bar1.exceptions()).hasSize(1);
+        assertThat(bar1.sampleJsonRequest()).isEmpty();
 
         final TypeInfo string = TypeInfo.of(ValueType.STRING, false);
         final FunctionInfo bar2 = functions.get("bar2");
-        assertThat(bar2.parameters().isEmpty(), is(true));
-        assertThat(bar2.returnType(), is(string));
-        assertThat(bar2.exceptions().size(), is(1));
-        assertEquals("", bar2.sampleJsonRequest());
+        assertThat(bar2.parameters()).isEmpty();
+        assertThat(bar2.returnType()).isEqualTo(string);
+        assertThat(bar2.exceptions()).hasSize(1);
+        assertThat(bar2.sampleJsonRequest()).isEmpty();
 
         final StructInfo foo = StructInfo.of(new StructMetaData(TType.STRUCT, FooStruct.class));
         final FunctionInfo bar3 = functions.get("bar3");
-        assertThat(bar3.parameters().size(), is(2));
-        assertThat(bar3.parameters().get(0),
-                   is(FieldInfo.of("intVal", RequirementType.DEFAULT, TypeInfo.of(ValueType.I32, false))));
-        assertThat(bar3.parameters().get(1), is(FieldInfo.of("foo", RequirementType.DEFAULT, foo)));
-        assertThat(bar3.returnType(), is(foo));
-        assertThat(bar3.exceptions().size(), is(1));
-        assertJsonEquals("{\"intVal\": 10}", bar3.sampleJsonRequest());
+        assertThat(bar3.parameters()).containsExactly(
+                FieldInfo.of("intVal", RequirementType.DEFAULT, TypeInfo.of(ValueType.I32, false)),
+                FieldInfo.of("foo", RequirementType.DEFAULT, foo));
+        assertThat(bar3.returnType()).isEqualTo(foo);
+        assertThat(bar3.exceptions()).hasSize(1);
+        assertThatJson(bar3.sampleJsonRequest()).isEqualTo("{\"intVal\": 10}");
 
         final FunctionInfo bar4 = functions.get("bar4");
-        assertThat(bar4.parameters().size(), is(1));
-        assertThat(bar4.parameters().get(0),
-                   is(FieldInfo.of("foos", RequirementType.DEFAULT, ListInfo.of(foo))));
-        assertThat(bar4.returnType(), is(ListInfo.of(foo)));
-        assertThat(bar4.exceptions().size(), is(1));
-        assertEquals("", bar4.sampleJsonRequest());
+        assertThat(bar4.parameters()).containsExactly(
+                FieldInfo.of("foos", RequirementType.DEFAULT, ListInfo.of(foo)));
+        assertThat(bar4.returnType()).isEqualTo(ListInfo.of(foo));
+        assertThat(bar4.exceptions()).hasSize(1);
+        assertThat(bar4.sampleJsonRequest()).isEmpty();
 
         final FunctionInfo bar5 = functions.get("bar5");
-        assertThat(bar5.parameters().size(), is(1));
-        assertThat(bar5.parameters().get(0),
-                   is(FieldInfo.of("foos", RequirementType.DEFAULT, MapInfo.of(string, foo))));
-        assertThat(bar5.returnType(), is(MapInfo.of(string, foo)));
-        assertThat(bar5.exceptions().size(), is(1));
-        assertEquals("", bar5.sampleJsonRequest());
+        assertThat(bar5.parameters()).containsExactly(
+                FieldInfo.of("foos", RequirementType.DEFAULT, MapInfo.of(string, foo)));
+        assertThat(bar5.returnType()).isEqualTo(MapInfo.of(string, foo));
+        assertThat(bar5.exceptions()).hasSize(1);
+        assertThat(bar5.sampleJsonRequest()).isEmpty();
 
         final String sampleHttpHeaders = service.sampleHttpHeaders();
-        assertThat(sampleHttpHeaders, notNullValue());
-        assertThat(sampleHttpHeaders, equalTo("{\n  \"foobar\" : \"barbaz\"\n}"));
+        assertThat(sampleHttpHeaders).isNotNull();
+        assertThatJson(sampleHttpHeaders).isEqualTo("{ \"foobar\": \"barbaz\" }");
     }
 }
