@@ -117,7 +117,7 @@ public class PathMappings<T> implements Function<String, PathMapped<T>> {
         // Cache miss or disabled cache
         PathMapped<T> result = PathMapped.empty();
         final int size = patterns.size();
-        for (int i = 0; i < size; i ++) {
+        for (int i = 0; i < size; i++) {
             final Entry<PathMapping, T> e = patterns.get(i);
             final String mappedPath = e.getKey().apply(path);
             if (mappedPath != null) {

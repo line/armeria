@@ -67,7 +67,8 @@ public class ServerTest extends AbstractServerTest {
     @Override
     protected void configureServer(ServerBuilder sb) {
 
-        final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread = new EchoService().decorate(LoggingService::new);
+        final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
+                new EchoService().decorate(LoggingService::new);
 
         final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
             @Override
@@ -106,7 +107,7 @@ public class ServerTest extends AbstractServerTest {
 
         // Disable request timeout for '/timeout-not' only.
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
-                delegate -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(delegate) {
+                s -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
                     @Override
                     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                         ctx.setRequestTimeoutMillis(

@@ -131,10 +131,11 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
         return NativeLibraries.isEpollAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class;
     }
 
+    @SuppressWarnings("checkstyle:operatorwrap")
     private static EventLoopGroup createGroup(Function<TransportType, ThreadFactory> threadFactoryFactory) {
-        return NativeLibraries.isEpollAvailable() ?
-               new EpollEventLoopGroup(0, threadFactoryFactory.apply(TransportType.EPOLL)) :
-               new NioEventLoopGroup(0, threadFactoryFactory.apply(TransportType.NIO));
+        return NativeLibraries.isEpollAvailable()
+               ? new EpollEventLoopGroup(0, threadFactoryFactory.apply(TransportType.EPOLL))
+               : new NioEventLoopGroup(0, threadFactoryFactory.apply(TransportType.NIO));
     }
 
     @Override

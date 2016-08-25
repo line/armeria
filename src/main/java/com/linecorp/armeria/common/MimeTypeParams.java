@@ -48,7 +48,7 @@ final class MimeTypeParams {
         final StringBuilder buf = new StringBuilder(length);
 
         boolean escaped = false;
-        for(int i = 0; i < length; i++) {
+        for (int i = 0; i < length; i++) {
             final char c = value.charAt(i);
             if (escaped) {
                 buf.append(c);

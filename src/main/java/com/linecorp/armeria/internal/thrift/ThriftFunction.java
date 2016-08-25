@@ -252,6 +252,32 @@ public final class ThriftFunction {
         }
     }
 
+    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult(ProcessFunction<?, ?> func) {
+        return getResult0(Type.SYNC, func.getClass(), func.getMethodName());
+    }
+
+    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult(AsyncProcessFunction<?, ?, ?> asyncFunc) {
+        return getResult0(Type.ASYNC, asyncFunc.getClass(), asyncFunc.getMethodName());
+    }
+
+    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult0(
+            Type type, Class<?> funcClass, String methodName) {
+
+        final String resultTypeName = typeName(type, funcClass, methodName, methodName + "_result");
+        try {
+            @SuppressWarnings("unchecked")
+            Class<TBase<TBase<?, ?>, TFieldIdEnum>> resultType =
+                    (Class<TBase<TBase<?, ?>, TFieldIdEnum>>) Class.forName(
+                            resultTypeName, false, funcClass.getClassLoader());
+            return resultType.newInstance();
+        } catch (ClassNotFoundException ignored) {
+            // Oneway function does not have a result type.
+            return null;
+        } catch (Exception e) {
+            throw new IllegalStateException("cannot determine the result type of method: " + methodName, e);
+        }
+    }
+
     /**
      * Sets the exception field of the specified {@code result} to the specified {@code cause}.
      */
@@ -308,32 +334,6 @@ public final class ThriftFunction {
         }
     }
 
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult(ProcessFunction<?, ?> func) {
-        return getResult0(Type.SYNC, func.getClass(), func.getMethodName());
-    }
-
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult(AsyncProcessFunction<?, ?, ?> asyncFunc) {
-        return getResult0(Type.ASYNC, asyncFunc.getClass(), asyncFunc.getMethodName());
-    }
-
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult0(
-            Type type, Class<?> funcClass, String methodName) {
-
-        final String resultTypeName = typeName(type, funcClass, methodName, methodName + "_result");
-        try {
-            @SuppressWarnings("unchecked")
-            Class<TBase<TBase<?, ?>, TFieldIdEnum>> resultType =
-                    (Class<TBase<TBase<?, ?>, TFieldIdEnum>>) Class.forName(
-                            resultTypeName, false, funcClass.getClassLoader());
-            return resultType.newInstance();
-        } catch (ClassNotFoundException ignored) {
-            // Oneway function does not have a result type.
-            return null;
-        } catch (Exception e) {
-            throw new IllegalStateException("cannot determine the result type of method: " + methodName, e);
-        }
-    }
-
     private static Class<?>[] getDeclaredExceptions(ProcessFunction<?, ?> func) {
         return getDeclaredExceptions0(Type.SYNC, func.getClass(), func.getMethodName());
     }
@@ -366,7 +366,7 @@ public final class ThriftFunction {
     private static String typeName(Type type, Class<?> funcClass, String methodName, String toAppend) {
         final String funcClassName = funcClass.getName();
         final int serviceClassEndPos = funcClassName.lastIndexOf(
-                (type == Type.SYNC? "$Processor$" : "$AsyncProcessor$") + methodName);
+                (type == Type.SYNC ? "$Processor$" : "$AsyncProcessor$") + methodName);
 
         if (serviceClassEndPos <= 0) {
             throw new IllegalStateException("cannot determine the service class of method: " + methodName);

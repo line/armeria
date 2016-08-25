@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Optional;
 
 final class ExactPathMapping extends AbstractPathMapping {
@@ -30,13 +28,6 @@ final class ExactPathMapping extends AbstractPathMapping {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
         strVal = "exact: " + exactPath;
-    }
-
-    static String ensureAbsolutePath(String path, String paramName) {
-        if (!requireNonNull(path, paramName).startsWith("/")) {
-            throw new IllegalArgumentException(paramName + ": " + path + " (expected: starts with '/')");
-        }
-        return path;
     }
 
     @Override

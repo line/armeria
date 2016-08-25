@@ -153,7 +153,7 @@ public class PublisherBasedStreamMessageTest {
     }
 
     private static final class AbortTest {
-        private PublisherBasedStreamMessage<Integer> p;
+        private PublisherBasedStreamMessage<Integer> publisher;
         private SubscriberWrapper subscriberWrapper;
         private Subscription subscription;
 
@@ -166,10 +166,10 @@ public class PublisherBasedStreamMessageTest {
 
             @SuppressWarnings("unchecked")
             final Subscriber<Integer> subscriber = mock(Subscriber.class);
-            p = new PublisherBasedStreamMessage<>(delegate);
+            publisher = new PublisherBasedStreamMessage<>(delegate);
 
             // Subscribe.
-            p.subscribe(subscriber);
+            publisher.subscribe(subscriber);
             Mockito.verify(delegate).subscribe(subscriberCaptor.capture());
 
             // Capture the actual Subscriber implementation.
@@ -187,7 +187,7 @@ public class PublisherBasedStreamMessageTest {
         }
 
         void abort() {
-            p.abort();
+            publisher.abort();
         }
 
         void verify() {
@@ -195,8 +195,8 @@ public class PublisherBasedStreamMessageTest {
             Mockito.verify(subscription).cancel();
 
             // Ensure closeFuture is complete exceptionally.
-            assertThat(p.closeFuture()).isCompletedExceptionally();
-            assertThatThrownBy(() -> p.closeFuture().get())
+            assertThat(publisher.closeFuture()).isCompletedExceptionally();
+            assertThatThrownBy(() -> publisher.closeFuture().get())
                     .hasCauseExactlyInstanceOf(CancelledSubscriptionException.class);
         }
     }

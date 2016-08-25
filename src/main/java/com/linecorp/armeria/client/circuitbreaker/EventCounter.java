@@ -21,24 +21,23 @@ import java.util.Optional;
 interface EventCounter {
 
     /**
-     * Returns the current {@link EventCount}
+     * Returns the current {@link EventCount}.
      */
     EventCount count();
 
     /**
-     * Counts success events
+     * Counts success events.
      *
-     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated, or else
-     * an empty {@link Optional}.
+     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated,
+     *         or else an empty {@link Optional}.
      */
     Optional<EventCount> onSuccess();
 
     /**
-     * Counts failure events
+     * Counts failure events.
      *
-     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated, or else
-     * an empty {@link Optional}.
+     * @return An {@link Optional} containing the current {@link EventCount} if it has been updated,
+     *         or else an empty {@link Optional}.
      */
     Optional<EventCount> onFailure();
-
 }

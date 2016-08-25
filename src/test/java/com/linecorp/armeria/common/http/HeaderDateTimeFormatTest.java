@@ -42,10 +42,9 @@ import org.junit.Test;
 
 public class HeaderDateTimeFormatTest {
     /**
-     * This date is set at "06 Nov 1994 08:49:37 GMT" (same used in example in
-     * RFC documentation)
-     * <p>
-     * http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html
+     * This date is set at "06 Nov 1994 08:49:37 GMT" (same used in example in RFC documentation)
+     *
+     * <p>http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html
      */
     private static final Instant DATE = Instant.ofEpochMilli(784111777000L);
 

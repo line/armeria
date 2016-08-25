@@ -42,8 +42,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * An abstract {@link DecoratingService} that traces incoming {@link Request}s.
- * <p>
- * This class depends on <a href="https://github.com/openzipkin/brave">Brave</a>, a distributed tracing library.
+ *
+ * <p>This class depends on <a href="https://github.com/openzipkin/brave">Brave</a>, a distributed tracing
+ * library.
  *
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type

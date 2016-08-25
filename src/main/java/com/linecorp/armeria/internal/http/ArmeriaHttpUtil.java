@@ -66,8 +66,8 @@ import io.netty.util.HashingStrategy;
 
 /**
  * Provides various utility functions for internal use related with HTTP.
- * <p>
- * The conversion between HTTP/1 and HTTP/2 has been forked from Netty's {@link HttpConversionUtil}.
+ *
+ * <p>The conversion between HTTP/1 and HTTP/2 has been forked from Netty's {@link HttpConversionUtil}.
  */
 public final class ArmeriaHttpUtil {
 
@@ -222,8 +222,9 @@ public final class ArmeriaHttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     private static String toHttp2Path(URI uri) {
-        StringBuilder pathBuilder = new StringBuilder(length(uri.getRawPath()) +
-                                                      length(uri.getRawQuery()) + length(uri.getRawFragment()) + 2);
+        final StringBuilder pathBuilder = new StringBuilder(
+                length(uri.getRawPath()) + length(uri.getRawQuery()) + length(uri.getRawFragment()) + 2);
+
         if (!isNullOrEmpty(uri.getRawPath())) {
             pathBuilder.append(uri.getRawPath());
         }
@@ -302,7 +303,8 @@ public final class ArmeriaHttpUtil {
      * @param streamId The stream associated with {@code sourceHeaders}.
      * @param inputHeaders The HTTP/2 headers to convert.
      * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
-     * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as when doing the conversion.
+     * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as
+     *                    when doing the conversion.
      * @param isTrailer {@code true} if {@code outputHeaders} should be treated as trailing headers.
      *                  {@code false} otherwise.
      * @param isRequest {@code true} if the {@code outputHeaders} will be used in a request message.
@@ -340,6 +342,7 @@ public final class ArmeriaHttpUtil {
          */
         private static final CharSequenceMap REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap();
         private static final CharSequenceMap RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap();
+
         static {
             RESPONSE_HEADER_TRANSLATIONS.add(Http2Headers.PseudoHeaderName.AUTHORITY.value(),
                                              HttpHeaderNames.HOST);
@@ -350,11 +353,11 @@ public final class ArmeriaHttpUtil {
         private final CharSequenceMap translations;
 
         /**
-         * Create a new instance
+         * Create a new instance.
          *
          * @param output The HTTP/1.x headers object to store the results of the translation
-         * @param request if {@code true}, translates headers using the request translation map. Otherwise uses the
-         *        response translation map.
+         * @param request if {@code true}, translates headers using the request translation map.
+         *                Otherwise uses the response translation map.
          */
         Http2ToHttpHeaderTranslator(io.netty.handler.codec.http.HttpHeaders output,
                                     boolean request) {

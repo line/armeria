@@ -72,7 +72,8 @@ public class CircuitBreakerClientTest {
     private static final ThriftCall req = ctx.request();
     private static final ThriftCall reqB = ctxB.request();
     private static final ThriftReply successRes = new ThriftReply(0, (Object) null);
-    private static final ThriftReply failureRes = new ThriftReply(0, Exceptions.clearTrace(new Exception("bug")));
+    private static final ThriftReply failureRes =
+            new ThriftReply(0, Exceptions.clearTrace(new Exception("bug")));
 
     @Test
     public void testSingletonDecorator() throws Exception {

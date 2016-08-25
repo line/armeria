@@ -24,8 +24,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.thrift.TApplicationException;
@@ -46,9 +44,9 @@ import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_args;
 import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_result;
 
 /**
- * Test the TTextProtocol
+ * Tests the TTextProtocol.
  *
- * TODO(Alex Roetter): add more tests, especially ones that verify
+ * <p>TODO(Alex Roetter): add more tests, especially ones that verify
  * that we generate ParseErrors for invalid input
  *
  * @author Alex Roetter
@@ -59,8 +57,7 @@ public class TTextProtocolTest {
     private Base64 base64Encoder;
 
     /**
-     * Load a file containing a serialized thrift message in from disk
-     * @throws IOException
+     * Load a file containing a serialized thrift message in from disk.
      */
     @Before
     public void setUp() throws IOException {
@@ -78,7 +75,6 @@ public class TTextProtocolTest {
      * from a file on disk, then serialize it back out to a string.
      * Finally, deserialize that string and compare to the original
      * message.
-     * @throws IOException
      */
     @Test
     public void tTextProtocolReadWriteTest() throws Exception {
@@ -123,7 +119,7 @@ public class TTextProtocolTest {
                         3, 4L,
                         5, 6L
                 ))
-                .setJ(ImmutableMap.<Short,List<Boolean>>of(
+                .setJ(ImmutableMap.of(
                         (short) 1, ImmutableList.of(true, true, false, true),
                         (short) 5, ImmutableList.of(false)
                 ))
@@ -134,8 +130,8 @@ public class TTextProtocolTest {
                 .setP(Letter.CHARLIE)
                 .setQ(EnumSet.allOf(Letter.class))
                 .setR(ImmutableMap.of(sub(1, 2), 100L))
-                .setS(ImmutableMap.<Map<Map<Long, Long>, Long> ,Long>of(
-                        ImmutableMap.<Map<Long, Long>, Long>of(
+                .setS(ImmutableMap.of(
+                        ImmutableMap.of(
                                 ImmutableMap.of(200L, 400L), 300L
                         ), 100L
                 ))
@@ -145,8 +141,7 @@ public class TTextProtocolTest {
                 .setV(Letter.BETA)
                 .setW(TestUnion.f2(4))
                 .setX(ImmutableList.of(TestUnion.f2(5), TestUnion.f1(base64Encoder.decode("SGVsbG8gV29ybGQ="))))
-                .setY(Letter.ALPHA)
-                ;
+                .setY(Letter.ALPHA);
 
     }
 

@@ -5,8 +5,10 @@
 
 <module name="Checker">
   <property name="charset" value="UTF-8"/>
-  <property name="severity" value="warning"/>
+  <property name="severity" value="error"/>
   <property name="fileExtensions" value="java, properties, xml"/>
+
+  <module name="SuppressWarningsFilter" />
 
   <module name="Header">
     <property name="fileExtensions" value="java"/>
@@ -19,6 +21,8 @@
   </module>
 
   <module name="TreeWalker">
+    <module name="SuppressWarningsHolder"/>
+
     <module name="AnnotationLocation">
       <property name="tokens" value="CLASS_DEF, INTERFACE_DEF, ENUM_DEF, METHOD_DEF, CTOR_DEF"/>
     </module>
@@ -43,7 +47,7 @@
     <module name="RightCurly">
       <property name="option" value="alone"/>
       <property name="tokens"
-                value="CLASS_DEF, METHOD_DEF, CTOR_DEF, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO, STATIC_INIT, INSTANCE_INIT"/>
+                value="CLASS_DEF, METHOD_DEF, CTOR_DEF, LITERAL_FOR, LITERAL_WHILE, STATIC_INIT, INSTANCE_INIT"/>
     </module>
 
     <module name="FinalClass"/>
@@ -140,11 +144,9 @@
     <module name="ModifierOrder"/>
     <module name="RedundantModifier"/>
 
-    <module name="AbbreviationAsWordInName">
-      <property name="ignoreFinal" value="false"/>
-    </module>
+    <module name="AbbreviationAsWordInName"/>
     <module name="ClassTypeParameterName">
-      <property name="format" value="^[A-Z][A-Z0-9]*$"/>
+      <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"/>
       <message key="name.invalidPattern"
                value="Class type name ''{0}'' must match pattern ''{1}''."/>
     </module>
@@ -164,7 +166,7 @@
                value="Method name ''{0}'' must match pattern ''{1}''."/>
     </module>
     <module name="MethodTypeParameterName">
-      <property name="format" value="^[A-Z][A-Z0-9]*$"/>
+      <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"/>
       <message key="name.invalidPattern"
                value="Method type name ''{0}'' must match pattern ''{1}''."/>
     </module>

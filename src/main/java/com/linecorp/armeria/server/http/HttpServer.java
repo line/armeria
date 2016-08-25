@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.http;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
@@ -47,5 +46,6 @@ interface HttpServer {
     }
 
     SessionProtocol protocol();
+
     int unfinishedRequests();
 }

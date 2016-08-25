@@ -22,12 +22,16 @@ import java.util.List;
 import com.github.kristofa.brave.EmptySpanCollector;
 import com.twitter.zipkin.gen.Span;
 
-public class StubCollector extends EmptySpanCollector {
+public final class StubCollector extends EmptySpanCollector {
 
-    public final List<Span> spans = new ArrayList<>();
+    private final List<Span> spans = new ArrayList<>();
 
     @Override
     public void collect(Span span) {
         spans.add(span);
+    }
+
+    public List<Span> spans() {
+        return spans;
     }
 }

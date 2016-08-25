@@ -131,7 +131,7 @@ public interface RequestContext extends AttributeMap {
         final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(ctx);
         if (oldCtx == ctx) {
             // Reentrance
-            return () -> {};
+            return () -> { /* no-op */ };
         }
 
         if (runCallbacks) {
@@ -245,6 +245,8 @@ public interface RequestContext extends AttributeMap {
     /**
      * Returns a {@link FutureListener} that makes sure the current {@link RequestContext} is set and then
      * invokes the input {@code listener}.
+     *
+     * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
     <T> FutureListener<T> makeContextAware(FutureListener<T> listener);
@@ -252,6 +254,8 @@ public interface RequestContext extends AttributeMap {
     /**
      * Returns a {@link ChannelFutureListener} that makes sure the current {@link RequestContext} is set and
      * then invokes the input {@code listener}.
+     *
+     * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
     ChannelFutureListener makeContextAware(ChannelFutureListener listener);
@@ -259,6 +263,8 @@ public interface RequestContext extends AttributeMap {
     /**
      * Returns a {@link GenericFutureListener} that makes sure the current {@link RequestContext} is set and
      * then invokes the input {@code listener}.
+     *
+     * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
     <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener);

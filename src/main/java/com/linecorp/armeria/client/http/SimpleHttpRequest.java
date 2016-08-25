@@ -23,7 +23,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.HttpRequest;
 
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -160,25 +159,21 @@ public class SimpleHttpRequest {
         }
 
         @Override
-        @Deprecated
         public List<String> getAll(String name) {
             return delegate.getAll(name);
         }
 
         @Override
-        @Deprecated
         public List<Entry<String, String>> entries() {
             return delegate.entries();
         }
 
         @Override
-        @Deprecated
         public boolean contains(String name) {
             return delegate.contains(name);
         }
 
         @Override
-        @Deprecated
         public Iterator<Entry<String, String>> iterator() {
             return delegate.iterator();
         }

@@ -70,7 +70,8 @@ public abstract class AbstractRequestContext implements RequestContext {
     }
 
     @Override
-    public final <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener) {
+    public final <T extends Future<?>> GenericFutureListener<T>
+    makeContextAware(GenericFutureListener<T> listener) {
         return future -> invokeOperationComplete(listener, future);
     }
 
@@ -92,18 +93,16 @@ public abstract class AbstractRequestContext implements RequestContext {
                         "callback was passed from one invocation to another which is not allowed. Make " +
                         "sure you are not saving callbacks into shared state.");
             }
-            return () -> {};
+            return () -> { /* no-op */ };
         }, () -> RequestContext.push(this, true));
     }
 
     @Override
-    @Deprecated
     public final void resolvePromise(Promise<?> promise, Object result) {
         RequestContext.super.resolvePromise(promise, result);
     }
 
     @Override
-    @Deprecated
     public final void rejectPromise(Promise<?> promise, Throwable cause) {
         RequestContext.super.rejectPromise(promise, cause);
     }

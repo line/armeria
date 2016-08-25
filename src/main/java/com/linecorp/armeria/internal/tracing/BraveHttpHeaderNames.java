@@ -28,7 +28,7 @@ import io.netty.util.AsciiString;
 public final class BraveHttpHeaderNames {
 
     /**
-     * {@code "x-b3-sampled"}
+     * {@code "x-b3-sampled"}.
      *
      * @see BraveHttpHeaders#Sampled
      */
@@ -36,7 +36,7 @@ public final class BraveHttpHeaderNames {
             AsciiString.of(BraveHttpHeaders.Sampled.getName().toLowerCase(Locale.ENGLISH));
 
     /**
-     * {@code "x-b3-traceid"}
+     * {@code "x-b3-traceid"}.
      *
      * @see BraveHttpHeaders#TraceId
      */
@@ -44,7 +44,7 @@ public final class BraveHttpHeaderNames {
             AsciiString.of(BraveHttpHeaders.TraceId.getName().toLowerCase(Locale.ENGLISH));
 
     /**
-     * {@code "x-b3-spanid"}
+     * {@code "x-b3-spanid"}.
      *
      * @see BraveHttpHeaders#SpanId
      */
@@ -52,7 +52,7 @@ public final class BraveHttpHeaderNames {
             AsciiString.of(BraveHttpHeaders.SpanId.getName().toLowerCase(Locale.ENGLISH));
 
     /**
-     * {@code "x-b3-parentspanid"}
+     * {@code "x-b3-parentspanid"}.
      *
      * @see BraveHttpHeaders#ParentSpanId
      */

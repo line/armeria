@@ -25,7 +25,7 @@ import java.util.Objects;
 import org.apache.thrift.meta_data.ListMetaData;
 import org.apache.thrift.protocol.TType;
 
-class ListInfo extends TypeInfo implements CollectionInfo {
+final class ListInfo extends TypeInfo implements CollectionInfo {
 
     static ListInfo of(ListMetaData listMetaData) {
         return of(listMetaData, Collections.emptyMap());
@@ -59,9 +59,18 @@ class ListInfo extends TypeInfo implements CollectionInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        if (!super.equals(o)) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        if (!super.equals(o)) {
+            return false;
+        }
+
         ListInfo listInfo = (ListInfo) o;
         return Objects.equals(elementType, listInfo.elementType);
     }

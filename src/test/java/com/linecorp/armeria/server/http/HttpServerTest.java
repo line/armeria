@@ -156,7 +156,7 @@ public class HttpServerTest extends AbstractServerTest {
                 final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
 
                 // Send 9 informational responses before sending the actual response.
-                for (int i = 1; i <= 9; i ++) {
+                for (int i = 1; i <= 9; i++) {
                     ctx.eventLoop().schedule(
                             () -> res.respond(HttpStatus.PROCESSING),
                             delayMillis * i / 10, TimeUnit.MILLISECONDS);
@@ -177,7 +177,7 @@ public class HttpServerTest extends AbstractServerTest {
                 res.write(HttpHeaders.of(HttpStatus.OK));
 
                 // Send 10 characters ('0' - '9') at fixed rate.
-                for (int i = 0; i < 10; i ++) {
+                for (int i = 0; i < 10; i++) {
                     final int finalI = i;
                     ctx.eventLoop().schedule(
                             () -> {
@@ -213,11 +213,12 @@ public class HttpServerTest extends AbstractServerTest {
             protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                 res.write(HttpHeaders.of(HttpStatus.OK));
                 req.subscribe(new Subscriber<HttpObject>() {
-                    private Subscription s;
+                    private Subscription subscription;
+
                     @Override
-                    public void onSubscribe(Subscription s) {
-                        this.s = s;
-                        s.request(1);
+                    public void onSubscribe(Subscription subscription) {
+                        this.subscription = subscription;
+                        subscription.request(1);
                     }
 
                     @Override
@@ -225,7 +226,7 @@ public class HttpServerTest extends AbstractServerTest {
                         if (http2Object instanceof HttpData) {
                             res.write(http2Object);
                         }
-                        s.request(1);
+                        subscription.request(1);
                     }
 
                     @Override
@@ -304,7 +305,7 @@ public class HttpServerTest extends AbstractServerTest {
         }.decorate(HttpEncodingService.class));
 
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
-                delegate -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(delegate) {
+                s -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
                     @Override
                     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                         ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
@@ -418,13 +419,13 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 60000)
     public void testStreamingRequest() throws Exception {
-        testStreamingRequest("/count");
+        runStreamingRequestTest("/count");
     }
 
     @Test(timeout = 120000)
     public void testStreamingRequestWithSlowService() throws Exception {
         final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
-        testStreamingRequest("/slow_count");
+        runStreamingRequestTest("/slow_count");
         // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
         // If the number of deferred reads did not increase and the testStreaming() above did not fail,
         // it probably means the client failed to produce enough amount of traffic.
@@ -552,7 +553,7 @@ public class HttpServerTest extends AbstractServerTest {
         assertThat(res.content().toStringUtf8(), is("Armeria is awesome!"));
     }
 
-    private void testStreamingRequest(String path) throws InterruptedException, ExecutionException {
+    private void runStreamingRequestTest(String path) throws InterruptedException, ExecutionException {
         // Disable timeouts and length limits so that test does not fail due to slow transfer.
         clientWriteTimeoutMillis = 0;
         clientResponseTimeoutMillis = 0;
@@ -583,13 +584,13 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 60000)
     public void testStreamingResponse() throws Exception {
-        testStreamingResponse(false);
+        runStreamingResponseTest(false);
     }
 
     @Test(timeout = 120000)
     public void testStreamingResponseWithSlowClient() throws Exception {
         final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
-        testStreamingResponse(true);
+        runStreamingResponseTest(true);
         // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
         // If the number of deferred reads did not increase and the testStreaming() above did not fail,
         // it probably means the client failed to produce enough amount of traffic.
@@ -597,7 +598,7 @@ public class HttpServerTest extends AbstractServerTest {
     }
 
 
-    private void testStreamingResponse(boolean slowClient) throws InterruptedException, ExecutionException {
+    private void runStreamingResponseTest(boolean slowClient) throws InterruptedException, ExecutionException {
         // Disable timeouts and length limits so that test does not fail due to slow transfer.
         clientWriteTimeoutMillis = 0;
         clientResponseTimeoutMillis = 0;
@@ -666,7 +667,7 @@ public class HttpServerTest extends AbstractServerTest {
 
         builder.factory(clientFactory);
         builder.decorator(HttpRequest.class, HttpResponse.class,
-                          delegate -> new DecoratingClient<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(delegate) {
+                          s -> new DecoratingClient<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
             @Override
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
                 ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
@@ -708,7 +709,7 @@ public class HttpServerTest extends AbstractServerTest {
         private final ScheduledExecutorService executor;
         private final boolean slow;
 
-        private Subscription s;
+        private Subscription subscription;
         private long numReceivedBytes;
         private int numReceivedChunks;
 
@@ -722,9 +723,9 @@ public class HttpServerTest extends AbstractServerTest {
         }
 
         @Override
-        public void onSubscribe(Subscription s) {
-            this.s = s;
-            s.request(1);
+        public void onSubscribe(Subscription subscription) {
+            this.subscription = subscription;
+            subscription.request(1);
         }
 
         @Override
@@ -738,14 +739,14 @@ public class HttpServerTest extends AbstractServerTest {
 
                 if (slow) {
                     // Add 1 second delay for every chunk received.
-                    executor.schedule(() -> s.request(1), 1, TimeUnit.SECONDS);
+                    executor.schedule(() -> subscription.request(1), 1, TimeUnit.SECONDS);
                 } else {
-                    s.request(1);
+                    subscription.request(1);
                 }
 
                 logger.debug("{} bytes received", numReceivedBytes);
             } else {
-                s.request(1);
+                subscription.request(1);
             }
         }
     }

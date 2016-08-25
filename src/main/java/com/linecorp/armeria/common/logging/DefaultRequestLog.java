@@ -40,7 +40,9 @@ public final class DefaultRequestLog
     private String path;
 
     @Override
-    public void start(Channel channel, SessionProtocol sessionProtocol, String host, String method, String path) {
+    public void start(Channel channel, SessionProtocol sessionProtocol,
+                      String host, String method, String path) {
+
         requireNonNull(channel, "channel");
         requireNonNull(sessionProtocol, "sessionProtocol");
         requireNonNull(host, "host");

@@ -34,10 +34,7 @@ public abstract class AbstractPathMapping implements PathMapping {
      */
     @Override
     public final String apply(String path) {
-        requireNonNull(path, "path");
-        if (path.isEmpty() || path.charAt(0) != '/') {
-            throw new IllegalArgumentException("path: " + path + " (expected: an absolute path)");
-        }
+        ensureAbsolutePath(path, "path");
 
         final String mappedPath = doApply(path);
         if (mappedPath == null) {
@@ -53,6 +50,22 @@ public abstract class AbstractPathMapping implements PathMapping {
         }
 
         return mappedPath;
+    }
+
+    /**
+     * Ensures that the specified {@code path} is an absolute path.
+     *
+     * @return {@code path}
+     *
+     * @throws NullPointerException if {@code path} is {@code null}
+     * @throws IllegalArgumentException if {@code path} is not an asbsolute path
+     */
+    protected static String ensureAbsolutePath(String path, String paramName) {
+        requireNonNull(path, paramName);
+        if (path.isEmpty() || path.charAt(0) != '/') {
+            throw new IllegalArgumentException(paramName + ": " + path + " (expected: an absolute path)");
+        }
+        return path;
     }
 
     /**

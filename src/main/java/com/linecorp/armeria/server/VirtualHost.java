@@ -53,7 +53,9 @@ public final class VirtualHost {
     private static final Pattern HOSTNAME_PATTERN = Pattern.compile(
             "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
 
-    /** Initialized later by {@link ServerConfig} via {@link #setServerConfig(ServerConfig)}. */
+    /**
+     * Initialized later by {@link ServerConfig} via {@link #setServerConfig(ServerConfig)}.
+     */
     private ServerConfig serverConfig;
 
     private final String defaultHostname;
@@ -145,7 +147,7 @@ public final class VirtualHost {
 
     private static boolean needsNormalization(String hostnamePattern) {
         final int length = hostnamePattern.length();
-        for (int i = 0; i < length; i ++) {
+        for (int i = 0; i < length; i++) {
             int c = hostnamePattern.charAt(i);
             if (c > 0x7F) {
                 return true;
@@ -185,6 +187,7 @@ public final class VirtualHost {
     public String defaultHostname() {
         return defaultHostname;
     }
+
     /**
      * Returns the hostname pattern of this virtual host, as defined in
      * <a href="http://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>

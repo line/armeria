@@ -114,15 +114,17 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     }
 
     @Override
-    public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                              short weight, boolean exclusive, int padding, boolean endOfStream)
-            throws Http2Exception {
+    public void onHeadersRead(
+            ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
+            short weight, boolean exclusive, int padding, boolean endOfStream) throws Http2Exception {
+
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
     @Override
-    public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)
-            throws Http2Exception {
+    public int onDataRead(
+            ChannelHandlerContext ctx, int streamId, ByteBuf data,
+            int padding, boolean endOfStream) throws Http2Exception {
 
         final HttpResponseWrapper res = getResponse(id(streamId), endOfStream);
         if (res == null) {

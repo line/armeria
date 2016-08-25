@@ -22,9 +22,9 @@ import static org.mockito.Mockito.mock;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.MessageLogConsumer;
 
 public class MessageLogConsumerTest {
     @Test

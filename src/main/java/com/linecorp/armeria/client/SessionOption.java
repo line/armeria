@@ -37,7 +37,7 @@ import io.netty.util.ConstantPool;
  *
  * @param <T> the type of the option value
  */
-public class SessionOption<T> extends AbstractOption<T> {
+public final class SessionOption<T> extends AbstractOption<T> {
 
     @SuppressWarnings("rawtypes")
     private static final ConstantPool pool = new ConstantPool() {

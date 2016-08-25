@@ -75,7 +75,7 @@ import io.netty.util.AsciiString;
  *
  * @see JettyServiceBuilder
  */
-public class JettyService implements HttpService {
+public final class JettyService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(JettyService.class);
 
@@ -157,7 +157,7 @@ public class JettyService implements HttpService {
     private boolean startedServer;
 
     private JettyService(String hostname, Function<ExecutorService, Server> serverSupplier) {
-        this(hostname, serverSupplier, unused -> {});
+        this(hostname, serverSupplier, unused -> { /* unused */ });
     }
 
     private JettyService(String hostname,

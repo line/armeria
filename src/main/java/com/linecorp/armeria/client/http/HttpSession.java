@@ -83,10 +83,16 @@ interface HttpSession {
     }
 
     SessionProtocol protocol();
+
     boolean isActive();
+
     InboundTrafficController inboundTrafficController();
+
     boolean hasUnfinishedResponses();
+
     boolean invoke(ClientRequestContext ctx, HttpRequest req, DecodedHttpResponse res);
+
     void retryWithH1C();
+
     void deactivate();
 }

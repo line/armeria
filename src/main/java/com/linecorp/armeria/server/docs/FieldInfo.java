@@ -28,7 +28,7 @@ import org.apache.thrift.meta_data.FieldMetaData;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-class FieldInfo {
+final class FieldInfo {
 
     static FieldInfo of(FieldMetaData fieldMetaData) {
         return of(fieldMetaData, null, Collections.emptyMap());
@@ -88,8 +88,14 @@ class FieldInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
         FieldInfo fieldInfo = (FieldInfo) o;
         return Objects.equals(name, fieldInfo.name) &&
                Objects.equals(requirementType, fieldInfo.requirementType) &&

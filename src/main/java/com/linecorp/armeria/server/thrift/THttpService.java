@@ -89,7 +89,7 @@ public class THttpService extends AbstractHttpService {
      * defaulting to {@link SerializationFormat#THRIFT_BINARY TBinary} protocol when the client doesn't specify
      * one.
      *
-     * Currently, the only way to specify a serialization format is by using the HTTP session
+     * <p>Currently, the only way to specify a serialization format is by using the HTTP session
      * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
      *
      * @param implementation an implementation of {@code *.Iface} or {@code *.AsyncIface} service interface
@@ -103,7 +103,7 @@ public class THttpService extends AbstractHttpService {
      * Creates a new instance with the specified service implementation, supporting all thrift protocols and
      * defaulting to the specified {@code defaultSerializationFormat} when the client doesn't specify one.
      *
-     * Currently, the only way to specify a serialization format is by using the HTTP session
+     * <p>Currently, the only way to specify a serialization format is by using the HTTP session
      * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
      *
      *
@@ -123,7 +123,7 @@ public class THttpService extends AbstractHttpService {
      * Creates a new instance with the specified service implementation, supporting only the formats specified
      * and defaulting to the specified {@code defaultSerializationFormat} when the client doesn't specify one.
      *
-     * Currently, the only way to specify a serialization format is by using the HTTP session protocol and
+     * <p>Currently, the only way to specify a serialization format is by using the HTTP session protocol and
      * setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
      *
      * @param implementation an implementation of {@code *.Iface} or {@code *.AsyncIface} service interface
@@ -149,7 +149,7 @@ public class THttpService extends AbstractHttpService {
      * in {@code allowedSerializationFormats} and defaulting to the specified {@code defaultSerializationFormat}
      * when the client doesn't specify one.
      *
-     * Currently, the only way to specify a serialization format is by using the HTTP session protocol and
+     * <p>Currently, the only way to specify a serialization format is by using the HTTP session protocol and
      * setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
      *
      * @param implementation an implementation of {@code *.Iface} or {@code *.AsyncIface} service interface
@@ -175,7 +175,8 @@ public class THttpService extends AbstractHttpService {
     /**
      * Creates a new decorator that supports all thrift protocols and defaults to
      * {@link SerializationFormat#THRIFT_BINARY TBinary} protocol when the client doesn't specify one.
-     * Currently, the only way to specify a serialization format is by using the HTTP session
+     *
+     * <p>Currently, the only way to specify a serialization format is by using the HTTP session
      * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
      */
     public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator() {
@@ -261,7 +262,7 @@ public class THttpService extends AbstractHttpService {
         this.allowedSerializationFormats = Sets.immutableEnumSet(allowedSerializationFormats);
     }
 
-    private static ThriftCallService findThriftService(Service<? ,?> delegate) {
+    private static ThriftCallService findThriftService(Service<?, ?> delegate) {
         return delegate.as(ThriftCallService.class).orElseThrow(
                     () -> new IllegalStateException("service being decorated is not a ThriftService: " +
                                                     delegate));

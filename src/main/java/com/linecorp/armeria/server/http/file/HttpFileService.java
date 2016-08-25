@@ -95,10 +95,11 @@ public final class HttpFileService extends AbstractHttpService {
         return HttpFileServiceBuilder.forVfs(vfs).build();
     }
 
-
     private final HttpFileServiceConfig config;
 
-    /** An LRU cache map that releases the buffer that contains the cached content. */
+    /**
+     * An LRU cache map that releases the buffer that contains the cached content.
+     */
     private final Map<String, CachedEntry> cache;
 
     HttpFileService(HttpFileServiceConfig config) {
@@ -218,17 +219,6 @@ public final class HttpFileService extends AbstractHttpService {
         return entry;
     }
 
-    private Entry getEntryWithSupportedEncodings(String path,
-                                                 EnumSet<FileServiceContentEncoding> supportedEncodings) {
-        for (FileServiceContentEncoding encoding : supportedEncodings) {
-            final Entry entry = getEntry(path + encoding.extension, encoding.headerValue);
-            if (entry.lastModifiedMillis() != 0) {
-                return entry;
-            }
-        }
-        return getEntry(path, null);
-    }
-
     private Entry getEntry(String path, @Nullable String contentEncoding) {
         assert path != null;
 
@@ -246,33 +236,44 @@ public final class HttpFileService extends AbstractHttpService {
         return e;
     }
 
+    private Entry getEntryWithSupportedEncodings(String path,
+                                                 EnumSet<FileServiceContentEncoding> supportedEncodings) {
+        for (FileServiceContentEncoding encoding : supportedEncodings) {
+            final Entry entry = getEntry(path + encoding.extension, encoding.headerValue);
+            if (entry.lastModifiedMillis() != 0) {
+                return entry;
+            }
+        }
+        return getEntry(path, null);
+    }
+
     private static final class CachedEntry implements Entry {
 
-        private final Entry e;
+        private final Entry entry;
         private final int maxCacheEntrySizeBytes;
         private HttpData cachedContent;
         private volatile long cachedLastModifiedMillis;
 
-        CachedEntry(Entry e, int maxCacheEntrySizeBytes) {
-            this.e = e;
+        CachedEntry(Entry entry, int maxCacheEntrySizeBytes) {
+            this.entry = entry;
             this.maxCacheEntrySizeBytes = maxCacheEntrySizeBytes;
-            cachedLastModifiedMillis = e.lastModifiedMillis();
+            cachedLastModifiedMillis = entry.lastModifiedMillis();
         }
 
         @Override
         public MediaType mediaType() {
-            return e.mediaType();
+            return entry.mediaType();
         }
 
         @Nullable
         @Override
         public String contentEncoding() {
-            return e.contentEncoding();
+            return entry.contentEncoding();
         }
 
         @Override
         public long lastModifiedMillis() {
-            final long newLastModifiedMillis = e.lastModifiedMillis();
+            final long newLastModifiedMillis = entry.lastModifiedMillis();
             if (newLastModifiedMillis != cachedLastModifiedMillis) {
                 cachedLastModifiedMillis = newLastModifiedMillis;
                 destroyContent();
@@ -284,7 +285,7 @@ public final class HttpFileService extends AbstractHttpService {
         @Override
         public synchronized HttpData readContent() throws IOException {
             if (cachedContent == null) {
-                final HttpData newContent = e.readContent();
+                final HttpData newContent = entry.readContent();
                 if (newContent.length() > maxCacheEntrySizeBytes) {
                     // Do not cache if the content is too large.
                     return newContent;
@@ -303,7 +304,7 @@ public final class HttpFileService extends AbstractHttpService {
 
         @Override
         public String toString() {
-            return e.toString();
+            return entry.toString();
         }
     }
 
@@ -351,8 +352,7 @@ public final class HttpFileService extends AbstractHttpService {
         // Order matters, we use the enum ordinal as the priority to pick an encoding in. Encodings should
         // be ordered by priority.
         BROTLI(".br", "br"),
-        GZIP(".gz", "gzip")
-        ;
+        GZIP(".gz", "gzip");
 
         private final String extension;
         private final String headerValue;

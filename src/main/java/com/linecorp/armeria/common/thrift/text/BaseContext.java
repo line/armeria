@@ -39,7 +39,7 @@ class BaseContext {
     }
 
     /**
-     * Called before we write an item
+     * Called before we write an item.
      */
     protected void write() {
     }
@@ -84,7 +84,7 @@ class BaseContext {
     }
 
     /**
-     * Are there more child elements to process?
+     * Returns whether there are more child elements to process.
      */
     protected boolean hasMoreChildren() {
         return (Boolean) unsupportedOperation();

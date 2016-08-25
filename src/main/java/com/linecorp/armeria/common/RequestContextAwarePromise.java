@@ -89,16 +89,6 @@ final class RequestContextAwarePromise<T> implements Promise<T> {
     }
 
     @Override
-    public Promise<T> await() throws InterruptedException {
-        return delegate.await();
-    }
-
-    @Override
-    public Promise<T> awaitUninterruptibly() {
-        return delegate.awaitUninterruptibly();
-    }
-
-    @Override
     public Promise<T> sync() throws InterruptedException {
         return delegate.sync();
     }
@@ -124,6 +114,11 @@ final class RequestContextAwarePromise<T> implements Promise<T> {
     }
 
     @Override
+    public Promise<T> await() throws InterruptedException {
+        return delegate.await();
+    }
+
+    @Override
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
         return delegate.await(timeout, unit);
     }
@@ -131,6 +126,11 @@ final class RequestContextAwarePromise<T> implements Promise<T> {
     @Override
     public boolean await(long timeoutMillis) throws InterruptedException {
         return delegate.await(timeoutMillis);
+    }
+
+    @Override
+    public Promise<T> awaitUninterruptibly() {
+        return delegate.awaitUninterruptibly();
     }
 
     @Override

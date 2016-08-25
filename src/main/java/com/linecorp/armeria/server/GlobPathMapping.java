@@ -80,7 +80,7 @@ final class GlobPathMapping extends AbstractPathMapping {
             switch (asterisks) {
             case 1:
                 // Handle '/*/' specially.
-                if (beforeAsterisk == '/' && c =='/') {
+                if (beforeAsterisk == '/' && c == '/') {
                     buf.append("[^/]+");
                 } else {
                     buf.append("[^/]*");

@@ -58,8 +58,6 @@ import com.linecorp.armeria.common.logging.DefaultResponseLog;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.FileService;
@@ -71,7 +69,6 @@ import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.ImmediateExecutor;
 
 /**
  * Tests {@link ThriftCallService} and {@link THttpService}.
@@ -361,7 +358,7 @@ public class ThriftServiceTest {
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
             assertThat(e.getType(), is(TApplicationException.INTERNAL_ERROR));
-            assertThat(e.getMessage(), is (exception.toString()));
+            assertThat(e.getMessage(), is(exception.toString()));
         }
     }
 
@@ -383,7 +380,7 @@ public class ThriftServiceTest {
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
             assertThat(e.getType(), is(TApplicationException.INTERNAL_ERROR));
-            assertThat(e.getMessage(), is (exception.toString()));
+            assertThat(e.getMessage(), is(exception.toString()));
         }
     }
 
@@ -532,8 +529,8 @@ public class ThriftServiceTest {
 
         THttpService service = THttpService.of(new UberNameService(), defaultSerializationFormat);
 
-        invoke(service, req1, promise);
-        invoke(service, req2, promise2);
+        invoke0(service, req1, promise);
+        invoke0(service, req2, promise2);
 
         final HttpData res1 = promise.get();
         final HttpData res2 = promise2.get();
@@ -560,7 +557,7 @@ public class ThriftServiceTest {
     }
 
     private void invoke(THttpService service) throws Exception {
-        invoke(service, HttpData.of(out.getArray(), 0, out.length()), promise);
+        invoke0(service, HttpData.of(out.getArray(), 0, out.length()), promise);
 
         final HttpData res = promise.get();
         in.reset(res.array(), res.offset(), res.length());
@@ -568,17 +565,12 @@ public class ThriftServiceTest {
 
     private void invokeTwice(THttpService service1, THttpService service2) throws Exception {
         final HttpData content = HttpData.of(out.getArray(), 0, out.length());
-        invoke(service1, content, promise);
-        invoke(service2, content, promise2);
+        invoke0(service1, content, promise);
+        invoke0(service2, content, promise2);
     }
 
-    private static void invoke(THttpService service, HttpData content,
-                               CompletableFuture<HttpData> promise) throws Exception {
-
-        final ServiceConfig cfg =
-                new ServerBuilder().serviceAt("/", service)
-                                   .blockingTaskExecutor(ImmediateExecutor.INSTANCE).build()
-                                   .config().serviceConfigs().get(0);
+    private static void invoke0(THttpService service, HttpData content,
+                                CompletableFuture<HttpData> promise) throws Exception {
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final DefaultRequestLog reqLogBuilder = new DefaultRequestLog();

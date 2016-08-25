@@ -11,4 +11,6 @@
   <!-- Suppress Javadoc-related checks in test directories -->
   <suppress checks="JavadocPackage" files="[\\/](test|internal)[\\/]" />
   <suppress checks="JavadocMethod" files="[\\/](test|internal)[\\/]" />
+  <!-- Suppress all checks in generates sources -->
+  <suppress checks=".*" files="[\\/]generated[^\\/]*-sources[\\/]" />
 </suppressions>

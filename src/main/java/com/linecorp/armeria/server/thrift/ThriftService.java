@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.Service;
  * @deprecated Use {@link THttpService} instead.
  */
 @Deprecated
-public class ThriftService extends THttpService {
+public final class ThriftService extends THttpService {
 
     /**
      * @deprecated Use {@link THttpService#of(Object)} instead.

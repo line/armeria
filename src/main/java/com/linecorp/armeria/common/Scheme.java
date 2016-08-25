@@ -36,8 +36,10 @@ import java.util.Optional;
  * For example:
  * </p>
  * <ul>
- * <li>{@code "tbinary+https"} - {@link SerializationFormat#THRIFT_BINARY} and {@link SessionProtocol#HTTPS}</li>
- * <li>{@code "tcompact+h2c"} - {@link SerializationFormat#THRIFT_COMPACT} and {@link SessionProtocol#H2C}</li>
+ * <li>{@code "tbinary+https"} - {@link SerializationFormat#THRIFT_BINARY} and
+ *                               {@link SessionProtocol#HTTPS}</li>
+ * <li>{@code "tcompact+h2c"} - {@link SerializationFormat#THRIFT_COMPACT} and
+ *                              {@link SessionProtocol#H2C}</li>
  * </ul>
  */
 public final class Scheme implements Comparable<Scheme> {

@@ -45,9 +45,9 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance.
-     * <p>
-     * Since {@link CircuitBreaker} is a unit of failure detection, Don't reuse the same instance for unrelated
-     * services.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, Don't reuse the same instance for
+     * unrelated services.
      *
      * @param circuitBreaker The {@link CircuitBreaker} instance to be used
      */
@@ -55,6 +55,15 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
     Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
     newDecorator(CircuitBreaker circuitBreaker) {
         return newDecorator((ctx, req) -> circuitBreaker);
+    }
+
+    /**
+     * Creates a new decorator with the specified {@link CircuitBreakerMapping}.
+     */
+    public static <I extends Request, O extends Response>
+    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    newDecorator(CircuitBreakerMapping mapping) {
+        return delegate -> new CircuitBreakerClient<>(delegate, mapping);
     }
 
     /**
@@ -88,15 +97,6 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
     Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory) {
         return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST_AND_METHOD, factory));
-    }
-
-    /**
-     * Creates a new decorator with the specified {@link CircuitBreakerMapping}.
-     */
-    public static <I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
-    newDecorator(CircuitBreakerMapping mapping) {
-        return delegate -> new CircuitBreakerClient<>(delegate, mapping);
     }
 
     private final CircuitBreakerMapping mapping;

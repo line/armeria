@@ -38,7 +38,9 @@ import io.netty.util.DomainNameMappingBuilder;
  */
 public final class ServerConfig {
 
-    /** Initialized later by {@link Server} via {@link #setServer(Server)}. */
+    /**
+     * Initialized later by {@link Server} via {@link #setServer(Server)}.
+     */
     private Server server;
 
     private final List<ServerPort> ports;
@@ -145,7 +147,9 @@ public final class ServerConfig {
 
         // Build the complete list of the services available in this server.
         services = Collections.unmodifiableList(
-                virtualHostsCopy.stream().flatMap(h -> h.serviceConfigs().stream()).collect(Collectors.toList()));
+                virtualHostsCopy.stream()
+                                .flatMap(h -> h.serviceConfigs().stream())
+                                .collect(Collectors.toList()));
     }
 
     static int validateNumWorkers(int numWorkers) {
@@ -157,7 +161,8 @@ public final class ServerConfig {
 
     static int validateMaxPendingRequests(int maxPendingRequests) {
         if (maxPendingRequests <= 0) {
-            throw new IllegalArgumentException("maxPendingRequests: " + maxPendingRequests + " (expected: > 0)");
+            throw new IllegalArgumentException(
+                    "maxPendingRequests: " + maxPendingRequests + " (expected: > 0)");
         }
         return maxPendingRequests;
     }
@@ -211,7 +216,8 @@ public final class ServerConfig {
         final SslContext sslCtx = h.sslContext();
         // The default virtual host must have sslContext set if TLS is in use.
         if (sslCtx == null && ports.stream().anyMatch(p -> p.protocol().isTls())) {
-            throw new IllegalArgumentException("defaultVirtualHost must have sslContext set when TLS is enabled.");
+            throw new IllegalArgumentException(
+                    "defaultVirtualHost must have sslContext set when TLS is enabled.");
         }
 
         return new VirtualHost(

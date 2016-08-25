@@ -122,9 +122,10 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 final ServerConfig config = server.config();
                 final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
 
-                final List<ServiceConfig> services = config.serviceConfigs().stream()
-                                                           .filter(se -> virtualHosts.contains(se.virtualHost()))
-                                                           .collect(Collectors.toList());
+                final List<ServiceConfig> services =
+                        config.serviceConfigs().stream()
+                              .filter(se -> virtualHosts.contains(se.virtualHost()))
+                              .collect(Collectors.toList());
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
                                              .writeValueAsBytes(Specification.forServiceConfigs(

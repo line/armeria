@@ -37,7 +37,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-class ServiceInfo {
+final class ServiceInfo {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -61,9 +61,9 @@ class ServiceInfo {
             functions.add(function);
 
             addClassIfPossible(classes, function.returnType());
-            function.parameters().stream().forEach(p -> addClassIfPossible(classes, p.type()));
-            function.exceptions().stream().forEach(e -> {
-                e.fields().stream().forEach(f -> addClassIfPossible(classes, f.type()));
+            function.parameters().forEach(p -> addClassIfPossible(classes, p.type()));
+            function.exceptions().forEach(e -> {
+                e.fields().forEach(f -> addClassIfPossible(classes, f.type()));
                 addClassIfPossible(classes, e);
             });
         }
@@ -83,7 +83,7 @@ class ServiceInfo {
     private static void addClassIfPossible(Set<ClassInfo> classes, TypeInfo typeInfo) {
         if (typeInfo instanceof ClassInfo) {
             final ClassInfo classInfo = (ClassInfo) typeInfo;
-            classInfo.fields().stream().forEach(f -> addClassIfPossible(classes, f.type()));
+            classInfo.fields().forEach(f -> addClassIfPossible(classes, f.type()));
             classes.add(classInfo);
         } else if (typeInfo instanceof CollectionInfo) {
             addClassIfPossible(classes, ((CollectionInfo) typeInfo).elementType());
@@ -173,8 +173,14 @@ class ServiceInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
         ServiceInfo that = (ServiceInfo) o;
         return Objects.equals(name, that.name) &&
                Objects.equals(functions, that.functions) &&

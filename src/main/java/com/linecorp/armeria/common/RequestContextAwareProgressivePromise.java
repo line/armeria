@@ -83,16 +83,6 @@ final class RequestContextAwareProgressivePromise<T> implements ProgressivePromi
     }
 
     @Override
-    public ProgressivePromise<T> await() throws InterruptedException {
-        return delegate.await();
-    }
-
-    @Override
-    public ProgressivePromise<T> awaitUninterruptibly() {
-        return delegate.awaitUninterruptibly();
-    }
-
-    @Override
     public ProgressivePromise<T> sync() throws InterruptedException {
         return delegate.sync();
     }
@@ -133,6 +123,11 @@ final class RequestContextAwareProgressivePromise<T> implements ProgressivePromi
     }
 
     @Override
+    public ProgressivePromise<T> await() throws InterruptedException {
+        return delegate.await();
+    }
+
+    @Override
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
         return delegate.await(timeout, unit);
     }
@@ -140,6 +135,11 @@ final class RequestContextAwareProgressivePromise<T> implements ProgressivePromi
     @Override
     public boolean await(long timeoutMillis) throws InterruptedException {
         return delegate.await(timeoutMillis);
+    }
+
+    @Override
+    public ProgressivePromise<T> awaitUninterruptibly() {
+        return delegate.awaitUninterruptibly();
     }
 
     @Override

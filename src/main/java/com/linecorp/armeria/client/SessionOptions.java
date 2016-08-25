@@ -45,7 +45,7 @@ import io.netty.resolver.AddressResolverGroup;
 /**
  * A set of {@link SessionOption}s and their respective values.
  */
-public class SessionOptions extends AbstractOptions {
+public final class SessionOptions extends AbstractOptions {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionOptions.class);
 

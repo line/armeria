@@ -57,10 +57,27 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
     private final AtomicInteger numActiveRequests = new AtomicInteger();
     private final Queue<PendingTask> pendingRequests = new ConcurrentLinkedQueue<>();
 
+    /**
+     * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
+     * active requests to {@code maxConcurrency}, with the default timeout of {@value #DEFAULT_TIMEOUT_MILLIS}
+     * milliseconds.
+     *
+     * @param delegate the delegate {@link Client}
+     * @param maxConcurrency the maximum number of concurrent active requests. {@code 0} to disable the limit.
+     */
     protected ConcurrencyLimitingClient(Client<? super I, ? extends O> delegate, int maxConcurrency) {
         this(delegate, maxConcurrency, DEFAULT_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
+     * active requests to {@code maxConcurrency}.
+     *
+     * @param delegate the delegate {@link Client}
+     * @param maxConcurrency the maximum number of concurrent active requests. {@code 0} to disable the limit.
+     * @param timeout the amount of time until this decorator fails the request if the request was not
+     *                delegated to the {@code delegate} before then
+     */
     protected ConcurrencyLimitingClient(Client<? super I, ? extends O> delegate,
                                         int maxConcurrency, long timeout, TimeUnit unit) {
         super(delegate);

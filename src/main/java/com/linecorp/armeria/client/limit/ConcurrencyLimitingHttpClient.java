@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.http.HttpResponse;
 /**
  * A {@link Client} decorator that limits the concurrent number of active HTTP requests.
  *
- * For example:
+ * <p>For example:
  * <pre>{@code
  * ClientBuilder builder = new ClientBuilder(...);
  * builder.decorator(HttpRequest.class, HttpResponse.class, ConcurrencyLimitingHttpClient.newDecorator(16));
@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.http.HttpResponse;
  * }</pre>
  *
  */
-public class ConcurrencyLimitingHttpClient
+public final class ConcurrencyLimitingHttpClient
         extends ConcurrencyLimitingClient<HttpRequest, HttpResponse> {
 
     /**

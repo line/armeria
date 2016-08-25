@@ -145,6 +145,8 @@ public abstract class AbstractThriftOverHttpTest {
         return newTransport(newUri(scheme, path));
     }
 
+    protected abstract TTransport newTransport(String uri) throws TTransportException;
+
     protected static String newUri(String scheme, String path) {
         switch (scheme) {
         case "http":
@@ -155,6 +157,4 @@ public abstract class AbstractThriftOverHttpTest {
 
         throw new Error();
     }
-
-    protected abstract TTransport newTransport(String uri) throws TTransportException;
 }

@@ -65,10 +65,10 @@ public class TracingServiceTest {
         StubCollector spanCollector = testServiceInvocation(true /* sampled */);
 
         // only one span should be submitted
-        assertThat(spanCollector.spans, hasSize(1));
+        assertThat(spanCollector.spans(), hasSize(1));
 
         // check span name
-        Span span = spanCollector.spans.get(0);
+        Span span = spanCollector.spans().get(0);
         assertThat(span.getName(), is(TEST_METHOD));
 
         // check # of annotations
@@ -91,7 +91,7 @@ public class TracingServiceTest {
         StubCollector spanCollector = testServiceInvocation(false /* not sampled */);
 
         // don't submit any spans
-        assertThat(spanCollector.spans, hasSize(0));
+        assertThat(spanCollector.spans(), hasSize(0));
     }
 
     private static StubCollector testServiceInvocation(boolean sampled) throws Exception {

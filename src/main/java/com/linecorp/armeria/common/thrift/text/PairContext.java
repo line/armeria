@@ -44,7 +44,7 @@ class PairContext extends BaseContext {
     private Map.Entry<String, JsonNode> currentChild;
 
     /**
-     * Create an iterator over this object's children
+     * Creates an iterator over this object's children.
      */
     protected PairContext(JsonNode json) {
         children = null != json ? json.fields() : null;

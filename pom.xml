@@ -432,9 +432,7 @@
             <phase>validate</phase>
             <configuration>
               <encoding>UTF-8</encoding>
-              <!-- TODO(trustin): Enable once we fix all violations.
               <consoleOutput>true</consoleOutput>
-              -->
               <failsOnError>true</failsOnError>
               <includeTestSourceDirectory>true</includeTestSourceDirectory>
             </configuration>

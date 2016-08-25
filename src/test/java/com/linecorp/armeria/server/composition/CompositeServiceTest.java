@@ -108,7 +108,9 @@ public class CompositeServiceTest extends AbstractServerTest {
         }
     }
 
-    private static final class TestCompositeService extends AbstractCompositeService<HttpRequest, HttpResponse> {
+    private static final class TestCompositeService
+            extends AbstractCompositeService<HttpRequest, HttpResponse> {
+
         TestCompositeService() {
             super(CompositeServiceEntry.ofPrefix("/foo/", serviceA),
                   CompositeServiceEntry.ofPrefix("/bar/", serviceB),

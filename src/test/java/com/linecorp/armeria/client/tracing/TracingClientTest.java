@@ -45,7 +45,6 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -66,10 +65,10 @@ public class TracingClientTest {
         StubCollector spanCollector = testRemoteInvocationWithSamplingRate(1.0f);
 
         // only one span should be submitted
-        assertThat(spanCollector.spans, hasSize(1));
+        assertThat(spanCollector.spans(), hasSize(1));
 
         // check span name
-        Span span = spanCollector.spans.get(0);
+        Span span = spanCollector.spans().get(0);
         assertThat(span.getName(), is(TEST_SPAN));
 
         // check # of annotations
@@ -91,7 +90,7 @@ public class TracingClientTest {
     public void shouldNotSubmitSpanWhenNotSampled() throws Exception {
         StubCollector spanCollector = testRemoteInvocationWithSamplingRate(0.0f);
 
-        assertThat(spanCollector.spans, hasSize(0));
+        assertThat(spanCollector.spans(), hasSize(0));
     }
 
     private static StubCollector testRemoteInvocationWithSamplingRate(float samplingRate) throws Exception {

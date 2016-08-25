@@ -42,7 +42,8 @@ public final class ThriftServiceMetadata {
     private final Set<Class<?>> interfaces;
 
     /**
-     * A map whose key is a method name and whose value is {@link AsyncProcessFunction} or {@link ProcessFunction}.
+     * A map whose key is a method name and whose value is {@link AsyncProcessFunction} or
+     * {@link ProcessFunction}.
      */
     private final Map<String, ThriftFunction> functions = new HashMap<>();
 
@@ -169,7 +170,8 @@ public final class ThriftServiceMetadata {
             final Constructor<?> processorConstructor = processorClass.getConstructor(iface);
 
             @SuppressWarnings("rawtypes")
-            final TBaseAsyncProcessor processor = (TBaseAsyncProcessor) processorConstructor.newInstance(service);
+            final TBaseAsyncProcessor processor =
+                    (TBaseAsyncProcessor) processorConstructor.newInstance(service);
 
             @SuppressWarnings("unchecked")
             Map<String, AsyncProcessFunction<?, ?, ?>> processMap =

@@ -29,7 +29,7 @@ public final class EndpointGroupRegistry {
     private static final Map<String, EndpointSelector> serverGroups = new ConcurrentHashMap<>();
 
     /**
-     * Register the server group.
+     * Register the specified {@link EndpointGroup}.
      *
      * @throws EndpointGroupException if {@code groupName} has already been registered.
      */
@@ -45,7 +45,7 @@ public final class EndpointGroupRegistry {
     }
 
     /**
-     * Replace the exist server group registry.
+     * Replaces an existing {@link EndpointGroup}.
      *
      * @throws EndpointGroupException if {@code groupName} not registered yet.
      */
@@ -61,7 +61,9 @@ public final class EndpointGroupRegistry {
     }
 
     /**
-     * Get the {@link EndpointSelector} for {@code groupName}, or {@code null} if {@code groupName} has not been registered yet.
+     * Returns the {@link EndpointSelector} for the specified {@code groupName}.
+     *
+     * @return the {@link EndpointSelector}, or {@code null} if {@code groupName} has not been registered yet.
      */
     public static EndpointSelector getNodeSelector(String groupName) {
         requireNonNull(groupName, "groupName");
@@ -70,7 +72,9 @@ public final class EndpointGroupRegistry {
     }
 
     /**
-     * Get the {@link EndpointGroup} for {@code groupName}, or {@code null} if {@code groupName} has not been registered yet.
+     * Get the {@link EndpointGroup} for the specified {@code groupName}.
+     *
+     * @return the {@link EndpointSelector}, or {@code null} if {@code groupName} has not been registered yet.
      */
     public static EndpointGroup get(String groupName) {
         requireNonNull(groupName, "groupName");
@@ -83,7 +87,8 @@ public final class EndpointGroupRegistry {
     }
 
     /**
-     * Select a endpoint from the target endpoint group.
+     * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
+     * {@code groupName}.
      */
     public static Endpoint selectNode(String groupName) {
         EndpointSelector endpointSelector = getNodeSelector(groupName);
@@ -94,6 +99,5 @@ public final class EndpointGroupRegistry {
         return endpointSelector.select();
     }
 
-    private EndpointGroupRegistry() {
-    }
+    private EndpointGroupRegistry() {}
 }

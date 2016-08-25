@@ -43,7 +43,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  *
  * @see THttpService
  */
-public class ThriftCallService implements Service<ThriftCall, ThriftReply> {
+public final class ThriftCallService implements Service<ThriftCall, ThriftReply> {
 
     /**
      * Creates a new instance with the specified service implementation.

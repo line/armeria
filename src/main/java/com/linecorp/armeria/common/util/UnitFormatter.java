@@ -45,7 +45,7 @@ public final class UnitFormatter {
         } else if (elapsedNanos >= 100000000L) { // >= 100 ms
             buf.append(elapsedNanos / 1000000L).append("ms");
         } else if (elapsedNanos >= 100000L) { // >= 100 us
-            buf.append(elapsedNanos / 1000L).append("\u00B5s");
+            buf.append(elapsedNanos / 1000L).append("\u00B5s"); // microseconds
         } else {
             buf.append(elapsedNanos).append("ns");
         }

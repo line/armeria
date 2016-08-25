@@ -27,7 +27,7 @@ import org.apache.thrift.protocol.TType;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-class MapInfo extends TypeInfo {
+final class MapInfo extends TypeInfo {
 
     static MapInfo of(MapMetaData mapMetaData) {
         return of(mapMetaData, Collections.emptyMap());
@@ -69,9 +69,18 @@ class MapInfo extends TypeInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        if (!super.equals(o)) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        if (!super.equals(o)) {
+            return false;
+        }
+
         MapInfo mapInfo = (MapInfo) o;
         return Objects.equals(keyType, mapInfo.keyType) &&
                Objects.equals(valueType, mapInfo.valueType);

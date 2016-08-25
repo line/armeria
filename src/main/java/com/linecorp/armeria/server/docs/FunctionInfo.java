@@ -39,7 +39,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 
-class FunctionInfo {
+final class FunctionInfo {
 
     static FunctionInfo of(Method method, Map<Class<?>, ? extends TBase<?, ?>> sampleRequests)
             throws ClassNotFoundException {
@@ -174,8 +174,14 @@ class FunctionInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
         FunctionInfo that = (FunctionInfo) o;
         return Objects.equals(name, that.name) &&
                Objects.equals(returnType, that.returnType) &&

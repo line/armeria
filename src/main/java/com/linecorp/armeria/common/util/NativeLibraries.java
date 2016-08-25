@@ -25,7 +25,7 @@ import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
 
 /**
- * Reports the availability of the native libraries used by Armeria
+ * Reports the availability of the native libraries used by Armeria.
  */
 public final class NativeLibraries {
 

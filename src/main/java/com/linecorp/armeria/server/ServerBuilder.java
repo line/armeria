@@ -404,14 +404,14 @@ public final class ServerBuilder {
      * Sets the default {@link VirtualHost}, which is used when no other {@link VirtualHost}s match the
      * host name of a client request. e.g. the {@code "Host"} header in HTTP or host name in TLS SNI extension
      *
-     * @throws IllegalStateException if other default {@link VirtualHost} builder methods have been invoked
-     * already, including:
-     * <ul>
-     *   <li>{@link #sslContext(SslContext)}</li>
-     *   <li>{@link #serviceAt(String, Service)}</li>
-     *   <li>{@link #serviceUnder(String, Service)}</li>
-     *   <li>{@link #service(PathMapping, Service)}</li>
-     * </ul>
+     * @throws IllegalStateException
+     *     if other default {@link VirtualHost} builder methods have been invoked already, including:
+     *     <ul>
+     *       <li>{@link #sslContext(SslContext)}</li>
+     *       <li>{@link #serviceAt(String, Service)}</li>
+     *       <li>{@link #serviceUnder(String, Service)}</li>
+     *       <li>{@link #service(PathMapping, Service)}</li>
+     *     </ul>
      *
      * @see #virtualHost(VirtualHost)
      */

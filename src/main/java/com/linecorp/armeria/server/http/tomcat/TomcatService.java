@@ -270,7 +270,7 @@ public final class TomcatService implements HttpService {
     private boolean started;
 
     private TomcatService(String hostname, Function<String, Connector> connectorFactory) {
-        this(hostname, connectorFactory, unused -> {});
+        this(hostname, connectorFactory, unused -> { /* unused */ });
     }
 
     private TomcatService(String hostname,
@@ -301,7 +301,7 @@ public final class TomcatService implements HttpService {
     }
 
     /**
-     * Returns Tomcat {@link Connector}
+     * Returns Tomcat {@link Connector}.
      */
     public Connector connector() {
         final Connector connector = this.connector;

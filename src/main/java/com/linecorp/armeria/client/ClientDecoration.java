@@ -74,7 +74,8 @@ public final class ClientDecoration {
             }
 
             @SuppressWarnings("unchecked")
-            final Function<Client<? super I, ? extends O>, Client<I, O>> decorator = ((Entry<I, O>) e).decorator();
+            final Function<Client<? super I, ? extends O>, Client<I, O>> decorator =
+                    ((Entry<I, O>) e).decorator();
             client = decorator.apply(client);
         }
 

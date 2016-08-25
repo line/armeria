@@ -36,6 +36,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         return new PublisherBasedHttpResponse(publisher);
     }
 
+    @Override
+    CompletableFuture<Void> closeFuture();
+
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the response are received fully.
@@ -45,9 +48,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         subscribe(new HttpResponseAggregator(future));
         return future;
     }
-
-    @Override
-    CompletableFuture<Void> closeFuture();
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
