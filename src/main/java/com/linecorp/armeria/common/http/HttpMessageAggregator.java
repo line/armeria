@@ -26,8 +26,8 @@ import org.reactivestreams.Subscription;
 abstract class HttpMessageAggregator implements Subscriber<HttpObject> {
 
     private final CompletableFuture<AggregatedHttpMessage> future;
-    protected final List<HttpData> contentList = new ArrayList<>();
-    protected int contentLength;
+    private final List<HttpData> contentList = new ArrayList<>();
+    private int contentLength;
     private Subscription subscription;
 
     protected HttpMessageAggregator(CompletableFuture<AggregatedHttpMessage> future) {

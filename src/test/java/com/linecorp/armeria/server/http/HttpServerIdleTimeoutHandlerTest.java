@@ -104,7 +104,8 @@ public class HttpServerIdleTimeoutHandlerTest {
         server.unfinishedRequests--;
     }
 
-    private static final class MockHttpServerHandler extends ChannelInboundHandlerAdapter implements HttpServer {
+    private static final class MockHttpServerHandler
+            extends ChannelInboundHandlerAdapter implements HttpServer {
 
         int unfinishedRequests;
 

@@ -41,7 +41,7 @@ public final class ClientOption<T> extends AbstractOption<T> {
     };
 
     /**
-     * The default timeout of a socket write
+     * The default timeout of a socket write.
      */
     public static final ClientOption<Long> DEFAULT_WRITE_TIMEOUT_MILLIS =
             valueOf("DEFAULT_WRITE_TIMEOUT_MILLIS");

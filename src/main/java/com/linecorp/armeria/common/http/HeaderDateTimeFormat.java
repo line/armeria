@@ -41,8 +41,8 @@ import java.util.Locale;
 
 /**
  * Parses and formats 3 date-and-time representations.
- * <p>
- * <ul>
+ *
+ * <p><ul>
  * <li>Sun, 06 Nov 1994 08:49:37 GMT: standard specification, the only one with valid generation</li>
  * <li>Sun, 06 Nov 1994 08:49:37 GMT: obsolete specification</li>
  * <li>Sun Nov 6 08:49:37 1994: obsolete specification</li>
@@ -53,18 +53,18 @@ final class HeaderDateTimeFormat {
     private static final ZoneId GMT = ZoneId.of("GMT");
 
     /**
-     * Standard date format:
-     * <p>
-     * <pre>
+     * Standard date format.
+     *
+     * <p><pre>
      * Sun, 06 Nov 1994 08:49:37 GMT -> E, d MMM yyyy HH:mm:ss z
      * </pre>
      */
     private static final DateTimeFormatter format1 = newFormat("E, dd MMM yyyy HH:mm:ss z");
 
     /**
-     * First obsolete format:
-     * <p>
-     * <pre>
+     * First obsolete format.
+     *
+     * <p><pre>
      * Sunday, 06-Nov-94 08:49:37 GMT -> E, d-MMM-y HH:mm:ss z
      * </pre>
      */
@@ -72,6 +72,7 @@ final class HeaderDateTimeFormat {
 
     /**
      * A variant of the first obsolete format, which handles 20th century years such as 1994.
+     *
      * @see <a href="http://stackoverflow.com/a/29496149">http://stackoverflow.com/a/29496149</a>
      */
     private static final DateTimeFormatter format2a =
@@ -84,9 +85,9 @@ final class HeaderDateTimeFormat {
                                           .toFormatter(Locale.ENGLISH).withZone(GMT);
 
     /**
-     * Second obsolete format
-     * <p>
-     * <pre>
+     * Second obsolete format.
+     *
+     * <p><pre>
      * Sun Nov 6 08:49:37 1994 -> EEE, MMM d HH:mm:ss yyyy
      * </pre>
      */

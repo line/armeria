@@ -46,7 +46,7 @@ import io.netty.util.ReferenceCountUtil;
  * to be done for <tt>HEAD</tt> and <tt>CONNECT</tt> and why
  * {@link HttpResponseDecoder} can not handle it by itself.
  *
- * If the {@link Channel} is closed and there are missing responses,
+ * <p>If the {@link Channel} is closed and there are missing responses,
  * a {@link PrematureChannelClosureException} is thrown.
  *
  * @see HttpServerCodec

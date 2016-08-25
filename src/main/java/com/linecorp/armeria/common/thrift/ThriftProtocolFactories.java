@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.thrift.text.TTextProtocol;
 public final class ThriftProtocolFactories {
 
     /**
-     * {@link TProtocolFactory} for Thrift TBinary protocol
+     * {@link TProtocolFactory} for Thrift TBinary protocol.
      */
     public static final TProtocolFactory BINARY = new TBinaryProtocol.Factory() {
         private static final long serialVersionUID = -9020693963961565748L;
@@ -44,7 +44,7 @@ public final class ThriftProtocolFactories {
     };
 
     /**
-     * {@link TProtocolFactory} for Thrift TCompact protocol
+     * {@link TProtocolFactory} for Thrift TCompact protocol.
      */
     public static final TProtocolFactory COMPACT = new TCompactProtocol.Factory() {
         private static final long serialVersionUID = 1629726795326210377L;
@@ -56,7 +56,7 @@ public final class ThriftProtocolFactories {
     };
 
     /**
-     * {@link TProtocolFactory} for the Thrift TJSON protocol
+     * {@link TProtocolFactory} for the Thrift TJSON protocol.
      */
     public static final TProtocolFactory JSON = new TJSONProtocol.Factory() {
         private static final long serialVersionUID = 7690636602996870153L;
@@ -68,7 +68,7 @@ public final class ThriftProtocolFactories {
     };
 
     /**
-     * {@link TProtocolFactory} for the Thrift TText protocol
+     * {@link TProtocolFactory} for the Thrift TText protocol.
      */
     public static final TProtocolFactory TEXT = new TTextProtocol.Factory() {
         private static final long serialVersionUID = 4430306676070073610L;

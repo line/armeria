@@ -80,16 +80,16 @@ final class DefaultAggregatedHttpMessage implements AggregatedHttpMessage {
             return true;
         }
 
-        if (!(obj instanceof AggregatedHttpMessage)) {
+        if (!(obj instanceof DefaultAggregatedHttpMessage)) {
             return false;
         }
 
         final DefaultAggregatedHttpMessage that = (DefaultAggregatedHttpMessage) obj;
 
-        return informationals.equals(that.informationals)
-                && headers.equals(that.headers)
-                && content.equals(that.content)
-                && trailingHeaders.equals(that.trailingHeaders);
+        return informationals.equals(that.informationals) &&
+               headers.equals(that.headers) &&
+               content.equals(that.content) &&
+               trailingHeaders.equals(that.trailingHeaders);
     }
 
     @Override

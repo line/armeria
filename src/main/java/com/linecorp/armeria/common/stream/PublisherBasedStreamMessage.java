@@ -249,23 +249,24 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         private final PublisherBasedStreamMessage<?> parent;
         private final Executor executor;
-        private final Subscription s;
+        private final Subscription subscription;
 
-        SubscriptionWrapper(PublisherBasedStreamMessage<?> parent, Executor executor, Subscription s) {
+        SubscriptionWrapper(PublisherBasedStreamMessage<?> parent,
+                            Executor executor, Subscription subscription) {
             this.parent = parent;
             this.executor = executor;
-            this.s = s;
+            this.subscription = subscription;
         }
 
         @Override
         public void request(long n) {
-            s.request(n);
+            subscription.request(n);
         }
 
         @Override
         public void cancel() {
             try {
-                s.cancel();
+                subscription.cancel();
             } finally {
                 if (executor == null) {
                     completeCloseFuture();

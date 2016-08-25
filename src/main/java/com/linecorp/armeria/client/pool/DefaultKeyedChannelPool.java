@@ -43,7 +43,8 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
             Exceptions.clearTrace(new IllegalStateException("ChannelPool full"));
 
     private static final IllegalStateException UNHEALTHY_NON_OFFERED_TO_POOL =
-            Exceptions.clearTrace(new IllegalStateException("Channel is unhealthy; not offering it back to pool"));
+            Exceptions.clearTrace(new IllegalStateException(
+                    "Channel is unhealthy; not offering it back to pool"));
 
     private final EventLoop eventLoop;
     private final Function<K, Future<Channel>> channelFactory;

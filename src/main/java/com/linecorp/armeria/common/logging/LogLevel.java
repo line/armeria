@@ -19,27 +19,27 @@ package com.linecorp.armeria.common.logging;
 import org.slf4j.Logger;
 
 /**
- * Log level
+ * Log level.
  */
 public enum LogLevel {
     /**
-     * TRACE log level
+     * TRACE log level.
      */
     TRACE,
     /**
-     * DEBUG log level
+     * DEBUG log level.
      */
     DEBUG,
     /**
-     * INFO log level
+     * INFO log level.
      */
     INFO,
     /**
-     * WARN log level
+     * WARN log level.
      */
     WARN,
     /**
-     * ERROR log level
+     * ERROR log level.
      */
     ERROR;
 

@@ -30,7 +30,7 @@ import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.meta_data.StructMetaData;
 import org.apache.thrift.protocol.TType;
 
-class StructInfo extends TypeInfo implements ClassInfo {
+final class StructInfo extends TypeInfo implements ClassInfo {
 
     static StructInfo of(StructMetaData structMetaData) {
         return of(structMetaData, Collections.emptyMap());
@@ -94,9 +94,18 @@ class StructInfo extends TypeInfo implements ClassInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        if (!super.equals(o)) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        if (!super.equals(o)) {
+            return false;
+        }
+
         StructInfo that = (StructInfo) o;
         return Objects.equals(name, that.name) &&
                Objects.equals(fields, that.fields);

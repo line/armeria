@@ -112,9 +112,11 @@ final class THttp2Client extends TTransport {
                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                         .applicationProtocolConfig(new ApplicationProtocolConfig(
                                 Protocol.ALPN,
-                                // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
+                                // NO_ADVERTISE is currently the only mode supported by both OpenSsl and
+                                // JDK providers.
                                 SelectorFailureBehavior.NO_ADVERTISE,
-                                // ACCEPT is currently the only mode supported by both OpenSsl and JDK providers.
+                                // ACCEPT is currently the only mode supported by both OpenSsl and
+                                // JDK providers.
                                 SelectedListenerFailureBehavior.ACCEPT,
                                 ApplicationProtocolNames.HTTP_2))
                         .build();
@@ -201,7 +203,7 @@ final class THttp2Client extends TTransport {
         Channel ch = null;
         try {
             ch = b.connect(host, port).syncUninterruptibly().channel();
-            THttp2ClientHandler handler = initHandler.THttp2ClientHandler;
+            THttp2ClientHandler handler = initHandler.clientHandler;
 
             // Wait until HTTP/2 upgrade is finished.
             assertTrue(handler.settingsPromise.await(5, TimeUnit.SECONDS));
@@ -235,7 +237,7 @@ final class THttp2Client extends TTransport {
 
     private final class THttp2ClientInitializer extends ChannelInitializer<SocketChannel> {
 
-        THttp2ClientHandler THttp2ClientHandler;
+        THttp2ClientHandler clientHandler;
 
         @Override
         public void initChannel(SocketChannel ch) throws Exception {
@@ -250,7 +252,7 @@ final class THttp2Client extends TTransport {
                                     .propagateSettings(true).build()))
                     .build();
 
-            THttp2ClientHandler = new THttp2ClientHandler(ch.eventLoop());
+            clientHandler = new THttp2ClientHandler(ch.eventLoop());
 
             if (sslCtx != null) {
                 p.addLast(sslCtx.newHandler(p.channel().alloc()));
@@ -258,15 +260,15 @@ final class THttp2Client extends TTransport {
                 configureEndOfPipeline(p);
             } else {
                 Http1ClientCodec sourceCodec = new Http1ClientCodec();
-                HttpClientUpgradeHandler upgradeHandler =
-                        new HttpClientUpgradeHandler(sourceCodec, new Http2ClientUpgradeCodec(connHandler), 65536);
+                HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(
+                        sourceCodec, new Http2ClientUpgradeCodec(connHandler), 65536);
 
                 p.addLast(sourceCodec, upgradeHandler, new UpgradeRequestHandler());
             }
         }
 
         private void configureEndOfPipeline(ChannelPipeline p) {
-            p.addLast(THttp2ClientHandler);
+            p.addLast(clientHandler);
         }
 
         /**

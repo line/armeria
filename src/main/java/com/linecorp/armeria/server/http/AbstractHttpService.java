@@ -26,8 +26,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A skeletal {@link HttpService} for easier HTTP service implementation.
- * <p>
- * This class provides the methods that handles the HTTP requests of the methods their names signify.
+ *
+ * <p>This class provides the methods that handles the HTTP requests of the methods their names signify.
  * For example, {@link #doGet(ServiceRequestContext, HttpRequest, HttpResponseWriter) doGet()} method handles a
  * {@code GET} request.
  * <ul>

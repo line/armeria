@@ -254,6 +254,6 @@ public class ConcurrencyLimitingHttpClientTest {
     }
 
     private static void waitForEventLoop() {
-        eventLoop.submit(() -> {}).syncUninterruptibly();
+        eventLoop.submit(() -> { /* no-op */ }).syncUninterruptibly();
     }
 }

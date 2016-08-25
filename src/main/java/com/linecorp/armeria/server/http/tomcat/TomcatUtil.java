@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.http.tomcat;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.file.Files;
@@ -40,9 +39,11 @@ final class TomcatUtil {
 
     static URL getWebAppConfigFile(String contextPath, Path docBase) {
         final AtomicReference<URL> configUrlRef = new AtomicReference<>();
-        new Tomcat() {{
-            configUrlRef.set(getWebappConfigFile(docBase.toString(), contextPath));
-        }};
+        new Tomcat() {
+            {
+                configUrlRef.set(getWebappConfigFile(docBase.toString(), contextPath));
+            }
+        };
 
         return configUrlRef.get();
     }
@@ -57,9 +58,11 @@ final class TomcatUtil {
 
     static Class<?>[] classContext() {
         final AtomicReference<Class<?>[]> classContextRef = new AtomicReference<>();
-        new SecurityManager() {{
-            classContextRef.set(getClassContext());
-        }};
+        new SecurityManager() {
+            {
+                classContextRef.set(getClassContext());
+            }
+        };
 
         // Remove the first two classes which are:
         // - This class

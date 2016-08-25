@@ -73,7 +73,8 @@ public final class Server implements AutoCloseable {
 
     private final StateManager stateManager = new StateManager();
     private final Map<InetSocketAddress, ServerPort> activePorts = new ConcurrentHashMap<>();
-    private final Map<InetSocketAddress, ServerPort> unmodifiableActivePorts = Collections.unmodifiableMap(activePorts);
+    private final Map<InetSocketAddress, ServerPort> unmodifiableActivePorts =
+            Collections.unmodifiableMap(activePorts);
 
     private final List<ServerListener> listeners = new CopyOnWriteArrayList<>();
 
@@ -229,13 +230,17 @@ public final class Server implements AutoCloseable {
         try {
             // Initialize the event loop groups.
             if (NativeLibraries.isEpollAvailable()) {
-                final ThreadFactory bossThreadFactory = new DefaultThreadFactory("armeria-server-boss-epoll", false);
-                final ThreadFactory workerThreadFactory = new DefaultThreadFactory("armeria-server-epoll", false);
+                final ThreadFactory bossThreadFactory =
+                        new DefaultThreadFactory("armeria-server-boss-epoll", false);
+                final ThreadFactory workerThreadFactory =
+                        new DefaultThreadFactory("armeria-server-epoll", false);
                 bossGroup = new EpollEventLoopGroup(1, bossThreadFactory);
                 workerGroup = new EpollEventLoopGroup(config.numWorkers(), workerThreadFactory);
             } else {
-                final ThreadFactory bossThreadFactory = new DefaultThreadFactory("armeria-server-boss-nio", false);
-                final ThreadFactory workerThreadFactory = new DefaultThreadFactory("armeria-server-nio", false);
+                final ThreadFactory bossThreadFactory =
+                        new DefaultThreadFactory("armeria-server-boss-nio", false);
+                final ThreadFactory workerThreadFactory =
+                        new DefaultThreadFactory("armeria-server-nio", false);
                 bossGroup = new NioEventLoopGroup(1, bossThreadFactory);
                 workerGroup = new NioEventLoopGroup(config.numWorkers(), workerThreadFactory);
             }

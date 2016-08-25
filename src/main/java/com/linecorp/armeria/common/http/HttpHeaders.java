@@ -96,9 +96,19 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     Iterator<Entry<AsciiString, String>> iterator();
 
     /**
+     * Gets the {@link HttpHeaderNames#METHOD} header or {@code null} if there is no such header.
+     */
+    HttpMethod method();
+
+    /**
      * Sets the {@link HttpHeaderNames#METHOD} header.
      */
     HttpHeaders method(HttpMethod method);
+
+    /**
+     * Gets the {@link HttpHeaderNames#SCHEME} header or {@code null} if there is no such header.
+     */
+    String scheme();
 
     /**
      * Sets the {@link HttpHeaderNames#SCHEME} header.
@@ -106,14 +116,29 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     HttpHeaders scheme(String scheme);
 
     /**
+     * Gets the {@link HttpHeaderNames#AUTHORITY} header or {@code null} if there is no such header.
+     */
+    String authority();
+
+    /**
      * Sets the {@link HttpHeaderNames#AUTHORITY} header.
      */
     HttpHeaders authority(String authority);
 
     /**
+     * Gets the {@link HttpHeaderNames#PATH} header or {@code null} if there is no such header.
+     */
+    String path();
+
+    /**
      * Sets the {@link HttpHeaderNames#PATH} header.
      */
     HttpHeaders path(String path);
+
+    /**
+     * Gets the {@link HttpHeaderNames#STATUS} header or {@code null} if there is no such header.
+     */
+    HttpStatus status();
 
     /**
      * Sets the {@link HttpHeaderNames#STATUS} header.
@@ -124,31 +149,6 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
      * Sets the {@link HttpHeaderNames#STATUS} header.
      */
     HttpHeaders status(HttpStatus status);
-
-    /**
-     * Gets the {@link HttpHeaderNames#METHOD} header or {@code null} if there is no such header.
-     */
-    HttpMethod method();
-
-    /**
-     * Gets the {@link HttpHeaderNames#SCHEME} header or {@code null} if there is no such header.
-     */
-    String scheme();
-
-    /**
-     * Gets the {@link HttpHeaderNames#AUTHORITY} header or {@code null} if there is no such header.
-     */
-    String authority();
-
-    /**
-     * Gets the {@link HttpHeaderNames#PATH} header or {@code null} if there is no such header.
-     */
-    String path();
-
-    /**
-     * Gets the {@link HttpHeaderNames#STATUS} header or {@code null} if there is no such header.
-     */
-    HttpStatus status();
 
     /**
      * Returns the immutable view of this headers.

@@ -36,9 +36,9 @@ import com.linecorp.armeria.common.util.Exceptions;
 /**
  * A {@link StreamMessage} which buffers the elements to be signaled into a {@link Queue}.
  *
- * <p>This class implements the {@link StreamWriter} interface as well. A written element will be buffered into the
- * {@link Queue} until a {@link Subscriber} consumes it. Use {@link StreamWriter#onDemand(Runnable)} to control the
- * rate of production so that the {@link Queue} does not grow up infinitely.
+ * <p>This class implements the {@link StreamWriter} interface as well. A written element will be buffered
+ * into the {@link Queue} until a {@link Subscriber} consumes it. Use {@link StreamWriter#onDemand(Runnable)}
+ * to control the rate of production so that the {@link Queue} does not grow up infinitely.
  *
  * <pre>{@code
  * void stream(QueueBasedPublished<Integer> pub, int start, int end) {
@@ -94,8 +94,9 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             Exceptions.clearTrace(CancelledSubscriptionException.get()));
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, SubscriptionImpl> subscriptionUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, SubscriptionImpl.class, "subscription");
+    private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, SubscriptionImpl>
+            subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                    DefaultStreamMessage.class, SubscriptionImpl.class, "subscription");
 
     @SuppressWarnings("rawtypes")
     private static final AtomicLongFieldUpdater<DefaultStreamMessage> demandUpdater =
@@ -235,13 +236,13 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
         final Executor executor = subscription.executor();
         if (executor != null) {
-            executor.execute(() -> notifySubscribers0(subscription, queue));
+            executor.execute(() -> notifySubscriber(subscription, queue));
         } else {
-            notifySubscribers0(subscription, queue);
+            notifySubscriber(subscription, queue);
         }
     }
 
-    private void notifySubscribers0(SubscriptionImpl subscription, Queue<Object> queue) {
+    private void notifySubscriber(SubscriptionImpl subscription, Queue<Object> queue) {
         if (state == State.CLEANUP) {
             cleanup();
             return;
@@ -276,6 +277,37 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         }
     }
 
+    private boolean notifySubscriber(Subscriber<Object> subscriber, Queue<Object> queue) {
+        for (;;) {
+            final long demand = this.demand;
+            if (demand == 0) {
+                break;
+            }
+
+            if (demand == Long.MAX_VALUE || demandUpdater.compareAndSet(this, demand, demand - 1)) {
+                @SuppressWarnings("unchecked")
+                final T o = (T) queue.remove();
+                onRemoval(o);
+                subscriber.onNext(o);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean notifyCompletableFuture(Queue<Object> queue) {
+        if (demand == 0) {
+            return false;
+        }
+
+        @SuppressWarnings("unchecked")
+        final CompletableFuture<Void> f = (CompletableFuture<Void>) queue.remove();
+        f.complete(null);
+
+        return true;
+    }
+
     private void notifySubscriberWithCloseEvent(Subscriber<Object> subscriber, CloseEvent o) {
         setState(State.CLEANUP);
         cleanup();
@@ -296,37 +328,6 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 closeFuture.completeExceptionally(cause);
             }
         }
-    }
-
-    private boolean notifyCompletableFuture(Queue<Object> queue) {
-        if (demand == 0) {
-            return false;
-        }
-
-        @SuppressWarnings("unchecked")
-        final CompletableFuture<Void> f = (CompletableFuture<Void>) queue.remove();
-        f.complete(null);
-
-        return true;
-    }
-
-    private boolean notifySubscriber(Subscriber<Object> subscriber, Queue<Object> queue) {
-        for (;;) {
-            final long demand = this.demand;
-            if (demand == 0) {
-                break;
-            }
-
-            if (demand == Long.MAX_VALUE || demandUpdater.compareAndSet(this, demand, demand - 1)) {
-                @SuppressWarnings("unchecked")
-                final T o = (T) queue.remove();
-                onRemoval(o);
-                subscriber.onNext(o);
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

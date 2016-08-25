@@ -80,8 +80,14 @@ class TypeInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
         TypeInfo typeInfo = (TypeInfo) o;
         return Objects.equals(binary, typeInfo.binary) &&
                Objects.equals(type, typeInfo.type);

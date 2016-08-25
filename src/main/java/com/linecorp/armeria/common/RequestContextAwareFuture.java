@@ -92,11 +92,6 @@ final class RequestContextAwareFuture<T> implements Future<T> {
     }
 
     @Override
-    public Future<T> awaitUninterruptibly() {
-        return delegate.awaitUninterruptibly();
-    }
-
-    @Override
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
         return delegate.await(timeout, unit);
     }
@@ -104,6 +99,11 @@ final class RequestContextAwareFuture<T> implements Future<T> {
     @Override
     public boolean await(long timeoutMillis) throws InterruptedException {
         return delegate.await(timeoutMillis);
+    }
+
+    @Override
+    public Future<T> awaitUninterruptibly() {
+        return delegate.awaitUninterruptibly();
     }
 
     @Override

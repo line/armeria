@@ -26,7 +26,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
     private final String strVal;
 
     PrefixPathMapping(String prefix, boolean stripPrefix) {
-        prefix = ExactPathMapping.ensureAbsolutePath(prefix, "prefix");
+        prefix = ensureAbsolutePath(prefix, "prefix");
         if (!prefix.endsWith("/")) {
             prefix += '/';
         }

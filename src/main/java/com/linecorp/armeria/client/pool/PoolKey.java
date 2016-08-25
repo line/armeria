@@ -61,8 +61,13 @@ public final class PoolKey {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (!(o instanceof PoolKey)) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof PoolKey)) {
+            return false;
+        }
 
         PoolKey poolKey = (PoolKey) o;
         return value.equals(poolKey.value);

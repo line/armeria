@@ -48,19 +48,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * A simple text format for serializing/deserializing thrift
  * messages. This format is inefficient in space.
- * <p>
- * For an example, see:
+ *
+ * <p>For an example, see:
  * tests/resources/com/twitter/common/thrift/text/TTextProtocol_TestData.txt
- * <p>
- * which is a text encoding of the thrift message defined in:
- * <p>
- * src/main/thrift/com/twitter/common/thrift/text/TTextProtocolTest.thrift
- * <p>
- * Whitespace (including newlines) is not significant.
- * <p>
- * No comments are allowed in the json.
- * <p>
- * Messages must be formatted as a JSON object with a field 'method' containing
+ *
+ * <p>which is a text encoding of the thrift message defined in:
+ *
+ * <p>src/main/thrift/com/twitter/common/thrift/text/TTextProtocolTest.thrift
+ *
+ * <p>Whitespace (including newlines) is not significant.
+ *
+ * <p>No comments are allowed in the json.
+ *
+ * <p>Messages must be formatted as a JSON object with a field 'method' containing
  * the message name, 'type' containing the message type as an uppercase string
  * corresponding to {@link TMessageType}, 'args' containing a JSON object with
  * the actual arguments, and an optional 'seqid' field containing the sequence
@@ -80,19 +80,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * }
  *
  * }
- * <p>
- * TODO(Alex Roetter): write a wrapper that allows us to read in a file
+ *
+ * <p>TODO(Alex Roetter): write a wrapper that allows us to read in a file
  * of many structs (perhaps stored in a JsonArray), passing each struct to
  * this class for parsing.
- * <p>
- * See thrift's @see org.apache.thrift.protocol.TJSONProtocol
+ *
+ * <p>See thrift's @see org.apache.thrift.protocol.TJSONProtocol
  * for another example an implementation of the @see TProtocol
  * interface. This class is based on that.
- * <p>
- * TODO(Alex Roetter): Also add a new TEXT_PROTOCOL field to ThriftCodec
- * <p>
- * TODO: Support map enum keys specified as strings.
- * TODO: Support string values for enums that have been typedef'd.
+ *
+ * <p>TODO(Alex Roetter): Also add a new TEXT_PROTOCOL field to ThriftCodec
+ *
+ * <p>TODO: Support map enum keys specified as strings.
+ *
+ * <p>TODO: Support string values for enums that have been typedef'd.
  */
 public class TTextProtocol extends TProtocol {
 
@@ -115,7 +116,7 @@ public class TTextProtocol extends TProtocol {
 
     /**
      * Create a parser which can read from trans, and create the output writer
-     * that can write to a TTransport
+     * that can write to a TTransport.
      */
     public TTextProtocol(TTransport trans) {
         super(trans);
@@ -273,7 +274,7 @@ public class TTextProtocol extends TProtocol {
     }
 
     /**
-     * Helper shared by write{List/Set}Begin
+     * Helper shared by write{List/Set}Begin.
      */
     private void writeSequenceBegin(int size) throws TException {
         getCurrentContext().write();
@@ -290,7 +291,7 @@ public class TTextProtocol extends TProtocol {
     }
 
     /**
-     * Helper shared by write{List/Set}End
+     * Helper shared by write{List/Set}End.
      */
     private void writeSequenceEnd() throws TException {
         try {
@@ -527,7 +528,7 @@ public class TTextProtocol extends TProtocol {
     }
 
     /**
-     * Helper shared by read{List/Set}Begin
+     * Helper shared by read{List/Set}Begin.
      */
     private int readSequenceBegin() throws TException {
         getCurrentContext().read();
@@ -545,7 +546,7 @@ public class TTextProtocol extends TProtocol {
     }
 
     /**
-     * Helper shared by read{List/Set}End
+     * Helper shared by read{List/Set}End.
      */
     private void readSequenceEnd() {
         popContext();
@@ -575,14 +576,14 @@ public class TTextProtocol extends TProtocol {
             JsonNode elem = getCurrentContext().getCurrentChild();
             if (elem.isInt()) {
                 return TypedParser.INTEGER.readFromJsonElement(elem);
-            } else if (elem.isTextual()){
+            } else if (elem.isTextual()) {
                 @SuppressWarnings("rawtypes,unchecked") // All TEnum are enums
                 Class casted = (Class) fieldClass;
                 TEnum tEnum = (TEnum) Enum.valueOf(casted, TypedParser.STRING.readFromJsonElement(elem));
                 return tEnum.getValue();
             } else {
-                throw new TTransportException("invalid value type for enum field: " + elem.getNodeType()
-                                              + " (" + elem + ')');
+                throw new TTransportException("invalid value type for enum field: " + elem.getNodeType() +
+                                              " (" + elem + ')');
             }
         } else {
             return readNameOrValue(TypedParser.INTEGER);
@@ -614,8 +615,8 @@ public class TTextProtocol extends TProtocol {
      * JSONElement is a string and we convert it), or as a value
      * (meaning the JSONElement has the type we expect).
      * Uses a TypedParser to do the real work.
-     * <p>
-     * TODO(Alex Roetter): not sure TypedParser is a win for the number of
+     *
+     * <p>TODO(Alex Roetter): not sure TypedParser is a win for the number of
      * lines it saves. Consider expanding out all the readX() methods to
      * do what readNameOrValue does, calling the relevant methods from
      * the TypedParser directly.
@@ -654,28 +655,28 @@ public class TTextProtocol extends TProtocol {
     }
 
     /**
-     * Return the current parsing context
+     * Return the current parsing context.
      */
     private BaseContext getCurrentContext() {
         return contextStack.peek();
     }
 
     /**
-     * Add a new parsing context onto the parse context stack
+     * Add a new parsing context onto the parse context stack.
      */
     private void pushContext(BaseContext c) {
         contextStack.push(c);
     }
 
     /**
-     * Pop a parsing context from the parse context stack
+     * Pop a parsing context from the parse context stack.
      */
     private void popContext() {
         contextStack.pop();
     }
 
     /**
-     * Return the current parsing context
+     * Return the current parsing context.
      */
     private JsonGenerator getCurrentWriter() {
         return writers.peek().writer;
@@ -723,7 +724,7 @@ public class TTextProtocol extends TProtocol {
         writers.pop();
     }
 
-    private static class WriterByteArrayOutputStream {
+    private static final class WriterByteArrayOutputStream {
         final JsonGenerator writer;
         final ByteArrayOutputStream baos;
 
@@ -734,7 +735,7 @@ public class TTextProtocol extends TProtocol {
     }
 
     /**
-     * Factory
+     * Factory.
      */
     public static class Factory implements TProtocolFactory {
         private static final long serialVersionUID = -5607714914895109618L;
@@ -747,7 +748,7 @@ public class TTextProtocol extends TProtocol {
 
     /**
      * Just a byte array output stream that forwards all data to
-     * a TTransport when it is flushed or closed
+     * a TTransport when it is flushed or closed.
      */
     private class TTransportOutputStream extends ByteArrayOutputStream {
         // This isn't necessary, but a good idea to close the transport

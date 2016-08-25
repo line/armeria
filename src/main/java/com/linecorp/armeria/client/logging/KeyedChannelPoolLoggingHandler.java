@@ -71,6 +71,7 @@ public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHa
             this.ticker = ticker;
         }
 
+        @SuppressWarnings("checkstyle:fallthrough")
         void collect(EventType eventType) {
             switch (eventType) {
             case ACQUIRED:
@@ -78,13 +79,13 @@ public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHa
             case RELEASED:
                 lastUsedNanos = System.nanoTime();
             }
-
         }
 
         StringBuilder status(EventType eventType) {
             return status(eventType, new StringBuilder(16));
         }
 
+        @SuppressWarnings("checkstyle:fallthrough")
         StringBuilder status(EventType eventType, StringBuilder buf) {
             long currentNanos = ticker.read();
             switch (eventType) {
@@ -197,6 +198,7 @@ public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHa
         return buf;
     }
 
+    @SuppressWarnings("checkstyle:fallthrough")
     private void activeChannelStatus(EventType event, StringBuilder buf) {
         switch (event) {
         case CREATED:

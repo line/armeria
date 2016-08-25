@@ -23,27 +23,27 @@ import io.netty.util.AsciiString;
  */
 public enum HttpStatusClass {
     /**
-     * The informational class (1xx)
+     * The informational class (1xx).
      */
     INFORMATIONAL(100, 200, "Informational"),
     /**
-     * The success class (2xx)
+     * The success class (2xx).
      */
     SUCCESS(200, 300, "Success"),
     /**
-     * The redirection class (3xx)
+     * The redirection class (3xx).
      */
     REDIRECTION(300, 400, "Redirection"),
     /**
-     * The client error class (4xx)
+     * The client error class (4xx).
      */
     CLIENT_ERROR(400, 500, "Client Error"),
     /**
-     * The server error class (5xx)
+     * The server error class (5xx).
      */
     SERVER_ERROR(500, 600, "Server Error"),
     /**
-     * The unknown class
+     * The unknown class.
      */
     UNKNOWN(0, 0, "Unknown Status") {
         @Override

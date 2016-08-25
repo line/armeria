@@ -71,10 +71,7 @@ final class PathManipulators {
 
         StripPrefixByPathPrefix(PathMapping mapping, String pathPrefix) {
             requireNonNull(mapping, "mapping");
-            requireNonNull(pathPrefix, "pathPrefix");
-            if (!pathPrefix.startsWith("/")) {
-                throw new IllegalArgumentException("pathPrefix: " + pathPrefix + " (expected: an absolute path)");
-            }
+            ensureAbsolutePath(pathPrefix, "pathPrefix");
 
             this.mapping = mapping;
             if (pathPrefix.endsWith("/")) {
@@ -137,10 +134,7 @@ final class PathManipulators {
 
         Prepend(PathMapping mapping, String pathPrefix) {
             requireNonNull(mapping, "mapping");
-            requireNonNull(pathPrefix, "pathPrefix");
-            if (!pathPrefix.startsWith("/")) {
-                throw new IllegalArgumentException("pathPrefix: " + pathPrefix + " (expected: an absolute path)");
-            }
+            ensureAbsolutePath(pathPrefix, "pathPrefix");
 
             this.mapping = mapping;
             if (pathPrefix.endsWith("/")) {

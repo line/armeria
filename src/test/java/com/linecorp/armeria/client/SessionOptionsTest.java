@@ -44,7 +44,7 @@ public class SessionOptionsTest {
     }
 
     @Test
-    public void valueOverrideTest(){
+    public void valueOverrideTest() {
         Duration connectionTimeout = Duration.ofMillis(10);
         Duration idleTimeout = Duration.ofMillis(200);
         EventLoop eventLoop = mock(EventLoop.class);
@@ -64,12 +64,12 @@ public class SessionOptionsTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testValidateFailConnectTimeout(){
+    public void testValidateFailConnectTimeout() {
         SessionOptions.of(CONNECT_TIMEOUT.newValue(Duration.ZERO));
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testValidateFailIdleTimeout(){
+    public void testValidateFailIdleTimeout() {
         SessionOptions.of(IDLE_TIMEOUT.newValue(Duration.ofMillis(-1)));
     }
 }

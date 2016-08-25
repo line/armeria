@@ -38,10 +38,13 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
 
     @SuppressWarnings({ "AtomicFieldUpdaterIssues", "rawtypes" })
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, StreamMessage> delegateUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(DeferredStreamMessage.class, StreamMessage.class, "delegate");
+            AtomicReferenceFieldUpdater.newUpdater(
+                    DeferredStreamMessage.class, StreamMessage.class, "delegate");
+
     @SuppressWarnings({ "AtomicFieldUpdaterIssues", "rawtypes" })
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, Subscriber> subscriberUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(DeferredStreamMessage.class, Subscriber.class, "subscriber");
+            AtomicReferenceFieldUpdater.newUpdater(
+                    DeferredStreamMessage.class, Subscriber.class, "subscriber");
 
     private static final Subscriber<?> ABORTED_SUBSCRIBER = new Subscriber<Object>() {
         @Override

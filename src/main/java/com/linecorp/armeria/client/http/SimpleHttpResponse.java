@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.http;
 
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.HttpResponse;
 
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;

@@ -150,7 +150,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Override
     public void onNext(HttpObject o) {
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
-            throw newIllegalStateException("published an HttpObject that's neither Http2Headers nor Http2Data: " + o);
+            throw newIllegalStateException(
+                    "published an HttpObject that's neither Http2Headers nor Http2Data: " + o);
         }
 
         boolean endOfStream = false;

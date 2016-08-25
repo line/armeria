@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 
-import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;

@@ -45,10 +45,11 @@ import com.google.common.collect.ImmutableMap;
 /**
  * {@link ThriftDocString} is a DocString extractor for Thrift IDL JSON.
  *
- * To include docstrings in {@link DocService} pages, use a recent development version of the Thrift compiler
- * (0.9.3 will not work) and compile your thrift files with 'json' code generation and
- * include the resulting json files in the classpath location META-INF/armeria/thrift.
- * The classpath location can be changed by setting the armeria.thrift.json.dir system property.
+ * <p>To include docstrings in {@link DocService} pages, use a recent development version of the Thrift
+ * compiler (0.9.3 will not work) and compile your thrift files with 'json' code generation and
+ * include the resulting json files in the classpath location {@code META-INF/armeria/thrift}.
+ * The classpath location can be changed by setting the {@code com.linecorp.armeria.thrift.jsonDir}
+ * system property.
  */
 final class ThriftDocString {
 
@@ -86,7 +87,8 @@ final class ThriftDocString {
      * @return a map with key is FQCN and value is document string.
      */
     static Map<String, String> getAllDocStrings(ClassLoader classLoader) {
-        return cached.computeIfAbsent(classLoader, loader -> parseDocStrings(loader, getAllThriftJsons(loader)));
+        return cached.computeIfAbsent(
+                classLoader, loader -> parseDocStrings(loader, getAllThriftJsons(loader)));
     }
 
     /**

@@ -46,10 +46,10 @@ import io.netty.util.AttributeKey;
 import io.netty.util.AttributeMap;
 
 /**
- * Default {@link AttributeMap} implementation which use simple synchronization per bucket to keep the memory overhead
- * as low as possible.
- * <p>
- * Note: This class has been forked from {@link io.netty.util.DefaultAttributeMap}.
+ * Default {@link AttributeMap} implementation which use simple synchronization per bucket to keep the memory
+ * overhead as low as possible.
+ *
+ * <p>Note: This class has been forked from {@link io.netty.util.DefaultAttributeMap}.
  */
 public class DefaultAttributeMap implements AttributeMap {
 
@@ -85,8 +85,8 @@ public class DefaultAttributeMap implements AttributeMap {
         int i = index(key);
         DefaultAttribute<?> head = attributes.get(i);
         if (head == null) {
-            // No head exists yet which means we may be able to add the attribute without synchronization and just
-            // use compare and set. At worst we need to fallback to synchronization
+            // No head exists yet which means we may be able to add the attribute without synchronization and
+            // just use compare and set. At worst we need to fallback to synchronization
             head = new DefaultAttribute(key);
             if (attributes.compareAndSet(i, null, head)) {
                 // we were able to add it so return the head right away
@@ -249,8 +249,8 @@ public class DefaultAttributeMap implements AttributeMap {
                         next.prev = prev;
                     }
 
-                    // Null out prev and next - this will guard against multiple remove0() calls which may corrupt
-                    // the linked list for the bucket.
+                    // Null out prev and next - this will guard against multiple remove0() calls which may
+                    // corrupt the linked list for the bucket.
                     prev = null;
                     next = null;
                 }
@@ -262,7 +262,7 @@ public class DefaultAttributeMap implements AttributeMap {
 
         private final AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
-        private int i = -1;
+        private int idx = -1;
         private DefaultAttribute<?> next;
 
         IteratorImpl(AtomicReferenceArray<DefaultAttribute<?>> attributes) {
@@ -289,15 +289,15 @@ public class DefaultAttributeMap implements AttributeMap {
         private DefaultAttribute<?> findNext(DefaultAttribute<?> next) {
             loop: for (;;) {
                 if (next == null) {
-                    for (i++; i < attributes.length(); i++) {
-                        final DefaultAttribute<?> attr = attributes.get(i);
+                    for (idx++; idx < attributes.length(); idx++) {
+                        final DefaultAttribute<?> attr = attributes.get(idx);
                         if (attr != null) {
                             next = attr;
                             break;
                         }
                     }
 
-                    if (i == attributes.length()) {
+                    if (idx == attributes.length()) {
                         return null;
                     }
                 }

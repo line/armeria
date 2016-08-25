@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;

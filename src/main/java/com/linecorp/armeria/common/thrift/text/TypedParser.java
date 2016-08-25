@@ -28,13 +28,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 /**
  * A type parsing helper, knows how to parse a given type either from a string
  * or from a JsonElement, and knows how to emit a given type to a JsonGenerator.
- * <p>
- * Clients should use the static members defined here for common types.
+ *
+ * <p>Clients should use the static members defined here for common types.
  * Should be implemented for each integral type we need to read/write.
  *
- * @param <T> The type we are trying to read.
- *
  * @author Alex Roetter
+ *
+ * @param <T> The type we are trying to read.
  */
 abstract class TypedParser<T> {
     // Static methods clients can use.
@@ -228,17 +228,17 @@ abstract class TypedParser<T> {
     };
 
     /**
-     * Convert from a string to the given type
+     * Convert from a string to the given type.
      */
     abstract T readFromString(String s);
 
     /**
-     * Read the given type from a JsonElement
+     * Read the given type from a JsonElement.
      */
     abstract T readFromJsonElement(JsonNode elem);
 
     /**
-     * Write the given type out using a JsonGenerator
+     * Write the given type out using a JsonGenerator.
      */
     abstract void writeValue(JsonGenerator jw, T val) throws IOException;
 }

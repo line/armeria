@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 import org.apache.thrift.TException;
 import org.apache.thrift.meta_data.FieldMetaData;
 
-class ExceptionInfo extends TypeInfo implements ClassInfo {
+final class ExceptionInfo extends TypeInfo implements ClassInfo {
 
     static ExceptionInfo of(Class<? extends TException> exceptionClass) {
         return of(exceptionClass, Collections.emptyMap());
@@ -99,9 +99,18 @@ class ExceptionInfo extends TypeInfo implements ClassInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        if (!super.equals(o)) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        if (!super.equals(o)) {
+            return false;
+        }
+
         ExceptionInfo that = (ExceptionInfo) o;
         return Objects.equals(name, that.name) &&
                Objects.equals(fields, that.fields);

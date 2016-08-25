@@ -431,17 +431,22 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ChannelFuture respond0(ChannelHandlerContext ctx, DecodedHttpRequest req, AggregatedHttpMessage res) {
+    private ChannelFuture respond0(ChannelHandlerContext ctx,
+                                   DecodedHttpRequest req, AggregatedHttpMessage res) {
+
         // No need to consume further since the response is ready.
         req.abort();
 
         final boolean trailingHeadersEmpty = res.trailingHeaders().isEmpty();
         final boolean contentAndTrailingHeadersEmpty = res.content().isEmpty() && trailingHeadersEmpty;
-        ChannelFuture future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), res.headers(), contentAndTrailingHeadersEmpty);
+        ChannelFuture future = responseEncoder.writeHeaders(
+                ctx, req.id(), req.streamId(), res.headers(), contentAndTrailingHeadersEmpty);
         if (!contentAndTrailingHeadersEmpty) {
-            future = responseEncoder.writeData(ctx, req.id(), req.streamId(), res.content(), trailingHeadersEmpty);
+            future = responseEncoder.writeData(
+                    ctx, req.id(), req.streamId(), res.content(), trailingHeadersEmpty);
             if (!trailingHeadersEmpty) {
-                future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), res.trailingHeaders(), true);
+                future = responseEncoder.writeHeaders(
+                        ctx, req.id(), req.streamId(), res.trailingHeaders(), true);
             }
         }
         return future;

@@ -68,8 +68,8 @@ abstract class HttpResponseDecoder {
                 new HttpResponseWrapper(req, res, logBuilder, responseTimeoutMillis, maxContentLength);
         final HttpResponseWriter oldRes = responses.put(id, newRes);
 
-        assert oldRes == null :
-               "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " + oldRes;
+        assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
+                                oldRes;
 
         return newRes;
     }

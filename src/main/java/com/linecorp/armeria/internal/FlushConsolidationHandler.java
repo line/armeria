@@ -26,22 +26,22 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.ObjectUtil;
 
 /**
- * {@link ChannelDuplexHandler} which consolidate {@link ChannelOutboundInvoker#flush()} operations (which also includes
- * {@link ChannelOutboundInvoker#writeAndFlush(Object)} and
+ * {@link ChannelDuplexHandler} which consolidate {@link ChannelOutboundInvoker#flush()} operations (which also
+ * includes {@link ChannelOutboundInvoker#writeAndFlush(Object)} and
  * {@link ChannelOutboundInvoker#writeAndFlush(Object, ChannelPromise)}).
  *
- * Flush operations are general speaking expensive as these may trigger a syscall on the transport level. Thus it is
- * in most cases (where write latency can be traded with throughput) a good idea to try to minimize flush operations
- * as much as possible.
+ * <p>Flush operations are general speaking expensive as these may trigger a syscall on the transport level.
+ * Thus it is in most cases (where write latency can be traded with throughput) a good idea to try to minimize
+ * flush operations as much as possible.
  *
- * When {@link #flush(ChannelHandlerContext)} is called it will only pass it on to the next
+ * <p>When {@link #flush(ChannelHandlerContext)} is called it will only pass it on to the next
  * {@link ChannelOutboundHandler} in the {@link ChannelPipeline} if no read loop is currently ongoing
  * as it will pick up any pending flushes when {@link #channelReadComplete(ChannelHandlerContext)} is trigged.
  * If {@code explicitFlushAfterFlushes} is reached the flush will also be forwarded as well.
  *
- * If the {@link Channel} becomes non-writable it will also try to execute any pending flush operations.
+ * <p>If the {@link Channel} becomes non-writable it will also try to execute any pending flush operations.
  *
- * The {@link FlushConsolidationHandler} should be put as first {@link ChannelHandler} in the
+ * <p>The {@link FlushConsolidationHandler} should be put as first {@link ChannelHandler} in the
  * {@link ChannelPipeline} to have the best effect.
  */
 public class FlushConsolidationHandler extends ChannelDuplexHandler {
@@ -69,8 +69,8 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     @Override
     public void flush(ChannelHandlerContext ctx) throws Exception {
         if (readInprogess) {
-            // If there is still a read in progress we are sure we will see a channelReadComplete(...) call. Thus
-            // we only need to flush if we reach the explicitFlushAfterFlushes limit.
+            // If there is still a read in progress we are sure we will see a channelReadComplete(...) call.
+            // Thus we only need to flush if we reach the explicitFlushAfterFlushes limit.
             if (++flushPendingCount == explicitFlushAfterFlushes) {
                 flushPendingCount = 0;
                 ctx.flush();
@@ -117,7 +117,8 @@ public class FlushConsolidationHandler extends ChannelDuplexHandler {
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         if (!ctx.channel().isWritable()) {
-            // The writability of the channel changed to false, so flush all consolidated flushes now to free up memory.
+            // The writability of the channel changed to false, so flush all consolidated flushes now
+            // to free up memory.
             flushIfNeeded(ctx, false);
         }
         ctx.fireChannelWritabilityChanged();

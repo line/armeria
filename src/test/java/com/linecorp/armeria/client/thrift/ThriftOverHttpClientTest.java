@@ -147,15 +147,15 @@ public class ThriftOverHttpClientTest {
             return handler;
         }
 
-        <T> Class<T> Iface() {
+        <T> Class<T> iface() {
             return (Class<T>) iface;
         }
 
-        <T> Class<T> AsyncIface() {
+        <T> Class<T> asyncIface() {
             return (Class<T>) asyncIface;
         }
 
-        String getPath(SerializationFormat serializationFormat) {
+        String path(SerializationFormat serializationFormat) {
             return '/' + name() + '/' + serializationFormat.name();
         }
     }
@@ -178,7 +178,7 @@ public class ThriftOverHttpClientTest {
                     if (ENABLE_LOGGING_DECORATORS) {
                         service = service.decorate(LoggingService::new);
                     }
-                    sb.serviceAt(h.getPath(defaultSerializationFormat), service);
+                    sb.serviceAt(h.path(defaultSerializationFormat), service);
                 }
             }
         } catch (Exception e) {
@@ -235,7 +235,7 @@ public class ThriftOverHttpClientTest {
                 SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE);
 
         final SessionOptionValue<Function<KeyedChannelPoolHandler<PoolKey>,
-                                                        KeyedChannelPoolHandler<PoolKey>>> poolHandlerDecoratorOptVal =
+                                          KeyedChannelPoolHandler<PoolKey>>> poolHandlerDecoratorOptVal =
                 SessionOption.POOL_HANDLER_DECORATOR.newValue(
                         ENABLE_LOGGING_DECORATORS ? KeyedChannelPoolLoggingHandler::new
                                                   : Function.identity());
@@ -284,7 +284,7 @@ public class ThriftOverHttpClientTest {
     public void testHelloServiceSync() throws Exception {
 
         HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
-                                                      Handlers.HELLO.Iface(), clientOptions);
+                                                      Handlers.HELLO.iface(), clientOptions);
         assertEquals("Hello, kukuman!", client.hello("kukuman"));
 
         for (int i = 0; i < 10; i++) {
@@ -295,7 +295,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testHelloServiceAsync() throws Exception {
         HelloService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.HELLO), Handlers.HELLO.AsyncIface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.HELLO), Handlers.HELLO.asyncIface(),
                                   clientOptions);
 
         final int testCount = 10;
@@ -325,7 +325,7 @@ public class ThriftOverHttpClientTest {
     public void testOnewayHelloServiceSync() throws Exception {
         OnewayHelloService.Iface client =
                 Clients.newClient(clientFactory(), getURI(Handlers.ONEWAYHELLO),
-                                  Handlers.ONEWAYHELLO.Iface(), clientOptions);
+                                  Handlers.ONEWAYHELLO.iface(), clientOptions);
         client.hello("kukuman");
         client.hello("kukuman2");
         assertEquals("kukuman", serverReceivedNames.take());
@@ -336,7 +336,7 @@ public class ThriftOverHttpClientTest {
     public void testOnewayHelloServiceAsync() throws Exception {
         OnewayHelloService.AsyncIface client =
                 Clients.newClient(clientFactory(), getURI(Handlers.ONEWAYHELLO),
-                                  Handlers.ONEWAYHELLO.AsyncIface(), clientOptions);
+                                  Handlers.ONEWAYHELLO.asyncIface(), clientOptions);
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
         String[] names = { "kukuman", "kukuman2" };
@@ -356,7 +356,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testDevNullServiceSync() throws Exception {
         DevNullService.Iface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.DEVNULL), Handlers.DEVNULL.Iface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.DEVNULL), Handlers.DEVNULL.iface(),
                                   clientOptions);
         client.consume("kukuman");
         client.consume("kukuman2");
@@ -368,7 +368,7 @@ public class ThriftOverHttpClientTest {
     public void testDevNullServiceAsync() throws Exception {
         DevNullService.AsyncIface client =
                 Clients.newClient(clientFactory(), getURI(Handlers.DEVNULL),
-                                  Handlers.DEVNULL.AsyncIface(), clientOptions);
+                                  Handlers.DEVNULL.asyncIface(), clientOptions);
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
         String[] names = { "kukuman", "kukuman2" };
@@ -388,7 +388,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testTimeServiceSync() throws Exception {
         TimeService.Iface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.TIME), Handlers.TIME.Iface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.TIME), Handlers.TIME.iface(),
                                   clientOptions);
 
         long serverTime = client.getServerTime();
@@ -398,7 +398,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testTimeServiceAsync() throws Exception {
         TimeService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.TIME), Handlers.TIME.AsyncIface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.TIME), Handlers.TIME.asyncIface(),
                                   clientOptions);
 
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -412,7 +412,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000, expected = FileServiceException.class)
     public void testFileServiceSync() throws Exception {
         FileService.Iface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.FILE), Handlers.FILE.Iface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.FILE), Handlers.FILE.iface(),
                                   clientOptions);
 
         client.create("test");
@@ -421,7 +421,7 @@ public class ThriftOverHttpClientTest {
     @Test(timeout = 10000)
     public void testFileServiceAsync() throws Exception {
         FileService.AsyncIface client =
-                Clients.newClient(clientFactory(), getURI(Handlers.FILE), Handlers.FILE.AsyncIface(),
+                Clients.newClient(clientFactory(), getURI(Handlers.FILE), Handlers.FILE.asyncIface(),
                                   clientOptions);
 
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
@@ -438,7 +438,7 @@ public class ThriftOverHttpClientTest {
         final String TOKEN_B = "token 5678";
 
         final HeaderService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HEADER),
-                                                             Handlers.HEADER.Iface(), clientOptions);
+                                                             Handlers.HEADER.iface(), clientOptions);
 
         assertThat(client.header(AUTHORIZATION), is(NO_TOKEN));
 
@@ -461,7 +461,7 @@ public class ThriftOverHttpClientTest {
 
     private String getURI(Handlers handler) {
         int port = useTls ? httpsPort : httpPort;
-        return serializationFormat.uriText() + '+' + httpProtocol + "://127.0.0.1:" + port + handler.getPath(
+        return serializationFormat.uriText() + '+' + httpProtocol + "://127.0.0.1:" + port + handler.path(
                 serializationFormat);
     }
 

@@ -226,7 +226,9 @@ public class GracefulShutdownHandlerTest {
         executor.execute(() -> {
             try {
                 Thread.sleep(10000);
-            } catch (InterruptedException ignored) {}
+            } catch (InterruptedException ignored) {
+                // Ignored
+            }
         });
     }
 }

@@ -40,12 +40,12 @@ final class SlidingWindowCounter implements EventCounter {
     private final long updateIntervalNanos;
 
     /**
-     * The reference to the latest {@link Bucket}
+     * The reference to the latest {@link Bucket}.
      */
     private final AtomicReference<Bucket> current;
 
     /**
-     * The reference to the latest accumulated {@link EventCount}
+     * The reference to the latest accumulated {@link EventCount}.
      */
     private final AtomicReference<EventCount> snapshot = new AtomicReference<>(EventCount.ZERO);
 
@@ -121,7 +121,8 @@ final class SlidingWindowCounter implements EventCounter {
     private EventCount trimAndSum(long tickerNanos) {
         final long oldLimit = tickerNanos - slidingWindowNanos;
         final Iterator<Bucket> iterator = reservoir.iterator();
-        long success = 0, failure = 0;
+        long success = 0;
+        long failure = 0;
         while (iterator.hasNext()) {
             final Bucket bucket = iterator.next();
             if (bucket.timestamp < oldLimit) {

@@ -35,6 +35,7 @@ import org.reactivestreams.Subscription;
  * </ul>
  *
  * <h3>When is a {@link StreamMessage} open?</h3>
+ *
  * <p>A {@link StreamMessage} is open since its instantiation until:
  * <ul>
  *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
@@ -44,6 +45,7 @@ import org.reactivestreams.Subscription;
  * </ul>
  *
  * <h3>Getting notified when a {@link StreamMessage} is closed</h3>
+ *
  * <p>Use {@link #closeFuture()}
  *
  * @param <T> the type of element signaled

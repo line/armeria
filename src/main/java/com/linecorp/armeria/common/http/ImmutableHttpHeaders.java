@@ -40,8 +40,18 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
+    public HttpMethod method() {
+        return delegate.method();
+    }
+
+    @Override
     public HttpHeaders method(HttpMethod method) {
         return unsupported();
+    }
+
+    @Override
+    public String scheme() {
+        return delegate.scheme();
     }
 
     @Override
@@ -50,13 +60,28 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
+    public String authority() {
+        return delegate.authority();
+    }
+
+    @Override
     public HttpHeaders authority(String authority) {
         return unsupported();
     }
 
     @Override
+    public String path() {
+        return delegate.path();
+    }
+
+    @Override
     public HttpHeaders path(String path) {
         return unsupported();
+    }
+
+    @Override
+    public HttpStatus status() {
+        return delegate.status();
     }
 
     @Override
@@ -67,31 +92,6 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     @Override
     public HttpHeaders status(HttpStatus status) {
         return unsupported();
-    }
-
-    @Override
-    public HttpMethod method() {
-        return delegate.method();
-    }
-
-    @Override
-    public String scheme() {
-        return delegate.scheme();
-    }
-
-    @Override
-    public String authority() {
-        return delegate.authority();
-    }
-
-    @Override
-    public String path() {
-        return delegate.path();
-    }
-
-    @Override
-    public HttpStatus status() {
-        return delegate.status();
     }
 
     @Override
@@ -395,6 +395,12 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
+    public HttpHeaders add(
+            Headers<? extends AsciiString, ? extends String, ?> headers) {
+        return unsupported();
+    }
+
+    @Override
     public HttpHeaders addObject(AsciiString name, Object value) {
         return unsupported();
     }
@@ -455,12 +461,6 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
-    public HttpHeaders add(
-            Headers<? extends AsciiString, ? extends String, ?> headers) {
-        return unsupported();
-    }
-
-    @Override
     public HttpHeaders set(AsciiString name, String value) {
         return unsupported();
     }
@@ -472,6 +472,12 @@ final class ImmutableHttpHeaders implements HttpHeaders {
 
     @Override
     public HttpHeaders set(AsciiString name, String... values) {
+        return unsupported();
+    }
+
+    @Override
+    public HttpHeaders set(
+            Headers<? extends AsciiString, ? extends String, ?> headers) {
         return unsupported();
     }
 
@@ -532,12 +538,6 @@ final class ImmutableHttpHeaders implements HttpHeaders {
 
     @Override
     public HttpHeaders setTimeMillis(AsciiString name, long value) {
-        return unsupported();
-    }
-
-    @Override
-    public HttpHeaders set(
-            Headers<? extends AsciiString, ? extends String, ?> headers) {
         return unsupported();
     }
 

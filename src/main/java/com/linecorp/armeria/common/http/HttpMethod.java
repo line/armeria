@@ -89,8 +89,7 @@ public enum HttpMethod {
     TRACE,
 
     /**
-     * This specification reserves the method name CONNECT for use with a proxy that can dynamically
-     * switch to being a tunnel
+     * The CONNECT method is used for a proxy that can dynamically switch to being a tunnel.
      */
     CONNECT;
 }

@@ -112,19 +112,16 @@ final class RequestContextAwareEventLoop implements EventLoop {
     }
 
     @Override
-    @Deprecated
     public void shutdown() {
         delegate.shutdown();
     }
 
     @Override
-    @Deprecated
     public List<Runnable> shutdownNow() {
         return delegate.shutdownNow();
     }
 
     @Override
-    @Deprecated
     public Iterator<EventExecutor> iterator() {
         return delegate.iterator();
     }
@@ -232,7 +229,6 @@ final class RequestContextAwareEventLoop implements EventLoop {
     }
 
     @Override
-    @Deprecated
     public ChannelFuture register(Channel channel,
                                   ChannelPromise channelPromise) {
         return delegate.register(channel, channelPromise);

@@ -47,7 +47,6 @@ final class HttpRequestAggregator extends HttpMessageAggregator {
     @Override
     protected void doClear() {
         trailingHeaders.clear();
-        contentList.clear();
     }
 
     @Override

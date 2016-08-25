@@ -80,48 +80,6 @@ public final class DefaultHttpHeaders
     }
 
     @Override
-    public HttpHeaders method(HttpMethod method) {
-        requireNonNull(method, "method");
-        this.method = method;
-        set(HttpHeaderNames.METHOD, method.name());
-        return this;
-    }
-
-    @Override
-    public HttpHeaders scheme(String scheme) {
-        requireNonNull(scheme, "scheme");
-        set(HttpHeaderNames.SCHEME, scheme);
-        return this;
-    }
-
-    @Override
-    public HttpHeaders authority(String authority) {
-        requireNonNull(authority, "authority");
-        set(HttpHeaderNames.AUTHORITY, authority);
-        return this;
-    }
-
-    @Override
-    public HttpHeaders path(String path) {
-        requireNonNull(path, "path");
-        set(HttpHeaderNames.PATH, path);
-        return this;
-    }
-
-    @Override
-    public HttpHeaders status(int statusCode) {
-        final HttpStatus status = this.status = HttpStatus.valueOf(statusCode);
-        set(HttpHeaderNames.STATUS, status.codeAsText());
-        return this;
-    }
-
-    @Override
-    public HttpHeaders status(HttpStatus status) {
-        requireNonNull(status, "status");
-        return status(status.code());
-    }
-
-    @Override
     public HttpMethod method() {
         HttpMethod method = this.method;
         if (method != null) {
@@ -141,8 +99,23 @@ public final class DefaultHttpHeaders
     }
 
     @Override
+    public HttpHeaders method(HttpMethod method) {
+        requireNonNull(method, "method");
+        this.method = method;
+        set(HttpHeaderNames.METHOD, method.name());
+        return this;
+    }
+
+    @Override
     public String scheme() {
         return get(HttpHeaderNames.SCHEME);
+    }
+
+    @Override
+    public HttpHeaders scheme(String scheme) {
+        requireNonNull(scheme, "scheme");
+        set(HttpHeaderNames.SCHEME, scheme);
+        return this;
     }
 
     @Override
@@ -151,8 +124,22 @@ public final class DefaultHttpHeaders
     }
 
     @Override
+    public HttpHeaders authority(String authority) {
+        requireNonNull(authority, "authority");
+        set(HttpHeaderNames.AUTHORITY, authority);
+        return this;
+    }
+
+    @Override
     public String path() {
         return get(HttpHeaderNames.PATH);
+    }
+
+    @Override
+    public HttpHeaders path(String path) {
+        requireNonNull(path, "path");
+        set(HttpHeaderNames.PATH, path);
+        return this;
     }
 
     @Override
@@ -172,6 +159,19 @@ public final class DefaultHttpHeaders
         } catch (NumberFormatException ignored) {
             throw new IllegalStateException("invalid status: " + statusStr);
         }
+    }
+
+    @Override
+    public HttpHeaders status(int statusCode) {
+        final HttpStatus status = this.status = HttpStatus.valueOf(statusCode);
+        set(HttpHeaderNames.STATUS, status.codeAsText());
+        return this;
+    }
+
+    @Override
+    public HttpHeaders status(HttpStatus status) {
+        requireNonNull(status, "status");
+        return status(status.code());
     }
 
     @Override

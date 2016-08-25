@@ -25,27 +25,27 @@ import java.util.Set;
  */
 public enum SessionProtocol {
     /**
-     * HTTP (cleartext, HTTP/2 preferred)
+     * HTTP - cleartext, HTTP/2 preferred.
      */
     HTTP(false, "http", false, 80),
     /**
-     * HTTP over TLS (over TLS, HTTP/2 preferred)
+     * HTTP - over TLS, HTTP/2 preferred.
      */
     HTTPS(true, "https", false, 443),
     /**
-     * HTTP/1 (over TLS)
+     * HTTP/1 - over TLS.
      */
     H1(true, "h1", false, 443),
     /**
-     * HTTP/1 (cleartext)
+     * HTTP/1 - cleartext.
      */
     H1C(false, "h1c", false, 80),
     /**
-     * HTTP/2 (over TLS)
+     * HTTP/2 - over TLS.
      */
     H2(true, "h2", true, 443),
     /**
-     * HTTP/2 (cleartext)
+     * HTTP/2 - cleartext.
      */
     H2C(false, "h2c", true, 80);
 
@@ -55,7 +55,8 @@ public enum SessionProtocol {
     /**
      * Returns the set of all known HTTP session protocols. This method is useful when determining if a
      * {@link SessionProtocol} is HTTP or not.
-     * e.g. {@code if (SessionProtocol.ofHttp().contains(proto)) { ... }}
+     *
+     * <p>e.g. {@code if (SessionProtocol.ofHttp().contains(proto)) { ... }}
      */
     public static Set<SessionProtocol> ofHttp() {
         return HTTP_PROTOCOLS;

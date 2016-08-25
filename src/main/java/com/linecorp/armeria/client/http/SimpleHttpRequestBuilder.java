@@ -23,7 +23,6 @@ import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.HttpRequest;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
@@ -36,7 +35,7 @@ import io.netty.handler.codec.http.HttpMethod;
  * @deprecated Use {@link AggregatedHttpMessage} instead.
  */
 @Deprecated
-public class SimpleHttpRequestBuilder {
+public final class SimpleHttpRequestBuilder {
 
     private static final byte[] EMPTY = new byte[0];
 

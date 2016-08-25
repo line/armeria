@@ -28,285 +28,285 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     private static final IntObjectMap<HttpStatus> map = new IntObjectHashMap<>(1000);
 
     /**
-     * 100 Continue
+     * 100 Continue.
      */
     public static final HttpStatus CONTINUE = newConstant(100, "Continue");
 
     /**
-     * 101 Switching Protocols
+     * 101 Switching Protocols.
      */
     public static final HttpStatus SWITCHING_PROTOCOLS = newConstant(101, "Switching Protocols");
 
     /**
-     * 102 Processing (WebDAV, RFC2518)
+     * 102 Processing (WebDAV, RFC2518).
      */
     public static final HttpStatus PROCESSING = newConstant(102, "Processing");
 
     /**
-     * 200 OK
+     * 200 OK.
      */
     public static final HttpStatus OK = newConstant(200, "OK");
 
     /**
-     * 201 Created
+     * 201 Created.
      */
     public static final HttpStatus CREATED = newConstant(201, "Created");
 
     /**
-     * 202 Accepted
+     * 202 Accepted.
      */
     public static final HttpStatus ACCEPTED = newConstant(202, "Accepted");
 
     /**
-     * 203 Non-Authoritative Information (since HTTP/1.1)
+     * 203 Non-Authoritative Information (since HTTP/1.1).
      */
     public static final HttpStatus NON_AUTHORITATIVE_INFORMATION =
             newConstant(203, "Non-Authoritative Information");
 
     /**
-     * 204 No Content
+     * 204 No Content.
      */
     public static final HttpStatus NO_CONTENT = newConstant(204, "No Content");
 
     /**
-     * 205 Reset Content
+     * 205 Reset Content.
      */
     public static final HttpStatus RESET_CONTENT = newConstant(205, "Reset Content");
 
     /**
-     * 206 Partial Content
+     * 206 Partial Content.
      */
     public static final HttpStatus PARTIAL_CONTENT = newConstant(206, "Partial Content");
 
     /**
-     * 207 Multi-Status (WebDAV, RFC2518)
+     * 207 Multi-Status (WebDAV, RFC2518).
      */
     public static final HttpStatus MULTI_STATUS = newConstant(207, "Multi-Status");
 
     /**
-     * 300 Multiple Choices
+     * 300 Multiple Choices.
      */
     public static final HttpStatus MULTIPLE_CHOICES = newConstant(300, "Multiple Choices");
 
     /**
-     * 301 Moved Permanently
+     * 301 Moved Permanently.
      */
     public static final HttpStatus MOVED_PERMANENTLY = newConstant(301, "Moved Permanently");
 
     /**
-     * 302 Found
+     * 302 Found.
      */
     public static final HttpStatus FOUND = newConstant(302, "Found");
 
     /**
-     * 303 See Other (since HTTP/1.1)
+     * 303 See Other (since HTTP/1.1).
      */
     public static final HttpStatus SEE_OTHER = newConstant(303, "See Other");
 
     /**
-     * 304 Not Modified
+     * 304 Not Modified.
      */
     public static final HttpStatus NOT_MODIFIED = newConstant(304, "Not Modified");
 
     /**
-     * 305 Use Proxy (since HTTP/1.1)
+     * 305 Use Proxy (since HTTP/1.1).
      */
     public static final HttpStatus USE_PROXY = newConstant(305, "Use Proxy");
 
     /**
-     * 307 Temporary Redirect (since HTTP/1.1)
+     * 307 Temporary Redirect (since HTTP/1.1).
      */
     public static final HttpStatus TEMPORARY_REDIRECT = newConstant(307, "Temporary Redirect");
 
     /**
-     * 400 Bad Request
+     * 400 Bad Request.
      */
     public static final HttpStatus BAD_REQUEST = newConstant(400, "Bad Request");
 
     /**
-     * 401 Unauthorized
+     * 401 Unauthorized.
      */
     public static final HttpStatus UNAUTHORIZED = newConstant(401, "Unauthorized");
 
     /**
-     * 402 Payment Required
+     * 402 Payment Required.
      */
     public static final HttpStatus PAYMENT_REQUIRED = newConstant(402, "Payment Required");
 
     /**
-     * 403 Forbidden
+     * 403 Forbidden.
      */
     public static final HttpStatus FORBIDDEN = newConstant(403, "Forbidden");
 
     /**
-     * 404 Not Found
+     * 404 Not Found.
      */
     public static final HttpStatus NOT_FOUND = newConstant(404, "Not Found");
 
     /**
-     * 405 Method Not Allowed
+     * 405 Method Not Allowed.
      */
     public static final HttpStatus METHOD_NOT_ALLOWED = newConstant(405, "Method Not Allowed");
 
     /**
-     * 406 Not Acceptable
+     * 406 Not Acceptable.
      */
     public static final HttpStatus NOT_ACCEPTABLE = newConstant(406, "Not Acceptable");
 
     /**
-     * 407 Proxy Authentication Required
+     * 407 Proxy Authentication Required.
      */
     public static final HttpStatus PROXY_AUTHENTICATION_REQUIRED =
             newConstant(407, "Proxy Authentication Required");
 
     /**
-     * 408 Request Timeout
+     * 408 Request Timeout.
      */
     public static final HttpStatus REQUEST_TIMEOUT = newConstant(408, "Request Timeout");
 
     /**
-     * 409 Conflict
+     * 409 Conflict.
      */
     public static final HttpStatus CONFLICT = newConstant(409, "Conflict");
 
     /**
-     * 410 Gone
+     * 410 Gone.
      */
     public static final HttpStatus GONE = newConstant(410, "Gone");
 
     /**
-     * 411 Length Required
+     * 411 Length Required.
      */
     public static final HttpStatus LENGTH_REQUIRED = newConstant(411, "Length Required");
 
     /**
-     * 412 Precondition Failed
+     * 412 Precondition Failed.
      */
     public static final HttpStatus PRECONDITION_FAILED = newConstant(412, "Precondition Failed");
 
     /**
-     * 413 Request Entity Too Large
+     * 413 Request Entity Too Large.
      */
     public static final HttpStatus REQUEST_ENTITY_TOO_LARGE =
             newConstant(413, "Request Entity Too Large");
 
     /**
-     * 414 Request-URI Too Long
+     * 414 Request-URI Too Long.
      */
     public static final HttpStatus REQUEST_URI_TOO_LONG = newConstant(414, "Request-URI Too Long");
 
     /**
-     * 415 Unsupported Media Type
+     * 415 Unsupported Media Type.
      */
     public static final HttpStatus UNSUPPORTED_MEDIA_TYPE = newConstant(415, "Unsupported Media Type");
 
     /**
-     * 416 Requested Range Not Satisfiable
+     * 416 Requested Range Not Satisfiable.
      */
     public static final HttpStatus REQUESTED_RANGE_NOT_SATISFIABLE =
             newConstant(416, "Requested Range Not Satisfiable");
 
     /**
-     * 417 Expectation Failed
+     * 417 Expectation Failed.
      */
     public static final HttpStatus EXPECTATION_FAILED = newConstant(417, "Expectation Failed");
 
     /**
-     * 421 Misdirected Request
+     * 421 Misdirected Request.
      *
-     * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-15#section-9.1.2">421 Status Code</a>
+     * @see <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-15#section-9.1.2">421 Status Code</a>
      */
     public static final HttpStatus MISDIRECTED_REQUEST = newConstant(421, "Misdirected Request");
 
     /**
-     * 422 Unprocessable Entity (WebDAV, RFC4918)
+     * 422 Unprocessable Entity (WebDAV, RFC4918).
      */
     public static final HttpStatus UNPROCESSABLE_ENTITY = newConstant(422, "Unprocessable Entity");
 
     /**
-     * 423 Locked (WebDAV, RFC4918)
+     * 423 Locked (WebDAV, RFC4918).
      */
     public static final HttpStatus LOCKED = newConstant(423, "Locked");
 
     /**
-     * 424 Failed Dependency (WebDAV, RFC4918)
+     * 424 Failed Dependency (WebDAV, RFC4918).
      */
     public static final HttpStatus FAILED_DEPENDENCY = newConstant(424, "Failed Dependency");
 
     /**
-     * 425 Unordered Collection (WebDAV, RFC3648)
+     * 425 Unordered Collection (WebDAV, RFC3648).
      */
     public static final HttpStatus UNORDERED_COLLECTION = newConstant(425, "Unordered Collection");
 
     /**
-     * 426 Upgrade Required (RFC2817)
+     * 426 Upgrade Required (RFC2817).
      */
     public static final HttpStatus UPGRADE_REQUIRED = newConstant(426, "Upgrade Required");
 
     /**
-     * 428 Precondition Required (RFC6585)
+     * 428 Precondition Required (RFC6585).
      */
     public static final HttpStatus PRECONDITION_REQUIRED = newConstant(428, "Precondition Required");
 
     /**
-     * 429 Too Many Requests (RFC6585)
+     * 429 Too Many Requests (RFC6585).
      */
     public static final HttpStatus TOO_MANY_REQUESTS = newConstant(429, "Too Many Requests");
 
     /**
-     * 431 Request Header Fields Too Large (RFC6585)
+     * 431 Request Header Fields Too Large (RFC6585).
      */
     public static final HttpStatus REQUEST_HEADER_FIELDS_TOO_LARGE =
             newConstant(431, "Request Header Fields Too Large");
 
     /**
-     * 500 Internal Server Error
+     * 500 Internal Server Error.
      */
     public static final HttpStatus INTERNAL_SERVER_ERROR = newConstant(500, "Internal Server Error");
 
     /**
-     * 501 Not Implemented
+     * 501 Not Implemented.
      */
     public static final HttpStatus NOT_IMPLEMENTED = newConstant(501, "Not Implemented");
 
     /**
-     * 502 Bad Gateway
+     * 502 Bad Gateway.
      */
     public static final HttpStatus BAD_GATEWAY = newConstant(502, "Bad Gateway");
 
     /**
-     * 503 Service Unavailable
+     * 503 Service Unavailable.
      */
     public static final HttpStatus SERVICE_UNAVAILABLE = newConstant(503, "Service Unavailable");
 
     /**
-     * 504 Gateway Timeout
+     * 504 Gateway Timeout.
      */
     public static final HttpStatus GATEWAY_TIMEOUT = newConstant(504, "Gateway Timeout");
 
     /**
-     * 505 HTTP Version Not Supported
+     * 505 HTTP Version Not Supported.
      */
     public static final HttpStatus HTTP_VERSION_NOT_SUPPORTED =
             newConstant(505, "HTTP Version Not Supported");
 
     /**
-     * 506 Variant Also Negotiates (RFC2295)
+     * 506 Variant Also Negotiates (RFC2295).
      */
     public static final HttpStatus VARIANT_ALSO_NEGOTIATES = newConstant(506, "Variant Also Negotiates");
 
     /**
-     * 507 Insufficient Storage (WebDAV, RFC4918)
+     * 507 Insufficient Storage (WebDAV, RFC4918).
      */
     public static final HttpStatus INSUFFICIENT_STORAGE = newConstant(507, "Insufficient Storage");
 
     /**
-     * 510 Not Extended (RFC2774)
+     * 510 Not Extended (RFC2774).
      */
     public static final HttpStatus NOT_EXTENDED = newConstant(510, "Not Extended");
 
     /**
-     * 511 Network Authentication Required (RFC6585)
+     * 511 Network Authentication Required (RFC6585).
      */
     public static final HttpStatus NETWORK_AUTHENTICATION_REQUIRED =
             newConstant(511, "Network Authentication Required");
@@ -360,7 +360,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
             throw new NullPointerException("reasonPhrase");
         }
 
-        for (int i = 0; i < reasonPhrase.length(); i ++) {
+        for (int i = 0; i < reasonPhrase.length(); i++) {
             char c = reasonPhrase.charAt(i);
             // Check prohibited characters.
             switch (c) {
@@ -405,7 +405,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     }
 
     /**
-     * Returns the class of this {@link HttpStatus}
+     * Returns the class of this {@link HttpStatus}.
      */
     public HttpStatusClass codeClass() {
         return codeClass;

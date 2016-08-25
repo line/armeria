@@ -28,7 +28,7 @@ import java.util.Objects;
 import org.apache.thrift.meta_data.EnumMetaData;
 import org.apache.thrift.protocol.TType;
 
-class EnumInfo extends TypeInfo implements ClassInfo {
+final class EnumInfo extends TypeInfo implements ClassInfo {
 
     static EnumInfo of(EnumMetaData enumMetaData) {
         return of(enumMetaData, Collections.emptyMap());
@@ -48,7 +48,9 @@ class EnumInfo extends TypeInfo implements ClassInfo {
             if (field.isEnumConstant()) {
                 try {
                     constants.add(field.get(null));
-                } catch (IllegalAccessException ignored) {}
+                } catch (IllegalAccessException ignored) {
+                    // Skip inaccessible fields.
+                }
             }
         }
 
@@ -98,9 +100,18 @@ class EnumInfo extends TypeInfo implements ClassInfo {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-        if (!super.equals(o)) { return false; }
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        if (!super.equals(o)) {
+            return false;
+        }
+
         EnumInfo enumInfo = (EnumInfo) o;
         return Objects.equals(name, enumInfo.name) &&
                Objects.equals(constants, enumInfo.constants);

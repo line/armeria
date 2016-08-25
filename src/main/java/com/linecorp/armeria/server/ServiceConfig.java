@@ -35,7 +35,9 @@ public final class ServiceConfig {
             Pattern.compile("^\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*" +
                             "(?:\\.\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)*$");
 
-    /** Initialized later by {@link VirtualHost} via {@link #build(VirtualHost)}. */
+    /**
+     * Initialized later by {@link VirtualHost} via {@link #build(VirtualHost)}.
+     */
     private VirtualHost virtualHost;
 
     private final PathMapping pathMapping;

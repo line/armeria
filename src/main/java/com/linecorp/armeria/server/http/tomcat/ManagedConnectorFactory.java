@@ -66,7 +66,8 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
         }
 
         final Connector connector = new Connector(protocolType.getName());
-        connector.setPort(0); // We do not really open a port - just trying to stop the Connector from complaining.
+        // We do not really open a port - just trying to stop the Connector from complaining.
+        connector.setPort(0);
 
         final StandardServer server = newServer(hostname, connector, config);
 
@@ -132,7 +133,8 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
         // Create a new context and add it to the host.
         final Context ctx;
         try {
-            ctx = (Context) Class.forName(host.getContextClass(), true, getClass().getClassLoader()).newInstance();
+            ctx = (Context) Class.forName(host.getContextClass(), true,getClass().getClassLoader())
+                                 .newInstance();
         } catch (Exception e) {
             throw new TomcatServiceException("failed to create a new context: " + config, e);
         }

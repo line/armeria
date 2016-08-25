@@ -39,8 +39,8 @@ import com.linecorp.armeria.common.http.HttpResponse;
 /**
  * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
  * <a href="http://zipkin.io/">Zipkin</a>.
- * <p>
- * This decorator puts trace data into HTTP headers. The specifications of header names and its values
+ *
+ * <p>This decorator puts trace data into HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  */
 public class HttpTracingClient extends AbstractTracingClient<HttpRequest, HttpResponse> {

@@ -47,17 +47,17 @@ public enum SerializationFormat {
     UNKNOWN("unknown", create("application", "x-unknown")),
 
     /**
-     * Thrift TBinary serialization format
+     * Thrift TBinary serialization format.
      */
     THRIFT_BINARY("tbinary", create("application", "x-thrift").withParameter("protocol", "TBINARY")),
 
     /**
-     * Thrift TCompact serialization format
+     * Thrift TCompact serialization format.
      */
     THRIFT_COMPACT("tcompact", create("application", "x-thrift").withParameter("protocol", "TCOMPACT")),
 
     /**
-     * Thrift TJSON serialization format
+     * Thrift TJSON serialization format.
      */
     THRIFT_JSON("tjson", create("application", "x-thrift").withParameter("protocol", "TJSON")),
 

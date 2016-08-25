@@ -58,16 +58,22 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
 
-    /** Whether the current channel is active or not **/
+    /**
+     * Whether the current channel is active or not.
+     */
     private volatile boolean active;
 
-    /** The current negotiated {@link SessionProtocol} */
+    /**
+     * The current negotiated {@link SessionProtocol}.
+     */
     private SessionProtocol protocol;
 
     private HttpResponseDecoder responseDecoder;
     private HttpObjectEncoder requestEncoder;
 
-    /** The number of requests sent. Disconnects when it reaches at {@link #MAX_NUM_REQUESTS_SENT}. */
+    /**
+     * The number of requests sent. Disconnects when it reaches at {@link #MAX_NUM_REQUESTS_SENT}.
+     */
     private int numRequestsSent;
 
     /**

@@ -35,7 +35,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.thrift.THttpService;
 
-class Specification {
+final class Specification {
 
     static Specification forServiceConfigs(Iterable<ServiceConfig> serviceConfigs,
                                            Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,

@@ -92,12 +92,13 @@ public final class HttpFileServiceBuilder {
 
     /**
      * Whether pre-compressed files should be served. {@link HttpFileService} supports serving files
-     * compressed with gzip, with the extension ".gz", and brotli, with the extension ".br". The extension
-     * should be appended to the original file. For example, to serve index.js either raw, gzip-compressed, or
-     * brotli-compressed, there should be three files, index.js, index.js.gz, and index.js.br.
-     * <p>
-     * Some tools for precompressing resources during a build process include gulp-zopfli and gulp-brotli,
-     * which by default create files with the correct extension.
+     * compressed with gzip, with the extension {@code ".gz"}, and brotli, with the extension {@code ".br"}.
+     * The extension should be appended to the original file. For example, to serve {@code index.js} either
+     * raw, gzip-compressed, or brotli-compressed, there should be three files, {@code index.js},
+     * {@code index.js.gz}, and {@code index.js.br}.
+     *
+     * <p>Some tools for precompressing resources during a build process include {@code gulp-zopfli} and
+     * {@code gulp-brotli}, which by default create files with the correct extension.
      */
     public HttpFileServiceBuilder serveCompressedFiles(boolean serveCompressedFiles) {
         this.serveCompressedFiles = serveCompressedFiles;

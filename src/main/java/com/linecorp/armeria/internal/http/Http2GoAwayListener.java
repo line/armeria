@@ -23,13 +23,12 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionAdapter;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
 
 /**
- * A {@link Http2Connection.Listener} that logs the received GOAWAY frames and makes sure disconnection.
+ * A {@link Http2ConnectionAdapter} that logs the received GOAWAY frames and makes sure disconnection.
  */
 public class Http2GoAwayListener extends Http2ConnectionAdapter {
 

@@ -20,6 +20,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
@@ -58,7 +59,7 @@ class StructContext extends PairContext {
     private final Map<String, Class<?>> classMap;
 
     /**
-     * Build the name -> TField map
+     * Build the name -> TField map.
      */
     StructContext(JsonNode json) {
         this(json, getCurrentThriftMessageClass());
@@ -90,15 +91,15 @@ class StructContext extends PairContext {
      * i I parse a line "count : 7", I need to know we are in a
      * StatsThriftMessage, or similar, to know that count should be
      * of type int32, and have a thrift id 1.
-     * <p>
-     * In order to figure this out, I assume that this method was
+     *
+     * <p>In order to figure this out, I assume that this method was
      * called (indirectly) by the read() method in a class T which
      * is a TBase subclass. It is called that way by thrift generated
      * code. So, I iterate backwards up the call stack, stopping
      * at the first method call which belongs to a TBase object.
      * I return the Class for that object.
-     * <p>
-     * One could argue this is someone fragile and error prone.
+     *
+     * <p>One could argue this is someone fragile and error prone.
      * The alternative is to modify the thrift compiler to generate
      * code which passes class information into this (and other)
      * TProtocol objects, and that seems like a lot more work. Given
@@ -107,8 +108,8 @@ class StructContext extends PairContext {
      * subclass, which has the knowledge of what fields exist, as well as
      * their types & relationships, will have to be the caller of
      * the TProtocol methods.
-     * <p>
-     * Note: this approach does not handle TUnion, because TUnion has its own implementation of
+     *
+     * <p>Note: this approach does not handle TUnion, because TUnion has its own implementation of
      * read/write and any TUnion thrift structure does not override its read and write method.
      * Thus this algorithm fail to get current specific TUnion thrift structure by reading the stack.
      * To fix this, we can track call stack of nested thrift objects on our own by overriding
@@ -118,11 +119,11 @@ class StructContext extends PairContext {
         StackTraceElement[] frames =
                 Thread.currentThread().getStackTrace();
 
-        for (int i = 0; i < frames.length; ++i) {
-            String className = frames[i].getClassName();
+        for (StackTraceElement f : frames) {
+            String className = f.getClassName();
 
             try {
-                Class clazz = Class.forName(className);
+                Class<?> clazz = Class.forName(className);
 
                 // Note, we need to check
                 // if the class is abstract, because abstract class does not have metaDataMap
@@ -142,21 +143,21 @@ class StructContext extends PairContext {
         throw new RuntimeException("Must call (indirectly) from a TBase/TApplicationException object.");
     }
 
-    private static boolean isTBase(Class clazz) {
+    private static boolean isTBase(Class<?> clazz) {
         return TBase.class.isAssignableFrom(clazz);
     }
 
-    private static boolean isTApplicationException(Class clazz) {
+    private static boolean isTApplicationException(Class<?> clazz) {
         return TApplicationException.class.isAssignableFrom(clazz);
     }
 
-    private static boolean isAbstract(Class clazz) {
+    private static boolean isAbstract(Class<?> clazz) {
         return Modifier.isAbstract(clazz.getModifiers());
     }
 
-    private static boolean hasNoArgConstructor(Class clazz) {
-        Constructor[] allConstructors = clazz.getConstructors();
-        for (Constructor ctor : allConstructors) {
+    private static boolean hasNoArgConstructor(Class<?> clazz) {
+        Constructor<?>[] allConstructors = clazz.getConstructors();
+        for (Constructor<?> ctor : allConstructors) {
             Class<?>[] pType = ctor.getParameterTypes();
             if (pType.length == 0) {
                 return true;
@@ -175,18 +176,19 @@ class StructContext extends PairContext {
 
         if (isTBase(clazz)) {
             // Get the metaDataMap for this Thrift class
+            @SuppressWarnings("unchecked")
             Map<? extends TFieldIdEnum, FieldMetaData> metaDataMap =
-                    FieldMetaData.getStructMetaDataMap((Class<? extends TBase>) clazz);
+                    FieldMetaData.getStructMetaDataMap((Class<? extends TBase<?, ?>>) clazz);
 
-            for (TFieldIdEnum key : metaDataMap.keySet()) {
-                final String fieldName = key.getFieldName();
-                final FieldMetaData metaData = metaDataMap.get(key);
+            for (Entry<? extends TFieldIdEnum, FieldMetaData> e : metaDataMap.entrySet()) {
+                final String fieldName = e.getKey().getFieldName();
+                final FieldMetaData metaData = e.getValue();
 
                 final FieldValueMetaData elementMetaData;
                 if (metaData.valueMetaData.isContainer()) {
                     if (metaData.valueMetaData instanceof SetMetaData) {
                         elementMetaData = ((SetMetaData) metaData.valueMetaData).elemMetaData;
-                    } else if (metaData.valueMetaData instanceof ListMetaData){
+                    } else if (metaData.valueMetaData instanceof ListMetaData) {
                         elementMetaData = ((ListMetaData) metaData.valueMetaData).elemMetaData;
                     } else if (metaData.valueMetaData instanceof MapMetaData) {
                         elementMetaData = ((MapMetaData) metaData.valueMetaData).valueMetaData;
@@ -210,13 +212,13 @@ class StructContext extends PairContext {
                 // The thrift generated parsing code requires that, when expecting
                 // a value of enum, we actually parse a value of type int32. The
                 // generated read() method then looks up the enum value in a map.
-                byte type = (TType.ENUM == metaData.valueMetaData.type)
-                            ? TType.I32 : metaData.valueMetaData.type;
+                byte type = TType.ENUM == metaData.valueMetaData.type ? TType.I32
+                                                                      : metaData.valueMetaData.type;
 
                 map.put(fieldName,
                         new TField(fieldName,
                                    type,
-                                   key.getThriftFieldId()));
+                                   e.getKey().getThriftFieldId()));
             }
         } else { // TApplicationException
             map.put("message", new TField("message", (byte)11, (short)1));

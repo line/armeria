@@ -38,9 +38,6 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
      * A {@link Client} decorator that tracks request stats using the Dropwizard metrics library.
      * To use, simply prepare a {@link MetricRegistry} and add this decorator to a client.
      *
-     * @param metricRegistry the {@link MetricRegistry} to store metrics into.
-     * @param metricNamePrefix the prefix of the names of the metrics created by the returned decorator.
-     *
      * <p>Example:
      * <pre>{@code
      * MetricRegistry metricRegistry = new MetricRegistry();
@@ -50,8 +47,12 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
      *         .build(MyService.Iface.class);
      * }
      * </pre>
+     *
      * <p>It is generally recommended to define your own name for the service instead of using something like
      * the Java class to make sure otherwise safe changes like renames don't break metrics.
+     *
+     * @param metricRegistry the {@link MetricRegistry} to store metrics into.
+     * @param metricNamePrefix the prefix of the names of the metrics created by the returned decorator.
      */
     public static <I extends Request, O extends Response>
     Function<Client<? super I, ? extends O>, DropwizardMetricCollectingClient<I, O>> newDecorator(
