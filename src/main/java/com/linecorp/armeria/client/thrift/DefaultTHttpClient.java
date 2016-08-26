@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -41,8 +43,15 @@ final class DefaultTHttpClient extends UserClient<THttpClient, ThriftCall, Thrif
 
     @Override
     public ThriftReply execute(String path, Class<?> serviceType, String method, Object... args) {
+        return executeMultiplexed(path, serviceType, "", method, args);
+    }
+
+    @Override
+    public ThriftReply executeMultiplexed(
+            String path, Class<?> serviceType, String serviceName, String method, Object... args) {
+        requireNonNull(serviceName, "serviceName");
         final ThriftCall call = new ThriftCall(nextSeqId.getAndIncrement(), serviceType, method, args);
-        return execute(call.method(), path, call, cause -> new ThriftReply(call.seqId(), cause));
+        return execute(call.method(), path, serviceName, call, cause -> new ThriftReply(call.seqId(), cause));
     }
 
     @Override

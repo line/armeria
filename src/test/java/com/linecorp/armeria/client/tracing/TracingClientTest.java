@@ -106,7 +106,7 @@ public class TracingClientTest {
         final ThriftReply res = new ThriftReply(0, "Hello, Armeria!");
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
-                "POST", "/", ClientOptions.DEFAULT, req);
+                "POST", "/", "", ClientOptions.DEFAULT, req);
 
         ctx.requestLogBuilder().start(mock(Channel.class), SessionProtocol.H2C, "localhost", "POST", "/");
         ctx.requestLogBuilder().end();

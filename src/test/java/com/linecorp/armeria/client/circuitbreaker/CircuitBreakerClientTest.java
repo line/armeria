@@ -60,13 +60,13 @@ public class CircuitBreakerClientTest {
     private static final ClientRequestContext ctx = new DefaultClientRequestContext(
             new DefaultEventLoop(), SessionProtocol.H2C,
             Endpoint.of("dummyhost", 8080),
-            "POST", "/", ClientOptions.DEFAULT,
+            "POST", "/", "", ClientOptions.DEFAULT,
             new ThriftCall(0, HelloService.Iface.class, "methodA", "a", "b"));
 
     private static final ClientRequestContext ctxB = new DefaultClientRequestContext(
             new DefaultEventLoop(), SessionProtocol.H2C,
             Endpoint.of("dummyhost", 8080),
-            "POST", "/", ClientOptions.DEFAULT,
+            "POST", "/", "", ClientOptions.DEFAULT,
             new ThriftCall(0, HelloService.Iface.class, "methodB", "c", "d"));
 
     private static final ThriftCall req = ctx.request();

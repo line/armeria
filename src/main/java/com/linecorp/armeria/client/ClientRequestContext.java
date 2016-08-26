@@ -52,6 +52,14 @@ public interface ClientRequestContext extends RequestContext {
     ClientOptions options();
 
     /**
+     * Returns the fragment part of the URI of the current {@link Request}, as defined in
+     * <a href="https://tools.ietf.org/html/rfc3986#section-3.5">the section 3.5 of RFC3986</a>.
+     *
+     * @return the fragment part of the request URI, or an empty string if no fragment was specified
+     */
+    String fragment();
+
+    /**
      * Returns the amount of time allowed until sending out the current {@link Request} completely.
      * This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
      */

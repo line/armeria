@@ -107,15 +107,16 @@ public abstract class UserClient<T, I extends Request, O extends Response> imple
      * Executes the specified {@link Request} via {@link #delegate()}.
      *
      * @param method the method of the {@link Request}
-     * @param path the path of the {@link Request}
+     * @param path the path of the {@link Request} URI
+     * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
      * @param fallback the fallback response {@link Function} to use when
      *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      *                 an exception instead of returning an error response
      */
     protected final O execute(
-            String method, String path, I req, Function<Throwable, O> fallback) {
-        return execute(eventLoop(), method, path, req, fallback);
+            String method, String path, String fragment, I req, Function<Throwable, O> fallback) {
+        return execute(eventLoop(), method, path,  fragment, req, fallback);
     }
 
     /**
@@ -123,17 +124,18 @@ public abstract class UserClient<T, I extends Request, O extends Response> imple
      *
      * @param eventLoop the {@link EventLoop} to execute the {@link Request}
      * @param method the method of the {@link Request}
-     * @param path the path of the {@link Request}
+     * @param path the path part of the {@link Request} URI
+     * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
      * @param fallback the fallback response {@link Function} to use when
-     *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
-     *                 an exception instead of returning an error response
+ *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      */
     protected final O execute(
-            EventLoop eventLoop, String method, String path, I req, Function<Throwable, O> fallback) {
+            EventLoop eventLoop, String method, String path, String fragment, I req,
+            Function<Throwable, O> fallback) {
 
         final ClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop, sessionProtocol, endpoint, method, path, options, req);
+                eventLoop, sessionProtocol, endpoint, method, path, fragment, options, req);
         try (PushHandle ignored = RequestContext.push(ctx)) {
             return delegate().execute(ctx, req);
         } catch (Throwable cause) {

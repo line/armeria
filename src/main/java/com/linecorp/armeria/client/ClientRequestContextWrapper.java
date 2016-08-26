@@ -40,6 +40,11 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public String fragment() {
+        return delegate().fragment();
+    }
+
+    @Override
     public ClientOptions options() {
         return delegate().options();
     }
