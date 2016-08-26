@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 
+import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
@@ -119,6 +120,7 @@ public final class ServerBuilder {
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
+    private CorsConfig corsConfig;
 
     private Function<Service<Request, Response>, Service<Request, Response>> decorator;
 
@@ -294,6 +296,16 @@ public final class ServerBuilder {
      */
     public ServerBuilder serviceLoggerPrefix(String serviceLoggerPrefix) {
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
+        return this;
+    }
+
+    /**
+     * Sets a Cross-Origin Resource Sharing configuration
+     * @param corsConfig the Cross-Origin Resource Sharing configuration
+     * @return this server builder
+     */
+    public ServerBuilder cors(CorsConfig corsConfig) {
+        this.corsConfig = corsConfig;
         return this;
     }
 
@@ -484,7 +496,8 @@ public final class ServerBuilder {
                 ports, defaultVirtualHost, virtualHosts, numWorkers, maxPendingRequests, maxConnections,
                 idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix));
+                blockingTaskExecutor, serviceLoggerPrefix,
+                corsConfig));
     }
 
     @Override
@@ -494,6 +507,7 @@ public final class ServerBuilder {
                 numWorkers, maxPendingRequests, maxConnections, idleTimeoutMillis,
                 defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix);
+                blockingTaskExecutor, serviceLoggerPrefix,
+                corsConfig);
     }
 }

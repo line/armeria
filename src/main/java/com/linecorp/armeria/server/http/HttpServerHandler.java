@@ -22,10 +22,13 @@ import static java.util.Objects.requireNonNull;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import io.netty.util.AsciiString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,6 +93,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             Pattern.compile("(?:[:<>|?*\\\\]|/\\.\\.|\\.\\.$|\\.\\./)");
 
     private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
+
+    private static final String ANY_ORIGIN = "*";
+    private static final String NULL_ORIGIN = "null";
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -218,6 +224,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             handledLastRequest = true;
         }
 
+        // check if CORS preflight must be returned, or if
+        // we need to forbid access because origin could not be validated
+        if (config.corsConfig() != null && config.corsConfig().isCorsSupportEnabled()) {
+            if (isPreflightRequest(req)) {
+                handleCorsPreflight(ctx, req);
+                return;
+            }
+            if (config.corsConfig().isShortCircuit() && !validateOrigin(req)) {
+                forbidden(ctx, req);
+                return;
+            }
+        }
+
         final HttpHeaders headers = req.headers();
         if (!ALLOWED_METHODS.contains(headers.method())) {
             respond(ctx, req, HttpStatus.METHOD_NOT_ALLOWED);
@@ -303,7 +322,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             });
         })).exceptionally(CompletionActions::log);
 
-        res.subscribe(new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req), eventLoop);
+        res.subscribe(new HttpResponseSubscriber(this, ctx, responseEncoder, reqCtx, req), eventLoop);
     }
 
     private void handleOptions(ChannelHandlerContext ctx, DecodedHttpRequest req) {
@@ -492,4 +511,166 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             ctx.close();
         }
     }
+
+    /**
+     * Emit CORS headers if origin was found.
+     * @param req the HTTP request with the CORS info
+     * @param headers the headers to modify
+     */
+    void handleCorsResponseHeaders(final HttpRequest req, HttpHeaders headers) {
+        if (config.corsConfig() != null && setOrigin(req, headers)) {
+            setAllowCredentials(headers);
+            setAllowHeaders(headers);
+            setExposeHeaders(headers);
+        }
+    }
+
+    /**
+     * Check for a CORS preflight request.
+     * @param request the HTTP request with CORS info
+     * @return true if HTTP request is a CORS preflight request
+     */
+    private boolean isPreflightRequest(final HttpRequest request) {
+        return request.method() == HttpMethod.OPTIONS &&
+                request.headers().contains(HttpHeaderNames.ORIGIN) &&
+                request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    }
+
+    /**
+     * Handle CORS preflight by setting the appropriate headers
+     * @param ctx the ChannelHandlerContext used for the response
+     * @param req the decoded HTTP request
+     */
+    private void handleCorsPreflight(final ChannelHandlerContext ctx, final DecodedHttpRequest req) {
+        HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+        if (setOrigin(req, headers)) {
+            setAllowMethods(headers);
+            setAllowHeaders(headers);
+            setAllowCredentials(headers);
+            setMaxAge(headers);
+            setPreflightHeaders(headers);
+        }
+        AggregatedHttpMessage res = AggregatedHttpMessage.of(headers);
+        respond(ctx, req, res);
+    }
+
+    /**
+     * This is a non CORS specification feature which enables the setting of preflight
+     * response headers that might be required by intermediaries.
+     *
+     * @param headers the Httpheaders to which the preflight headers should be added.
+     */
+    private void setPreflightHeaders(final HttpHeaders headers) {
+        for (Map.Entry<String,String> entry : config.corsConfig().preflightResponseHeaders()) {
+            headers.add(AsciiString.of(entry.getKey()), entry.getValue());
+        }
+    }
+
+    /**
+     * Return a "forbidden" response.
+     * @param ctx the ChannelHandlerContext used for the response
+     * @param request the decoded HTTP request
+     */
+    private void forbidden(final ChannelHandlerContext ctx, final DecodedHttpRequest request) {
+        respond(ctx, request, AggregatedHttpMessage.of(HttpHeaders.of(HttpStatus.FORBIDDEN)));
+    }
+
+    /**
+     * Validate if origin matches the CORS requirements.
+     * @param request the HTTP request to check
+     * @return true if origin matches
+     */
+    private boolean validateOrigin(final HttpRequest request) {
+        if (config.corsConfig().isAnyOriginSupported()) {
+            return true;
+        }
+        final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        return origin == null
+                || ("null".equals(origin) && config.corsConfig().isNullOriginAllowed())
+                || config.corsConfig().origins().contains(origin.toLowerCase());
+    }
+
+    /**
+     * Set origin header according to the given CORS configuration and HTTP request.
+     * @param request the HTTP reqeust
+     * @param headers the HTTP headers to modify
+     * @return true if CORS configuration matches, otherwise false
+     */
+    private boolean setOrigin(final HttpRequest request, final HttpHeaders headers) {
+        if (config.corsConfig() == null) {
+            return false;
+        }
+        final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        if (origin != null) {
+            if (NULL_ORIGIN.equals(origin) && config.corsConfig().isNullOriginAllowed()) {
+                setNullOrigin(headers);
+                return true;
+            }
+            if (config.corsConfig().isAnyOriginSupported()) {
+                if (config.corsConfig().isCredentialsAllowed()) {
+                    echoRequestOrigin(request, headers);
+                    setVaryHeader(headers);
+                } else {
+                    setAnyOrigin(headers);
+                }
+                return true;
+            }
+            if (config.corsConfig().origins().contains(origin.toLowerCase())) {
+                setOrigin(headers, origin);
+                setVaryHeader(headers);
+                return true;
+            }
+            logger.debug("Request origin [{}]] was not among the configured origins [{1}]",
+                    origin, config.corsConfig().origins());
+        }
+        return false;
+    }
+
+    private static void echoRequestOrigin(final HttpRequest request, final HttpHeaders headers) {
+        setOrigin(headers, request.headers().get(HttpHeaderNames.ORIGIN));
+    }
+
+    private static void setVaryHeader(final HttpHeaders headers) {
+        headers.set(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN.toString());
+    }
+
+    private static void setAnyOrigin(final HttpHeaders headers) {
+        setOrigin(headers, ANY_ORIGIN);
+    }
+
+    private static void setNullOrigin(final HttpHeaders headers) {
+        setOrigin(headers, NULL_ORIGIN);
+    }
+
+    private static void setOrigin(final HttpHeaders headers, final String origin) {
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+    }
+
+    private void setAllowCredentials(final HttpHeaders headers) {
+        if (config.corsConfig().isCredentialsAllowed()
+                && !headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN).equals(ANY_ORIGIN)) {
+            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        }
+    }
+
+    private void setExposeHeaders(final HttpHeaders headers) {
+        if (!config.corsConfig().exposedHeaders().isEmpty()) {
+            headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, config.corsConfig().exposedHeaders());
+        }
+    }
+
+    private void setAllowMethods(final HttpHeaders headers) {
+        List<String> methods = config.corsConfig().allowedRequestMethods()
+                .stream().map(io.netty.handler.codec.http.HttpMethod::name).collect(Collectors.toList());
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, methods);
+    }
+
+    private void setAllowHeaders(final HttpHeaders headers) {
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, config.corsConfig().allowedRequestHeaders());
+    }
+
+    private void setMaxAge(final HttpHeaders headers) {
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, Long.toString(config.corsConfig().maxAge()));
+    }
+
 }
