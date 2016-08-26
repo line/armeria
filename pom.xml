@@ -112,6 +112,9 @@
     <thrift.source.test>${project.basedir}/src/test/thrift</thrift.source.test>
     <thrift.generated.main>${project.build.directory}/generated-sources</thrift.generated.main>
     <thrift.generated.test>${project.build.directory}/generated-test-sources</thrift.generated.test>
+
+    <!-- Release -->
+    <release.localCheckout>true</release.localCheckout>
   </properties>
 
   <dependencies>
@@ -847,6 +850,17 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <!-- Disable local checkout on Windows because it doesn't work. -->
+        <release.localCheckout>false</release.localCheckout>
+      </properties>
     </profile>
   </profiles>
 </project>
