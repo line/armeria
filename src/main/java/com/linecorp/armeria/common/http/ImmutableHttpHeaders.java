@@ -95,6 +95,11 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
+    public boolean isEndOfStream() {
+        return delegate.isEndOfStream();
+    }
+
+    @Override
     public String get(AsciiString name) {
         return delegate.get(name);
     }

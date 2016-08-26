@@ -48,6 +48,8 @@ public final class DefaultHttpHeaders
         }
     };
 
+    private final boolean endOfStream;
+
     private HttpMethod method;
     private HttpStatus status;
 
@@ -74,9 +76,21 @@ public final class DefaultHttpHeaders
      * @param initialCapacity the initial capacity of the internal data structure
      */
     public DefaultHttpHeaders(boolean validate, int initialCapacity) {
+        this(validate, initialCapacity, false);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param validate whether to validate the header names and values
+     * @param initialCapacity the initial capacity of the internal data structure
+     * @param endOfStream whether the stream should be closed after writing these headers
+     */
+    public DefaultHttpHeaders(boolean validate, int initialCapacity, boolean endOfStream) {
         super(ArmeriaHttpUtil.HTTP2_HEADER_NAME_HASHER,
               StringValueConverter.INSTANCE,
               validate ? HTTP2_NAME_VALIDATOR : NameValidator.NOT_NULL, initialCapacity);
+        this.endOfStream = endOfStream;
     }
 
     @Override
@@ -172,6 +186,11 @@ public final class DefaultHttpHeaders
     public HttpHeaders status(HttpStatus status) {
         requireNonNull(status, "status");
         return status(status.code());
+    }
+
+    @Override
+    public boolean isEndOfStream() {
+        return endOfStream;
     }
 
     @Override
