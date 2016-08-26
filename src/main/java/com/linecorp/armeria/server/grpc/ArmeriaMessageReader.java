@@ -33,7 +33,7 @@ import io.grpc.internal.ReadableBuffers;
  * A {@link Subscriber} to read request data and pass it to a GRPC {@link TransportState}
  * for processing. GRPC code will then handle deframing, decompressing, etc.
  */
-public class ArmeriaMessageReader implements Subscriber<HttpObject> {
+class ArmeriaMessageReader implements Subscriber<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaMessageReader.class);
 
@@ -41,7 +41,7 @@ public class ArmeriaMessageReader implements Subscriber<HttpObject> {
 
     private Subscription subscription;
 
-    public ArmeriaMessageReader(TransportState transportState) {
+    ArmeriaMessageReader(TransportState transportState) {
         this.transportState = transportState;
     }
 
