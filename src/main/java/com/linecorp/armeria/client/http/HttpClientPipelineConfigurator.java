@@ -441,7 +441,8 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 assert upgradeEvt == UPGRADE_REJECTED;
                 onUpgradeResponse(
                         ctx, false,
-                        "close".equals(((FullHttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION)));
+                        "close".equalsIgnoreCase(
+                                ((FullHttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION)));
                 return;
             }
 
