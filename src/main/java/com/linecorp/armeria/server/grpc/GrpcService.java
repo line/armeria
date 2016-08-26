@@ -50,7 +50,7 @@ import io.netty.util.AsciiString;
 /**
  * A {@link AbstractHttpService} that implements the GRPC wire protocol.
  */
-final class GrpcService extends AbstractHttpService {
+public final class GrpcService extends AbstractHttpService {
 
     private static final Metadata EMPTY_METADATA = new Metadata();
 
