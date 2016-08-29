@@ -131,13 +131,28 @@ public final class VirtualHostBuilder {
         this(LOCAL_HOSTNAME, "*");
     }
     
+    /**
+     * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
+     * 
+     * @param serverBuilder parent {@link ServerBuilder} for return
+     */
     public VirtualHostBuilder(ServerBuilder serverBuilder) {
         this(LOCAL_HOSTNAME, "*");
+        
+        requireNonNull(serverBuilder, "serverBuilder");
         this.serverBuilder = serverBuilder;
     }
     
+    /**
+     * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
+     * 
+     * @param hostnamePattern virtual host name regular expression
+     * @param serverBuilder parent {@link ServerBuilder} for return
+     */
     public VirtualHostBuilder(String hostnamePattern, ServerBuilder serverBuilder) {
         this(hostnamePattern);
+        
+        requireNonNull(serverBuilder, "serverBuilder");
         this.serverBuilder = serverBuilder;
     }
 

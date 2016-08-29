@@ -57,7 +57,20 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * // Build a server.
  * Server s = sb.build();
  * }</pre>
- *
+ * 
+ * <h2>Example 2</h2>
+ * <pre>{@code
+ * ServerBuilder sb = new ServerBuilder();
+ * Server server =
+ *      sb.port(8080, SessionProtocol.HTTP) // Add a port to listen
+ *      .withDefaultVirtualHost() // Add services to the default virtual host.
+ *          .serviceAt(...)
+ *          .serviceUnder(...)
+ *      .and().withVirtualHost("*.foo.com") // Add a virtual host.
+ *          .serviceAt(...)
+ *          .serviceUnder(...)
+ *      .and().build(); // Build
+ * }</pre>
  * @see VirtualHostBuilder
  */
 public final class ServerBuilder {
@@ -426,6 +439,32 @@ public final class ServerBuilder {
         return this;
     }
 
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
+     * specified by {@link VirtualHost}.
+     * 
+     * @return {@link VirtualHostBuilder} for build the default virtual host
+     */
+    public VirtualHostBuilder withDefaultVirtualHost() {
+        defaultVirtualHostBuilderUpdated();
+        return defaultVirtualHostBuilder;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
+     * specified by {@link VirtualHost}.
+     * 
+     * @param hostnamePattern virtual host name regular expression
+     * @return {@link VirtualHostBuilder} for build the virtual host
+     */
+    public VirtualHostBuilder withVirtualHost(String hostnamePattern) {
+        VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(hostnamePattern, this);
+        virtualHostBuilders.add(virtualHostBuilder);
+        
+        return virtualHostBuilder;
+    }
+
     /**
      * Decorates all {@link Service}s with the specified {@code decorator}.
      *
@@ -498,17 +537,5 @@ public final class ServerBuilder {
                 defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix);
-    }
-
-    public VirtualHostBuilder withDefaultHost() {
-        defaultVirtualHostBuilderUpdated();
-        return defaultVirtualHostBuilder;
-    }
-
-    public VirtualHostBuilder withVirtualHost(String hostnamePattern) {
-        VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(hostnamePattern, this);
-        virtualHostBuilders.add(virtualHostBuilder);
-        
-        return virtualHostBuilder;
     }
 }
