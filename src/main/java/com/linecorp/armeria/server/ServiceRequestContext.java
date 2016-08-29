@@ -20,6 +20,9 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
+
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
@@ -79,6 +82,12 @@ public interface ServiceRequestContext extends RequestContext {
      * }</pre>
      */
     Logger logger();
+
+    /**
+     * The {@link SSLSession} for this request if the connection is made over TLS, or null otherwise.
+     */
+    @Nullable
+    SSLSession sslSession();
 
     /**
      * Returns the amount of time allowed until receiving the current {@link Request} completely.

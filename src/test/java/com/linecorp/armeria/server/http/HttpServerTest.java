@@ -24,6 +24,8 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
@@ -304,6 +306,18 @@ public class HttpServerTest extends AbstractServerTest {
             }
         }.decorate(HttpEncodingService.class));
 
+        sb.serviceAt("/sslsession", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                if (ctx.sessionProtocol().isTls()) {
+                    assertNotNull(ctx.sslSession());
+                } else {
+                    assertNull(ctx.sslSession());
+                }
+                res.respond(HttpStatus.OK);
+            }
+        }.decorate(HttpEncodingService.class));
+
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
                 s -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
                     @Override
@@ -551,6 +565,15 @@ public class HttpServerTest extends AbstractServerTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is(nullValue()));
         assertThat(res.headers().get(HttpHeaderNames.VARY), is(nullValue()));
         assertThat(res.content().toStringUtf8(), is("Armeria is awesome!"));
+    }
+
+    @Test(timeout = 10000)
+    public void testSslSession() throws Exception {
+        final CompletableFuture<AggregatedHttpMessage> f = client().get("/sslsession").aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
     }
 
     private void runStreamingRequestTest(String path) throws InterruptedException, ExecutionException {
