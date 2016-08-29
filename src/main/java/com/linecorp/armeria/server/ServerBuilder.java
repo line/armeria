@@ -104,7 +104,8 @@ public final class ServerBuilder {
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<VirtualHost> virtualHosts = new ArrayList<>();
-    private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder();
+    private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
+    private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this);
     private boolean updatedDefaultVirtualHostBuilder;
 
     private VirtualHost defaultVirtualHost;
@@ -471,6 +472,8 @@ public final class ServerBuilder {
             defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
         }
 
+        virtualHostBuilders.forEach(vhb -> this.virtualHosts.add(vhb.build()));
+
         final List<VirtualHost> virtualHosts;
         if (decorator != null) {
             virtualHosts = this.virtualHosts.stream()
@@ -495,5 +498,17 @@ public final class ServerBuilder {
                 defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix);
+    }
+
+    public VirtualHostBuilder withDefaultHost() {
+        defaultVirtualHostBuilderUpdated();
+        return defaultVirtualHostBuilder;
+    }
+
+    public VirtualHostBuilder withVirtualHost(String hostnamePattern) {
+        VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(hostnamePattern, this);
+        virtualHostBuilders.add(virtualHostBuilder);
+        
+        return virtualHostBuilder;
     }
 }

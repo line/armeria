@@ -67,7 +67,9 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 public final class VirtualHostBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(VirtualHostBuilder.class);
-
+    
+    private ServerBuilder serverBuilder;
+    
     private static final ApplicationProtocolConfig HTTPS_ALPN_CFG = new ApplicationProtocolConfig(
             Protocol.ALPN,
             // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -127,6 +129,16 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder() {
         this(LOCAL_HOSTNAME, "*");
+    }
+    
+    public VirtualHostBuilder(ServerBuilder serverBuilder) {
+        this(LOCAL_HOSTNAME, "*");
+        this.serverBuilder = serverBuilder;
+    }
+    
+    public VirtualHostBuilder(String hostnamePattern, ServerBuilder serverBuilder) {
+        this(hostnamePattern);
+        this.serverBuilder = serverBuilder;
     }
 
     /**
@@ -271,5 +283,9 @@ public final class VirtualHostBuilder {
     @Override
     public String toString() {
         return VirtualHost.toString(getClass(), defaultHostname, hostnamePattern, sslContext, services);
+    }
+
+    public ServerBuilder and() {
+        return serverBuilder;
     }
 }
