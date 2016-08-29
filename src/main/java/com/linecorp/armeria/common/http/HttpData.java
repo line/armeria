@@ -27,14 +27,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 
 /**
- * HTTP/2 data.
+ * HTTP/2 data. Helpers in this class create {@link HttpData} objects that leave the stream open.
+ * To create a {@link HttpData} that closes the stream, directly instantiate {@link DefaultHttpData}.
  */
 public interface HttpData extends HttpObject {
 
     /**
      * Empty HTTP/2 data.
      */
-    HttpData EMPTY_DATA = DefaultHttpData.EMPTY_DATA;
+    HttpData EMPTY_DATA = new DefaultHttpData(new byte[0], 0, 0, false);
 
     /**
      * Creates a new instance from the specified byte array. The array is not copied; any changes made in the
@@ -48,7 +49,7 @@ public interface HttpData extends HttpObject {
             return EMPTY_DATA;
         }
 
-        return new DefaultHttpData(data, 0, data.length);
+        return new DefaultHttpData(data, 0, data.length, false);
     }
 
     /**
@@ -69,7 +70,7 @@ public interface HttpData extends HttpObject {
             return EMPTY_DATA;
         }
 
-        return new DefaultHttpData(data, offset, length);
+        return new DefaultHttpData(data, offset, length, false);
     }
 
     /**
