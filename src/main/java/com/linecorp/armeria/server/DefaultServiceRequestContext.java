@@ -24,6 +24,9 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
+
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.NonWrappingRequestContext;
@@ -48,6 +51,7 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
     private final ServiceConfig cfg;
     private final String mappedPath;
     private final Logger logger;
+    private final SSLSession sslSession;
 
     private final DefaultRequestLog requestLog;
     private final DefaultResponseLog responseLog;
@@ -64,10 +68,12 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param logger the {@link Logger} for the invocation
      * @param request the request associated with this context
+     * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
-            String method, String path, String mappedPath, Logger logger, Object request) {
+            String method, String path, String mappedPath, Logger logger, Object request,
+            @Nullable SSLSession sslSession) {
 
         super(sessionProtocol, method, path, request);
 
@@ -75,6 +81,7 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
         this.cfg = cfg;
         this.mappedPath = mappedPath;
         this.logger = new RequestContextAwareLogger(this, logger);
+        this.sslSession = sslSession;
 
         requestLog = new DefaultRequestLog();
         requestLog.start(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method, path);
@@ -130,6 +137,12 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
     @Override
     public Logger logger() {
         return logger;
+    }
+
+    @Nullable
+    @Override
+    public SSLSession sslSession() {
+        return sslSession;
     }
 
     @Override

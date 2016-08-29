@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.net.ssl.SSLSession;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +74,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.ssl.SslHandler;
 
 final class HttpServerHandler extends ChannelInboundHandlerAdapter implements HttpServer {
 
@@ -264,7 +267,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceCfg, channel,
                 protocol,
                 req.method().name(), path, mappedPath,
-                LoggerFactory.getLogger(serviceCfg.loggerName()), req);
+                LoggerFactory.getLogger(serviceCfg.loggerName()), req, getSSLSession(channel));
 
         final RequestLogBuilder reqLogBuilder = reqCtx.requestLogBuilder();
         final HttpResponse res;
@@ -472,6 +475,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().length());
+    }
+
+    private SSLSession getSSLSession(Channel channel) {
+        SslHandler sslHandler = channel.pipeline().get(SslHandler.class);
+        return sslHandler != null ? sslHandler.engine().getSession() : null;
     }
 
     @Override
