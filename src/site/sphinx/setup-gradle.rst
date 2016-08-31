@@ -45,7 +45,7 @@ You might want to use the following  ``build.gradle`` as a starting point if you
         from configurations.javaAgent
         into "$buildDir/javaAgents"
         rename { String fileName ->
-            fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+\\.[^\\.]+\\.jar", ".jar")
+            fileName.replaceFirst("-[0-9]+\\\\.[0-9]+\\\\.[0-9]+(?:\\\\.[^\\\\.]+)?\\\\.jar", ".jar")
         }
     }
 
