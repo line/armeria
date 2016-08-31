@@ -26,7 +26,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
+import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
@@ -48,7 +48,8 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
     public ThriftOverHttp1Test() {
         try {
             SSLContext sslCtx =
-                    SSLContextBuilder.create().loadTrustMaterial(TrustSelfSignedStrategy.INSTANCE).build();
+                    SSLContextBuilder.create().loadTrustMaterial(
+                            (TrustStrategy) (chain, authType) -> true).build();
 
             httpClient = HttpClientBuilder.create().setSSLContext(sslCtx).build();
         } catch (Exception e) {
