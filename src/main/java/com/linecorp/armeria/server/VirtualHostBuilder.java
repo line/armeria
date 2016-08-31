@@ -130,7 +130,7 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder() {
         this(LOCAL_HOSTNAME, "*");
     }
-    
+
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
      * 
@@ -142,7 +142,7 @@ public final class VirtualHostBuilder {
         requireNonNull(serverBuilder, "serverBuilder");
         this.serverBuilder = serverBuilder;
     }
-    
+
     /**
      * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
      * 
@@ -300,7 +300,16 @@ public final class VirtualHostBuilder {
         return VirtualHost.toString(getClass(), defaultHostname, hostnamePattern, sslContext, services);
     }
 
+    /**
+     * return parent serverBuiler
+     * 
+     * @return serverBuiler
+     */
     public ServerBuilder and() {
+        if (serverBuilder == null) {
+            throw new IllegalStateException("Only you can call and() only created through ServerBuilder.with*VirtualHost () in the ServerBuilder.");
+        }
+        
         return serverBuilder;
     }
 }
