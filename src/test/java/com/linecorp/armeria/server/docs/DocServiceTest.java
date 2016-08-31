@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.docs;
 import static com.linecorp.armeria.common.SerializationFormat.THRIFT_BINARY;
 import static com.linecorp.armeria.common.SerializationFormat.THRIFT_COMPACT;
 import static com.linecorp.armeria.common.SerializationFormat.THRIFT_TEXT;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -63,7 +64,7 @@ public class DocServiceTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) {
-        final THttpService helloService = THttpService.of(HELLO_SERVICE_HANDLER);
+        final THttpService helloService = THttpService.of(ImmutableMap.of("hello", HELLO_SERVICE_HANDLER));
         final THttpService fooService = THttpService.ofFormats(mock(FooService.AsyncIface.class),
                                                                THRIFT_COMPACT);
         final THttpService cassandraService = THttpService.ofFormats(mock(Cassandra.AsyncIface.class),
@@ -72,7 +73,7 @@ public class DocServiceTest extends AbstractServerTest {
                 THttpService.ofFormats(mock(Cassandra.AsyncIface.class), THRIFT_TEXT);
         final THttpService hbaseService = THttpService.of(mock(Hbase.AsyncIface.class));
 
-        sb.serviceAt("/hello", helloService);
+        sb.serviceAt("/", helloService);
         sb.serviceAt("/foo", fooService);
         sb.serviceAt("/cassandra", cassandraService);
         sb.serviceAt("/cassandra/debug", cassandraServiceDebug);
@@ -87,14 +88,14 @@ public class DocServiceTest extends AbstractServerTest {
     public void testOk() throws Exception {
         final Map<Class<?>, Iterable<EndpointInfo>> serviceMap = new LinkedHashMap<>();
         serviceMap.put(HelloService.class, Collections.singletonList(
-                EndpointInfo.of("*", "/hello", THRIFT_BINARY, SerializationFormat.ofThrift())));
+                EndpointInfo.of("*", "/", "hello", THRIFT_BINARY, SerializationFormat.ofThrift())));
         serviceMap.put(FooService.class, Collections.singletonList(
-                EndpointInfo.of("*", "/foo", THRIFT_COMPACT, EnumSet.of(THRIFT_COMPACT))));
+                EndpointInfo.of("*", "/foo", "", THRIFT_COMPACT, EnumSet.of(THRIFT_COMPACT))));
         serviceMap.put(Cassandra.class, Arrays.asList(
-                EndpointInfo.of("*", "/cassandra", THRIFT_BINARY, EnumSet.of(THRIFT_BINARY)),
-                EndpointInfo.of("*", "/cassandra/debug", THRIFT_TEXT, EnumSet.of(THRIFT_TEXT))));
+                EndpointInfo.of("*", "/cassandra", "", THRIFT_BINARY, EnumSet.of(THRIFT_BINARY)),
+                EndpointInfo.of("*", "/cassandra/debug", "", THRIFT_TEXT, EnumSet.of(THRIFT_TEXT))));
         serviceMap.put(Hbase.class, Collections.singletonList(
-                EndpointInfo.of("*", "/hbase", THRIFT_BINARY, SerializationFormat.ofThrift())));
+                EndpointInfo.of("*", "/hbase", "", THRIFT_BINARY, SerializationFormat.ofThrift())));
 
         final String expected = new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(
                 Specification.forServiceClasses(serviceMap,
@@ -107,7 +108,7 @@ public class DocServiceTest extends AbstractServerTest {
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 String responseJson = EntityUtils.toString(res.getEntity());
-                assertThat(responseJson, is(expected));
+                assertThatJson(responseJson).isEqualTo(expected);
             }
         }
     }

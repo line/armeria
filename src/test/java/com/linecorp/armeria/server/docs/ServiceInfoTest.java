@@ -41,9 +41,9 @@ public class ServiceInfoTest {
         final ServiceInfo service =
                 ServiceInfo.of(FooService.class,
                                Arrays.asList(
-                                       EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_BINARY,
+                                       EndpointInfo.of("*", "/foo", "a", SerializationFormat.THRIFT_BINARY,
                                                        EnumSet.of(SerializationFormat.THRIFT_BINARY)),
-                                       EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
+                                       EndpointInfo.of("*", "/debug/foo", "b", SerializationFormat.THRIFT_TEXT,
                                                        EnumSet.of(SerializationFormat.THRIFT_TEXT))),
                                ImmutableMap.of(bar3_args.class, new bar3_args().setIntVal(10)),
                                ImmutableMap.of("foobar", "barbaz"));
@@ -51,9 +51,9 @@ public class ServiceInfoTest {
         assertThat(service.endpoints()).hasSize(2);
         // Should be sorted alphabetically
         assertThat(service.endpoints()).containsExactlyInAnyOrder(
-                EndpointInfo.of("*", "/debug/foo", SerializationFormat.THRIFT_TEXT,
+                EndpointInfo.of("*", "/debug/foo", "b", SerializationFormat.THRIFT_TEXT,
                                 EnumSet.of(SerializationFormat.THRIFT_TEXT)),
-                EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_BINARY,
+                EndpointInfo.of("*", "/foo", "a", SerializationFormat.THRIFT_BINARY,
                                 EnumSet.of(SerializationFormat.THRIFT_BINARY)));
 
         final Map<String, FunctionInfo> functions = service.functions();
