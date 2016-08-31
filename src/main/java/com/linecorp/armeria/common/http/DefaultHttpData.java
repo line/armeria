@@ -18,18 +18,21 @@ package com.linecorp.armeria.common.http;
 
 import com.google.common.base.MoreObjects;
 
-final class DefaultHttpData implements HttpData {
-
-    static final HttpData EMPTY_DATA = new DefaultHttpData(new byte[0], 0, 0);
+public final class DefaultHttpData implements HttpData {
 
     private final byte[] data;
     private final int offset;
     private final int length;
+    private final boolean endOfStream;
 
-    DefaultHttpData(byte[] data, int offset, int length) {
+    /**
+     * Creates a new instance.
+     */
+    public DefaultHttpData(byte[] data, int offset, int length, boolean endOfStream) {
         this.data = data;
         this.offset = offset;
         this.length = length;
+        this.endOfStream = endOfStream;
     }
 
     @Override
@@ -89,5 +92,10 @@ final class DefaultHttpData implements HttpData {
                           .add("offset", offset)
                           .add("length", length)
                           .add("array", data.toString()).toString();
+    }
+
+    @Override
+    public boolean isEndOfStream() {
+        return endOfStream;
     }
 }

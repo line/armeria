@@ -154,7 +154,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                     "published an HttpObject that's neither Http2Headers nor Http2Data: " + o);
         }
 
-        boolean endOfStream = false;
+        boolean endOfStream = o.isEndOfStream();
         switch (state) {
             case NEEDS_DATA_OR_TRAILING_HEADERS: {
                 if (o instanceof HttpHeaders) {
@@ -162,6 +162,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                     if (trailingHeaders.status() != null) {
                         throw newIllegalStateException("published a trailing HttpHeaders with status: " + o);
                     }
+                    // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
                 }
                 break;
