@@ -123,7 +123,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
                     " (service: " + service + ')');
         }
 
-        boolean endOfStream = false;
+        boolean endOfStream = o.isEndOfStream();
         switch (state) {
             case NEEDS_HEADERS: {
                 logBuilder.start();
@@ -149,13 +149,17 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
                 logBuilder.statusCode(statusCode);
                 logBuilder.attr(ResponseLog.HTTP_HEADERS).set(headers);
 
-                if (req.method() == HttpMethod.HEAD || headers.isEndOfStream()) {
+                if (req.method() == HttpMethod.HEAD) {
+                    // HEAD responses always close the stream with the initial headers, even if not explicitly
+                    // set.
                     endOfStream = true;
                     break;
                 }
 
                 switch (statusCode) {
                     case 204: case 205: case 304:
+                        // These responses are not allowed to have content so we always close the stream even if
+                        // not explicitly set.
                         endOfStream = true;
                         break;
                     default:
@@ -172,6 +176,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
                                 " (service: " + service + ')');
                     }
 
+                    // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
                 }
                 break;

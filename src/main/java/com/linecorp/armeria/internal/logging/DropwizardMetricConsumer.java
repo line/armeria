@@ -27,6 +27,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.logging.LogCollectingClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
@@ -102,6 +103,11 @@ public final class DropwizardMetricConsumer implements MessageLogConsumer {
     private static String method(RequestLog log) {
         if (log.hasAttr(RequestLog.RPC_REQUEST)) {
             return log.attr(RequestLog.RPC_REQUEST).get().method();
+        }
+
+        if (log.hasAttr(RequestLog.HTTP_HEADERS)) {
+            HttpHeaders headers = log.attr(RequestLog.HTTP_HEADERS).get();
+            return headers.path() + '#' + headers.method();
         }
 
         return MoreObjects.firstNonNull(log.method(), "__unknown__");
