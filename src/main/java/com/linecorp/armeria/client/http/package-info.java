@@ -15,6 +15,6 @@
  */
 
 /**
- * Simple HTTP client.
+ * HTTP client.
  */
 package com.linecorp.armeria.client.http;

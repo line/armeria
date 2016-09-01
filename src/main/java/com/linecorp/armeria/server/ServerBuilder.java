@@ -525,7 +525,7 @@ public final class ServerBuilder {
             defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
         }
 
-        virtualHostBuilders.forEach(vhb -> this.virtualHosts.add(vhb.build()));
+        virtualHostBuilders.forEach(vhb -> virtualHosts.add(vhb.build()));
 
         final List<VirtualHost> virtualHosts;
         if (decorator != null) {

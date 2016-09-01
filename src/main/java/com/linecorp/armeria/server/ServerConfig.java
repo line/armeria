@@ -92,7 +92,6 @@ public final class ServerConfig {
         validateGreaterThanOrEqual(gracefulShutdownTimeout, "gracefulShutdownTimeout",
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
-
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (blockingTaskExecutor instanceof ExecutorService) {
             this.blockingTaskExecutor = new InterminableExecutorService((ExecutorService) blockingTaskExecutor);

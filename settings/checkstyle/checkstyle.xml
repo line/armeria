@@ -20,6 +20,8 @@
     <property name="eachLine" value="true"/>
   </module>
 
+  <module name="JavadocPackage"/>
+
   <module name="TreeWalker">
     <module name="SuppressWarningsHolder"/>
 
