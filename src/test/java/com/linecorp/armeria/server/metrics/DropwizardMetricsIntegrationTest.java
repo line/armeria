@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.metrics;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -81,12 +82,14 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
         assertEquals(210, metricRegistry.getMeters()
                                       .get("client.HelloService.hello.requestBytes")
                                       .getCount());
-        assertEquals(368, metricRegistry.getMeters()
-                                      .get("server.HelloService.hello.responseBytes")
-                                      .getCount());
-        assertEquals(368, metricRegistry.getMeters()
-                                      .get("client.HelloService.hello.responseBytes")
-                                      .getCount());
+
+        // Can't assert with exact byte count because the failure responses contain stack traces.
+        assertThat(metricRegistry.getMeters()
+                                 .get("server.HelloService.hello.responseBytes")
+                                 .getCount()).isGreaterThan(0);
+        assertThat(metricRegistry.getMeters()
+                                 .get("client.HelloService.hello.responseBytes")
+                                 .getCount()).isGreaterThan(0);
     }
 
     private void makeRequest(String name) {

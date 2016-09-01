@@ -91,3 +91,8 @@ service FooService {
 service HeaderService {
     string header(1: string name)
 }
+
+// Tests a binary parameter
+service BinaryService {
+    binary process(1: binary data)
+}

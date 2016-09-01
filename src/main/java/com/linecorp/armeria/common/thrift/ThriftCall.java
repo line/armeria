@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AbstractRpcRequest;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 
 /**
  * A Thrift {@link RpcRequest}.
@@ -70,7 +71,8 @@ public final class ThriftCall extends AbstractRpcRequest {
         final TBase<TBase<?, ?>, TFieldIdEnum> castThriftArgs = (TBase<TBase<?, ?>, TFieldIdEnum>) thriftArgs;
         return Collections.unmodifiableList(
                 FieldMetaData.getStructMetaDataMap(castThriftArgs.getClass()).keySet().stream()
-                             .map(castThriftArgs::getFieldValue).collect(Collectors.toList()));
+                             .map(field -> ThriftFieldAccess.get(castThriftArgs, field))
+                             .collect(Collectors.toList()));
     }
 
     private ThriftCall(int seqId, Class<?> serviceType, String method, List<Object> args) {

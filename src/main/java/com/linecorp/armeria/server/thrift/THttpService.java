@@ -483,7 +483,12 @@ public class THttpService extends AbstractHttpService {
                 func.setSuccess(wrappedResult, result);
                 respond(serializationFormat, seqId, func, wrappedResult, res);
             } catch (Throwable t) {
-                respond(serializationFormat, seqId, func, t, res);
+                final TBase<TBase<?, ?>, TFieldIdEnum> exceptionResult = func.newResult();
+                if (func.setException(exceptionResult, t)) {
+                    respond(serializationFormat, seqId, func, exceptionResult, res);
+                } else {
+                    respond(serializationFormat, seqId, func, t, res);
+                }
             }
         })).exceptionally(CompletionActions::log);
     }
@@ -511,12 +516,7 @@ public class THttpService extends AbstractHttpService {
     private static void respond(SerializationFormat serializationFormat, int seqId,
                                 ThriftFunction func, Throwable cause, HttpResponseWriter res) {
 
-        final TBase<TBase<?, ?>, TFieldIdEnum> result = func.newResult();
-        if (func.setException(result, cause)) {
-            respond(serializationFormat, seqId, func, result, res);
-        } else {
-            respond(serializationFormat, seqId, func.name(), cause, res);
-        }
+        respond(serializationFormat, seqId, func.name(), cause, res);
     }
 
     private static void respond(SerializationFormat serializationFormat, int seqId,
@@ -557,8 +557,12 @@ public class THttpService extends AbstractHttpService {
         if (cause instanceof TApplicationException) {
             appException = (TApplicationException) cause;
         } else {
-            appException = new TApplicationException(TApplicationException.INTERNAL_ERROR,
-                                                     cause.toString());
+            appException = new TApplicationException(
+                    TApplicationException.INTERNAL_ERROR,
+                    "internal server error:" + System.lineSeparator() +
+                    "---- BEGIN server-side trace ----" + System.lineSeparator() +
+                    Throwables.getStackTraceAsString(cause) +
+                    "---- END server-side trace ----");
         }
 
         final TMemoryBuffer buf = new TMemoryBuffer(128);

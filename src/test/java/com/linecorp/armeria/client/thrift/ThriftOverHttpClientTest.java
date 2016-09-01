@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isOneOf;
@@ -24,6 +25,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -72,6 +74,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
+import com.linecorp.armeria.service.test.thrift.main.BinaryService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.FileService;
 import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
@@ -113,6 +116,14 @@ public class ThriftOverHttpClientTest {
         assertTrue(serverReceivedNames.add(value));
     };
 
+    private static final BinaryService.Iface binaryHandler = data -> {
+        ByteBuffer result = ByteBuffer.allocate(data.remaining());
+        for (int i = data.position(), j = 0; i < data.limit(); i++, j++) {
+            result.put(j, (byte) (data.get(i) + 1));
+        }
+        return result;
+    };
+
     private static final TimeService.AsyncIface timeServiceHandler =
             resultHandler -> resultHandler.onComplete(System.currentTimeMillis());
 
@@ -129,6 +140,7 @@ public class ThriftOverHttpClientTest {
         HELLO(helloHandler, HelloService.Iface.class, HelloService.AsyncIface.class),
         ONEWAYHELLO(onewayHelloHandler, OnewayHelloService.Iface.class, OnewayHelloService.AsyncIface.class),
         DEVNULL(devNullHandler, DevNullService.Iface.class, DevNullService.AsyncIface.class),
+        BINARY(binaryHandler, BinaryService.Iface.class, BinaryService.AsyncIface.class),
         TIME(timeServiceHandler, TimeService.Iface.class, TimeService.AsyncIface.class),
         FILE(fileServiceHandler, FileService.Iface.class, FileService.AsyncIface.class),
         HEADER(headerServiceHandler, HeaderService.Iface.class, HeaderService.AsyncIface.class);
@@ -383,6 +395,20 @@ public class ThriftOverHttpClientTest {
         for (String ignored : names) {
             assertThat(serverReceivedNames.take(), isOneOf(names));
         }
+    }
+
+    @Test(timeout = 10000)
+    public void testBinaryServiceSync() throws Exception {
+        BinaryService.Iface client = Clients.newClient(clientFactory(),
+                                                       getURI(Handlers.BINARY), Handlers.BINARY.iface(),
+                                                       clientOptions);
+
+        ByteBuffer result = client.process(ByteBuffer.wrap(new byte[] { 1, 2 }));
+        List<Byte> out = new ArrayList<>();
+        for (int i = result.position(); i < result.limit(); i++) {
+            out.add(result.get(i));
+        }
+        assertThat(out, hasItems((byte) 2, (byte) 3));
     }
 
     @Test(timeout = 10000)
