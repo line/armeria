@@ -150,6 +150,14 @@ public class HttpFileServiceTest {
     }
 
     @Test
+    public void testUnknownMediaType() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal();
+             CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.unknown")))) {
+            assert200Ok(res, null, "Unknown Media Type\n");
+        }
+    }
+
+    @Test
     public void testGetPreCompressedSupportsNone() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
@@ -281,8 +289,13 @@ public class HttpFileServiceTest {
         // Ensure the content and its type are correct.
         assertThat(EntityUtils.toString(res.getEntity()), is(expectedContent));
 
-        assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE), is(true));
-        assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue(), startsWith(expectedContentType));
+        if (expectedContentType != null) {
+            assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE), is(true));
+            assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue(),
+                       startsWith(expectedContentType));
+        } else {
+            assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE), is(false));
+        }
 
         return lastModified;
     }
