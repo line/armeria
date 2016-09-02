@@ -56,14 +56,32 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
      * Creates a new instance with the default {@link SessionOptions}.
      */
     public HttpClientFactory() {
-        this(SessionOptions.DEFAULT);
+        this(false);
+    }
+
+    /**
+     * Creates a new instance with the default {@link SessionOptions}.
+     *
+     * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
+     */
+    public HttpClientFactory(boolean useDaemonThreads) {
+        this(SessionOptions.DEFAULT, useDaemonThreads);
     }
 
     /**
      * Creates a new instance with the specified {@link SessionOptions}.
      */
     public HttpClientFactory(SessionOptions options) {
-        super(options);
+        this(options, false);
+    }
+
+    /**
+     * Creates a new instance with the specified {@link SessionOptions}.
+     *
+     * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
+     */
+    public HttpClientFactory(SessionOptions options, boolean useDaemonThreads) {
+        super(options, useDaemonThreads);
         delegate = new HttpClientDelegate(this);
     }
 

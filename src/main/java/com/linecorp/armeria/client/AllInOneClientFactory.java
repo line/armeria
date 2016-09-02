@@ -59,16 +59,34 @@ public class AllInOneClientFactory extends AbstractClientFactory {
      * Creates a new instance with the default {@link SessionOptions}.
      */
     public AllInOneClientFactory() {
-        this(SessionOptions.DEFAULT);
+        this(false);
+    }
+
+    /**
+     * Creates a new instance with the default {@link SessionOptions}.
+     *
+     * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
+     */
+    public AllInOneClientFactory(boolean useDaemonThreads) {
+        this(SessionOptions.DEFAULT, useDaemonThreads);
     }
 
     /**
      * Creates a new instance with the specified {@link SessionOptions}.
      */
     public AllInOneClientFactory(SessionOptions options) {
+        this(options, false);
+    }
+
+    /**
+     * Creates a new instance with the specified {@link SessionOptions}.
+     *
+     * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
+     */
+    public AllInOneClientFactory(SessionOptions options, boolean useDaemonThreads) {
         // TODO(trustin): Allow specifying different options for different session protocols.
         //                We have only one session protocol at the moment, so this is OK so far.
-        final HttpClientFactory httpClientFactory = new HttpClientFactory(options);
+        final HttpClientFactory httpClientFactory = new HttpClientFactory(options, useDaemonThreads);
         final THttpClientFactory thriftClientFactory = new THttpClientFactory(httpClientFactory);
 
         final ImmutableMap.Builder<Scheme, ClientFactory> builder = ImmutableMap.builder();
