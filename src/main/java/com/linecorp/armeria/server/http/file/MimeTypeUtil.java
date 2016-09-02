@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.common.net.MediaType;
 
 final class MimeTypeUtil {
@@ -77,6 +79,7 @@ final class MimeTypeUtil {
         }
     }
 
+    @Nullable
     static MediaType guessFromPath(String path, boolean preCompressed) {
         requireNonNull(path, "path");
         // If the path is for a precompressed file, it will have an additional extension indicating the
