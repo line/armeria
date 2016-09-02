@@ -146,6 +146,7 @@ public interface HttpVfs {
     abstract class AbstractEntry implements Entry {
 
         private final String path;
+        @Nullable
         private final MediaType mediaType;
         @Nullable
         private final String contentEncoding;
@@ -167,6 +168,7 @@ public interface HttpVfs {
         }
 
         @Override
+        @Nullable
         public MediaType mediaType() {
             return mediaType;
         }
