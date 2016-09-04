@@ -50,7 +50,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * // Add a port to listen
  * sb.port(8080, SessionProtocol.HTTP);
  * // Build and add a virtual host.
- * sb.virtualHost(new VirtualHost("*.foo.com").serviceAt(...).build());
+ * sb.virtualHost(new VirtualHostBuilder("*.foo.com").serviceAt(...).build());
  * // Add services to the default virtual host.
  * sb.serviceAt(...);
  * sb.serviceUnder(...);
@@ -66,10 +66,10 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  *      .withDefaultVirtualHost() // Add services to the default virtual host.
  *          .serviceAt(...)
  *          .serviceUnder(...)
- *      .and().withVirtualHost("*.foo.com") // Add a virtual host.
+ *      .and().withVirtualHost("*.foo.com") // Add a another virtual host.
  *          .serviceAt(...)
  *          .serviceUnder(...)
- *      .and().build(); // Build
+ *      .and().build(); // Build a server.
  * }</pre>
  * @see VirtualHostBuilder
  */
@@ -117,8 +117,8 @@ public final class ServerBuilder {
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<VirtualHost> virtualHosts = new ArrayList<>();
-    private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
-    private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this);
+    private final List<ChainedVirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
+    private final ChainedVirtualHostBuilder defaultVirtualHostBuilder = new ChainedVirtualHostBuilder(this);
     private boolean updatedDefaultVirtualHostBuilder;
 
     private VirtualHost defaultVirtualHost;
@@ -446,7 +446,7 @@ public final class ServerBuilder {
      * 
      * @return {@link VirtualHostBuilder} for build the default virtual host
      */
-    public VirtualHostBuilder withDefaultVirtualHost() {
+    public ChainedVirtualHostBuilder withDefaultVirtualHost() {
         defaultVirtualHostBuilderUpdated();
         return defaultVirtualHostBuilder;
     }
@@ -458,10 +458,24 @@ public final class ServerBuilder {
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for build the virtual host
      */
-    public VirtualHostBuilder withVirtualHost(String hostnamePattern) {
-        VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(hostnamePattern, this);
+    public ChainedVirtualHostBuilder withVirtualHost(String hostnamePattern) {
+        ChainedVirtualHostBuilder virtualHostBuilder = new ChainedVirtualHostBuilder(hostnamePattern, this);
         virtualHostBuilders.add(virtualHostBuilder);
-        
+        return virtualHostBuilder;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
+     * specified by {@link VirtualHost}.
+     * 
+     * @param defaultHostname default hostname of this virtual host
+     * @param hostnamePattern virtual host name regular expression
+     * @return {@link VirtualHostBuilder} for build the virtual host
+     */
+    public ChainedVirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
+        ChainedVirtualHostBuilder virtualHostBuilder =
+                new ChainedVirtualHostBuilder(defaultHostname, hostnamePattern, this);
+        virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.util.function.Function;
 
@@ -28,49 +30,58 @@ import com.linecorp.armeria.common.SessionProtocol;
 import io.netty.handler.ssl.SslContext;
 
 /**
- * Builds a new {@link VirtualHost}.
- * <h2>Example</h2>
- * <pre>{@code
- * VirtualHostBuilder vhb = new VirtualHostBuilder("*.example.com");
- * vhb.serviceAt("/foo", new FooService())
- *    .serviceUnder("/bar/", new BarService())
- *    .service(PathMapping.ofRegex("^/baz/.*", new BazService());
- *
- * VirtualHost vh = vhb.build();
- * }</pre>
- *
+ * Build a new {@link VirtualHost}.
+ * This class can only be created through 
+ * the withDefaultVirtualHost() or withVirtualHost() method of the serverBuilder.
+ * call and() method can also return to ServerBuilder.
+ * 
+ * @see ServerBuilder
  * @see PathMapping
+ * @see VirtualHostBuilder
  */
-public class VirtualHostBuilder {
+public final class ChainedVirtualHostBuilder {
 
-    private InternalVirtualHostBuilder internalVirtualHostBuilder;
+    private final InternalVirtualHostBuilder internalVirtualHostBuilder;
+
+    private final ServerBuilder serverBuilder;
     
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
+     * 
+     * @param serverBuilder parent {@link ServerBuilder} for return
      */
-    public VirtualHostBuilder() {
+    ChainedVirtualHostBuilder(ServerBuilder serverBuilder) {
         internalVirtualHostBuilder =
                 new InternalVirtualHostBuilder(InternalVirtualHostBuilder.LOCAL_HOSTNAME, "*");
+        
+        requireNonNull(serverBuilder, "serverBuilder");
+        this.serverBuilder = serverBuilder;
     }
 
     /**
      * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
+     * 
+     * @param hostnamePattern virtual host name regular expression
+     * @param serverBuilder parent {@link ServerBuilder} for return
      */
-    public VirtualHostBuilder(String hostnamePattern) {
+    ChainedVirtualHostBuilder(String hostnamePattern, ServerBuilder serverBuilder) {
         internalVirtualHostBuilder = new InternalVirtualHostBuilder(hostnamePattern);
+        
+        requireNonNull(serverBuilder, "serverBuilder");
+        this.serverBuilder = serverBuilder;
     }
 
-    /**
-     * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
-     */
-    public VirtualHostBuilder(String defaultHostname, String hostnamePattern) {
+    ChainedVirtualHostBuilder(String defaultHostname, String hostnamePattern, ServerBuilder serverBuilder) {
         internalVirtualHostBuilder = new InternalVirtualHostBuilder(defaultHostname, hostnamePattern);
+        
+        requireNonNull(serverBuilder, "serverBuilder");
+        this.serverBuilder = serverBuilder;
     }
 
     /**
      * Sets the {@link SslContext} of this {@link VirtualHost}.
      */
-    public VirtualHostBuilder sslContext(SslContext sslContext) {
+    public ChainedVirtualHostBuilder sslContext(SslContext sslContext) {
         internalVirtualHostBuilder.sslContext(sslContext);
         return this;
     }
@@ -79,7 +90,7 @@ public class VirtualHostBuilder {
      * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
      * {@code keyCertChainFile} and cleartext {@code keyFile}.
      */
-    public VirtualHostBuilder sslContext(
+    public ChainedVirtualHostBuilder sslContext(
             SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
         return sslContext(protocol, keyCertChainFile, keyFile, null);
     }
@@ -88,7 +99,7 @@ public class VirtualHostBuilder {
      * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
      * {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
      */
-    public VirtualHostBuilder sslContext(
+    public ChainedVirtualHostBuilder sslContext(
             SessionProtocol protocol,
             File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
 
@@ -99,21 +110,21 @@ public class VirtualHostBuilder {
     /**
      * Binds the specified {@link Service} at the specified exact path.
      */
-    public VirtualHostBuilder serviceAt(String exactPath, Service<?, ?> service) {
+    public ChainedVirtualHostBuilder serviceAt(String exactPath, Service<?, ?> service) {
         return service(PathMapping.ofExact(exactPath), service);
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    public VirtualHostBuilder serviceUnder(String pathPrefix, Service<?, ?> service) {
+    public ChainedVirtualHostBuilder serviceUnder(String pathPrefix, Service<?, ?> service) {
         return service(PathMapping.ofPrefix(pathPrefix), service);
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    public VirtualHostBuilder service(PathMapping pathMapping, Service<?, ?> service) {
+    public ChainedVirtualHostBuilder service(PathMapping pathMapping, Service<?, ?> service) {
         internalVirtualHostBuilder.service(pathMapping, service);
         return this;
     }
@@ -125,7 +136,8 @@ public class VirtualHostBuilder {
      *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
      *                   such as a package name or a fully-qualified class name
      */
-    public VirtualHostBuilder service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
+    public ChainedVirtualHostBuilder service(PathMapping pathMapping, Service<?, ?> service,
+                                             String loggerName) {
         internalVirtualHostBuilder.service(pathMapping, service, loggerName);
         return this;
     }
@@ -139,17 +151,23 @@ public class VirtualHostBuilder {
      */
     public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
             R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
-    VirtualHostBuilder decorator(Function<T, R> decorator) {
+    ChainedVirtualHostBuilder decorator(Function<T, R> decorator) {
 
         internalVirtualHostBuilder.decorator(decorator);
         return this;
     }
 
-    /**
-     * Creates a new {@link VirtualHost}.
-     */
-    public VirtualHost build() {
+    VirtualHost build() {
         return internalVirtualHostBuilder.build();
+    }
+
+    /**
+     * Return parent serverBuilder.
+     * 
+     * @return serverBuiler
+     */
+    public ServerBuilder and() {
+        return serverBuilder;
     }
 
     @Override
