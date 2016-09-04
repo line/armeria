@@ -56,9 +56,10 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
  * @see ChainedVirtualHostBuilder
  * @see VirtualHostBuilder
  */
-public final class InternalVirtualHostBuilder {
+@SuppressWarnings("rawtypes")
+abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> {
 
-    private static final Logger logger = LoggerFactory.getLogger(InternalVirtualHostBuilder.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractVirtualHostBuilder.class);
     
     protected static final ApplicationProtocolConfig HTTPS_ALPN_CFG = new ApplicationProtocolConfig(
             Protocol.ALPN,
@@ -117,14 +118,14 @@ public final class InternalVirtualHostBuilder {
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
      */
-    InternalVirtualHostBuilder() {
+    AbstractVirtualHostBuilder() {
         this(LOCAL_HOSTNAME, "*");
     }
 
     /**
      * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
      */
-    InternalVirtualHostBuilder(String hostnamePattern) {
+    AbstractVirtualHostBuilder(String hostnamePattern) {
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
 
         if ("*".equals(hostnamePattern)) {
@@ -141,7 +142,7 @@ public final class InternalVirtualHostBuilder {
     /**
      * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
      */
-    InternalVirtualHostBuilder(String defaultHostname, String hostnamePattern) {
+    AbstractVirtualHostBuilder(String defaultHostname, String hostnamePattern) {
         requireNonNull(defaultHostname, "defaultHostname");
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
@@ -155,24 +156,29 @@ public final class InternalVirtualHostBuilder {
     /**
      * Sets the {@link SslContext} of this {@link VirtualHost}.
      */
-    void sslContext(SslContext sslContext) {
+    @SuppressWarnings("unchecked")
+    public B sslContext(SslContext sslContext) {
         this.sslContext = VirtualHost.validateSslContext(requireNonNull(sslContext, "sslContext"));
+        return (B) this;
     }
 
     /**
      * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
      * {@code keyCertChainFile} and cleartext {@code keyFile}.
      */
-    void sslContext(
+    @SuppressWarnings("unchecked")
+    public B sslContext(
             SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
         sslContext(protocol, keyCertChainFile, keyFile, null);
+        return (B) this;
     }
 
     /**
      * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
      * {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
      */
-    void sslContext(
+    @SuppressWarnings("unchecked")
+    public B sslContext(
             SessionProtocol protocol,
             File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
 
@@ -187,27 +193,34 @@ public final class InternalVirtualHostBuilder {
         builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
 
         sslContext(builder.build());
+        return (B) this;
     }
 
     /**
      * Binds the specified {@link Service} at the specified exact path.
      */
-    void serviceAt(String exactPath, Service<?, ?> service) {
+    @SuppressWarnings("unchecked")
+    public B serviceAt(String exactPath, Service<?, ?> service) {
         service(PathMapping.ofExact(exactPath), service);
+        return (B) this;
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    void serviceUnder(String pathPrefix, Service<?, ?> service) {
+    @SuppressWarnings("unchecked")
+    public B serviceUnder(String pathPrefix, Service<?, ?> service) {
         service(PathMapping.ofPrefix(pathPrefix), service);
+        return (B) this;
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    void service(PathMapping pathMapping, Service<?, ?> service) {
+    @SuppressWarnings("unchecked")
+    public B service(PathMapping pathMapping, Service<?, ?> service) {
         services.add(new ServiceConfig(pathMapping, service, null));
+        return (B) this;
     }
 
     /**
@@ -217,8 +230,10 @@ public final class InternalVirtualHostBuilder {
      *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
      *                   such as a package name or a fully-qualified class name
      */
-    void service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
+    @SuppressWarnings("unchecked")
+    public B service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
         services.add(new ServiceConfig(pathMapping, service, loggerName));
+        return (B) this;
     }
 
     /**
@@ -228,13 +243,13 @@ public final class InternalVirtualHostBuilder {
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
-    <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
-    R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
-    void decorator(Function<T, R> decorator) {
+    @SuppressWarnings("unchecked")
+    public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
+            R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
+    B decorator(Function<T, R> decorator) {
 
         requireNonNull(decorator, "decorator");
 
-        @SuppressWarnings("unchecked")
         final Function<Service<Request, Response>, Service<Request, Response>> castDecorator =
                 (Function<Service<Request, Response>, Service<Request, Response>>) decorator;
 
@@ -243,12 +258,14 @@ public final class InternalVirtualHostBuilder {
         } else {
             this.decorator = castDecorator;
         }
+        
+        return (B) this;
     }
 
     /**
      * Creates a new {@link VirtualHost}.
      */
-    VirtualHost build() {
+    VirtualHost doBuild() {
         final VirtualHost virtualHost = new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
