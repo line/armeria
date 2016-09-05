@@ -522,10 +522,10 @@ public final class ServerBuilder {
         if (this.defaultVirtualHost != null) {
             defaultVirtualHost = this.defaultVirtualHost.decorate(decorator);
         } else {
-            defaultVirtualHost = defaultVirtualHostBuilder.doBuild().decorate(decorator);
+            defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
         }
 
-        virtualHostBuilders.forEach(vhb -> this.virtualHosts.add(vhb.doBuild()));
+        virtualHostBuilders.forEach(vhb -> this.virtualHosts.add(vhb.build()));
 
         final List<VirtualHost> virtualHosts;
         if (decorator != null) {

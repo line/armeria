@@ -36,7 +36,7 @@ public class VirtualHostBuilder extends AbstractVirtualHostBuilder<VirtualHostBu
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
      */
     public VirtualHostBuilder() {
-        super(LOCAL_HOSTNAME, "*");
+        super();
     }
 
     /**
@@ -47,7 +47,8 @@ public class VirtualHostBuilder extends AbstractVirtualHostBuilder<VirtualHostBu
     }
 
     /**
-     * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
+     * Creates a new {@link VirtualHostBuilder} with
+     * the default host name and the specified hostname pattern.
      */
     public VirtualHostBuilder(String defaultHostname, String hostnamePattern) {
         super(defaultHostname, hostnamePattern);
@@ -57,6 +58,6 @@ public class VirtualHostBuilder extends AbstractVirtualHostBuilder<VirtualHostBu
      * Creates a new {@link VirtualHost}.
      */
     public VirtualHost build() {
-        return doBuild();
+        return build();
     }
 }

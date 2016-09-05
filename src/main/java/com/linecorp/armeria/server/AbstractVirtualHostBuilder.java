@@ -61,7 +61,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractVirtualHostBuilder.class);
     
-    protected static final ApplicationProtocolConfig HTTPS_ALPN_CFG = new ApplicationProtocolConfig(
+    private static final ApplicationProtocolConfig HTTPS_ALPN_CFG = new ApplicationProtocolConfig(
             Protocol.ALPN,
             // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
             SelectorFailureBehavior.NO_ADVERTISE,
@@ -70,7 +70,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
             ApplicationProtocolNames.HTTP_2,
             ApplicationProtocolNames.HTTP_1_1);
 
-    protected static final String LOCAL_HOSTNAME;
+    private static final String LOCAL_HOSTNAME;
 
     static {
         // Try the '/usr/bin/hostname' command first, which is more reliable.
@@ -140,7 +140,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
+     * Creates a new {@link VirtualHostBuilder} with
+     * the default host name and the specified hostname pattern.
      */
     AbstractVirtualHostBuilder(String defaultHostname, String hostnamePattern) {
         requireNonNull(defaultHostname, "defaultHostname");
@@ -156,28 +157,25 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     /**
      * Sets the {@link SslContext} of this {@link VirtualHost}.
      */
-    @SuppressWarnings("unchecked")
     public B sslContext(SslContext sslContext) {
         this.sslContext = VirtualHost.validateSslContext(requireNonNull(sslContext, "sslContext"));
-        return (B) this;
+        return self();
     }
 
     /**
      * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
      * {@code keyCertChainFile} and cleartext {@code keyFile}.
      */
-    @SuppressWarnings("unchecked")
     public B sslContext(
             SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
         sslContext(protocol, keyCertChainFile, keyFile, null);
-        return (B) this;
+        return self();
     }
 
     /**
      * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
      * {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
      */
-    @SuppressWarnings("unchecked")
     public B sslContext(
             SessionProtocol protocol,
             File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
@@ -193,34 +191,31 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
 
         sslContext(builder.build());
-        return (B) this;
+        return self();
     }
 
     /**
      * Binds the specified {@link Service} at the specified exact path.
      */
-    @SuppressWarnings("unchecked")
     public B serviceAt(String exactPath, Service<?, ?> service) {
         service(PathMapping.ofExact(exactPath), service);
-        return (B) this;
+        return self();
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    @SuppressWarnings("unchecked")
     public B serviceUnder(String pathPrefix, Service<?, ?> service) {
         service(PathMapping.ofPrefix(pathPrefix), service);
-        return (B) this;
+        return self();
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    @SuppressWarnings("unchecked")
     public B service(PathMapping pathMapping, Service<?, ?> service) {
         services.add(new ServiceConfig(pathMapping, service, null));
-        return (B) this;
+        return self();
     }
 
     /**
@@ -230,10 +225,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
      *                   such as a package name or a fully-qualified class name
      */
-    @SuppressWarnings("unchecked")
     public B service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
         services.add(new ServiceConfig(pathMapping, service, loggerName));
-        return (B) this;
+        return self();
     }
 
     /**
@@ -258,14 +252,19 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
         } else {
             this.decorator = castDecorator;
         }
-        
+
+        return self();
+    }
+
+    @SuppressWarnings("unchecked")
+    final B self() {
         return (B) this;
     }
 
     /**
      * Creates a new {@link VirtualHost}.
      */
-    VirtualHost doBuild() {
+    protected VirtualHost build() {
         final VirtualHost virtualHost = new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }

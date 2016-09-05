@@ -16,10 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
@@ -30,154 +27,146 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.http.HttpService;
 
 public class ChainedVirtualHostBuilderTest {
-    
+
     @Test
     public void defaultVirtualHost() {
         final ServerBuilder sb = new ServerBuilder();
         final ChainedVirtualHostBuilder chainedVirtualHostBuilder = sb.withDefaultVirtualHost();
-        assertNotNull(chainedVirtualHostBuilder);
-        assertThat(chainedVirtualHostBuilder, is(sb.withDefaultVirtualHost()));
-        
-        final Server server = sb.withDefaultVirtualHost()
-                .serviceAt("/test", new TempService())
-                .and().build();
-        assertNotNull(server);
-        
+        assertThat(chainedVirtualHostBuilder).isNotNull();
+        assertThat(chainedVirtualHostBuilder).isEqualTo(sb.withDefaultVirtualHost());
+
+        final Server server = sb.withDefaultVirtualHost().serviceAt("/test", new TempService())
+        .and().build();
+        assertThat(server).isNotNull();
+
         final VirtualHost virtualHost = server.config().defaultVirtualHost();
-        assertNotNull(virtualHost);
-        assertThat(virtualHost.hostnamePattern(), is("*"));
-        assertThat(virtualHost.defaultHostname(), is(not("*")));
+        assertThat(virtualHost).isNotNull();
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
+        assertThat(virtualHost.defaultHostname()).isNotEqualTo("*");
     }
-    
+
     @Test
     public void defaultVirtualHostWithImplicitStyle() {
         final ServerBuilder sb = new ServerBuilder();
         final Server server = sb.serviceAt("/test", new TempService()).build();
-        assertNotNull(server);
-        
+        assertThat(server).isNotNull();
+
         final VirtualHost virtualHost = server.config().defaultVirtualHost();
-        assertNotNull(virtualHost);
-        assertThat(virtualHost.hostnamePattern(), is("*"));
+        assertThat(virtualHost).isNotNull();
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
     }
-    
+
     @Test
     public void virtualHostWithHostnamepattern() {
         final ServerBuilder sb = new ServerBuilder();
         final ChainedVirtualHostBuilder chainedVirtualHostBuilder = sb.withVirtualHost("*.foo.com");
-        assertNotNull(chainedVirtualHostBuilder);
-        
-        final Server server = sb.withDefaultVirtualHost()
-                .serviceAt("/test", new TempService())
-                .and().build();
-        assertNotNull(server);
-        
+        assertThat(chainedVirtualHostBuilder).isNotNull();
+
+        final Server server = sb.withDefaultVirtualHost().serviceAt("/test", new TempService())
+        .and().build();
+        assertThat(server).isNotNull();
+
         final List<VirtualHost> virtualHosts = server.config().virtualHosts();
-        
-        assertNotNull(virtualHosts);
-        assertThat(virtualHosts.size(), is(2));
-        
+        assertThat(virtualHosts).isNotNull();
+        assertThat(virtualHosts.size()).isEqualTo(2);
+
         final VirtualHost virtualHost = virtualHosts.get(0);
-        assertNotNull(virtualHost);
-        assertThat(virtualHost.hostnamePattern(), is("*.foo.com"));
-        assertThat(virtualHost.defaultHostname(), is("foo.com"));
-        
+        assertThat(virtualHost).isNotNull();
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("*.foo.com");
+        assertThat(virtualHost.defaultHostname()).isEqualTo("foo.com");
+
         final VirtualHost defaultVirtualHost = virtualHosts.get(1);
-        assertNotNull(defaultVirtualHost);
-        assertThat(defaultVirtualHost, is(server.config().defaultVirtualHost()));
+        assertThat(defaultVirtualHost).isNotNull();
+        assertThat(defaultVirtualHost).isEqualTo(server.config().defaultVirtualHost());
     }
 
     @Test
     public void virtualHostWithDefaultHostnameAndHostnamepattern() {
         final ServerBuilder sb = new ServerBuilder();
         final ChainedVirtualHostBuilder chainedVirtualHostBuilder = sb.withVirtualHost("foo", "*");
-        assertNotNull(chainedVirtualHostBuilder);
-        
+        assertThat(chainedVirtualHostBuilder).isNotNull();
+
         chainedVirtualHostBuilder.serviceAt("/test", new TempService());
         final Server server = sb.build();
-        assertNotNull(server);
-        
+        assertThat(server).isNotNull();
+
         final List<VirtualHost> virtualHosts = server.config().virtualHosts();
-        
-        assertNotNull(virtualHosts);
-        assertThat(virtualHosts.size(), is(2));
-        
+        assertThat(virtualHosts).isNotNull();
+        assertThat(virtualHosts.size()).isEqualTo(2);
+
         final VirtualHost virtualHost = virtualHosts.get(0);
-        assertNotNull(virtualHost);
-        assertThat(virtualHost.hostnamePattern(), is("*"));
-        assertThat(virtualHost.defaultHostname(), is("foo"));
-        
+        assertThat(virtualHost).isNotNull();
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
+        assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
+
         final VirtualHost defaultVirtualHost = virtualHosts.get(1);
-        assertNotNull(defaultVirtualHost);
-        assertThat(defaultVirtualHost, is(server.config().defaultVirtualHost()));
+        assertThat(defaultVirtualHost).isNotNull();
+        assertThat(defaultVirtualHost).isEqualTo(server.config().defaultVirtualHost());
     }
 
     @Test
     public void virtualHostWithCreateStyle() {
         final VirtualHost h = new VirtualHostBuilder("foo", "*").build();
-        assertThat(h.hostnamePattern(), is("*"));
-        assertThat(h.defaultHostname(), is("foo"));
-        
+        assertThat(h.hostnamePattern()).isEqualTo("*");
+        assertThat(h.defaultHostname()).isEqualTo("foo");
+
         final ServerBuilder sb = new ServerBuilder();
         sb.virtualHost(h);
         final Server server = sb.serviceAt("/test", new TempService()).build();
-        assertNotNull(server);
-        
+        assertThat(server).isNotNull();
+
         final List<VirtualHost> virtualHosts = server.config().virtualHosts();
-        assertNotNull(virtualHosts);
-        assertThat(virtualHosts.size(), is(2));
-        
+        assertThat(virtualHosts).isNotNull();
+        assertThat(virtualHosts.size()).isEqualTo(2);
+
         final VirtualHost virtualHost = virtualHosts.get(0);
-        assertNotNull(virtualHost);
-        assertThat(virtualHost.hostnamePattern(), is("*"));
-        assertThat(virtualHost.defaultHostname(), is("foo"));
-        
+        assertThat(virtualHost).isNotNull();
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
+        assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
+
         final VirtualHost defaultVirtualHost = virtualHosts.get(1);
-        assertNotNull(defaultVirtualHost);
-        assertThat(defaultVirtualHost, is(server.config().defaultVirtualHost()));
+        assertThat(defaultVirtualHost).isNotNull();
+        assertThat(defaultVirtualHost).isEqualTo(server.config().defaultVirtualHost());
     }
-    
+
     @Test
     public void defaultVirtalHostMixedStyle() {
         final ServerBuilder sb = new ServerBuilder();
         sb.serviceAt("/test", new TempService())
-        .withDefaultVirtualHost()
-            .serviceAt("/test2", new TempService());
-        
+        .withDefaultVirtualHost().serviceAt("/test2", new TempService());
+
         final Server server = sb.build();
-        assertNotNull(server);
-        
+        assertThat(server).isNotNull();
+
         final List<ServiceConfig> serviceConfigs = server.config()
-                .defaultVirtualHost()
-                .serviceConfigs();
-        assertThat(serviceConfigs.size(), is(2));
+        .defaultVirtualHost().serviceConfigs();
+        assertThat(serviceConfigs.size()).isEqualTo(2);
     }
 
     @Test
-    public void virtualHostMixedStyleTest() {
+    public void virtualHostMixedStyle() {
         final VirtualHost h = new VirtualHostBuilder("bar.foo.com")
-                .serviceAt("/test", new TempService())
-                .build();
-        
+        .serviceAt("/test", new TempService()).build();
+
         final ServerBuilder sb = new ServerBuilder();
-        sb.withVirtualHost("*.some.com")
-            .serviceAt("/test2", new TempService())
+        sb.withVirtualHost("*.some.com").serviceAt("/test2", new TempService())
         .and().virtualHost(h);
-        
+
         final Server server = sb.build();
-        assertNotNull(server);
-        
+        assertThat(server).isNotNull();
+
         final List<VirtualHost> virtualHosts = server.config().virtualHosts();
-        assertThat(virtualHosts.size(), is(3));
-        
+        assertThat(virtualHosts.size()).isEqualTo(3);
+
         final VirtualHost virtualHost = virtualHosts.get(0);
-        assertNotNull(virtualHost);
-        assertThat(virtualHost.hostnamePattern(), is("bar.foo.com"));
-        assertThat(virtualHost.defaultHostname(), is("bar.foo.com"));
-        
+        assertThat(virtualHost).isNotNull();
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("bar.foo.com");
+        assertThat(virtualHost.defaultHostname()).isEqualTo("bar.foo.com");
+
         final VirtualHost virtualHost2 = virtualHosts.get(1);
-        assertNotNull(virtualHost2);
-        assertThat(virtualHost2.hostnamePattern(), is("*.some.com"));
-        assertThat(virtualHost2.defaultHostname(), is("some.com"));
+        assertThat(virtualHost2).isNotNull();
+        assertThat(virtualHost2.hostnamePattern()).isEqualTo("*.some.com");
+        assertThat(virtualHost2.defaultHostname()).isEqualTo("some.com");
     }
 
     @Test(expected = NullPointerException.class)
@@ -203,6 +192,5 @@ public class ChainedVirtualHostBuilderTest {
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             return null;
         }
-        
     }
 }
