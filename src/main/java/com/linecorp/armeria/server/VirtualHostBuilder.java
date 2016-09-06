@@ -58,6 +58,6 @@ public class VirtualHostBuilder extends AbstractVirtualHostBuilder<VirtualHostBu
      * Creates a new {@link VirtualHost}.
      */
     public VirtualHost build() {
-        return build();
+        return super.build();
     }
 }
