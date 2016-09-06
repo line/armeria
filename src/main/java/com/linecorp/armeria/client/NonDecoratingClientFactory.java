@@ -72,21 +72,25 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
 
     /**
      * Creates a new instance with the default {@link SessionOptions}.
+     *
+     * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
      */
-    protected NonDecoratingClientFactory() {
-        this(SessionOptions.DEFAULT);
+    protected NonDecoratingClientFactory(boolean useDaemonThreads) {
+        this(SessionOptions.DEFAULT, useDaemonThreads);
     }
 
     /**
      * Creates a new instance with the specified {@link SessionOptions}.
+     *
+     * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
      */
-    protected NonDecoratingClientFactory(SessionOptions options) {
+    protected NonDecoratingClientFactory(SessionOptions options, boolean useDaemonThreads) {
         this(options, type -> {
             switch (type) {
                 case NIO:
-                    return new DefaultThreadFactory("armeria-client-nio", false);
+                    return new DefaultThreadFactory("armeria-client-nio", useDaemonThreads);
                 case EPOLL:
-                    return new DefaultThreadFactory("armeria-client-epoll", false);
+                    return new DefaultThreadFactory("armeria-client-epoll", useDaemonThreads);
                 default:
                     throw new Error();
             }
