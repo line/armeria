@@ -50,7 +50,7 @@ public interface ClientFactory extends AutoCloseable {
     /**
      * The default {@link ClientFactory} implementation.
      */
-    ClientFactory DEFAULT = new AllInOneClientFactory();
+    ClientFactory DEFAULT = new AllInOneClientFactory(true);
 
     /**
      * Closes the default {@link ClientFactory}.
