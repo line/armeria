@@ -276,6 +276,7 @@ public final class ArmeriaHttpUtil {
     public static Http2Headers toNettyHttp2(HttpHeaders inputHeaders) {
         final Http2Headers outputHeaders = new DefaultHttp2Headers(false, inputHeaders.size());
         outputHeaders.set(inputHeaders);
+        outputHeaders.remove(HttpHeaderNames.CONNECTION);
         outputHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
         outputHeaders.remove(HttpHeaderNames.TRAILER);
         return outputHeaders;

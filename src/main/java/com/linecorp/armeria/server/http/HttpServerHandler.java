@@ -202,10 +202,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-        if (responseEncoder != null) {
+        if (responseEncoder == null) {
+            responseEncoder = new Http2ObjectEncoder(handler.encoder());
+        } else if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
+            responseEncoder = new Http2ObjectEncoder(handler.encoder());
         }
-        responseEncoder = new Http2ObjectEncoder(handler.encoder());
     }
 
     private void handleRequest(ChannelHandlerContext ctx, DecodedHttpRequest req) throws Exception {
@@ -459,8 +461,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      * Sets the keep alive header as per:
      * - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
      */
-    private static void addKeepAliveHeaders(HttpRequest req, AggregatedHttpMessage res) {
-        res.headers().set(HttpHeaderNames.CONNECTION, "keep-alive");
+    private void addKeepAliveHeaders(HttpRequest req, AggregatedHttpMessage res) {
+        switch (protocol) {
+            case H1:
+            case H1C:
+                res.headers().set(HttpHeaderNames.CONNECTION, "keep-alive");
+                break;
+            default:
+                // Do not add the 'connection' header for HTTP/2 responses.
+                // See https://tools.ietf.org/html/rfc7540#section-8.1.2.2
+        }
+
         setContentLength(req, res);
     }
 
@@ -477,7 +488,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         res.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, res.content().length());
     }
 
-    private SSLSession getSSLSession(Channel channel) {
+    private static SSLSession getSSLSession(Channel channel) {
         SslHandler sslHandler = channel.pipeline().get(SslHandler.class);
         return sslHandler != null ? sslHandler.engine().getSession() : null;
     }
