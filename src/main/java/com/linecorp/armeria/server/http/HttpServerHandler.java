@@ -202,10 +202,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-        if (responseEncoder != null) {
+        if (responseEncoder == null) {
+            responseEncoder = new Http2ObjectEncoder(handler.encoder());
+        } else if (responseEncoder instanceof Http1ObjectEncoder) {
             responseEncoder.close();
+            responseEncoder = new Http2ObjectEncoder(handler.encoder());
         }
-        responseEncoder = new Http2ObjectEncoder(handler.encoder());
     }
 
     private void handleRequest(ChannelHandlerContext ctx, DecodedHttpRequest req) throws Exception {
