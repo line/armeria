@@ -62,7 +62,6 @@ public final class ClientOptions extends AbstractOptions {
                     HttpHeaderNames.STATUS,
                     HttpHeaderNames.TRANSFER_ENCODING,
                     HttpHeaderNames.UPGRADE,
-                    HttpHeaderNames.USER_AGENT,
                     ExtensionHeaderNames.PATH.text(),
                     ExtensionHeaderNames.SCHEME.text(),
                     ExtensionHeaderNames.STREAM_DEPENDENCY_ID.text(),
