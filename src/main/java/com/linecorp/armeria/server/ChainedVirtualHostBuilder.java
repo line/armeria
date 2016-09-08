@@ -22,7 +22,7 @@ import static java.util.Objects.requireNonNull;
  * Builds a new {@link VirtualHost}.
  * 
  * <p>This class can only be created through the {@link ServerBuilder#withDefaultVirtualHost()} or
- * {@link ServerBuilder#withVirtualHost()} method of the {@link ServerBuilder}.
+ * {@link ServerBuilder#withVirtualHost(String)} method of the {@link ServerBuilder}.
  * 
  * <p>Call {@link #and()} method can also return to {@link ServerBuilder}.
  * 
