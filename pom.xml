@@ -624,6 +624,16 @@
         <version>2.0</version>
         <executions>
           <execution>
+            <id>create-version-props</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <source>${basedir}/src/build/versions-props.groovy</source>
+            </configuration>
+          </execution>
+          <execution>
             <id>tomcat80-compat</id>
             <phase>process-classes</phase>
             <goals>
