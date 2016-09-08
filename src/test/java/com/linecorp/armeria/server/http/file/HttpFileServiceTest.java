@@ -153,7 +153,7 @@ public class HttpFileServiceTest {
     public void testUnknownMediaType() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal();
              CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.unknown")))) {
-            assert200Ok(res, null, "Unknown Media Type\n");
+            assert200Ok(res, null, "Unknown Media Type");
         }
     }
 
