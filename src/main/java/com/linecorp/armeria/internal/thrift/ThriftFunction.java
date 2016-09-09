@@ -236,7 +236,7 @@ public final class ThriftFunction {
     public Object getResult(TBase<TBase<?, ?>, TFieldIdEnum> result) throws TException {
         for (TFieldIdEnum fieldIdEnum : exceptionFields()) {
             if (result.isSet(fieldIdEnum)) {
-                throw (TException) result.getFieldValue(fieldIdEnum);
+                throw (TException) ThriftFieldAccess.get(result, fieldIdEnum);
             }
         }
 
@@ -244,7 +244,7 @@ public final class ThriftFunction {
         if (successField == null) { //void method
             return null;
         } else if (result.isSet(successField)) {
-            return result.getFieldValue(successField);
+            return ThriftFieldAccess.get(result, successField);
         } else {
             throw new TApplicationException(
                     TApplicationException.MISSING_RESULT,
