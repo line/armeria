@@ -35,8 +35,10 @@ public class ChainedVirtualHostBuilderTest {
         assertThat(chainedVirtualHostBuilder).isNotNull();
         assertThat(chainedVirtualHostBuilder).isEqualTo(sb.withDefaultVirtualHost());
 
-        final Server server = sb.withDefaultVirtualHost().serviceAt("/test", new TempService())
-        .and().build();
+        final Server server = sb.withDefaultVirtualHost()
+                                .serviceAt("/test", new TempService())
+                                .and().build();
+
         assertThat(server).isNotNull();
 
         final VirtualHost virtualHost = server.config().defaultVirtualHost();
@@ -62,8 +64,10 @@ public class ChainedVirtualHostBuilderTest {
         final ChainedVirtualHostBuilder chainedVirtualHostBuilder = sb.withVirtualHost("*.foo.com");
         assertThat(chainedVirtualHostBuilder).isNotNull();
 
-        final Server server = sb.withDefaultVirtualHost().serviceAt("/test", new TempService())
-        .and().build();
+        final Server server = sb.withDefaultVirtualHost()
+                                .serviceAt("/test", new TempService())
+                                .and().build();
+
         assertThat(server).isNotNull();
 
         final List<VirtualHost> virtualHosts = server.config().virtualHosts();
@@ -133,24 +137,24 @@ public class ChainedVirtualHostBuilderTest {
     public void defaultVirtalHostMixedStyle() {
         final ServerBuilder sb = new ServerBuilder();
         sb.serviceAt("/test", new TempService())
-        .withDefaultVirtualHost().serviceAt("/test2", new TempService());
+          .withDefaultVirtualHost().serviceAt("/test2", new TempService());
 
         final Server server = sb.build();
         assertThat(server).isNotNull();
 
-        final List<ServiceConfig> serviceConfigs = server.config()
-        .defaultVirtualHost().serviceConfigs();
+        final List<ServiceConfig> serviceConfigs = server.config().defaultVirtualHost().serviceConfigs();
         assertThat(serviceConfigs.size()).isEqualTo(2);
     }
 
     @Test
     public void virtualHostMixedStyle() {
-        final VirtualHost h = new VirtualHostBuilder("bar.foo.com")
-        .serviceAt("/test", new TempService()).build();
+        final VirtualHost h =
+                new VirtualHostBuilder("bar.foo.com").serviceAt("/test", new TempService()).build();
 
         final ServerBuilder sb = new ServerBuilder();
-        sb.withVirtualHost("*.some.com").serviceAt("/test2", new TempService())
-        .and().virtualHost(h);
+        sb.withVirtualHost("*.some.com")
+          .serviceAt("/test2", new TempService())
+          .and().virtualHost(h);
 
         final Server server = sb.build();
         assertThat(server).isNotNull();
