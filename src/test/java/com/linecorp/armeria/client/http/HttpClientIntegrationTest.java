@@ -44,7 +44,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
-
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
@@ -135,8 +134,7 @@ public class HttpClientIntegrationTest {
 
             sb.serviceAt("/useragent", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                     HttpResponseWriter res) {
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     String ua = req.headers().get(HttpHeaderNames.USER_AGENT, "undefined");
                     res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, ua);
                 }
@@ -291,8 +289,7 @@ public class HttpClientIntegrationTest {
         HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
                                               HttpClient.class, options);
 
-        AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.GET, "/useragent")).aggregate().get();
+        AggregatedHttpMessage response = client.get("/useragent").aggregate().get();
 
         assertEquals(TEST_USER_AGENT_NAME, response.content().toStringUtf8());
     }
@@ -308,10 +305,10 @@ public class HttpClientIntegrationTest {
 
         final String OVERIDDEN_USER_AGENT_NAME = "Overridden";
 
-        AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.GET, "/useragent")
-                        .add(HttpHeaderNames.USER_AGENT, OVERIDDEN_USER_AGENT_NAME))
-                .aggregate().get();
+        AggregatedHttpMessage response =
+                client.execute(HttpHeaders.of(HttpMethod.GET, "/useragent")
+                                          .add(HttpHeaderNames.USER_AGENT, OVERIDDEN_USER_AGENT_NAME))
+                      .aggregate().get();
 
         assertEquals(OVERIDDEN_USER_AGENT_NAME, response.content().toStringUtf8());
     }
