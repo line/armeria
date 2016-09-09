@@ -50,14 +50,27 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * // Add a port to listen
  * sb.port(8080, SessionProtocol.HTTP);
  * // Build and add a virtual host.
- * sb.virtualHost(new VirtualHost("*.foo.com").serviceAt(...).build());
+ * sb.virtualHost(new VirtualHostBuilder("*.foo.com").serviceAt(...).build());
  * // Add services to the default virtual host.
  * sb.serviceAt(...);
  * sb.serviceUnder(...);
  * // Build a server.
  * Server s = sb.build();
  * }</pre>
- *
+ * 
+ * <h2>Example 2</h2>
+ * <pre>{@code
+ * ServerBuilder sb = new ServerBuilder();
+ * Server server =
+ *      sb.port(8080, SessionProtocol.HTTP) // Add a port to listen
+ *      .withDefaultVirtualHost() // Add services to the default virtual host.
+ *          .serviceAt(...)
+ *          .serviceUnder(...)
+ *      .and().withVirtualHost("*.foo.com") // Add a another virtual host.
+ *          .serviceAt(...)
+ *          .serviceUnder(...)
+ *      .and().build(); // Build a server.
+ * }</pre>
  * @see VirtualHostBuilder
  */
 public final class ServerBuilder {
@@ -104,7 +117,8 @@ public final class ServerBuilder {
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<VirtualHost> virtualHosts = new ArrayList<>();
-    private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder();
+    private final List<ChainedVirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
+    private final ChainedVirtualHostBuilder defaultVirtualHostBuilder = new ChainedVirtualHostBuilder(this);
     private boolean updatedDefaultVirtualHostBuilder;
 
     private VirtualHost defaultVirtualHost;
@@ -425,6 +439,46 @@ public final class ServerBuilder {
         return this;
     }
 
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
+     * specified by {@link VirtualHost}.
+     * 
+     * @return {@link VirtualHostBuilder} for build the default virtual host
+     */
+    public ChainedVirtualHostBuilder withDefaultVirtualHost() {
+        defaultVirtualHostBuilderUpdated();
+        return defaultVirtualHostBuilder;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
+     * specified by {@link VirtualHost}.
+     * 
+     * @param hostnamePattern virtual host name regular expression
+     * @return {@link VirtualHostBuilder} for build the virtual host
+     */
+    public ChainedVirtualHostBuilder withVirtualHost(String hostnamePattern) {
+        ChainedVirtualHostBuilder virtualHostBuilder = new ChainedVirtualHostBuilder(hostnamePattern, this);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
+     * specified by {@link VirtualHost}.
+     * 
+     * @param defaultHostname default hostname of this virtual host
+     * @param hostnamePattern virtual host name regular expression
+     * @return {@link VirtualHostBuilder} for build the virtual host
+     */
+    public ChainedVirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
+        ChainedVirtualHostBuilder virtualHostBuilder =
+                new ChainedVirtualHostBuilder(defaultHostname, hostnamePattern, this);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
     /**
      * Decorates all {@link Service}s with the specified {@code decorator}.
      *
@@ -470,6 +524,8 @@ public final class ServerBuilder {
         } else {
             defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
         }
+
+        virtualHostBuilders.forEach(vhb -> this.virtualHosts.add(vhb.build()));
 
         final List<VirtualHost> virtualHosts;
         if (decorator != null) {
