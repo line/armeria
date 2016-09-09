@@ -59,12 +59,12 @@ public class SpecificationTest {
 
         assertThat(services.containsKey(HelloService.class.getName()), is(true));
         assertThat(services.get(HelloService.class.getName()).endpoints(),
-                   contains(EndpointInfo.of("*", "/hello", SerializationFormat.THRIFT_BINARY,
+                   contains(EndpointInfo.of("*", "/hello", "", SerializationFormat.THRIFT_BINARY,
                                             SerializationFormat.ofThrift())));
 
         assertThat(services.containsKey(FooService.class.getName()), is(true));
         assertThat(services.get(FooService.class.getName()).endpoints(),
-                   contains(EndpointInfo.of("*", "/foo", SerializationFormat.THRIFT_COMPACT,
+                   contains(EndpointInfo.of("*", "/foo", "", SerializationFormat.THRIFT_COMPACT,
                                             EnumSet.of(SerializationFormat.THRIFT_COMPACT))));
     }
 }

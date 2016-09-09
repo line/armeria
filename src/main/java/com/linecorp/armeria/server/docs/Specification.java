@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -44,8 +45,14 @@ final class Specification {
         final Map<Class<?>, Iterable<EndpointInfo>> map = new LinkedHashMap<>();
 
         for (ServiceConfig c : serviceConfigs) {
-            c.service().as(THttpService.class).ifPresent(service -> {
-                for (Class<?> iface : service.interfaces()) {
+            final Optional<THttpService> serviceOpt = c.service().as(THttpService.class);
+            if (!serviceOpt.isPresent()) {
+                continue;
+            }
+
+            final THttpService service = serviceOpt.get();
+            service.entries().forEach((serviceName, entry) -> {
+                for (Class<?> iface : entry.interfaces()) {
                     final Class<?> serviceClass = iface.getEnclosingClass();
                     final List<EndpointInfo> endpoints =
                             (List<EndpointInfo>) map.computeIfAbsent(serviceClass, cls -> new ArrayList<>());
@@ -53,7 +60,8 @@ final class Specification {
                     c.pathMapping().exactPath().ifPresent(
                             p -> endpoints.add(EndpointInfo.of(
                                     c.virtualHost().hostnamePattern(),
-                                    p, service.defaultSerializationFormat(),
+                                    p, serviceName,
+                                    service.defaultSerializationFormat(),
                                     service.allowedSerializationFormats())));
                 }
             });

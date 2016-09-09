@@ -147,7 +147,7 @@
               {{#each serviceEndpoints}}
               <tr>
                 <td><code>{{{hostnamePattern}}}</code></td>
-                <td><code>{{{path}}}</code></td>
+                <td><code>{{{path}}}{{#if fragment}}#{{fragment}}{{/if}}</code></td>
                 <td>
                   <ul>
                   {{#each availableMimeTypes}}
