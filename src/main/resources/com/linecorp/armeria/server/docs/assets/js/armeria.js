@@ -183,34 +183,56 @@ $(function () {
     var toggleCollapser = function() {
       collapser.toggleClass('opened');
       collapser.next().collapse('toggle');
-    }
+    };
     collapser.click(function() {
       toggleCollapser();
     });
     var submitDebugRequest = function () {
-      var args;
+      var argsText;
+      var httpHeadersText = '';
       var httpHeaders = {};
+
+      // Validate arguments.
+      try {
+        var args = JSON.parse(debugText.val()); // Use the JSON parser for validation.
+        if (typeof args !== 'object') {
+          debugResponse.text("Arguments must be a JSON object.\nYou entered: " + typeof args);
+        }
+        // Do not use the parsed JSON but just a minified one not to lose number precision.
+        // See: https://github.com/line/armeria/issues/273
+        argsText = JSON.minify(debugText.val());
+      } catch (e) {
+        debugResponse.text("Failed to parse a JSON object:\n" + e);
+        return false;
+      }
+
+      // Validate HTTP headers.
       try {
         if (debugHttpHeadersText.val()) {
           httpHeaders = JSON.parse(debugHttpHeadersText.val());
+          if (typeof httpHeaders !== 'object') {
+            debugResponse.text("HTTP headers must be a JSON object.\nYou entered: " + typeof httpHeaders);
+            return false;
+          }
+
+          httpHeadersText = JSON.minify(debugHttpHeadersText.val());
+          if (httpHeadersText === '{}') {
+            httpHeadersText = '';
+          }
         }
-        args = JSON.parse(debugText.val());
       } catch (e) {
-        debugResponse.text("Failed to parse a JSON object, please check your request:\n" + e);
+        debugResponse.text("Failed to parse a JSON object:\n" + e);
         return false;
       }
+
       var method = serviceInfo.debugFragment ? serviceInfo.debugFragment + ':' + functionInfo.name
                                              : functionInfo.name;
 
-      var request = {
-        method: method,
-        type: 'CALL',
-        args: args
-      };
+      var request = '{"method":"' + method + '","type":"CALL","args":' + argsText + '}';
       $.ajax({
         type: 'POST',
         url: serviceInfo.debugPath,
-        data: JSON.stringify(request),
+        data: request,
         headers: httpHeaders,
         contentType: TTEXT_MIME_TYPE,
         success: function (response) {
@@ -219,16 +241,14 @@ $(function () {
 
           // Set the URL with request
           var uri = URI(window.location.href);
-          var fragment = uri.fragment(true);
-          var req = {
-            args: debugText.val()
-          };
-          if (debugHttpHeadersText.val()) { // Includes when a value is set
-            req.http_headers = debugHttpHeadersText.val();
+          if (httpHeadersText.length > 0) {
+            uri.fragment(true).setSearch({ args: argsText, http_headers: httpHeadersText });
+          } else {
+            uri.fragment(true).setSearch('args', argsText);
+            // NB: Reusing the fragment object returned by URI.fragment() will cause stack overflow.
+            //     Related issue: https://github.com/medialize/URI.js/issues/167
+            uri.fragment(true).removeSearch('http_headers');
           }
-          fragment.setQuery({
-            req: JSON.stringify(req)
-          });
           window.location.href = uri.toString();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -241,15 +261,32 @@ $(function () {
 
     functionContainer.removeClass('hidden');
 
-    var fragment = URI(window.location.href).fragment(true);
-    var fragmentParams = fragment.query(true);
-    if (fragmentParams.req) {
-      var req = JSON.parse(fragmentParams.req);
+    // Get the parameters ('args' and 'http_headers') from the current location.
+    // Note that we do not use URI.js here to avoid parsing JSON.
+    function getParameterByName(name) {
+      var matches = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.href);
+      return matches && decodeURIComponent(matches[1].replace(/\+/g, ' '));
+    }
 
-      debugText.val(req.args);
+    var argsText = getParameterByName('args');
+    if (argsText) {
+      try {
+        JSON.parse(argsText);
+        debugText.val(JSON.prettify(argsText));
+      } catch (e) {
+        // Invalid JSON
+        debugText.val(argsText);
+      }
 
-      if ('http_headers' in req) {
-        debugHttpHeadersText.val(req.http_headers);
+      var httpHeadersText = getParameterByName('http_headers');
+      if (httpHeadersText) {
+        try {
+          JSON.parse(httpHeadersText);
+          debugHttpHeadersText.val(JSON.prettify(httpHeadersText));
+        } catch (e) {
+          // Invalid JSON
+          debugHttpHeadersText.val(debugHttpHeadersText);
+        }
       } else {
         debugHttpHeadersText.val(''); // Remove the default value if set
       }
