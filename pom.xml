@@ -625,7 +625,7 @@
         <executions>
           <execution>
             <id>create-version-props</id>
-            <phase>prepare-package</phase>
+            <phase>process-resources</phase>
             <goals>
               <goal>execute</goal>
             </goals>
