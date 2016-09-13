@@ -15,6 +15,6 @@
  */
 
 /**
- * A decorator that will apply HTTP encoding (e.g., GZIP compression) to responses.
+ * Applies HTTP encoding (e.g. GZIP compression) to responses.
  */
 package com.linecorp.armeria.server.http.encoding;
