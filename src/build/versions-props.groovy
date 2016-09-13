@@ -60,7 +60,7 @@ String executeCommand(String command) {
     return output;
 }
 
-def gitLogOut = executeCommand('git log -1 "--format=format:%h %H %cd" --date=iso')
+def gitLogOut = executeCommand('git log -1 --format=format:%h%x20%H%x20%cd --date=iso')
 if (gitLogOut) {
     println("Latest commit : ${gitLogOut}")
     def tokens = gitLogOut.tokenize(' ')
