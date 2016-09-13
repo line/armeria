@@ -173,7 +173,7 @@ public class HttpClientIntegrationTest {
                 "/foo",
                 port -> "GET /foo HTTP/1.1\r\n" +
                         "host: 127.0.0.1:" + port + "\r\n" +
-                        "user-agent: Armeria\r\n\r\n");
+                        "user-agent: " + HttpHeaderUtil.USER_AGENT + "\r\n\r\n");
     }
 
     @Test
@@ -273,7 +273,7 @@ public class HttpClientIntegrationTest {
                 path,
                 port -> "GET " + normalizedPath + " HTTP/1.1\r\n" +
                         "host: 127.0.0.1:" + port + "\r\n" +
-                        "user-agent: Armeria\r\n\r\n"
+                        "user-agent: " + HttpHeaderUtil.USER_AGENT + "\r\n\r\n"
         );
     }
 
