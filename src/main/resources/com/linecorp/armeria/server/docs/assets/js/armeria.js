@@ -165,6 +165,11 @@ $(function () {
 
     makeActive('li#nav-' + serviceName + '.' + functionName);
 
+    // Get the elements for the HTTP headers and its stickiness before applying the template,
+    // because they will be replaced when the template is applied.
+    var oldDebugHttpHeadersText = functionContainer.find('.debug-http-headers');
+    var oldDebugHttpHeadersSticky = functionContainer.find('.debug-http-headers-sticky');
+
     functionContainer.html(functionTemplate({
       'serviceName': serviceName,
       'serviceSimpleName': serviceInfo.simpleName,
@@ -174,8 +179,15 @@ $(function () {
       'function': functionInfo
     }));
 
+    var debugHttpHeadersText = functionContainer.find('.debug-http-headers');
+    var debugHttpHeadersSticky = functionContainer.find('.debug-http-headers-sticky');
     var debugText = functionContainer.find('.debug-textarea').val(functionInfo.sampleJsonRequest);
-    var debugHttpHeadersText = functionContainer.find('.debug-http-headers').val(serviceInfo.sampleHttpHeaders);
+    if (oldDebugHttpHeadersSticky.is(':checked')) {
+      debugHttpHeadersSticky.prop('checked', true);
+      debugHttpHeadersText.val(oldDebugHttpHeadersText.val());
+    } else {
+      debugHttpHeadersText.val(serviceInfo.sampleHttpHeaders);
+    }
     var debugResponse = functionContainer.find('.debug-response code');
 
     // Sets 'debug-http-headers' section
@@ -202,7 +214,7 @@ $(function () {
         // See: https://github.com/line/armeria/issues/273
         argsText = JSON.minify(debugText.val());
       } catch (e) {
-        debugResponse.text("Failed to parse a JSON object:\n" + e);
+        debugResponse.text("Failed to parse a JSON object in the arguments field:\n" + e);
         return false;
       }
 
@@ -221,7 +233,7 @@ $(function () {
           }
         }
       } catch (e) {
-        debugResponse.text("Failed to parse a JSON object:\n" + e);
+        debugResponse.text("Failed to parse a JSON object in the HTTP headers field:\n" + e);
         return false;
       }
 
@@ -241,14 +253,19 @@ $(function () {
 
           // Set the URL with request
           var uri = URI(window.location.href);
+
+          // NB: Reusing the fragment object returned by URI.fragment() will cause stack overflow.
+          //     Related issue: https://github.com/medialize/URI.js/issues/167
+          uri.fragment(true).removeSearch('http_headers');
+          uri.fragment(true).removeSearch('http_headers_sticky');
+          uri.fragment(true).setSearch('args', argsText);
           if (httpHeadersText.length > 0) {
-            uri.fragment(true).setSearch({ args: argsText, http_headers: httpHeadersText });
-          } else {
-            uri.fragment(true).setSearch('args', argsText);
-            // NB: Reusing the fragment object returned by URI.fragment() will cause stack overflow.
-            //     Related issue: https://github.com/medialize/URI.js/issues/167
-            uri.fragment(true).removeSearch('http_headers');
+            uri.fragment(true).setSearch('http_headers', httpHeadersText);
+            if (debugHttpHeadersSticky.is(':checked')) {
+              uri.fragment(true).setSearch('http_headers_sticky');
+            }
           }
+
           window.location.href = uri.toString();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -264,8 +281,16 @@ $(function () {
     // Get the parameters ('args' and 'http_headers') from the current location.
     // Note that we do not use URI.js here to avoid parsing JSON.
     function getParameterByName(name) {
-      var matches = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.href);
-      return matches && decodeURIComponent(matches[1].replace(/\+/g, ' '));
+      var matches = new RegExp('[?&]' + name + '(?:=([^&]*)|&|$)').exec(window.location.href);
+      if (matches) {
+        if (matches[1]) {
+          return decodeURIComponent(matches[1].replace(/\+/g, ' '));
+        } else {
+          return 'true';
+        }
+      }
+
+      return undefined;
     }
 
     var argsText = getParameterByName('args');
@@ -290,6 +315,8 @@ $(function () {
       } else {
         debugHttpHeadersText.val(''); // Remove the default value if set
       }
+
+      debugHttpHeadersSticky.prop('checked', getParameterByName('http_headers_sticky') === 'true');
 
       functionContainer.find('.debug-textarea').focus();
     }
