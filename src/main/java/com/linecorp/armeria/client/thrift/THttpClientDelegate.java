@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
 
@@ -192,7 +193,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
 
         for (TFieldIdEnum fieldIdEnum : method.exceptionFields()) {
             if (result.isSet(fieldIdEnum)) {
-                throw (TException) result.getFieldValue(fieldIdEnum);
+                throw (TException) ThriftFieldAccess.get(result, fieldIdEnum);
             }
         }
 
@@ -201,7 +202,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
             return null;
         }
         if (result.isSet(successField)) {
-            return result.getFieldValue(successField);
+            return ThriftFieldAccess.get(result, successField);
         }
 
         throw new TApplicationException(TApplicationException.MISSING_RESULT,

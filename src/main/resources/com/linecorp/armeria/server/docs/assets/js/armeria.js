@@ -170,6 +170,7 @@ $(function () {
       'serviceSimpleName': serviceInfo.simpleName,
       'serviceEndpoints': serviceInfo.endpoints,
       'serviceDebugPath': serviceInfo.debugPath,
+      'serviceDebugFragment': serviceInfo.debugFragment,
       'function': functionInfo
     }));
 
@@ -198,8 +199,11 @@ $(function () {
         debugResponse.text("Failed to parse a JSON object, please check your request:\n" + e);
         return false;
       }
+      var method = serviceInfo.debugFragment ? serviceInfo.debugFragment + ':' + functionInfo.name
+                                             : functionInfo.name;
+
       var request = {
-        method: functionInfo.name,
+        method: method,
         type: 'CALL',
         args: args
       };
@@ -218,7 +222,7 @@ $(function () {
           var fragment = uri.fragment(true);
           var req = {
             args: debugText.val()
-          }
+          };
           if (debugHttpHeadersText.val()) { // Includes when a value is set
             req.http_headers = debugHttpHeadersText.val();
           }
@@ -272,6 +276,7 @@ $(function () {
       var mimeType = availableMimeTypes[idx];
       if (mimeType === TTEXT_MIME_TYPE && serviceInfo.debugPath == undefined) {
         serviceInfo.debugPath = pathInfo.path;
+        serviceInfo.debugFragment = pathInfo.fragment;
       }
       if (mimeType === pathInfo.defaultMimeType) {
         availableMimeTypes[idx] = '<b>' + mimeType + '</b>';

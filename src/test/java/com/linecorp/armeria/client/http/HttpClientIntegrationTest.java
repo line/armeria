@@ -41,6 +41,8 @@ import com.google.common.io.Closeables;
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
@@ -60,6 +62,8 @@ import com.linecorp.armeria.server.http.AbstractHttpService;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
 public class HttpClientIntegrationTest {
+
+    private static final String TEST_USER_AGENT_NAME = "ArmeriaTest";
 
     private static final Server server;
 
@@ -127,6 +131,15 @@ public class HttpClientIntegrationTest {
                     res.respond(HttpStatus.NOT_FOUND);
                 }
             });
+
+            sb.serviceAt("/useragent", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    String ua = req.headers().get(HttpHeaderNames.USER_AGENT, "undefined");
+                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, ua);
+                }
+            });
+
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -158,7 +171,9 @@ public class HttpClientIntegrationTest {
     public void testRequestNoBodyWithoutExtraHeaders() throws Exception {
         testSocketOutput(
                 "/foo",
-                port -> "GET /foo HTTP/1.1\r\nuser-agent: Armeria\r\nhost: 127.0.0.1:" + port + "\r\n\r\n");
+                port -> "GET /foo HTTP/1.1\r\n" +
+                        "host: 127.0.0.1:" + port + "\r\n" +
+                        "user-agent: " + HttpHeaderUtil.USER_AGENT + "\r\n\r\n");
     }
 
     @Test
@@ -254,10 +269,48 @@ public class HttpClientIntegrationTest {
     }
 
     private static void testDoubleSlashSuppression(String path, String normalizedPath) throws IOException {
-        testSocketOutput(path,
-                         port -> "GET " + normalizedPath + " HTTP/1.1\r\n" +
-                                 "user-agent: Armeria\r\n" +
-                                 "host: 127.0.0.1:" + port + "\r\n\r\n");
+        testSocketOutput(
+                path,
+                port -> "GET " + normalizedPath + " HTTP/1.1\r\n" +
+                        "host: 127.0.0.1:" + port + "\r\n" +
+                        "user-agent: " + HttpHeaderUtil.USER_AGENT + "\r\n\r\n"
+        );
+    }
+
+    /**
+     * User-agent header should be overridden by ClientOption.HTTP_HEADER
+     */
+    @Test
+    public void testUserAgentOverridableByClientOption() throws Exception {
+
+        HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.USER_AGENT, TEST_USER_AGENT_NAME);
+        ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
+
+        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
+                                              HttpClient.class, options);
+
+        AggregatedHttpMessage response = client.get("/useragent").aggregate().get();
+
+        assertEquals(TEST_USER_AGENT_NAME, response.content().toStringUtf8());
+    }
+
+    @Test
+    public void testUserAgentOverridableByRequestHeader() throws Exception {
+
+        HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.USER_AGENT, TEST_USER_AGENT_NAME);
+        ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
+
+        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
+                                              HttpClient.class, options);
+
+        final String OVERIDDEN_USER_AGENT_NAME = "Overridden";
+
+        AggregatedHttpMessage response =
+                client.execute(HttpHeaders.of(HttpMethod.GET, "/useragent")
+                                          .add(HttpHeaderNames.USER_AGENT, OVERIDDEN_USER_AGENT_NAME))
+                      .aggregate().get();
+
+        assertEquals(OVERIDDEN_USER_AGENT_NAME, response.content().toStringUtf8());
     }
 
     private static void testSocketOutput(String path,

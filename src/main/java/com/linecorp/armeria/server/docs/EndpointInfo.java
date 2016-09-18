@@ -30,20 +30,22 @@ import com.linecorp.armeria.common.SerializationFormat;
 
 class EndpointInfo {
 
-    static EndpointInfo of(String hostnamePattern, String path,
+    static EndpointInfo of(String hostnamePattern, String path, String fragment,
                            SerializationFormat defaultFormat, Set<SerializationFormat> formats) {
-        return new EndpointInfo(hostnamePattern, path, defaultFormat, formats);
+        return new EndpointInfo(hostnamePattern, path, fragment, defaultFormat, formats);
     }
 
     private final String hostnamePattern;
     private final String path;
+    private final String fragment;
     private final String defaultMimeType;
     private final Set<String> availableMimeTypes;
 
-    EndpointInfo(String hostnamePattern, String path,
+    EndpointInfo(String hostnamePattern, String path, String fragment,
                  SerializationFormat defaultFormat, Set<SerializationFormat> availableFormats) {
         this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
         this.path = requireNonNull(path, "path");
+        this.fragment = requireNonNull(fragment, "fragment");
         defaultMimeType = requireNonNull(defaultFormat, "defaultFormat").mediaType().toString();
 
         final Set<String> sortedAvailableMimeTypes =
@@ -62,6 +64,11 @@ class EndpointInfo {
     @JsonProperty
     String path() {
         return path;
+    }
+
+    @JsonProperty
+    String fragment() {
+        return fragment;
     }
 
     @JsonProperty
@@ -92,6 +99,7 @@ class EndpointInfo {
         final EndpointInfo that = (EndpointInfo) obj;
         return hostnamePattern.equals(that.hostnamePattern) &&
                path.equals(that.path) &&
+               fragment.equals(that.fragment) &&
                defaultMimeType.equals(that.defaultMimeType) &&
                availableMimeTypes.equals(that.availableMimeTypes);
     }
@@ -101,6 +109,7 @@ class EndpointInfo {
         return "EndpointInfo{" +
                "hostnamePattern=" + hostnamePattern +
                ", path=" + path +
+               ", fragment=" + fragment +
                ", defaultMimeType=" + defaultMimeType +
                ", availableMimeTypes=" + availableMimeTypes +
                '}';

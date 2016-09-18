@@ -17,7 +17,9 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,6 +62,7 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.service.test.thrift.main.BinaryService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.FileService;
 import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
@@ -358,7 +362,7 @@ public class ThriftServiceTest {
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
             assertThat(e.getType(), is(TApplicationException.INTERNAL_ERROR));
-            assertThat(e.getMessage(), is(exception.toString()));
+            assertThat(e.getMessage(), containsString(exception.toString()));
         }
     }
 
@@ -380,7 +384,7 @@ public class ThriftServiceTest {
             fail(TApplicationException.class.getSimpleName() + " not raised.");
         } catch (TApplicationException e) {
             assertThat(e.getType(), is(TApplicationException.INTERNAL_ERROR));
-            assertThat(e.getMessage(), is(exception.toString()));
+            assertThat(e.getMessage(), containsString(exception.toString()));
         }
     }
 
@@ -508,6 +512,32 @@ public class ThriftServiceTest {
         invokeTwice(syncService, asyncService);
 
         assertThat(promise.get(), is(promise2.get()));
+    }
+
+    @Test
+    public void testBinary() throws Exception {
+        BinaryService.Client client = new BinaryService.Client.Factory().getClient(inProto, outProto);
+        client.send_process(ByteBuffer.wrap(new byte[] { 1, 2 }));
+
+        THttpService service = THttpService.of((BinaryService.Iface) data -> {
+            ByteBuffer result = ByteBuffer.allocate(data.remaining());
+            for (int i = data.position(), j = 0; i < data.limit(); i++, j++) {
+                result.put(j, (byte) (data.get(i) + 1));
+            }
+            return result;
+        }, defaultSerializationFormat);
+
+        invoke(service);
+
+        ByteBuffer result = client.recv_process();
+
+        // Convert the result into a Byte[] for more comprehensive comparison.
+        List<Byte> out = new ArrayList<>();
+        for (int i = result.position(); i < result.limit(); i++) {
+            out.add(result.get(i));
+        }
+
+        assertThat(out, hasItems((byte) 2, (byte) 3));
     }
 
     @Test

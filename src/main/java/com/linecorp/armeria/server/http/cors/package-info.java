@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2016 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,6 +15,7 @@
  */
 
 /**
- * Metrics service.
+ * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
+ * (CORS)</a> support.
  */
-package com.linecorp.armeria.server.metrics;
+package com.linecorp.armeria.server.http.cors;

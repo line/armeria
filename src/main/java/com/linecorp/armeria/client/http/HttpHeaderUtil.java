@@ -16,12 +16,15 @@
 
 package com.linecorp.armeria.client.http;
 
+import com.linecorp.armeria.common.util.Version;
+
 import io.netty.util.AsciiString;
 
 final class HttpHeaderUtil {
 
-    // TODO(trustin): Add version information
-    static final AsciiString USER_AGENT = AsciiString.of("Armeria");
+    private static final String CLIENT_ARTIFACT_ID = "armeria";
+
+    static final AsciiString USER_AGENT = AsciiString.of(createUserAgentName());
 
     static String hostHeader(String host, int port, int defaultPort) {
         if (port == defaultPort) {
@@ -29,6 +32,11 @@ final class HttpHeaderUtil {
         }
 
         return new StringBuilder(host.length() + 6).append(host).append(':').append(port).toString();
+    }
+
+    private static String createUserAgentName() {
+        Version version = Version.identify().get(CLIENT_ARTIFACT_ID);
+        return CLIENT_ARTIFACT_ID + '/' + (version != null ? version.artifactId() : "unknown");
     }
 
     private HttpHeaderUtil() {}

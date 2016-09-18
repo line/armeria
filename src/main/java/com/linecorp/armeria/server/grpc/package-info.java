@@ -15,6 +15,6 @@
  */
 
 /**
- * Service that allows an armeria server to host a GRPC API using the GRPC wire protocol.
+ * Allows an Armeria server to host a GRPC API using the GRPC wire protocol.
  */
 package com.linecorp.armeria.server.grpc;

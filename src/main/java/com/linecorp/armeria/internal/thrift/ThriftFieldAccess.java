@@ -14,7 +14,29 @@
  * under the License.
  */
 
+package com.linecorp.armeria.internal.thrift;
+
+import java.nio.ByteBuffer;
+
+import org.apache.thrift.TBase;
+import org.apache.thrift.TFieldIdEnum;
+
 /**
- * Applies HTTP encoding (e.g. GZIP compression) to responses.
+ * Provides the access to a Thrift field.
  */
-package com.linecorp.armeria.server.http.encoding;
+public final class ThriftFieldAccess {
+
+    /**
+     * Gets a field value from the specified struct.
+     */
+    public static Object get(TBase<? extends TBase<?, ?>, TFieldIdEnum> struct, TFieldIdEnum field) {
+        Object value = struct.getFieldValue(field);
+        if (value instanceof byte[]) {
+            return ByteBuffer.wrap((byte[]) value);
+        } else {
+            return value;
+        }
+    }
+
+    private ThriftFieldAccess() {}
+}

@@ -44,6 +44,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelHealthChecker;
+import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
@@ -103,7 +104,6 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     private static void autoFillHeaders(ClientRequestContext ctx, Endpoint endpoint, HttpRequest req) {
         requireNonNull(req, "req");
         final HttpHeaders headers = req.headers();
-        headers.set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
 
         if (headers.authority() == null) {
             final String hostname = endpoint.host();
@@ -127,9 +127,19 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             headers.scheme(ctx.sessionProtocol().isTls() ? "https" : "http");
         }
 
-        // Add the handlers specified in ClientOptions.
+        // Add the headers specified in ClientOptions, if not overridden by request.
         if (ctx.hasAttr(ClientRequestContext.HTTP_HEADERS)) {
-            headers.setAll(ctx.attr(ClientRequestContext.HTTP_HEADERS).get());
+            HttpHeaders clientOptionHeaders = ctx.attr(ClientRequestContext.HTTP_HEADERS).get();
+            clientOptionHeaders.forEach(entry -> {
+                AsciiString name = entry.getKey();
+                if (!headers.contains(name)) {
+                    headers.set(name, entry.getValue());
+                }
+            });
+        }
+
+        if (!headers.contains(HttpHeaderNames.USER_AGENT)) {
+            headers.set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
         }
     }
 
