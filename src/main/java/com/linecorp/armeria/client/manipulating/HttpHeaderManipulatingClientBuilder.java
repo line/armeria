@@ -47,9 +47,9 @@ public class HttpHeaderManipulatingClientBuilder {
     }
 
     /**
-     * Creates a decorator with {@link HttpHeaderManipulatingClient}.
+     * Creates a decorator function using newly built {@link HttpHeaderManipulatingClient} instance.
      *
-     * @return this::{@link #buildClient(Client)}
+     * @return the new decorator function
      */
     public Function<Client<? super HttpRequest, ? extends HttpResponse>, HttpHeaderManipulatingClient>
     newDecorator() {
@@ -63,7 +63,7 @@ public class HttpHeaderManipulatingClientBuilder {
      */
     public HttpHeaderManipulatingClient buildClient(
             Client<? super HttpRequest, ? extends HttpResponse> delegate) {
-        Manipulator<HttpRequest> manipulator = new Manipulator(requestManipulatingOperations);
+        Manipulator<HttpRequest> manipulator = new Manipulator<>(requestManipulatingOperations);
         return new HttpHeaderManipulatingClient(delegate, manipulator);
     }
 
@@ -128,7 +128,7 @@ public class HttpHeaderManipulatingClientBuilder {
     public HttpHeaderManipulatingClientBuilder set(AsciiString header,
                                                    Function<String, String> generator) {
         requireNotEmpty(header, "header");
-        requireNonNull(generator, "generator should not be null");
+        requireNonNull(generator, "generator");
         return appendOperator(request -> {
             String oldValue = request.headers().get(header);
             String newValue = generator.apply(oldValue);
@@ -139,7 +139,7 @@ public class HttpHeaderManipulatingClientBuilder {
     }
 
     /**
-     * Appends an remove operation that removes given header from request.
+     * Appends a remove operation that removes given header from request.
      * @param header header to remove
      *
      * @return this instance
@@ -154,7 +154,7 @@ public class HttpHeaderManipulatingClientBuilder {
     }
 
     /**
-     * Appends an conditional remove operation that removes all (header, value) entries passes the test
+     * Appends a conditional remove operation that removes all (header, value) entries passes the test
      * of given predicate.
      *
      * @param predicate function that returns true when input (header, value) is to be removed.
@@ -163,7 +163,7 @@ public class HttpHeaderManipulatingClientBuilder {
      * @throws NullPointerException when predicate is null
      */
     public HttpHeaderManipulatingClientBuilder remove(BiPredicate<AsciiString, String> predicate) {
-        requireNonNull(predicate, "predicate should not be null");
+        requireNonNull(predicate, "predicate");
         return appendOperator(request -> {
             HttpHeaders headers = request.headers();
             headers.forEach(entry -> {
@@ -184,12 +184,12 @@ public class HttpHeaderManipulatingClientBuilder {
      * @throws NullPointerException when updater is null
      */
     public HttpHeaderManipulatingClientBuilder update(Consumer<HttpHeaders> updater) {
-        requireNonNull(updater, "updater should not be null");
+        requireNonNull(updater, "updater");
         return appendOperator(request -> updater.accept(request.headers()));
     }
 
     private static void requireNotEmpty(CharSequence str, String target) {
-        requireNonNull(str, target + " should not be null");
+        requireNonNull(str, target);
         if (str.length() < 1) {
             throw new IllegalArgumentException(target + " should not be empty");
         }

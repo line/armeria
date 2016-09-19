@@ -16,11 +16,17 @@
 
 package com.linecorp.armeria.client.manipulating;
 
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.util.Arrays;
 import java.util.List;
+
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 
 import org.junit.Test;
 
@@ -36,49 +42,75 @@ import io.netty.util.AsciiString;
 
 public class HttpHeaderManipulatingClientBuilderTest {
 
-    @Test
-    public void testErrorOnNullOrEmptyHeader() {
-        HttpHeaderManipulatingClientBuilder builder = newBuilder();
-        boolean thrown = false;
-        try {
-            builder.add(null, "value");
-            fail("Exception not thrown on null header ");
+    // builder instance for null/empty argument tests only
+    private static HttpHeaderManipulatingClientBuilder builder = newBuilder(); 
+    
+    @Test(expected = NullPointerException.class)
+    public void addNullHeader() {
+        builder.add(null, "value");
+    }
 
-            builder.add(EMPTY_HEADER, "value");
-            fail("Exception not thrown on empty header");
+    @Test(expected = NullPointerException.class)
+    public void addNullValue() {
+        builder.add(HEADER_0, null);
+    }
 
-            builder.set(null, "value");
-            fail("Exception not thrown on null header");
+    @Test(expected = IllegalArgumentException.class)
+    public void addEmptyHeader() {
+        builder.add(EMPTY_HEADER, "value");
+    }
 
-            builder.set(EMPTY_HEADER, "value");
-            fail("Exception not thrown on empty header");
+    @Test(expected = IllegalArgumentException.class)
+    public void addEmptyValue() {
+        builder.add(HEADER_0, "");
+    }
 
-            builder.remove((AsciiString) null);
-            fail("Exception not thrown on null header");
+    @Test(expected = NullPointerException.class)
+    public void setNullHeader() {
+        builder.set(null, "value");
+    }
 
-            builder.remove(EMPTY_HEADER);
-            fail("Exception not thrown on empty header");
+    @Test(expected = NullPointerException.class)
+    public void setNullValue() {
+        builder.set(HEADER_0, (String) null);
+    }
 
-            builder.update(null);
-            fail("Exception not thrown on null updater");
+    @Test(expected = NullPointerException.class)
+    public void setNullGenerator() {
+        Function<String, String> func = null;
+        builder.set(HEADER_0, func);
+    }
 
-        } catch (Exception e) {
-            thrown = true;
-        }
-        assertEquals(true, thrown);
+    @Test(expected = IllegalArgumentException.class)
+    public void setEmptyHeader() {
+        builder.set(EMPTY_HEADER, "value");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void setEmptyValue() {
+        builder.set(HEADER_0, "");
+    }
+
+
+    @Test(expected = NullPointerException.class)
+    public void removeNullHeader() {
+        builder.remove((AsciiString)null);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void removeNullPredicate() {
+        BiPredicate<AsciiString, String> predicate = null;
+        builder.remove(predicate);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void removeEmptyHeader() {
+        builder.remove(EMPTY_HEADER);
     }
 
     @SuppressWarnings("unchecked")
     private static final Client dummyDelegate = mock(Client.class);
     private static final ClientRequestContext dummyContext = mock(ClientRequestContext.class);
-
-    @Test
-    public void testEmpty() throws Exception {
-        HttpRequest request = newRequest();
-        Client client = newBuilder().buildClient(dummyDelegate);
-        client.execute(dummyContext, request);
-        assertEquals(3, request.headers().size());
-    }
 
     @Test
     public void testAdd() throws Exception {
@@ -94,8 +126,8 @@ public class HttpHeaderManipulatingClientBuilderTest {
         List<String> value0 = headers.getAll(HEADER_0);
         List<String> value1 = headers.getAll(HEADER_1);
 
-        assertEquals("[v0, a0]", value0.toString());
-        assertEquals("[a1]", value1.toString());
+        assertThat(value0, is(Arrays.asList(VALUE_0, "a0")));
+        assertThat(value1, is(Arrays.asList("a1")));
     }
 
     @Test
@@ -120,10 +152,10 @@ public class HttpHeaderManipulatingClientBuilderTest {
         List<String> value2 = headers.getAll(HEADER_2);
         List<String> value3 = headers.getAll(HEADER_3);
 
-        assertEquals("[s0]", value0.toString());
-        assertEquals("[s1!!]", value1.toString());
-        assertEquals("[s2]", value2.toString());
-        assertEquals("[s3]", value3.toString());
+        assertThat(value0, is(Arrays.asList("s0")));
+        assertThat(value1, is(Arrays.asList("s1!!")));
+        assertThat(value2, is(Arrays.asList("s2")));
+        assertThat(value3, is(Arrays.asList("s3")));
     }
 
     @Test
@@ -144,10 +176,10 @@ public class HttpHeaderManipulatingClientBuilderTest {
         client.execute(dummyContext, request);
         HttpHeaders headers = request.headers();
 
-        assertEquals(null, headers.get(HEADER_0));
+        assertFalse(headers.contains(HEADER_0));
         assertEquals("v1", headers.get(HEADER_1));
-        assertEquals(null, headers.get(X_HEADER_1));
-        assertEquals(null, headers.get(X_HEADER_2));
+        assertFalse(headers.contains(X_HEADER_1));
+        assertFalse(headers.contains(X_HEADER_2));
         assertEquals("X3", headers.get(X_HEADER_3));
     }
 
@@ -155,12 +187,12 @@ public class HttpHeaderManipulatingClientBuilderTest {
     public void testUpdate() throws Exception {
         HttpRequest request = newRequest();
         request.headers()
-                .set(HEADER_1, "v1")
-                .set(HEADER_2, "v2")
-                .set(HEADER_3, "v3")
-                .set(X_HEADER_1, "x1")
-                .set(X_HEADER_2, "x2")
-                .set(X_HEADER_3, "x3");
+               .set(HEADER_1, "v1")
+               .set(HEADER_2, "v2")
+               .set(HEADER_3, "v3")
+               .set(X_HEADER_1, "x1")
+               .set(X_HEADER_2, "x2")
+               .set(X_HEADER_3, "x3");
 
 
         Updater updater = new Updater("!!");
@@ -171,15 +203,15 @@ public class HttpHeaderManipulatingClientBuilderTest {
         client.execute(dummyContext, request);
         HttpHeaders headers = request.headers();
 
-        assertEquals(null, headers.get(X_HEADER_1));
-        assertEquals(null, headers.get(X_HEADER_2));
-        assertEquals(null, headers.get(X_HEADER_3));
+        assertFalse(headers.contains(X_HEADER_1));
+        assertFalse(headers.contains(X_HEADER_2));
+        assertFalse(headers.contains(X_HEADER_3));
         assertEquals("!!v0v1v2v3x1x2x3", headers.get(X_HEADER_0));
     }
 
     private static HttpRequest newRequest() {
         final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.POST, "/hello");
-        req.headers().set(HEADER_0, "v0");
+        req.headers().set(HEADER_0, VALUE_0);
         req.close();
         return req;
     }
@@ -199,6 +231,8 @@ public class HttpHeaderManipulatingClientBuilderTest {
     private static AsciiString X_HEADER_1 = new AsciiString("x-h1");
     private static AsciiString X_HEADER_2 = new AsciiString("x-h2");
     private static AsciiString X_HEADER_3 = new AsciiString("x-h3");
+
+    private static String VALUE_0 = "v0";
 
     private static class Updater {
         private String seed;
