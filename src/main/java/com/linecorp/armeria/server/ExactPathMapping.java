@@ -21,18 +21,30 @@ import java.util.Optional;
 final class ExactPathMapping extends AbstractPathMapping {
 
     private final String exactPath;
+    private final String loggerName;
     private final Optional<String> exactPathOpt;
     private final String strVal;
 
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
+        loggerName = loggerName(exactPath);
         strVal = "exact: " + exactPath;
     }
 
     @Override
     protected String doApply(String path) {
         return exactPath.equals(path) ? path : null;
+    }
+
+    @Override
+    public String loggerName() {
+        return loggerName;
+    }
+
+    @Override
+    public String metricName() {
+        return exactPath;
     }
 
     @Override

@@ -51,6 +51,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public PathMapping pathMapping() {
+        return delegate().pathMapping();
+    }
+
+    @Override
     public <T extends Service<?, ?>> T service() {
         return delegate().service();
     }

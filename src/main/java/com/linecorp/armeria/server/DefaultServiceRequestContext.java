@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -50,11 +51,11 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
     private final Channel ch;
     private final ServiceConfig cfg;
     private final String mappedPath;
-    private final Logger logger;
     private final SSLSession sslSession;
 
     private final DefaultRequestLog requestLog;
     private final DefaultResponseLog responseLog;
+    private final Logger logger;
 
     private long requestTimeoutMillis;
     private long maxRequestLength;
@@ -66,13 +67,12 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
      *
      * @param ch the {@link Channel} that handles the invocation
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param logger the {@link Logger} for the invocation
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
-            String method, String path, String mappedPath, Logger logger, Object request,
+            String method, String path, String mappedPath, Object request,
             @Nullable SSLSession sslSession) {
 
         super(sessionProtocol, method, path, request);
@@ -80,16 +80,26 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
         this.ch = ch;
         this.cfg = cfg;
         this.mappedPath = mappedPath;
-        this.logger = new RequestContextAwareLogger(this, logger);
         this.sslSession = sslSession;
 
         requestLog = new DefaultRequestLog();
         requestLog.start(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method, path);
         responseLog = new DefaultResponseLog(requestLog);
+        logger = newLogger(cfg);
 
         final ServerConfig serverCfg = cfg.server().config();
         requestTimeoutMillis = serverCfg.defaultRequestTimeoutMillis();
         maxRequestLength = serverCfg.defaultMaxRequestLength();
+    }
+
+    private RequestContextAwareLogger newLogger(ServiceConfig cfg) {
+        String loggerName = cfg.loggerName().orElse(null);
+        if (loggerName == null) {
+            loggerName = cfg.pathMapping().loggerName();
+        }
+
+        return new RequestContextAwareLogger(this, LoggerFactory.getLogger(
+                cfg.server().config().serviceLoggerPrefix() + '.' + loggerName));
     }
 
     @Override
@@ -100,6 +110,11 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
     @Override
     public VirtualHost virtualHost() {
         return cfg.virtualHost();
+    }
+
+    @Override
+    public PathMapping pathMapping() {
+        return cfg.pathMapping();
     }
 
     @Override

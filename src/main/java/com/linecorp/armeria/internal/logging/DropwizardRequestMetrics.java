@@ -48,6 +48,10 @@ final class DropwizardRequestMetrics {
         this.responseBytes = responseBytes;
     }
 
+    String name() {
+        return name;
+    }
+
     void updateTime(long durationNanos) {
         timer.update(durationNanos, TimeUnit.NANOSECONDS);
     }

@@ -23,6 +23,7 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     static final CatchAllPathMapping INSTANCE = new CatchAllPathMapping();
 
     private static final Optional<String> PREFIX_PATH_OPT = Optional.of("/");
+    private static final String LOGGER_NAME = loggerName("/"); // "__ROOT__"
 
     private CatchAllPathMapping() {}
 
@@ -32,8 +33,13 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> prefixPath() {
-        return PREFIX_PATH_OPT;
+    public String loggerName() {
+        return LOGGER_NAME;
+    }
+
+    @Override
+    public String metricName() {
+        return "/**";
     }
 
     @Override

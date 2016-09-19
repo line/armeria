@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.PathMapping.ofGlob;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.Objects;
 
 import org.junit.Assert;
@@ -78,6 +81,11 @@ public class GlobPathMappingTest {
         compile("**").apply("not/an/absolute/path");
     }
 
+    @Test
+    public void testLoggerName() throws Exception {
+        assertThat(ofGlob("/foo/bar/**").loggerName()).isEqualTo("foo.bar.__");
+    }
+
     private static void pass(String glob, String... paths) {
         final GlobPathMapping pattern = compile(glob);
         for (String p: paths) {
@@ -97,6 +105,6 @@ public class GlobPathMappingTest {
     }
 
     private static GlobPathMapping compile(String glob) {
-        return (GlobPathMapping) PathMapping.ofGlob(glob);
+        return (GlobPathMapping) ofGlob(glob);
     }
 }

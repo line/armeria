@@ -222,7 +222,7 @@ public final class ServerConfig {
         return new VirtualHost(
                 h.defaultHostname(), "*", sslCtx,
                 h.serviceConfigs().stream().map(
-                        e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerNameWithoutPrefix()))
+                        e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
                  .collect(Collectors.toList()));
     }
 
