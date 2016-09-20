@@ -46,6 +46,12 @@ public interface ServiceRequestContext extends RequestContext {
     VirtualHost virtualHost();
 
     /**
+     * Returns the {@link PathMapping} associated with the {@link Service} that is handling the current
+     * {@link Request}.
+     */
+    PathMapping pathMapping();
+
+    /**
      * Returns the {@link Service} that is handling the current {@link Request}.
      */
     <T extends Service<?, ?>> T service();

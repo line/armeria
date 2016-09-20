@@ -23,16 +23,44 @@ import java.util.regex.Pattern;
 final class RegexPathMapping extends AbstractPathMapping {
 
     private final Pattern regex;
+    private final String loggerName;
     private final String strVal;
 
     RegexPathMapping(Pattern regex) {
         this.regex = requireNonNull(regex, "regex");
+        loggerName = toLoggerName(regex);
         strVal = "regex: " + regex.pattern();
     }
 
     @Override
     protected String doApply(String path) {
         return regex.matcher(path).find() ? path : null;
+    }
+
+    @Override
+    public String loggerName() {
+        return loggerName;
+    }
+
+    private static String toLoggerName(Pattern regex) {
+        final String regexStr = regex.pattern();
+        final String prefix = "regex.";
+        final StringBuilder buf = new StringBuilder(prefix.length() + regexStr.length());
+        buf.append(prefix);
+        for (int i = 0; i < regexStr.length(); i++) {
+            final char ch = regexStr.charAt(i);
+            if (Character.isJavaIdentifierPart(ch)) {
+                buf.append(ch);
+            } else {
+                buf.append('_');
+            }
+        }
+        return buf.toString();
+    }
+
+    @Override
+    public String metricName() {
+        return strVal;
     }
 
     @Override

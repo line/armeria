@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.server.PathManipulators.Prepend;
@@ -32,8 +31,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * The translated path, returned by {@link #apply(String)}, determines the value of
  * {@link ServiceRequestContext#mappedPath()}.
  */
-@FunctionalInterface
-public interface PathMapping extends Function<String, String> {
+public interface PathMapping {
 
     /**
      * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
@@ -133,26 +131,28 @@ public interface PathMapping extends Function<String, String> {
      * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
      *         {@code null} if the specified {@code path} does not match this mapping.
      */
-    @Override
     String apply(String path);
+
+    /**
+     * Returns the logger name.
+     *
+     * @return the logger name
+     */
+    String loggerName();
+
+    /**
+     * Returns the metric name.
+     *
+     * @return the metric name whose components are separated by the specified {@code separator}.
+     */
+    String metricName();
 
     /**
      * Returns the exact path of this path mapping if it is an exact path mapping, or {@link Optional#empty}
      * otherwise. This can be useful for services which provide logic after scanning the server's mapped
      * services, e.g. {@link DocService}
      */
-    default Optional<String> exactPath() {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns the prefix of this path mapping if it is a prefix path mapping, or {@link Optional#empty}
-     * otherwise. This can be useful for services which provide logic after scanning the server's mapped
-     * services, e.g. {@link DocService}
-     */
-    default Optional<String> prefixPath() {
-        return Optional.empty();
-    }
+    Optional<String> exactPath();
 
     /**
      * Creates a new {@link PathMapping} that removes the specified {@code pathPrefix} from the matched path
@@ -174,7 +174,7 @@ public interface PathMapping extends Function<String, String> {
 
     /**
      * Creates a new {@link PathMapping} that removes the first {@code <numPathComponents>} path components
-     * from the matches path so that the {@link ServiceRequestContext#mappedPath()} does not have
+     * from the matched path so that the {@link ServiceRequestContext#mappedPath()} does not have
      * unnecessary path prefixes. This method is useful when used with {@link #ofRegex(Pattern)} or
      * {@link #ofGlob(String)}. For example:
      * <pre>{@code

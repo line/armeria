@@ -18,27 +18,56 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
+
 final class PathManipulators {
 
-    static final class StripPrefixByNumPathComponents extends AbstractPathMapping {
-
+    abstract static class PathMappingWrapper extends AbstractPathMapping {
         private final PathMapping mapping;
+
+        PathMappingWrapper(PathMapping mapping) {
+            requireNonNull(mapping, "mapping");
+            this.mapping = mapping;
+        }
+
+        PathMapping mapping() {
+            return mapping;
+        }
+
+        @Override
+        public String loggerName() {
+            return mapping.loggerName();
+        }
+
+        @Override
+        public String metricName() {
+            return mapping.metricName();
+        }
+
+        @Override
+        public Optional<String> exactPath() {
+            return mapping.exactPath();
+        }
+
+    }
+
+    static final class StripPrefixByNumPathComponents extends PathMappingWrapper {
+
         private final int numPathComponents;
 
         StripPrefixByNumPathComponents(PathMapping mapping, int numPathComponents) {
-            requireNonNull(mapping, "mapping");
+            super(mapping);
             if (numPathComponents <= 0) {
                 throw new IllegalArgumentException(
                         "numPathComponents: " + numPathComponents + " (expected: > 0)");
             }
 
-            this.mapping = mapping;
             this.numPathComponents = numPathComponents;
         }
 
         @Override
         protected String doApply(String path) {
-            path = mapping.apply(path);
+            path = mapping().apply(path);
             if (path == null) {
                 return null;
             }
@@ -60,20 +89,18 @@ final class PathManipulators {
 
         @Override
         public String toString() {
-            return "stripPrefix(" + numPathComponents + ", " + mapping + ')';
+            return "stripPrefix(" + numPathComponents + ", " + mapping() + ')';
         }
     }
 
-    static class StripPrefixByPathPrefix extends AbstractPathMapping {
+    static class StripPrefixByPathPrefix extends PathMappingWrapper {
 
-        private final PathMapping mapping;
         private final String pathPrefix;
 
         StripPrefixByPathPrefix(PathMapping mapping, String pathPrefix) {
-            requireNonNull(mapping, "mapping");
+            super(mapping);
             ensureAbsolutePath(pathPrefix, "pathPrefix");
 
-            this.mapping = mapping;
             if (pathPrefix.endsWith("/")) {
                 this.pathPrefix = pathPrefix;
             } else {
@@ -83,7 +110,7 @@ final class PathManipulators {
 
         @Override
         protected String doApply(String path) {
-            path = mapping.apply(path);
+            path = mapping().apply(path);
             if (path == null || !path.startsWith(pathPrefix)) {
                 return null;
             }
@@ -93,21 +120,19 @@ final class PathManipulators {
 
         @Override
         public String toString() {
-            return "stripPrefix(" + pathPrefix + ", " + mapping + ')';
+            return "stripPrefix(" + pathPrefix + ", " + mapping() + ')';
         }
     }
 
-    static class StripParents extends AbstractPathMapping {
-
-        private final PathMapping mapping;
+    static class StripParents extends PathMappingWrapper {
 
         StripParents(PathMapping mapping) {
-            this.mapping = requireNonNull(mapping, "mapping");
+            super(mapping);
         }
 
         @Override
         protected String doApply(String path) {
-            path = mapping.apply(path);
+            path = mapping().apply(path);
             if (path == null) {
                 return null;
             }
@@ -123,20 +148,18 @@ final class PathManipulators {
 
         @Override
         public String toString() {
-            return "stripParents(" + mapping + ')';
+            return "stripParents(" + mapping() + ')';
         }
     }
 
-    static class Prepend extends AbstractPathMapping {
+    static class Prepend extends PathMappingWrapper {
 
-        private final PathMapping mapping;
         private final String pathPrefix;
 
         Prepend(PathMapping mapping, String pathPrefix) {
-            requireNonNull(mapping, "mapping");
+            super(mapping);
             ensureAbsolutePath(pathPrefix, "pathPrefix");
 
-            this.mapping = mapping;
             if (pathPrefix.endsWith("/")) {
                 this.pathPrefix = pathPrefix.substring(0, pathPrefix.length() - 1);
             } else {
@@ -146,7 +169,7 @@ final class PathManipulators {
 
         @Override
         protected String doApply(String path) {
-            path = mapping.apply(path);
+            path = mapping().apply(path);
             if (path == null) {
                 return null;
             }
@@ -156,7 +179,7 @@ final class PathManipulators {
 
         @Override
         public String toString() {
-            return "prepend(" + pathPrefix + ", " + mapping + ')';
+            return "prepend(" + pathPrefix + ", " + mapping() + ')';
         }
     }
 

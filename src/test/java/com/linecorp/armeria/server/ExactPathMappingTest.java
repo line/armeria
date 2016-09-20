@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static com.linecorp.armeria.server.PathMapping.ofExact;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
@@ -26,11 +25,23 @@ public class ExactPathMappingTest {
 
     @Test
     public void shouldReturnNullOnMismatch() {
-        assertThat(new ExactPathMapping("/find/me").apply("/find/me/not"), is(nullValue()));
+        assertThat(new ExactPathMapping("/find/me").apply("/find/me/not")).isNull();
     }
 
     @Test
     public void shouldReturnExactPathOnMatch() {
-        assertThat(new ExactPathMapping("/find/me").apply("/find/me"), is("/find/me"));
+        assertThat(new ExactPathMapping("/find/me").apply("/find/me")).isEqualTo("/find/me");
+    }
+
+    @Test
+    public void testLoggerNameEscaping() throws Exception {
+        assertThat(ofExact("/foo/bar.txt").loggerName()).isEqualTo("foo.bar_txt");
+        assertThat(ofExact("/bar/b-a-z").loggerName()).isEqualTo("bar.b_a_z");
+        assertThat(ofExact("/bar/baz/").loggerName()).isEqualTo("bar.baz");
+    }
+
+    @Test
+    public void testLoggerName() throws Exception {
+        assertThat(ofExact("/foo/bar").loggerName()).isEqualTo("foo.bar");
     }
 }

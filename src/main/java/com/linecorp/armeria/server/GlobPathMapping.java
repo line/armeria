@@ -20,19 +20,31 @@ import java.util.regex.Pattern;
 
 final class GlobPathMapping extends AbstractPathMapping {
 
-    private final Pattern pattern;
-    private final String strVal;
     private final String glob;
+    private final Pattern pattern;
+    private final String loggerName;
+    private final String strVal;
 
     GlobPathMapping(String glob) {
         this.glob = glob;
         pattern = globToRegex(glob);
+        loggerName = loggerName(glob);
         strVal = "glob:" + glob;
     }
 
     @Override
     protected String doApply(String path) {
         return pattern.matcher(path).matches() ? path : null;
+    }
+
+    @Override
+    public String loggerName() {
+        return loggerName;
+    }
+
+    @Override
+    public String metricName() {
+        return glob;
     }
 
     Pattern asRegex() {

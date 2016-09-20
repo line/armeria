@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
+
 /**
  * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(String)}.
  */
@@ -58,7 +60,7 @@ public abstract class AbstractPathMapping implements PathMapping {
      * @return {@code path}
      *
      * @throws NullPointerException if {@code path} is {@code null}
-     * @throws IllegalArgumentException if {@code path} is not an asbsolute path
+     * @throws IllegalArgumentException if {@code path} is not an absolute path
      */
     protected static String ensureAbsolutePath(String path, String paramName) {
         requireNonNull(path, paramName);
@@ -76,4 +78,68 @@ public abstract class AbstractPathMapping implements PathMapping {
      *         {@code null} if the specified {@code path} does not match this mapping.
      */
     protected abstract String doApply(String path);
+
+    @Override
+    public String loggerName() {
+        return "__UNKNOWN__";
+    }
+
+    static String loggerName(String pathish) {
+        if (pathish == null) {
+            return "__UNKNOWN__";
+        }
+
+        String normalized = pathish;
+        if ("/".equals(normalized)) {
+            return "__ROOT__";
+        }
+        normalized = normalized.substring(1); // Strip the first slash.
+
+        final int end;
+        if (normalized.endsWith("/")) {
+            end = normalized.length() - 1;
+        } else {
+            end = normalized.length();
+        }
+
+        final StringBuilder buf = new StringBuilder(end);
+        boolean start = true;
+        for (int i = 0; i < end; i++) {
+            final char ch = normalized.charAt(i);
+            if (ch != '/') {
+                if (start) {
+                    start = false;
+                    if (Character.isJavaIdentifierStart(ch)) {
+                        buf.append(ch);
+                    } else {
+                        buf.append('_');
+                        if (Character.isJavaIdentifierPart(ch)) {
+                            buf.append(ch);
+                        }
+                    }
+                } else {
+                    if (Character.isJavaIdentifierPart(ch)) {
+                        buf.append(ch);
+                    } else {
+                        buf.append('_');
+                    }
+                }
+            } else {
+                start = true;
+                buf.append('.');
+            }
+        }
+
+        return buf.toString();
+    }
+
+    @Override
+    public String metricName() {
+        return "__UNKNOWN_PATH__";
+    }
+
+    @Override
+    public Optional<String> exactPath() {
+        return Optional.empty();
+    }
 }

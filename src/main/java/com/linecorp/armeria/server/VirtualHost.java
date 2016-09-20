@@ -229,7 +229,7 @@ public final class VirtualHost {
                 this.services.stream().map(cfg -> {
                     final PathMapping pathMapping = cfg.pathMapping();
                     final Service<Request, Response> service = decorator.apply(cfg.service());
-                    final String loggerName = cfg.loggerNameWithoutPrefix();
+                    final String loggerName = cfg.loggerName().orElse(null);
                     return new ServiceConfig(pathMapping, service, loggerName);
                 }).collect(Collectors.toList());
 
