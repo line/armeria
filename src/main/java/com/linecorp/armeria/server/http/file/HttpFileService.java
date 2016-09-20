@@ -150,7 +150,6 @@ public final class HttpFileService extends AbstractHttpService {
 
         if (lastModifiedMillis < ifModifiedSinceMillis) {
             res.write(HttpHeaders.of(HttpStatus.NOT_MODIFIED)
-                                 .set(HttpHeaderNames.CONTENT_TYPE, entry.mediaType().toString())
                                  .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
                                  .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis));
             res.close();
@@ -170,9 +169,9 @@ public final class HttpFileService extends AbstractHttpService {
         }
 
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                   .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
-                   .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
-                   .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis);
+                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
+                                         .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
+                                         .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis);
         if (entry.mediaType() != null) {
             headers.set(HttpHeaderNames.CONTENT_TYPE, entry.mediaType().toString());
         }
