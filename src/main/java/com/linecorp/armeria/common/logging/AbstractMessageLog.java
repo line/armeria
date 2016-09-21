@@ -19,11 +19,10 @@ package com.linecorp.armeria.common.logging;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.UnitFormatter;
@@ -178,17 +177,53 @@ abstract class AbstractMessageLog<T extends MessageLog>
 
     @Override
     public final String toString() {
-        final MoreObjects.ToStringHelper helper =
-                MoreObjects.toStringHelper("")
-                           .add("timeSpan",
-                                startTimeNanos + "+" + UnitFormatter.elapsed(startTimeNanos, endTimeNanos))
-                           .add("contentLength", UnitFormatter.size(contentLength));
+        final StringBuilder buf = new StringBuilder(512);
 
-        append(helper);
+        buf.append("{timeSpan=").append(startTimeNanos).append('+');
+        UnitFormatter.appendElapsed(buf, startTimeNanos, endTimeNanos);
 
-        return helper.add("cause", cause)
-                     .add("attrs", attrs).toString();
+        buf.append(", contentLength=");
+        UnitFormatter.appendSize(buf, contentLength);
+
+        appendProperties(buf);
+
+        buf.append(", cause=").append(cause);
+
+        appendAttrs(buf);
+
+        return buf.append('}').toString();
     }
 
-    abstract void append(MoreObjects.ToStringHelper helper);
+    abstract void appendProperties(StringBuilder buf);
+
+    private void appendAttrs(StringBuilder buf) {
+        for (Iterator<Attribute<?>> i = attrs.attrs(); i.hasNext();) {
+            final Attribute<?> a = i.next();
+            if (!includeAttr(a)) {
+                continue;
+            }
+
+            final String name = a.key().name();
+            final Object value = a.get();
+
+            buf.append(", ");
+
+            final int sharpIndex = name.lastIndexOf('#');
+            if (sharpIndex > 0) {
+                buf.append(name, sharpIndex + 1, name.length());
+            } else {
+                buf.append(name);
+            }
+
+            buf.append('=');
+
+            if (value instanceof Object[]) {
+                buf.append(Arrays.toString((Object[]) value));
+            } else {
+                buf.append(value);
+            }
+        }
+    }
+
+    abstract boolean includeAttr(Attribute<?> attr);
 }

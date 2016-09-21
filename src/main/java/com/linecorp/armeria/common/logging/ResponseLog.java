@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.common.logging;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.thrift.ApacheThriftReply;
 
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
@@ -40,6 +45,16 @@ public interface ResponseLog extends MessageLog {
      * The {@link AttributeKey} of the processed {@link RpcResponse}.
      */
     AttributeKey<RpcResponse> RPC_RESPONSE = AttributeKey.valueOf(RequestLog.class, "RPC_RESPONSE");
+
+    /**
+     * The {@link AttributeKey} of the processed {@link RpcResponse} in its protocol-dependent low-level form.
+     *
+     * <p>For a Thrift response, the value of this {@link Attribute} is an {@link ApacheThriftReply}.
+     *
+     * <p>For a Protocol Buffers request, the value of this {@link Attribute} is a {@link Message} or
+     * a {@link MessageLite}.
+     */
+    AttributeKey<Object> RAW_RPC_RESPONSE = AttributeKey.valueOf(ResponseLog.class, "RAW_RPC_RESPONSE");
 
     /**
      * Returns the {@link RequestLog} of the corresponding {@link Request}.

@@ -18,13 +18,12 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.MoreObjects.ToStringHelper;
-
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
+import io.netty.util.Attribute;
 
 /**
  * Default {@link RequestLog} implementation.
@@ -95,12 +94,21 @@ public final class DefaultRequestLog
     }
 
     @Override
-    protected void append(ToStringHelper helper) {
-        helper.add("channel", channel)
-              .add("scheme", (serializationFormat != null ? serializationFormat.uriText() : null) + '+' +
-                             (sessionProtocol != null ? sessionProtocol.uriText() : null))
-              .add("host", host)
-              .add("method", method)
-              .add("path", path);
+    protected void appendProperties(StringBuilder buf) {
+        buf.append(", scheme=")
+           .append(serializationFormat != null ? serializationFormat.uriText() : null)
+           .append('+')
+           .append(sessionProtocol != null ? sessionProtocol.uriText() : null)
+           .append(", host=")
+           .append(host)
+           .append(", method=")
+           .append(method)
+           .append(", path=")
+           .append(path);
+    }
+
+    @Override
+    boolean includeAttr(Attribute<?> attr) {
+        return attr.key() != RAW_RPC_REQUEST;
     }
 }

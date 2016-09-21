@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
-import com.google.common.base.MoreObjects.ToStringHelper;
+import io.netty.util.Attribute;
 
 /**
  * Default {@link ResponseLog} implementation.
@@ -61,8 +61,12 @@ public final class DefaultResponseLog
     }
 
     @Override
-    protected void append(ToStringHelper helper) {
-        helper.add("statusCode", statusCode);
+    protected void appendProperties(StringBuilder buf) {
+        buf.append(", statusCode=").append(statusCode);
     }
 
+    @Override
+    boolean includeAttr(Attribute<?> attr) {
+        return attr.key() != RAW_RPC_RESPONSE;
+    }
 }
