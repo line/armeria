@@ -40,7 +40,7 @@ public final class DropwizardMetricConsumer implements MessageLogConsumer {
 
     private final MetricRegistry metricRegistry;
     private final BiFunction<RequestContext, RequestLog, String> metricNameFunc;
-    private final Map<RequestLog, DropwizardRequestMetrics> methodRequestMetrics;
+    private final Map<String, DropwizardRequestMetrics> methodRequestMetrics;
 
     /**
      * Creates a new instance.
@@ -100,18 +100,16 @@ public final class DropwizardMetricConsumer implements MessageLogConsumer {
     }
 
     private DropwizardRequestMetrics getRequestMetrics(RequestContext ctx, RequestLog req) {
+        final String metricName = metricNameFunc.apply(ctx, req);
         return methodRequestMetrics.computeIfAbsent(
-                req,
-                reqLog -> {
-                    final String metricName = metricNameFunc.apply(ctx, reqLog);
-                    return new DropwizardRequestMetrics(
-                            metricName,
-                            metricRegistry.timer(MetricRegistry.name(metricName, "requests")),
-                            metricRegistry.meter(MetricRegistry.name(metricName, "successes")),
-                            metricRegistry.meter(MetricRegistry.name(metricName, "failures")),
-                            metricRegistry.counter(MetricRegistry.name(metricName, "activeRequests")),
-                            metricRegistry.meter(MetricRegistry.name(metricName, "requestBytes")),
-                            metricRegistry.meter(MetricRegistry.name(metricName, "responseBytes")));
-                });
+                metricName,
+                name -> new DropwizardRequestMetrics(
+                        name,
+                        metricRegistry.timer(MetricRegistry.name(name, "requests")),
+                        metricRegistry.meter(MetricRegistry.name(name, "successes")),
+                        metricRegistry.meter(MetricRegistry.name(name, "failures")),
+                        metricRegistry.counter(MetricRegistry.name(name, "activeRequests")),
+                        metricRegistry.meter(MetricRegistry.name(name, "requestBytes")),
+                        metricRegistry.meter(MetricRegistry.name(name, "responseBytes"))));
     }
 }
