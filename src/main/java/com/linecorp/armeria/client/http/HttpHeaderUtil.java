@@ -35,8 +35,10 @@ final class HttpHeaderUtil {
     }
 
     private static String createUserAgentName() {
-        Version version = Version.identify().get(CLIENT_ARTIFACT_ID);
-        return CLIENT_ARTIFACT_ID + '/' + (version != null ? version.artifactId() : "unknown");
+        final Version version = Version.identify(HttpHeaderUtil.class.getClassLoader())
+                                       .get(CLIENT_ARTIFACT_ID);
+
+        return CLIENT_ARTIFACT_ID + '/' + (version != null ? version.artifactVersion() : "unknown");
     }
 
     private HttpHeaderUtil() {}
