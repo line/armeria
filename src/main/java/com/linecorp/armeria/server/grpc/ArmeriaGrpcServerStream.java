@@ -37,6 +37,7 @@ import io.grpc.internal.TransportFrameUtil;
 import io.grpc.internal.WritableBuffer;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * An {@link AbstractServerStream} that converts GRPC structures and writes to an Armeria
@@ -90,8 +91,15 @@ final class ArmeriaGrpcServerStream extends AbstractServerStream {
                 // Armeria flushes every message so no need to do anything here.
                 return;
             }
-            ByteBuf buf = ((NettyWritableBuffer) frame).bytebuf();
-            HttpData data = HttpData.of(buf);
+
+            final ByteBuf buf = ((NettyWritableBuffer) frame).bytebuf();
+            final HttpData data;
+            try {
+                data = HttpData.of(buf);
+            } finally {
+                ReferenceCountUtil.safeRelease(buf);
+            }
+
             responseWriter.write(data);
         }
 
