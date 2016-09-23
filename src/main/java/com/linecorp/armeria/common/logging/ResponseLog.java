@@ -39,12 +39,12 @@ public interface ResponseLog extends MessageLog {
     /**
      * The {@link AttributeKey} of the {@link HttpHeaders} of the processed {@link HttpResponse}.
      */
-    AttributeKey<HttpHeaders> HTTP_HEADERS = AttributeKey.valueOf(RequestLog.class, "HTTP_HEADERS");
+    AttributeKey<HttpHeaders> HTTP_HEADERS = AttributeKey.valueOf(ResponseLog.class, "HTTP_HEADERS");
 
     /**
      * The {@link AttributeKey} of the processed {@link RpcResponse}.
      */
-    AttributeKey<RpcResponse> RPC_RESPONSE = AttributeKey.valueOf(RequestLog.class, "RPC_RESPONSE");
+    AttributeKey<RpcResponse> RPC_RESPONSE = AttributeKey.valueOf(ResponseLog.class, "RPC_RESPONSE");
 
     /**
      * The {@link AttributeKey} of the processed {@link RpcResponse} in its protocol-dependent low-level form.

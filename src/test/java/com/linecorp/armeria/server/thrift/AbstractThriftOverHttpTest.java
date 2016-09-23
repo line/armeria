@@ -102,9 +102,6 @@ public abstract class AbstractThriftOverHttpTest {
 
             sb.serviceAt("/hellochild", THttpService.of(new HelloServiceChild()));
 
-            sb.serviceAt("/oneway", THttpService.of(
-                    (OnewayHelloService.AsyncIface) (name, resultHandler) -> resultHandler.onComplete(null)));
-
             sb.serviceAt("/exception", THttpService.of(
                     (AsyncIface) (name, resultHandler) ->
                             resultHandler.onError(Exceptions.clearTrace(new Exception(name)))));

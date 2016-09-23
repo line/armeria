@@ -786,7 +786,6 @@
             <link>https://netty.io/4.1/api</link>
             <link>https://developers.google.com/protocol-buffers/docs/reference/java</link>
             <link>https://people.apache.org/~thejas/thrift-0.9/javadoc/</link>
-            <link></link>
           </links>
         </configuration>
       </plugin>
