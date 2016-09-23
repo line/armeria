@@ -52,7 +52,6 @@ import com.linecorp.armeria.server.logging.LogCollectingService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
-import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
