@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.common.logging;
 
+import com.google.protobuf.Message;
+import com.google.protobuf.MessageLite;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.thrift.ApacheThriftCall;
 
 import io.netty.channel.Channel;
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
@@ -40,6 +45,16 @@ public interface RequestLog extends MessageLog {
      * The {@link AttributeKey} of the processed {@link RpcRequest}.
      */
     AttributeKey<RpcRequest> RPC_REQUEST = AttributeKey.valueOf(RequestLog.class, "RPC_REQUEST");
+
+    /**
+     * The {@link AttributeKey} of the processed {@link RpcRequest} in its protocol-dependent low-level form.
+     *
+     * <p>For a Thrift request, the value of this {@link Attribute} is an {@link ApacheThriftCall}.
+     *
+     * <p>For a Protocol Buffers request, the value of this {@link Attribute} is a {@link Message} or
+     * a {@link MessageLite}.
+     */
+    AttributeKey<Object> RAW_RPC_REQUEST = AttributeKey.valueOf(RequestLog.class, "RAW_RPC_REQUEST");
 
     /**
      * Returns the Netty {@link Channel} which handled the {@link Request}.

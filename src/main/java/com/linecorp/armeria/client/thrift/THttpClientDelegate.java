@@ -52,6 +52,8 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.common.thrift.ApacheThriftCall;
+import com.linecorp.armeria.common.thrift.ApacheThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -104,13 +106,17 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         try {
             final TMemoryBuffer outTransport = new TMemoryBuffer(128);
             final TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
-            final TMessage tMessage = new TMessage(fullMethod(ctx, method), func.messageType(), seqId);
+            final TMessage header = new TMessage(fullMethod(ctx, method), func.messageType(), seqId);
 
-            tProtocol.writeMessageBegin(tMessage);
+            tProtocol.writeMessageBegin(header);
             @SuppressWarnings("rawtypes")
             final TBase tArgs = func.newArgs(args);
             tArgs.write(tProtocol);
             tProtocol.writeMessageEnd();
+
+            ctx.requestLogBuilder()
+               .attr(RequestLog.RAW_RPC_REQUEST)
+               .set(new ApacheThriftCall(header, tArgs));
 
             final DefaultHttpRequest httpReq = new DefaultHttpRequest(
                     HttpHeaders.of(HttpMethod.POST, path)
@@ -135,7 +141,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
                 }
 
                 try {
-                    reply.complete(decodeResponse(func, res.content()));
+                    reply.complete(decodeResponse(ctx, func, res.content()));
                 } catch (Throwable t) {
                     completeExceptionally(reply, func, t);
                 }
@@ -165,11 +171,14 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         return metadataMap.computeIfAbsent(serviceType, ThriftServiceMetadata::new);
     }
 
-    private Object decodeResponse(ThriftFunction method, HttpData content) throws TException {
+    private Object decodeResponse(
+            ClientRequestContext ctx, ThriftFunction func, HttpData content) throws TException {
+
+        if (func.isOneWay()) {
+            return null;
+        }
+
         if (content.isEmpty()) {
-            if (method.isOneWay()) {
-                return null;
-            }
             throw new TApplicationException(TApplicationException.MISSING_RESULT);
         }
 
@@ -177,27 +186,30 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
                 new TMemoryInputTransport(content.array(), content.offset(), content.length());
         final TProtocol inputProtocol = protocolFactory.getProtocol(inputTransport);
 
-        final TMessage msg = inputProtocol.readMessageBegin();
-        if (msg.type == TMessageType.EXCEPTION) {
-            TApplicationException ex = TApplicationException.read(inputProtocol);
-            inputProtocol.readMessageEnd();
-            throw ex;
+        final TMessage header = inputProtocol.readMessageBegin();
+        final TApplicationException appEx = readApplicationException(func, inputProtocol, header);
+        if (appEx != null) {
+            ctx.responseLogBuilder()
+               .attr(ResponseLog.RAW_RPC_RESPONSE)
+               .set(new ApacheThriftReply(header, appEx));
+            throw appEx;
         }
 
-        if (!method.name().equals(msg.name)) {
-            throw new TApplicationException(TApplicationException.WRONG_METHOD_NAME, msg.name);
-        }
-        TBase<? extends TBase<?, ?>, TFieldIdEnum> result = method.newResult();
+        TBase<? extends TBase<?, ?>, TFieldIdEnum> result = func.newResult();
         result.read(inputProtocol);
         inputProtocol.readMessageEnd();
 
-        for (TFieldIdEnum fieldIdEnum : method.exceptionFields()) {
+        ctx.responseLogBuilder()
+           .attr(ResponseLog.RAW_RPC_RESPONSE)
+           .set(new ApacheThriftReply(header, result));
+
+        for (TFieldIdEnum fieldIdEnum : func.exceptionFields()) {
             if (result.isSet(fieldIdEnum)) {
                 throw (TException) ThriftFieldAccess.get(result, fieldIdEnum);
             }
         }
 
-        TFieldIdEnum successField = method.successField();
+        TFieldIdEnum successField = func.successField();
         if (successField == null) { // void method
             return null;
         }
@@ -207,6 +219,26 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
 
         throw new TApplicationException(TApplicationException.MISSING_RESULT,
                                         result.getClass().getName() + '.' + successField.getFieldName());
+    }
+
+    private static TApplicationException readApplicationException(ThriftFunction func,
+                                                                  TProtocol inputProtocol,
+                                                                  TMessage msg) throws TException {
+        final TApplicationException appEx;
+        if (msg.type == TMessageType.EXCEPTION) {
+            appEx = TApplicationException.read(inputProtocol);
+            inputProtocol.readMessageEnd();
+        } else if (!func.name().equals(msg.name)) {
+            appEx = new TApplicationException(
+                    TApplicationException.WRONG_METHOD_NAME, msg.name);
+        } else {
+            appEx = null;
+        }
+        return appEx;
+    }
+
+    private static void completeExceptionally(ThriftReply reply, ThriftFunction thriftMethod, Throwable cause) {
+        reply.completeExceptionally(decodeException(cause, thriftMethod.declaredExceptions()));
     }
 
     private static Exception decodeException(Throwable cause, Class<?>[] declaredThrowableExceptions) {
@@ -227,9 +259,5 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         } else {
             return new TTransportException(cause);
         }
-    }
-
-    private static void completeExceptionally(ThriftReply reply, ThriftFunction thriftMethod, Throwable cause) {
-        reply.completeExceptionally(decodeException(cause, thriftMethod.declaredExceptions()));
     }
 }
