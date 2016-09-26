@@ -49,6 +49,7 @@ import com.linecorp.armeria.service.test.thrift.hbase.Hbase;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
+import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 
 public class DocServiceTest extends AbstractServerTest {
@@ -76,12 +77,14 @@ public class DocServiceTest extends AbstractServerTest {
         final THttpService cassandraServiceDebug =
                 THttpService.ofFormats(mock(Cassandra.AsyncIface.class), THRIFT_TEXT);
         final THttpService hbaseService = THttpService.of(mock(Hbase.AsyncIface.class));
+        final THttpService onewayHelloService = THttpService.of(mock(OnewayHelloService.AsyncIface.class));
 
         sb.serviceAt("/", helloAndSleepService);
         sb.serviceAt("/foo", fooService);
         sb.serviceAt("/cassandra", cassandraService);
         sb.serviceAt("/cassandra/debug", cassandraServiceDebug);
         sb.serviceAt("/hbase", hbaseService);
+        sb.serviceAt("/oneway", onewayHelloService);
 
         sb.serviceUnder("/docs/",
                         new DocService(ImmutableList.of(SAMPLE_HELLO), SAMPLE_HTTP_HEADERS)
@@ -102,6 +105,8 @@ public class DocServiceTest extends AbstractServerTest {
                 EndpointInfo.of("*", "/cassandra/debug", "", THRIFT_TEXT, EnumSet.of(THRIFT_TEXT))));
         serviceMap.put(Hbase.class, Collections.singletonList(
                 EndpointInfo.of("*", "/hbase", "", THRIFT_BINARY, SerializationFormat.ofThrift())));
+        serviceMap.put(OnewayHelloService.class, Collections.singletonList(
+                EndpointInfo.of("*", "/oneway", "", THRIFT_BINARY, SerializationFormat.ofThrift())));
 
         final ObjectMapper mapper = new ObjectMapper();
         final String expectedJson = mapper.writeValueAsString(
