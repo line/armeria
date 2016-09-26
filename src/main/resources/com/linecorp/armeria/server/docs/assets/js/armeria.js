@@ -248,7 +248,8 @@ $(function () {
         headers: httpHeaders,
         contentType: TTEXT_MIME_TYPE,
         success: function (response) {
-          debugResponse.text(response);
+          var result = response.length > 0 ? response : "Oneway: OK";
+          debugResponse.text(result);
           hljs.highlightBlock(debugResponse.get(0));
 
           // Set the URL with request
