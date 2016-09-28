@@ -24,6 +24,7 @@ import java.util.Optional;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.FlushConsolidationHandler;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
+import com.linecorp.armeria.internal.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.http.Http2GoAwayListener;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerPort;
@@ -95,8 +96,10 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
 
         if (port.protocol().isTls()) {
             p.addLast(new SniHandler(sslContexts));
+            p.addLast(TrafficLoggingHandler.SERVER);
             configureHttps(p);
         } else {
+            p.addLast(TrafficLoggingHandler.SERVER);
             configureHttp(p);
         }
     }
