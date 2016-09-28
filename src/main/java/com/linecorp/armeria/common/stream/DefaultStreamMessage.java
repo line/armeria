@@ -310,23 +310,25 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
     private void notifySubscriberWithCloseEvent(Subscriber<Object> subscriber, CloseEvent o) {
         setState(State.CLEANUP);
-        cleanup();
-
-        final Throwable cause = o.cause();
-        if (cause == null) {
-            try {
-                subscriber.onComplete();
-            } finally {
-                closeFuture.complete(null);
-            }
-        } else {
-            try {
-                if (!o.isCancelled()) {
-                    subscriber.onError(cause);
+        try {
+            final Throwable cause = o.cause();
+            if (cause == null) {
+                try {
+                    subscriber.onComplete();
+                } finally {
+                    closeFuture.complete(null);
                 }
-            } finally {
-                closeFuture.completeExceptionally(cause);
+            } else {
+                try {
+                    if (!o.isCancelled()) {
+                        subscriber.onError(cause);
+                    }
+                } finally {
+                    closeFuture.completeExceptionally(cause);
+                }
             }
+        } finally {
+            cleanup();
         }
     }
 
