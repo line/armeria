@@ -17,6 +17,10 @@
         tmp, tmp2, new_str = [], ns = 0, from = 0, lc, rc
         ;
 
+    if (!tokenizer.exec(json)) {
+        return json;
+    }
+
     tokenizer.lastIndex = 0;
 
     while (tmp = tokenizer.exec(json)) {
