@@ -248,7 +248,7 @@ $(function () {
         headers: httpHeaders,
         contentType: TTEXT_MIME_TYPE,
         success: function (response) {
-          var result = response.length > 0 ? response : "Oneway: OK";
+          var result = response.length > 0 ? response : "Request sent to one-way function";
           debugResponse.text(result);
           hljs.highlightBlock(debugResponse.get(0));
 

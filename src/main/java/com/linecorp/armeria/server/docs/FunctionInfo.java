@@ -105,7 +105,7 @@ final class FunctionInfo {
     private FunctionInfo(String namespace,
                          String name,
                          Class<? extends TBase<?, ?>> argsClass,
-                         Class<? extends TBase<?, ?>> resultClass,
+                         @Nullable Class<? extends TBase<?, ?>> resultClass,
                          Class<? extends TException>[] exceptionClasses,
                          String sampleJsonRequest,
                          Map<String, String> docStrings) {
