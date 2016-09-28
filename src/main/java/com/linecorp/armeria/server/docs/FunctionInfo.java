@@ -75,13 +75,20 @@ final class FunctionInfo {
             }
         }
 
+        Class<?> resultClass;
+        try {
+            resultClass =  Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
+        } catch (ClassNotFoundException ignored) {
+            // Oneway function does not have a result type.
+            resultClass = null;
+        }
+
         @SuppressWarnings("unchecked")
         final FunctionInfo function =
                 new FunctionInfo(namespace,
                                  methodName,
                                  argsClass,
-                                 (Class<? extends TBase<?, ?>>) Class.forName(
-                                         serviceName + '$' + methodName + "_result", false, classLoader),
+                                 (Class<? extends TBase<?, ?>>) resultClass,
                                  (Class<? extends TException>[]) method.getExceptionTypes(),
                                  sampleJsonRequest,
                                  docStrings);
@@ -98,7 +105,7 @@ final class FunctionInfo {
     private FunctionInfo(String namespace,
                          String name,
                          Class<? extends TBase<?, ?>> argsClass,
-                         Class<? extends TBase<?, ?>> resultClass,
+                         @Nullable Class<? extends TBase<?, ?>> resultClass,
                          Class<? extends TException>[] exceptionClasses,
                          String sampleJsonRequest,
                          Map<String, String> docStrings) {
@@ -107,7 +114,6 @@ final class FunctionInfo {
         final String functionNamespace = ThriftDocString.key(namespace, name);
         this.docString = docStrings.get(functionNamespace);
         requireNonNull(argsClass, "argsClass");
-        requireNonNull(resultClass, "resultClass");
         requireNonNull(exceptionClasses, "exceptionClasses");
 
         final Map<? extends TFieldIdEnum, FieldMetaData> argsMetaData =
@@ -117,13 +123,16 @@ final class FunctionInfo {
                             .map(fieldMetaData -> FieldInfo.of(fieldMetaData, functionNamespace, docStrings))
                             .collect(Collectors.toList()));
 
-        final Map<? extends TFieldIdEnum, FieldMetaData> resultMetaData =
-                FieldMetaData.getStructMetaDataMap(resultClass);
         FieldInfo fieldInfo = null;
-        for (FieldMetaData fieldMetaData : resultMetaData.values()) {
-            if ("success".equals(fieldMetaData.fieldName)) {
-                fieldInfo = FieldInfo.of(fieldMetaData, functionNamespace, docStrings);
-                break;
+        if (resultClass != null) { // Function isn't "oneway" function
+            final Map<? extends TFieldIdEnum, FieldMetaData> resultMetaData =
+                    FieldMetaData.getStructMetaDataMap(resultClass);
+
+            for (FieldMetaData fieldMetaData : resultMetaData.values()) {
+                if ("success".equals(fieldMetaData.fieldName)) {
+                    fieldInfo = FieldInfo.of(fieldMetaData, functionNamespace, docStrings);
+                    break;
+                }
             }
         }
         if (fieldInfo == null) {
