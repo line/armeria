@@ -33,6 +33,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -57,6 +59,8 @@ import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public abstract class AbstractThriftOverHttpTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractThriftOverHttpTest.class);
 
     private static final Server server;
 
@@ -259,6 +263,9 @@ public abstract class AbstractThriftOverHttpTest {
 
         final ApacheThriftReply rawResponse = (ApacheThriftReply) res.attr(ResponseLog.RAW_RPC_RESPONSE)
                                                                      .get();
+        if (rawResponse.header().type != TMessageType.EXCEPTION) {
+            logger.warn("Received a non-EXCEPTION response: {}", rawResponse);
+        }
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.EXCEPTION);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.exception()).isNotNull();
