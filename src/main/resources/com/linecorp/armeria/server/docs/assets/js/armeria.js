@@ -165,6 +165,11 @@ $(function () {
 
     makeActive('li#nav-' + serviceName + '.' + functionName);
 
+    // Get the elements for the HTTP headers and its stickiness before applying the template,
+    // because they will be replaced when the template is applied.
+    var oldDebugHttpHeadersText = functionContainer.find('.debug-http-headers');
+    var oldDebugHttpHeadersSticky = functionContainer.find('.debug-http-headers-sticky');
+
     functionContainer.html(functionTemplate({
       'serviceName': serviceName,
       'serviceSimpleName': serviceInfo.simpleName,
@@ -174,8 +179,15 @@ $(function () {
       'function': functionInfo
     }));
 
+    var debugHttpHeadersText = functionContainer.find('.debug-http-headers');
+    var debugHttpHeadersSticky = functionContainer.find('.debug-http-headers-sticky');
     var debugText = functionContainer.find('.debug-textarea').val(functionInfo.sampleJsonRequest);
-    var debugHttpHeadersText = functionContainer.find('.debug-http-headers').val(serviceInfo.sampleHttpHeaders);
+    if (oldDebugHttpHeadersSticky.is(':checked')) {
+      debugHttpHeadersSticky.prop('checked', true);
+      debugHttpHeadersText.val(oldDebugHttpHeadersText.val());
+    } else {
+      debugHttpHeadersText.val(serviceInfo.sampleHttpHeaders);
+    }
     var debugResponse = functionContainer.find('.debug-response code');
 
     // Sets 'debug-http-headers' section
@@ -183,52 +195,78 @@ $(function () {
     var toggleCollapser = function() {
       collapser.toggleClass('opened');
       collapser.next().collapse('toggle');
-    }
+    };
     collapser.click(function() {
       toggleCollapser();
     });
     var submitDebugRequest = function () {
-      var args;
+      var argsText;
+      var httpHeadersText = '';
       var httpHeaders = {};
+
+      // Validate arguments.
+      try {
+        var args = JSON.parse(debugText.val()); // Use the JSON parser for validation.
+        if (typeof args !== 'object') {
+          debugResponse.text("Arguments must be a JSON object.\nYou entered: " + typeof args);
+        }
+        // Do not use the parsed JSON but just a minified one not to lose number precision.
+        // See: https://github.com/line/armeria/issues/273
+        argsText = JSON.minify(debugText.val());
+      } catch (e) {
+        debugResponse.text("Failed to parse a JSON object in the arguments field:\n" + e);
+        return false;
+      }
+
+      // Validate HTTP headers.
       try {
         if (debugHttpHeadersText.val()) {
           httpHeaders = JSON.parse(debugHttpHeadersText.val());
+          if (typeof httpHeaders !== 'object') {
+            debugResponse.text("HTTP headers must be a JSON object.\nYou entered: " + typeof httpHeaders);
+            return false;
+          }
+
+          httpHeadersText = JSON.minify(debugHttpHeadersText.val());
+          if (httpHeadersText === '{}') {
+            httpHeadersText = '';
+          }
         }
-        args = JSON.parse(debugText.val());
       } catch (e) {
-        debugResponse.text("Failed to parse a JSON object, please check your request:\n" + e);
+        debugResponse.text("Failed to parse a JSON object in the HTTP headers field:\n" + e);
         return false;
       }
+
       var method = serviceInfo.debugFragment ? serviceInfo.debugFragment + ':' + functionInfo.name
                                              : functionInfo.name;
 
-      var request = {
-        method: method,
-        type: 'CALL',
-        args: args
-      };
+      var request = '{"method":"' + method + '","type":"CALL","args":' + argsText + '}';
       $.ajax({
         type: 'POST',
         url: serviceInfo.debugPath,
-        data: JSON.stringify(request),
+        data: request,
         headers: httpHeaders,
         contentType: TTEXT_MIME_TYPE,
         success: function (response) {
-          debugResponse.text(response);
+          var result = response.length > 0 ? response : "Request sent to one-way function";
+          debugResponse.text(result);
           hljs.highlightBlock(debugResponse.get(0));
 
           // Set the URL with request
           var uri = URI(window.location.href);
-          var fragment = uri.fragment(true);
-          var req = {
-            args: debugText.val()
-          };
-          if (debugHttpHeadersText.val()) { // Includes when a value is set
-            req.http_headers = debugHttpHeadersText.val();
+
+          // NB: Reusing the fragment object returned by URI.fragment() will cause stack overflow.
+          //     Related issue: https://github.com/medialize/URI.js/issues/167
+          uri.fragment(true).removeSearch('http_headers');
+          uri.fragment(true).removeSearch('http_headers_sticky');
+          uri.fragment(true).setSearch('args', argsText);
+          if (httpHeadersText.length > 0) {
+            uri.fragment(true).setSearch('http_headers', httpHeadersText);
+            if (debugHttpHeadersSticky.is(':checked')) {
+              uri.fragment(true).setSearch('http_headers_sticky');
+            }
           }
-          fragment.setQuery({
-            req: JSON.stringify(req)
-          });
+
           window.location.href = uri.toString();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -241,18 +279,45 @@ $(function () {
 
     functionContainer.removeClass('hidden');
 
-    var fragment = URI(window.location.href).fragment(true);
-    var fragmentParams = fragment.query(true);
-    if (fragmentParams.req) {
-      var req = JSON.parse(fragmentParams.req);
+    // Get the parameters ('args' and 'http_headers') from the current location.
+    // Note that we do not use URI.js here to avoid parsing JSON.
+    function getParameterByName(name) {
+      var matches = new RegExp('[?&]' + name + '(?:=([^&]*)|&|$)').exec(window.location.href);
+      if (matches) {
+        if (matches[1]) {
+          return decodeURIComponent(matches[1].replace(/\+/g, ' '));
+        } else {
+          return 'true';
+        }
+      }
 
-      debugText.val(req.args);
+      return undefined;
+    }
 
-      if ('http_headers' in req) {
-        debugHttpHeadersText.val(req.http_headers);
+    var argsText = getParameterByName('args');
+    if (argsText) {
+      try {
+        JSON.parse(argsText);
+        debugText.val(JSON.prettify(argsText));
+      } catch (e) {
+        // Invalid JSON
+        debugText.val(argsText);
+      }
+
+      var httpHeadersText = getParameterByName('http_headers');
+      if (httpHeadersText) {
+        try {
+          JSON.parse(httpHeadersText);
+          debugHttpHeadersText.val(JSON.prettify(httpHeadersText));
+        } catch (e) {
+          // Invalid JSON
+          debugHttpHeadersText.val(debugHttpHeadersText);
+        }
       } else {
         debugHttpHeadersText.val(''); // Remove the default value if set
       }
+
+      debugHttpHeadersSticky.prop('checked', getParameterByName('http_headers_sticky') === 'true');
 
       functionContainer.find('.debug-textarea').focus();
     }

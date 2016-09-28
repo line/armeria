@@ -45,7 +45,7 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
             }
             throw new IllegalArgumentException("bad argument");
         }).decorate(DropwizardMetricCollectingService.newDecorator(
-                metricRegistry, MetricRegistry.name("client", "HelloService"))));
+                metricRegistry, MetricRegistry.name("services"))));
     }
 
     @Test(timeout = 10000L)
@@ -59,44 +59,52 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
         makeRequest("world");
 
         assertEquals(3, metricRegistry.getMeters()
-                                      .get("server.HelloService.hello.failures")
+                                      .get(clientMetricName("hello", "failures"))
                                       .getCount());
         assertEquals(3, metricRegistry.getMeters()
-                                      .get("client.HelloService.hello.failures")
+                                      .get(serverMetricName("hello", "failures"))
                                       .getCount());
         assertEquals(4, metricRegistry.getMeters()
-                                      .get("server.HelloService.hello.successes")
+                                      .get(clientMetricName("hello", "successes"))
                                       .getCount());
         assertEquals(4, metricRegistry.getMeters()
-                                      .get("client.HelloService.hello.successes")
+                                      .get(serverMetricName("hello", "successes"))
                                       .getCount());
         assertEquals(7, metricRegistry.getTimers()
-                                      .get("server.HelloService.hello.requests")
+                                      .get(clientMetricName("hello", "requests"))
                                       .getCount());
         assertEquals(7, metricRegistry.getTimers()
-                                      .get("client.HelloService.hello.requests")
+                                      .get(serverMetricName("hello", "requests"))
                                       .getCount());
         assertEquals(210, metricRegistry.getMeters()
-                                      .get("server.HelloService.hello.requestBytes")
+                                      .get(clientMetricName("hello", "requestBytes"))
                                       .getCount());
         assertEquals(210, metricRegistry.getMeters()
-                                      .get("client.HelloService.hello.requestBytes")
+                                      .get(serverMetricName("hello", "requestBytes"))
                                       .getCount());
 
         // Can't assert with exact byte count because the failure responses contain stack traces.
         assertThat(metricRegistry.getMeters()
-                                 .get("server.HelloService.hello.responseBytes")
+                                 .get(clientMetricName("hello", "responseBytes"))
                                  .getCount()).isGreaterThan(0);
         assertThat(metricRegistry.getMeters()
-                                 .get("client.HelloService.hello.responseBytes")
+                                 .get(serverMetricName("hello", "responseBytes"))
                                  .getCount()).isGreaterThan(0);
+    }
+
+    private static String serverMetricName(String method, String property) {
+        return MetricRegistry.name("services", "/helloservice", method, property);
+    }
+
+    private static String clientMetricName(String method, String property) {
+        return MetricRegistry.name("clients", "HelloService", method, property);
     }
 
     private void makeRequest(String name) {
         Iface client = new ClientBuilder("tbinary+" + uri("/helloservice"))
                 .decorator(ThriftCall.class, ThriftReply.class,
                            DropwizardMetricCollectingClient.newDecorator(
-                                   metricRegistry, MetricRegistry.name("server", "HelloService")))
+                                   metricRegistry, MetricRegistry.name("clients", "HelloService")))
                 .build(Iface.class);
         try {
             client.hello(name);

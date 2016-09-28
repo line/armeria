@@ -16,13 +16,12 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.Optional;
-
 final class PrefixPathMapping extends AbstractPathMapping {
 
     private final String prefix;
     private final boolean stripPrefix;
-    private final Optional<String> prefixOpt;
+    private final String loggerName;
+    private final String metricName;
     private final String strVal;
 
     PrefixPathMapping(String prefix, boolean stripPrefix) {
@@ -33,7 +32,8 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
         this.prefix = prefix;
         this.stripPrefix = stripPrefix;
-        prefixOpt = Optional.of(prefix);
+        loggerName = loggerName(prefix);
+        metricName = prefix + "**";
         strVal = "prefix: " + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
@@ -47,8 +47,13 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> prefixPath() {
-        return prefixOpt;
+    public String loggerName() {
+        return loggerName;
+    }
+
+    @Override
+    public String metricName() {
+        return metricName;
     }
 
     @Override

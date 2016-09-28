@@ -26,8 +26,8 @@ import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.internal.grpc.NettyWritableBuffer;
-import com.linecorp.armeria.internal.grpc.NettyWritableBufferAllocator;
+import com.linecorp.armeria.internal.grpc.ArmeriaWritableBuffer;
+import com.linecorp.armeria.internal.grpc.ArmeriaWritableBufferAllocator;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -35,7 +35,6 @@ import io.grpc.internal.AbstractServerStream;
 import io.grpc.internal.GrpcUtil;
 import io.grpc.internal.TransportFrameUtil;
 import io.grpc.internal.WritableBuffer;
-import io.netty.buffer.ByteBuf;
 import io.netty.util.AsciiString;
 
 /**
@@ -51,16 +50,16 @@ final class ArmeriaGrpcServerStream extends AbstractServerStream {
     private final long maxMessageSize;
 
     ArmeriaGrpcServerStream(HttpResponseWriter responseWriter, long maxMessageSize) {
-        super(new NettyWritableBufferAllocator());
+        super(new ArmeriaWritableBufferAllocator());
         this.responseWriter = responseWriter;
         this.maxMessageSize = maxMessageSize;
-        this.sink = new Sink();
-        this.transportState = new TransportState();
-        this.messageReader = new ArmeriaMessageReader(transportState);
+        sink = new Sink();
+        transportState = new TransportState();
+        messageReader = new ArmeriaMessageReader(transportState);
     }
 
     ArmeriaMessageReader messageReader() {
-        return this.messageReader;
+        return messageReader;
     }
 
     @Override
@@ -69,7 +68,7 @@ final class ArmeriaGrpcServerStream extends AbstractServerStream {
     }
 
     @Override
-    protected Sink abstractServerStreamSink() {
+    protected AbstractServerStream.Sink abstractServerStreamSink() {
         return sink;
     }
 
@@ -90,8 +89,9 @@ final class ArmeriaGrpcServerStream extends AbstractServerStream {
                 // Armeria flushes every message so no need to do anything here.
                 return;
             }
-            ByteBuf buf = ((NettyWritableBuffer) frame).bytebuf();
-            HttpData data = HttpData.of(buf);
+
+            final ArmeriaWritableBuffer f = (ArmeriaWritableBuffer) frame;
+            final HttpData data = HttpData.of(f.array(), 0, f.readableBytes());
             responseWriter.write(data);
         }
 

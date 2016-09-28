@@ -136,7 +136,7 @@ public class HttpFileServiceTest {
             req.setHeader(HttpHeaders.CONNECTION, "close");
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assert304NotModified(res, lastModified, "text/plain");
+                assert304NotModified(res, lastModified);
             }
         }
     }
@@ -153,7 +153,15 @@ public class HttpFileServiceTest {
     public void testUnknownMediaType() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal();
              CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.unknown")))) {
-            assert200Ok(res, null, "Unknown Media Type");
+            final String lastModified = assert200Ok(res, null, "Unknown Media Type");
+
+            HttpUriRequest req = new HttpGet(newUri("/bar.unknown"));
+            req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
+            req.setHeader(HttpHeaders.CONNECTION, "close");
+
+            try (CloseableHttpResponse resCached = hc.execute(req)) {
+                assert304NotModified(resCached, lastModified);
+            }
         }
     }
 
@@ -242,7 +250,7 @@ public class HttpFileServiceTest {
             req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assert304NotModified(res, lastModified, "text/html");
+                assert304NotModified(res, lastModified);
             }
 
             // Test if the 'If-Modified-Since' header works as expected after the file is modified.
@@ -301,18 +309,15 @@ public class HttpFileServiceTest {
     }
 
     private static void assert304NotModified(
-            CloseableHttpResponse res, String expectedLastModified, String expectedContentType) {
+            CloseableHttpResponse res, String expectedLastModified) {
 
         assertStatusLine(res, "HTTP/1.1 304 Not Modified");
 
         // Ensure that the 'Last-Modified' header did not change.
         assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue(), is(expectedLastModified));
 
-        // Ensure that the content does not exist but its type does.
+        // Ensure that the content does not exist.
         assertThat(res.getEntity(), is(nullValue()));
-
-        assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE), is(true));
-        assertThat(res.getFirstHeader(HttpHeaders.CONTENT_TYPE).getValue(), startsWith(expectedContentType));
     }
 
     private static void assert404NotFound(CloseableHttpResponse res) {

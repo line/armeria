@@ -43,51 +43,27 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package com.linecorp.armeria.internal.grpc;
 
 import io.grpc.internal.WritableBuffer;
-import io.netty.buffer.ByteBuf;
+import io.grpc.internal.WritableBufferAllocator;
 
 /**
- * The {@link WritableBuffer} used by the Netty transport.
+ * Allocates an {@link ArmeriaWritableBuffer}.
  *
- * <p>Forked from grpc-java.
+ * <p>NOTE: Forked from grpc-java.
  */
-public class NettyWritableBuffer implements WritableBuffer {
+public final class ArmeriaWritableBufferAllocator implements WritableBufferAllocator {
 
-    private final ByteBuf bytebuf;
+    // Use 4k as our minimum buffer size.
+    private static final int MIN_BUFFER = 4096;
 
-    NettyWritableBuffer(ByteBuf bytebuf) {
-        this.bytebuf = bytebuf;
-    }
-
-    @Override
-    public void write(byte[] src, int srcIndex, int length) {
-        bytebuf.writeBytes(src, srcIndex, length);
-    }
+    // Set the maximum buffer size to 1MB
+    private static final int MAX_BUFFER = 1024 * 1024;
 
     @Override
-    public void write(byte b) {
-        bytebuf.writeByte(b);
-    }
-
-    @Override
-    public int writableBytes() {
-        return bytebuf.writableBytes();
-    }
-
-    @Override
-    public int readableBytes() {
-        return bytebuf.readableBytes();
-    }
-
-    @Override
-    public void release() {
-        bytebuf.release();
-    }
-
-    public ByteBuf bytebuf() {
-        return bytebuf;
+    public WritableBuffer allocate(int capacityHint) {
+        capacityHint = Math.min(MAX_BUFFER, Math.max(MIN_BUFFER, capacityHint));
+        return new ArmeriaWritableBuffer(capacityHint);
     }
 }

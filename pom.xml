@@ -26,7 +26,7 @@
 
   <groupId>com.linecorp.armeria</groupId>
   <artifactId>armeria</artifactId>
-  <version>0.25.1.Final-SNAPSHOT</version>
+  <version>0.26.2.Final-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>Armeria</name>
   <description>
@@ -292,6 +292,11 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jul-to-slf4j</artifactId>
       <version>${slf4j.version}</version>
     </dependency>
     <dependency>
@@ -783,7 +788,9 @@
           </groups>
 
           <links>
-            <link>http://netty.io/4.1/api</link>
+            <link>https://netty.io/4.1/api</link>
+            <link>https://developers.google.com/protocol-buffers/docs/reference/java</link>
+            <link>https://people.apache.org/~thejas/thrift-0.9/javadoc/</link>
           </links>
         </configuration>
       </plugin>

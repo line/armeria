@@ -178,6 +178,12 @@
                 <a class="btn btn-link debug-http-headers-collapser" data-toggle="collapse">Edit additional HTTP Headers</a>
                 <div class="collapse">
                   <textarea class="debug-http-headers form-control code">{&#10;&#10;}&#10;</textarea>
+                  <div class="checkbox">
+                    <label>
+                      <input class="debug-http-headers-sticky" type="checkbox">
+                      Use these HTTP headers for all functions.
+                    </label>
+                  </div>
                 </div>
               </div>
               <div>
@@ -251,6 +257,8 @@
 <script src="assets/js/vendor/bootstrap-3.3.5.min.js"></script>
 <script src="assets/js/vendor/handlebars-4.0.4.min.js"></script>
 <script src="assets/js/vendor/highlight-jsononly-8.9.1.pack.js"></script>
+<script src="assets/js/vendor/json-minify-0.1.js"></script>
+<script src="assets/js/vendor/json-prettify-0.1.js"></script>
 <script src="assets/js/vendor/URI-1.17.0.min.js"></script>
 <script src="assets/js/armeria.js"></script>
 </body>

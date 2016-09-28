@@ -34,6 +34,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.google.protobuf.ByteString;
 
@@ -69,6 +70,9 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     /** Starts the server with HTTPS. */
     @BeforeClass
     public static void startServer() {
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+
         try {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             ServerBuilder sb = new ServerBuilder()

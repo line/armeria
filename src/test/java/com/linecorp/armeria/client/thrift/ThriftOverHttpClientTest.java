@@ -16,14 +16,8 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isOneOf;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.ByteBuffer;
 import java.util.AbstractMap;
@@ -38,7 +32,9 @@ import java.util.function.Function;
 
 import javax.net.ssl.TrustManagerFactory;
 
+import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.apache.thrift.protocol.TMessageType;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -46,7 +42,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import com.linecorp.armeria.client.ClientDecoration;
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
@@ -57,6 +54,7 @@ import com.linecorp.armeria.client.SessionOptionValue;
 import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
+import com.linecorp.armeria.client.logging.LogCollectingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
@@ -66,6 +64,11 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.logging.MessageLogConsumer;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.common.thrift.ApacheThriftCall;
+import com.linecorp.armeria.common.thrift.ApacheThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -103,17 +106,24 @@ public class ThriftOverHttpClientTest {
 
     private static final BlockingQueue<String> serverReceivedNames = new LinkedBlockingQueue<>();
 
+    private static volatile boolean recordMessageLogs;
+    private static final BlockingQueue<RequestLog> requestLogs = new LinkedBlockingQueue<>();
+    private static final BlockingQueue<ResponseLog> responseLogs = new LinkedBlockingQueue<>();
+
     private static final HelloService.AsyncIface helloHandler = (name, resultHandler)
             -> resultHandler.onComplete("Hello, " + name + '!');
 
+    private static final HelloService.AsyncIface exceptionThrowingHandler = (name, resultHandler)
+            -> resultHandler.onError(new Exception(name));
+
     private static final OnewayHelloService.AsyncIface onewayHelloHandler = (name, resultHandler) -> {
         resultHandler.onComplete(null);
-        assertTrue(serverReceivedNames.add(name));
+        assertThat(serverReceivedNames.add(name)).isTrue();
     };
 
     private static final DevNullService.AsyncIface devNullHandler = (value, resultHandler) -> {
         resultHandler.onComplete(null);
-        assertTrue(serverReceivedNames.add(value));
+        assertThat(serverReceivedNames.add(value)).isTrue();
     };
 
     private static final BinaryService.Iface binaryHandler = data -> {
@@ -138,6 +148,7 @@ public class ThriftOverHttpClientTest {
 
     private enum Handlers {
         HELLO(helloHandler, HelloService.Iface.class, HelloService.AsyncIface.class),
+        EXCEPTION(exceptionThrowingHandler, HelloService.Iface.class, HelloService.AsyncIface.class),
         ONEWAYHELLO(onewayHelloHandler, OnewayHelloService.Iface.class, OnewayHelloService.AsyncIface.class),
         DEVNULL(devNullHandler, DevNullService.Iface.class, DevNullService.AsyncIface.class),
         BINARY(binaryHandler, BinaryService.Iface.class, BinaryService.AsyncIface.class),
@@ -264,13 +275,32 @@ public class ThriftOverHttpClientTest {
                         poolHandlerDecoratorOptVal,
                         SessionOption.USE_HTTP2_PREFACE.newValue(false))));
 
+        final Function<Client<ThriftCall, ThriftReply>,
+                       LogCollectingClient<ThriftCall, ThriftReply>> logCollectingDecorator =
+                s -> new LogCollectingClient<>(s, new MessageLogConsumer() {
+                    @Override
+                    public void onRequest(RequestContext ctx, RequestLog req) throws Exception {
+                        if (recordMessageLogs) {
+                            requestLogs.add(req);
+                        }
+                    }
+
+                    @Override
+                    public void onResponse(RequestContext ctx, ResponseLog res) throws Exception {
+                        if (recordMessageLogs) {
+                            responseLogs.add(res);
+                        }
+                    }
+                });
+
+        final ClientDecorationBuilder decoBuilder = new ClientDecorationBuilder();
+        decoBuilder.add(ThriftCall.class, ThriftReply.class, logCollectingDecorator);
+
         if (ENABLE_LOGGING_DECORATORS) {
-            clientOptions = ClientOptions.of(
-                    ClientOption.DECORATION.newValue(
-                            ClientDecoration.of(ThriftCall.class, ThriftReply.class, LoggingClient::new)));
-        } else {
-            clientOptions = ClientOptions.DEFAULT;
+            decoBuilder.add(ThriftCall.class, ThriftReply.class, LoggingClient::new);
         }
+
+        clientOptions = ClientOptions.of(ClientOption.DECORATION.newValue(decoBuilder.build()));
     }
 
     @AfterClass
@@ -285,6 +315,10 @@ public class ThriftOverHttpClientTest {
     @Before
     public void beforeTest() {
         serverReceivedNames.clear();
+
+        recordMessageLogs = false;
+        requestLogs.clear();
+        responseLogs.clear();
     }
 
     private ClientFactory clientFactory() {
@@ -292,15 +326,15 @@ public class ThriftOverHttpClientTest {
                                : clientFactoryWithoutUseHttp2Preface;
     }
 
-    @Test
+    @Test(timeout = 10000)
     public void testHelloServiceSync() throws Exception {
 
         HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
                                                       Handlers.HELLO.iface(), clientOptions);
-        assertEquals("Hello, kukuman!", client.hello("kukuman"));
+        assertThat(client.hello("kukuman")).isEqualTo("Hello, kukuman!");
 
         for (int i = 0; i < 10; i++) {
-            assertEquals("Hello, kukuman" + i + '!', client.hello("kukuman" + i));
+            assertThat(client.hello("kukuman" + i)).isEqualTo("Hello, kukuman" + i + '!');
         }
     }
 
@@ -318,18 +352,18 @@ public class ThriftOverHttpClientTest {
             client.hello("kukuman" + num, new AsyncMethodCallback<String>() {
                 @Override
                 public void onComplete(String response) {
-                    assertTrue(resultQueue.add(new AbstractMap.SimpleEntry<>(num, response)));
+                    assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, response))).isTrue();
                 }
 
                 @Override
                 public void onError(Exception exception) {
-                    assertTrue(resultQueue.add(new AbstractMap.SimpleEntry<>(num, exception)));
+                    assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, exception))).isTrue();
                 }
             });
         }
         for (int i = 0; i < testCount; i++) {
             AbstractMap.SimpleEntry<Integer, ?> pair = resultQueue.take();
-            assertEquals("Hello, kukuman" + pair.getKey() + '!', pair.getValue());
+            assertThat(pair.getValue()).isEqualTo("Hello, kukuman" + pair.getKey() + '!');
         }
     }
 
@@ -340,8 +374,8 @@ public class ThriftOverHttpClientTest {
                                   Handlers.ONEWAYHELLO.iface(), clientOptions);
         client.hello("kukuman");
         client.hello("kukuman2");
-        assertEquals("kukuman", serverReceivedNames.take());
-        assertEquals("kukuman2", serverReceivedNames.take());
+        assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
+        assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
     }
 
     @Test(timeout = 10000)
@@ -357,11 +391,11 @@ public class ThriftOverHttpClientTest {
         }
 
         for (String ignored : names) {
-            assertEquals("null", resQueue.take());
+            assertThat(resQueue.take()).isEqualTo("null");
         }
 
         for (String ignored : names) {
-            assertThat(serverReceivedNames.take(), isOneOf(names));
+            assertThat(serverReceivedNames.take()).isIn(names);
         }
     }
 
@@ -372,8 +406,8 @@ public class ThriftOverHttpClientTest {
                                   clientOptions);
         client.consume("kukuman");
         client.consume("kukuman2");
-        assertEquals("kukuman", serverReceivedNames.take());
-        assertEquals("kukuman2", serverReceivedNames.take());
+        assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
+        assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
     }
 
     @Test(timeout = 10000)
@@ -389,11 +423,11 @@ public class ThriftOverHttpClientTest {
         }
 
         for (String ignored : names) {
-            assertEquals("null", resQueue.take());
+            assertThat(resQueue.take()).isEqualTo("null");
         }
 
         for (String ignored : names) {
-            assertThat(serverReceivedNames.take(), isOneOf(names));
+            assertThat(serverReceivedNames.take()).isIn(names);
         }
     }
 
@@ -408,7 +442,7 @@ public class ThriftOverHttpClientTest {
         for (int i = result.position(); i < result.limit(); i++) {
             out.add(result.get(i));
         }
-        assertThat(out, hasItems((byte) 2, (byte) 3));
+        assertThat(out).containsExactly((byte) 2, (byte) 3);
     }
 
     @Test(timeout = 10000)
@@ -418,7 +452,7 @@ public class ThriftOverHttpClientTest {
                                   clientOptions);
 
         long serverTime = client.getServerTime();
-        assertThat(serverTime, lessThanOrEqualTo(System.currentTimeMillis()));
+        assertThat(serverTime).isLessThanOrEqualTo(System.currentTimeMillis());
     }
 
     @Test(timeout = 10000)
@@ -431,8 +465,8 @@ public class ThriftOverHttpClientTest {
         client.getServerTime(new RequestQueuingCallback(resQueue));
 
         final Object result = resQueue.take();
-        assertThat(result, is(instanceOf(Long.class)));
-        assertThat((Long) result, lessThanOrEqualTo(System.currentTimeMillis()));
+        assertThat(result).isInstanceOf(Long.class);
+        assertThat((Long) result).isLessThanOrEqualTo(System.currentTimeMillis());
     }
 
     @Test(timeout = 10000, expected = FileServiceException.class)
@@ -453,7 +487,7 @@ public class ThriftOverHttpClientTest {
         BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
         client.create("test", new RequestQueuingCallback(resQueue));
 
-        assertThat(resQueue.take(), instanceOf(FileServiceException.class));
+        assertThat(resQueue.take()).isInstanceOf(FileServiceException.class);
     }
 
     @Test(timeout = 10000)
@@ -466,7 +500,7 @@ public class ThriftOverHttpClientTest {
         final HeaderService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HEADER),
                                                              Handlers.HEADER.iface(), clientOptions);
 
-        assertThat(client.header(AUTHORIZATION), is(NO_TOKEN));
+        assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
 
         final HeaderService.Iface clientA =
                 Clients.newDerivedClient(client, newHttpHeaderOption(AsciiString.of(AUTHORIZATION), TOKEN_A));
@@ -474,11 +508,99 @@ public class ThriftOverHttpClientTest {
         final HeaderService.Iface clientB =
                 Clients.newDerivedClient(client, newHttpHeaderOption(AsciiString.of(AUTHORIZATION), TOKEN_B));
 
-        assertThat(clientA.header(AUTHORIZATION), is(TOKEN_A));
-        assertThat(clientB.header(AUTHORIZATION), is(TOKEN_B));
+        assertThat(clientA.header(AUTHORIZATION)).isEqualTo(TOKEN_A);
+        assertThat(clientB.header(AUTHORIZATION)).isEqualTo(TOKEN_B);
 
         // Ensure that the parent client's HTTP_HEADERS option did not change:
-        assertThat(client.header(AUTHORIZATION), is(NO_TOKEN));
+        assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
+    }
+
+    @Test(timeout = 10000)
+    public void testMessageLogsForCall() throws Exception {
+        HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
+                                                      Handlers.HELLO.iface(), clientOptions);
+        recordMessageLogs = true;
+        client.hello("trustin");
+
+        final RequestLog req = requestLogs.take();
+        final ResponseLog res = responseLogs.take();
+
+        assertThat(req.hasAttr(RequestLog.HTTP_HEADERS)).isTrue();
+        assertThat(req.hasAttr(RequestLog.RPC_REQUEST)).isTrue();
+        assertThat(req.hasAttr(RequestLog.RAW_RPC_REQUEST)).isTrue();
+
+        final ApacheThriftCall rawRequest = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
+        assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
+        assertThat(rawRequest.header().name).isEqualTo("hello");
+        assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
+        assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
+
+        assertThat(res.hasAttr(ResponseLog.HTTP_HEADERS)).isTrue();
+        assertThat(res.hasAttr(ResponseLog.RPC_RESPONSE)).isTrue();
+        assertThat(res.hasAttr(ResponseLog.RAW_RPC_RESPONSE)).isTrue();
+
+        final ApacheThriftReply rawResponse = (ApacheThriftReply) res.attr(ResponseLog.RAW_RPC_RESPONSE).get();
+        assertThat(rawResponse.header().type).isEqualTo(TMessageType.REPLY);
+        assertThat(rawResponse.header().name).isEqualTo("hello");
+        assertThat(rawResponse.result()).isInstanceOf(HelloService.hello_result.class);
+        assertThat(((HelloService.hello_result) rawResponse.result()).getSuccess())
+                .isEqualTo("Hello, trustin!");
+    }
+
+    @Test(timeout = 10000)
+    public void testMessageLogsForOneWay() throws Exception {
+        OnewayHelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
+                                                            Handlers.ONEWAYHELLO.iface(), clientOptions);
+        recordMessageLogs = true;
+        client.hello("trustin");
+
+        final RequestLog req = requestLogs.take();
+        final ResponseLog res = responseLogs.take();
+
+        assertThat(req.hasAttr(RequestLog.HTTP_HEADERS)).isTrue();
+        assertThat(req.hasAttr(RequestLog.RPC_REQUEST)).isTrue();
+        assertThat(req.hasAttr(RequestLog.RAW_RPC_REQUEST)).isTrue();
+
+        final ApacheThriftCall rawRequest = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
+        assertThat(rawRequest.header().type).isEqualTo(TMessageType.ONEWAY);
+        assertThat(rawRequest.header().name).isEqualTo("hello");
+        assertThat(rawRequest.args()).isInstanceOf(OnewayHelloService.hello_args.class);
+        assertThat(((OnewayHelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
+
+        assertThat(res.hasAttr(ResponseLog.HTTP_HEADERS)).isTrue();
+        assertThat(res.hasAttr(ResponseLog.RPC_RESPONSE)).isTrue();
+        assertThat(res.hasAttr(ResponseLog.RAW_RPC_RESPONSE)).isFalse();
+    }
+
+    @Test(timeout = 10000)
+    public void testMessageLogsForException() throws Exception {
+        HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.EXCEPTION),
+                                                      Handlers.EXCEPTION.iface(), clientOptions);
+        recordMessageLogs = true;
+
+        assertThatThrownBy(() -> client.hello("trustin")).isInstanceOf(TApplicationException.class);
+
+        final RequestLog req = requestLogs.take();
+        final ResponseLog res = responseLogs.take();
+
+        assertThat(req.hasAttr(RequestLog.HTTP_HEADERS)).isTrue();
+        assertThat(req.hasAttr(RequestLog.RPC_REQUEST)).isTrue();
+        assertThat(req.hasAttr(RequestLog.RAW_RPC_REQUEST)).isTrue();
+
+        final ApacheThriftCall rawRequest = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
+        assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
+        assertThat(rawRequest.header().name).isEqualTo("hello");
+        assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
+        assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
+
+        assertThat(res.hasAttr(ResponseLog.HTTP_HEADERS)).isTrue();
+        assertThat(res.hasAttr(ResponseLog.RPC_RESPONSE)).isTrue();
+        assertThat(res.hasAttr(ResponseLog.RAW_RPC_RESPONSE)).isTrue();
+
+        final ApacheThriftReply rawResponse = (ApacheThriftReply) res.attr(ResponseLog.RAW_RPC_RESPONSE).get();
+        assertThat(rawResponse.header().type).isEqualTo(TMessageType.EXCEPTION);
+        assertThat(rawResponse.header().name).isEqualTo("hello");
+        assertThat(rawResponse.exception()).isNotNull();
     }
 
     private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(AsciiString name, String value) {
@@ -502,12 +624,12 @@ public class ThriftOverHttpClientTest {
 
         @Override
         public void onComplete(Object response) {
-            assertTrue(resQueue.add(response == null ? "null" : response));
+            assertThat(resQueue.add(response == null ? "null" : response)).isTrue();
         }
 
         @Override
         public void onError(Exception exception) {
-            assertTrue(resQueue.add(exception));
+            assertThat(resQueue.add(exception)).isTrue();
         }
     }
 }

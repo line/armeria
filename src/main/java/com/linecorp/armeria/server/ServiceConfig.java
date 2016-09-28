@@ -44,8 +44,6 @@ public final class ServiceConfig {
     private final String loggerName;
     private final Service<?, ?> service;
 
-    private String fullLoggerName;
-
     /**
      * Creates a new instance.
      */
@@ -68,8 +66,7 @@ public final class ServiceConfig {
     ServiceConfig(PathMapping pathMapping, Service<?, ?> service, @Nullable String loggerName) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.service = requireNonNull(service, "service");
-        this.loggerName = loggerName != null ? validateLoggerName(loggerName, "loggerName")
-                                             : defaultLoggerName(pathMapping);
+        this.loggerName = loggerName != null ? validateLoggerName(loggerName, "loggerName") : null;
     }
 
     static String validateLoggerName(String value, String propertyName) {
@@ -78,61 +75,6 @@ public final class ServiceConfig {
             throw new IllegalArgumentException(propertyName + ": " + value);
         }
         return value;
-    }
-
-    static String defaultLoggerName(PathMapping pathMapping) {
-        final Optional<String> exactOpt = pathMapping.exactPath();
-        if (exactOpt.isPresent()) {
-            return convertPathToLoggerName(exactOpt);
-        }
-
-        final Optional<String> prefixOpt = pathMapping.prefixPath();
-        return convertPathToLoggerName(prefixOpt);
-    }
-
-    private static String convertPathToLoggerName(Optional<String> servicePathOpt) {
-        if (!servicePathOpt.isPresent()) {
-            return "__UNKNOWN__";
-        }
-
-        String loggerName = servicePathOpt.get();
-        if ("/".equals(loggerName)) {
-            return "__ROOT__";
-        }
-        loggerName = loggerName.substring(1); // Strip the first slash.
-        if (loggerName.endsWith("/")) {
-            loggerName = loggerName.substring(0, loggerName.length() - 1); // Strip the last slash.
-        }
-
-        final StringBuilder buf = new StringBuilder(loggerName.length());
-        boolean start = true;
-        for (int i = 0; i < loggerName.length(); i++) {
-            final char ch = loggerName.charAt(i);
-            if (ch != '/') {
-                if (start) {
-                    start = false;
-                    if (Character.isJavaIdentifierStart(ch)) {
-                        buf.append(ch);
-                    } else {
-                        buf.append('_');
-                        if (Character.isJavaIdentifierPart(ch)) {
-                            buf.append(ch);
-                        }
-                    }
-                } else {
-                    if (Character.isJavaIdentifierPart(ch)) {
-                        buf.append(ch);
-                    } else {
-                        buf.append('_');
-                    }
-                }
-            } else {
-                start = true;
-                buf.append('.');
-            }
-        }
-
-        return buf.toString();
     }
 
     ServiceConfig build(VirtualHost virtualHost) {
@@ -173,27 +115,20 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the name of the {@link ServiceRequestContext#logger() service logger}.
+     * Returns the preferred name of the {@link ServiceRequestContext#logger() service logger}.
+     *
+     *
      */
-    public String loggerName() {
-        if (fullLoggerName == null) {
-            fullLoggerName = virtualHost().server().config().serviceLoggerPrefix() + '.' + loggerName;
-        }
-
-        return fullLoggerName;
-    }
-
-    String loggerNameWithoutPrefix() {
-        return loggerName;
+    public Optional<String> loggerName() {
+        return Optional.ofNullable(loggerName);
     }
 
     @Override
     public String toString() {
         if (virtualHost != null) {
-            return virtualHost.hostnamePattern() + ':' +
-                   pathMapping + " -> " + service + " (" + loggerName + ')';
+            return virtualHost.hostnamePattern() + ": " + pathMapping + " -> " + service;
         } else {
-            return pathMapping + " -> " + service + " (" + loggerName + ')';
+            return pathMapping + " -> " + service;
         }
     }
 }

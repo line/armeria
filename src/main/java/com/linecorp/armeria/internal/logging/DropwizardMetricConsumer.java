@@ -20,14 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.logging.LogCollectingClient;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
@@ -40,22 +39,23 @@ import com.linecorp.armeria.server.logging.LogCollectingService;
 public final class DropwizardMetricConsumer implements MessageLogConsumer {
 
     private final MetricRegistry metricRegistry;
-    private final String metricNamePrefix;
+    private final BiFunction<RequestContext, RequestLog, String> metricNameFunc;
     private final Map<String, DropwizardRequestMetrics> methodRequestMetrics;
 
     /**
      * Creates a new instance.
      */
-    public DropwizardMetricConsumer(MetricRegistry metricRegistry, String metricNamePrefix) {
+    public DropwizardMetricConsumer(
+            MetricRegistry metricRegistry, BiFunction<RequestContext, RequestLog, String> metricNameFunc) {
+
         this.metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
-        this.metricNamePrefix = requireNonNull(metricNamePrefix, "metricNamePrefix");
+        this.metricNameFunc = requireNonNull(metricNameFunc, "metricNameFunc");
         methodRequestMetrics = new ConcurrentHashMap<>();
     }
 
     @Override
     public void onRequest(RequestContext ctx, RequestLog req) {
-        final String metricName = MetricRegistry.name(metricNamePrefix, method(req));
-        final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
+        final DropwizardRequestMetrics metrics = getRequestMetrics(ctx, req);
         if (req.cause() == null) {
             metrics.markStart();
         } else {
@@ -66,8 +66,7 @@ public final class DropwizardMetricConsumer implements MessageLogConsumer {
     @Override
     public void onResponse(RequestContext ctx, ResponseLog res) {
         final RequestLog req = res.request();
-        final String metricName = MetricRegistry.name(metricNamePrefix, method(req));
-        final DropwizardRequestMetrics metrics = getRequestMetrics(metricName);
+        final DropwizardRequestMetrics metrics = getRequestMetrics(ctx, req);
         metrics.updateTime(res.endTimeNanos() - req.startTimeNanos());
         if (isSuccess(res)) {
             metrics.markSuccess();
@@ -100,29 +99,17 @@ public final class DropwizardMetricConsumer implements MessageLogConsumer {
                res.attr(ResponseLog.RPC_RESPONSE).get().getCause() == null;
     }
 
-    private static String method(RequestLog log) {
-        if (log.hasAttr(RequestLog.RPC_REQUEST)) {
-            return log.attr(RequestLog.RPC_REQUEST).get().method();
-        }
-
-        if (log.hasAttr(RequestLog.HTTP_HEADERS)) {
-            HttpHeaders headers = log.attr(RequestLog.HTTP_HEADERS).get();
-            return headers.path() + '#' + headers.method();
-        }
-
-        return MoreObjects.firstNonNull(log.method(), "__unknown__");
-    }
-
-    private DropwizardRequestMetrics getRequestMetrics(String methodLoggedName) {
+    private DropwizardRequestMetrics getRequestMetrics(RequestContext ctx, RequestLog req) {
+        final String metricName = metricNameFunc.apply(ctx, req);
         return methodRequestMetrics.computeIfAbsent(
-                methodLoggedName,
-                m -> new DropwizardRequestMetrics(
-                        m,
-                        metricRegistry.timer(MetricRegistry.name(m, "requests")),
-                        metricRegistry.meter(MetricRegistry.name(m, "successes")),
-                        metricRegistry.meter(MetricRegistry.name(m, "failures")),
-                        metricRegistry.counter(MetricRegistry.name(m, "activeRequests")),
-                        metricRegistry.meter(MetricRegistry.name(m, "requestBytes")),
-                        metricRegistry.meter(MetricRegistry.name(m, "responseBytes"))));
+                metricName,
+                name -> new DropwizardRequestMetrics(
+                        name,
+                        metricRegistry.timer(MetricRegistry.name(name, "requests")),
+                        metricRegistry.meter(MetricRegistry.name(name, "successes")),
+                        metricRegistry.meter(MetricRegistry.name(name, "failures")),
+                        metricRegistry.counter(MetricRegistry.name(name, "activeRequests")),
+                        metricRegistry.meter(MetricRegistry.name(name, "requestBytes")),
+                        metricRegistry.meter(MetricRegistry.name(name, "responseBytes"))));
     }
 }

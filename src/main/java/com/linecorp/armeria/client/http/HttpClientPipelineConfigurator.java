@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.FlushConsolidationHandler;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
+import com.linecorp.armeria.internal.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.http.Http1ClientCodec;
 import com.linecorp.armeria.internal.http.Http2GoAwayListener;
 
@@ -203,6 +204,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final ChannelPipeline p = ch.pipeline();
         final SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
         p.addLast(sslHandler);
+        p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -254,6 +256,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     // refer https://http2.github.io/http2-spec/#discover-http
     private void configureAsHttp(Channel ch) {
         final ChannelPipeline pipeline = ch.pipeline();
+        pipeline.addLast(TrafficLoggingHandler.CLIENT);
 
         final boolean attemptUpgrade;
         switch (httpPreference) {

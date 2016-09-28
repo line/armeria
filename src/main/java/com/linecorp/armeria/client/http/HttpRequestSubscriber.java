@@ -133,6 +133,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         String host = firstHeaders.authority();
         if (host == null) {
             host = ((InetSocketAddress) ch.remoteAddress()).getHostString();
+        } else {
+            final int colonIdx = host.lastIndexOf(':');
+            if (colonIdx > 0) {
+                host = host.substring(0, colonIdx);
+            }
         }
 
         logBuilder.start(ch, HttpSession.get(ch).protocol(),

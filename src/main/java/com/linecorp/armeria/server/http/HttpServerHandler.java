@@ -268,8 +268,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel,
                 protocol,
-                req.method().name(), path, mappedPath,
-                LoggerFactory.getLogger(serviceCfg.loggerName()), req, getSSLSession(channel));
+                req.method().name(), path, mappedPath, req, getSSLSession(channel));
 
         final RequestLogBuilder reqLogBuilder = reqCtx.requestLogBuilder();
         final HttpResponse res;
