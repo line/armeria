@@ -1,0 +1,109 @@
+// Configure all Java projects
+configure(subprojects.findAll { it.name != 'site' }) {
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+
+    if (project.name == 'core') {
+        archivesBaseName = 'armeria'
+    } else {
+        archivesBaseName = "armeria-$project.name"
+    }
+
+    configurations {
+        javaAgent
+
+        all*.exclude(module: 'commons-logging')
+        all*.exclude(module: 'guava-jdk5')
+        all*.exclude(module: 'log4j')
+    }
+
+    // Common dependencies
+    dependencies {
+        // JSR305
+        compile("com.google.code.findbugs:jsr305:3.0.1") {
+            ext.optional = true
+        }
+
+        // Jetty ALPN support
+        compile("org.eclipse.jetty.alpn:alpn-api:${property('jetty-alpn-api.version')}") {
+            ext.provided = true
+        }
+        javaAgent "org.mortbay.jetty.alpn:jetty-alpn-agent:${property('jetty-alpn-agent.version')}"
+
+        // Logging
+        compile "org.slf4j:slf4j-api:${property('slf4j.version')}"
+        testCompile "org.slf4j:jul-to-slf4j:${property('slf4j.version')}"
+        testRuntime "ch.qos.logback:logback-classic:${property('logback.version')}"
+        ['jcl-over-slf4j', 'log4j-over-slf4j'].each {
+            testRuntime "org.slf4j:$it:${property('slf4j.version')}"
+        }
+
+        // Test-time dependencies
+        testCompile "junit:junit:${property('junit.version')}"
+        testCompile "org.hamcrest:hamcrest-library:${property('hamcrest.version')}"
+        testCompile "org.assertj:assertj-core:${property('assertj.version')}"
+        testCompile "org.mockito:mockito-core:${property('mockito.version')}"
+        testCompile "org.apache.httpcomponents:httpclient:${property('httpclient.version')}"
+        testCompile "net.javacrumbs.json-unit:json-unit:${property('jsonunit.version')}"
+        testCompile "net.javacrumbs.json-unit:json-unit-fluent:${property('jsonunit.version')}"
+    }
+
+    // Configure JaCoCo test coverage, which is enabled when '-Pcoverage' option is specified.
+    def jacocoEnabled = project.hasProperty('coverage')
+
+    test {
+        jacoco {
+            enabled = jacocoEnabled
+            append = false
+        }
+    }
+
+    jacocoTestReport {
+        reports {
+            xml.enabled jacocoEnabled
+        }
+    }
+
+    if (jacocoEnabled) {
+        tasks.test.finalizedBy(jacocoTestReport)
+    }
+
+    // Require Java 8 to build the project.
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        options.encoding = 'UTF-8'
+        options.warnings = false
+        options.debug = true
+    }
+
+    // Prepare the JVM agent that enables TLS ALPN extension.
+    task copyJavaAgents(type: Copy) {
+        from configurations.javaAgent
+        into "${rootProject.buildDir}"
+        rename { String fileName ->
+            fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[^\\.]+)?\\.jar", ".jar")
+        }
+    }
+
+    // Add common JVM options such as TLS ALPN agent, max memory and leak detection.
+    tasks.withType(JavaForkOptions) {
+        dependsOn 'copyJavaAgents'
+
+        // Use larger heap when test coverage is enabled.
+        maxHeapSize = jacocoEnabled ? '384m' : '128m'
+
+        // Enable leak detection when '-Pleak' option is specified.
+        if (project.hasProperty('leak')) {
+            systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
+        }
+
+        jvmArgs "-javaagent:${rootProject.buildDir}/jetty-alpn-agent.jar"
+    }
+}
