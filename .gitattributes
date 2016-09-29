@@ -1,3 +1,6 @@
+*.bat text eol=crlf
 *.br binary
 *.gz binary
+
+/gradlew text eol=lf
 

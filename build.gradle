@@ -1,0 +1,231 @@
+// Configure all Java projects
+configure(subprojects.findAll { it.name != 'site' }) {
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+
+    if (project.name == 'core') {
+        project.archivesBaseName = 'armeria'
+    } else {
+        project.archivesBaseName = "armeria-$project.name"
+    }
+
+    configurations {
+        javaAgent
+
+        all*.exclude(module: 'commons-logging')
+        all*.exclude(module: 'guava-jdk5')
+        all*.exclude(module: 'log4j')
+    }
+
+    // Common dependencies
+    dependencies {
+        // JSR305
+        compile("com.google.code.findbugs:jsr305:3.0.1") {
+            ext.optional = true
+        }
+
+        // Jetty ALPN support
+        compile("org.eclipse.jetty.alpn:alpn-api:${property('jetty-alpn-api.version')}") {
+            ext.provided = true
+        }
+        javaAgent "org.mortbay.jetty.alpn:jetty-alpn-agent:${property('jetty-alpn-agent.version')}"
+
+        // Logging
+        compile "org.slf4j:slf4j-api:${property('slf4j.version')}"
+        testCompile "org.slf4j:jul-to-slf4j:${property('slf4j.version')}"
+        testRuntime "ch.qos.logback:logback-classic:${property('logback.version')}"
+        ['jcl-over-slf4j', 'log4j-over-slf4j'].each {
+            testRuntime "org.slf4j:$it:${property('slf4j.version')}"
+        }
+
+        // Test-time dependencies
+        testCompile "junit:junit:${property('junit.version')}"
+        testCompile "org.hamcrest:hamcrest-library:${property('hamcrest.version')}"
+        testCompile "org.assertj:assertj-core:${property('assertj.version')}"
+        testCompile "org.mockito:mockito-core:${property('mockito.version')}"
+        testCompile "org.apache.httpcomponents:httpclient:${property('httpclient.version')}"
+        testCompile "net.javacrumbs.json-unit:json-unit:${property('jsonunit.version')}"
+        testCompile "net.javacrumbs.json-unit:json-unit-fluent:${property('jsonunit.version')}"
+    }
+
+    // Enable JaCoCo test coverage when '-Pcoverage' option is specified.
+    def jacocoEnabled = project.hasProperty('coverage')
+
+    test {
+        jacoco {
+            enabled = jacocoEnabled
+            append = false
+        }
+    }
+
+    jacocoTestReport {
+        reports {
+            xml.enabled jacocoEnabled
+        }
+    }
+
+    if (jacocoEnabled) {
+        tasks.test.finalizedBy(jacocoTestReport)
+    }
+
+    // Require Java 8 to build the project.
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        options.encoding = 'UTF-8'
+        options.warnings = false
+        options.debug = true
+    }
+
+    // Prepare the JVM agent that enables TLS ALPN extension.
+    task copyJavaAgents(type: Copy) {
+        from configurations.javaAgent
+        into "${rootProject.buildDir}"
+        rename { String fileName ->
+            fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[^\\.]+)?\\.jar", ".jar")
+        }
+    }
+
+    // Add common JVM options such as TLS ALPN agent, max memory and leak detection.
+    tasks.withType(JavaForkOptions) {
+        dependsOn 'copyJavaAgents'
+
+        // Use larger heap when test coverage is enabled.
+        maxHeapSize = jacocoEnabled ? '384m' : '128m'
+
+        // Enable leak detection when '-Pleak' option is specified.
+        if (project.hasProperty('leak')) {
+            systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
+        }
+
+        jvmArgs "-javaagent:${rootProject.buildDir}/jetty-alpn-agent.jar"
+    }
+
+    // Generate version.properties, similar to Netty.
+    generateVersionProperties(project)
+
+    // Print only the interesting test result and progress.
+    test {
+        def buf = new StringBuilder()
+        def printedProgress = false
+
+        // Record the test output.
+        onOutput { TestDescriptor td, TestOutputEvent toe ->
+            buf << toe.message
+        }
+
+        // Print the test output when the test failed or the test output contains an Exception or an Error.
+        afterTest { TestDescriptor td, TestResult tr ->
+            if (tr.resultType == TestResult.ResultType.FAILURE || buf =~ /(?:Exception|Error|Throwable):/) {
+                def simpleClassName = td.className.substring(td.className.lastIndexOf('.') + 1)
+
+                // Add an empty line if the test progress dots were printed.
+                if (printedProgress) {
+                    println()
+                    println()
+                    printedProgress = false
+                }
+
+                def subject = "${simpleClassName}.${td.name}: ${tr.resultType}"
+                println subject
+
+                if (buf.length() != 0) {
+                    println '-' * subject.length()
+                    println buf
+                    if (buf[buf.length() - 1] != '\n') {
+                        println()
+                    }
+                }
+            } else {
+                // Print the progress dots.
+                print '.'
+                System.out.flush()
+                printedProgress = true
+            }
+
+            buf.length = 0
+        }
+    }
+}
+
+private def generateVersionProperties(Project project) {
+    def PROJECT_ARTIFACT_ID = project.archivesBaseName
+    def PROPS_DIR_PATH = "${project.buildDir}/resources/main/META-INF"
+    def PROPS_FILE_PATH = "${PROPS_DIR_PATH}/${project.group}.versions.properties"
+
+    logger.info("Generating version properties for ${PROJECT_ARTIFACT_ID} ..")
+
+    def keyOf = [
+            version: PROJECT_ARTIFACT_ID + ".version",
+            buildDate: PROJECT_ARTIFACT_ID + ".buildDate",
+            longCommitHash : PROJECT_ARTIFACT_ID + ".longCommitHash",
+            shortCommitHash : PROJECT_ARTIFACT_ID + ".shortCommitHash",
+            commitDate : PROJECT_ARTIFACT_ID + ".commitDate",
+            repoStatus : PROJECT_ARTIFACT_ID + ".repoStatus"
+    ]
+
+    // The default values taken from Netty.
+    def valueOf = [
+            version : project.version,
+            buildDate : new Date().format("yyyy-MM-dd HH:mm:ss Z"), // same with git log date format
+            longCommitHash : "0000000000000000000000000000000000000000",
+            shortCommitHash : "0",
+            commitDate : "1970-01-01 00:00:00 +0000",
+            repoStatus : "unknown"
+    ]
+
+    def gitLogOut = executeCommand('git', 'log', '-1', '--format=format:%h%x20%H%x20%cd', '--date=iso')
+    if (gitLogOut) {
+        logger.info("Latest commit: ${gitLogOut}")
+        def tokens = gitLogOut.tokenize(' ')
+        valueOf.shortCommitHash = tokens[0]
+        valueOf.longCommitHash = tokens[1]
+        valueOf.commitDate = tokens[2..4].join(' ')
+    }
+
+    def gitStatusOut = executeCommand('git', 'status', '--porcelain')
+    if (!gitStatusOut.empty) {
+        valueOf.repoStatus = 'dirty'
+        logger.info("Repository is dirty:${System.lineSeparator()}${gitStatusOut}")
+    } else {
+        valueOf.repoStatus = 'clean'
+    }
+
+    project.mkdir(PROPS_DIR_PATH)
+
+    def props = new Properties()
+    def propsFile = project.file(PROPS_FILE_PATH)
+    if (propsFile.exists()) {
+        logger.info("Updating ${PROPS_FILE_PATH} ..")
+        props.load(propsFile.newDataInputStream())
+    } else {
+        logger.info("Creating ${PROPS_FILE_PATH} ..")
+        propsFile.createNewFile()
+    }
+
+    keyOf.each { key, propName -> props.setProperty(propName, valueOf[key]) }
+    props.store(propsFile.newWriter(), null)
+}
+
+private String executeCommand(String[] command) {
+    def output = ''
+    try {
+        def proc = command.execute()
+        proc.waitFor()
+        if (!proc.exitValue()) {
+            output = proc.in.text
+        } else {
+            logger.warn("'${command}' exited with a non-zero exit code: ${proc.exitValue()}: ${proc.err.text}")
+        }
+    } catch (all) {
+        logger.warn("Could not run '${command}':", all)
+    }
+
+    return output
+}
