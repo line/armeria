@@ -32,6 +32,7 @@ import org.reactivestreams.Subscription;
 public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private final StreamMessage<T> delegate;
+    private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
 
     /**
      * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
@@ -80,7 +81,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public CompletableFuture<Void> closeFuture() {
-        return delegate.closeFuture();
+        return closeFuture;
     }
 
     @Override
@@ -122,14 +123,22 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onError(Throwable t) {
-            beforeError(delegate, t);
-            delegate.onError(t);
+            try {
+                beforeError(delegate, t);
+                delegate.onError(t);
+            } finally {
+                closeFuture.completeExceptionally(t);
+            }
         }
 
         @Override
         public void onComplete() {
-            beforeComplete(delegate);
-            delegate.onComplete();
+            try {
+                beforeComplete(delegate);
+                delegate.onComplete();
+            } finally {
+                closeFuture.complete(null);
+            }
         }
     }
 }
