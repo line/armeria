@@ -12,7 +12,7 @@
   <suppress checks="JavadocPackage" files="[\\/](test|internal)[\\/]" />
   <suppress checks="JavadocMethod" files="[\\/](test|internal)[\\/]" />
   <!-- Suppress all checks in generates sources -->
-  <suppress checks=".*" files="[\\/]generated[^\\/]*-sources[\\/]" />
+  <suppress checks=".*" files="[\\/]gen-java[\\/]" />
   <!-- Suppress checks in large forks to make diffing against upstream easier -->
   <suppress checks=".*" files="[\\/]grpc[\\/]ServerCallImpl.java$" />
 </suppressions>
