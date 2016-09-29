@@ -26,7 +26,7 @@
 
   <groupId>com.linecorp.armeria</groupId>
   <artifactId>armeria</artifactId>
-  <version>0.26.2.Final-SNAPSHOT</version>
+  <version>0.27.1.Final-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>Armeria</name>
   <description>
