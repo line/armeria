@@ -29,7 +29,7 @@ import java.nio.file.Paths
 // otherwise JVM will fail to load the ProtocolHandler due to the references to the non-existent classes in the
 // method signatures.
 
-path = Paths.get("target", "classes", "com", "linecorp", "armeria", "server", "http", "tomcat",
+path = Paths.get("build", "classes", "com", "linecorp", "armeria", "server", "http", "tomcat",
                  "Tomcat80ProtocolHandler.class")
 
 reader = new ClassReader(Files.readAllBytes(path))

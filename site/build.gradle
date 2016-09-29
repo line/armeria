@@ -1,0 +1,24 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath group: 'kr.motd.gradle', name: 'sphinx-gradle-plugin', version: '1.0.2.Final'
+    }
+}
+
+apply plugin: 'kr.motd.sphinx'
+
+sphinx {
+    sourceDirectory "${project.projectDir}/src/sphinx"
+}
+
+task clean << {
+    project.delete(project.buildDir)
+}
+
+task build {
+    dependsOn site
+}

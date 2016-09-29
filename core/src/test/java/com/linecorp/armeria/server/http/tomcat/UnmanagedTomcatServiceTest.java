@@ -43,17 +43,17 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
     public static void createTomcat() throws Exception {
         tomcatWithWebApp = new Tomcat();
         tomcatWithWebApp.setPort(0);
-        tomcatWithWebApp.setBaseDir("target" + File.separatorChar +
+        tomcatWithWebApp.setBaseDir("build" + File.separatorChar +
                                     "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-1");
         tomcatWithWebApp.addWebapp(
                 "",
-                new File("target" + File.separatorChar +
+                new File("build" + File.separatorChar +
                          "test-classes" + File.separatorChar + "tomcat_service").getAbsolutePath());
         tomcatWithWebApp.getService().getContainer().setName("tomcatWithWebApp");
 
         tomcatWithoutWebApp = new Tomcat();
         tomcatWithoutWebApp.setPort(0);
-        tomcatWithoutWebApp.setBaseDir("target" + File.separatorChar +
+        tomcatWithoutWebApp.setBaseDir("build" + File.separatorChar +
                                        "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-2");
     }
 
