@@ -459,7 +459,9 @@ configure(javaProjects) {
             onlyIf { isPublishing() }
         }
     }
-    task install(dependsOn: publishToMavenLocal)
+    task install(dependsOn: publishToMavenLocal,
+                 group: 'Publishing',
+                 description: 'An alias of publishToMavenLocal')
 
     // Print only interesting test results and progress.
     test {
@@ -519,21 +521,31 @@ private def getRepoStatus() {
             repoStatus : 'unknown'
     ]
 
-    def gitLogOut = executeCommand('git', 'log', '-1', '--format=format:%h%x20%H%x20%cd', '--date=iso')
-    if (gitLogOut) {
-        logger.info("Latest commit: ${gitLogOut}")
-        def tokens = gitLogOut.tokenize(' ')
-        result.shortCommitHash = tokens[0]
-        result.longCommitHash = tokens[1]
-        result.commitDate = tokens[2..4].join(' ')
+    // Do not run 'git' if the project is not from a Git repository.
+    if (!rootProject.file("${rootProject.projectDir}/.git").isDirectory()) {
+        return result
     }
 
-    def gitStatusOut = executeCommand('git', 'status', '--porcelain')
-    if (!gitStatusOut.empty) {
-        result.repoStatus = 'dirty'
-        logger.info("Repository is dirty:${System.lineSeparator()}${gitStatusOut}")
-    } else {
-        result.repoStatus = 'clean'
+    // Retrieve the repository status from the Git repository.
+    try {
+        def gitLogOut = executeCommand('git', 'log', '-1', '--format=format:%h%x20%H%x20%cd', '--date=iso')
+        if (gitLogOut) {
+            logger.info("Latest commit: ${gitLogOut}")
+            def tokens = gitLogOut.tokenize(' ')
+            result.shortCommitHash = tokens[0]
+            result.longCommitHash = tokens[1]
+            result.commitDate = tokens[2..4].join(' ')
+        }
+
+        def gitStatusOut = executeCommand('git', 'status', '--porcelain')
+        if (!gitStatusOut.empty) {
+            result.repoStatus = 'dirty'
+            logger.info("Repository is dirty:${System.lineSeparator()}${gitStatusOut}")
+        } else {
+            result.repoStatus = 'clean'
+        }
+    } catch (e) {
+        logger.warn("Failed to retrieve the repository status:", e)
     }
 
     return result
@@ -544,7 +556,7 @@ private def generateVersionProperties(Project project) {
     def propsFile = project.file(
             "${project.buildDir}/resources/main/META-INF/${project.group}.versions.properties")
 
-    logger.info("Generating version properties for ${artifactId} ..")
+    logger.info("Generating versions.properties for ${artifactId} ..")
 
     def props = new Properties()
     rootProject.ext.repoStatus.each { k, v ->
@@ -553,29 +565,23 @@ private def generateVersionProperties(Project project) {
 
     project.mkdir(propsFile.parent)
     if (propsFile.exists()) {
-        logger.info("Updating ${propsFile} ..")
+        logger.debug("Updating ${propsFile} ..")
         props.load(propsFile.newDataInputStream())
     } else {
-        logger.info("Creating ${propsFile} ..")
+        logger.debug("Creating ${propsFile} ..")
         propsFile.createNewFile()
     }
 
     props.store(propsFile.newWriter(), null)
 }
 
-private String executeCommand(String[] command) {
-    def output = ''
-    try {
-        def proc = command.execute()
-        proc.waitFor()
-        if (!proc.exitValue()) {
-            output = proc.in.text
-        } else {
-            logger.warn("'${command}' exited with a non-zero exit code: ${proc.exitValue()}: ${proc.err.text}")
-        }
-    } catch (all) {
-        logger.warn("Could not run '${command}':", all)
+private static String executeCommand(String[] command) {
+    def proc = command.execute()
+    proc.waitFor()
+    if (proc.exitValue() != 0) {
+        throw new IOException(
+                "'${command}' exited with a non-zero exit code: ${proc.exitValue()}: ${proc.err.text}")
     }
 
-    return output
+    return proc.in.text
 }
