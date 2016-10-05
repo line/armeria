@@ -84,7 +84,7 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
 
         requestLog = new DefaultRequestLog();
         requestLog.start(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method, path);
-        responseLog = new DefaultResponseLog(requestLog);
+        responseLog = new DefaultResponseLog(requestLog, requestLog);
         logger = newLogger(cfg);
 
         final ServerConfig serverCfg = cfg.server().config();

@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -105,6 +107,11 @@ public final class DefaultRequestLog
            .append(method)
            .append(", path=")
            .append(path);
+    }
+
+    @Override
+    CompletableFuture<?> parentLogFuture() {
+        return null;
     }
 
     @Override
