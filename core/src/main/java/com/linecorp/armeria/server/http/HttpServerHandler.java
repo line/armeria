@@ -98,7 +98,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Throwable cause = future.cause();
         final Channel ch = future.channel();
         if (cause != null) {
-            Exceptions.logIfUnexpected(logger, ch, HttpServer.get(ch).protocol(), cause);
+            logException(ch, cause);
         }
         safeClose(ch);
     };
@@ -107,10 +107,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Throwable cause = future.cause();
         if (cause != null && !(cause instanceof ClosedPublisherException)) {
             final Channel ch = future.channel();
-            Exceptions.logIfUnexpected(logger, ch, HttpServer.get(ch).protocol(), cause);
+            logException(ch, cause);
             safeClose(ch);
         }
     };
+
+    private static void logException(Channel ch, Throwable cause) {
+        final HttpServer server = HttpServer.get(ch);
+        if (server != null) {
+            Exceptions.logIfUnexpected(logger, ch, server.protocol(), cause);
+        } else {
+            Exceptions.logIfUnexpected(logger, ch, cause);
+        }
+    }
 
     static void safeClose(Channel ch) {
         if (!ch.isActive()) {
