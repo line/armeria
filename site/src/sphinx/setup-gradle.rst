@@ -22,16 +22,16 @@ You might want to use the following  ``build.gradle`` as a starting point if you
         compile group: 'com.linecorp.armeria', name: 'armeria', version: '\ |release|\ '
 
         // Logging
-        runtime group: 'ch.qos.logback', name: 'logback-classic', version: '\ |logback_version|\ '
+        runtime group: 'ch.qos.logback', name: 'logback-classic', version: '\ |logback.version|\ '
 
         // Embedded Tomcat
         [ "core", "jasper", "el" ].each { module ->
-            runtime group: 'org.apache.tomcat.embed', name: "tomcat-embed-$module", version: '\ |tomcat_version|\ '
+            runtime group: 'org.apache.tomcat.embed', name: "tomcat-embed-$module", version: '\ |tomcat.version|\ '
         }
-        runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: '\ |slf4j_version|\ '
+        runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: '\ |slf4j.version|\ '
 
         // JVM agent to enable TLS ALPN extension
-        javaAgent group: 'org.mortbay.jetty.alpn', name: 'jetty-alpn-agent', version: '\ |jetty_alpnAgent_version|\ '
+        javaAgent group: 'org.mortbay.jetty.alpn', name: 'jetty-alpn-agent', version: '\ |jetty-alpn-agent.version|\ '
     }
 
     // Require Java 8 to build the project.

@@ -1,0 +1,3 @@
+rootProject.name = 'armeria'
+include 'core', 'site'
+

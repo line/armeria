@@ -1,0 +1,581 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'io.spring.gradle:dependency-management-plugin:0.6.1.RELEASE'
+    }
+}
+
+ext.javaProjects = subprojects.findAll { it.name != 'site' }
+ext.repoStatus = getRepoStatus()
+ext.versionOf = { project.property("${it}.version") }
+ext.requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
+ext.isPublishing = {
+    gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null
+}
+
+// Configure all projects
+allprojects {
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+}
+
+// Configure all Java projects
+configure(javaProjects) {
+
+    // Apply common plugins and define repositories.
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+    apply plugin: 'checkstyle'
+
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
+
+    apply plugin: 'io.spring.dependency-management'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    // Set the artifact ID.
+    if (project.name == 'core') {
+        project.archivesBaseName = 'armeria'
+    } else {
+        project.archivesBaseName = "armeria-$project.name"
+    }
+
+    // Common properties
+    ext {
+        pomFile = file("${project.buildDir}/generated-pom.xml")
+        isReleaseVersion = !(project.version =~ /-SNAPSHOT$/)
+        versionOf = rootProject.ext.versionOf
+    }
+
+    // Use the dependency management plugin to keep the versions and exclusions in a single place.
+    dependencyManagement {
+        dependencies {
+            // AssertJ
+            dependency "org.assertj:assertj-core:${ext.versionOf('assertj')}"
+
+            // gRPC
+            dependencySet(group: 'io.grpc', version: ext.versionOf('grpc')) {
+                entry('grpc-core') {
+                    exclude 'com.google.code.findbugs:jsr305'
+                }
+                entry 'grpc-stub'
+                entry 'grpc-protobuf'
+                entry('grpc-interop-testing') {
+                    exclude 'io.netty:netty-codec-http2'
+                    exclude 'com.google.guava:guava-jdk5'
+                }
+            }
+
+            // Guava
+            dependencySet(group: 'com.google.guava', version: ext.versionOf('guava')) {
+                entry 'guava'
+                entry('guava-testlib') {
+                    exclude 'com.google.code.findbugs:jsr305'
+                    exclude 'com.google.errorprone:error_prone_annotations'
+                }
+            }
+
+            // Hamcrest
+            dependency "org.hamcrest:hamcrest-library:${ext.versionOf('hamcrest')}"
+
+            // HttpClient
+            dependency("org.apache.httpcomponents:httpclient:${ext.versionOf('httpclient')}") {
+                exclude 'commons-logging:commons-logging'
+            }
+
+            // Jackson
+            dependencySet(group: 'com.fasterxml.jackson.core', version: ext.versionOf('jackson')) {
+                entry 'jackson-core'
+                entry 'jackson-annotations'
+                entry 'jackson-databind'
+            }
+
+            // Jetty
+            dependencySet(group: 'org.eclipse.jetty', version: ext.versionOf('jetty')) {
+                entry 'jetty-server'
+                entry 'jetty-webapp'
+                entry 'jetty-annotations'
+                entry 'apache-jsp'
+                entry 'apache-jstl'
+            }
+            dependency "org.eclipse.jetty.http2:http2-server:${ext.versionOf('jetty')}"
+
+            // Jetty ALPN support
+            dependency "org.eclipse.jetty.alpn:alpn-api:${ext.versionOf('jetty-alpn-api')}"
+            dependency "org.mortbay.jetty.alpn:jetty-alpn-agent:${ext.versionOf('jetty-alpn-agent')}"
+
+            // JSON-unit
+            dependencySet(group: 'net.javacrumbs.json-unit', version: ext.versionOf('jsonunit')) {
+                entry 'json-unit'
+                entry 'json-unit-fluent'
+            }
+
+            // JSR305
+            dependency 'com.google.code.findbugs:jsr305:3.0.1'
+
+            // jUnit
+            dependency "junit:junit:${ext.versionOf('junit')}"
+
+            // Logback
+            dependency "ch.qos.logback:logback-classic:${ext.versionOf('logback')}"
+
+            // Metrics
+            dependency "io.dropwizard.metrics:metrics-core:${ext.versionOf('metrics')}"
+
+            // Mockito
+            dependency "org.mockito:mockito-core:${ext.versionOf('mockito')}"
+
+            // Netty
+            dependencySet(group: 'io.netty', version: ext.versionOf('netty')) {
+                entry 'netty-transport'
+                entry 'netty-codec-http2'
+                entry 'netty-resolver-dns'
+            }
+            dependency "io.netty:netty-tcnative-boringssl-static:${ext.versionOf('netty-tcnative')}"
+            dependency "org.javassist:javassist:${ext.versionOf('javassist')}"
+
+            // Reactive Streams
+            dependency "org.reactivestreams:reactive-streams:${ext.versionOf('reactive-streams')}"
+
+            // Reflections
+            dependency("org.reflections:reflections:${ext.versionOf('reflections')}") {
+                exclude 'com.google.code.findbugs:annotations'
+            }
+
+            // SLF4J
+            dependencySet(group: 'org.slf4j', version: ext.versionOf('slf4j')) {
+                entry 'slf4j-api'
+                entry 'jul-to-slf4j'
+                entry 'jcl-over-slf4j'
+                entry 'log4j-over-slf4j'
+            }
+
+            // Thrift
+            dependency("org.apache.thrift:libthrift:${ext.versionOf('thrift')}") {
+                exclude 'org.apache.httpcomponents:httpcore'
+                exclude 'org.apache.httpcomponents:httpclient'
+            }
+
+            // Tomcat
+            dependencySet(group: 'org.apache.tomcat.embed', version: ext.versionOf('tomcat')) {
+                entry 'tomcat-embed-core'
+                entry 'tomcat-embed-jasper'
+                entry 'tomcat-embed-el'
+            }
+
+            // Zipkin
+            dependencySet(group: 'io.zipkin.brave', version: ext.versionOf('brave')) {
+                entry 'brave-core'
+                entry 'brave-http'
+            }
+        }
+    }
+
+    // Common dependencies
+    configurations {
+        javaAgent
+    }
+
+    dependencies {
+        // JSR305
+        compile 'com.google.code.findbugs:jsr305' // Can't use compileOnly due to Javadoc errors
+
+        // Jetty ALPN support
+        compileOnly('org.eclipse.jetty.alpn:alpn-api')
+        javaAgent 'org.mortbay.jetty.alpn:jetty-alpn-agent'
+
+        // Logging
+        compile 'org.slf4j:slf4j-api'
+        testCompile 'org.slf4j:jul-to-slf4j'
+        testRuntime 'ch.qos.logback:logback-classic'
+        ['jcl-over-slf4j', 'log4j-over-slf4j'].each {
+            testRuntime "org.slf4j:$it"
+        }
+
+        // Test-time dependencies
+        testCompile 'junit:junit'
+        testCompile 'org.hamcrest:hamcrest-library'
+        testCompile 'org.assertj:assertj-core'
+        testCompile 'org.mockito:mockito-core'
+        testCompile 'org.apache.httpcomponents:httpclient'
+        testCompile 'net.javacrumbs.json-unit:json-unit'
+        testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
+    }
+
+    // Enforce checkstyle rules.
+    checkstyle {
+        def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
+        configFile = project.file("${checkstyleConfigDir}/checkstyle.xml")
+        configProperties = [ 'checkstyleConfigDir': "$checkstyleConfigDir" ]
+        toolVersion = '7.1'
+    }
+
+    // Enable JaCoCo test coverage when '-Pcoverage' option is specified.
+    def jacocoEnabled = project.hasProperty('coverage')
+
+    test {
+        jacoco {
+            enabled = jacocoEnabled
+            append = false
+        }
+    }
+
+    jacocoTestReport {
+        reports {
+            xml.enabled jacocoEnabled
+        }
+    }
+
+    if (jacocoEnabled) {
+        tasks.test.finalizedBy(jacocoTestReport)
+    }
+
+    // Require Java 8 to build the project.
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        options.encoding = 'UTF-8'
+        options.warnings = false
+        options.debug = true
+    }
+
+    // Prepare the JVM agent that enables TLS ALPN extension.
+    task copyJavaAgents(type: Copy) {
+        from configurations.javaAgent
+        into "${rootProject.buildDir}"
+        rename { String fileName ->
+            fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[^\\.]+)?\\.jar", ".jar")
+        }
+    }
+
+    // Add common JVM options such as TLS ALPN agent, max memory and leak detection.
+    tasks.withType(JavaForkOptions) {
+        dependsOn 'copyJavaAgents'
+
+        // Use larger heap when test coverage is enabled.
+        maxHeapSize = jacocoEnabled ? '384m' : '128m'
+
+        // Enable leak detection when '-Pleak' option is specified.
+        if (project.hasProperty('leak')) {
+            systemProperties 'io.netty.leakDetectionLevel': 'paranoid'
+        }
+
+        jvmArgs "-javaagent:${rootProject.buildDir}/jetty-alpn-agent.jar"
+    }
+
+    // Generate version.properties, similar to Netty.
+    task versionProperties << { generateVersionProperties(project) }
+    // Ensure version.properties is available during compilation.
+    tasks.processResources.dependsOn(versionProperties)
+    // Ensure version.properties is generated when imported by an IDE.
+    afterEvaluate { versionProperties.execute() }
+
+    // Generate a source JAR.
+    task sourceJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    // Generate a javadoc JAR.
+    javadoc {
+        options {
+            quiet()
+            addBooleanOption('Xdoclint:all').value = true
+            addBooleanOption('Xdoclint:-missing').value = true
+        }
+    }
+
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+    }
+
+    // Generate source/javadoc JARs only when publishing.
+    tasks.sourceJar.onlyIf {
+        isPublishing() || requestedTaskNames.find { it =~ /(?:^|:)sourceJar$/ }
+    }
+    [ tasks.javadoc, tasks.javadocJar ].each {
+        it.onlyIf {
+            isPublishing() || requestedTaskNames.find { it =~ /(?:^|:)javadoc(?:Jar)?$/ }
+        }
+    }
+
+    // Sign and publish all artifacts.
+    artifacts {
+        archives jar
+        archives sourceJar
+        archives javadocJar
+    }
+
+    signing {
+        required { signatory != null && project.ext.isReleaseVersion }
+        sign configurations.archives
+    }
+
+    publishing {
+        repositories {
+            maven {
+                if (project.ext.isReleaseVersion) {
+                    url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                } else {
+                    url 'https://oss.sonatype.org/content/repositories/snapshots/'
+                }
+
+                credentials {
+                    username = project.properties.ossrhUsername
+                    password = project.properties.ossrhPassword
+                }
+            }
+        }
+
+        publications {
+            jar(MavenPublication) {
+                artifactId "${project.archivesBaseName}"
+
+                pom.withXml {
+                    NodeList children = asNode().children()
+                    Node dependencies = children.find { it.name().localPart == 'dependencies' } as Node
+
+                    // Insert the elements required by OSSRH.
+                    children[children.indexOf(dependencies) - 1] + {
+                        resolveStrategy = Closure.DELEGATE_FIRST
+                        name "${project.archivesBaseName}"
+                        description "Asynchronous RPC/API client/server library built on top of Java 8, " +
+                                    "Netty 4.1, HTTP/2, and Thrift (${project.archivesBaseName})"
+                        url 'http://line.github.io/armeria/'
+                        licenses {
+                            license {
+                                name 'The Apache License, Version 2.0'
+                                url 'http://www.apache.org/license/LICENSE-2.0.txt'
+                                distribution 'repo'
+                            }
+                        }
+                        inceptionYear 2015
+                        organization {
+                            name 'LINE Corporation'
+                            url 'http://linecorp.com/en/'
+                        }
+                        developers {
+                            developer {
+                                id 'linecorp.com'
+                                name 'LINE Corporation'
+                                url 'http://linecorp.com/en/'
+                            }
+                        }
+                        scm {
+                            url 'https://github.com/line/armeria'
+                            connection 'scm:git:https://github.com/line/armeria.git'
+                            developerConnection 'scm:git:ssh://git@github.com/line/armeria.git'
+                        }
+                    }
+
+                    // Remove:
+                    // - the compileOnly dependencies
+                    // - the dependencies provided by the platform
+                    // - the dependencies in the 'javaAgent' configuration
+                    dependencies.children().removeAll {
+                        it.artifactId.text() in [ 'jsr305', 'alpn-api', 'jetty-alpn-agent' ]
+                    }
+
+                    // Work around the bug where the maven-publish plugin sets the scope of all
+                    // dependencies to 'runtime'.
+                    // https://discuss.gradle.org/t/maven-publish-plugin-generated-pom-making-dependency-scope-runtime/7494
+                    def compileDeps = configurations.compile.dependencies.collectEntries { [it.name, it] } +
+                            configurations.compileOnly.dependencies.collectEntries { [it.name, it] }
+
+                    def allDeps = compileDeps +
+                            configurations.runtime.dependencies.collectEntries { [it.name, it] }
+
+                    dependencies.children().each {
+                        if (compileDeps.containsKey(it.artifactId.text())) {
+                            it.scope*.value = 'compile'
+                        }
+
+                        // Add <optional>true</optional> to optional dependencies.
+                        def dep = allDeps[it.artifactId.text()]
+                        if (dep.hasProperty('optional') && dep.optional) {
+                            if (it.optional) {
+                                it.optional.value = true
+                            } else {
+                                it.appendNode('optional', 'true')
+                            }
+                        }
+                    }
+                }
+
+                from components.java
+
+                artifact(sourceJar) {
+                    classifier = 'sources'
+                }
+                artifact(javadocJar) {
+                    classifier = 'javadoc'
+                }
+
+                // Sign the pom.xml and artifacts.
+                if (signing.required) {
+                    // Sign the pom.xml.
+                    pom.withXml {
+                        writeTo(project.ext.pomFile)
+                        def pomAscFile = signing.sign(project.ext.pomFile).signatureFiles[0]
+                        artifact(pomAscFile) {
+                            classifier = null
+                            extension = 'pom.asc'
+                        }
+                        project.ext.pomFile.delete()
+                    }
+
+                    // Sign the artifacts.
+                    project.tasks.signArchives.signatureFiles.each {
+                        artifact(it) {
+                            def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
+                            if (matcher.find()) {
+                                classifier = matcher.group(1)
+                            } else {
+                                classifier = null
+                            }
+                            extension = 'jar.asc'
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    model {
+        tasks.publishJarPublicationToMavenLocal {
+            dependsOn(project.tasks.signArchives)
+        }
+        tasks.publishJarPublicationToMavenRepository {
+            dependsOn(project.tasks.signArchives)
+        }
+        tasks.signArchives {
+            onlyIf { isPublishing() }
+        }
+    }
+    task install(dependsOn: publishToMavenLocal)
+
+    // Print only interesting test results and progress.
+    test {
+        def buf = new StringBuilder()
+        def printedProgress = false
+
+        // Record the test output.
+        onOutput { TestDescriptor td, TestOutputEvent toe ->
+            buf << toe.message
+        }
+
+        // Print the test output when the test failed or the test output contains an Exception or an Error.
+        afterTest { TestDescriptor td, TestResult tr ->
+            if (tr.resultType == TestResult.ResultType.FAILURE || buf =~ /(?:Exception|Error|Throwable):/) {
+                def simpleClassName = td.className.substring(td.className.lastIndexOf('.') + 1)
+
+                // Add an empty line if the test progress dots were printed.
+                if (printedProgress) {
+                    println()
+                    println()
+                    printedProgress = false
+                }
+
+                def subject = "${simpleClassName}.${td.name}: ${tr.resultType}"
+                println subject
+
+                if (buf.length() != 0) {
+                    println '-' * subject.length()
+                    println buf
+                    if (buf[buf.length() - 1] != '\n') {
+                        println()
+                    }
+                }
+            } else {
+                // Print the progress dots.
+                print '.'
+                System.out.flush()
+                printedProgress = true
+            }
+
+            buf.length = 0
+        }
+    }
+}
+
+private def getRepoStatus() {
+    // Make sure this method is executed only once during the build.
+    assert !rootProject.hasProperty('repoStatus')
+
+    // The default values taken from Netty.
+    def result = [
+            version : project.version,
+            buildDate : new Date().format('yyyy-MM-dd HH:mm:ss Z'), // same with git log date format
+            longCommitHash : '0000000000000000000000000000000000000000',
+            shortCommitHash : '0000000',
+            commitDate : '1970-01-01 00:00:00 +0000',
+            repoStatus : 'unknown'
+    ]
+
+    def gitLogOut = executeCommand('git', 'log', '-1', '--format=format:%h%x20%H%x20%cd', '--date=iso')
+    if (gitLogOut) {
+        logger.info("Latest commit: ${gitLogOut}")
+        def tokens = gitLogOut.tokenize(' ')
+        result.shortCommitHash = tokens[0]
+        result.longCommitHash = tokens[1]
+        result.commitDate = tokens[2..4].join(' ')
+    }
+
+    def gitStatusOut = executeCommand('git', 'status', '--porcelain')
+    if (!gitStatusOut.empty) {
+        result.repoStatus = 'dirty'
+        logger.info("Repository is dirty:${System.lineSeparator()}${gitStatusOut}")
+    } else {
+        result.repoStatus = 'clean'
+    }
+
+    return result
+}
+
+private def generateVersionProperties(Project project) {
+    def artifactId = project.archivesBaseName
+    def propsFile = project.file(
+            "${project.buildDir}/resources/main/META-INF/${project.group}.versions.properties")
+
+    logger.info("Generating version properties for ${artifactId} ..")
+
+    def props = new Properties()
+    rootProject.ext.repoStatus.each { k, v ->
+        props["${artifactId}.${k}"] = v
+    }
+
+    project.mkdir(propsFile.parent)
+    if (propsFile.exists()) {
+        logger.info("Updating ${propsFile} ..")
+        props.load(propsFile.newDataInputStream())
+    } else {
+        logger.info("Creating ${propsFile} ..")
+        propsFile.createNewFile()
+    }
+
+    props.store(propsFile.newWriter(), null)
+}
+
+private String executeCommand(String[] command) {
+    def output = ''
+    try {
+        def proc = command.execute()
+        proc.waitFor()
+        if (!proc.exitValue()) {
+            output = proc.in.text
+        } else {
+            logger.warn("'${command}' exited with a non-zero exit code: ${proc.exitValue()}: ${proc.err.text}")
+        }
+    } catch (all) {
+        logger.warn("Could not run '${command}':", all)
+    }
+
+    return output
+}

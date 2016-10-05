@@ -32,7 +32,7 @@ you don't need this if you are going to use HTTP/2 over a cleartext connection (
     <project>
       ...
       <properties>
-        <jetty.alpnAgent.version>\ |jetty_alpnAgent_version|\ </jetty.alpnAgent.version>
+        <jetty.alpnAgent.version>\ |jetty-alpn-agent.version|\ </jetty.alpnAgent.version>
         <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
         <argLine.alpnAgent>-javaagent:"${jetty.alpnAgent.path}"</argLine.alpnAgent>
       </properties>
@@ -84,8 +84,8 @@ If you want to embed Tomcat into Armeria, you'll have to add the optional depend
       ...
       <properties>
         ...
-        <slf4j.version>\ |slf4j_version|\ </slf4j.version>
-        <tomcat.version>\ |tomcat_version|\ </tomcat.version>
+        <slf4j.version>\ |slf4j.version|\ </slf4j.version>
+        <tomcat.version>\ |tomcat.version|\ </tomcat.version>
         ...
       </properties>
       ...
@@ -126,12 +126,6 @@ You might want to use the following  ``pom.xml`` as a template if you are starti
     <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
       <modelVersion>4.0.0</modelVersion>
-      <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>\ |oss_parent_version|\ </version>
-      </parent>
-
       <groupId>com.example</groupId>
       <artifactId>myproject</artifactId>
       <version>0.1.0.Final-SNAPSHOT</version>
@@ -155,10 +149,10 @@ You might want to use the following  ``pom.xml`` as a template if you are starti
 
         <!-- Dependency versions -->
         <armeria.version>\ |release|\ </armeria.version>
-        <logback.version>\ |logback_version|\ </logback.version>
-        <slf4j.version>\ |slf4j_version|\ </slf4j.version>
-        <tomcat.version>\ |tomcat_version|\ </tomcat.version>
-        <jetty.alpnAgent.version>\ |jetty_alpnAgent_version|\ </jetty.alpnAgent.version>
+        <logback.version>\ |logback.version|\ </logback.version>
+        <slf4j.version>\ |slf4j.version|\ </slf4j.version>
+        <tomcat.version>\ |tomcat.version|\ </tomcat.version>
+        <jetty.alpnAgent.version>\ |jetty-alpn-agent.version|\ </jetty.alpnAgent.version>
         <jetty.alpnAgent.path>${settings.localRepository}/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
         <argLine.alpnAgent>-javaagent:"${jetty.alpnAgent.path}"</argLine.alpnAgent>
       </properties>
