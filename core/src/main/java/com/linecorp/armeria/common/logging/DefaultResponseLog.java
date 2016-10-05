@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import java.util.concurrent.CompletableFuture;
+
 import io.netty.util.Attribute;
 
 /**
@@ -25,6 +27,7 @@ public final class DefaultResponseLog
         extends AbstractMessageLog<ResponseLog> implements ResponseLog, ResponseLogBuilder {
 
     private final RequestLog request;
+    private final CompletableFuture<?> requestLogFuture;
     private int statusCode;
 
     /**
@@ -32,8 +35,9 @@ public final class DefaultResponseLog
      *
      * @param request the {@link RequestLog} of the corresponding request
      */
-    public DefaultResponseLog(RequestLog request) {
+    public DefaultResponseLog(RequestLog request, CompletableFuture<?> requestLogFuture) {
         this.request = request;
+        this.requestLogFuture = requestLogFuture;
     }
 
     @Override
@@ -63,6 +67,11 @@ public final class DefaultResponseLog
     @Override
     protected void appendProperties(StringBuilder buf) {
         buf.append(", statusCode=").append(statusCode);
+    }
+
+    @Override
+    CompletableFuture<?> parentLogFuture() {
+        return requestLogFuture;
     }
 
     @Override

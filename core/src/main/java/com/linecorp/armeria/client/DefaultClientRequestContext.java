@@ -73,7 +73,7 @@ public final class DefaultClientRequestContext extends NonWrappingRequestContext
         this.fragment = requireNonNull(fragment, "fragment");
 
         requestLog = new DefaultRequestLog();
-        responseLog = new DefaultResponseLog(requestLog);
+        responseLog = new DefaultResponseLog(requestLog, requestLog);
 
         writeTimeoutMillis = options.defaultWriteTimeoutMillis();
         responseTimeoutMillis = options.defaultResponseTimeoutMillis();

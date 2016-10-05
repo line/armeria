@@ -604,7 +604,7 @@ public class ThriftServiceTest {
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final DefaultRequestLog reqLogBuilder = new DefaultRequestLog();
-        final DefaultResponseLog resLogBuilder = new DefaultResponseLog(reqLogBuilder);
+        final DefaultResponseLog resLogBuilder = new DefaultResponseLog(reqLogBuilder, reqLogBuilder);
 
         when(ctx.blockingTaskExecutor()).thenReturn(ImmediateEventExecutor.INSTANCE);
         when(ctx.requestLogBuilder()).thenReturn(reqLogBuilder);

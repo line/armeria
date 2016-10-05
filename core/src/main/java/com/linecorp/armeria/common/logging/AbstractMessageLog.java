@@ -24,7 +24,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.UnitFormatter;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
@@ -35,6 +34,7 @@ abstract class AbstractMessageLog<T extends MessageLog>
         extends CompletableFuture<T> implements MessageLog, MessageLogBuilder {
 
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
+    private volatile boolean endCalled;
     private boolean startTimeNanosSet;
     private long startTimeNanos;
     private long contentLength;
@@ -42,7 +42,15 @@ abstract class AbstractMessageLog<T extends MessageLog>
     private Throwable cause;
 
     boolean start0() {
-        if (isDone() || startTimeNanosSet) {
+        if (endCalled) {
+            return false;
+        }
+
+        return setStartTimeNanos();
+    }
+
+    private boolean setStartTimeNanos() {
+        if (startTimeNanosSet) {
             return false;
         }
 
@@ -61,7 +69,7 @@ abstract class AbstractMessageLog<T extends MessageLog>
         if (deltaBytes < 0) {
             throw new IllegalArgumentException("deltaBytes: " + deltaBytes + " (expected: >= 0)");
         }
-        if (isDone()) {
+        if (endCalled) {
             return;
         }
 
@@ -73,7 +81,7 @@ abstract class AbstractMessageLog<T extends MessageLog>
         if (contentLength < 0) {
             throw new IllegalArgumentException("contentLength: " + contentLength + " (expected: >= 0)");
         }
-        if (isDone()) {
+        if (endCalled) {
             return;
         }
 
@@ -112,14 +120,15 @@ abstract class AbstractMessageLog<T extends MessageLog>
     }
 
     private void end0(Throwable cause) {
-        if (isDone()) {
+        if (endCalled) {
             return;
         }
 
+        endCalled = true;
         this.cause = cause;
 
         // Handle the case where end() was called without start()
-        start0();
+        setStartTimeNanos();
 
         final Iterator<Attribute<?>> attrs = attrs();
         if (attrs.hasNext()) {
@@ -147,18 +156,23 @@ abstract class AbstractMessageLog<T extends MessageLog>
                             dependencies.toArray(new CompletableFuture<?>[dependencies.size()]));
             }
 
-            future.handle((unused1, unused2) -> complete())
-                  .exceptionally(CompletionActions::log);
+            future.whenComplete((unused1, unused2) -> complete());
         } else {
             complete();
         }
     }
 
-    private Void complete() {
+    private void complete() {
         endTimeNanos = System.nanoTime();
-        complete(self());
-        return null;
+        CompletableFuture<?> f = parentLogFuture();
+        if (f != null && !f.isDone()) {
+            f.whenComplete((unused1, unused2) -> complete(self()));
+        } else {
+            complete(self());
+        }
     }
+
+    abstract CompletableFuture<?> parentLogFuture();
 
     @Override
     public long endTimeNanos() {
