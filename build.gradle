@@ -543,7 +543,7 @@ task release(group: 'Publishing',
     def tag = "$rootProject.name-$releaseVersion"
 
     def gradlePropsFile = project.file("${project.projectDir}/gradle.properties")
-    def gradlePropsContent = gradlePropsFile.getText("ISO-8859-1")
+    def gradlePropsContent = gradlePropsFile.getText('ISO-8859-1')
     def versionPattern = /\nversion=[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)-SNAPSHOT(\r?\n)/
     assert gradlePropsContent =~ versionPattern
 
@@ -554,11 +554,20 @@ task release(group: 'Publishing',
     executeCommand('git', 'commit', '-m', "Release $tag")
     executeCommand('git', 'tag', tag)
 
-    // Update the version to the next version and commit.
+    // Update the version to the next version.
     executeCommand('git', 'reset', '--hard', 'HEAD^')
     gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${nextVersion}\$1"),
                           'ISO-8859-1')
     executeCommand('git', 'add', gradlePropsFile.toString())
+
+    // Update the version in the Sphinx conf.py as well.
+    def sphinxConfFile = project.file("${project.projectDir}/site/src/sphinx/conf.py")
+    def sphinxConfContent = sphinxConfFile.getText('UTF-8')
+    def sphinxConfVersionPattern = /\n( *)release = '[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)'(\r?\n)/
+    assert sphinxConfContent =~ sphinxConfVersionPattern
+    sphinxConfFile.write(sphinxConfContent.replaceFirst(sphinxConfVersionPattern, "\n\$1release = '${releaseVersion}'\$1"))
+
+    // Commit.
     executeCommand('git', 'commit', '-m', "Update the project version to ${nextVersion}")
 
     // Push the commits and tags.
@@ -568,12 +577,28 @@ task release(group: 'Publishing',
     println()
     println "Tagged: ${tag}"
     println '-' * (tag.length() + 8)
-    println "Run the following commands to publish the release:"
+    println "1. Upload the artifacts to the staging repository:"
     println()
-    println "  git checkout $tag"
-    println "  ./gradlew clean publish"
+    println "   git checkout $tag"
+    println "   ./gradlew clean publish"
     println()
-    println "and visit https://oss.sonatype.org/ to close and release the staging repository."
+    println '2. Close and release the staging repository at:'
+    println()
+    println '   https://oss.sonatype.org/'
+    println()
+    println '3. Close the milestone and set its release date at:'
+    println()
+    println '   https://github.com/line/armeria/milestones'
+    println()
+    println '4. Update the release note at:'
+    println()
+    println "   https://github.com/line/armeria/releases/tag/${tag}"
+    println()
+    println '5. Generate and deploy the new web site:'
+    println()
+    println "   git checkout $tag"
+    println '   ./gradlew site'
+    println '   .. copy the web site to the gh-pages branch ..'
 }
 
 private def getRepoStatus() {
