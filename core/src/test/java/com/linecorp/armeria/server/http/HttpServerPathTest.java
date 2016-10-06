@@ -17,9 +17,14 @@
 package com.linecorp.armeria.server.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.junit.Assert.assertThat;
 
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.junit.Test;
 
@@ -30,6 +35,7 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.AbstractServerTest;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -47,6 +53,56 @@ public class HttpServerPathTest extends AbstractServerTest {
                 res.respond(HttpStatus.OK);
             }
         });
+
+        sb.service(PathMapping.ofPrefix("/"), new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                    throws Exception {
+                res.respond(HttpStatus.OK);
+            }
+        });
+    }
+
+    // last space is workaround..
+    private static final String HTTP11_PROTOCOL = "HTTP/1.1 ";
+    
+    private static final Map<HttpStatus, String> TEST_URLS = new HashMap<>();
+    static	{
+    	TEST_URLS.put(HttpStatus.OK, "/");
+    	TEST_URLS.put(HttpStatus.OK, "/service//foo");
+    	TEST_URLS.put(HttpStatus.OK, "/service/foo..bar");
+
+    	TEST_URLS.put(HttpStatus.NOT_FOUND, "/..service/foobar");
+    	TEST_URLS.put(HttpStatus.NOT_FOUND, "/service../foobar");
+    	TEST_URLS.put(HttpStatus.NOT_FOUND, "/service/foobar..");
+
+    	/**
+    	 * TODO(krisjey) should move validation code to ArmeriaHttpUtil
+    	 * Http1RequestDecoder, Http2RequestDecoder
+    	 * expected 404. but 500 
+    	 * @see com.linecorp.armeria.common.http.HttpHeaders.toArmeria(HttpMessage in) 
+    	 */
+    	TEST_URLS.put(HttpStatus.INTERNAL_SERVER_ERROR, "/service/foo>bar");
+
+    	/**
+    	 * TODO(krisjey) should move validation code to ArmeriaHttpUtil
+    	 * Http1RequestDecoder, Http2RequestDecoder
+    	 * expected 404. but 500 
+    	 * @see com.linecorp.armeria.common.http.HttpHeaders.toArmeria(HttpMessage in) 
+    	 */
+    	TEST_URLS.put(HttpStatus.INTERNAL_SERVER_ERROR, "/service/foo<bar");
+
+    	TEST_URLS.put(HttpStatus.NOT_FOUND, "/service/foo*bar");
+    	TEST_URLS.put(HttpStatus.NOT_FOUND, "/service/foo|bar");
+    	TEST_URLS.put(HttpStatus.NOT_FOUND, "/service/foo\bar");
+    	TEST_URLS.put(HttpStatus.NOT_FOUND, "/service:name/hello");
+
+    	TEST_URLS.put(HttpStatus.BAD_REQUEST, "");
+    	TEST_URLS.put(HttpStatus.BAD_REQUEST, ".");
+    	TEST_URLS.put(HttpStatus.BAD_REQUEST, "..");
+    	TEST_URLS.put(HttpStatus.BAD_REQUEST, "something");
+    	
+    	TEST_URLS.put(HttpStatus.OK, "/service/foo:bar");
     }
 
     @Test(timeout = 10000)
@@ -55,7 +111,25 @@ public class HttpServerPathTest extends AbstractServerTest {
             s.setSoTimeout(10000);
             s.getOutputStream().write("GET /service//foo HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
             assertThat(new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII))
-                    .startsWith("HTTP/1.1 200 OK\r\n");
+                    .startsWith(HTTP11_PROTOCOL + HttpStatus.OK.toString());
         }
     }
+
+	@Test
+	public void testPathOfUrl() throws Exception {
+		for (Entry<HttpStatus, String> url : TEST_URLS.entrySet()) {
+			urlPathAssertion(url.getValue(), url.getKey());
+		}
+	}
+
+	private void urlPathAssertion(String path, HttpStatus expected) throws Exception {
+		String requestString = "GET " + path + " HTTP/1.0\r\n\r\n";
+
+		try (Socket s = new Socket(NetUtil.LOCALHOST, httpPort())) {
+			s.setSoTimeout(10000);
+			s.getOutputStream().write(requestString.getBytes(StandardCharsets.US_ASCII));
+			assertThat(path, new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII), 
+					startsWith(HTTP11_PROTOCOL + expected.toString()));
+		}
+	}
 }
