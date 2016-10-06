@@ -83,12 +83,12 @@ import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.InboundTrafficController;
-import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
+import com.linecorp.armeria.test.AbstractServerTest;
 
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;

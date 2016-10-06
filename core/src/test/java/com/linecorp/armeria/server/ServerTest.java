@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.test.AbstractServerTest;
 
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;

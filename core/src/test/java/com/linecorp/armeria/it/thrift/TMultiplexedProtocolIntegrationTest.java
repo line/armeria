@@ -31,10 +31,10 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
+import com.linecorp.armeria.test.AbstractServerTest;
 
 /**
  * Ensures TMultiplexedProtocol works.

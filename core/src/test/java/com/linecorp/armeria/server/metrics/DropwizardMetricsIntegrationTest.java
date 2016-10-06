@@ -27,11 +27,11 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.logging.DropwizardMetricCollectingClient;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
-import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
+import com.linecorp.armeria.test.AbstractServerTest;
 
 public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
 

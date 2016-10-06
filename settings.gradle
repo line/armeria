@@ -1,3 +1,10 @@
 rootProject.name = 'armeria'
-include 'core', 'site'
+// Java projects
+include 'core'
+include 'grpc'
+include 'jetty'
+include 'tomcat'
+include 'zipkin'
 
+// Site generation project
+include 'site'

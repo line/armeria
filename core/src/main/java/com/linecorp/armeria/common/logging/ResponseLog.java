@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.common.logging;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.MessageLite;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcResponse;
@@ -51,8 +48,8 @@ public interface ResponseLog extends MessageLog {
      *
      * <p>For a Thrift response, the value of this {@link Attribute} is an {@link ApacheThriftReply}.
      *
-     * <p>For a Protocol Buffers request, the value of this {@link Attribute} is a {@link Message} or
-     * a {@link MessageLite}.
+     * <p>For a Protocol Buffers request, the value of this {@link Attribute} is a {@code Message} or
+     * a {@code MessageLite}.
      */
     AttributeKey<Object> RAW_RPC_RESPONSE = AttributeKey.valueOf(ResponseLog.class, "RAW_RPC_RESPONSE");
 
