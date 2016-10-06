@@ -15,6 +15,7 @@ buildscript {
     }
 }
 
+apply plugin: 'base'
 apply plugin: 'kr.motd.sphinx'
 
 ext.copyrightFooter =
@@ -23,14 +24,15 @@ ext.copyrightFooter =
         'All rights reserved.'
 
 sphinx {
+    group = 'Documentation'
+    description = 'Generates the Sphinx web site.'
     sourceDirectory "${project.projectDir}/src/sphinx"
 }
 
-task clean << {
-    project.delete(project.buildDir)
-}
+task javadoc(type: Javadoc,
+             group: 'Documentation',
+             description: 'Generates Javadoc API documentation for the main source code.') {
 
-task apidocs(type: Javadoc) {
     destinationDir = project.file("${project.buildDir}/site/apidocs")
     javaProjects.each { source it.sourceSets.main.java.srcDirs }
     classpath = javaProjects.inject(project.files()) { result, project ->
@@ -72,28 +74,36 @@ task apidocs(type: Javadoc) {
     }
 }
 
-task xref << {
-    JXR jxr = new JXR ()
-    jxr.dest = "${project.buildDir}/site/xref"
-    jxr.inputEncoding = 'UTF-8'
-    jxr.outputEncoding = 'UTF-8'
-    jxr.log = new JxrLog(logger: logger)
+task xref(group: 'Documentation',
+          description: 'Generates the source cross-reference.') {
 
+    def outputDir = "${project.buildDir}/site/xref"
     def sourceDirs = javaProjects.inject([]) { srcDirs, project ->
         project.sourceSets.main.java.srcDirs.each { srcDirs << it.path }
         return srcDirs
     }
 
-    def title = "Armeria ${project.version} cross-reference"
-    jxr.xref(sourceDirs, 'templates', title, title, project.ext.copyrightFooter)
-    ant.copy(file: "${project.projectDir}/src/xref/stylesheet.css", todir: jxr.dest)
+    inputs.dir sourceDirs
+    outputs.dir outputDir
+
+    doLast {
+        JXR jxr = new JXR()
+        jxr.dest = outputDir
+        jxr.inputEncoding = 'UTF-8'
+        jxr.outputEncoding = 'UTF-8'
+        jxr.log = new JxrLog(logger: logger)
+
+        def title = "Armeria ${project.version} cross-reference"
+        jxr.xref(sourceDirs, 'templates', title, title, project.ext.copyrightFooter)
+        ant.copy(file: "${project.projectDir}/src/xref/stylesheet.css", todir: jxr.dest)
+    }
 }
 
 tasks.site {
+    group = 'Documentation'
+    description = 'Generates the project web site.'
     dependsOn xref
-    dependsOn apidocs
+    dependsOn javadoc
 }
 
-task build {
-    dependsOn site
-}
+tasks.build.dependsOn(tasks.site)
