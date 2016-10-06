@@ -507,6 +507,75 @@ configure(javaProjects) {
     }
 }
 
+task release(group: 'Publishing',
+             description: 'Releases a new version.') << {
+
+    if (!project.hasProperty('releaseVersion') || !project.hasProperty('nextVersion')) {
+        throw new InvalidUserDataException(
+                "Specify 'releaseVersion' and 'nextVersion' properties.${System.lineSeparator()}" +
+                'e.g. ./gradlew release -PreleaseVersion=0.1.2.Final -PnextVersion=0.1.3.Final-SNAPSHOT')
+    }
+
+    def releaseVersion = project.property('releaseVersion')
+    def nextVersion = project.property('nextVersion')
+
+    // Validate the specified version numbers.
+    if (!(releaseVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)$/)) {
+        throw new InvalidUserDataException("invalid release version: ${releaseVersion}")
+    }
+    if (!(nextVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)-SNAPSHOT$/)) {
+        throw new InvalidUserDataException("invalid next version: ${releaseVersion}")
+    }
+
+    // Ensure the repository is upstream.
+    def repoUrl = executeCommand('git', 'config', '--get', 'remote.origin.url').trim()
+    if (!(repoUrl =~ /github.com:line\/armeria\.git$/)) {
+        throw new InvalidUserDataException('Release must be performed at the upstream repository.')
+    }
+
+    // Ensure the repository is clean.
+    def gitStatusOut = executeCommand('git', 'status', '--porcelain')
+    if (!gitStatusOut.empty) {
+        throw new InvalidUserDataException(
+                "Git repository is not clean:${System.lineSeparator()}${gitStatusOut}")
+    }
+
+    def tag = "$rootProject.name-$releaseVersion"
+
+    def gradlePropsFile = project.file("${project.projectDir}/gradle.properties")
+    def gradlePropsContent = gradlePropsFile.getText("ISO-8859-1")
+    def versionPattern = /\nversion=[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)-SNAPSHOT(\r?\n)/
+    assert gradlePropsContent =~ versionPattern
+
+    // Update the version to the release version, commit and tag.
+    gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${releaseVersion}\$1"),
+                          'ISO-8859-1')
+    executeCommand('git', 'add', gradlePropsFile.toString())
+    executeCommand('git', 'commit', '-m', "Release $tag")
+    executeCommand('git', 'tag', tag)
+
+    // Update the version to the next version and commit.
+    executeCommand('git', 'reset', '--hard', 'HEAD^')
+    gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${nextVersion}\$1"),
+                          'ISO-8859-1')
+    executeCommand('git', 'add', gradlePropsFile.toString())
+    executeCommand('git', 'commit', '-m', "Update the project version to ${nextVersion}")
+
+    // Push the commits and tags.
+    executeCommand('git', 'push', 'origin')
+    executeCommand('git', 'push', 'origin', tag)
+
+    println()
+    println "Tagged: ${tag}"
+    println '-' * (tag.length() + 8)
+    println "Run the following commands to publish the release:"
+    println()
+    println "  git checkout $tag"
+    println "  ./gradlew clean publish"
+    println()
+    println "and visit https://oss.sonatype.org/ to close and release the staging repository."
+}
+
 private def getRepoStatus() {
     // Make sure this method is executed only once during the build.
     assert !rootProject.hasProperty('repoStatus')
@@ -566,7 +635,7 @@ private def generateVersionProperties(Project project) {
     project.mkdir(propsFile.parent)
     if (propsFile.exists()) {
         logger.debug("Updating ${propsFile} ..")
-        props.load(propsFile.newDataInputStream())
+        props.load(propsFile.newInputStream())
     } else {
         logger.debug("Creating ${propsFile} ..")
         propsFile.createNewFile()
@@ -580,7 +649,8 @@ private static String executeCommand(String[] command) {
     proc.waitFor()
     if (proc.exitValue() != 0) {
         throw new IOException(
-                "'${command}' exited with a non-zero exit code: ${proc.exitValue()}: ${proc.err.text}")
+                "'${command}' exited with a non-zero exit code: ${proc.exitValue()}:" +
+                "${System.lineSeparator()}${proc.err.text}")
     }
 
     return proc.in.text
