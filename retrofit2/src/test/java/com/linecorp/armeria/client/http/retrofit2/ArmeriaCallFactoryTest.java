@@ -4,8 +4,10 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
+import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.junit.AfterClass;
@@ -15,6 +17,8 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.net.MediaType;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -31,14 +35,20 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import retrofit2.Response;
 import retrofit2.adapter.guava.GuavaCallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
+import retrofit2.http.Body;
 import retrofit2.http.GET;
+import retrofit2.http.Headers;
+import retrofit2.http.POST;
 
 public class ArmeriaCallFactoryTest {
 
     public static class Pojo {
+        @JsonProperty("name")
         String name;
+        @JsonProperty("age")
         int age;
 
         @JsonCreator
@@ -67,6 +77,11 @@ public class ArmeriaCallFactoryTest {
             result = result * 31 + age;
             return result;
         }
+
+        @Override
+        public String toString() {
+            return "Pojo[name=" + name + ", age=" + age + "]";
+        }
     }
 
     interface Service {
@@ -75,8 +90,13 @@ public class ArmeriaCallFactoryTest {
 
         @GET("/pojos")
         ListenableFuture<List<Pojo>> pojos();
+
+        @POST("/post")
+        @Headers("content-type: application/json; charset=UTF-8")
+        ListenableFuture<Response<Void>> post(@Body Pojo pojo);
     }
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Server server;
 
     private static int httpPort;
@@ -100,6 +120,32 @@ public class ArmeriaCallFactoryTest {
                         res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
                                     "[{\"name\":\"Cony\", \"age\":26}," +
                                     "{\"name\":\"Leonard\", \"age\":21}]");
+                    }
+                })
+                .serviceAt("/post", new AbstractHttpService() {
+                    @Override
+                    protected void doPost(ServiceRequestContext ctx,
+                                          HttpRequest req, HttpResponseWriter res) throws Exception {
+                        req.aggregate().handle(voidFunction((aReq, cause) -> {
+                            if (cause != null) {
+                                res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                                            MediaType.PLAIN_TEXT_UTF_8,
+                                            Throwables.getStackTraceAsString(cause));
+                                return;
+                            }
+                            String text = aReq.content().toStringUtf8();
+                            final Pojo request;
+                            try {
+                                request = OBJECT_MAPPER.readValue(text, Pojo.class);
+                            } catch (IOException e) {
+                                res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                                            MediaType.PLAIN_TEXT_UTF_8,
+                                            Throwables.getStackTraceAsString(e));
+                                return;
+                            }
+                            assertThat(request).isEqualTo(new Pojo("Cony", 26));
+                            res.respond(HttpStatus.OK);
+                        }));
                     }
                 });
         server = sb.build();
@@ -126,7 +172,7 @@ public class ArmeriaCallFactoryTest {
         service = ArmeriaRetrofit.builder(Clients.newClient(ClientFactory.DEFAULT,
                                                             "none+http://127.0.0.1:" + httpPort,
                                                             HttpClient.class))
-                                 .addConverterFactory(JacksonConverterFactory.create())
+                                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                                  .addCallAdapterFactory(GuavaCallAdapterFactory.create())
                                  .build()
                                  .create(Service.class);
@@ -135,13 +181,20 @@ public class ArmeriaCallFactoryTest {
     @Test
     public void pojo() throws Exception {
         Pojo pojo = service.pojo().get();
-        assertThat(pojo).isEqualTo(new Pojo("Cony", 35));
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
     }
 
     @Test
     public void pojos() throws Exception {
         List<Pojo> pojos = service.pojos().get();
-        assertThat(pojos.get(0)).isEqualTo(new Pojo("Cony", 35));
+        assertThat(pojos.get(0)).isEqualTo(new Pojo("Cony", 26));
         assertThat(pojos.get(1)).isEqualTo(new Pojo("Leonard", 21));
     }
+
+    @Test
+    public void post() throws Exception {
+        Response<Void> response = service.post(new Pojo("Cony", 26)).get();
+        assertThat(response.isSuccessful());
+    }
+
 }
