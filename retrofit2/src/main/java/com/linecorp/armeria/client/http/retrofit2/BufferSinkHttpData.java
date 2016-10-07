@@ -43,12 +43,17 @@ class BufferSinkHttpData implements BufferedSink, HttpData {
     }
 
     @Override
-    public long writeAll(Source source) throws IOException {
+    public BufferedSink write(Source source, long byteCount) throws IOException {
         throw new IllegalStateException();
     }
 
     @Override
-    public BufferedSink write(Source source, long byteCount) throws IOException {
+    public void write(Buffer source, long byteCount) throws IOException {
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public long writeAll(Source source) throws IOException {
         throw new IllegalStateException();
     }
 
@@ -120,11 +125,6 @@ class BufferSinkHttpData implements BufferedSink, HttpData {
 
     @Override
     public BufferedSink writeHexadecimalUnsignedLong(long v) throws IOException {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public void write(Buffer source, long byteCount) throws IOException {
         throw new IllegalStateException();
     }
 
