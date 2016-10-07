@@ -1,0 +1,8 @@
+dependencies {
+    compile project(':core')
+
+    // Zipkin
+    [ 'brave-core', 'brave-http' ].each {
+        compile "io.zipkin.brave:$it"
+    }
+}

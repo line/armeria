@@ -40,7 +40,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -51,6 +50,7 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
+import com.linecorp.armeria.test.AbstractServerTest;
 
 public class DocServiceTest extends AbstractServerTest {
 
