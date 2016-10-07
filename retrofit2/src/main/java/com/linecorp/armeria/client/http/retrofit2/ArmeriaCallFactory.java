@@ -36,7 +36,6 @@ import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import okio.Buffer;
 
 /**
  * A {@link Call.Factory} that creates a {@link Call} instance for {@link HttpClient}.
@@ -75,7 +74,7 @@ public class ArmeriaCallFactory implements Call.Factory {
             this.request = request;
         }
 
-        private HttpResponse doCall(HttpClient httpClient, Request request) {
+        private static HttpResponse doCall(HttpClient httpClient, Request request) {
             URL url = request.url().url();
             StringBuilder uriBuilder = new StringBuilder(url.getPath());
             if (url.getQuery() != null) {
@@ -112,14 +111,15 @@ public class ArmeriaCallFactory implements Call.Factory {
                     (key, values) -> headers.add(HttpHeaderNames.of(key), values));
             if (request.body() != null) {
                 headers.set(HttpHeaderNames.CONTENT_TYPE, request.body().contentType().toString());
-                Buffer contentBuffer = new Buffer();
+                final BufferSinkHttpData contentBuffer;
                 try {
+                    contentBuffer = new BufferSinkHttpData((int) request.body().contentLength());
                     request.body().writeTo(contentBuffer);
                 } catch (IOException e) {
                     throw new IllegalArgumentException(
                             "Failed to convert RequestBody to HttpData. " + request.method(), e);
                 }
-                return httpClient.execute(headers, contentBuffer.readByteArray());
+                return httpClient.execute(headers, contentBuffer);
             }
             return httpClient.execute(headers);
         }
