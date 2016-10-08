@@ -15,11 +15,6 @@
  */
 
 /**
- * Retrofit2 adapter for Armeria.
- * <p>
- * <h2>Starting points</h2>
- * <ul>
- * <li>{@link com.linecorp.armeria.retrofit2.ArmeriaRetrofit}</li>
- * </ul>
+ * <a href="https://square.github.io/retrofit/">Retrofit2</a> adapter for Armeria.
  */
 package com.linecorp.armeria.client.http.retrofit2;
