@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.server.http;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.junit.Assert.assertEquals;
 
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.junit.Test;
 
@@ -30,6 +34,7 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.AbstractServerTest;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -47,15 +52,98 @@ public class HttpServerPathTest extends AbstractServerTest {
                 res.respond(HttpStatus.OK);
             }
         });
+
+        sb.service(PathMapping.ofPrefix("/"), new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                    throws Exception {
+                res.respond(HttpStatus.OK);
+            }
+        });
+    }
+
+    // last space is workaround..
+    private static final String HTTP11_PROTOCOL = "HTTP/1.1 ";
+
+    private static final Map<String, HttpStatus> TEST_URLS = new HashMap<>();
+
+    static {
+        // 200 test
+        TEST_URLS.put("/", HttpStatus.OK);
+        TEST_URLS.put("/service//foo", HttpStatus.OK);
+        TEST_URLS.put("/service/foo..bar", HttpStatus.OK);
+        TEST_URLS.put("/service..hello/foobar", HttpStatus.OK);
+        TEST_URLS.put("/service//test//////a/", HttpStatus.OK);
+        TEST_URLS.put("/service//test//////a/?flag=hello", HttpStatus.OK);
+        TEST_URLS.put("/service/foo:bar", HttpStatus.OK);
+        TEST_URLS.put("/service/foo::::::bar", HttpStatus.OK);
+        TEST_URLS.put("/cache/v1.0/rnd_team/get/krisjey:56578015655:1223", HttpStatus.OK);
+
+        TEST_URLS.put("/signout/56578015655?crumb=s-1475829101-cec4230588-%E2%98%83", HttpStatus.OK);
+        TEST_URLS.put(
+                "/search/num=20&newwindow=1&espv=2&q=url+path+colon&oq=url+path+colon&gs_l=serp.3" +
+                "..0i30k1.80626.89265.0.89464.18.16.1.1.1.0.154.1387.0j12.12.0....0...1c.1j4.64.s" +
+                "erp..4.14.1387...0j35i39k1j0i131k1j0i19k1j0i30i19k1j0i8i30i19k1j0i5i30i19k1j0i8i10" +
+                "i30i19k1.Z6SsEq-rZDw",
+                HttpStatus.OK);
+
+        // 400 test
+        TEST_URLS.put("..", HttpStatus.BAD_REQUEST);
+        TEST_URLS.put("something", HttpStatus.BAD_REQUEST);
+
+        // 404 test
+        TEST_URLS.put("/..service/foobar1", HttpStatus.NOT_FOUND);
+        TEST_URLS.put("/service../foobar2", HttpStatus.NOT_FOUND);
+        TEST_URLS.put("/service/foobar3..", HttpStatus.NOT_FOUND);
+        TEST_URLS.put("/gwturl#user:45/comments", HttpStatus.NOT_FOUND);
+        TEST_URLS.put("/service/foo*bar4", HttpStatus.NOT_FOUND);
+        TEST_URLS.put("/service:name/hello", HttpStatus.NOT_FOUND);
+        TEST_URLS.put("/service::::name/hello", HttpStatus.NOT_FOUND);
+
+        // 500 test
+        TEST_URLS.put("/service/foo|bar5", HttpStatus.INTERNAL_SERVER_ERROR);
+        TEST_URLS.put("/service/foo\bar6", HttpStatus.INTERNAL_SERVER_ERROR);
+        TEST_URLS.put(".\\", HttpStatus.INTERNAL_SERVER_ERROR);
+        TEST_URLS.put("//", HttpStatus.INTERNAL_SERVER_ERROR);
+        TEST_URLS.put("/\\\\", HttpStatus.INTERNAL_SERVER_ERROR);
+
+        /**
+         * TODO(krisjey) should move validation code to ArmeriaHttpUtil
+         * Http1RequestDecoder, Http2RequestDecoder
+         * expected 404. but 500 
+         * @see com.linecorp.armeria.common.http.HttpHeaders.toArmeria(HttpMessage in) 
+         */
+        TEST_URLS.put("/service/foo>bar", HttpStatus.INTERNAL_SERVER_ERROR);
+
+        /**
+         * TODO(krisjey) should move validation code to ArmeriaHttpUtil
+         * Http1RequestDecoder, Http2RequestDecoder
+         * expected 404. but 500 
+         * @see com.linecorp.armeria.common.http.HttpHeaders.toArmeria(HttpMessage in) 
+         */
+        TEST_URLS.put("/service/foo<bar", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test(timeout = 10000)
-    public void testDoubleSlashPath() throws Exception {
+    public void testPathOfUrl() throws Exception {
+        int numberOfTests = 0;
+        for (Entry<String, HttpStatus> url : TEST_URLS.entrySet()) {
+            urlPathAssertion(url.getValue(), url.getKey());
+            numberOfTests++;
+        }
+
+        assertEquals(numberOfTests, TEST_URLS.size());
+    }
+
+    private void urlPathAssertion(HttpStatus expected, String path) throws Exception {
+        String requestString = "GET " + path + " HTTP/1.0\r\n\r\n";
+
         try (Socket s = new Socket(NetUtil.LOCALHOST, httpPort())) {
             s.setSoTimeout(10000);
-            s.getOutputStream().write("GET /service//foo HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
-            assertThat(new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII))
-                    .startsWith("HTTP/1.1 200 OK\r\n");
+            s.getOutputStream().write(requestString.getBytes(StandardCharsets.US_ASCII));
+            org.junit.Assert.assertThat(path,
+                    new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII),
+                    startsWith(HTTP11_PROTOCOL + expected.toString()));
         }
     }
 }
