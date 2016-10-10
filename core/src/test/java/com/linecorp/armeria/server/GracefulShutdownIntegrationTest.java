@@ -34,6 +34,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService.AsyncIface;
+import com.linecorp.armeria.test.AbstractServerTest;
 
 public class GracefulShutdownIntegrationTest extends AbstractServerTest {
 

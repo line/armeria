@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.common.logging;
 
-import com.google.protobuf.Message;
-import com.google.protobuf.MessageLite;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
@@ -51,8 +48,8 @@ public interface RequestLog extends MessageLog {
      *
      * <p>For a Thrift request, the value of this {@link Attribute} is an {@link ApacheThriftCall}.
      *
-     * <p>For a Protocol Buffers request, the value of this {@link Attribute} is a {@link Message} or
-     * a {@link MessageLite}.
+     * <p>For a Protocol Buffers request, the value of this {@link Attribute} is a {@code Message} or
+     * a {@code MessageLite}.
      */
     AttributeKey<Object> RAW_RPC_REQUEST = AttributeKey.valueOf(RequestLog.class, "RAW_RPC_REQUEST");
 

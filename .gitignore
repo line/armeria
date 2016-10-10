@@ -6,7 +6,7 @@
 
 # Package Files #
 *.jar
-!**/src/test/resources/**/WEB-INF/lib/*.jar
+!**/src/**/WEB-INF/lib/*.jar
 !/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
@@ -24,14 +24,17 @@ hs_err_pid*
 *.ipr
 *.ids
 *.orig
+/classes
+/out
 
 # Eclipse
 *.pydevproject
 .project
 .metadata
-/bin/**
-/tmp/**
-/tmp/**/*
+/bin
+/*/bin
+/tmp
+/*/tmp
 *.tmp
 *.bak
 *.swp

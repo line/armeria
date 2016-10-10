@@ -27,7 +27,7 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.github.kristofa.brave.internal.Nullable;
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;

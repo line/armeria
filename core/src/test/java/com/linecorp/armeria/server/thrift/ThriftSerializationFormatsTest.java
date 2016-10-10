@@ -12,9 +12,9 @@ import com.linecorp.armeria.client.InvalidResponseException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.server.AbstractServerTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
+import com.linecorp.armeria.test.AbstractServerTest;
 
 /**
  * Test of serialization format validation / detection based on HTTP headers.

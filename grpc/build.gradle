@@ -1,0 +1,9 @@
+dependencies {
+    compile project(':core')
+
+    // gRPC
+    [ 'grpc-core', 'grpc-stub', 'grpc-protobuf' ].each {
+        compile "io.grpc:$it"
+    }
+    testCompile 'io.grpc:grpc-interop-testing'
+}

@@ -17,10 +17,9 @@ copyright = properties.get('inceptionYear') + '-' + str(date.today().year) + ', 
 # Use the last known stable release if the current version ends with '-SNAPSHOT'.
 if re.match(r'^.*-SNAPSHOT$', properties.get('version')):
     release = '0.28.0.Final'
-    version = '0.28'
 else:
     release = properties.get('version')
-    version = re.match(r'^[0-9]+\.[0-9]+', release).group(0)
+version = re.match(r'^[0-9]+\.[0-9]+', release).group(0)
 
 # Export the loaded properties and some useful values into epilogs
 rst_epilog = '\n'
