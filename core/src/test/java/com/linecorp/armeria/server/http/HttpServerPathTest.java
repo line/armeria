@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.server.http;
 
-import static org.hamcrest.CoreMatchers.startsWith;
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -61,9 +60,6 @@ public class HttpServerPathTest extends AbstractServerTest {
             }
         });
     }
-
-    // last space is workaround..
-    private static final String HTTP11_PROTOCOL = "HTTP/1.1 ";
 
     private static final Map<String, HttpStatus> TEST_URLS = new HashMap<>();
 
@@ -126,13 +122,9 @@ public class HttpServerPathTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testPathOfUrl() throws Exception {
-        int numberOfTests = 0;
         for (Entry<String, HttpStatus> url : TEST_URLS.entrySet()) {
             urlPathAssertion(url.getValue(), url.getKey());
-            numberOfTests++;
         }
-
-        assertEquals(numberOfTests, TEST_URLS.size());
     }
 
     private void urlPathAssertion(HttpStatus expected, String path) throws Exception {
@@ -141,9 +133,9 @@ public class HttpServerPathTest extends AbstractServerTest {
         try (Socket s = new Socket(NetUtil.LOCALHOST, httpPort())) {
             s.setSoTimeout(10000);
             s.getOutputStream().write(requestString.getBytes(StandardCharsets.US_ASCII));
-            org.junit.Assert.assertThat(path,
-                    new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII),
-                    startsWith(HTTP11_PROTOCOL + expected.toString()));
+            assertThat(new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII))
+            .as(path)
+            .startsWith("HTTP/1.1 " + expected.toString());
         }
-    }
+     }
 }

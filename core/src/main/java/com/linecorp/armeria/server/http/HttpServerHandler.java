@@ -90,11 +90,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             ALLOWED_METHODS.stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
     /**
-     * According to rfc 3986 section 3.3, path can contain a colon. except that first segment.
+     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
      * @See https://tools.ietf.org/html/rfc3986#section-3.3
      */
     private static final Pattern PROHIBITED_PATH_PATTERN =
-            Pattern.compile("^[/][^/]*[:][^/]*[/]|[|<>*\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
+            Pattern.compile("^/[^/]*:[^/]*/|[|<>*\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
 
     private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
 
