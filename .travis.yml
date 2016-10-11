@@ -33,7 +33,7 @@ install:
   - true
 
 script:
-  - ./gradlew --no-daemon -Pcoverage build
+  - ./gradlew --no-daemon --stacktrace -Pcoverage build
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
