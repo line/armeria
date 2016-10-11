@@ -157,6 +157,7 @@ configure(javaProjects) {
             // Netty
             dependencySet(group: 'io.netty', version: ext.versionOf('netty')) {
                 entry 'netty-transport'
+                entry 'netty-handler'
                 entry 'netty-codec-http2'
                 entry 'netty-resolver-dns'
             }
@@ -275,6 +276,10 @@ configure(javaProjects) {
         configProperties = [ 'checkstyleConfigDir': "$checkstyleConfigDir" ]
         toolVersion = '7.1'
     }
+    task checkstyle(group: 'Verification',
+                    description: 'Runs the checkstyle rules.')
+    tasks.checkstyle.dependsOn 'checkstyleMain'
+    tasks.checkstyle.dependsOn 'checkstyleTest'
 
     // Enable full exception logging for test failures.
     test {

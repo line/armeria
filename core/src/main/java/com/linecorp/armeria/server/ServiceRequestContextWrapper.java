@@ -16,12 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
-
-import javax.annotation.Nullable;
-import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 
@@ -66,16 +62,6 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public <A extends SocketAddress> A remoteAddress() {
-        return delegate().remoteAddress();
-    }
-
-    @Override
-    public <A extends SocketAddress> A localAddress() {
-        return delegate().localAddress();
-    }
-
-    @Override
     public String mappedPath() {
         return delegate().mappedPath();
     }
@@ -83,12 +69,6 @@ public class ServiceRequestContextWrapper
     @Override
     public Logger logger() {
         return delegate().logger();
-    }
-
-    @Nullable
-    @Override
-    public SSLSession sslSession() {
-        return delegate().sslSession();
     }
 
     @Override

@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -45,8 +44,7 @@ import io.netty.channel.EventLoop;
 /**
  * Default {@link ServiceRequestContext} implementation.
  */
-public final class DefaultServiceRequestContext extends NonWrappingRequestContext
-        implements ServiceRequestContext {
+public class DefaultServiceRequestContext extends NonWrappingRequestContext implements ServiceRequestContext {
 
     private final Channel ch;
     private final ServiceConfig cfg;
@@ -103,6 +101,11 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
     }
 
     @Override
+    protected Channel channel() {
+        return ch;
+    }
+
+    @Override
     public Server server() {
         return cfg.server();
     }
@@ -125,18 +128,6 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
     @Override
     public ExecutorService blockingTaskExecutor() {
         return server().config().blockingTaskExecutor();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A remoteAddress() {
-        return (A) ch.remoteAddress();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A localAddress() {
-        return (A) ch.localAddress();
     }
 
     @Override
@@ -223,7 +214,7 @@ public final class DefaultServiceRequestContext extends NonWrappingRequestContex
         final StringBuilder buf = new StringBuilder(96);
 
         // Prepend the current channel information if available.
-        final Channel ch = requestLog.channel();
+        final Channel ch = channel();
         final boolean hasChannel = ch != null;
         if (hasChannel) {
             buf.append(ch);

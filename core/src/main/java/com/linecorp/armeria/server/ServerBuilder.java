@@ -391,16 +391,10 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
-     * {@link VirtualHost}.
-     *
-     * @param loggerName the name of the {@linkplain ServiceRequestContext#logger() service logger};
-     *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
-     *                   such as a package name or a fully-qualified class name
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
+     *             {@code armeria-logback}.
      */
+    @Deprecated
     public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service, loggerName);

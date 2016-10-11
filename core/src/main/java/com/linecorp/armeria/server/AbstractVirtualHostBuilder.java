@@ -219,12 +219,10 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping}.
-     *
-     * @param loggerName the name of the {@linkplain ServiceRequestContext#logger() service logger};
-     *                   must be a string of valid Java identifier names concatenated by period ({@code '.'}),
-     *                   such as a package name or a fully-qualified class name
+     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
+     *             {@code armeria-logback}.
      */
+    @Deprecated
     public B service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
         services.add(new ServiceConfig(pathMapping, service, loggerName));
         return self();

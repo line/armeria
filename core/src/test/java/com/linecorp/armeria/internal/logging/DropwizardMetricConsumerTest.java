@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
 public class DropwizardMetricConsumerTest {
@@ -84,6 +85,11 @@ public class DropwizardMetricConsumerTest {
         @Override
         public EventLoop eventLoop() {
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected Channel channel() {
+            return null;
         }
 
         @Override
