@@ -1,7 +1,7 @@
 .. _`com.linecorp.armeria.client.http.retrofit2`: apidocs/index.html?com/linecorp/armeria/client/http/retrofit2/package-summary.html
 
 Using Armeria as a Retrofit2 HTTP client
-===============================
+========================================
 For more information, please refer to the API documentation of the `com.linecorp.armeria.client.http.retrofit2`_ package.
 
 .. code-block:: java
@@ -20,8 +20,7 @@ For more information, please refer to the API documentation of the `com.linecorp
         UserInfo getUserInfo(String id);
     }
 
-    HttpClient httpClient = Clients.newClient("none+http://localhost:8080",
-                                          HttpClient.class);
+    HttpClient httpClient = Clients.newClient("none+http://localhost:8080", HttpClient.class);
 
     Retrofit retrofit = ArmeriaRetrofit.builder(httpClient)
                                        .addConverterFactory(JacksonConverterFactory.create())

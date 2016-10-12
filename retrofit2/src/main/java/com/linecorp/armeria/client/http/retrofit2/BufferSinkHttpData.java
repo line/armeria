@@ -13,11 +13,9 @@ import okio.Source;
 import okio.Timeout;
 
 class BufferSinkHttpData implements BufferedSink, HttpData {
-    private final int contentLength;
     private final byte[] bytes;
 
     BufferSinkHttpData(int contentLength) {
-        this.contentLength = contentLength;
         bytes = new byte[contentLength];
     }
 
@@ -175,6 +173,6 @@ class BufferSinkHttpData implements BufferedSink, HttpData {
 
     @Override
     public int length() {
-        return contentLength;
+        return bytes.length;
     }
 }
