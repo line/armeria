@@ -8,3 +8,4 @@ Writing a client
 
     client-basics
     client-http
+    client-http-retrofit
