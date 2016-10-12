@@ -126,14 +126,14 @@ public class HttpServerPathTest extends AbstractServerTest {
     }
 
     private void urlPathAssertion(HttpStatus expected, String path) throws Exception {
-        String requestString = "GET " + path + " HTTP/1.0\r\n\r\n";
+        final String requestString = "GET " + path + " HTTP/1.0\r\n\r\n";
 
         try (Socket s = new Socket(NetUtil.LOCALHOST, httpPort())) {
             s.setSoTimeout(10000);
             s.getOutputStream().write(requestString.getBytes(StandardCharsets.US_ASCII));
             assertThat(new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII))
                     .as(path)
-                    .startsWith("HTTP/1.1 " + expected.toString());
+                    .startsWith("HTTP/1.1 " + expected);
         }
     }
 }
