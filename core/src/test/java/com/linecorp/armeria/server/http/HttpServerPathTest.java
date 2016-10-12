@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.test.AbstractServerTest;
@@ -52,7 +51,7 @@ public class HttpServerPathTest extends AbstractServerTest {
             }
         });
 
-        sb.service(PathMapping.ofPrefix("/"), new AbstractHttpService() {
+        sb.serviceUnder("/", new AbstractHttpService() {
             @Override
             protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
                     throws Exception {
@@ -76,8 +75,7 @@ public class HttpServerPathTest extends AbstractServerTest {
         TEST_URLS.put("/cache/v1.0/rnd_team/get/krisjey:56578015655:1223", HttpStatus.OK);
 
         TEST_URLS.put("/signout/56578015655?crumb=s-1475829101-cec4230588-%E2%98%83", HttpStatus.OK);
-        TEST_URLS.put(
-                "/search/num=20&newwindow=1&espv=2&q=url+path+colon&oq=url+path+colon&gs_l=serp.3" +
+        TEST_URLS.put("/search/num=20&newwindow=1&espv=2&q=url+path+colon&oq=url+path+colon&gs_l=serp.3" +
                 "..0i30k1.80626.89265.0.89464.18.16.1.1.1.0.154.1387.0j12.12.0....0...1c.1j4.64.s" +
                 "erp..4.14.1387...0j35i39k1j0i131k1j0i19k1j0i30i19k1j0i8i30i19k1j0i5i30i19k1j0i8i10" +
                 "i30i19k1.Z6SsEq-rZDw",
@@ -134,8 +132,8 @@ public class HttpServerPathTest extends AbstractServerTest {
             s.setSoTimeout(10000);
             s.getOutputStream().write(requestString.getBytes(StandardCharsets.US_ASCII));
             assertThat(new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII))
-            .as(path)
-            .startsWith("HTTP/1.1 " + expected.toString());
+                    .as(path)
+                    .startsWith("HTTP/1.1 " + expected.toString());
         }
-     }
+    }
 }
