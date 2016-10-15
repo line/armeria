@@ -91,7 +91,6 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
         return connector;
     }
 
-
     private StandardServer newServer(String hostname, Connector connector, TomcatServiceConfig config) {
         //
         // server <------ services <------ engines <------ realm
@@ -130,10 +129,14 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
             engine.addChild(host);
         }
 
+        if (!host.getAppBaseFile().mkdirs()) {
+            throw new TomcatServiceException("failed to create app base file: " + host.getAppBaseFile());
+        }
+
         // Create a new context and add it to the host.
         final Context ctx;
         try {
-            ctx = (Context) Class.forName(host.getContextClass(), true,getClass().getClassLoader())
+            ctx = (Context) Class.forName(host.getContextClass(), true, getClass().getClassLoader())
                                  .newInstance();
         } catch (Exception e) {
             throw new TomcatServiceException("failed to create a new context: " + config, e);
@@ -160,7 +163,6 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
     private void checkConfiguration(StandardServer server,
                                     Service expectedService, Connector expectedConnector,
                                     Engine expectedEngine, StandardHost expectedHost, Context expectedContext) {
-
 
         // Check if Catalina base and home directories have not been changed.
         final File expectedBaseDir = config.baseDir().toFile();
