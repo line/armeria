@@ -270,6 +270,13 @@ configure(javaProjects) {
         toolVersion = '7.1'
     }
 
+    // Enable full exception logging for test failures.
+    test {
+        testLogging {
+            exceptionFormat = 'full'
+        }
+    }
+
     // Enable JaCoCo test coverage when '-Pcoverage' option is specified.
     def jacocoEnabled = project.hasProperty('coverage')
 
