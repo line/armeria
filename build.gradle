@@ -165,6 +165,13 @@ configure(javaProjects) {
                 exclude 'com.google.code.findbugs:annotations'
             }
 
+            // Retrfit2
+            dependencySet(group: 'com.squareup.retrofit2', version: ext.versionOf('retrofit2')) {
+                entry 'retrofit'
+                entry 'adapter-guava'
+                entry 'converter-jackson'
+            }
+
             // SLF4J
             dependencySet(group: 'org.slf4j', version: ext.versionOf('slf4j')) {
                 entry 'slf4j-api'
@@ -261,6 +268,13 @@ configure(javaProjects) {
         configFile = project.file("${checkstyleConfigDir}/checkstyle.xml")
         configProperties = [ 'checkstyleConfigDir': "$checkstyleConfigDir" ]
         toolVersion = '7.1'
+    }
+
+    // Enable full exception logging for test failures.
+    test {
+        testLogging {
+            exceptionFormat = 'full'
+        }
     }
 
     // Enable JaCoCo test coverage when '-Pcoverage' option is specified.

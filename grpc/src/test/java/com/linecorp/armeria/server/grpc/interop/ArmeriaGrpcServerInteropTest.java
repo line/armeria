@@ -24,16 +24,27 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.Socket;
+import java.security.KeyStore;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.ManagerFactoryParameters;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.google.protobuf.ByteString;
@@ -58,8 +69,9 @@ import io.grpc.testing.integration.TestServiceGrpc;
 import io.grpc.testing.integration.TestServiceGrpc.TestServiceStub;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty.util.internal.EmptyArrays;
 
 /**
  * Interop test based on grpc-interop-testing. Should provide reasonable confidence in armeria's
@@ -190,6 +202,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     // requests after a channel is gracefully closed but doesn't appear to (maybe because it supports both
     // HTTP1, which has no concept of graceful shutdown, and HTTP2).
     @Ignore
+    @Override
     @Test(timeout = 10000)
     public void gracefulShutdown() throws Exception {
         final List<StreamingOutputCallRequest> requests = Arrays.asList(
@@ -273,6 +286,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         verifyNoMoreInteractions(responseObserver);
     }
 
+    @Override
     @Test(timeout = 10000)
     public void cancelAfterFirstResponse() throws Exception {
         final StreamingOutputCallRequest request = StreamingOutputCallRequest
@@ -314,6 +328,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         verifyNoMoreInteractions(responseObserver);
     }
 
+    @Override
     @Test(timeout = 10000)
     public void emptyStream() throws Exception {
         @SuppressWarnings("unchecked")
@@ -323,5 +338,74 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         requestObserver.onCompleted();
         verify(responseObserver, timeout(operationTimeoutMillis())).onCompleted();
         verifyNoMoreInteractions(responseObserver);
+    }
+
+    // TODO(trustin): Replace this with Netty's InsecureTrustManager once it creates X509ExtendedTrustManager.
+    //
+    // When a server mandates the authentication of a client certificate, JDK internally wraps a TrustManager
+    // with AbstractTrustManagerWrapper unless it extends X509ExtendedTrustManager. AbstractTrustManagerWrapper
+    // performs an additional check (DN comparison), making InsecureTrustManager not insecure enough.
+    //
+    // To work around this problem, we forked Netty's InsecureTrustManagerFactory and made its TrustManager
+    // implementation extend X509ExtendedTrustManager instead of X509TrustManager.
+    static final class InsecureTrustManagerFactory extends SimpleTrustManagerFactory {
+
+        private static final Logger logger = LoggerFactory.getLogger(InsecureTrustManagerFactory.class);
+
+        public static final TrustManagerFactory INSTANCE = new InsecureTrustManagerFactory();
+
+        private static final TrustManager tm = new X509ExtendedTrustManager() {
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String s) {
+                log("client", chain);
+            }
+
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String s, Socket socket) {
+                log("client", chain);
+            }
+
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String s, SSLEngine sslEngine) {
+                log("client", chain);
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String s) {
+                log("server", chain);
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String s, Socket socket) {
+                log("server", chain);
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String s, SSLEngine sslEngine) {
+                log("server", chain);
+            }
+
+            @Override
+            public X509Certificate[] getAcceptedIssuers() {
+                return EmptyArrays.EMPTY_X509_CERTIFICATES;
+            }
+
+            private void log(String type, X509Certificate[] chain) {
+                logger.debug("Accepting a {} certificate: {}", type, chain[0].getSubjectDN());
+            }
+        };
+
+        private InsecureTrustManagerFactory() { }
+
+        @Override
+        protected void engineInit(KeyStore keyStore) throws Exception { }
+
+        @Override
+        protected void engineInit(ManagerFactoryParameters managerFactoryParameters) throws Exception { }
+
+        @Override
+        protected TrustManager[] engineGetTrustManagers() {
+            return new TrustManager[] { tm };
+        }
     }
 }
