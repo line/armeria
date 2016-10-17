@@ -34,8 +34,8 @@ task javadoc(type: Javadoc,
              description: 'Generates Javadoc API documentation for the main source code.') {
 
     destinationDir = project.file("${project.buildDir}/site/apidocs")
-    javaProjects.each { source it.sourceSets.main.java.srcDirs }
-    classpath = javaProjects.inject(project.files()) { result, project ->
+    publishedJavaProjects.each { source it.sourceSets.main.java.srcDirs }
+    classpath = publishedJavaProjects.inject(project.files()) { result, project ->
         result.from(project.sourceSets.main.runtimeClasspath)
     }
 
@@ -78,7 +78,7 @@ task xref(group: 'Documentation',
           description: 'Generates the source cross-reference.') {
 
     def outputDir = "${project.buildDir}/site/xref"
-    def sourceDirs = javaProjects.inject([]) { srcDirs, project ->
+    def sourceDirs = publishedJavaProjects.inject([]) { srcDirs, project ->
         project.sourceSets.main.java.srcDirs.each { srcDirs << it.path }
         return srcDirs
     }
