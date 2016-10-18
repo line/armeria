@@ -1,0 +1,34 @@
+dependencies {
+    // Guava
+    compile 'com.google.guava:guava'
+    testCompile 'com.google.guava:guava-testlib'
+
+    // Jackson
+    [ 'jackson-core', 'jackson-annotations', 'jackson-databind' ].each {
+        compile "com.fasterxml.jackson.core:$it"
+    }
+
+    // Metrics
+    compile 'io.dropwizard.metrics:metrics-core'
+
+    // Netty
+    [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
+        compile "io.netty:$it"
+    }
+    compile "io.netty:netty-transport-native-epoll:${versionOf('netty')}:linux-x86_64"
+    compile 'io.netty:netty-tcnative-boringssl-static'
+    runtime 'org.javassist:javassist'
+
+    // Reactive Streams
+    compile 'org.reactivestreams:reactive-streams'
+
+    // Reflections
+    compile 'org.reflections:reflections'
+
+    // Thrift
+    compile 'org.apache.thrift:libthrift'
+
+    // Jetty, for testing TServlet interoperability.
+    testCompile 'org.eclipse.jetty:jetty-webapp'
+    testCompile 'org.eclipse.jetty.http2:http2-server'
+}

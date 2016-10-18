@@ -1,18 +1,21 @@
 # Build output
-/target
-/*/target
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+/build
+/*/build
+**/src/main/gen-java
+**/src/test/gen-java
 
 # Package Files #
 *.jar
-!/src/test/resources/**/WEB-INF/lib/*.jar
+!**/src/**/WEB-INF/lib/*.jar
+!/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+# Gradle
+.gradle
 
 # IntelliJ
 .idea
@@ -21,23 +24,24 @@ hs_err_pid*
 *.ipr
 *.ids
 *.orig
+/classes
+/out
 
 # Eclipse
 *.pydevproject
 .project
 .metadata
-/bin/**
-/tmp/**
-/tmp/**/*
+/bin
+/*/bin
+/tmp
+/*/tmp
 *.tmp
 *.bak
 *.swp
 *~.nib
-local.properties
 .classpath
-.settings/**
+.settings
 .loadpath
-/src/main/resources/rebel.xml
 
 # External tool builders
 .externalToolBuilders/**

@@ -1,0 +1,17 @@
+dependencies {
+    compile project(':core')
+
+    // Jetty
+    compile('org.eclipse.jetty:jetty-server')
+    ['jetty-webapp', 'jetty-annotations', 'apache-jsp', 'apache-jstl'].each {
+        testCompile "org.eclipse.jetty:$it"
+    }
+}
+
+sourceSets {
+    test {
+        // Use the common test classes and resources provided by the 'tomcat' project.
+        java.srcDir "${rootProject.projectDir}/tomcat/src/test/java-shared"
+        resources.srcDir "${rootProject.projectDir}/tomcat/src/test/resources-shared"
+    }
+}

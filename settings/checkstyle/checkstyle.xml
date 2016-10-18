@@ -9,6 +9,9 @@
   <property name="fileExtensions" value="java, properties, xml"/>
 
   <module name="SuppressWarningsFilter" />
+  <module name="SuppressionFilter">
+    <property name="file" value="${checkstyleConfigDir}/checkstyle-suppressions.xml"/>
+  </module>
 
   <module name="Header">
     <property name="fileExtensions" value="java"/>

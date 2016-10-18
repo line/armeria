@@ -1,0 +1,12 @@
+#Organize Import Order
+#Tue Jun 23 15:43:17 KST 2015
+9=jp.naver
+8=com.nhncorp
+7=com.nhn
+6=com.linecorp
+5=com
+4=net
+3=android
+2=org
+1=javax
+0=java
