@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.routing;
 
 /**
- * A {@link RuntimeException} raised when the registration or resolution of an {@link EndpointGroup} fails.
+ * A {@link RuntimeException} raised when the resolution of an {@link EndpointGroup} fails.
  */
 public class EndpointGroupException extends RuntimeException {
 

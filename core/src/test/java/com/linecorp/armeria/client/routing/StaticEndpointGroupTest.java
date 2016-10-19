@@ -126,7 +126,7 @@ public class StaticEndpointGroupTest {
                 Endpoint.of("127.0.0.1", 1234, 3),
                 Endpoint.of("127.0.0.1", 2345, 2),
                 Endpoint.of("127.0.0.1", 3456, 2));
-        EndpointGroupRegistry.replace(groupName, endpointGroup2, WEIGHTED_ROUND_ROBIN);
+        EndpointGroupRegistry.register(groupName, endpointGroup2, WEIGHTED_ROUND_ROBIN);
 
         assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
         assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
@@ -149,7 +149,7 @@ public class StaticEndpointGroupTest {
                 Endpoint.of("127.0.0.1", 1234, 4),
                 Endpoint.of("127.0.0.1", 2345, 4),
                 Endpoint.of("127.0.0.1", 3456, 4));
-        EndpointGroupRegistry.replace(groupName, endpointGroup3, WEIGHTED_ROUND_ROBIN);
+        EndpointGroupRegistry.register(groupName, endpointGroup3, WEIGHTED_ROUND_ROBIN);
 
         assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
         assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
@@ -163,7 +163,7 @@ public class StaticEndpointGroupTest {
                 Endpoint.of("127.0.0.1", 1234, 2),
                 Endpoint.of("127.0.0.1", 2345, 4),
                 Endpoint.of("127.0.0.1", 3456, 6));
-        EndpointGroupRegistry.replace(groupName, endpointGroup4, WEIGHTED_ROUND_ROBIN);
+        EndpointGroupRegistry.register(groupName, endpointGroup4, WEIGHTED_ROUND_ROBIN);
 
         assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
         assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
@@ -224,7 +224,7 @@ public class StaticEndpointGroupTest {
                 Endpoint.of("127.0.0.1", 2345, 4),
                 Endpoint.of("127.0.0.1", 3456, 2));
 
-        EndpointGroupRegistry.replace(groupName, serverGroup2, WEIGHTED_ROUND_ROBIN);
+        EndpointGroupRegistry.register(groupName, serverGroup2, WEIGHTED_ROUND_ROBIN);
 
         ipService = Clients.newClient("tbinary+http://" + endpointGroupMark + groupName + "/serverIp",
                 HelloService.Iface.class);
