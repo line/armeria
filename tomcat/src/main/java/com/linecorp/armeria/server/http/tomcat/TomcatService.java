@@ -471,6 +471,8 @@ public final class TomcatService implements HttpService {
         coyoteReq.method().setString(method.name());
 
         // Set the request URI.
+        // Do not use URLEncoder.encode(path, encoding); it is not available in some older Tomcats.
+        @SuppressWarnings("deprecation")
         final byte[] uriBytes = TOMCAT_URL_ENCODER.encode(mappedPath)
                                                   .getBytes(StandardCharsets.US_ASCII);
         coyoteReq.requestURI().setBytes(uriBytes, 0, uriBytes.length);

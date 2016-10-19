@@ -70,7 +70,11 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
         // create new request adapter to catch generated spanId
         final String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method();
         final InternalClientRequestAdapter requestAdapter =
-                new InternalClientRequestAdapter(Endpoint.create(ctx.endpoint().authority(), 0, 0), method);
+                new InternalClientRequestAdapter(
+                        Endpoint.builder()
+                                .serviceName(ctx.endpoint().authority())
+                                .build(),
+                        method);
 
         final Span span = clientInterceptor.openSpan(requestAdapter);
 
