@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -228,6 +229,14 @@ public interface RequestContext extends AttributeMap {
      */
     default Executor makeContextAware(Executor executor) {
         return runnable -> executor.execute(makeContextAware(runnable));
+    }
+
+    /**
+     * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, making
+     * sure to propagate the current {@link RequestContext} into the callback execution.
+     */
+    default ExecutorService makeContextAware(ExecutorService executor) {
+        return new RequestContextAwareExecutorService(this, executor);
     }
 
     /**
