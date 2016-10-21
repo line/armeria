@@ -18,8 +18,12 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
+
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -56,6 +60,24 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public SessionProtocol sessionProtocol() {
         return delegate().sessionProtocol();
+    }
+
+    @Nullable
+    @Override
+    public <A extends SocketAddress> A remoteAddress() {
+        return delegate().remoteAddress();
+    }
+
+    @Nullable
+    @Override
+    public <A extends SocketAddress> A localAddress() {
+        return delegate().localAddress();
+    }
+
+    @Nullable
+    @Override
+    public SSLSession sslSession() {
+        return delegate().sslSession();
     }
 
     @Override

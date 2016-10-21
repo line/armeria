@@ -43,7 +43,16 @@ task javadoc(type: Javadoc,
         def title = "Armeria ${project.version} API reference"
         docTitle = title
         windowTitle = title
-        bottom = project.ext.copyrightFooter
+        bottom = project.ext.copyrightFooter +
+                 '<script>' + // Open an external link in a new tab/window.
+                 'for(var i in document.links) {' +
+                 '  var l = document.links[i];' +
+                 '  if (l.href.indexOf("http") === 0) {' +
+                 '    l.target = "_blank";' +
+                 '  }' +
+                 '}' +
+                 '</script>'
+
         encoding = 'UTF-8'
         docEncoding = 'UTF-8'
         breakIterator = true
@@ -68,9 +77,11 @@ task javadoc(type: Javadoc,
         group 'Common', 'com.linecorp.armeria.common*'
 
         // External Javadoc links
-        links 'https://netty.io/4.1/api',
-              'https://developers.google.com/protocol-buffers/docs/reference/java',
-              'https://people.apache.org/~thejas/thrift-0.9/javadoc/'
+        links 'http://www.slf4j.org/api/',
+              'https://netty.io/4.1/api/',
+              'https://developers.google.com/protocol-buffers/docs/reference/java/',
+              'https://people.apache.org/~thejas/thrift-0.9/javadoc/',
+              'http://logback.qos.ch/apidocs/'
     }
 }
 

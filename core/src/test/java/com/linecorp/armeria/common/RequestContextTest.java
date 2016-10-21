@@ -256,6 +256,11 @@ public class RequestContextTest {
         }
 
         @Override
+        protected Channel channel() {
+            return channel;
+        }
+
+        @Override
         public RequestLogBuilder requestLogBuilder() {
             throw new UnsupportedOperationException();
         }

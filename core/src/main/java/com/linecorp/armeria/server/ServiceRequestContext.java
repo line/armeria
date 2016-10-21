@@ -16,12 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
-
-import javax.annotation.Nullable;
-import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 
@@ -64,16 +60,6 @@ public interface ServiceRequestContext extends RequestContext {
     ExecutorService blockingTaskExecutor();
 
     /**
-     * Returns the remote address of this invocation.
-     */
-    <A extends SocketAddress> A remoteAddress();
-
-    /**
-     * Returns the local address of this invocation.
-     */
-    <A extends SocketAddress> A localAddress();
-
-    /**
      * Returns the path with its context path removed. This method can be useful for a reusable service bound
      * at various path prefixes. For client side invocations, this method always returns the same value as
      * {@link #path()}.
@@ -81,19 +67,11 @@ public interface ServiceRequestContext extends RequestContext {
     String mappedPath();
 
     /**
-     * Returns the {@link Logger}  which logs information about this invocation as the prefix of log messages.
-     * e.g. If a user called {@code ctx.logger().info("Hello")},
-     * <pre>{@code
-     * [id: 0x270781f4, /127.0.0.1:63466 => /127.0.0.1:63432][tbinary+h2c://example.com/path#method][42] Hello
-     * }</pre>
+     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
+     *             {@code armeria-logback}.
      */
+    @Deprecated
     Logger logger();
-
-    /**
-     * The {@link SSLSession} for this request if the connection is made over TLS, or null otherwise.
-     */
-    @Nullable
-    SSLSession sslSession();
 
     /**
      * Returns the amount of time allowed until receiving the current {@link Request} completely.
