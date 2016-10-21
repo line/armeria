@@ -722,7 +722,8 @@ task release(group: 'Publishing',
     def sphinxConfContent = sphinxConfFile.getText('UTF-8')
     def sphinxConfVersionPattern = /\n( *)release = '[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)'(\r?\n)/
     assert sphinxConfContent =~ sphinxConfVersionPattern
-    sphinxConfFile.write(sphinxConfContent.replaceFirst(sphinxConfVersionPattern, "\n\$1release = '${releaseVersion}'\$1"))
+    sphinxConfFile.write(sphinxConfContent.replaceFirst(sphinxConfVersionPattern, "\n\$1release = '${releaseVersion}'\$2"))
+    executeCommand(gitPath, 'add', sphinxConfFile.toString())
 
     // Commit.
     executeCommand(gitPath, 'commit', '-m', "Update the project version to ${nextVersion}")
