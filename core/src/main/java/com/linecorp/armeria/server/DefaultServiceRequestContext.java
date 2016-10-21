@@ -55,6 +55,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private final DefaultResponseLog responseLog;
     private final Logger logger;
 
+    private ExecutorService blockingTaskExecutor;
+
     private long requestTimeoutMillis;
     private long maxRequestLength;
 
@@ -127,7 +129,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public ExecutorService blockingTaskExecutor() {
-        return server().config().blockingTaskExecutor();
+        if (blockingTaskExecutor != null) {
+            return blockingTaskExecutor;
+        }
+
+        return blockingTaskExecutor = makeContextAware(server().config().blockingTaskExecutor());
     }
 
     @Override

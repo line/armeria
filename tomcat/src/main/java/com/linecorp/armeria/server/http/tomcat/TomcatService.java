@@ -56,8 +56,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpData;
@@ -405,7 +403,7 @@ public final class TomcatService implements HttpService {
                         return;
                     }
 
-                    try (PushHandle ignored = RequestContext.push(ctx)) {
+                    try {
                         coyoteAdapter.service(coyoteReq, coyoteRes);
                         final HttpHeaders headers = convertResponse(coyoteRes);
                         res.write(headers);

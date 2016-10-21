@@ -54,8 +54,11 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the {@link ExecutorService} that could be used for executing a potentially long-running task.
-     * Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)} may
-     * block the {@link Server}'s I/O event loop and thus should be executed in other threads.
+     * The {@link ExecutorService} will propagate the {@link ServiceRequestContext} automatically when running
+     * a task.
+     *
+     * <p>Note that performing a long-running task in {@link Service#serve(ServiceRequestContext, Request)}
+     * may block the {@link Server}'s I/O event loop and thus should be executed in other threads.
      */
     ExecutorService blockingTaskExecutor();
 

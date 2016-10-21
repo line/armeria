@@ -381,6 +381,9 @@ public final class ServerConfig {
 
     /**
      * Returns the {@link ExecutorService} dedicated to the execution of blocking tasks or invocations.
+     * Note that the {@link ExecutorService} returned by this method does not set the
+     * {@link ServiceRequestContext} when executing a submitted task.
+     * Use {@link ServiceRequestContext#blockingTaskExecutor()} if possible.
      */
     public ExecutorService blockingTaskExecutor() {
         return blockingTaskExecutor;
