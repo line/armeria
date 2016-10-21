@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.http;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
@@ -102,11 +101,7 @@ public final class SimpleHttpRequestBuilder {
 
     private static SimpleHttpRequestBuilder createRequestBuilder(String uri, HttpMethod method) {
         requireNonNull(uri);
-        try {
-            return new SimpleHttpRequestBuilder(new URI(uri), method);
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("invalid uri: " + uri, e);
-        }
+        return new SimpleHttpRequestBuilder(URI.create(uri), method);
     }
 
     private SimpleHttpRequestBuilder(URI uri, HttpMethod method) {
