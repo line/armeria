@@ -115,10 +115,10 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the preferred name of the {@link ServiceRequestContext#logger() service logger}.
-     *
-     *
+     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
+     *             {@code armeria-logback}.
      */
+    @Deprecated
     public Optional<String> loggerName() {
         return Optional.ofNullable(loggerName);
     }

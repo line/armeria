@@ -39,8 +39,6 @@ import com.github.kristofa.brave.KeyValueAnnotation;
 import com.github.kristofa.brave.Sampler;
 import com.github.kristofa.brave.SpanId;
 import com.github.kristofa.brave.TraceData;
-import com.twitter.zipkin.gen.Annotation;
-import com.twitter.zipkin.gen.Span;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
@@ -48,11 +46,13 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.tracing.HelloService;
-import com.linecorp.armeria.common.tracing.StubCollector;
+import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
+import zipkin.Annotation;
+import zipkin.Span;
 
 public class TracingServiceTest {
 
@@ -62,17 +62,17 @@ public class TracingServiceTest {
 
     @Test
     public void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
-        StubCollector spanCollector = testServiceInvocation(true /* sampled */);
+        SpanCollectingReporter reporter = testServiceInvocation(true /* sampled */);
 
         // only one span should be submitted
-        assertThat(spanCollector.spans(), hasSize(1));
+        assertThat(reporter.spans(), hasSize(1));
 
         // check span name
-        Span span = spanCollector.spans().get(0);
-        assertThat(span.getName(), is(TEST_METHOD));
+        Span span = reporter.spans().get(0);
+        assertThat(span.name, is(TEST_METHOD));
 
         // check # of annotations
-        List<Annotation> annotations = span.getAnnotations();
+        List<Annotation> annotations = span.annotations;
         assertThat(annotations, hasSize(2));
 
         // check annotation values
@@ -81,24 +81,24 @@ public class TracingServiceTest {
 
         // check service name
         List<String> serviceNames = annotations.stream()
-                                               .map(anno -> anno.host.service_name)
+                                               .map(anno -> anno.endpoint.serviceName)
                                                .collect(Collectors.toList());
         assertThat(serviceNames, is(contains(TEST_SERVICE, TEST_SERVICE)));
     }
 
     @Test
     public void shouldNotSubmitSpanWhenRequestIsNotSampled() throws Exception {
-        StubCollector spanCollector = testServiceInvocation(false /* not sampled */);
+        SpanCollectingReporter reporter = testServiceInvocation(false /* not sampled */);
 
         // don't submit any spans
-        assertThat(spanCollector.spans(), hasSize(0));
+        assertThat(reporter.spans(), hasSize(0));
     }
 
-    private static StubCollector testServiceInvocation(boolean sampled) throws Exception {
-        StubCollector spanCollector = new StubCollector();
+    private static SpanCollectingReporter testServiceInvocation(boolean sampled) throws Exception {
+        SpanCollectingReporter reporter = new SpanCollectingReporter();
 
         Brave brave = new Brave.Builder(TEST_SERVICE)
-                .spanCollector(spanCollector)
+                .reporter(reporter)
                 .traceSampler(Sampler.create(1.0f))
                 .build();
 
@@ -131,7 +131,7 @@ public class TracingServiceTest {
         stub.serve(ctx, req);
 
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
-        return spanCollector;
+        return reporter;
     }
 
     private static class TracingServiceImpl extends AbstractTracingService<ThriftCall, ThriftReply> {

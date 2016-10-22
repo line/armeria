@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContext.PushHandle;
 
 /**
  * Utility methods that invokes the callback methods of {@link MessageLogConsumer} safely.
@@ -34,7 +35,7 @@ public final class MessageLogConsumerInvoker {
      * Invokes {@link MessageLogConsumer#onRequest(RequestContext, RequestLog)}.
      */
     public static void invokeOnRequest(MessageLogConsumer consumer, RequestContext ctx, RequestLog req) {
-        try {
+        try (PushHandle ignored = RequestContext.push(ctx)) {
             consumer.onRequest(ctx, req);
         } catch (Throwable e) {
             logger.warn("onRequest() failed with an exception: {}", e);
@@ -45,7 +46,7 @@ public final class MessageLogConsumerInvoker {
      * Invokes {@link MessageLogConsumer#onResponse(RequestContext, ResponseLog)}.
      */
     public static void invokeOnResponse(MessageLogConsumer consumer, RequestContext ctx, ResponseLog res) {
-        try {
+        try (PushHandle ignored = RequestContext.push(ctx)) {
             consumer.onResponse(ctx, res);
         } catch (Throwable e) {
             logger.warn("onResponse() failed with an exception: {}", e);
