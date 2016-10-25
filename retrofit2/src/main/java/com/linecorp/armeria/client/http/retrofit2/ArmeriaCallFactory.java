@@ -36,6 +36,7 @@ import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
+import okio.Buffer;
 
 /**
  * A {@link Call.Factory} that creates a {@link Call} instance for {@link HttpClient}.
@@ -111,15 +112,14 @@ public class ArmeriaCallFactory implements Call.Factory {
                     (key, values) -> headers.add(HttpHeaderNames.of(key), values));
             if (request.body() != null) {
                 headers.set(HttpHeaderNames.CONTENT_TYPE, request.body().contentType().toString());
-                final BufferSinkHttpData contentBuffer;
+                Buffer contentBuffer = new Buffer();
                 try {
-                    contentBuffer = new BufferSinkHttpData((int) request.body().contentLength());
                     request.body().writeTo(contentBuffer);
                 } catch (IOException e) {
                     throw new IllegalArgumentException(
                             "Failed to convert RequestBody to HttpData. " + request.method(), e);
                 }
-                return httpClient.execute(headers, contentBuffer);
+                return httpClient.execute(headers, contentBuffer.readByteArray());
             }
             return httpClient.execute(headers);
         }
