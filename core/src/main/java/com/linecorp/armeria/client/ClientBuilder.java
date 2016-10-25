@@ -19,12 +19,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+
+import io.netty.handler.codec.Headers;
+import io.netty.util.AsciiString;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
@@ -33,10 +34,8 @@ import com.linecorp.armeria.common.Response;
 public final class ClientBuilder {
 
     private final URI uri;
-    private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
-
     private ClientFactory factory = ClientFactory.DEFAULT;
-    private ClientDecorationBuilder decoration;
+    private final ClientOptionsBuilder options = new ClientOptionsBuilder();
 
     /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
@@ -64,14 +63,7 @@ public final class ClientBuilder {
      * Adds the specified {@link ClientOptions}.
      */
     public ClientBuilder options(ClientOptions options) {
-        requireNonNull(options, "options");
-
-        final Map<ClientOption<Object>, ClientOptionValue<Object>> optionMap = options.asMap();
-        for (ClientOptionValue<?> o : optionMap.values()) {
-            validateOption(o.option());
-        }
-
-        this.options.putAll(optionMap);
+        this.options.options(options);
         return this;
     }
 
@@ -79,21 +71,7 @@ public final class ClientBuilder {
      * Adds the specified {@link ClientOptionValue}s.
      */
     public ClientBuilder options(ClientOptionValue<?>... options) {
-        requireNonNull(options, "options");
-        for (int i = 0; i < options.length; i++) {
-            final ClientOptionValue<?> o = options[i];
-            if (o == null) {
-                throw new NullPointerException("options[" + i + ']');
-            }
-
-            if (o.option() == ClientOption.DECORATION && decoration != null) {
-                throw new IllegalArgumentException(
-                        "options[" + i + "]: option(" + ClientOption.DECORATION +
-                        ") and decorator() are mutually exclusive.");
-            }
-
-            this.options.put(o.option(), o);
-        }
+        this.options.options(options);
         return this;
     }
 
@@ -101,17 +79,16 @@ public final class ClientBuilder {
      * Adds the specified {@link ClientOption} and its {@code value}.
      */
     public <T> ClientBuilder option(ClientOption<T> option, T value) {
-        validateOption(option);
-        options.put(option, option.newValue(value));
+        this.options.option(option, value);
         return this;
     }
 
-    private void validateOption(ClientOption<?> option) {
-        requireNonNull(option, "option");
-        if (option == ClientOption.DECORATION && decoration != null) {
-            throw new IllegalArgumentException(
-                    "option(" + ClientOption.DECORATION + ") and decorator() are mutually exclusive.");
-        }
+    /**
+     * Adds the specified {@link ClientOptionValue}.
+     */
+    public <T> ClientBuilder option(ClientOptionValue<T> optionValue) {
+        options.option(optionValue);
+        return this;
     }
 
     /**
@@ -120,7 +97,8 @@ public final class ClientBuilder {
      * @param defaultWriteTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public ClientBuilder defaultWriteTimeoutMillis(long defaultWriteTimeoutMillis) {
-        return option(ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS, defaultWriteTimeoutMillis);
+        options.defaultWriteTimeoutMillis(defaultWriteTimeoutMillis);
+        return this;
     }
 
     /**
@@ -129,7 +107,8 @@ public final class ClientBuilder {
      * @param defaultWriteTimeout the timeout. {@code 0} disables the timeout.
      */
     public ClientBuilder defaultWriteTimeout(Duration defaultWriteTimeout) {
-        return defaultWriteTimeoutMillis(requireNonNull(defaultWriteTimeout, "defaultWriteTimeout").toMillis());
+        options.defaultWriteTimeout(defaultWriteTimeout);
+        return this;
     }
 
     /**
@@ -138,7 +117,8 @@ public final class ClientBuilder {
      * @param defaultResponseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public ClientBuilder defaultResponseTimeoutMillis(long defaultResponseTimeoutMillis) {
-        return option(ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS, defaultResponseTimeoutMillis);
+        options.defaultResponseTimeoutMillis(defaultResponseTimeoutMillis);
+        return this;
     }
 
     /**
@@ -147,8 +127,18 @@ public final class ClientBuilder {
      * @param defaultResponseTimeout the timeout. {@code 0} disables the timeout.
      */
     public ClientBuilder defaultResponseTimeout(Duration defaultResponseTimeout) {
-        return defaultResponseTimeoutMillis(
-                requireNonNull(defaultResponseTimeout, "defaultResponseTimeout").toMillis());
+        options.defaultResponseTimeout(defaultResponseTimeout);
+        return this;
+    }
+
+    /**
+     * Sets the default maximum allowed length of a server response in bytes.
+     *
+     * @param defaultMaxResponseLength the maximum length in bytes. {@code 0} disables the limit.
+     */
+    public ClientBuilder defaultMaxResponseLength(long defaultMaxResponseLength) {
+        options.defaultMaxResponseLength(defaultMaxResponseLength);
+        return this;
     }
 
     /**
@@ -157,17 +147,39 @@ public final class ClientBuilder {
     public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
             I extends Request, O extends Response>
     ClientBuilder decorator(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
+        options.decorator(requestType, responseType, decorator);
+        return this;
+    }
 
-        if (options.containsKey(ClientOption.DECORATION)) {
-            throw new IllegalArgumentException(
-                    "decorator() and option(" + ClientOption.DECORATION + ") are mutually exclusive.");
-        }
+    /**
+     * Adds the specified HTTP header.
+     */
+    public ClientBuilder addHttpHeader(AsciiString name, Object value) {
+        options.addHttpHeader(name, value);
+        return this;
+    }
 
-        if (decoration == null) {
-            decoration = new ClientDecorationBuilder();
-        }
+    /**
+     * Adds the specified HTTP headers.
+     */
+    public ClientBuilder addHttpHeaders(Headers<AsciiString, String, ?> httpHeaders) {
+        options.addHttpHeaders(httpHeaders);
+        return this;
+    }
 
-        decoration.add(requestType, responseType, decorator);
+    /**
+     * Sets the specified HTTP header.
+     */
+    public ClientBuilder setHttpHeader(AsciiString name, Object value) {
+        options.setHttpHeader(name, value);
+        return this;
+    }
+
+    /**
+     * Sets the specified HTTP headers.
+     */
+    public ClientBuilder setHttpHeaders(Headers<AsciiString, String, ?> httpHeaders) {
+        options.setHttpHeaders(httpHeaders);
         return this;
     }
 
@@ -181,11 +193,6 @@ public final class ClientBuilder {
     @SuppressWarnings("unchecked")
     public <T> T build(Class<T> clientType) {
         requireNonNull(clientType, "clientType");
-
-        if (decoration != null) {
-            options.put(ClientOption.DECORATION, ClientOption.DECORATION.newValue(decoration.build()));
-        }
-
-        return factory.newClient(uri, clientType, ClientOptions.of(options.values()));
+        return factory.newClient(uri, clientType, options.build());
     }
 }
