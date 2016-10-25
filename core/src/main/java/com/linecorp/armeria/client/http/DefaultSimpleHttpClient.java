@@ -21,7 +21,9 @@ import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import java.net.URI;
 import java.util.Arrays;
 
-import com.linecorp.armeria.client.ClientOptionValue;
+import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpMethod;
@@ -37,10 +39,32 @@ import io.netty.util.concurrent.Promise;
 @SuppressWarnings("deprecation")
 final class DefaultSimpleHttpClient implements SimpleHttpClient {
 
+    private final ClientBuilderParams params;
     private final DefaultHttpClient client;
 
-    DefaultSimpleHttpClient(DefaultHttpClient client) {
+    DefaultSimpleHttpClient(ClientBuilderParams params, DefaultHttpClient client) {
+        this.params = params;
         this.client = client;
+    }
+
+    @Override
+    public ClientFactory factory() {
+        return params.factory();
+    }
+
+    @Override
+    public URI uri() {
+        return params.uri();
+    }
+
+    @Override
+    public Class<?> clientType() {
+        return params.clientType();
+    }
+
+    @Override
+    public ClientOptions options() {
+        return params.options();
     }
 
     @Override
@@ -97,10 +121,5 @@ final class DefaultSimpleHttpClient implements SimpleHttpClient {
         }
 
         return promise;
-    }
-
-    @Override
-    public SimpleHttpClient withOptions(Iterable<ClientOptionValue<?>> additionalOptions) {
-        return new DefaultSimpleHttpClient((DefaultHttpClient) client.withOptions(additionalOptions));
     }
 }

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.http;
 
-import com.linecorp.armeria.client.ClientOptionDerivable;
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 
 import io.netty.util.concurrent.Future;
@@ -28,7 +28,7 @@ import io.netty.util.concurrent.Future;
  * @see SimpleHttpRequestBuilder
  */
 @Deprecated
-public interface SimpleHttpClient extends ClientOptionDerivable<SimpleHttpClient> {
+public interface SimpleHttpClient extends ClientBuilderParams {
     /**
      * Sends the specified {@code request} to the HTTP server asynchronously.
      *

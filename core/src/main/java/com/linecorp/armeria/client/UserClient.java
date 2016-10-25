@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import java.net.URI;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -30,40 +30,54 @@ import io.netty.channel.EventLoop;
 /**
  * A base class for implementing a user's entry point for sending a {@link Request}.
  *
- * <p>It provides the utility methods for easily forwarding a {@link Request} from a user to a {@link Client},
- * as well as the default implementation of {@link ClientOptionDerivable}.
+ * <p>It provides the utility methods for easily forwarding a {@link Request} from a user to a {@link Client}.
  *
  * <p>Note that this class is not a subtype of {@link Client}, although its name may mislead.
  *
- * @param <T> the self type
  * @param <I> the request type
  * @param <O> the response type
  */
-public abstract class UserClient<T, I extends Request, O extends Response> implements ClientOptionDerivable<T> {
+public abstract class UserClient<I extends Request, O extends Response> implements ClientBuilderParams {
 
+    private final ClientBuilderParams params;
     private final Client<I, O> delegate;
-    private final Supplier<EventLoop> eventLoopSupplier;
     private final SessionProtocol sessionProtocol;
-    private final ClientOptions options;
     private final Endpoint endpoint;
 
     /**
      * Creates a new instance.
      *
+     * @param params the parameters used for constructing the client
      * @param delegate the {@link Client} that will process {@link Request}s
-     * @param eventLoopSupplier the {@link Supplier} that yields an {@link EventLoop} for each {@link Request}
      * @param sessionProtocol the {@link SessionProtocol} of the {@link Client}
-     * @param options the {@link ClientOptions} of the {@link Client}
      * @param endpoint the {@link Endpoint} of the {@link Client}
      */
-    protected UserClient(Client<I, O> delegate, Supplier<EventLoop> eventLoopSupplier,
-                         SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
-
+    protected UserClient(ClientBuilderParams params,
+                         Client<I, O> delegate, SessionProtocol sessionProtocol, Endpoint endpoint) {
+        this.params = params;
         this.delegate = delegate;
-        this.eventLoopSupplier = eventLoopSupplier;
         this.sessionProtocol = sessionProtocol;
-        this.options = options;
         this.endpoint = endpoint;
+    }
+
+    @Override
+    public ClientFactory factory() {
+        return params.factory();
+    }
+
+    @Override
+    public URI uri() {
+        return params.uri();
+    }
+
+    @Override
+    public Class<?> clientType() {
+        return params.clientType();
+    }
+
+    @Override
+    public final ClientOptions options() {
+        return params.options();
     }
 
     /**
@@ -75,11 +89,10 @@ public abstract class UserClient<T, I extends Request, O extends Response> imple
     }
 
     /**
-     * Retrieves an {@link EventLoop} from the {@link Supplier} specified in
-     * {@link #UserClient(Client, Supplier, SessionProtocol, ClientOptions, Endpoint)}.
+     * Retrieves an {@link EventLoop} supplied by the {@link ClientFactory}.
      */
     protected final EventLoop eventLoop() {
-        return eventLoopSupplier.get();
+        return params.factory().eventLoopSupplier().get();
     }
 
     /**
@@ -87,13 +100,6 @@ public abstract class UserClient<T, I extends Request, O extends Response> imple
      */
     protected final SessionProtocol sessionProtocol() {
         return sessionProtocol;
-    }
-
-    /**
-     * Returns the {@link ClientOptions} of the {@link #delegate()}.
-     */
-    protected final ClientOptions options() {
-        return options;
     }
 
     /**
@@ -135,7 +141,7 @@ public abstract class UserClient<T, I extends Request, O extends Response> imple
             Function<Throwable, O> fallback) {
 
         final ClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop, sessionProtocol, endpoint, method, path, fragment, options, req);
+                eventLoop, sessionProtocol, endpoint, method, path, fragment, options(), req);
         try (PushHandle ignored = RequestContext.push(ctx)) {
             return delegate().execute(ctx, req);
         } catch (Throwable cause) {
@@ -143,28 +149,4 @@ public abstract class UserClient<T, I extends Request, O extends Response> imple
             return fallback.apply(cause);
         }
     }
-
-    @Override
-    public final T withOptions(ClientOptionValue<?>... additionalOptions) {
-        final ClientOptions options = ClientOptions.of(options(), additionalOptions);
-        return newInstance(delegate(), eventLoopSupplier, sessionProtocol(), options, endpoint());
-    }
-
-    @Override
-    public final T withOptions(Iterable<ClientOptionValue<?>> additionalOptions) {
-        final ClientOptions options = ClientOptions.of(options(), additionalOptions);
-        return newInstance(delegate(), eventLoopSupplier, sessionProtocol(), options, endpoint());
-    }
-
-    /**
-     * Creates a new instance of the same type with this client.
-     *
-     * @param delegate the {@link Client} that will process {@link Request}s
-     * @param eventLoopSupplier the {@link Supplier} that yields an {@link EventLoop} for each {@link Request}
-     * @param sessionProtocol the {@link SessionProtocol} of the {@link Client}
-     * @param options the {@link ClientOptions} of the {@link Client}
-     * @param endpoint the {@link Endpoint} of the {@link Client}
-     */
-    protected abstract T newInstance(Client<I, O> delegate, Supplier<EventLoop> eventLoopSupplier,
-                                     SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint);
 }
