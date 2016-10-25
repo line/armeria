@@ -125,15 +125,19 @@ public class HttpHealthCheckService extends AbstractHttpService {
     }
 
     @Override
-    protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-        final AggregatedHttpMessage response;
-        if (isHealthy()) {
-            response = newHealthyResponse(ctx);
-        } else {
-            response = newUnhealthyResponse(ctx);
-        }
+    protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) throws Exception {
+        res.write(newResponse(ctx).headers()); // Send without the content.
+        res.close();
+    }
 
-        res.respond(response);
+    @Override
+    protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+        res.respond(newResponse(ctx));
+    }
+
+    private AggregatedHttpMessage newResponse(ServiceRequestContext ctx) {
+        return isHealthy() ? newHealthyResponse(ctx)
+                           : newUnhealthyResponse(ctx);
     }
 
     private boolean isHealthy() {
