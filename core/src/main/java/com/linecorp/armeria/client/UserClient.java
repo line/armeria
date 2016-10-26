@@ -146,14 +146,18 @@ public abstract class UserClient<T, I extends Request, O extends Response> imple
 
     @Override
     public final T withOptions(ClientOptionValue<?>... additionalOptions) {
-        final ClientOptions options = ClientOptions.of(options(), additionalOptions);
-        return newInstance(delegate(), eventLoopSupplier, sessionProtocol(), options, endpoint());
+        return ClientOptionDerivable.super.withOptions(additionalOptions);
     }
 
     @Override
     public final T withOptions(Iterable<ClientOptionValue<?>> additionalOptions) {
-        final ClientOptions options = ClientOptions.of(options(), additionalOptions);
-        return newInstance(delegate(), eventLoopSupplier, sessionProtocol(), options, endpoint());
+        return ClientOptionDerivable.super.withOptions(additionalOptions);
+    }
+
+    @Override
+    public final T derive(Function<? super ClientOptions, ClientOptions> configurator) {
+        final ClientOptions newOptions = configurator.apply(options());
+        return newInstance(delegate(), eventLoopSupplier, sessionProtocol(), newOptions, endpoint());
     }
 
     /**

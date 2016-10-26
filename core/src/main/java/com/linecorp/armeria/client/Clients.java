@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import java.net.URI;
+import java.util.function.Function;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -157,8 +158,10 @@ public final class Clients {
 
     /**
      * Creates a new derived client that connects to the same {@link URI} with the specified {@code client}
-     * with the specified {@code additionalOptions}. Note that the derived client will use the options of
-     * the specified {@code client} unless specified in {@code additionalOptions}.
+     * and the specified {@code additionalOptions}.
+     *
+     * @see ClientOptionsBuilder ClientOptionsBuilder, for more information about how the base options and
+     *                           additional options are merged when a derived client is created.
      */
     public static <T> T newDerivedClient(T client, ClientOptionValue<?>... additionalOptions) {
         return asDerivable(client).withOptions(additionalOptions);
@@ -166,11 +169,38 @@ public final class Clients {
 
     /**
      * Creates a new derived client that connects to the same {@link URI} with the specified {@code client}
-     * with the specified {@code additionalOptions}. Note that the derived client will use the options of
-     * the specified {@code client} unless specified in {@code additionalOptions}.
+     * and the specified {@code additionalOptions}.
+     *
+     * @see ClientOptionsBuilder ClientOptionsBuilder, for more information about how the base options and
+     *                           additional options are merged when a derived client is created.
      */
     public static <T> T newDerivedClient(T client, Iterable<ClientOptionValue<?>> additionalOptions) {
         return asDerivable(client).withOptions(additionalOptions);
+    }
+
+    /**
+     * Creates a new derived client that connects to the same {@link URI} with the specified {@code client}
+     * but with different {@link ClientOption}s. For example:
+     *
+     * <pre>{@code
+     * HttpClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
+     *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
+     *     builder.decorator(...);   // Add a decorator.
+     *     builder.httpHeader(...); // Add an HTTP header.
+     *     return builder.build();
+     * });
+     * }</pre>
+     *
+     * @param configurator a {@link Function} whose input is the original {@link ClientOptions} of the client
+     *                     being derived from and whose output is the {@link ClientOptions} of the new derived
+     *                     client
+     *
+     * @see ClientOptionsBuilder ClientOptionsBuilder, for more information about how the base options and
+     *                           additional options are merged when a derived client is created.
+     */
+    public static <T> T newDerivedClient(
+            T client, Function<? super ClientOptions, ClientOptions> configurator) {
+        return asDerivable(client).derive(configurator);
     }
 
     private static <T> ClientOptionDerivable<T> asDerivable(T client) {
