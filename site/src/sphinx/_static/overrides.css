@@ -11,11 +11,6 @@ html, body, .wy-grid-for-nav {
   margin: 0;
 }
 
-/* Hide the page; will be centered and then become visible by the script in _templates/versions.html */
-.wy-body-for-nav {
-  display: none;
-}
-
 .wy-nav-side {
   font-size: 17px;
 }
