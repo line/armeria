@@ -59,6 +59,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private long requestTimeoutMillis;
     private long maxRequestLength;
+    private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
 
     private String strVal;
 
@@ -168,7 +169,17 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             throw new IllegalArgumentException(
                     "requestTimeoutMillis: " + requestTimeoutMillis + " (expected: >= 0)");
         }
-        this.requestTimeoutMillis = requestTimeoutMillis;
+        if (this.requestTimeoutMillis != requestTimeoutMillis) {
+            this.requestTimeoutMillis = requestTimeoutMillis;
+            final RequestTimeoutChangeListener listener = requestTimeoutChangeListener;
+            if (listener != null) {
+                if (ch.eventLoop().inEventLoop()) {
+                    listener.onRequestTimeoutChange(requestTimeoutMillis);
+                } else {
+                    ch.eventLoop().execute(() -> listener.onRequestTimeoutChange(requestTimeoutMillis));
+                }
+            }
+        }
     }
 
     @Override
@@ -208,6 +219,21 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public CompletableFuture<ResponseLog> responseLogFuture() {
         return responseLog;
+    }
+
+    /**
+     * Sets the listener that is notified when the {@linkplain #requestTimeoutMillis()} request timeout} of
+     * the request is changed.
+     *
+     * <p>Note: This method is meant for internal use by server-side protocol implementation to reschedule
+     * a timeout task when a user updates the request timeout configuration.
+     */
+    public void setRequestTimeoutChangeListener(RequestTimeoutChangeListener listener) {
+        requireNonNull(listener, "listener");
+        if (requestTimeoutChangeListener != null) {
+            throw new IllegalStateException("requestTimeoutChangeListener is set already.");
+        }
+        requestTimeoutChangeListener = listener;
     }
 
     @Override
