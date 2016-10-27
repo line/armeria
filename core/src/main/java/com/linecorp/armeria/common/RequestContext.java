@@ -16,14 +16,17 @@
 
 package com.linecorp.armeria.common;
 
+import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
 import org.slf4j.LoggerFactory;
 
@@ -162,6 +165,25 @@ public interface RequestContext extends AttributeMap {
     SessionProtocol sessionProtocol();
 
     /**
+     * Returns the remote address of this request, or {@code null} if the connection is not established yet.
+     */
+    @Nullable
+    <A extends SocketAddress> A remoteAddress();
+
+    /**
+     * Returns the local address of this request, or {@code null} if the connection is not established yet.
+     */
+    @Nullable
+    <A extends SocketAddress> A localAddress();
+
+    /**
+     * The {@link SSLSession} for this request if the connection is made over TLS, or {@code null} if
+     * the connection is not established yet or the connection is not a TLS connection.
+     */
+    @Nullable
+    SSLSession sslSession();
+
+    /**
      * Returns the session-layer method name of the current {@link Request}. e.g. "GET" or "POST" for HTTP
      */
     String method();
@@ -228,6 +250,14 @@ public interface RequestContext extends AttributeMap {
      */
     default Executor makeContextAware(Executor executor) {
         return runnable -> executor.execute(makeContextAware(runnable));
+    }
+
+    /**
+     * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, making
+     * sure to propagate the current {@link RequestContext} into the callback execution.
+     */
+    default ExecutorService makeContextAware(ExecutorService executor) {
+        return new RequestContextAwareExecutorService(this, executor);
     }
 
     /**

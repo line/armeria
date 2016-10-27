@@ -1,5 +1,6 @@
 .. _`Server basics`: server-basics.html
 .. _`Using Armeria as an HTTP client`: client-http.html
+.. _`Using Armeria as a Retrofit2 HTTP client`: client-http-retrofit.html
 .. _`Clients`: apidocs/index.html?com/linecorp/armeria/client/Clients.html
 .. _`ClientBuilder`: apidocs/index.html?com/linecorp/armeria/client/ClientBuilder.html
 
@@ -80,6 +81,7 @@ Next steps
 ----------
 - `Server basics`_ if you did not write a Thrift RPC server with Armeria yet
 - `Using Armeria as an HTTP client`_ if you want to send an HTTP request asynchronously
+- `Using Armeria as a Retrofit2 HTTP client`_ if you want to build a REST client
 - or you could explore the client-side API documentation:
    - `Clients`_
    - `ClientBuilder`_

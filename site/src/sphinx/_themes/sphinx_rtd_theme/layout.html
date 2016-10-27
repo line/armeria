@@ -81,6 +81,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+  {% block extrabody %} {% endblock %}
   <div class="wy-grid-for-nav">
 
     {# SIDE NAV, TOGGLES ON MOBILE #}
@@ -120,7 +121,7 @@
 
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           {% block menu %}
-            {% set toctree = toctree(maxdepth=4, collapse=theme_collapse_navigation, includehidden=True) %}
+            {% set toctree = toctree(maxdepth=theme_navigation_depth, collapse=theme_collapse_navigation, includehidden=True) %}
             {% if toctree %}
                 {{ toctree }}
             {% else %}
@@ -136,8 +137,10 @@
 
       {# MOBILE NAV, TRIGGLES SIDE NAV ON TOGGLE #}
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="{{ pathto(master_doc) }}">{{ project }}</a>
+        {% block mobile_nav %}
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="{{ pathto(master_doc) }}">{{ project }}</a>
+        {% endblock %}
       </nav>
 
 

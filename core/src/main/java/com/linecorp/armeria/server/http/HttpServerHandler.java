@@ -91,7 +91,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     /**
      * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
-     * @See https://tools.ietf.org/html/rfc3986#section-3.3
+     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
      */
     private static final Pattern PROHIBITED_PATH_PATTERN =
             Pattern.compile("^/[^/]*:[^/]*/|[|<>*\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
@@ -254,13 +254,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         // Validate and split path and query.
-        final String path = validatePathAndStripQuery(originalPath);
-        if (path == null) {
+        final String[] pathAndQuery = validateAndSplitPath(originalPath);
+        if (pathAndQuery == null) {
             // Reject requests without a valid path.
             respond(ctx, req, HttpStatus.NOT_FOUND);
             return;
         }
 
+        final String path = pathAndQuery[0];
+        final String query = pathAndQuery[1];
         final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
@@ -279,9 +281,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final Channel channel = ctx.channel();
         final ServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel,
-                protocol,
-                req.method().name(), path, mappedPath, req, getSSLSession(channel));
+                serviceCfg, channel, protocol, req.method().name(),
+                query != null ? path + query : path,
+                query != null ? mappedPath + query : mappedPath,
+                req, getSSLSession(channel));
 
         final RequestLogBuilder reqLogBuilder = reqCtx.requestLogBuilder();
         final HttpResponse res;
@@ -371,7 +374,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return hostname.substring(0, hostnameColonIdx);
     }
 
-    private static String validatePathAndStripQuery(String path) {
+    private static String[] validateAndSplitPath(String path) {
         // Filter out an empty path or a relative path.
         if (path.isEmpty() || path.charAt(0) != '/') {
             return null;
@@ -379,8 +382,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         // Strip the query string.
         final int queryPos = path.indexOf('?');
+        final String query;
         if (queryPos >= 0) {
             path = path.substring(0, queryPos);
+            query = path.substring(queryPos);
+        } else {
+            query = null;
         }
 
         try {
@@ -399,7 +406,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         // Work around the case where a client sends a path such as '/path//with///consecutive////slashes'.
-        return CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/");
+        return new String[] {
+                CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/"),
+                query
+        };
     }
 
     private void redirect(ChannelHandlerContext ctx, DecodedHttpRequest req, String location) {

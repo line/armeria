@@ -38,6 +38,7 @@ import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.length;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
@@ -51,7 +52,6 @@ import com.linecorp.armeria.common.http.HttpStatusClass;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
@@ -86,6 +86,8 @@ public final class ArmeriaHttpUtil {
                     return a.equals(b);
                 }
             };
+
+    private static final URI ROOT = URI.create("/");
 
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/1 to HTTP/2.
@@ -151,7 +153,7 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Converts the headers of the given Netty HTTP/1.x message into Armeria HTTP/2 headers.
+     * Converts the headers of the given Netty HTTP/1.x request into Armeria HTTP/2 headers.
      * The following headers are only used if they can not be found in the {@code HOST} header or the
      * {@code Request-Line} as defined by <a href="https://tools.ietf.org/html/rfc7230">rfc7230</a>
      * <ul>
@@ -159,25 +161,34 @@ public final class ArmeriaHttpUtil {
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
-    public static HttpHeaders toArmeria(HttpMessage in) {
+    public static HttpHeaders toArmeria(HttpRequest in) throws URISyntaxException {
+        final URI requestTargetUri = toUri(in);
+
+        final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
+        final HttpHeaders out = new DefaultHttpHeaders(true, inHeaders.size());
+
+        out.path(toHttp2Path(requestTargetUri));
+        out.method(HttpMethod.valueOf(in.method().name()));
+        setHttp2Scheme(inHeaders, requestTargetUri, out);
+
+        if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
+            // Attempt to take from HOST header before taking from the request-line
+            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+            setHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
+        }
+
+        // Add the HTTP headers which have not been consumed above
+        toArmeria(inHeaders, out);
+        return out;
+    }
+
+    /**
+     * Converts the headers of the given Netty HTTP/1.x response into Armeria HTTP/2 headers.
+     */
+    public static HttpHeaders toArmeria(HttpResponse in) {
         io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final HttpHeaders out = new DefaultHttpHeaders(true, inHeaders.size());
-        if (in instanceof HttpRequest) {
-            HttpRequest request = (HttpRequest) in;
-            URI requestTargetUri = URI.create(request.uri());
-            out.path(toHttp2Path(requestTargetUri));
-            out.method(HttpMethod.valueOf(request.method().name()));
-            setHttp2Scheme(inHeaders, requestTargetUri, out);
-
-            if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
-                // Attempt to take from HOST header before taking from the request-line
-                String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                setHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
-            }
-        } else if (in instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse) in;
-            out.status(response.status().code());
-        }
+        out.status(in.status().code());
 
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
@@ -214,6 +225,22 @@ public final class ArmeriaHttpUtil {
 
                 out.add(aName, entry.getValue().toString());
             }
+        }
+    }
+
+    private static URI toUri(HttpRequest in) throws URISyntaxException {
+        final String uri = in.uri();
+        if (uri.startsWith("//")) {
+            // Normalize the path that starts with more than one slash into the one with a single slash,
+            // so that java.net.URI does not raise a URISyntaxException.
+            for (int i = 0; i < uri.length(); i++) {
+                if (uri.charAt(i) != '/') {
+                    return new URI(uri.substring(i - 1));
+                }
+            }
+            return ROOT;
+        } else {
+            return new URI(uri);
         }
     }
 

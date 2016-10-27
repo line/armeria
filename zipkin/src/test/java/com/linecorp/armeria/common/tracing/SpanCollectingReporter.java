@@ -19,15 +19,15 @@ package com.linecorp.armeria.common.tracing;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.github.kristofa.brave.EmptySpanCollector;
-import com.twitter.zipkin.gen.Span;
+import zipkin.Span;
+import zipkin.reporter.Reporter;
 
-public final class StubCollector extends EmptySpanCollector {
+public final class SpanCollectingReporter implements Reporter<Span> {
 
     private final List<Span> spans = new ArrayList<>();
 
     @Override
-    public void collect(Span span) {
+    public void report(Span span) {
         spans.add(span);
     }
 

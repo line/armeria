@@ -38,8 +38,7 @@ import io.netty.channel.EventLoop;
 /**
  * Default {@link ClientRequestContext} implementation.
  */
-public final class DefaultClientRequestContext extends NonWrappingRequestContext
-        implements ClientRequestContext {
+public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
 
     private final EventLoop eventLoop;
     private final ClientOptions options;
@@ -87,6 +86,11 @@ public final class DefaultClientRequestContext extends NonWrappingRequestContext
                 attr(HTTP_HEADERS).set(headersCopy);
             }
         }
+    }
+
+    @Override
+    protected Channel channel() {
+        return requestLog.channel();
     }
 
     @Override
@@ -187,7 +191,7 @@ public final class DefaultClientRequestContext extends NonWrappingRequestContext
         final StringBuilder buf = new StringBuilder(96);
 
         // Prepend the current channel information if available.
-        final Channel ch = requestLog.channel();
+        final Channel ch = channel();
         final boolean hasChannel = ch != null;
         if (hasChannel) {
             buf.append(ch);

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.http;
 
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
@@ -175,6 +176,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     req.close();
                     this.req = req = null;
                 }
+            }
+        } catch (URISyntaxException e) {
+            fail(ctx, HttpResponseStatus.BAD_REQUEST);
+            if (req != null) {
+                req.close(e);
             }
         } catch (Throwable t) {
             fail(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);

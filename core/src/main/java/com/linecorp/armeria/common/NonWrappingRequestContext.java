@@ -16,12 +16,18 @@
 
 package com.linecorp.armeria.common;
 
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
+
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
+import io.netty.channel.Channel;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -55,6 +61,41 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @Override
     public final SessionProtocol sessionProtocol() {
         return sessionProtocol;
+    }
+
+    /**
+     * Returns the {@link Channel} that is handling this request, or {@code null} if the connection is not
+     * established yet.
+     */
+    @Nullable
+    protected abstract Channel channel();
+
+    @Nullable
+    @Override
+    @SuppressWarnings("unchecked")
+    public <A extends SocketAddress> A remoteAddress() {
+        final Channel ch = channel();
+        return ch != null ? (A) ch.remoteAddress() : null;
+    }
+
+    @Nullable
+    @Override
+    @SuppressWarnings("unchecked")
+    public <A extends SocketAddress> A localAddress() {
+        final Channel ch = channel();
+        return ch != null ? (A) ch.localAddress() : null;
+    }
+
+    @Nullable
+    @Override
+    public SSLSession sslSession() {
+        final Channel ch = channel();
+        if (ch == null) {
+            return null;
+        }
+
+        final SslHandler sslHandler = ch.pipeline().get(SslHandler.class);
+        return sslHandler != null ? sslHandler.engine().getSession() : null;
     }
 
     @Override

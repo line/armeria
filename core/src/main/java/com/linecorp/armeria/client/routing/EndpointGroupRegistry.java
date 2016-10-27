@@ -26,38 +26,40 @@ import com.linecorp.armeria.client.Endpoint;
  * An in-memory registry of server groups.
  */
 public final class EndpointGroupRegistry {
+
     private static final Map<String, EndpointSelector> serverGroups = new ConcurrentHashMap<>();
 
     /**
-     * Register the specified {@link EndpointGroup}.
+     * Registers the specified {@link EndpointGroup}. If there's already an {@link EndpointGroup} with the
+     * specified {@code groupName}, this method will replace it with the new one.
      *
-     * @throws EndpointGroupException if {@code groupName} has already been registered.
+     * @return {@code true} if there was no {@link EndpointGroup} with the specified {@code groupName}.
+     *         {@code false} if there was already an {@link EndpointGroup} with the specified {@code groupName}
+     *         and it has been replaced with the new one.
      */
-    public static void register(String groupName, EndpointGroup endpointGroup,
-                                EndpointSelectionStrategy endpointSelectionStrategy) {
+    public static boolean register(String groupName, EndpointGroup endpointGroup,
+                                   EndpointSelectionStrategy endpointSelectionStrategy) {
         requireNonNull(groupName, "groupName");
         requireNonNull(endpointGroup, "group");
         requireNonNull(endpointSelectionStrategy, "endpointSelectionStrategy");
 
-        if (serverGroups.putIfAbsent(groupName, endpointSelectionStrategy.newSelector(endpointGroup)) != null) {
-            throw new EndpointGroupException("A EndpointGroup with the same name exists: " + groupName);
-        }
+        final EndpointSelector oldSelector = serverGroups.put(
+                groupName, endpointSelectionStrategy.newSelector(endpointGroup));
+
+        return oldSelector == null;
     }
 
     /**
-     * Replaces an existing {@link EndpointGroup}.
+     * Unregisters the {@link EndpointGroup} with the specified {@code groupName}. Note that this is
+     * potentially a dangerous operation; make sure the {@code groupName} of the unregistered
+     * {@link EndpointGroup} is not in use by any clients.
      *
-     * @throws EndpointGroupException if {@code groupName} not registered yet.
+     * @return {@code true} if the {@link EndpointGroup} with the specified {@code groupName} has been removed.
+     *         {@code false} if there's no such {@link EndpointGroup} in the registry.
      */
-    public static void replace(String groupName, EndpointGroup endpointGroup,
-                               EndpointSelectionStrategy endpointSelectionStrategy) {
+    public static boolean unregister(String groupName) {
         requireNonNull(groupName, "groupName");
-        requireNonNull(endpointGroup, "group");
-        requireNonNull(endpointSelectionStrategy, "endpointSelectionStrategy");
-
-        if (serverGroups.replace(groupName, endpointSelectionStrategy.newSelector(endpointGroup)) == null) {
-            throw new EndpointGroupException("non-existent EndpointGroup: " + groupName);
-        }
+        return serverGroups.remove(groupName) != null;
     }
 
     /**

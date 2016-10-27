@@ -73,6 +73,7 @@ Read more
     setup
     server
     client
+    advanced
     Release notes <https://github.com/line/armeria/releases>
     API documentation <apidocs/index.html#://>
     Source cross-reference <xref/index.html#://>

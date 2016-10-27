@@ -157,6 +157,7 @@ configure(javaProjects) {
             // Netty
             dependencySet(group: 'io.netty', version: ext.versionOf('netty')) {
                 entry 'netty-transport'
+                entry 'netty-handler'
                 entry 'netty-codec-http2'
                 entry 'netty-resolver-dns'
             }
@@ -275,6 +276,10 @@ configure(javaProjects) {
         configProperties = [ 'checkstyleConfigDir': "$checkstyleConfigDir" ]
         toolVersion = '7.1'
     }
+    task checkstyle(group: 'Verification',
+                    description: 'Runs the checkstyle rules.')
+    tasks.checkstyle.dependsOn 'checkstyleMain'
+    tasks.checkstyle.dependsOn 'checkstyleTest'
 
     // Enable full exception logging for test failures.
     test {
@@ -717,7 +722,8 @@ task release(group: 'Publishing',
     def sphinxConfContent = sphinxConfFile.getText('UTF-8')
     def sphinxConfVersionPattern = /\n( *)release = '[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)'(\r?\n)/
     assert sphinxConfContent =~ sphinxConfVersionPattern
-    sphinxConfFile.write(sphinxConfContent.replaceFirst(sphinxConfVersionPattern, "\n\$1release = '${releaseVersion}'\$1"))
+    sphinxConfFile.write(sphinxConfContent.replaceFirst(sphinxConfVersionPattern, "\n\$1release = '${releaseVersion}'\$2"))
+    executeCommand(gitPath, 'add', sphinxConfFile.toString())
 
     // Commit.
     executeCommand(gitPath, 'commit', '-m', "Update the project version to ${nextVersion}")

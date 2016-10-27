@@ -1,10 +1,4 @@
-<div class="github-fork-ribbon-wrapper right">
-  <div class="github-fork-ribbon">
-    <a href="https://github.com/line/armeria">Fork me on GitHub</a>
-  </div>
-</div>
-<!-- Append the Slack invitation and project badges at the end of the menu. -->
-<script type="text/javascript">
+// Append the Slack invitation and project badges at the end of the menu (sidenav).
 function addSlackInvitation(parent) {
   var li = document.createElement('li');
   li.className = 'toctree-l1';
@@ -33,11 +27,11 @@ function addBadges(parent) {
   var div = document.createElement('div');
   div.className = 'project-badges';
   addBadge(div, 'https://img.shields.io/maven-central/v/com.linecorp.armeria/armeria.svg?style=flat-square',
-           'http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.linecorp.armeria%22%20AND%20a%3A%22armeria%22');
+    'http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22com.linecorp.armeria%22%20AND%20a%3A%22armeria%22');
   addBadge(div, 'https://img.shields.io/travis/line/armeria/master.svg?style=flat-square',
-           'https://travis-ci.org/line/armeria');
+    'https://travis-ci.org/line/armeria');
   addBadge(div, 'https://img.shields.io/codecov/c/github/line/armeria/master.svg?style=flat-square',
-           'https://codecov.io/gh/line/armeria');
+    'https://codecov.io/gh/line/armeria');
   li.appendChild(div);
   parent.appendChild(li);
 }
@@ -51,5 +45,3 @@ if (menus.length > 0) {
     addBadges(lists[0]);
   }
 }
-</script>
-

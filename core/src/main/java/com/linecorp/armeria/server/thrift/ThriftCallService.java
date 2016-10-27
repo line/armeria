@@ -33,8 +33,6 @@ import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
@@ -169,7 +167,7 @@ public final class ThriftCallService implements Service<ThriftCall, ThriftReply>
                 return;
             }
 
-            try (PushHandle ignored = RequestContext.push(ctx)) {
+            try {
                 @SuppressWarnings("unchecked")
                 TBase<TBase<?, ?>, TFieldIdEnum> result = f.getResult(impl, args);
                 if (func.isOneWay()) {

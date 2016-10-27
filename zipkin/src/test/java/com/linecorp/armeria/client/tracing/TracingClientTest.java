@@ -37,8 +37,6 @@ import org.junit.Test;
 import com.github.kristofa.brave.Brave;
 import com.github.kristofa.brave.Sampler;
 import com.github.kristofa.brave.SpanId;
-import com.twitter.zipkin.gen.Annotation;
-import com.twitter.zipkin.gen.Span;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientOptions;
@@ -49,10 +47,12 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.tracing.HelloService;
-import com.linecorp.armeria.common.tracing.StubCollector;
+import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultEventLoop;
+import zipkin.Annotation;
+import zipkin.Span;
 
 public class TracingClientTest {
 
@@ -62,17 +62,17 @@ public class TracingClientTest {
 
     @Test
     public void shouldSubmitSpanWhenSampled() throws Exception {
-        StubCollector spanCollector = testRemoteInvocationWithSamplingRate(1.0f);
+        SpanCollectingReporter reporter = testRemoteInvocationWithSamplingRate(1.0f);
 
         // only one span should be submitted
-        assertThat(spanCollector.spans(), hasSize(1));
+        assertThat(reporter.spans(), hasSize(1));
 
         // check span name
-        Span span = spanCollector.spans().get(0);
-        assertThat(span.getName(), is(TEST_SPAN));
+        Span span = reporter.spans().get(0);
+        assertThat(span.name, is(TEST_SPAN));
 
         // check # of annotations
-        List<Annotation> annotations = span.getAnnotations();
+        List<Annotation> annotations = span.annotations;
         assertThat(annotations, hasSize(2));
 
         // check annotation values
@@ -81,23 +81,25 @@ public class TracingClientTest {
 
         // check service name
         List<String> serviceNames = annotations.stream()
-                                               .map(anno -> anno.host.service_name)
+                                               .map(anno -> anno.endpoint.serviceName)
                                                .collect(Collectors.toList());
         assertThat(serviceNames, is(contains(TEST_SERVICE, TEST_SERVICE)));
     }
 
     @Test
     public void shouldNotSubmitSpanWhenNotSampled() throws Exception {
-        StubCollector spanCollector = testRemoteInvocationWithSamplingRate(0.0f);
+        SpanCollectingReporter reporter = testRemoteInvocationWithSamplingRate(0.0f);
 
-        assertThat(spanCollector.spans(), hasSize(0));
+        assertThat(reporter.spans(), hasSize(0));
     }
 
-    private static StubCollector testRemoteInvocationWithSamplingRate(float samplingRate) throws Exception {
-        StubCollector spanCollector = new StubCollector();
+    private static SpanCollectingReporter testRemoteInvocationWithSamplingRate(
+            float samplingRate) throws Exception {
+
+        SpanCollectingReporter reporter = new SpanCollectingReporter();
 
         Brave brave = new Brave.Builder(TEST_SERVICE)
-                .spanCollector(spanCollector)
+                .reporter(reporter)
                 .traceSampler(Sampler.create(samplingRate))
                 .build();
 
@@ -124,7 +126,7 @@ public class TracingClientTest {
 
         verify(delegate, times(1)).execute(ctx, req);
 
-        return spanCollector;
+        return reporter;
     }
 
     private static class TracingClientImpl extends AbstractTracingClient<ThriftCall, ThriftReply> {

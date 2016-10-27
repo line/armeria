@@ -2,12 +2,12 @@
 @import url(https://fonts.googleapis.com/css?family=Source+Code+Pro:500,700);
 @import url(https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.1.1/gh-fork-ribbon.min.css);
 
-body {
+html, body, .wy-grid-for-nav {
   font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
   font-weight: normal;
   font-size: 15px;
   line-height: 1.42857143;
-  background-color: white;
+  background: #f0f0f0;
   margin: 0;
 }
 
@@ -19,8 +19,14 @@ body {
   line-height: 30px;
 }
 
+.wy-nav-content-wrap {
+  background: #f0f0f0;
+}
+
 .wy-nav-content {
-  max-width: 100%;
+  background: white;
+  max-width: 800px;
+  margin: 0;
 }
 
 .wy-nav-content p {
@@ -38,7 +44,7 @@ body {
 }
 
 .wy-side-nav-search > a img.logo {
-  max-width: 75%;
+  max-width: 11.5em;
   height: auto;
   margin: 0 auto;
   padding: 0;
@@ -59,6 +65,30 @@ body {
 
 .wy-menu.wy-menu-vertical .project-badges a:hover {
   background: inherit;
+}
+
+.wy-menu.wy-menu-vertical .project-badges img {
+  display: inline;
+  padding: 0;
+  height: 1.45em;
+}
+
+/* Hide the Github fork ribbon on mobile view. */
+@media screen and (max-width: 768px) {
+  .github-fork-ribbon-wrapper {
+    display: none;
+  }
+}
+
+/* Move the right-side breadcrumb a little bit left so that it does not overlap with the Github fork ribbom. */
+@media screen and (min-width: 769px) {
+  .wy-breadcrumbs-aside {
+    padding-right: 64px;
+  }
+}
+
+.wy-breadcrumbs-aside {
+  margin-top: 0.225em;
 }
 
 /* Make sure the invitation dialog appears on top of the menu whose z-index is 200. */
