@@ -61,7 +61,6 @@ import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceUnavailableException;
 import com.linecorp.armeria.server.VirtualHost;
 
@@ -280,7 +279,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Service<Request, HttpResponse> service = serviceCfg.service();
 
         final Channel channel = ctx.channel();
-        final ServiceRequestContext reqCtx = new DefaultServiceRequestContext(
+        final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, protocol, req.method().name(),
                 query != null ? path + query : path,
                 query != null ? mappedPath + query : mappedPath,
@@ -323,7 +322,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             });
         })).exceptionally(CompletionActions::log);
 
-        res.subscribe(new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req), eventLoop);
+
+        final HttpResponseSubscriber resSubscriber =
+                new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
+        reqCtx.setRequestTimeoutChangeListener(resSubscriber);
+        res.subscribe(resSubscriber, eventLoop);
     }
 
     private void handleOptions(ChannelHandlerContext ctx, DecodedHttpRequest req) {
