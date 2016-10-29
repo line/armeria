@@ -114,7 +114,7 @@ public class HttpHealthCheckServiceTest {
     }
 
     @Test
-    public void defaultResponseIsNotChunked() throws Exception {
+    public void testGet() throws Exception {
         final ServerBuilder builder = new ServerBuilder();
         builder.port(0, SessionProtocol.HTTP);
         builder.serviceAt("/l7check", new HttpHealthCheckService());
@@ -132,6 +132,31 @@ public class HttpHealthCheckServiceTest {
                 // Should not be chunked.
                 assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo(
                         "HTTP/1.1 200 OK\r\ncontent-length: 2\r\n\r\nok");
+            }
+        } finally {
+            server.stop();
+        }
+    }
+
+    @Test
+    public void testHead() throws Exception {
+        final ServerBuilder builder = new ServerBuilder();
+        builder.port(0, SessionProtocol.HTTP);
+        builder.serviceAt("/l7check", new HttpHealthCheckService());
+        final Server server = builder.build();
+        try {
+            server.start().join();
+
+            final int port = server.activePort().get().localAddress().getPort();
+            try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
+                s.setSoTimeout(10000);
+                final InputStream in = s.getInputStream();
+                final OutputStream out = s.getOutputStream();
+                out.write("HEAD /l7check HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+
+                // Should neither be chunked nor have content.
+                assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo(
+                        "HTTP/1.1 200 OK\r\ncontent-length: 2\r\n\r\n");
             }
         } finally {
             server.stop();

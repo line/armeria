@@ -39,10 +39,11 @@ import com.linecorp.armeria.common.http.HttpStatusClass;
 import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 import com.linecorp.armeria.internal.http.HttpObjectEncoder;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.server.RequestTimeoutChangeListener;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceUnavailableException;
 
 import io.netty.channel.Channel;
@@ -51,7 +52,8 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
 
-final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFutureListener {
+final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener,
+                                              ChannelFutureListener {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
@@ -63,24 +65,29 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
 
     private final ChannelHandlerContext ctx;
     private final HttpObjectEncoder responseEncoder;
-    private final Service<?, ?> service;
     private final DecodedHttpRequest req;
-    private final long timeoutMillis;
-    private final ResponseLogBuilder logBuilder;
+    private final DefaultServiceRequestContext reqCtx;
+    private final long startTimeNanos;
 
     private Subscription subscription;
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_HEADERS;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
-                           ServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
+        this.reqCtx = reqCtx;
+        startTimeNanos = System.nanoTime();
+    }
 
-        service = reqCtx.service();
-        logBuilder = reqCtx.responseLogBuilder();
-        timeoutMillis = reqCtx.requestTimeoutMillis();
+    private Service<?, ?> service() {
+        return reqCtx.service();
+    }
+
+    private ResponseLogBuilder logBuilder() {
+        return reqCtx.responseLogBuilder();
     }
 
     @Override
@@ -97,21 +104,41 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
     }
 
     @Override
+    public void onRequestTimeoutChange(long newRequestTimeoutMillis) {
+        // Cancel the previously scheduled timeout, if exists.
+        cancelTimeout();
+
+        if (newRequestTimeoutMillis > 0 && state != State.DONE) {
+            // Calculate the amount of time passed since the creation of this subscriber.
+            final long passedTimeMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+
+            if (passedTimeMillis < newRequestTimeoutMillis) {
+                timeoutFuture = ctx.channel().eventLoop().schedule(
+                        this::onTimeout,
+                        newRequestTimeoutMillis - passedTimeMillis, TimeUnit.MILLISECONDS);
+            } else {
+                // We went past the dead line set by the new timeout already.
+                onTimeout();
+            }
+        }
+    }
+
+    private void onTimeout() {
+        if (state != State.DONE) {
+            failAndRespond(RequestTimeoutException.get(),
+                           HttpStatus.SERVICE_UNAVAILABLE, Http2Error.INTERNAL_ERROR);
+        }
+    }
+
+    @Override
     public void onSubscribe(Subscription subscription) {
         assert this.subscription == null;
         this.subscription = subscription;
 
-        if (timeoutMillis > 0) {
-            timeoutFuture = ctx.channel().eventLoop().schedule(
-                    () -> {
-                        if (state != State.DONE) {
-                            failAndRespond(RequestTimeoutException.get(),
-                                           HttpStatus.SERVICE_UNAVAILABLE, Http2Error.INTERNAL_ERROR);
-                        }
-                    },
-                    timeoutMillis, TimeUnit.MILLISECONDS);
-        }
+        // Schedule the initial request timeout.
+        onRequestTimeoutChange(reqCtx.requestTimeoutMillis());
 
+        // Start consuming.
         subscription.request(1);
     }
 
@@ -120,24 +147,24 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
         if (!(o instanceof HttpData) && !(o instanceof HttpHeaders)) {
             throw newIllegalStateException(
                     "published an HttpObject that's neither HttpHeaders nor HttpData: " + o +
-                    " (service: " + service + ')');
+                    " (service: " + service() + ')');
         }
 
         boolean endOfStream = o.isEndOfStream();
         switch (state) {
             case NEEDS_HEADERS: {
-                logBuilder.start();
+                logBuilder().start();
                 if (!(o instanceof HttpHeaders)) {
                     throw newIllegalStateException(
                             "published an HttpData without a preceding Http2Headers: " + o +
-                            " (service: " + service + ')');
+                            " (service: " + service() + ')');
                 }
 
                 final HttpHeaders headers = (HttpHeaders) o;
                 final HttpStatus status = headers.status();
                 if (status == null) {
                     throw newIllegalStateException("published an HttpHeaders without status: " + o +
-                                                   " (service: " + service + ')');
+                                                   " (service: " + service() + ')');
                 }
 
                 if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
@@ -146,8 +173,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
                 }
 
                 final int statusCode = status.code();
-                logBuilder.statusCode(statusCode);
-                logBuilder.attr(ResponseLog.HTTP_HEADERS).set(headers);
+                logBuilder().statusCode(statusCode);
+                logBuilder().attr(ResponseLog.HTTP_HEADERS).set(headers);
 
                 if (req.method() == HttpMethod.HEAD) {
                     // HEAD responses always close the stream with the initial headers, even if not explicitly
@@ -173,7 +200,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
                     if (trailingHeaders.status() != null) {
                         throw newIllegalStateException(
                                 "published a trailing HttpHeaders with status: " + o +
-                                " (service: " + service + ')');
+                                " (service: " + service() + ')');
                     }
 
                     // Trailing headers always end the stream even if not explicitly set.
@@ -196,7 +223,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
             failAndRespond(cause, HttpStatus.NOT_FOUND, Http2Error.CANCEL);
         } else {
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",
-                        ctx.channel(), service, cause);
+                        ctx.channel(), service(), cause);
 
             failAndRespond(cause, HttpStatus.INTERNAL_SERVER_ERROR, Http2Error.INTERNAL_ERROR);
         }
@@ -209,7 +236,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
         }
 
         if (wroteNothing(state)) {
-            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service);
+            logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
             responseEncoder.writeReset(ctx, req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
             return;
         }
@@ -243,7 +270,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
         if (o instanceof HttpData) {
             final HttpData data = (HttpData) o;
             future = responseEncoder.writeData(ctx, req.id(), req.streamId(), data, endOfStream);
-            logBuilder.increaseContentLength(data.length());
+            logBuilder().increaseContentLength(data.length());
         } else if (o instanceof HttpHeaders) {
             future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
         } else {
@@ -252,7 +279,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
         }
 
         if (endOfStream) {
-            logBuilder.end();
+            logBuilder().end();
         }
 
         future.addListener(this);
@@ -263,7 +290,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, ChannelFut
 
     private void fail(Throwable cause) {
         setDone();
-        logBuilder.end(cause);
+        logBuilder().end(cause);
     }
 
     private void setDone() {
