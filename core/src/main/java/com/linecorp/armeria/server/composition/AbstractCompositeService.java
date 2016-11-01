@@ -25,8 +25,8 @@ import java.util.List;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.PathMappings;
@@ -127,7 +127,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         }
 
         final ServiceRequestContext newCtx = new CompositeServiceRequestContext(ctx, mapped.mappedPath());
-        try (PushHandle ignored = RequestContext.push(newCtx, false)) {
+        try (SafeCloseable ignored = RequestContext.push(newCtx, false)) {
             return mapped.value().serve(newCtx, req);
         }
     }
