@@ -28,9 +28,9 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptionDerivable;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
+import com.linecorp.armeria.client.DefaultClientBuilderParams;
 import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -95,7 +95,8 @@ public class THttpClientFactory extends DecoratingClientFactory {
                                         uri.getPath(), serializationFormat));
 
         final THttpClient thriftClient = new DefaultTHttpClient(
-                delegate, eventLoopSupplier(), scheme.sessionProtocol(), options, newEndpoint(uri));
+                new DefaultClientBuilderParams(this, uri, THttpClient.class, options),
+                delegate, scheme.sessionProtocol(), newEndpoint(uri));
 
         if (clientType == THttpClient.class) {
             @SuppressWarnings("unchecked")
@@ -105,12 +106,12 @@ public class THttpClientFactory extends DecoratingClientFactory {
             @SuppressWarnings("unchecked")
             T client = (T) Proxy.newProxyInstance(
                     clientType.getClassLoader(),
-                    new Class<?>[] { clientType, ClientOptionDerivable.class },
+                    new Class<?>[] { clientType },
                     new THttpClientInvocationHandler(
+                            new DefaultClientBuilderParams(this, uri, clientType, options),
                             thriftClient,
                             firstNonNull(uri.getPath(), "/"),
-                            firstNonNull(uri.getFragment(), ""),
-                            clientType));
+                            firstNonNull(uri.getFragment(), "")));
             return client;
         }
     }
