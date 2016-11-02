@@ -28,9 +28,6 @@ dependencies {
     // Thrift
     compile 'org.apache.thrift:libthrift'
 
-    //zookeeper
-    compile  "org.apache.zookeeper:zookeeper:${versionOf('zookeeper')}"
-
     // Jetty, for testing TServlet interoperability.
     testCompile 'org.eclipse.jetty:jetty-webapp'
     testCompile 'org.eclipse.jetty.http2:http2-server'

@@ -1,0 +1,8 @@
+dependencies {
+    compile project(':core')
+
+    // Zookeeper
+    compile 'org.apache.zookeeper:zookeeper'
+
+    testCompile "org.dmonix.junit:zookeeper-junit"
+}

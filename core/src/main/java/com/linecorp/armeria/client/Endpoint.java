@@ -155,7 +155,7 @@ public final class Endpoint {
      * Returns the port number of this endpoint.
      *
      * @throws IllegalStateException if this endpoint is not a host endpoint or
-     *                                  this endpoint does not have its port specified.
+     *                               this endpoint does not have its port specified.
      */
     public int port() {
         ensureSingle();
@@ -243,15 +243,22 @@ public final class Endpoint {
 
     @Override
     public String toString() {
-        return "Endpoint(" + authority() + ')';
+        return "Endpoint(" + authority() + "/" + weight + ')';
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Endpoint) {
-            Endpoint anotherEndPoint = (Endpoint) obj;
-            return authority().equals(anotherEndPoint.authority()) && (weight() == anotherEndPoint.weight());
+        if (this == obj) {
+            return true;
+        } else if (obj instanceof Endpoint) {
+            Endpoint other = (Endpoint) obj;
+            return authority().equals(other.authority()) && weight() == other.weight();
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return authority().hashCode();
     }
 }

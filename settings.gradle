@@ -9,6 +9,7 @@ include 'logback'
 include 'retrofit2'
 include 'tomcat'
 include 'zipkin'
+include 'zookeeper'
 
 // Site generation project
 include 'site'
