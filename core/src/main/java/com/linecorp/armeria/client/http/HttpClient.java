@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.http;
 
 import java.nio.charset.Charset;
 
-import com.linecorp.armeria.client.ClientOptionDerivable;
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.http.HttpResponse;
 /**
  * An HTTP client.
  */
-public interface HttpClient extends ClientOptionDerivable<HttpClient> {
+public interface HttpClient extends ClientBuilderParams {
 
     /**
      * Sends the specified HTTP request.

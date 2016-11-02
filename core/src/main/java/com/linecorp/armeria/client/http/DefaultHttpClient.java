@@ -16,10 +16,8 @@
 
 package com.linecorp.armeria.client.http;
 
-import java.util.function.Supplier;
-
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UserClient;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -34,11 +32,12 @@ import com.linecorp.armeria.common.http.HttpResponse;
 
 import io.netty.channel.EventLoop;
 
-final class DefaultHttpClient extends UserClient<HttpClient, HttpRequest, HttpResponse> implements HttpClient {
+final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements HttpClient {
 
-    DefaultHttpClient(Client<HttpRequest, HttpResponse> delegate, Supplier<EventLoop> eventLoopSupplier,
-                      SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
-        super(delegate, eventLoopSupplier, sessionProtocol, options, endpoint);
+    DefaultHttpClient(ClientBuilderParams params,
+                      Client<HttpRequest, HttpResponse> delegate,
+                      SessionProtocol sessionProtocol, Endpoint endpoint) {
+        super(params, delegate, sessionProtocol, endpoint);
     }
 
     // For SimpleHttpClient
@@ -83,13 +82,5 @@ final class DefaultHttpClient extends UserClient<HttpClient, HttpRequest, HttpRe
 
         req.close();
         return execute(eventLoop, req);
-    }
-
-    @Override
-    protected HttpClient newInstance(
-            Client<HttpRequest, HttpResponse> delegate, Supplier<EventLoop> eventLoopSupplier,
-            SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
-
-        return new DefaultHttpClient(delegate, eventLoopSupplier, sessionProtocol, options, endpoint);
     }
 }

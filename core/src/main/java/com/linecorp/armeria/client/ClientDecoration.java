@@ -54,6 +54,10 @@ public final class ClientDecoration {
         this.entries = Collections.unmodifiableList(entries);
     }
 
+    List<Entry<?, ?>> entries() {
+        return entries;
+    }
+
     /**
      * Decorates the specified {@link Client} using the decorator with matching {@code requestType} and
      * {@code responseType}.
@@ -108,6 +112,36 @@ public final class ClientDecoration {
 
         Function<Client<? super I, ? extends O>, Client<I, O>> decorator() {
             return decorator;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            final Entry<?, ?> entry = (Entry<?, ?>) o;
+
+            if (!requestType.equals(entry.requestType)) {
+                return false;
+            }
+            if (!responseType.equals(entry.responseType)) {
+                return false;
+            }
+
+            final Function<?, ?> decorator = this.decorator;
+            return decorator == entry.decorator;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = requestType.hashCode();
+            result = 31 * result + responseType.hashCode();
+            result = 31 * result + System.identityHashCode(decorator);
+            return result;
         }
 
         @Override

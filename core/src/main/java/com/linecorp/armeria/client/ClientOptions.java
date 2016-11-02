@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -238,5 +239,12 @@ public final class ClientOptions extends AbstractOptions {
     public ClientDecoration decoration() {
         return getOrElse(DECORATION, ClientDecoration.NONE);
     }
-}
 
+    /**
+     * Returns the additional HTTP headers to send with requests. Used only when the underlying
+     * {@link SessionProtocol} is HTTP.
+     */
+    public HttpHeaders httpHeaders() {
+        return getOrElse(HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
+    }
+}

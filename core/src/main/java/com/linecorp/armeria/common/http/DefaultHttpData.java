@@ -18,6 +18,9 @@ package com.linecorp.armeria.common.http;
 
 import com.google.common.base.MoreObjects;
 
+/**
+ * Default {@link HttpData} implementation.
+ */
 public final class DefaultHttpData implements HttpData {
 
     private final byte[] data;

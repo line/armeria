@@ -19,26 +19,23 @@ package com.linecorp.armeria.client.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UserClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 
-import io.netty.channel.EventLoop;
-
-final class DefaultTHttpClient extends UserClient<THttpClient, ThriftCall, ThriftReply> implements THttpClient {
+final class DefaultTHttpClient extends UserClient<ThriftCall, ThriftReply> implements THttpClient {
 
     private final AtomicInteger nextSeqId = new AtomicInteger();
 
-    DefaultTHttpClient(Client<ThriftCall, ThriftReply> delegate, Supplier<EventLoop> eventLoopSupplier,
-                       SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
-
-        super(delegate, eventLoopSupplier, sessionProtocol, options, endpoint);
+    DefaultTHttpClient(ClientBuilderParams params,
+                       Client<ThriftCall, ThriftReply> delegate,
+                       SessionProtocol sessionProtocol, Endpoint endpoint) {
+        super(params, delegate, sessionProtocol, endpoint);
     }
 
     @Override
@@ -52,13 +49,5 @@ final class DefaultTHttpClient extends UserClient<THttpClient, ThriftCall, Thrif
         requireNonNull(serviceName, "serviceName");
         final ThriftCall call = new ThriftCall(nextSeqId.getAndIncrement(), serviceType, method, args);
         return execute(call.method(), path, serviceName, call, cause -> new ThriftReply(call.seqId(), cause));
-    }
-
-    @Override
-    protected THttpClient newInstance(
-            Client<ThriftCall, ThriftReply> delegate, Supplier<EventLoop> eventLoopSupplier,
-            SessionProtocol sessionProtocol, ClientOptions options, Endpoint endpoint) {
-
-        return new DefaultTHttpClient(delegate, eventLoopSupplier, sessionProtocol, options, endpoint);
     }
 }

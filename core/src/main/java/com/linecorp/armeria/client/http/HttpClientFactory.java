@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.DefaultClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.NonDecoratingClientFactory;
 import com.linecorp.armeria.client.SessionOptions;
@@ -113,22 +114,30 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
         final Endpoint endpoint = newEndpoint(uri);
 
         if (clientType == HttpClient.class) {
-            final HttpClient client = new DefaultHttpClient(
-                    delegate, eventLoopSupplier(), scheme.sessionProtocol(), options, endpoint);
+            final HttpClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
 
+            @SuppressWarnings("unchecked")
+            T castClient = (T) client;
+            return castClient;
+        } else if (clientType == SimpleHttpClient.class) {
+            @SuppressWarnings("deprecation")
+            final SimpleHttpClient client = new DefaultSimpleHttpClient(
+                    new DefaultClientBuilderParams(this, uri, SimpleHttpClient.class, options),
+                    newHttpClient(uri, scheme, endpoint, options, delegate));
 
             @SuppressWarnings("unchecked")
             T castClient = (T) client;
             return castClient;
         } else {
-            @SuppressWarnings("deprecation")
-            final SimpleHttpClient client = new DefaultSimpleHttpClient(new DefaultHttpClient(
-                    delegate, eventLoopSupplier(), scheme.sessionProtocol(), options, endpoint));
-
-            @SuppressWarnings("unchecked")
-            T castClient = (T) client;
-            return castClient;
+            throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
+    }
+
+    private DefaultHttpClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
+                                            Client<HttpRequest, HttpResponse> delegate) {
+        return new DefaultHttpClient(
+                new DefaultClientBuilderParams(this, uri, HttpClient.class, options),
+                delegate, scheme.sessionProtocol(), endpoint);
     }
 
     @SuppressWarnings("deprecation")

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import com.linecorp.armeria.client.ClientOptionDerivable;
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 
 /**
@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
  * client.execute("/foo", FooService.Iface.class, "foo", "arg1", "arg2", ...);
  * }</pre>
  */
-public interface THttpClient extends ClientOptionDerivable<THttpClient> {
+public interface THttpClient extends ClientBuilderParams {
     /**
      * Executes the specified Thrift call.
      *
