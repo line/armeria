@@ -24,7 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.common.util.UnitFormatter;
+import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.netty.util.Attribute;
@@ -46,10 +46,10 @@ abstract class AbstractMessageLog<T extends MessageLog>
             return false;
         }
 
-        return setStartTimeNanos();
+        return setStartTime();
     }
 
-    private boolean setStartTimeNanos() {
+    protected boolean setStartTime() {
         if (startTimeNanosSet) {
             return false;
         }
@@ -128,7 +128,7 @@ abstract class AbstractMessageLog<T extends MessageLog>
         this.cause = cause;
 
         // Handle the case where end() was called without start()
-        setStartTimeNanos();
+        setStartTime();
 
         final Iterator<Attribute<?>> attrs = attrs();
         if (attrs.hasNext()) {
@@ -194,10 +194,10 @@ abstract class AbstractMessageLog<T extends MessageLog>
         final StringBuilder buf = new StringBuilder(512);
 
         buf.append("{timeSpan=").append(startTimeNanos).append('+');
-        UnitFormatter.appendElapsed(buf, startTimeNanos, endTimeNanos);
+        TextFormatter.appendElapsed(buf, startTimeNanos, endTimeNanos);
 
         buf.append(", contentLength=");
-        UnitFormatter.appendSize(buf, contentLength);
+        TextFormatter.appendSize(buf, contentLength);
 
         appendProperties(buf);
 

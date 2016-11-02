@@ -215,6 +215,8 @@ configure(javaProjects) {
             // ZooKeeper JUnit
             dependency "org.dmonix.junit:zookeeper-junit:${ext.versionOf('zookeeper-junit')}"
 
+            // Kafka
+            dependency "org.apache.kafka:kafka-clients:${ext.versionOf('kafka')}"
         }
     }
 
