@@ -245,4 +245,13 @@ public final class Endpoint {
     public String toString() {
         return "Endpoint(" + authority() + ')';
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Endpoint) {
+            Endpoint anotherEndPoint = (Endpoint) obj;
+            return authority().equals(anotherEndPoint.authority()) && (weight() == anotherEndPoint.weight());
+        }
+        return false;
+    }
 }

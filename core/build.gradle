@@ -4,7 +4,7 @@ dependencies {
     testCompile 'com.google.guava:guava-testlib'
 
     // Jackson
-    [ 'jackson-core', 'jackson-annotations', 'jackson-databind' ].each {
+    ['jackson-core', 'jackson-annotations', 'jackson-databind'].each {
         compile "com.fasterxml.jackson.core:$it"
     }
 
@@ -12,7 +12,7 @@ dependencies {
     compile 'io.dropwizard.metrics:metrics-core'
 
     // Netty
-    [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
+    ['netty-transport', 'netty-codec-http2', 'netty-resolver-dns'].each {
         compile "io.netty:$it"
     }
     compile "io.netty:netty-transport-native-epoll:${versionOf('netty')}:linux-x86_64"
@@ -27,6 +27,9 @@ dependencies {
 
     // Thrift
     compile 'org.apache.thrift:libthrift'
+
+    //zookeeper
+    compile  "org.apache.zookeeper:zookeeper:${versionOf('zookeeper')}"
 
     // Jetty, for testing TServlet interoperability.
     testCompile 'org.eclipse.jetty:jetty-webapp'

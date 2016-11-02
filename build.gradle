@@ -237,6 +237,7 @@ configure(javaProjects) {
         testCompile 'org.apache.httpcomponents:httpclient'
         testCompile 'net.javacrumbs.json-unit:json-unit'
         testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
+        testCompile 'org.dmonix.junit:zookeeper-junit:${versionOf(\'zookeeper-junit\')}'
     }
 
     // Copy test resources to the same directory with test classes, because some tests such as
