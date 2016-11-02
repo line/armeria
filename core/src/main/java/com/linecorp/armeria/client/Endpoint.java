@@ -254,4 +254,9 @@ public final class Endpoint {
         }
         return false;
     }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
 }

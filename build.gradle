@@ -154,6 +154,12 @@ configure(javaProjects) {
             // Mockito
             dependency "org.mockito:mockito-core:${ext.versionOf('mockito')}"
 
+            //zookeeper
+            dependency "org.apache.zookeeper:zookeeper:${ext.versionOf('zookeeper')}"
+
+            //zookeeper-junit
+            dependency "org.dmonix.junit:zookeeper-junit:${ext.versionOf('zookeeper-junit')}"
+
             // Netty
             dependencySet(group: 'io.netty', version: ext.versionOf('netty')) {
                 entry 'netty-transport'
@@ -237,7 +243,7 @@ configure(javaProjects) {
         testCompile 'org.apache.httpcomponents:httpclient'
         testCompile 'net.javacrumbs.json-unit:json-unit'
         testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
-        testCompile 'org.dmonix.junit:zookeeper-junit:${versionOf(\'zookeeper-junit\')}'
+        testCompile  "org.dmonix.junit:zookeeper-junit"
     }
 
     // Copy test resources to the same directory with test classes, because some tests such as

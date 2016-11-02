@@ -20,9 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
 import org.apache.zookeeper.AsyncCallback.StatCallback;
@@ -39,7 +37,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
- *  a zookeeper endpoint group implementation
+ *  a zookeeper {@link EndpointGroup} implementation .
+ *  it will get the {@link EndpointGroup} information from a zookeeper zNode, any update to it will
+ *  reflect asynchronously to the system
  */
 public class ZookeeperEndpointGroup implements EndpointGroup, Watcher, StatCallback {
 
@@ -49,19 +49,26 @@ public class ZookeeperEndpointGroup implements EndpointGroup, Watcher, StatCallb
     private String znode;
     private List<Endpoint> endpointList;
     private ZooKeeper zooKeeper;
-    byte prevData[];
+    byte[] prevData;
     Function<byte[], List<Endpoint>> nodeValueToEndpointList;
 
     final CountDownLatch connectionLatch = new CountDownLatch(1);
 
-    public ZookeeperEndpointGroup(String hostPort, String znode, int sessionTimeout,
+    /**
+     * create a zookeeper endpoint group
+     * @param hostPort zookeeper hostPort eg. localhost:2181
+     * @param zNode a zNode path eg. /groups/productionGroups
+     * @param sessionTimeout   zookeeper session timeout
+     * @param nodeValueToEndpointList a function to convert zNode value to a List of {@link Endpoint}
+     */
+    public ZookeeperEndpointGroup(String hostPort, String zNode, int sessionTimeout,
                                   Function<byte[], List<Endpoint>> nodeValueToEndpointList) {
 
         requireNonNull(hostPort);
-        requireNonNull(znode);
+        requireNonNull(zNode);
         requireNonNull(nodeValueToEndpointList);
         this.hostPort = hostPort;
-        this.znode = znode;
+        this.znode = zNode;
         this.nodeValueToEndpointList = nodeValueToEndpointList;
         try {
             zooKeeper = new ZooKeeper(hostPort, sessionTimeout, event -> {
@@ -72,17 +79,19 @@ public class ZookeeperEndpointGroup implements EndpointGroup, Watcher, StatCallb
             });
             connectionLatch.await();
 
-            Stat stat = zooKeeper.exists(znode, this);
+            Stat stat = zooKeeper.exists(zNode, this);
             byte[] nodeData;
             if (stat != null) {
-                nodeData = zooKeeper.getData(znode, false, null);
+                nodeData = zooKeeper.getData(zNode, false, null);
                 endpointList = nodeValueToEndpointList.apply(nodeData);
             }
 
         } catch (IOException e) {
             logger.error("error occurred while connecting zooKeeper " + e.getMessage());
             e.printStackTrace();
-        } catch (InterruptedException ignored) {} catch (KeeperException ke) {
+        } catch (InterruptedException ignored) {
+            //ignored
+        } catch (KeeperException ke) {
             logger.error("error occurred while reading data from zookeeper ");
         }
 
@@ -126,7 +135,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup, Watcher, StatCallb
                 return;
         }
 
-        byte nodeData[] = null;
+        byte[] nodeData = null;
         if (exists) {
             try {
                 nodeData = zooKeeper.getData(znode, false, null);
@@ -136,8 +145,8 @@ public class ZookeeperEndpointGroup implements EndpointGroup, Watcher, StatCallb
                 return;
             }
         }
-        if ((nodeData == null && nodeData != prevData)
-            || (nodeData != null && !Arrays.equals(prevData, nodeData))) {
+        if ((nodeData == null && nodeData != prevData) ||
+            (nodeData != null && !Arrays.equals(prevData, nodeData))) {
             prevData = nodeData;
             this.endpointList = nodeValueToEndpointList.apply(prevData);
         }

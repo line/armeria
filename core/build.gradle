@@ -29,7 +29,7 @@ dependencies {
     compile 'org.apache.thrift:libthrift'
 
     //zookeeper
-    compile  "org.apache.zookeeper:zookeeper:${versionOf('zookeeper')}"
+    compile  'org.apache.zookeeper:zookeeper'
 
     // Jetty, for testing TServlet interoperability.
     testCompile 'org.eclipse.jetty:jetty-webapp'
