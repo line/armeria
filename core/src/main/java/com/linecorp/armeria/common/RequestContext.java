@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -96,9 +97,9 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link PushHandle#close()}, which can be done using a {@code try-finally} block:
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-finally} block:
      * <pre>{@code
-     * try (PushHandler ignored = RequestContext.push(ctx)) {
+     * try (SafeCloseable ignored = RequestContext.push(ctx)) {
      *     ...
      * }
      * }</pre>
@@ -108,15 +109,15 @@ public interface RequestContext extends AttributeMap {
      *
      * <p>NOTE: In case of re-entrance, the callbacks will never run.
      */
-    static PushHandle push(RequestContext ctx) {
+    static SafeCloseable push(RequestContext ctx) {
         return push(ctx, true);
     }
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link PushHandle#close()}, which can be done using a {@code try-finally} block:
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-finally} block:
      * <pre>{@code
-     * try (PushHandler ignored = RequestContext.push(ctx, true)) {
+     * try (PushHandle ignored = RequestContext.push(ctx, true)) {
      *     ...
      * }
      * }</pre>
@@ -130,7 +131,7 @@ public interface RequestContext extends AttributeMap {
      *                     If {@code false}, no callbacks will be executed.
      *                     NOTE: In case of re-entrance, the callbacks will never run.
      */
-    static PushHandle push(RequestContext ctx, boolean runCallbacks) {
+    static SafeCloseable push(RequestContext ctx, boolean runCallbacks) {
         final RequestContext oldCtx = RequestContextThreadLocal.getAndSet(ctx);
         if (oldCtx == ctx) {
             // Reentrance
@@ -413,16 +414,5 @@ public interface RequestContext extends AttributeMap {
 
         LoggerFactory.getLogger(RequestContext.class).warn(
                 "Failed to reject a completed promise ({}) with {}", promise, cause, cause);
-    }
-
-    /**
-     * An {@link AutoCloseable} that automatically pops the context stack when it is closed.
-     *
-     * @see #push(RequestContext)
-     */
-    @FunctionalInterface
-    interface PushHandle extends AutoCloseable {
-        @Override
-        void close();
     }
 }

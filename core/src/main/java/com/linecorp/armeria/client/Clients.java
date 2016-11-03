@@ -22,6 +22,11 @@ import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.util.SafeCloseable;
+
+import io.netty.util.AsciiString;
+
 /**
  * Creates a new client that connects to a specified {@link URI}.
  */
@@ -242,6 +247,88 @@ public final class Clients {
         }
 
         throw new IllegalArgumentException("derivation not supported by: " + client.getClass().getName());
+    }
+
+    /**
+     * Sets the specified HTTP header in a thread-local variable so that the header is sent by the client call
+     * made from the current thread. Use the `try-resources-finally` block with the returned
+     * {@link SafeCloseable} to unset the thread-local variable automatically:
+     * <pre>{@code
+     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+     *
+     * try (SafeCloseable ignored = withHttpHeader(AUTHORIZATION, myCredential)) {
+     *     client.executeSomething(..);
+     * }
+     * }</pre>
+     * You can also nest the header manipulation:
+     * <pre>{@code
+     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     *
+     * try (SafeCloseable ignored = withHttpHeader(USER_AGENT, myAgent)) {
+     *     for (String secret : secrets) {
+     *         try (SafeCloseable ignored2 = withHttpHeader(AUTHORIZATION, secret)) {
+     *             // Both USER_AGENT and AUTHORIZATION will be set.
+     *             client.executeSomething(..);
+     *         }
+     *     }
+     * }
+     * }</pre>
+     *
+     * @see #withHttpHeaders(Function)
+     */
+    public static SafeCloseable withHttpHeader(AsciiString name, String value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        return withHttpHeaders(headers -> headers.set(name, value));
+    }
+
+    /**
+     * Sets the specified HTTP header manipulating function in a thread-local variable so that the manipulated
+     * headers are sent by the client call made from the current thread. Use the `try-resources-finally` block
+     * with the returned {@link SafeCloseable} to unset the thread-local variable automatically:
+     * <pre>{@code
+     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     *
+     * try (SafeCloseable ignored = withHttpHeaders(headers -> {
+     *     headers.set(HttpHeaders.AUTHORIZATION, myCredential)
+     *            .set(HttpHeaders.USER_AGENT, myAgent);
+     * }) {
+     *     client.executeSomething(..);
+     * }
+     * }</pre>
+     * You can also nest the header manipulation:
+     * <pre>{@code
+     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     *
+     * try (SafeCloseable ignored = withHttpHeaders(h -> h.set(USER_AGENT, myAgent)) {
+     *     for (String secret : secrets) {
+     *         try (SafeCloseable ignored2 = withHttpHeaders(h -> h.set(AUTHORIZATION, secret)) {
+     *             // Both USER_AGENT and AUTHORIZATION will be set.
+     *             client.executeSomething(..);
+     *         }
+     *     }
+     * }
+     * }</pre>
+     *
+     * @see #withHttpHeader(AsciiString, String)
+     */
+    public static SafeCloseable withHttpHeaders(Function<HttpHeaders, HttpHeaders> headerManipulator) {
+        requireNonNull(headerManipulator, "headerManipulator");
+
+        final Function<HttpHeaders, HttpHeaders> oldManipulator =
+                UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.get();
+
+
+        if (oldManipulator != null) {
+            UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.set(oldManipulator.andThen(headerManipulator));
+            return () -> UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.set(oldManipulator);
+        } else {
+            UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.set(headerManipulator);
+            return UserClient.THREAD_LOCAL_HEADER_MANIPULATOR::remove;
+        }
     }
 
     private Clients() {}

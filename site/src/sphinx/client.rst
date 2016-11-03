@@ -9,3 +9,4 @@ Writing a client
     client-basics
     client-http
     client-http-retrofit
+    client-thrift-custom-http-headers
