@@ -32,6 +32,8 @@ import org.apache.thrift.TBaseProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.internal.Types;
+
 /**
  * Provides the metadata of a Thrift service interface or implementation.
  */
@@ -65,7 +67,7 @@ public final class ThriftServiceMetadata {
     }
 
     private Set<Class<?>> init(Object implementation) {
-        return init(implementation, getAllInterfaces(implementation.getClass()));
+        return init(implementation, Types.getAllInterfaces(implementation.getClass()));
     }
 
     private Set<Class<?>> init(Object implementation, Iterable<Class<?>> candidateInterfaces) {
@@ -102,24 +104,6 @@ public final class ThriftServiceMetadata {
         }
 
         return Collections.unmodifiableSet(interfaces);
-    }
-
-    private static Set<Class<?>> getAllInterfaces(Class<?> cls) {
-        final Set<Class<?>> interfacesFound = new HashSet<>();
-        getAllInterfaces(cls, interfacesFound);
-        return interfacesFound;
-    }
-
-    private static void getAllInterfaces(Class<?> cls, Set<Class<?>> interfacesFound) {
-        while (cls != null) {
-            final Class<?>[] interfaces = cls.getInterfaces();
-            for (final Class<?> i : interfaces) {
-                if (interfacesFound.add(i)) {
-                    getAllInterfaces(i, interfacesFound);
-                }
-            }
-            cls = cls.getSuperclass();
-        }
     }
 
     private static Map<String, ProcessFunction<?, ?>> getThriftProcessMap(Object service, Class<?> iface) {
