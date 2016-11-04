@@ -18,16 +18,21 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetAddress;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Optional;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
@@ -37,14 +42,18 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.dns.DatagramDnsResponseDecoder;
+import io.netty.handler.codec.dns.DefaultDnsPtrRecord;
+import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.DefaultDnsRecordDecoder;
+import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.NameResolver;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
-import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
@@ -52,6 +61,42 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * A skeletal {@link ClientFactory} that does not decorate other {@link ClientFactory}.
  */
 public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
+
+    private static final Logger logger = LoggerFactory.getLogger(NonDecoratingClientFactory.class);
+
+    static {
+        // TODO(trustin): Remove this hack once Netty 4.1.7.Final is out.
+        // See https://github.com/netty/netty/pull/5923
+        try {
+            final Field decoder = DnsNameResolver.class.getDeclaredField("DECODER");
+            final Field modifiers = Field.class.getDeclaredField("modifiers");
+
+            // Trick the JDK by changing Field.modifier so that it allows updating a final field.
+            modifiers.setAccessible(true);
+            modifiers.setInt(decoder, decoder.getModifiers() & ~Modifier.FINAL);
+
+            // Set DnsNameResolver.DECODER to a new decoder with a bug fix.
+            decoder.setAccessible(true);
+            decoder.set(null, new DatagramDnsResponseDecoder(new DefaultDnsRecordDecoder() {
+                @Override
+                protected DnsRecord decodeRecord(
+                        String name, DnsRecordType type, int dnsClass, long timeToLive,
+                        ByteBuf in, int offset, int length) throws Exception {
+
+                    if (type == DnsRecordType.PTR) {
+                        return new DefaultDnsPtrRecord(
+                                name, dnsClass, timeToLive,
+                                decodeName0(in.duplicate().setIndex(offset, offset + length)));
+                    }
+                    return new DefaultDnsRawRecord(
+                            name, type, dnsClass, timeToLive,
+                            in.retainedDuplicate().setIndex(offset, offset + length));
+                }
+            }));
+        } catch (Exception e) {
+            logger.warn("Failed to replace DnsNameResolver.DECODER. Some DNS resolutions may fail.", e);
+        }
+    }
 
     private enum TransportType {
         NIO, EPOLL
@@ -108,7 +153,8 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
         baseBootstrap.channel(channelType());
         baseBootstrap.resolver(
                 options.addressResolverGroup()
-                       .orElseGet(DnsAddressResolverGroup5657::new));
+                       .orElseGet(() -> new DnsAddressResolverGroup(datagramChannelType(),
+                                                                    DnsServerAddresses.defaultAddresses())));
 
         baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
                              ConvertUtils.safeLongToInt(options.connectTimeoutMillis()));
@@ -169,30 +215,6 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
     public void close() {
         if (closeEventLoopGroup) {
             eventLoopGroup.shutdownGracefully().syncUninterruptibly();
-        }
-    }
-
-    private static class DnsAddressResolverGroup5657 extends DnsAddressResolverGroup {
-
-        DnsAddressResolverGroup5657() {
-            super(datagramChannelType(), DnsServerAddresses.defaultAddresses());
-        }
-
-        @Override
-        protected NameResolver<InetAddress> newNameResolver(
-                EventLoop eventLoop, ChannelFactory<? extends DatagramChannel> channelFactory,
-                DnsServerAddresses nameServerAddresses) throws Exception {
-
-            final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
-            builder.channelFactory(channelFactory);
-            builder.nameServerAddresses(nameServerAddresses);
-            if (Boolean.getBoolean("java.net.preferIPv4Stack")) {
-                // Resolve IPv4 addresses only when -Djava.net.preferIPv4Stack is enabled,
-                // because JDK will fail or refuse connecting to an IPv6 address at all.
-                // See: https://github.com/netty/netty/issues/5657
-                builder.resolvedAddressTypes(InternetProtocolFamily.IPv4);
-            }
-            return builder.build();
         }
     }
 }
