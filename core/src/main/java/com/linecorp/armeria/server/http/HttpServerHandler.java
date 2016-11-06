@@ -36,7 +36,6 @@ import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
@@ -50,6 +49,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.http.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.http.Http1ObjectEncoder;
@@ -287,7 +287,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final RequestLogBuilder reqLogBuilder = reqCtx.requestLogBuilder();
         final HttpResponse res;
-        try (PushHandle ignored = RequestContext.push(reqCtx)) {
+        try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
             req.init(reqCtx);
             res = service.serve(reqCtx, req);
         } catch (Throwable cause) {

@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -222,7 +223,7 @@ public class RequestContextExportingAppenderTest {
 
         MDC.put("some-prop", "some-value");
         final ServiceRequestContext ctx = newServiceContext("/foo");
-        try (RequestContext.PushHandle ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
             assertThat(mdc).containsEntry("req.direction", "INBOUND")
@@ -243,7 +244,7 @@ public class RequestContextExportingAppenderTest {
         });
 
         final ServiceRequestContext ctx = newServiceContext("/foo");
-        try (RequestContext.PushHandle ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
             assertThat(mdc).containsEntry("local.host", "server.com")
@@ -274,7 +275,7 @@ public class RequestContextExportingAppenderTest {
         });
 
         final ServiceRequestContext ctx = newServiceContext("/foo");
-        try (RequestContext.PushHandle ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final RequestLogBuilder req = ctx.requestLogBuilder();
             final ResponseLogBuilder res = ctx.responseLogBuilder();
             req.end();
@@ -319,7 +320,7 @@ public class RequestContextExportingAppenderTest {
         });
 
         final ServiceRequestContext ctx = newServiceContext("/foo");
-        try (RequestContext.PushHandle ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final RequestLogBuilder req = ctx.requestLogBuilder();
             final ResponseLogBuilder res = ctx.responseLogBuilder();
             req.serializationFormat(SerializationFormat.THRIFT_BINARY);
@@ -413,7 +414,7 @@ public class RequestContextExportingAppenderTest {
         });
 
         final ClientRequestContext ctx = newClientContext("/foo");
-        try (RequestContext.PushHandle ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
             assertThat(mdc).containsEntry("local.host", "client.com")
@@ -449,7 +450,7 @@ public class RequestContextExportingAppenderTest {
         });
 
         final ClientRequestContext ctx = newClientContext("/bar");
-        try (RequestContext.PushHandle ignored = RequestContext.push(ctx)) {
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final RequestLogBuilder req = ctx.requestLogBuilder();
             final ResponseLogBuilder res = ctx.responseLogBuilder();
             req.serializationFormat(SerializationFormat.THRIFT_BINARY);

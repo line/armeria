@@ -20,39 +20,54 @@ import static com.linecorp.armeria.common.util.Functions.voidFunction;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 
-import com.linecorp.armeria.client.ClientOptionDerivable;
-import com.linecorp.armeria.client.ClientOptionValue;
+import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
 
-final class THttpClientInvocationHandler implements InvocationHandler {
+final class THttpClientInvocationHandler implements InvocationHandler, ClientBuilderParams {
 
     private static final Object[] NO_ARGS = new Object[0];
 
+    private final ClientBuilderParams params;
     private final THttpClient thriftClient;
     private final String path;
     private final String fragment;
-    private final Class<?> clientType;
 
-    THttpClientInvocationHandler(THttpClient thriftClient, String path, String fragment, Class<?> clientType) {
+    THttpClientInvocationHandler(ClientBuilderParams params,
+                                 THttpClient thriftClient, String path, String fragment) {
+        this.params = params;
         this.thriftClient = thriftClient;
         this.path = path;
         this.fragment = fragment;
-        this.clientType = clientType;
     }
 
-    private THttpClientInvocationHandler(THttpClientInvocationHandler handler, THttpClient thriftClient) {
-        this.thriftClient = thriftClient;
-        path = handler.path;
-        fragment = handler.fragment;
-        clientType = handler.clientType;
+    @Override
+    public ClientFactory factory() {
+        return params.factory();
+    }
+
+    @Override
+    public URI uri() {
+        return params.uri();
+    }
+
+    @Override
+    public Class<?> clientType() {
+        return params.clientType();
+    }
+
+    @Override
+    public ClientOptions options() {
+        return params.options();
     }
 
     @Override
@@ -63,11 +78,7 @@ final class THttpClientInvocationHandler implements InvocationHandler {
             return invokeObjectMethod(proxy, method, args);
         }
 
-        if (declaringClass == ClientOptionDerivable.class) {
-            return invokeClientOptionDerivableMethod(method, args);
-        }
-
-        assert declaringClass == clientType;
+        assert declaringClass == params.clientType();
         // Handle the methods in the interface.
         return invokeClientMethod(method, args);
     }
@@ -77,39 +88,13 @@ final class THttpClientInvocationHandler implements InvocationHandler {
 
         switch (methodName) {
         case "toString":
-            return clientType.getSimpleName() + '(' + path + ')';
+            return params.clientType().getSimpleName() + '(' + path + ')';
         case "hashCode":
             return System.identityHashCode(proxy);
         case "equals":
             return proxy == args[0];
         default:
             throw new Error("unknown method: " + methodName);
-        }
-    }
-
-    private Object invokeClientOptionDerivableMethod(Method method, Object[] args) {
-        final String methodName = method.getName();
-        switch (methodName) {
-            case "withOptions":
-                final Object arg = args[0];
-                if (arg instanceof Iterable) {
-                    @SuppressWarnings("unchecked")
-                    final Iterable<ClientOptionValue<?>> options = (Iterable<ClientOptionValue<?>>) arg;
-                    return Proxy.newProxyInstance(
-                            clientType.getClassLoader(),
-                            new Class<?>[] { clientType, ClientOptionDerivable.class },
-                            new THttpClientInvocationHandler(this, thriftClient.withOptions(options)));
-                } else if (arg instanceof ClientOptionValue[]) {
-                    final ClientOptionValue<?>[] options = (ClientOptionValue<?>[]) arg;
-                    return Proxy.newProxyInstance(
-                            clientType.getClassLoader(),
-                            new Class<?>[] { clientType, ClientOptionDerivable.class },
-                            new THttpClientInvocationHandler(this, thriftClient.withOptions(options)));
-                } else {
-                    throw new Error("unknown argument: " + arg);
-                }
-            default:
-                throw new Error("unknown method: " + methodName);
         }
     }
 
@@ -132,7 +117,7 @@ final class THttpClientInvocationHandler implements InvocationHandler {
 
         try {
             final ThriftReply reply = thriftClient.executeMultiplexed(
-                    path, clientType, fragment, method.getName(), args);
+                    path, params.clientType(), fragment, method.getName(), args);
 
             if (callback != null) {
                 reply.handle(voidFunction((result, cause) -> {
