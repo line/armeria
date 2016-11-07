@@ -373,7 +373,7 @@ public final class JettyService implements HttpService {
             }
 
             if (content.hasArray()) {
-                final int from = content.arrayOffset();
+                final int from = content.arrayOffset() + content.position();
                 out.add(HttpData.of(Arrays.copyOfRange(content.array(), from, from + length)));
                 content.position(content.position() + length);
             } else {
