@@ -55,5 +55,3 @@ hs_err_pid*
 # PDT-specific
 .buildpath
 
-
-*.ucls
