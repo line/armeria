@@ -11,13 +11,13 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
-public class DefaultNodeValueConverterTest {
+public class DefaultZkNodeValueConverterTest {
     @Rule
     public ExpectedException exceptionGrabber = ExpectedException.none();
 
     @Test
     public void convert() {
-        NodeValueConverter converter = new DefaultNodeValueConverter();
+        ZkNodeValueConverter converter = new DefaultZkNodeValueConverter();
         converter.convert("localhost:8001,localhost:8002:2,192.abc.1.2".getBytes());
         assertThat(
                 converter.convert("localhost:8001,localhost:8002:2,192.168.1.2".getBytes()),

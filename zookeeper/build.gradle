@@ -1,8 +1,9 @@
 dependencies {
     compile project(':core')
 
-    // Zookeeper
+    // ZooKeeper
     compile 'org.apache.zookeeper:zookeeper'
 
+    // ZooKeeper Junit
     testCompile "org.dmonix.junit:zookeeper-junit"
 }

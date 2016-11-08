@@ -206,10 +206,10 @@ configure(javaProjects) {
                 entry 'brave-http'
             }
 
-            // Zookeeper
+            // ZooKeeper
             dependency "org.apache.zookeeper:zookeeper:${ext.versionOf('zookeeper')}"
 
-            // Zookeeper Junit
+            // ZooKeeper Junit
             dependency "org.dmonix.junit:zookeeper-junit:${ext.versionOf('zookeeper-junit')}"
 
         }

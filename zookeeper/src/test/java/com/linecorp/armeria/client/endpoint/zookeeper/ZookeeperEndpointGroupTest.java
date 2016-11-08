@@ -20,7 +20,6 @@ import static org.junit.Assert.assertEquals;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
@@ -29,6 +28,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -40,9 +42,9 @@ import zookeeperjunit.ZooKeeperAssert;
 public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert {
     private static final Duration duration = Duration.ofSeconds(5);
     private static final ZKInstance zkInstance = ZKFactory.apply().create();
-    private String zNode = "/testEndPoints";
+    private static final String zNode = "/testEndPoints";
     private ZookeeperEndpointGroup zookeeperEndpointGroup;
-    private static ArrayList<Endpoint> initializedEndpointGroupList = new ArrayList<>();
+    private static final ArrayList<Endpoint> initializedEndpointGroupList = new ArrayList<>();
 
     @Override
     public ZKInstance instance() {
@@ -65,20 +67,18 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
     public static void stop() {
         try {
             zkInstance.stop().ready(duration);
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     @Before
     public void connectZk() {
-        createOrUpdateZNode(zNode, endPointListTobyteArray(initializedEndpointGroupList));
+        createOrUpdateZNode(endpointListToByteArray(initializedEndpointGroupList));
         //forcing a get on the Option as we should be connected at this stage
         zookeeperEndpointGroup = new ZookeeperEndpointGroup(
                 zkInstance.connectString().get(), zNode, 3000,
-                new DefaultNodeValueConverter());
+                new DefaultZkNodeValueConverter());
     }
 
     @After
@@ -92,37 +92,36 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
 
     @Test
     public void testUpdateEndpointGroup() {
-        ArrayList<Endpoint> expected = new ArrayList<>();
-        expected.add(Endpoint.of("127.0.0.1", 8001, 2));
-        expected.add(Endpoint.of("127.0.0.1", 8002, 3));
-
-        createOrUpdateZNode(zNode, endPointListTobyteArray(expected));
-        assertEquals(zookeeperEndpointGroup.endpoints(), expected);
+        List<Endpoint> expected = ImmutableList.of(Endpoint.of("127.0.0.1", 8001, 2),
+                                                   Endpoint.of("127.0.0.1", 8002, 3));
+        createOrUpdateZNode(endpointListToByteArray(expected));
+        assertEquals(expected, zookeeperEndpointGroup.endpoints());
     }
 
     @Test
     public void testGetEndpointGroup() {
-        assertEquals(zookeeperEndpointGroup.endpoints(), initializedEndpointGroupList);
+        assertEquals(initializedEndpointGroupList, zookeeperEndpointGroup.endpoints());
     }
 
-    private void createOrUpdateZNode(String znode, byte[] nodeValue) {
+    private void createOrUpdateZNode(byte[] nodeValue) {
         zkInstance.connect().map(closeableZooKeeper -> {
-            if (closeableZooKeeper.exists(this.zNode).get()) {
-                return closeableZooKeeper.setData(znode, nodeValue,
-                                                  closeableZooKeeper.exists(this.zNode, false).getVersion());
+            if (closeableZooKeeper.exists(zNode).get()) {
+                return closeableZooKeeper.setData(zNode, nodeValue,
+                                                  closeableZooKeeper.exists(zNode,
+                                                                            false).getVersion());
             }
-            return closeableZooKeeper.create(znode, nodeValue, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+            return closeableZooKeeper.create(zNode, nodeValue, ZooDefs.Ids.OPEN_ACL_UNSAFE,
                                              CreateMode.PERSISTENT);
 
         });
-        assertExists(this.zNode);
+        assertExists(zNode);
     }
 
-    private static byte[] endPointListTobyteArray(List<Endpoint> endpointList) {
+    private static byte[] endpointListToByteArray(List<Endpoint> endpointList) {
         return endpointList.stream().map(
-                endPointA -> (endPointA.authority() + ":" + endPointA.weight())).reduce(
-                (endPointAStr, endPointBStr) -> (
-                        endPointAStr +
-                        "," + endPointBStr)).orElse("").getBytes();
+                endPointA -> (endPointA.authority() + ':' + endPointA.weight())
+        ).reduce(
+                (endPointAStr, endPointBStr) -> (endPointAStr + ',' + endPointBStr)
+        ).orElse("").getBytes(Charsets.UTF_8);
     }
 }

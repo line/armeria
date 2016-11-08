@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.AsyncCallback.StatCallback;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -33,6 +32,7 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -49,76 +49,73 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
     private static final Logger logger = LoggerFactory.getLogger(ZookeeperEndpointGroup.class);
 
     private final String zkConnectionStr;
-    private final String znode;
+    private final String zNode;
     private List<Endpoint> endpointList;
-    private ZooKeeper zooKeeper;
+    private final ZooKeeper zooKeeper;
     private byte[] prevData;
-    private final NodeValueConverter nodeValueToEndpointList;
+    private final ZkNodeValueConverter converter;
 
     private final CountDownLatch connectionLatch = new CountDownLatch(1);
 
     /**
      * Creates a {@link ZookeeperEndpointGroup}.
      * @param zkConnectionStr A connection string containing a comma
-     *          separated list of host:port pairs,each corresponding to a ZooKeeper server
+     *                          separated list of host:port pairs,each corresponding to a ZooKeeper server
      * @param zNode a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout   Zookeeper session timeout in milliseconds
      * @param converter a function to convert zNode value to a List of {@link Endpoint}
      */
     public ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout,
-                                  NodeValueConverter converter) {
+                                  ZkNodeValueConverter converter) {
 
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
-        this.znode = requireNonNull(zNode, "zNode");
-        this.nodeValueToEndpointList = requireNonNull(converter, "nodeValueToEndpointList");
+        this.zNode = requireNonNull(zNode, "zNode");
+        this.converter = requireNonNull(converter, "converter");
         try {
             zooKeeper = new ZooKeeper(zkConnectionStr, sessionTimeout, event -> {
                 if (event.getState() == KeeperState.SyncConnected) {
                     connectionLatch.countDown();
                 }
-
             });
             connectionLatch.await();
             Stat stat = zooKeeper.exists(zNode, new ZkWatcher());
             byte[] nodeData;
             if (stat != null) {
                 nodeData = zooKeeper.getData(zNode, false, null);
-                endpointList = nodeValueToEndpointList.convert(nodeData);
+                endpointList = this.converter.convert(nodeData);
             }
-
         } catch (Exception e) {
-            throw new EndpointGroupException("failed to connect to ZooKeeper:" + zkConnectionStr);
+            throw new EndpointGroupException(
+                    "failed to connect to ZooKeeper:" + zkConnectionStr + " with error:" + e.getMessage());
         }
     }
 
     /**
-     * Create a Zookeeper endpoint group with a {@link DefaultNodeValueConverter}.
-     * @param zkConnectionStr  A connection string containing a comma separated list
-     *        of host:port pairs,each corresponding to a ZooKeeper server
+     * Create a Zookeeper endpoint group with a {@link DefaultZkNodeValueConverter}.
+     * @param zkConnectionStr A connection string containing a comma
+     *                          separated list of host:port pairs,each corresponding to a ZooKeeper server
      * @param zNode a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout   Zookeeper session timeout in milliseconds
      */
     public ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout) {
-        this(zkConnectionStr, zNode, sessionTimeout, new DefaultNodeValueConverter());
+        this(zkConnectionStr, zNode, sessionTimeout, new DefaultZkNodeValueConverter());
     }
 
     @Override
     public List<Endpoint> endpoints() {
-        return this.endpointList;
-
+        return endpointList;
     }
 
-    public class ZkWatcher implements Watcher, StatCallback {
+    final class ZkWatcher implements Watcher, StatCallback {
         @Override
         public void process(WatchedEvent event) {
             String path = event.getPath();
             if (event.getType() != Event.EventType.None) {
-                if (path != null && path.equals(znode)) {
+                if (path != null && path.equals(zNode)) {
                     // Something has changed on the node, let's find out
-                    zooKeeper.exists(znode, true, this, null);
+                    zooKeeper.exists(zNode, true, this, null);
                 }
             }
-
         }
 
         @Override
@@ -137,35 +134,43 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                     return;
                 default:
                     // Retry errors
-                    zooKeeper.exists(znode, true, this, null);
+                    zooKeeper.exists(zNode, true, this, null);
                     return;
             }
 
             byte[] nodeData = null;
             if (exists) {
                 try {
-                    nodeData = zooKeeper.getData(znode, false, null);
-                } catch (KeeperException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
+                    nodeData = zooKeeper.getData(zNode, false, null);
+                } catch (Exception e) {
+                    logger.warn("error to get zNode data:" + e.getMessage());
                     return;
                 }
             }
-            if ((nodeData == null && nodeData != prevData) ||
-                (nodeData != null && !Arrays.equals(prevData, nodeData))) {
+            if (nodeData == null && nodeData != prevData ||
+                nodeData != null && !Arrays.equals(prevData, nodeData)) {
                 prevData = nodeData;
-                ZookeeperEndpointGroup.this.endpointList = nodeValueToEndpointList.convert(prevData);
+                try {
+                    endpointList = converter.convert(prevData);
+                } catch (IllegalArgumentException exception) {
+                    logger.warn("error to convert zNode value to EndpointGroup:" + exception.getMessage() +
+                                ",invalid value:" + new String(prevData, Charsets.UTF_8));
+                }
             }
         }
     }
 
     /**
-     *  Close the under Zookeeper connection.
-     * @throws Exception Closing exception
+     *  Closes the underlying Zookeeper connection.
+     * @throws EndpointGroupException Closing exception
      */
-    public void close() throws Exception {
-        zooKeeper.close();
-
+    public void close() throws EndpointGroupException {
+        try {
+            zooKeeper.close();
+        } catch (InterruptedException e) {
+            throw new EndpointGroupException(
+                    "error to close underlying ZooKeeper connection :" + e.getMessage());
+        }
     }
 
     @Override
