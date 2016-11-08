@@ -43,12 +43,12 @@ import org.mockito.junit.MockitoRule;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.logging.ResponseLogBuilder;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -181,7 +181,7 @@ public class RequestContextTest {
     @Test
     public void contextPropagationSameContextAlreadySet() {
         final RequestContext context = createContext();
-        try (PushHandle ignored = RequestContext.push(context, false)) {
+        try (SafeCloseable ignored = RequestContext.push(context, false)) {
             context.makeContextAware(() -> {
                 assertEquals(context, RequestContext.current());
                 // Context was already correct, so handlers were not run (in real code they would already be
@@ -196,7 +196,7 @@ public class RequestContextTest {
         final RequestContext context = createContext();
         final RequestContext context2 = createContext();
 
-        try (PushHandle ignored = RequestContext.push(context2)) {
+        try (SafeCloseable ignored = RequestContext.push(context2)) {
             thrown.expect(IllegalStateException.class);
             context.makeContextAware((Runnable) Assert::fail).run();
         }

@@ -30,8 +30,8 @@ import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContext.PushHandle;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -237,7 +237,7 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
                 }
             }
 
-            try (PushHandle ignored = RequestContext.push(ctx)) {
+            try (SafeCloseable ignored = RequestContext.push(ctx)) {
                 try {
                     final O actualRes = delegate().execute(ctx, req);
                     actualRes.closeFuture().whenCompleteAsync((unused, cause) -> {

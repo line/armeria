@@ -19,6 +19,8 @@ package com.linecorp.armeria.common;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 
+import com.linecorp.armeria.common.util.SafeCloseable;
+
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
@@ -44,7 +46,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final <T> Callable<T> makeContextAware(Callable<T> callable) {
         return () -> {
-            try (PushHandle ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
                 return callable.call();
             }
         };
@@ -53,7 +55,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     @Override
     public final Runnable makeContextAware(Runnable runnable) {
         return () -> {
-            try (PushHandle ignored = propagateContextIfNotPresent()) {
+            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
                 runnable.run();
             }
         };
@@ -78,12 +80,12 @@ public abstract class AbstractRequestContext implements RequestContext {
     private <T extends Future<?>> void invokeOperationComplete(
             GenericFutureListener<T> listener, T future) throws Exception {
 
-        try (PushHandle ignored = propagateContextIfNotPresent()) {
+        try (SafeCloseable ignored = propagateContextIfNotPresent()) {
             listener.operationComplete(future);
         }
     }
 
-    private PushHandle propagateContextIfNotPresent() {
+    private SafeCloseable propagateContextIfNotPresent() {
         return RequestContext.mapCurrent(currentContext -> {
             if (currentContext != this) {
                 throw new IllegalStateException(
