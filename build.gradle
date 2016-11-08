@@ -154,12 +154,6 @@ configure(javaProjects) {
             // Mockito
             dependency "org.mockito:mockito-core:${ext.versionOf('mockito')}"
 
-            //zookeeper
-            dependency "org.apache.zookeeper:zookeeper:${ext.versionOf('zookeeper')}"
-
-            //zookeeper-junit
-            dependency "org.dmonix.junit:zookeeper-junit:${ext.versionOf('zookeeper-junit')}"
-
             // Netty
             dependencySet(group: 'io.netty', version: ext.versionOf('netty')) {
                 entry 'netty-transport'
@@ -211,6 +205,13 @@ configure(javaProjects) {
                 entry 'brave-core'
                 entry 'brave-http'
             }
+
+            // Zookeeper
+            dependency "org.apache.zookeeper:zookeeper:${ext.versionOf('zookeeper')}"
+
+            // Zookeeper Junit
+            dependency "org.dmonix.junit:zookeeper-junit:${ext.versionOf('zookeeper-junit')}"
+
         }
     }
 
