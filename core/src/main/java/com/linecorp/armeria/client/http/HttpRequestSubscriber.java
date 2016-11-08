@@ -128,8 +128,13 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void writeFirstHeader() {
         final Channel ch = ctx.channel();
-        final HttpHeaders firstHeaders = request.headers();
+        final HttpSession session = HttpSession.get(ch);
+        if (!session.isActive()) {
+            failAndRespond(ClosedSessionException.get());
+            return;
+        }
 
+        final HttpHeaders firstHeaders = request.headers();
         String host = firstHeaders.authority();
         if (host == null) {
             host = ((InetSocketAddress) ch.remoteAddress()).getHostString();
@@ -140,7 +145,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             }
         }
 
-        logBuilder.start(ch, HttpSession.get(ch).protocol(),
+        logBuilder.start(ch, session.protocol(),
                          host, firstHeaders.method().name(), firstHeaders.path());
         logBuilder.attr(RequestLog.HTTP_HEADERS).set(firstHeaders);
 
