@@ -25,5 +25,10 @@ import com.linecorp.armeria.client.routing.EndpointGroup;
  */
 @FunctionalInterface
 public interface ZkNodeValueConverter {
+    /**
+     * Convert zNode value to a list of {@link Endpoint}.
+     * @param zNodeValue zNode value
+     * @return list of {@link Endpoint}
+     */
     List<Endpoint> convert(byte[] zNodeValue);
 }

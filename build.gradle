@@ -212,7 +212,7 @@ configure(javaProjects) {
             // ZooKeeper
             dependency "org.apache.zookeeper:zookeeper:${ext.versionOf('zookeeper')}"
 
-            // ZooKeeper Junit
+            // ZooKeeper JUnit
             dependency "org.dmonix.junit:zookeeper-junit:${ext.versionOf('zookeeper-junit')}"
 
         }

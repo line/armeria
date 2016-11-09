@@ -25,8 +25,8 @@ import com.google.common.base.Charsets;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
- * A default zNode value to endpoint list converter,assuming zNode value is a CSV string
- * like {@code "localhost:8001:5,localhost:8002,192.168.1.2:80:3"},whose each segment consist of
+ * A default zNode value to endpoint list converter , assuming zNode value is a CSV string
+ * like {@code "localhost:8001:5 , localhost:8002 , 192.168.1.2:80:3"} , whose each segment consists of
  * {@code "host:portNumber:weight"}
  * <h3>Note:</h3>
  * <ul>
@@ -39,6 +39,39 @@ import com.linecorp.armeria.client.Endpoint;
 public class DefaultZkNodeValueConverter implements ZkNodeValueConverter {
 
     private final Pattern segmentsPattern = Pattern.compile("[^,\\s][^\\,]*[^,\\s]*");
+
+    @Override
+    public List<Endpoint> convert(byte[] data) {
+        List<Endpoint> endpointsList = new ArrayList<>();
+        String valueString = new String(data, Charsets.UTF_8);
+        for (String seg : filter(valueString)) {
+            String[] token = seg.split(":");
+            switch (token.length) {
+                case 1: //host
+                case 2: //host and port
+                    endpointsList.add(Endpoint.of(seg));
+                    break;
+                case 3: //host , port , weight
+                    int weight;
+                    int port;
+                    try {
+                        port = Integer.parseInt(token[1]);
+                        weight = Integer.parseInt(token[2]);
+                    } catch (NumberFormatException nfe) {
+                        throw new IllegalArgumentException(
+                                "can not parse to int " + nfe.getMessage() + ". " +
+                                "Invalid endpoint group string:" + valueString);
+                    }
+                    endpointsList.add(Endpoint.of(token[0], port, weight));
+                    break;
+                default: //unknown
+            }
+        }
+        if (endpointsList.isEmpty()) {
+            throw new IllegalArgumentException("ZNode dose not contain any endpoints.");
+        }
+        return endpointsList;
+    }
 
     /**
      * Filters out valid segments.
@@ -54,36 +87,4 @@ public class DefaultZkNodeValueConverter implements ZkNodeValueConverter {
         return segments;
     }
 
-    @Override
-    public List<Endpoint> convert(byte[] data) {
-        List<Endpoint> endpointsList = new ArrayList<>();
-        String valueString = new String(data, Charsets.UTF_8);
-        for (String seg : filter(valueString)) {
-            String[] token = seg.split(":");
-            switch (token.length) {
-                case 1: //host
-                case 2: //host and port
-                    endpointsList.add(Endpoint.of(seg));
-                    break;
-                case 3: //host,port,weight
-                    int weight;
-                    int port;
-                    try {
-                        port = Integer.parseInt(token[1]);
-                        weight = Integer.parseInt(token[2]);
-                    } catch (NumberFormatException nfe) {
-                        throw new IllegalArgumentException(
-                                "can not parse to int " + nfe.getMessage() + ".invalid endpoint group string:" +
-                                valueString);
-                    }
-                    endpointsList.add(Endpoint.of(token[0], port, weight));
-                    break;
-                default: //unknown
-            }
-        }
-        if (endpointsList.isEmpty()) {
-            throw new IllegalArgumentException("zNode dose not contain any endpoints.");
-        }
-        return endpointsList;
-    }
 }

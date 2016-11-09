@@ -119,9 +119,9 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
 
     private static byte[] endpointListToByteArray(List<Endpoint> endpointList) {
         return endpointList.stream().map(
-                endPointA -> (endPointA.authority() + ':' + endPointA.weight())
+                endPointA -> endPointA.authority() + ':' + endPointA.weight()
         ).reduce(
-                (endPointAStr, endPointBStr) -> (endPointAStr + ',' + endPointBStr)
+                (endPointAStr, endPointBStr) -> endPointAStr + ',' + endPointBStr
         ).orElse("").getBytes(Charsets.UTF_8);
     }
 }

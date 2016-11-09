@@ -243,7 +243,7 @@ public final class Endpoint {
 
     @Override
     public String toString() {
-        return "Endpoint(" + authority() + "/" + weight + ')';
+        return "Endpoint(" + authority() + '/' + weight + ')';
     }
 
     @Override

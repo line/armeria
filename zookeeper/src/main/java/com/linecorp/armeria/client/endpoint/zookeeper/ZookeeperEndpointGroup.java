@@ -40,9 +40,9 @@ import com.linecorp.armeria.client.routing.EndpointGroup;
 import com.linecorp.armeria.client.routing.EndpointGroupException;
 
 /**
- *  A Zookeeper based {@link EndpointGroup} implementation.
- *  It will get the {@link EndpointGroup} information from a Zookeeper zNode, any update to it will
- *  be reflected asynchronously to the group.
+ * A Zookeeper based {@link EndpointGroup} implementation.
+ * It will get the {@link EndpointGroup} information from a Zookeeper zNode, any update to it will
+ * be reflected asynchronously to the group.
  */
 public class ZookeeperEndpointGroup implements EndpointGroup {
 
@@ -54,13 +54,14 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
     private final ZooKeeper zooKeeper;
     private byte[] prevData;
     private final ZkNodeValueConverter converter;
+    private static final int MAX_ATTEMPT_COUNT = 60;
 
     private final CountDownLatch connectionLatch = new CountDownLatch(1);
 
     /**
      * Creates a {@link ZookeeperEndpointGroup}.
      * @param zkConnectionStr A connection string containing a comma
-     *                          separated list of host:port pairs,each corresponding to a ZooKeeper server
+     *                          separated list of host:port pairs , each corresponding to a ZooKeeper server
      * @param zNode a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout   Zookeeper session timeout in milliseconds
      * @param converter a function to convert zNode value to a List of {@link Endpoint}
@@ -86,14 +87,14 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
             }
         } catch (Exception e) {
             throw new EndpointGroupException(
-                    "failed to connect to ZooKeeper:" + zkConnectionStr + " with error:" + e.getMessage());
+                    "failed to connect to ZooKeeper:  " + zkConnectionStr + " with error:  " + e.getMessage());
         }
     }
 
     /**
      * Create a Zookeeper endpoint group with a {@link DefaultZkNodeValueConverter}.
      * @param zkConnectionStr A connection string containing a comma
-     *                          separated list of host:port pairs,each corresponding to a ZooKeeper server
+     *                          separated list of host:port pairs , each corresponding to a ZooKeeper server
      * @param zNode a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout   Zookeeper session timeout in milliseconds
      */
@@ -107,6 +108,8 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
     }
 
     final class ZkWatcher implements Watcher, StatCallback {
+        private int retryCounter = 1;
+
         @Override
         public void process(WatchedEvent event) {
             String path = event.getPath();
@@ -133,11 +136,21 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                 case NOAUTH:
                     return;
                 default:
-                    // Retry errors
-                    zooKeeper.exists(zNode, true, this, null);
+                    // Retry errors ,by using a exponential backoff strategy
+                    if (retryCounter < MAX_ATTEMPT_COUNT) {
+                        try {
+                            Thread.sleep(retryCounter * 1000);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                        retryCounter++;
+                        zooKeeper.exists(zNode, true, this, null);
+                    } else { // reset the counter to restart the attempt ,
+                        // we still believe it is a temporary error
+                        retryCounter = 1;
+                    }
                     return;
             }
-
             byte[] nodeData = null;
             if (exists) {
                 try {
@@ -153,8 +166,8 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                 try {
                     endpointList = converter.convert(prevData);
                 } catch (IllegalArgumentException exception) {
-                    logger.warn("error to convert zNode value to EndpointGroup:" + exception.getMessage() +
-                                ",invalid value:" + new String(prevData, Charsets.UTF_8));
+                    logger.warn("Failed to convert zNode value to EndpointGroup:" + exception.getMessage() +
+                                " , invalid value:  " + new String(prevData, Charsets.UTF_8));
                 }
             }
         }
@@ -168,13 +181,12 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
         try {
             zooKeeper.close();
         } catch (InterruptedException e) {
-            throw new EndpointGroupException(
-                    "error to close underlying ZooKeeper connection :" + e.getMessage());
+            throw new EndpointGroupException("Failed to close underlying ZooKeeper connection", e);
         }
     }
 
     @Override
     public String toString() {
-        return Joiner.on(";").join(endpoints()) + " with Zookeeper connection string:" + zkConnectionStr;
+        return Joiner.on(";").join(endpoints()) + " with Zookeeper connection string:  " + zkConnectionStr;
     }
 }
