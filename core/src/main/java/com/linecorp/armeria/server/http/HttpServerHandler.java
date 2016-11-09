@@ -285,48 +285,49 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 query != null ? mappedPath + query : mappedPath,
                 req, getSSLSession(channel));
 
-        final RequestLogBuilder reqLogBuilder = reqCtx.requestLogBuilder();
-        final HttpResponse res;
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
-            req.init(reqCtx);
-            res = service.serve(reqCtx, req);
-        } catch (Throwable cause) {
-            reqLogBuilder.end(cause);
-            if (cause instanceof ResourceNotFoundException) {
-                respond(ctx, req, HttpStatus.NOT_FOUND);
-            } else if (cause instanceof ServiceUnavailableException) {
-                respond(ctx, req, HttpStatus.SERVICE_UNAVAILABLE);
-            } else {
-                logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
-                respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            return;
-        }
-
-        final EventLoop eventLoop = channel.eventLoop();
-
-        // Keep track of the number of unfinished requests and
-        // clean up the request stream when response stream ends.
-        unfinishedRequests++;
-        res.closeFuture().handle(voidFunction((ret, cause) -> {
-            req.abort();
-            if (cause == null) {
-                reqLogBuilder.end();
-            } else {
+            final RequestLogBuilder reqLogBuilder = reqCtx.requestLogBuilder();
+            final HttpResponse res;
+            try {
+                req.init(reqCtx);
+                res = service.serve(reqCtx, req);
+            } catch (Throwable cause) {
                 reqLogBuilder.end(cause);
-            }
-            eventLoop.execute(() -> {
-                if (--unfinishedRequests == 0 && handledLastRequest) {
-                    ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                if (cause instanceof ResourceNotFoundException) {
+                    respond(ctx, req, HttpStatus.NOT_FOUND);
+                } else if (cause instanceof ServiceUnavailableException) {
+                    respond(ctx, req, HttpStatus.SERVICE_UNAVAILABLE);
+                } else {
+                    logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
+                    respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR);
                 }
-            });
-        })).exceptionally(CompletionActions::log);
+                return;
+            }
 
+            final EventLoop eventLoop = channel.eventLoop();
 
-        final HttpResponseSubscriber resSubscriber =
-                new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
-        reqCtx.setRequestTimeoutChangeListener(resSubscriber);
-        res.subscribe(resSubscriber, eventLoop);
+            // Keep track of the number of unfinished requests and
+            // clean up the request stream when response stream ends.
+            unfinishedRequests++;
+            res.closeFuture().handle(voidFunction((ret, cause) -> {
+                req.abort();
+                if (cause == null) {
+                    reqLogBuilder.end();
+                } else {
+                    reqLogBuilder.end(cause);
+                }
+                eventLoop.execute(() -> {
+                    if (--unfinishedRequests == 0 && handledLastRequest) {
+                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                    }
+                });
+            })).exceptionally(CompletionActions::log);
+
+            final HttpResponseSubscriber resSubscriber =
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
+            reqCtx.setRequestTimeoutChangeListener(resSubscriber);
+            res.subscribe(resSubscriber, eventLoop);
+        }
     }
 
     private void handleOptions(ChannelHandlerContext ctx, DecodedHttpRequest req) {

@@ -77,6 +77,9 @@ configure(javaProjects) {
             // AssertJ
             dependency "org.assertj:assertj-core:${ext.versionOf('assertj')}"
 
+            // FastUtil
+            dependency "it.unimi.dsi:fastutil:${ext.versionOf('fastutil')}"
+
             // gRPC
             dependencySet(group: 'io.grpc', version: ext.versionOf('grpc')) {
                 entry('grpc-core') {

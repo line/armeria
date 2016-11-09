@@ -18,8 +18,6 @@ package com.linecorp.armeria.common.logback;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +45,7 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
  * A <a href="http://logback.qos.ch/">Logback</a> {@link Appender} that exports the properties of the current
@@ -233,10 +232,14 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
             final Map<String, String> originalMdcMap = eventObject.getMDCPropertyMap();
             final Map<String, String> mdcMap;
+
+            // Create a copy of 'state' to avoid the race between:
+            // - the delegate appenders who iterate over the MDC map and
+            // - this class who update 'state'.
             if (!originalMdcMap.isEmpty()) {
-                mdcMap = new UnionMap<>(state, originalMdcMap);
+                mdcMap = new UnionMap<>(state.clone(), originalMdcMap);
             } else {
-                mdcMap = state.asUnmodifiable();
+                mdcMap = state.clone();
             }
 
             eventObject = new LoggingEventWrapper(eventObject, mdcMap);
@@ -343,20 +346,10 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
         }
     }
 
-    private static final class State extends HashMap<String, String> {
+    private static final class State extends Object2ObjectOpenHashMap<String, String> {
         private static final long serialVersionUID = -7084248226635055988L;
 
-        private Map<String, String> unmodifiableMap;
-
         LogAvailability availability;
-
-        Map<String, String> asUnmodifiable() {
-            if (unmodifiableMap != null) {
-                return unmodifiableMap;
-            }
-
-            return unmodifiableMap = Collections.unmodifiableMap(this);
-        }
     }
 
     private static final class LoggingEventWrapper implements ILoggingEvent {
