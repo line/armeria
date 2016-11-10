@@ -27,7 +27,7 @@ public interface ZkNodeValueConverter {
     /**
      * Converts a zNode value into a list of {@link Endpoint}s.
      * @param zNodeValue zNode value
-     * @return list of {@link Endpoint}s
+     * @return the list of {@link Endpoint}s
      */
     List<Endpoint> convert(byte[] zNodeValue);
 }

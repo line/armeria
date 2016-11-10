@@ -44,7 +44,7 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
     private static final ZKInstance zkInstance = ZKFactory.apply().create();
     private static final String zNode = "/testEndPoints";
     private ZookeeperEndpointGroup zookeeperEndpointGroup;
-    private static final ArrayList<Endpoint> initializedEndpointGroupList = new ArrayList<>();
+    private static final List<Endpoint> initializedEndpointGroupList = new ArrayList<>();
 
     @Override
     public ZKInstance instance() {
@@ -118,10 +118,9 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
     }
 
     private static byte[] endpointListToByteArray(List<Endpoint> endpointList) {
-        return endpointList.stream().map(
-                endPointA -> endPointA.authority() + ':' + endPointA.weight()
-        ).reduce(
-                (endPointAStr, endPointBStr) -> endPointAStr + ',' + endPointBStr
-        ).orElse("").getBytes(Charsets.UTF_8);
+        return endpointList.stream()
+                           .map(endPointA -> endPointA.authority() + ':' + endPointA.weight())
+                           .reduce((endPointAStr, endPointBStr) -> endPointAStr + ',' + endPointBStr)
+                           .orElse("").getBytes(Charsets.UTF_8);
     }
 }

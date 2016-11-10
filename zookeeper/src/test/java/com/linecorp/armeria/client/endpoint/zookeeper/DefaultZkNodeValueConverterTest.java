@@ -41,5 +41,4 @@ public class DefaultZkNodeValueConverterTest {
         exceptionGrabber.expect(IllegalArgumentException.class);
         converter.convert("http://localhost:8001,localhost:8002:2,192.168.1.2".getBytes());
     }
-
 }
