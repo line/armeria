@@ -40,7 +40,7 @@ import com.linecorp.armeria.client.routing.EndpointGroup;
 import com.linecorp.armeria.client.routing.EndpointGroupException;
 
 /**
- * A Zookeeper based {@link EndpointGroup} implementation.
+ * A ZooKeeper based {@link EndpointGroup} implementation.
  * It will get the {@link EndpointGroup} information from a Zookeeper zNode, any update to it will
  * be reflected asynchronously to the group.
  */
@@ -54,7 +54,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
     private final ZooKeeper zooKeeper;
     private byte[] prevData;
     private final ZkNodeValueConverter converter;
-    private static final int MAX_ATTEMPT_COUNT = 60;
+    private static final int MAX_RETRY_DELAY = 60 * 1000; //one minute
 
     private final CountDownLatch connectionLatch = new CountDownLatch(1);
 
@@ -108,7 +108,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
     }
 
     final class ZkWatcher implements Watcher, StatCallback {
-        private int retryCounter = 1;
+        private int retryDelay = 1000; //start with one second
 
         @Override
         public void process(WatchedEvent event) {
@@ -134,21 +134,24 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                     break;
                 case SESSIONEXPIRED:
                 case NOAUTH:
+                    close();
+                    logger.error("Underlying ZooKeeper connection has been closed " +
+                                 "due to session expired or authentication error");
                     return;
                 default:
-                    // Retry errors ,by using a exponential backoff strategy
-                    if (retryCounter < MAX_ATTEMPT_COUNT) {
+                    // Retry errors, by using a exponential backoff strategy
+                    if (retryDelay < MAX_RETRY_DELAY) {
                         try {
-                            Thread.sleep(retryCounter * 1000);
+                            Thread.sleep(retryDelay);
                         } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
+                            throw new EndpointGroupException(e);
                         }
-                        retryCounter++;
-                        zooKeeper.exists(zNode, true, this, null);
-                    } else { // reset the counter to restart the attempt ,
-                        // we still believe it is a temporary error
-                        retryCounter = 1;
+                        retryDelay = Math.min(MAX_RETRY_DELAY, retryDelay * 2);
+                    } else { //retry at maximum delay
+                        retryDelay = MAX_RETRY_DELAY;
                     }
+                    //retry it
+                    zooKeeper.exists(zNode, true, this, null);
                     return;
             }
             byte[] nodeData = null;
@@ -156,7 +159,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                 try {
                     nodeData = zooKeeper.getData(zNode, false, null);
                 } catch (Exception e) {
-                    logger.warn("error to get zNode data:" + e.getMessage());
+                    logger.warn("error to get zNode data:  " + e.getMessage());
                     return;
                 }
             }
@@ -166,8 +169,8 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                 try {
                     endpointList = converter.convert(prevData);
                 } catch (IllegalArgumentException exception) {
-                    logger.warn("Failed to convert zNode value to EndpointGroup:" + exception.getMessage() +
-                                " , invalid value:  " + new String(prevData, Charsets.UTF_8));
+                    logger.warn("Failed to convert zNode value to EndpointGroup:  " + exception.getMessage() +
+                                ", invalid value:  " + new String(prevData, Charsets.UTF_8));
                 }
             }
         }

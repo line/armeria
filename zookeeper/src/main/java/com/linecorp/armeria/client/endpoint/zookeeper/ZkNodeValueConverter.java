@@ -18,17 +18,16 @@ package com.linecorp.armeria.client.endpoint.zookeeper;
 import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.routing.EndpointGroup;
 
 /**
- * A zNode value converter which converts byte array form of value to {@link EndpointGroup}.
+ * Converts a zNode value into a list of {@link Endpoint}s.
  */
 @FunctionalInterface
 public interface ZkNodeValueConverter {
     /**
-     * Convert zNode value to a list of {@link Endpoint}.
+     * Converts a zNode value into a list of {@link Endpoint}s.
      * @param zNodeValue zNode value
-     * @return list of {@link Endpoint}
+     * @return list of {@link Endpoint}s
      */
     List<Endpoint> convert(byte[] zNodeValue);
 }

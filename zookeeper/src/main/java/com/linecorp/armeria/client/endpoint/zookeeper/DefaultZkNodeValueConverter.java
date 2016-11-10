@@ -65,6 +65,9 @@ public class DefaultZkNodeValueConverter implements ZkNodeValueConverter {
                     endpointsList.add(Endpoint.of(token[0], port, weight));
                     break;
                 default: //unknown
+                    throw new IllegalArgumentException(
+                            "Invalid endpoint group string:  " + seg + '/' + valueString);
+
             }
         }
         if (endpointsList.isEmpty()) {
