@@ -20,13 +20,12 @@ import static org.apache.zookeeper.KeeperException.Code.get;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
@@ -48,15 +47,16 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ZookeeperEndpointGroup.class);
 
+    private static final int MAX_RETRY_DELAY = 60 * 1000; //one minute
+    private int retryDelay = 1000; //start with one second
     private final String zkConnectionStr;
     private final String zNode;
-    private List<Endpoint> endpointList;
-    private final ZooKeeper zooKeeper;
-    private byte[] prevData;
+    private final int sessionTimeout;
     private final ZkNodeValueConverter converter;
-    private static final int MAX_RETRY_DELAY = 60 * 1000; //one minute
-
-    private final CountDownLatch connectionLatch = new CountDownLatch(1);
+    private List<Endpoint> endpointList;
+    private ZooKeeper zooKeeper;
+    private byte[] prevData;
+    private CompletableFuture<ZooKeeper> zkHandleProxy = new CompletableFuture<>();
 
     /**
      * Creates a {@link ZookeeperEndpointGroup}.
@@ -72,23 +72,8 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNode = requireNonNull(zNode, "zNode");
         this.converter = requireNonNull(converter, "converter");
-        try {
-            zooKeeper = new ZooKeeper(zkConnectionStr, sessionTimeout, event -> {
-                if (event.getState() == KeeperState.SyncConnected) {
-                    connectionLatch.countDown();
-                }
-            });
-            connectionLatch.await();
-            Stat stat = zooKeeper.exists(zNode, new ZkWatcher());
-            byte[] nodeData;
-            if (stat != null) {
-                nodeData = zooKeeper.getData(zNode, false, null);
-                endpointList = this.converter.convert(nodeData);
-            }
-        } catch (Exception e) {
-            throw new EndpointGroupException(
-                    "failed to connect to ZooKeeper:  " + zkConnectionStr + " with error:  " + e.getMessage());
-        }
+        this.sessionTimeout = sessionTimeout;
+        doConnect();
     }
 
     /**
@@ -102,21 +87,75 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
         this(zkConnectionStr, zNode, sessionTimeout, new DefaultZkNodeValueConverter());
     }
 
+    /**
+     *<h3>note:</h3>.
+     *This method could be invoked in the callback thread instead of the main thread,
+     *The resetting operation of the Zookeeper client handler could cause a race condition between the
+     *two threads,we need to use a proxy to protect it
+     */
+    private void doConnect() {
+        try {
+            zooKeeper = new ZooKeeper(zkConnectionStr, sessionTimeout, new ZkWatcher());
+
+            Stat stat = zkHandleProxy.get().exists(zNode, true);
+            byte[] nodeData;
+            if (stat != null) {
+                nodeData = zkHandleProxy.get().getData(zNode, false, null);
+                endpointList = converter.convert(nodeData);
+            }
+        } catch (Exception e) {
+            throw new EndpointGroupException(
+                    "failed to connect to ZooKeeper:  " + zkConnectionStr + " with error:  " + e.getMessage());
+        }
+
+    }
+
     @Override
     public List<Endpoint> endpoints() {
         return endpointList;
     }
 
     final class ZkWatcher implements Watcher, StatCallback {
-        private int retryDelay = 1000; //start with one second
 
         @Override
         public void process(WatchedEvent event) {
             String path = event.getPath();
-            if (event.getType() != Event.EventType.None) {
+            if (event.getType() == Event.EventType.None) {
+                // We are are being told that the state of the connection has changed
+                // note when a network partition occurs, ZooKeeper client will automatic reconnect the server
+                //until connection recovered
+                switch (event.getState()) {
+                    case SyncConnected:
+                        //3 types syncConnected:  application starting time connect,reconnect within session
+                        // timeout time ,reconnect after session expired
+                        zkHandleProxy.complete(zooKeeper);
+                        break;
+                    case Expired:
+                        //session expired usually happens when a client reconnect to the server after
+                        //a client-server network partition recover, but the recovering time exceed
+                        //session timeout. It's all over, we need reconstruct the ZooKeeper client handle.
+                        //first clean the original handle
+                        close();
+                        zooKeeper = null;
+                        zkHandleProxy = new CompletableFuture<>();
+                        while (zooKeeper == null) {
+                            try {
+                                recoverZkConnection();
+                            } catch (EndpointGroupException ex) {
+                                logger.warn("Failed to attempt to recover ZooKeeper connection:  " + ex
+                                        .getMessage());
+                            }
+                        }
+                        break;
+                }
+            } else {
                 if (path != null && path.equals(zNode)) {
                     // Something has changed on the node, let's find out
-                    zooKeeper.exists(zNode, true, this, null);
+                    try {
+                        zkHandleProxy.get().exists(zNode, true, this, null);
+                    } catch (Exception e) {
+                        throw new EndpointGroupException("Failed to process ZooKeeper watch event", e);
+                    }
                 }
             }
         }
@@ -133,33 +172,28 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                     exists = false;
                     break;
                 case SESSIONEXPIRED:
+                    //ignore this and let the zNode Watcher process it first
                 case NOAUTH:
-                    close();
-                    logger.error("Underlying ZooKeeper connection has been closed " +
-                                 "due to session expired or authentication error");
+                    //possible happens during application runtime, we ignore this and wait
+                    //for the ACL returned to normal. When it happens at application Start time, the
+                    //ZookeeperEndpointGroup class constructor will throw an exception
                     return;
                 default:
-                    // Retry errors, by using a exponential backoff strategy
-                    if (retryDelay < MAX_RETRY_DELAY) {
-                        try {
-                            Thread.sleep(retryDelay);
-                        } catch (InterruptedException e) {
-                            throw new EndpointGroupException(e);
-                        }
-                        retryDelay = Math.min(MAX_RETRY_DELAY, retryDelay * 2);
-                    } else { //retry at maximum delay
-                        retryDelay = MAX_RETRY_DELAY;
+                    //recoverable errors, retry it, fatal errors goes to Watcher process routine
+                    try {
+                        zkHandleProxy.get().exists(zNode, true, this, null);
+                    } catch (Exception ex) {
+                        throw new EndpointGroupException("Failed to process ZooKeeper callback event", ex);
                     }
-                    //retry it
-                    zooKeeper.exists(zNode, true, this, null);
                     return;
             }
             byte[] nodeData = null;
             if (exists) {
                 try {
-                    nodeData = zooKeeper.getData(zNode, false, null);
+                    nodeData = zkHandleProxy.get().getData(zNode, false, null);
                 } catch (Exception e) {
                     logger.warn("error to get zNode data:  " + e.getMessage());
+                    //just return, fatal errors goes to Watcher process routine
                     return;
                 }
             }
@@ -174,22 +208,48 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                 }
             }
         }
+
+        private void recoverZkConnection() {
+            //recoverZkConnection  by using a exponential backoff strategy
+            try {
+                Thread.sleep(retryDelay);
+            } catch (InterruptedException e) {
+                throw new EndpointGroupException("Failed to recover ZooKeeper connection", e);
+            }
+            retryDelay = Math.min(MAX_RETRY_DELAY, retryDelay * 2);
+            doConnect();
+        }
     }
 
     /**
      *  Closes the underlying Zookeeper connection.
-     * @throws EndpointGroupException Closing exception
      */
-    public void close() throws EndpointGroupException {
+    public void close() {
         try {
-            zooKeeper.close();
-        } catch (InterruptedException e) {
+            //protect the ZooKeeper client handler from the main thread
+            zkHandleProxy.get().close();
+        } catch (Exception e) {
             throw new EndpointGroupException("Failed to close underlying ZooKeeper connection", e);
         }
+    }
+
+    /**
+     * Get the underlying ZooKeeper connection status.
+     * @return ZooKeeper connection status
+     */
+    public String getZKStatus() {
+        try {
+            //protect the ZooKeeper client handler from the main thread
+            return zkHandleProxy.get().getState().toString();
+        } catch (Exception e) {
+            throw new EndpointGroupException("Failed to get the status.", e);
+        }
+
     }
 
     @Override
     public String toString() {
         return Joiner.on(";").join(endpoints()) + " with Zookeeper connection string:  " + zkConnectionStr;
     }
+
 }
