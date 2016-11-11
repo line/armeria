@@ -68,7 +68,6 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
      */
     public ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout,
                                   ZkNodeValueConverter converter) {
-
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNode = requireNonNull(zNode, "zNode");
         this.converter = requireNonNull(converter, "converter");
