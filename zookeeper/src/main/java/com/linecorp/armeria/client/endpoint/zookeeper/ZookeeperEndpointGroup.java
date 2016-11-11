@@ -23,7 +23,8 @@ import static org.apache.zookeeper.Watcher.Event.KeeperState.SyncConnected;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Stack;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.zookeeper.AsyncCallback.StatCallback;
@@ -53,8 +54,8 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ZookeeperEndpointGroup.class);
 
-    private static final int MAX_RETRY_DELAY = 60 * 1000; //one minute
-    private int retryDelay = 1000; //start with one second
+    private static final int MAX_RETRY_DELAY_MILLIS = 60 * 1000; //one minute
+    private int retryDelayMills = 1000; //start with one second
     private final String zkConnectionStr;
     private final String zNode;
     private final int sessionTimeout;
@@ -63,7 +64,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
     private ZooKeeper zooKeeper;
     private byte[] prevData;
     private CompletableFuture<ZooKeeper> zkHandleProxy = new CompletableFuture<>();
-    private Stack<KeeperState> statesStack;
+    private BlockingQueue<KeeperState> statesQueue;
 
     /**
      * Create a Zookeeper endpoint group with a {@link DefaultZkNodeValueConverter}.
@@ -104,7 +105,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
         this.converter = requireNonNull(converter, "converter");
         this.sessionTimeout = sessionTimeout;
         if (openStatesStack) {
-            statesStack = new Stack<>();
+            statesQueue = new ArrayBlockingQueue<>(10);
         }
         doConnect();
     }
@@ -148,27 +149,27 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                 //until connection recovered
                 switch (event.getState()) {
                     case Disconnected:
-                        if (statesStack != null) {
-                            statesStack.push(Disconnected);
+                        if (statesQueue != null) {
+                            enqueueState(Disconnected);
                         }
                         break;
                     case SyncConnected:
-                        if (statesStack != null) {
-                            statesStack.push(SyncConnected);
+                        if (statesQueue != null) {
+                            enqueueState(SyncConnected);
                         }
                         //3 types syncConnected:  application starting time connect,reconnect within session
                         //timeout time ,reconnect after session expired
                         zkHandleProxy.complete(zooKeeper);
                         //once connected, reset the retry delay for the next time
-                        retryDelay = 1000;
+                        retryDelayMills = 1000;
                         break;
                     case Expired:
                         //session expired usually happens when a client reconnect to the server after
                         //a client-server network partition recover, but the recovering time exceed
                         //session timeout. It's all over, we need reconstruct the ZooKeeper client handle.
                         //first clean the original handle
-                        if (statesStack != null) {
-                            statesStack.push(Expired);
+                        if (statesQueue != null) {
+                            enqueueState(Expired);
                         }
                         close();
                         zooKeeper = null;
@@ -227,7 +228,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                 try {
                     nodeData = zkHandleProxy.get().getData(zNode, false, null);
                 } catch (Exception e) {
-                    logger.warn("error to get zNode data:  " + e.getMessage());
+                    logger.warn("Failed to get zNode data:  " + e.getMessage());
                     //just return, fatal errors goes to Watcher process routine
                     return;
                 }
@@ -247,13 +248,26 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
         private void recoverZkConnection() {
             //recoverZkConnection  by using a exponential backoff strategy
             try {
-                Thread.sleep(retryDelay);
+                Thread.sleep(retryDelayMills);
             } catch (InterruptedException e) {
                 throw new EndpointGroupException("Failed to recover ZooKeeper connection", e);
             }
-            retryDelay = Math.min(MAX_RETRY_DELAY, retryDelay * 2);
+            retryDelayMills = Math.min(MAX_RETRY_DELAY_MILLIS, retryDelayMills * 2);
             doConnect();
         }
+
+        /**
+         * Enqueue the state.
+         * @param state ZooKeeper state
+         */
+        private void enqueueState(KeeperState state) {
+            try {
+                statesQueue.put(state);
+            } catch (InterruptedException e) {
+                throw new EndpointGroupException("Failed to enqueue the state.", e);
+            }
+        }
+
     }
 
     /**
@@ -292,7 +306,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
      * @return the handler
      */
     @VisibleForTesting
-    protected ZooKeeper getZkHandler() {
+    ZooKeeper getZkHandler() {
         try {
             return zkHandleProxy.get();
         } catch (Exception e) {
@@ -308,8 +322,8 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
      * @param openStatesStack whether open statesStack
      */
     @VisibleForTesting
-    public ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout,
-                                  boolean openStatesStack) {
+    ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout,
+                           boolean openStatesStack) {
         this(zkConnectionStr, zNode, sessionTimeout, new DefaultZkNodeValueConverter(), openStatesStack);
     }
 
@@ -318,7 +332,7 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
      * @return the stack
      */
     @VisibleForTesting
-    protected Stack<KeeperState> getStatesStack() {
-        return statesStack;
+    BlockingQueue<KeeperState> getStatesQueue() {
+        return statesQueue;
     }
 }
