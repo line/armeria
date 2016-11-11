@@ -17,20 +17,26 @@ package com.linecorp.armeria.client.endpoint.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.zookeeper.KeeperException.Code.get;
+import static org.apache.zookeeper.Watcher.Event.KeeperState.Disconnected;
+import static org.apache.zookeeper.Watcher.Event.KeeperState.Expired;
+import static org.apache.zookeeper.Watcher.Event.KeeperState.SyncConnected;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 
@@ -57,22 +63,18 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
     private ZooKeeper zooKeeper;
     private byte[] prevData;
     private CompletableFuture<ZooKeeper> zkHandleProxy = new CompletableFuture<>();
+    private Stack<KeeperState> statesStack;
 
     /**
-     * Creates a {@link ZookeeperEndpointGroup}.
+     * Create a Zookeeper endpoint group with a {@link DefaultZkNodeValueConverter}.
      * @param zkConnectionStr A connection string containing a comma
      *                          separated list of host:port pairs , each corresponding to a ZooKeeper server
      * @param zNode a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout   Zookeeper session timeout in milliseconds
-     * @param converter a function to convert zNode value to a List of {@link Endpoint}
      */
     public ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout,
                                   ZkNodeValueConverter converter) {
-        this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
-        this.zNode = requireNonNull(zNode, "zNode");
-        this.converter = requireNonNull(converter, "converter");
-        this.sessionTimeout = sessionTimeout;
-        doConnect();
+        this(zkConnectionStr, zNode, sessionTimeout, converter, false);
     }
 
     /**
@@ -83,7 +85,28 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
      * @param sessionTimeout   Zookeeper session timeout in milliseconds
      */
     public ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout) {
-        this(zkConnectionStr, zNode, sessionTimeout, new DefaultZkNodeValueConverter());
+        this(zkConnectionStr, zNode, sessionTimeout, new DefaultZkNodeValueConverter(), false);
+    }
+
+    /**
+     * Creates a {@link ZookeeperEndpointGroup}.
+     * @param zkConnectionStr A connection string containing a comma
+     *                          separated list of host:port pairs , each corresponding to a ZooKeeper server
+     * @param zNode a zNode path e.g. {@code "/groups/productionGroups"}
+     * @param sessionTimeout   Zookeeper session timeout in milliseconds
+     * @param converter a function to convert zNode value to a List of {@link Endpoint}
+     * @param openStatesStack whether opens the states stack for testing
+     */
+    private ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout,
+                                   ZkNodeValueConverter converter, boolean openStatesStack) {
+        this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
+        this.zNode = requireNonNull(zNode, "zNode");
+        this.converter = requireNonNull(converter, "converter");
+        this.sessionTimeout = sessionTimeout;
+        if (openStatesStack) {
+            statesStack = new Stack<>();
+        }
+        doConnect();
     }
 
     /**
@@ -124,7 +147,15 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                 // note when a network partition occurs, ZooKeeper client will automatic reconnect the server
                 //until connection recovered
                 switch (event.getState()) {
+                    case Disconnected:
+                        if (statesStack != null) {
+                            statesStack.push(Disconnected);
+                        }
+                        break;
                     case SyncConnected:
+                        if (statesStack != null) {
+                            statesStack.push(SyncConnected);
+                        }
                         //3 types syncConnected:  application starting time connect,reconnect within session
                         //timeout time ,reconnect after session expired
                         zkHandleProxy.complete(zooKeeper);
@@ -136,6 +167,9 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
                         //a client-server network partition recover, but the recovering time exceed
                         //session timeout. It's all over, we need reconstruct the ZooKeeper client handle.
                         //first clean the original handle
+                        if (statesStack != null) {
+                            statesStack.push(Expired);
+                        }
                         close();
                         zooKeeper = null;
                         zkHandleProxy = new CompletableFuture<>();
@@ -253,4 +287,38 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
         return Joiner.on(";").join(endpoints()) + " with Zookeeper connection string:  " + zkConnectionStr;
     }
 
+    /**
+     * Get the ZooKeeper handler.
+     * @return the handler
+     */
+    @VisibleForTesting
+    protected ZooKeeper getZkHandler() {
+        try {
+            return zkHandleProxy.get();
+        } catch (Exception e) {
+            throw new EndpointGroupException("Failed to get the ZooKeeper handler.", e);
+        }
+    }
+
+    /**
+     * Create a ZookeeperEndpointGroup with statesStack feature.
+     * @param zkConnectionStr connection string
+     * @param zNode the zNode
+     * @param sessionTimeout session timeout in millisecond
+     * @param openStatesStack whether open statesStack
+     */
+    @VisibleForTesting
+    public ZookeeperEndpointGroup(String zkConnectionStr, String zNode, int sessionTimeout,
+                                  boolean openStatesStack) {
+        this(zkConnectionStr, zNode, sessionTimeout, new DefaultZkNodeValueConverter(), openStatesStack);
+    }
+
+    /**
+     * Get the states stack.
+     * @return the stack
+     */
+    @VisibleForTesting
+    protected Stack<KeeperState> getStatesStack() {
+        return statesStack;
+    }
 }

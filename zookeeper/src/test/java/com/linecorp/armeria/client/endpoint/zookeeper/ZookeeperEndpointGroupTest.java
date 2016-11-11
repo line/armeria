@@ -16,13 +16,18 @@
 package com.linecorp.armeria.client.endpoint.zookeeper;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.ZooKeeper;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -43,8 +48,11 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
     private static final Duration duration = Duration.ofSeconds(5);
     private static final ZKInstance zkInstance = ZKFactory.apply().create();
     private static final String zNode = "/testEndPoints";
+    private static final int sessionTimeout = 3000;
+    private static final int retryWait = 5000;
     private ZookeeperEndpointGroup zookeeperEndpointGroup;
     private static final List<Endpoint> initializedEndpointGroupList = new ArrayList<>();
+    private static final Stack<KeeperState> expectedStates = new Stack<>();
 
     @Override
     public ZKInstance instance() {
@@ -56,10 +64,16 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
         initializedEndpointGroupList.add(Endpoint.of("127.0.0.1", 1234, 2));
         initializedEndpointGroupList.add(Endpoint.of("127.0.0.1", 2345, 4));
         initializedEndpointGroupList.add(Endpoint.of("127.0.0.1", 3456, 2));
+
+        expectedStates.push(KeeperState.SyncConnected);
+        expectedStates.push(KeeperState.Disconnected);
+        expectedStates.push(KeeperState.Expired);
+        expectedStates.push(KeeperState.SyncConnected);
+
         try {
             zkInstance.start().result(duration);
         } catch (Throwable throwable) {
-            throwable.printStackTrace();
+            fail();
         }
     }
 
@@ -68,7 +82,7 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
         try {
             zkInstance.stop().ready(duration);
         } catch (Exception e) {
-            e.printStackTrace();
+            //ignore
         }
     }
 
@@ -77,8 +91,7 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
         createOrUpdateZNode(endpointListToByteArray(initializedEndpointGroupList));
         //forcing a get on the Option as we should be connected at this stage
         zookeeperEndpointGroup = new ZookeeperEndpointGroup(
-                zkInstance.connectString().get(), zNode, 3000,
-                new DefaultZkNodeValueConverter());
+                zkInstance.connectString().get(), zNode, sessionTimeout, true);
     }
 
     @After
@@ -86,7 +99,7 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
         try {
             zookeeperEndpointGroup.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            fail();
         }
     }
 
@@ -101,6 +114,30 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
     @Test
     public void testGetEndpointGroup() {
         assertEquals(initializedEndpointGroupList, zookeeperEndpointGroup.endpoints());
+    }
+
+    @Test
+    public void testConnectionRecovery() {
+        ZooKeeper zkHandler1 = zookeeperEndpointGroup.getZkHandler();
+        CountDownLatch latch = new CountDownLatch(1);
+        ZooKeeper zkHandler2;
+        try {
+            //create a new handler with the same sessionId and password
+            zkHandler2 = new ZooKeeper(zkInstance.connectString().get(), sessionTimeout, event -> {
+                if (event.getState() == KeeperState.SyncConnected) {
+                    latch.countDown();
+                }
+            }, zkHandler1.getSessionId(), zkHandler1.getSessionPasswd());
+            latch.await();
+            //once connected, close the new handler to cause the original handler session expire
+            zkHandler2.close();
+            //wait  for the session to be expired
+            Thread.sleep(retryWait);
+            assertEquals(expectedStates, zookeeperEndpointGroup.getStatesStack());
+        } catch (Exception e) {
+            fail();
+        }
+
     }
 
     private void createOrUpdateZNode(byte[] nodeValue) {
