@@ -834,5 +834,5 @@ private static String executeCommand(String[] command) {
                 "${System.lineSeparator()}${proc.err.text}")
     }
 
-    return proc.in.text
+    return proc.in.text.trim()
 }
