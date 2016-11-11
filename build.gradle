@@ -769,7 +769,11 @@ private def getGitPath() {
 
     // Find the location of the 'git' command.
     try {
-        return executeCommand(osdetector.os == 'windows' ? 'where.exe' : 'which', 'git').trim()
+        if (osdetector.os == 'windows') {
+            return executeCommand('where.exe', 'git.exe')
+        } else {
+            return executeCommand('which', 'git')
+        }
     } catch (e) {
         logger.debug('Git not available:', e)
         return null
