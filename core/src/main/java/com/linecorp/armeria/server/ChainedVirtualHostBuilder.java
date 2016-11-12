@@ -76,8 +76,8 @@ public final class ChainedVirtualHostBuilder extends AbstractVirtualHostBuilder<
 
     /**
      * Returns the parent {@link ServerBuilder}.
-     * 
-     * @return serverBuiler the parent {@link ServerBuilder}.
+     *
+     * @return serverBuilder the parent {@link ServerBuilder}.
      */
     public ServerBuilder and() {
         return serverBuilder;
