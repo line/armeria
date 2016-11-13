@@ -1,7 +1,11 @@
 dependencies {
+    // completable-futures
+    compile 'com.spotify:completable-futures'
+
     // Guava
     compile 'com.google.guava:guava'
     testCompile 'com.google.guava:guava-testlib'
+    compile 'jp.skypencil.guava:helper'
 
     // Jackson
     [ 'jackson-core', 'jackson-annotations', 'jackson-databind' ].each {
