@@ -119,7 +119,7 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
 
     @Test
     public void testConnectionRecovery() throws Exception {
-        ZooKeeper zkHandler1 = zookeeperEndpointGroup.getZkHandler();
+        ZooKeeper zkHandler1 = zookeeperEndpointGroup.getZkHandler().get();
         CountDownLatch latch = new CountDownLatch(1);
         ZooKeeper zkHandler2;
 

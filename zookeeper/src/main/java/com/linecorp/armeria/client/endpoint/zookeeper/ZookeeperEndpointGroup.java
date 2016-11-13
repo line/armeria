@@ -47,8 +47,10 @@ import com.linecorp.armeria.client.routing.EndpointGroupException;
 
 /**
  * A ZooKeeper based {@link EndpointGroup} implementation.
- * It will get the {@link EndpointGroup} information from a Zookeeper zNode, any update to it will
- * be reflected asynchronously to the group.
+ * It will get the {@link EndpointGroup} information from a Zookeeper zNode, and any update to it will
+ * be also reflected asynchronously to the group.
+ * When a ZooKeeper session expired event occurs, it will automatically reconnect to its server,
+ * and also rebuild the builtin watcher on the zNode
  */
 public class ZookeeperEndpointGroup implements EndpointGroup {
 
@@ -286,14 +288,9 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
      * Get the underlying ZooKeeper connection status.
      * @return ZooKeeper connection status
      */
-    public String getZKStatus() {
-        try {
-            //protect the ZooKeeper client handler from the main thread
-            return zkHandleProxy.get().getState().toString();
-        } catch (Exception e) {
-            throw new EndpointGroupException("Failed to get the status.", e);
-        }
-
+    public CompletableFuture<String> getZKStatus() {
+        //protect the ZooKeeper client handler from the main thread
+        return zkHandleProxy.thenApply(handler -> handler.getState().toString());
     }
 
     @Override
@@ -306,12 +303,8 @@ public class ZookeeperEndpointGroup implements EndpointGroup {
      * @return the handler
      */
     @VisibleForTesting
-    ZooKeeper getZkHandler() {
-        try {
-            return zkHandleProxy.get();
-        } catch (Exception e) {
-            throw new EndpointGroupException("Failed to get the ZooKeeper handler.", e);
-        }
+    CompletableFuture<ZooKeeper> getZkHandler() {
+        return zkHandleProxy;
     }
 
     /**
