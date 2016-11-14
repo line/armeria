@@ -270,12 +270,12 @@ public final class Endpoint {
             return true;
         }
 
-        if (obj instanceof Endpoint) {
-            Endpoint other = (Endpoint) obj;
-            return authority().equals(other.authority()) && weight() == other.weight();
+        if (!(obj instanceof Endpoint)) {
+            return false;
         }
 
-        return false;
+        final Endpoint that = (Endpoint) obj;
+        return authority().equals(that.authority()) && weight() == that.weight();
     }
 
     @Override

@@ -55,8 +55,8 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
 
-    private static final int MAX_RETRY_DELAY_MILLIS = 60 * 1000; //one minute
-    private int retryDelayMills = 1000; //start with one second
+    private static final int MAX_RETRY_DELAY_MILLIS = 60 * 1000; // One minute
+    private int retryDelayMills = 1000; // Start with one second
     private final String zkConnectionStr;
     private final String zNodePath;
     private final int sessionTimeout;
@@ -182,6 +182,7 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
     /**
      *  Closes the underlying Zookeeper connection.
      */
+    @Override
     public void close() {
         try {
             // protect the ZooKeeper client handler from the main thread
@@ -259,7 +260,7 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
                     exists = false;
                     break;
                 case SESSIONEXPIRED:
-                    // Ignore this and let the zNode Watcher process it first
+                    // Ignore this and let the zNode Watcher process it first.
                 case NOAUTH:
                     // It's possible that this happens during runtime. We ignore this and wait for the ACL
                     // configuration returns to normal. If it happens when the endpoint group is initially
