@@ -31,7 +31,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
     private final List<Endpoint> endpoints;
 
     /**
-     * Creates a new instace.
+     * Creates a new instance.
      */
     public StaticEndpointGroup(Endpoint... endpoints) {
         requireNonNull(endpoints, "endpoints");
@@ -40,7 +40,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
     }
 
     /**
-     * Creates a new instace.
+     * Creates a new instance.
      */
     public StaticEndpointGroup(Iterable<Endpoint> endpoints) {
         requireNonNull(endpoints, "endpoints");

@@ -259,7 +259,7 @@ public class HttpClientIntegrationTest {
     }
 
     /**
-     * When the request path contains double slashes, they should be replaced with sigle slashes.
+     * When the request path contains double slashes, they should be replaced with single slashes.
      */
     @Test
     public void testDoubleSlashSuppression() throws Exception {
