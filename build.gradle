@@ -208,6 +208,13 @@ configure(javaProjects) {
                 entry 'brave-core'
                 entry 'brave-http'
             }
+
+            // ZooKeeper
+            dependency "org.apache.zookeeper:zookeeper:${ext.versionOf('zookeeper')}"
+
+            // ZooKeeper JUnit
+            dependency "org.dmonix.junit:zookeeper-junit:${ext.versionOf('zookeeper-junit')}"
+
         }
     }
 
@@ -258,7 +265,7 @@ configure(javaProjects) {
             if (project.file(javaSharedDir).isDirectory()) {
                 java.srcDir javaSharedDir
             }
-            
+
             // Add 'resources-shared' directory to the source set, if exists.
             def resourcesSharedDir = "${project.projectDir}/src/test/resources-shared"
             if (project.file(resourcesSharedDir).isDirectory()) {
