@@ -45,14 +45,14 @@ import zookeeperjunit.ZKFactory;
 import zookeeperjunit.ZKInstance;
 import zookeeperjunit.ZooKeeperAssert;
 
-public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert {
-    private static final Logger logger = LoggerFactory.getLogger(ZookeeperEndpointGroup.class);
+public class ZooKeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert {
+    private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
 
     private static final Duration duration = Duration.ofSeconds(5);
     private static final ZKInstance zkInstance = ZKFactory.apply().create();
     private static final String zNode = "/testEndPoints";
     private static final int sessionTimeout = 3000;
-    private ZookeeperEndpointGroup zookeeperEndpointGroup;
+    private ZooKeeperEndpointGroup zkEndpointGroup;
     private static final List<Endpoint> initializedEndpointGroupList = new ArrayList<>();
     private static final KeeperState[] expectedStates =
             {
@@ -91,14 +91,14 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
     public void connectZk() {
         createOrUpdateZNode(endpointListToByteArray(initializedEndpointGroupList));
         //forcing a get on the Option as we should be connected at this stage
-        zookeeperEndpointGroup = new ZookeeperEndpointGroup(
+        zkEndpointGroup = new ZooKeeperEndpointGroup(
                 zkInstance.connectString().get(), zNode, sessionTimeout, true);
     }
 
     @After
     public void disconnectZk() {
         try {
-            zookeeperEndpointGroup.close();
+            zkEndpointGroup.close();
         } catch (Exception e) {
             fail();
         }
@@ -109,17 +109,17 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
         List<Endpoint> expected = ImmutableList.of(Endpoint.of("127.0.0.1", 8001, 2),
                                                    Endpoint.of("127.0.0.1", 8002, 3));
         createOrUpdateZNode(endpointListToByteArray(expected));
-        assertEquals(expected, zookeeperEndpointGroup.endpoints());
+        assertEquals(expected, zkEndpointGroup.endpoints());
     }
 
     @Test
     public void testGetEndpointGroup() {
-        assertEquals(initializedEndpointGroupList, zookeeperEndpointGroup.endpoints());
+        assertEquals(initializedEndpointGroupList, zkEndpointGroup.endpoints());
     }
 
     @Test
     public void testConnectionRecovery() throws Exception {
-        ZooKeeper zkHandler1 = zookeeperEndpointGroup.getZkHandler().get();
+        ZooKeeper zkHandler1 = zkEndpointGroup.zkFuture().get();
         CountDownLatch latch = new CountDownLatch(1);
         ZooKeeper zkHandler2;
 
@@ -133,7 +133,7 @@ public class ZookeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert
         //once connected, close the new handler to cause the original handler session expire
         zkHandler2.close();
         for (KeeperState state : expectedStates) {
-            assertEquals(state, zookeeperEndpointGroup.getStatesQueue().take());
+            assertEquals(state, zkEndpointGroup.stateQueue().take());
         }
 
     }

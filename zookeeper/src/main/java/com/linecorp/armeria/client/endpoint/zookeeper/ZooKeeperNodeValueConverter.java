@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.client.endpoint.zookeeper;
 
+import static java.util.Objects.requireNonNull;
+
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -23,11 +26,23 @@ import com.linecorp.armeria.client.Endpoint;
  * Converts a zNode value into a list of {@link Endpoint}s.
  */
 @FunctionalInterface
-public interface ZkNodeValueConverter {
+public interface ZooKeeperNodeValueConverter {
     /**
      * Converts a zNode value into a list of {@link Endpoint}s.
+     *
      * @param zNodeValue zNode value
      * @return the list of {@link Endpoint}s
      */
     List<Endpoint> convert(byte[] zNodeValue);
+
+    /**
+     * Converts a zNode value into a list of {@link Endpoint}s.
+     *
+     * @param zNodeValue zNode value
+     * @return the list of {@link Endpoint}s
+     */
+    default List<Endpoint> convert(String zNodeValue) {
+        requireNonNull(zNodeValue, "zNodeValue");
+        return convert(zNodeValue.getBytes(StandardCharsets.UTF_8));
+    }
 }
