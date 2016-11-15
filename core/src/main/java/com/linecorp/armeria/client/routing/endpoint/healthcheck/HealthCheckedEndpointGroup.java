@@ -59,6 +59,10 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
         this.healthCheckRetryDelayMills = healthCheckRetryDelayMills;
     }
 
+    /**
+     * Update healty servers and start to schedule healthcheck.
+     * A subclass being initialized with this constructor must call {@link #init()} before start being used.
+     */
     protected void init() {
         checkAndUpdateHealthyServers();
         scheduleCheckAndUpdateHealthyServers();
