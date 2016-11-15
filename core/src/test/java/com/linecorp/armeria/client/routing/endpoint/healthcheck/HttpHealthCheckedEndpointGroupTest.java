@@ -1,12 +1,11 @@
-package com.linecorp.armeria.client.routing;
+package com.linecorp.armeria.client.routing.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.routing.endpoint.healthcheck.HealthCheckedEndpointGroup;
+import com.linecorp.armeria.client.routing.StaticEndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -14,7 +13,7 @@ import com.linecorp.armeria.server.http.healthcheck.HttpHealthCheckService;
 
 import io.netty.util.internal.PlatformDependent;
 
-public class HealthCheckedEndpointGroupTest {
+public class HttpHealthCheckedEndpointGroupTest {
 
     private static class ServiceServer {
         private Server server;
@@ -52,8 +51,7 @@ public class HealthCheckedEndpointGroupTest {
     @Test
     public void endpoints() throws Exception {
         String healthCheckPath = "/healthcheck";
-        HealthCheckedEndpointGroup endpointGroup = new HealthCheckedEndpointGroup(
-                ClientFactory.DEFAULT,
+        HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
                 new StaticEndpointGroup(
                         Endpoint.of("127.0.0.1", 1234),
                         Endpoint.of("127.0.0.1", 2345)),
@@ -77,8 +75,7 @@ public class HealthCheckedEndpointGroupTest {
         String healthCheckPath = "/healthcheck";
         ServiceServer serverOne = new ServiceServer(healthCheckPath, 1234).start();
 
-        HealthCheckedEndpointGroup endpointGroup = new HealthCheckedEndpointGroup(
-                ClientFactory.DEFAULT,
+        HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
                 new StaticEndpointGroup(
                         Endpoint.of("127.0.0.1", 1234),
                         Endpoint.of("127.0.0.1", 2345)),

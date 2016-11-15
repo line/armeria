@@ -38,6 +38,8 @@ import jp.skypencil.guava.stream.GuavaCollectors;
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
  */
 public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
+    public static final long DEFAULT_HEALTHCHECK_RETRY_DELAY_MILLS = 3_000; // 3 seconds.
+
     protected final ClientFactory clientFactory;
     private final EndpointGroup delegate;
     private final long healthCheckRetryDelayMills;
@@ -47,6 +49,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
 
     /**
      * Creates a new instance.
+     * A subclass being initialized with this constructor must call {@link #init()} before start being used.
      */
     protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
                                          EndpointGroup delegate,
@@ -54,7 +57,9 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.delegate = requireNonNull(delegate, "delegate");
         this.healthCheckRetryDelayMills = healthCheckRetryDelayMills;
+    }
 
+    protected void init() {
         checkAndUpdateHealthyServers();
         scheduleCheckAndUpdateHealthyServers();
     }
