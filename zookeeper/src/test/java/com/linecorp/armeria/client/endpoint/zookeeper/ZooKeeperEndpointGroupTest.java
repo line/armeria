@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint.zookeeper;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,17 +49,22 @@ import zookeeperjunit.ZooKeeperAssert;
 public class ZooKeeperEndpointGroupTest implements ZooKeeperAssert, OptionAssert {
     private static final Logger logger = LoggerFactory.getLogger(ZooKeeperEndpointGroup.class);
 
+    private static final File ROOT_DIR = new File("build" + File.separator + "zookeeper");
+
+    static {
+        ROOT_DIR.mkdirs();
+    }
+
     private static final Duration duration = Duration.ofSeconds(5);
-    private static final ZKInstance zkInstance = ZKFactory.apply().create();
+    private static final ZKInstance zkInstance = ZKFactory.apply().withRootDir(ROOT_DIR).create();
     private static final String zNode = "/testEndPoints";
     private static final int sessionTimeout = 3000;
     private ZooKeeperEndpointGroup zkEndpointGroup;
     private static final List<Endpoint> initializedEndpointGroupList = new ArrayList<>();
-    private static final KeeperState[] expectedStates =
-            {
-                    KeeperState.SyncConnected, KeeperState.Disconnected, KeeperState.Expired,
-                    KeeperState.SyncConnected
-            };
+    private static final KeeperState[] expectedStates = {
+            KeeperState.SyncConnected, KeeperState.Disconnected,
+            KeeperState.Expired, KeeperState.SyncConnected
+    };
 
     @Override
     public ZKInstance instance() {
