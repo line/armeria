@@ -40,11 +40,6 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         super(params, delegate, sessionProtocol, endpoint);
     }
 
-    // For SimpleHttpClient
-    EventLoop eventLoop0() {
-        return eventLoop();
-    }
-
     @Override
     public HttpResponse execute(HttpRequest req) {
         return execute(eventLoop(), req);

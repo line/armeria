@@ -59,8 +59,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
-
 public class HttpClientIntegrationTest {
 
     private static final String TEST_USER_AGENT_NAME = "ArmeriaTest";
@@ -192,21 +190,6 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
-    public void testRequestNoBodyWithSimpleClient() throws Exception {
-        SimpleHttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
-                                                    SimpleHttpClient.class);
-        SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/httptestbody")
-                                                            .header(HttpHeaderNames.ACCEPT, "utf-8")
-                                                            .build();
-        SimpleHttpResponse response = client.execute(request).get();
-        assertEquals(HttpResponseStatus.OK, response.status());
-        assertEquals("alwayscache", response.headers().get(HttpHeaderNames.CACHE_CONTROL));
-        assertEquals("METHOD: GET|ACCEPT: utf-8|BODY: ",
-                     new String(response.content(), StandardCharsets.UTF_8));
-    }
-
-    @Test
     public void testRequestWithBody() throws Exception {
         HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
                                               HttpClient.class);
@@ -223,22 +206,6 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    @SuppressWarnings("deprecation")
-    public void testRequestWithBodyWithSimpleClient() throws Exception {
-        SimpleHttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
-                                                    SimpleHttpClient.class);
-        SimpleHttpRequest request = SimpleHttpRequestBuilder.forPost("/httptestbody")
-                                                            .header(HttpHeaderNames.ACCEPT, "utf-8")
-                                                            .content("requestbody日本語", StandardCharsets.UTF_8)
-                                                            .build();
-        SimpleHttpResponse response = client.execute(request).get();
-        assertEquals(HttpResponseStatus.OK, response.status());
-        assertEquals("alwayscache", response.headers().get(HttpHeaderNames.CACHE_CONTROL));
-        assertEquals("METHOD: POST|ACCEPT: utf-8|BODY: requestbody日本語",
-                     new String(response.content(), StandardCharsets.UTF_8));
-    }
-
-    @Test
     public void testNot200() throws Exception {
         HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
                                               HttpClient.class);
@@ -246,16 +213,6 @@ public class HttpClientIntegrationTest {
         AggregatedHttpMessage response = client.get("/not200").aggregate().get();
 
         assertEquals(HttpStatus.NOT_FOUND, response.headers().status());
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testNot200WithSimpleClient() throws Exception {
-        SimpleHttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
-                                                    SimpleHttpClient.class);
-        SimpleHttpRequest request = SimpleHttpRequestBuilder.forGet("/not200").build();
-        SimpleHttpResponse response = client.execute(request).get();
-        assertEquals(HttpResponseStatus.NOT_FOUND, response.status());
     }
 
     /**

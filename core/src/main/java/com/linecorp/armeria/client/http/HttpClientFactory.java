@@ -119,15 +119,6 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
             @SuppressWarnings("unchecked")
             T castClient = (T) client;
             return castClient;
-        } else if (clientType == SimpleHttpClient.class) {
-            @SuppressWarnings("deprecation")
-            final SimpleHttpClient client = new DefaultSimpleHttpClient(
-                    new DefaultClientBuilderParams(this, uri, SimpleHttpClient.class, options),
-                    newHttpClient(uri, scheme, endpoint, options, delegate));
-
-            @SuppressWarnings("unchecked")
-            T castClient = (T) client;
-            return castClient;
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
@@ -140,14 +131,11 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
                 delegate, scheme.sessionProtocol(), endpoint);
     }
 
-    @SuppressWarnings("deprecation")
     private static void validateClientType(Class<?> clientType) {
-        if (clientType != HttpClient.class && clientType != SimpleHttpClient.class &&
-            clientType != Client.class) {
+        if (clientType != HttpClient.class && clientType != Client.class) {
             throw new IllegalArgumentException(
                     "clientType: " + clientType +
-                    " (expected: " + HttpClient.class.getSimpleName() + ", " +
-                    SimpleHttpClient.class.getSimpleName() + " or " +
+                    " (expected: " + HttpClient.class.getSimpleName() + " or " +
                     Client.class.getSimpleName() + ')');
         }
     }
