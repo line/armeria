@@ -73,9 +73,10 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
                                                   healthCheckPath,
                                                   healthCheckRetryDelayMills);
     }
+
     @Override
     EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint) {
-        return new HttpEndpointHealthChecker(clientFactory, endpoint, healthCheckPath);
+        return new HttpEndpointHealthChecker(clientFactory(), endpoint, healthCheckPath);
     }
 
     private static final class HttpEndpointHealthChecker implements EndpointHealthChecker {

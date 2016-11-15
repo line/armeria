@@ -40,7 +40,7 @@ import jp.skypencil.guava.stream.GuavaCollectors;
 public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     public static final long DEFAULT_HEALTHCHECK_RETRY_DELAY_MILLS = 3_000; // 3 seconds.
 
-    protected final ClientFactory clientFactory;
+    private final ClientFactory clientFactory;
     private final EndpointGroup delegate;
     private final long healthCheckRetryDelayMills;
 
@@ -66,6 +66,10 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     protected void init() {
         checkAndUpdateHealthyServers();
         scheduleCheckAndUpdateHealthyServers();
+    }
+
+    protected ClientFactory clientFactory() {
+        return clientFactory;
     }
 
     private void scheduleCheckAndUpdateHealthyServers() {
