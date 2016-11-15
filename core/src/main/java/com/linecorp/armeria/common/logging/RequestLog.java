@@ -54,6 +54,11 @@ public interface RequestLog extends MessageLog {
     AttributeKey<Object> RAW_RPC_REQUEST = AttributeKey.valueOf(RequestLog.class, "RAW_RPC_REQUEST");
 
     /**
+     * Returns the {@link System#currentTimeMillis()} of when the processing of the message started.
+     */
+    long startTimeMillis();
+
+    /**
      * Returns the Netty {@link Channel} which handled the {@link Request}.
      */
     Channel channel();

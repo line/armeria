@@ -38,7 +38,18 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public class LogCollectingService<I extends Request, O extends Response> extends DecoratingService<I, O, I, O> {
 
-    private final MessageLogConsumer consumer;
+    private MessageLogConsumer consumer;
+
+    /**
+     * Creates a new instance.
+     * A subclass being initialized with this constructor must call {@link #init(MessageLogConsumer)} before
+     * start being used.
+     *
+     * @param delegate the {@link Service} being decorated
+     */
+    public LogCollectingService(Service<? super I, ? extends O> delegate) {
+        super(delegate);
+    }
 
     /**
      * Creates a new instance.
@@ -47,12 +58,31 @@ public class LogCollectingService<I extends Request, O extends Response> extends
      * @param consumer the consumer of the collected {@link RequestLog}s and {@link ResponseLog}s
      */
     public LogCollectingService(Service<? super I, ? extends O> delegate, MessageLogConsumer consumer) {
-        super(delegate);
+        this(delegate);
+        init(requireNonNull(consumer, "consumer"));
+    }
+
+    /**
+     * Initialize a {@link MessageLogConsumer} which is used for logging.
+     * A subclass which cannot supply {@link MessageLogConsumer} through the constructor, because of the
+     * consumer needs to have reference to the {@link Service} class for example, can call this method manually
+     * to defer the consumer instantiation.
+     *
+     * @param consumer an instance of {@link MessageLogConsumer} to use for logging
+     */
+    protected void init(MessageLogConsumer consumer) {
+        if (this.consumer != null) {
+            throw new IllegalStateException("consumer has already initialized");
+        }
         this.consumer = requireNonNull(consumer, "consumer");
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
+        if (consumer == null) {
+            throw new IllegalStateException("consumer is not initialized yet");
+        }
+
         ctx.requestLogFuture()
            .thenAccept(log -> invokeOnRequest(consumer, ctx, log))
            .exceptionally(CompletionActions::log);

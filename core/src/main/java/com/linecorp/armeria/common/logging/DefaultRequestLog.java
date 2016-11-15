@@ -33,6 +33,7 @@ import io.netty.util.Attribute;
 public final class DefaultRequestLog
         extends AbstractMessageLog<RequestLog> implements RequestLog, RequestLogBuilder {
 
+    private long startTimeMillis;
     private Channel channel;
     private SessionProtocol sessionProtocol;
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
@@ -59,6 +60,20 @@ public final class DefaultRequestLog
         this.host = host;
         this.method = method;
         this.path = path;
+    }
+
+    @Override
+    protected boolean setStartTime() {
+        boolean isSet = super.setStartTime();
+        if (isSet) {
+            startTimeMillis = System.currentTimeMillis();
+        }
+        return isSet;
+    }
+
+    @Override
+    public long startTimeMillis() {
+        return startTimeMillis;
     }
 
     @Override

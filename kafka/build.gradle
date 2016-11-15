@@ -1,0 +1,6 @@
+dependencies {
+    compile project(':core')
+
+    // Kafka
+    compile 'org.apache.kafka:kafka-clients'
+}
