@@ -304,7 +304,7 @@ final class RequestContextExporter {
     private static void exportElapsedNanos(Map<String, String> out, @Nullable RequestLog req,
                                            @Nullable ResponseLog res) {
         if (req != null && res != null) {
-            out.put(ELAPSED_NANOS.mdcKey, String.valueOf(res.endTimeNanos() - req.startTimeNanos()));
+            out.put(ELAPSED_NANOS.mdcKey, String.valueOf(res.responseTimeNanos()));
         }
     }
 

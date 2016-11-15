@@ -37,14 +37,14 @@ public interface MessageLog extends AttributeMap {
     long contentLength();
 
     /**
-     * Returns the {@link System#nanoTime() nanoTime} of when the processing of the message started.
+     * Returns the time when the processing of the message started, in millis since the epoch.
      */
-    long startTimeNanos();
+    long startTimeMillis();
 
     /**
-     * Returns the {@link System#nanoTime() nanoTime} of when the processing of the message ended.
+     * Returns the duration that was taken to consume or produce the message completely, in nanoseconds.
      */
-    long endTimeNanos();
+    long durationNanos();
 
     /**
      * Returns the cause of message processing failure.
