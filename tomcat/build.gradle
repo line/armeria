@@ -34,28 +34,30 @@ dependencies {
 // ProtocolHandler implementation against Tomcat 8.5, but want to make sure the methods do not exist because
 // otherwise JVM will fail to load the ProtocolHandler due to the references to the non-existent classes in the
 // method signatures.
-task tomcat80compat << {
-    def path = Paths.get("${project.buildDir}", 'classes', 'main',
-            'com', 'linecorp', 'armeria', 'server', 'http', 'tomcat',
-            'Tomcat80ProtocolHandler.class')
+task tomcat80compat {
+    doLast {
+        def path = Paths.get("${project.buildDir}", 'classes', 'main',
+                             'com', 'linecorp', 'armeria', 'server', 'http', 'tomcat',
+                             'Tomcat80ProtocolHandler.class')
 
-    logger.info("Manipulating ${path} ..")
+        logger.info("Manipulating ${path} ..")
 
-    def reader = new ClassReader(Files.readAllBytes(path))
-    def writer = new ClassWriter(ClassWriter.COMPUTE_MAXS)
+        def reader = new ClassReader(Files.readAllBytes(path))
+        def writer = new ClassWriter(ClassWriter.COMPUTE_MAXS)
 
-    reader.accept(new ClassVisitor(Opcodes.ASM5, writer) {
-        @Override
-        MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-            if (name == 'addSslHostConfig' || name == 'findSslHostConfigs' ||
+        reader.accept(new ClassVisitor(Opcodes.ASM5, writer) {
+            @Override
+            MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                if (name == 'addSslHostConfig' || name == 'findSslHostConfigs' ||
                     name == 'addUpgradeProtocol' || name == 'findUpgradeProtocols') {
-                return null
-            } else {
-                return super.visitMethod(access, name, desc, signature, exceptions)
+                    return null
+                } else {
+                    return super.visitMethod(access, name, desc, signature, exceptions)
+                }
             }
-        }
-    }, 0)
+        }, 0)
 
-    Files.write(path, writer.toByteArray())
+        Files.write(path, writer.toByteArray())
+    }
 }
 tasks.compileJava.finalizedBy(tasks.tomcat80compat)
