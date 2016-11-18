@@ -18,14 +18,29 @@ package com.linecorp.armeria.client.routing;
 import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * A list of {@link Endpoint}s.
  */
 @FunctionalInterface
-public interface EndpointGroup {
+public interface EndpointGroup extends SafeCloseable {
     /**
      * Return the endpoints held by this {@link EndpointGroup}.
      */
     List<Endpoint> endpoints();
+
+    @Override
+    default void close() {}
+
+    /*
+     * Creates a new {@link EndpointGroup} that tries this {@link EndpointGroup} first and then the specified
+     * {@link EndpointGroup} when this {@link EndpointGroup} does not have a requested resource.
+     *
+     * @param nextEndpointGroup the {@link EndpointGroup} to try secondly.
+     */
+    default EndpointGroup orElse(EndpointGroup nextEndpointGroup) {
+        return new OrElseEndpointGroup(this, nextEndpointGroup);
+    }
+
 }

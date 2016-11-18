@@ -25,7 +25,7 @@ import com.google.common.base.Ticker;
 import com.linecorp.armeria.client.pool.DecoratingKeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
-import com.linecorp.armeria.common.util.UnitFormatter;
+import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
@@ -91,12 +91,12 @@ public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHa
             switch (eventType) {
             case ACQUIRED:
                 buf.append("was idle for ");
-                UnitFormatter.appendElapsed(buf, lastUsedNanos, currentNanos);
+                TextFormatter.appendElapsed(buf, lastUsedNanos, currentNanos);
                 buf.append(", ");
             case RELEASED:
             case CLOSED:
                 buf.append("used ").append(get()).append(" time(s), ");
-                UnitFormatter.appendElapsed(buf, createdNanos, currentNanos);
+                TextFormatter.appendElapsed(buf, createdNanos, currentNanos);
                 buf.append(" old");
             }
             return buf;

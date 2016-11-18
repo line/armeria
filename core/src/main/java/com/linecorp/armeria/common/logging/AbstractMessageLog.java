@@ -24,7 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.common.util.UnitFormatter;
+import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.netty.util.Attribute;
@@ -35,7 +35,8 @@ abstract class AbstractMessageLog<T extends MessageLog>
 
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private volatile boolean endCalled;
-    private boolean startTimeNanosSet;
+    private boolean startTimeSet;
+    private long startTimeMillis;
     private long startTimeNanos;
     private long contentLength;
     private long endTimeNanos;
@@ -46,22 +47,36 @@ abstract class AbstractMessageLog<T extends MessageLog>
             return false;
         }
 
-        return setStartTimeNanos();
+        return setStartTime();
     }
 
-    private boolean setStartTimeNanos() {
-        if (startTimeNanosSet) {
+    private boolean setStartTime() {
+        if (startTimeSet) {
             return false;
         }
 
         startTimeNanos = System.nanoTime();
-        startTimeNanosSet = true;
+        startTimeMillis = System.currentTimeMillis();
+        startTimeSet = true;
         return true;
     }
 
     @Override
-    public long startTimeNanos() {
+    public long startTimeMillis() {
+        return startTimeMillis;
+    }
+
+    @Override
+    public long durationNanos() {
+        return endTimeNanos - startTimeNanos;
+    }
+
+    final long startTimeNanos() {
         return startTimeNanos;
+    }
+
+    final long endTimeNanos() {
+        return endTimeNanos;
     }
 
     @Override
@@ -128,7 +143,7 @@ abstract class AbstractMessageLog<T extends MessageLog>
         this.cause = cause;
 
         // Handle the case where end() was called without start()
-        setStartTimeNanos();
+        setStartTime();
 
         final Iterator<Attribute<?>> attrs = attrs();
         if (attrs.hasNext()) {
@@ -175,11 +190,6 @@ abstract class AbstractMessageLog<T extends MessageLog>
     abstract CompletableFuture<?> parentLogFuture();
 
     @Override
-    public long endTimeNanos() {
-        return endTimeNanos;
-    }
-
-    @Override
     public Throwable cause() {
         return cause;
     }
@@ -193,11 +203,14 @@ abstract class AbstractMessageLog<T extends MessageLog>
     public final String toString() {
         final StringBuilder buf = new StringBuilder(512);
 
-        buf.append("{timeSpan=").append(startTimeNanos).append('+');
-        UnitFormatter.appendElapsed(buf, startTimeNanos, endTimeNanos);
+        buf.append("{startTimeMillis=").append(startTimeMillis)
+           .append('(').append(TextFormatter.epoch(startTimeMillis)).append(')');
+
+        buf.append(", duration=");
+        TextFormatter.appendElapsed(buf, startTimeNanos, endTimeNanos);
 
         buf.append(", contentLength=");
-        UnitFormatter.appendSize(buf, contentLength);
+        TextFormatter.appendSize(buf, contentLength);
 
         appendProperties(buf);
 

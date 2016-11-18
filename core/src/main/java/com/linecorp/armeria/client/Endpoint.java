@@ -83,9 +83,7 @@ public final class Endpoint {
     public static Endpoint of(String host, int port, int weight) {
         requireNonNull(host, "host");
         validatePort("port", port);
-        if (weight <= 0) {
-            throw new IllegalArgumentException("weight: " + weight + " (expected: > 0)");
-        }
+        validateWeight(weight);
 
         return new Endpoint(host, port, weight);
     }
@@ -194,6 +192,20 @@ public final class Endpoint {
     }
 
     /**
+     * Returns a new host endpoint with the specified weight.
+     *
+     * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
+     *
+     * @throws IllegalStateException if this endpoint is not a host endpoint
+     */
+    public Endpoint withWeight(int weight) {
+        ensureSingle();
+        validateWeight(weight);
+
+        return this.weight == weight ? this : new Endpoint(host(), port, weight);
+    }
+
+    /**
      * Returns the weight of this endpoint.
      */
     public int weight() {
@@ -241,6 +253,12 @@ public final class Endpoint {
         }
     }
 
+    private static void validateWeight(int weight) {
+        if (weight <= 0) {
+            throw new IllegalArgumentException("weight: " + weight + " (expected: > 0)");
+        }
+    }
+
     @Override
     public String toString() {
         return "Endpoint(" + authority() + '/' + weight + ')';
@@ -250,11 +268,14 @@ public final class Endpoint {
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
-        } else if (obj instanceof Endpoint) {
-            Endpoint other = (Endpoint) obj;
-            return authority().equals(other.authority()) && weight() == other.weight();
         }
-        return false;
+
+        if (!(obj instanceof Endpoint)) {
+            return false;
+        }
+
+        final Endpoint that = (Endpoint) obj;
+        return authority().equals(that.authority()) && weight() == that.weight();
     }
 
     @Override

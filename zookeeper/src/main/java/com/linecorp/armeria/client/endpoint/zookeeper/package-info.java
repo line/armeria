@@ -15,6 +15,6 @@
  */
 
 /**
- * A ZooKeeper based {@link com.linecorp.armeria.client.routing.EndpointGroup} implementation.
+ * ZooKeeper-based {@link com.linecorp.armeria.client.routing.EndpointGroup} implementation.
  */
 package com.linecorp.armeria.client.endpoint.zookeeper;

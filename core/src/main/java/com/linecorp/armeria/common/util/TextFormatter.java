@@ -15,10 +15,18 @@
  */
 package com.linecorp.armeria.common.util;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.Locale;
+
 /**
- * Formats a duration and a buffer size into a {@link String} or a {@link StringBuilder}.
+ * A utility class to format things as a {@link String} with ease.
  */
-public final class UnitFormatter {
+public final class TextFormatter {
+
+    private TextFormatter() {}
 
     /**
      * Appends the human-readable representation of the specified byte-unit {@code size} to the specified
@@ -35,11 +43,10 @@ public final class UnitFormatter {
     }
 
     /**
-     * Appends the human-readable representation of the duration between the specified {@code startTimeNanos}
-     * and {@code endTimeNanos} to the specified {@link StringBuilder}.
+     * Appends the human-readable representation of the duration given as {@code elapsed} to the specified
+     * {@link StringBuilder}.
      */
-    public static void appendElapsed(StringBuilder buf, long startTimeNanos, long endTimeNanos) {
-        final long elapsedNanos = endTimeNanos - startTimeNanos;
+    public static void appendElapsed(StringBuilder buf, long elapsedNanos) {
         if (elapsedNanos >= 100000000000L) { // >= 100 s
             buf.append(elapsedNanos / 1000000000L).append('s');
         } else if (elapsedNanos >= 100000000L) { // >= 100 ms
@@ -49,6 +56,14 @@ public final class UnitFormatter {
         } else {
             buf.append(elapsedNanos).append("ns");
         }
+    }
+
+    /**
+     * Appends the human-readable representation of the duration between the specified {@code startTimeNanos}
+     * and {@code endTimeNanos} to the specified {@link StringBuilder}.
+     */
+    public static void appendElapsed(StringBuilder buf, long startTimeNanos, long endTimeNanos) {
+        appendElapsed(buf, endTimeNanos - startTimeNanos);
     }
 
     /**
@@ -64,12 +79,20 @@ public final class UnitFormatter {
 
     /**
      * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
+     * given as {@code elapsed}.
+     */
+    public static StringBuilder elapsed(long elapsedNanos) {
+        final StringBuilder buf = new StringBuilder(16);
+        appendElapsed(buf, elapsedNanos);
+        return buf;
+    }
+
+    /**
+     * Creates a new {@link StringBuilder} whose content is the human-readable representation of the duration
      * between the specified {@code startTimeNanos} and {@code endTimeNanos}.
      */
     public static StringBuilder elapsed(long startTimeNanos, long endTimeNanos) {
-        final StringBuilder buf = new StringBuilder(16);
-        appendElapsed(buf, startTimeNanos, endTimeNanos);
-        return buf;
+        return elapsed(endTimeNanos - startTimeNanos);
     }
 
     /**
@@ -92,5 +115,19 @@ public final class UnitFormatter {
         return buf;
     }
 
-    private UnitFormatter() {}
+    private static final DateTimeFormatter dateTimeFormatter =
+            new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+                                          .toFormatter(Locale.ENGLISH)
+                                          .withZone(ZoneId.of("GMT"));
+
+    /**
+     * Formats given epoch time to typical human-readable format "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+     *
+     * @param timeMillis epoch time in ms
+     *
+     * @return human readable string representation of given epoch time
+     */
+    public static String epoch(long timeMillis) {
+        return dateTimeFormatter.format(Instant.ofEpochMilli(timeMillis));
+    }
 }

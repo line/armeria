@@ -16,16 +16,20 @@
 
 package com.linecorp.armeria.internal.logging;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import org.junit.Test;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.RequestContext;
@@ -59,22 +63,25 @@ public class DropwizardMetricConsumerTest {
         when(requestLog.path()).thenReturn("/bar");
         when(requestLog.method()).thenReturn("GET");
         when(requestLog.contentLength()).thenReturn(123L);
-        when(requestLog.startTimeNanos()).thenReturn(1L);
         when(responseLog.request()).thenReturn(requestLog);
         when(responseLog.statusCode()).thenReturn(200);
         when(responseLog.contentLength()).thenReturn(456L);
-        when(responseLog.endTimeNanos()).thenReturn(13L);
+        when(responseLog.responseTimeNanos()).thenReturn(13L);
 
         metricConsumer.onRequest(requestContext, requestLog);
-        assertEquals(1L, metricRegistry.getCounters().get("foo./bar#GET.activeRequests").getCount());
+        final Map<String, Counter> counters = metricRegistry.getCounters();
+        assertThat(counters.get("foo./bar#GET.activeRequests").getCount()).isEqualTo(1);
 
         metricConsumer.onResponse(requestContext, responseLog);
-        assertEquals(1L, metricRegistry.getTimers().get("foo./bar#GET.requests").getCount());
-        assertEquals(1L, metricRegistry.getMeters().get("foo./bar#GET.successes").getCount());
-        assertEquals(0L, metricRegistry.getMeters().get("foo./bar#GET.failures").getCount());
-        assertEquals(0L, metricRegistry.getCounters().get("foo./bar#GET.activeRequests").getCount());
-        assertEquals(123L, metricRegistry.getMeters().get("foo./bar#GET.requestBytes").getCount());
-        assertEquals(456L, metricRegistry.getMeters().get("foo./bar#GET.responseBytes").getCount());
+        final Map<String, Timer> timers = metricRegistry.getTimers();
+        final Map<String, Meter> meters = metricRegistry.getMeters();
+        assertThat(timers.get("foo./bar#GET.requests").getCount()).isEqualTo(1);
+        assertThat(timers.get("foo./bar#GET.requests").getSnapshot().getValues()).containsExactly(13);
+        assertThat(meters.get("foo./bar#GET.successes").getCount()).isEqualTo(1);
+        assertThat(meters.get("foo./bar#GET.failures").getCount()).isEqualTo(0);
+        assertThat(counters.get("foo./bar#GET.activeRequests").getCount()).isEqualTo(0);
+        assertThat(meters.get("foo./bar#GET.requestBytes").getCount()).isEqualTo(123);
+        assertThat(meters.get("foo./bar#GET.responseBytes").getCount()).isEqualTo(456);
     }
 
     private static class DummyRequestContext extends NonWrappingRequestContext {

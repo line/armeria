@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 /**
  * A <a href="http://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker</a>, which tracks the number of
- * succcess/failure requests and detects a remote service failure.
+ * success/failure requests and detects a remote service failure.
  */
 public interface CircuitBreaker {
 
