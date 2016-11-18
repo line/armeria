@@ -67,7 +67,7 @@ public final class DropwizardMetricConsumer implements MessageLogConsumer {
     public void onResponse(RequestContext ctx, ResponseLog res) {
         final RequestLog req = res.request();
         final DropwizardRequestMetrics metrics = getRequestMetrics(ctx, req);
-        metrics.updateTime(res.endTimeNanos() - req.startTimeNanos());
+        metrics.updateTime(res.responseTimeNanos());
         if (isSuccess(res)) {
             metrics.markSuccess();
         } else {

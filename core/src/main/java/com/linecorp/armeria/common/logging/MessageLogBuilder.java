@@ -36,14 +36,14 @@ public interface MessageLogBuilder extends AttributeMap {
     void contentLength(long contentLength);
 
     /**
-     * Sets {@link MessageLog#endTimeNanos()} and finishes the collection of the information, completing
+     * Sets {@link MessageLog#durationNanos()} and finishes the collection of the information, completing
      * {@link RequestContext#requestLogFuture()} or {@link RequestContext#responseLogFuture()} successfully.
      * This method will do nothing if called twice.
      */
     void end();
 
     /**
-     * Sets {@link MessageLog#endTimeNanos()} and finishes the collection of the information, completing
+     * Sets {@link MessageLog#durationNanos()} and finishes the collection of the information, completing
      * {@link RequestContext#requestLogFuture()} or {@link RequestContext#responseLogFuture()} exceptionally.
      * This method will do nothing if called twice.
      */

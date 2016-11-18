@@ -60,8 +60,7 @@ public interface ResponseLogBuilder extends MessageLogBuilder {
     };
 
     /**
-     * Starts the collection of information. This method will update the {@link MessageLog#startTimeNanos()}
-     * property. This method will do nothing if called twice.
+     * Starts the collection of information. This method will do nothing if called twice.
      */
     void start();
 

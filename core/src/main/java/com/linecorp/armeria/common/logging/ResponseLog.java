@@ -59,6 +59,12 @@ public interface ResponseLog extends MessageLog {
     RequestLog request();
 
     /**
+     * Returns the amount of time taken since the {@link Request} processing started and until the
+     * {@link Response} processing ended.
+     */
+    long responseTimeNanos();
+
+    /**
      * Returns the status code specific to the current {@link SessionProtocol}.
      */
     int statusCode();
