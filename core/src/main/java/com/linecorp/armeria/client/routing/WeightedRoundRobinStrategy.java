@@ -102,6 +102,9 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                     }
                 }
             }
+            if (endpoints.isEmpty()) {
+                throw new EndpointGroupException(endpointGroup + " is empty");
+            }
             //endpoints weight equal
             return endpoints.get((int) (currentSequence % endpoints.size()));
         }

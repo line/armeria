@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.common.util.TextFormatter;
+
 import io.netty.util.Attribute;
 
 /**
@@ -26,16 +28,16 @@ import io.netty.util.Attribute;
 public final class DefaultResponseLog
         extends AbstractMessageLog<ResponseLog> implements ResponseLog, ResponseLogBuilder {
 
-    private final RequestLog request;
+    private final DefaultRequestLog request;
     private final CompletableFuture<?> requestLogFuture;
     private int statusCode;
 
     /**
      * Creates a new instance.
      *
-     * @param request the {@link RequestLog} of the corresponding request
+     * @param request the {@link DefaultRequestLog} of the corresponding request
      */
-    public DefaultResponseLog(RequestLog request, CompletableFuture<?> requestLogFuture) {
+    public DefaultResponseLog(DefaultRequestLog request, CompletableFuture<?> requestLogFuture) {
         this.request = request;
         this.requestLogFuture = requestLogFuture;
     }
@@ -48,6 +50,11 @@ public final class DefaultResponseLog
     @Override
     public RequestLog request() {
         return request;
+    }
+
+    @Override
+    public long responseTimeNanos() {
+        return endTimeNanos() - request.startTimeNanos();
     }
 
     @Override
@@ -66,6 +73,8 @@ public final class DefaultResponseLog
 
     @Override
     protected void appendProperties(StringBuilder buf) {
+        buf.append(", responseTime=");
+        TextFormatter.appendElapsed(buf, responseTimeNanos());
         buf.append(", statusCode=").append(statusCode);
     }
 

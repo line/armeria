@@ -35,7 +35,8 @@ abstract class AbstractMessageLog<T extends MessageLog>
 
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private volatile boolean endCalled;
-    private boolean startTimeNanosSet;
+    private boolean startTimeSet;
+    private long startTimeMillis;
     private long startTimeNanos;
     private long contentLength;
     private long endTimeNanos;
@@ -49,19 +50,33 @@ abstract class AbstractMessageLog<T extends MessageLog>
         return setStartTime();
     }
 
-    protected boolean setStartTime() {
-        if (startTimeNanosSet) {
+    private boolean setStartTime() {
+        if (startTimeSet) {
             return false;
         }
 
         startTimeNanos = System.nanoTime();
-        startTimeNanosSet = true;
+        startTimeMillis = System.currentTimeMillis();
+        startTimeSet = true;
         return true;
     }
 
     @Override
-    public long startTimeNanos() {
+    public long startTimeMillis() {
+        return startTimeMillis;
+    }
+
+    @Override
+    public long durationNanos() {
+        return endTimeNanos - startTimeNanos;
+    }
+
+    final long startTimeNanos() {
         return startTimeNanos;
+    }
+
+    final long endTimeNanos() {
+        return endTimeNanos;
     }
 
     @Override
@@ -175,11 +190,6 @@ abstract class AbstractMessageLog<T extends MessageLog>
     abstract CompletableFuture<?> parentLogFuture();
 
     @Override
-    public long endTimeNanos() {
-        return endTimeNanos;
-    }
-
-    @Override
     public Throwable cause() {
         return cause;
     }
@@ -193,7 +203,10 @@ abstract class AbstractMessageLog<T extends MessageLog>
     public final String toString() {
         final StringBuilder buf = new StringBuilder(512);
 
-        buf.append("{timeSpan=").append(startTimeNanos).append('+');
+        buf.append("{startTimeMillis=").append(startTimeMillis)
+           .append('(').append(TextFormatter.epoch(startTimeMillis)).append(')');
+
+        buf.append(", duration=");
         TextFormatter.appendElapsed(buf, startTimeNanos, endTimeNanos);
 
         buf.append(", contentLength=");

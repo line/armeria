@@ -49,7 +49,7 @@ public abstract class StructuredLog {
         RequestLog reqLog = resLog.request();
 
         timestampMillis = reqLog.startTimeMillis();
-        responseTimeNanos = reqLog.endTimeNanos() - reqLog.startTimeNanos();
+        responseTimeNanos = resLog.responseTimeNanos();
 
         requestSize = reqLog.contentLength();
         responseSize = resLog.contentLength();

@@ -28,7 +28,6 @@ public interface RequestLogBuilder extends MessageLogBuilder {
     /**
      * Starts the collection of information. This method will update the following properties:
      * <ul>
-     *   <li>{@link MessageLog#startTimeNanos()}</li>
      *   <li>{@link RequestLog#scheme()} with {@link SerializationFormat#UNKNOWN}</li>
      *   <li>{@link RequestLog#host()}</li>
      *   <li>{@link RequestLog#method()}</li>
