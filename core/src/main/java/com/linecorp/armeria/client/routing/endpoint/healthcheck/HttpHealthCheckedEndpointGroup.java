@@ -49,7 +49,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
      */
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
                                                     String healthCheckPath) {
-        return of(delegate, healthCheckPath, DEFAULT_HEALTHCHECK_RETRY_DELAY_MILLS);
+        return of(delegate, healthCheckPath, DEFAULT_HEALTHCHECK_RETRY_INTERVAL_MILLIS);
     }
 
     /**
@@ -57,8 +57,8 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
      */
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
                                                     String healthCheckPath,
-                                                    long healthCheckRetryDelayMills) {
-        return of(ClientFactory.DEFAULT, delegate, healthCheckPath, healthCheckRetryDelayMills);
+                                                    long healthCheckRetryIntervalMillis) {
+        return of(ClientFactory.DEFAULT, delegate, healthCheckPath, healthCheckRetryIntervalMillis);
     }
 
     /**
@@ -67,15 +67,15 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
     public static HttpHealthCheckedEndpointGroup of(ClientFactory clientFactory,
                                                     EndpointGroup delegate,
                                                     String healthCheckPath,
-                                                    long healthCheckRetryDelayMills) {
+                                                    long healthCheckRetryIntervalMillis) {
         return new HttpHealthCheckedEndpointGroup(clientFactory,
                                                   delegate,
                                                   healthCheckPath,
-                                                  healthCheckRetryDelayMills);
+                                                  healthCheckRetryIntervalMillis);
     }
 
     @Override
-    EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint) {
+    protected EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint) {
         return new HttpEndpointHealthChecker(clientFactory(), endpoint, healthCheckPath);
     }
 
