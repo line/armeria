@@ -38,8 +38,8 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
     private HttpHealthCheckedEndpointGroup(ClientFactory clientFactory,
                                            EndpointGroup delegate,
                                            String healthCheckPath,
-                                           long healthCheckRetryDelayMills) {
-        super(clientFactory, delegate, healthCheckRetryDelayMills);
+                                           long healthCheckRetryIntervalMillis) {
+        super(clientFactory, delegate, healthCheckRetryIntervalMillis);
         this.healthCheckPath = requireNonNull(healthCheckPath, "healthCheckPath");
         init();
     }

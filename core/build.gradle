@@ -4,8 +4,8 @@ dependencies {
 
     // Guava
     compile 'com.google.guava:guava'
-    testCompile 'com.google.guava:guava-testlib'
     compile 'jp.skypencil.guava:helper'
+    testCompile 'com.google.guava:guava-testlib'
 
     // Jackson
     [ 'jackson-core', 'jackson-annotations', 'jackson-databind' ].each {
