@@ -13,11 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.routing.endpoint.healthcheck;
+package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -38,14 +39,14 @@ import jp.skypencil.guava.stream.GuavaCollectors;
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
  */
 public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
-    protected static final long DEFAULT_HEALTHCHECK_RETRY_INTERVAL_MILLIS = 3_000; // 3 seconds.
+    protected static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3_000);
 
     private final ClientFactory clientFactory;
     private final EndpointGroup delegate;
-    private final long healthCheckRetryIntervalMillis;
+    private final Duration healthCheckRetryInterval;
 
     volatile List<ServerConnection> allServers = ImmutableList.of();
-    volatile List<ServerConnection> healthyServers = ImmutableList.of();
+    volatile List<Endpoint> healthyEndpoints = ImmutableList.of();
 
     /**
      * Creates a new instance.
@@ -53,10 +54,10 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
      */
     protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
                                          EndpointGroup delegate,
-                                         long healthCheckRetryIntervalMillis) {
+                                         Duration healthCheckRetryInterval) {
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.delegate = requireNonNull(delegate, "delegate");
-        this.healthCheckRetryIntervalMillis = healthCheckRetryIntervalMillis;
+        this.healthCheckRetryInterval = requireNonNull(healthCheckRetryInterval, "healthCheckRetryInterval");
     }
 
     /**
@@ -68,6 +69,9 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
         scheduleCheckAndUpdateHealthyServers();
     }
 
+    /**
+     * Returns the {@link ClientFactory} that will process {@link EndpointHealthChecker}'s healthcheck requests.
+     */
     protected final ClientFactory clientFactory() {
         return clientFactory;
     }
@@ -75,7 +79,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     private void scheduleCheckAndUpdateHealthyServers() {
         clientFactory.eventLoopGroup().schedule(() -> {
             checkAndUpdateHealthyServers().thenRun(this::scheduleCheckAndUpdateHealthyServers);
-        }, healthCheckRetryIntervalMillis, TimeUnit.MILLISECONDS);
+        }, healthCheckRetryInterval.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     private CompletableFuture<Void> checkAndUpdateHealthyServers() {
@@ -87,10 +91,11 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
                               .collect(GuavaCollectors.toImmutableList()),
                 t -> false);
         return healthCheckResults.handle(voidFunction((result, thrown) -> {
-            healthyServers = IntStream
+            healthyEndpoints = IntStream
                     .range(0, result.size())
                     .filter(i -> result.get(i) != null && result.get(i))
                     .mapToObj(checkedServers::get)
+                    .map(ServerConnection::endpoint)
                     .collect(GuavaCollectors.toImmutableList());
         }));
     }
@@ -116,13 +121,14 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
                 .collect(GuavaCollectors.toImmutableList());
     }
 
+    /**
+     * Creates a new {@link EndpointHealthChecker} instance that will check {@code endpoint} healthiness.
+     */
     protected abstract EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint);
 
     @Override
     public List<Endpoint> endpoints() {
-        return healthyServers.stream()
-                             .map(ServerConnection::endpoint)
-                             .collect(GuavaCollectors.toImmutableList());
+        return healthyEndpoints;
     }
 
     @Override
@@ -134,8 +140,8 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
         }
         buf.setCharAt(buf.length() - 1, ']');
         buf.append(", healthy:[");
-        for (ServerConnection connection : healthyServers) {
-            buf.append(connection.endpoint).append(',');
+        for (Endpoint endpoint : healthyEndpoints) {
+            buf.append(endpoint).append(',');
         }
         buf.setCharAt(buf.length() - 1, ']');
         buf.append(')');

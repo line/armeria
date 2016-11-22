@@ -1,4 +1,4 @@
-package com.linecorp.armeria.client.routing.endpoint.healthcheck;
+package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

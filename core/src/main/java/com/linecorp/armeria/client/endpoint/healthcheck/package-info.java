@@ -15,6 +15,6 @@
  */
 
 /**
- * {@link com.linecorp.armeria.client.routing.endpoint.healthcheck.HealthCheckedEndpointGroup} groups.
+ * {@link com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup} groups.
  */
-package com.linecorp.armeria.client.routing.endpoint.healthcheck;
+package com.linecorp.armeria.client.endpoint.healthcheck;

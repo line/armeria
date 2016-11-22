@@ -13,10 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.routing.endpoint.healthcheck;
+package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -35,21 +36,9 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
      */
-    private HttpHealthCheckedEndpointGroup(ClientFactory clientFactory,
-                                           EndpointGroup delegate,
-                                           String healthCheckPath,
-                                           long healthCheckRetryIntervalMillis) {
-        super(clientFactory, delegate, healthCheckRetryIntervalMillis);
-        this.healthCheckPath = requireNonNull(healthCheckPath, "healthCheckPath");
-        init();
-    }
-
-    /**
-     * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
-     */
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
                                                     String healthCheckPath) {
-        return of(delegate, healthCheckPath, DEFAULT_HEALTHCHECK_RETRY_INTERVAL_MILLIS);
+        return of(delegate, healthCheckPath, DEFAULT_HEALTHCHECK_RETRY_INTERVAL);
     }
 
     /**
@@ -57,8 +46,8 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
      */
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
                                                     String healthCheckPath,
-                                                    long healthCheckRetryIntervalMillis) {
-        return of(ClientFactory.DEFAULT, delegate, healthCheckPath, healthCheckRetryIntervalMillis);
+                                                    Duration healthCheckRetryInterval) {
+        return of(ClientFactory.DEFAULT, delegate, healthCheckPath, healthCheckRetryInterval);
     }
 
     /**
@@ -67,11 +56,23 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
     public static HttpHealthCheckedEndpointGroup of(ClientFactory clientFactory,
                                                     EndpointGroup delegate,
                                                     String healthCheckPath,
-                                                    long healthCheckRetryIntervalMillis) {
+                                                    Duration healthCheckRetryInterval) {
         return new HttpHealthCheckedEndpointGroup(clientFactory,
                                                   delegate,
                                                   healthCheckPath,
-                                                  healthCheckRetryIntervalMillis);
+                                                  healthCheckRetryInterval);
+    }
+
+    /**
+     * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
+     */
+    private HttpHealthCheckedEndpointGroup(ClientFactory clientFactory,
+                                           EndpointGroup delegate,
+                                           String healthCheckPath,
+                                           Duration healthCheckRetryInterval) {
+        super(clientFactory, delegate, healthCheckRetryInterval);
+        this.healthCheckPath = requireNonNull(healthCheckPath, "healthCheckPath");
+        init();
     }
 
     @Override
