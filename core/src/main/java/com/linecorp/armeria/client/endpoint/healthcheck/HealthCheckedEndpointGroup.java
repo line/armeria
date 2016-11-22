@@ -39,7 +39,7 @@ import jp.skypencil.guava.stream.GuavaCollectors;
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
  */
 public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
-    protected static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3_000);
+    protected static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3);
 
     private final ClientFactory clientFactory;
     private final EndpointGroup delegate;
