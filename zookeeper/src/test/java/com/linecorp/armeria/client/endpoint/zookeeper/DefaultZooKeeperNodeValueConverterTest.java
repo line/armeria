@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.routing.EndpointGroupException;
+import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
 public class DefaultZooKeeperNodeValueConverterTest {
     @Test

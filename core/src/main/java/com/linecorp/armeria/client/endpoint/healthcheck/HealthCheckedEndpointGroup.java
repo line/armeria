@@ -31,7 +31,7 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.routing.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 
 import jp.skypencil.guava.stream.GuavaCollectors;
 

@@ -13,7 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.routing;
+
+package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
@@ -74,7 +75,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
         @Override
         public EndpointSelectionStrategy strategy() {
-            return EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+            return WEIGHTED_ROUND_ROBIN;
         }
 
         @Override

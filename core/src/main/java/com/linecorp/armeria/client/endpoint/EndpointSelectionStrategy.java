@@ -14,13 +14,24 @@
  * under the License.
  */
 
+package com.linecorp.armeria.client.endpoint;
+
+import com.linecorp.armeria.client.Endpoint;
+
 /**
- * {@link com.linecorp.armeria.client.Endpoint} groups and their registry.
- *
- * <h2>Starting points</h2>
- * <ul>
- *   <li>{@link com.linecorp.armeria.client.routing.EndpointGroupRegistry}</li>
- *   <li>{@link com.linecorp.armeria.client.routing.StaticEndpointGroup}</li>
- * </ul>
+ * {@link Endpoint} selection strategy that creates a {@link EndpointSelector}.
  */
-package com.linecorp.armeria.client.routing;
+@FunctionalInterface
+public interface EndpointSelectionStrategy {
+
+    /**
+     * Weighted round-robin strategy.
+     */
+    EndpointSelectionStrategy WEIGHTED_ROUND_ROBIN = new WeightedRoundRobinStrategy();
+
+    /**
+     * Creates a new {@link EndpointSelector} that selects an {@link Endpoint} from the specified
+     * {@link EndpointGroup}.
+     */
+    EndpointSelector newSelector(EndpointGroup endpointGroup);
+}
