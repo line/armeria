@@ -13,24 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.routing;
+
+package com.linecorp.armeria.client.endpoint;
+
+import static java.util.Objects.requireNonNull;
+
+import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
 
-/**
- * {@link Endpoint} selection strategy that creates a {@link EndpointSelector}.
- */
-@FunctionalInterface
-public interface EndpointSelectionStrategy {
+final class OrElseEndpointGroup implements EndpointGroup {
+    private final EndpointGroup first;
+    private final EndpointGroup second;
 
-    /**
-     * Weighted round-robin strategy.
-     */
-    EndpointSelectionStrategy WEIGHTED_ROUND_ROBIN = new WeightedRoundRobinStrategy();
+    OrElseEndpointGroup(EndpointGroup first, EndpointGroup second) {
+        this.first = requireNonNull(first, "first");
+        this.second = requireNonNull(second, "second");
+    }
 
-    /**
-     * Creates a new {@link EndpointSelector} that selects an {@link Endpoint} from the specified
-     * {@link EndpointGroup}.
-     */
-    EndpointSelector newSelector(EndpointGroup endpointGroup);
+    @Override
+    public List<Endpoint> endpoints() {
+        List<Endpoint> endpoints = first.endpoints();
+        if (!endpoints.isEmpty()) {
+            return endpoints;
+        }
+        return second.endpoints();
+    }
 }

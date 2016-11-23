@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.net.HostAndPort;
 
-import com.linecorp.armeria.client.routing.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 
 /**
  * A remote endpoint that refers to a single host or a group of multiple hosts.

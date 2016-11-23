@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.routing;
+package com.linecorp.armeria.client.endpoint;
 
-import static com.linecorp.armeria.client.routing.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.After;

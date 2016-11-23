@@ -15,6 +15,12 @@
  */
 
 /**
- * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
+ * {@link com.linecorp.armeria.client.Endpoint} groups and their registry.
+ *
+ * <h2>Starting points</h2>
+ * <ul>
+ *   <li>{@link com.linecorp.armeria.client.endpoint.EndpointGroupRegistry}</li>
+ *   <li>{@link com.linecorp.armeria.client.endpoint.StaticEndpointGroup}</li>
+ * </ul>
  */
-package com.linecorp.armeria.client.endpoint.zookeeper;
+package com.linecorp.armeria.client.endpoint;

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.routing.StaticEndpointGroup;
+import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;

@@ -13,7 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.routing;
+
+package com.linecorp.armeria.client.endpoint;
 
 import java.util.List;
 

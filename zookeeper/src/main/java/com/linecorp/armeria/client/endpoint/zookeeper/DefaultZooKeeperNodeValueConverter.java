@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.routing.EndpointGroupException;
+import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
 /**
  * Default {@link ZooKeeperNodeValueConverter} implementation which assumes zNode value is a comma-separated

@@ -23,8 +23,8 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.http.HttpClient;
-import com.linecorp.armeria.client.routing.EndpointGroup;
 import com.linecorp.armeria.common.http.HttpStatus;
 
 /**

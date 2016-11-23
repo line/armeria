@@ -13,9 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.routing;
 
-import static com.linecorp.armeria.client.routing.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
+package com.linecorp.armeria.client.endpoint;
+
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
