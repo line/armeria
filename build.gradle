@@ -77,6 +77,9 @@ configure(javaProjects) {
             // AssertJ
             dependency "org.assertj:assertj-core:${ext.versionOf('assertj')}"
 
+            // Completable-futures
+            dependency "com.spotify:completable-futures:${ext.versionOf('completable-futures')}"
+
             // FastUtil
             dependency "it.unimi.dsi:fastutil:${ext.versionOf('fastutil')}"
 
@@ -101,6 +104,9 @@ configure(javaProjects) {
                     exclude 'com.google.errorprone:error_prone_annotations'
                 }
             }
+
+            // Guava-helper
+            dependency "jp.skypencil.guava:helper:${ext.versionOf('guava-helper')}"
 
             // Hamcrest
             dependency "org.hamcrest:hamcrest-library:${ext.versionOf('hamcrest')}"
