@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
+import com.codahale.metrics.MetricRegistry;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -48,6 +50,8 @@ public class HttpHealthCheckedEndpointGroupTest {
         }
     }
 
+    private final MetricRegistry metricRegistry = new MetricRegistry();
+
     @Test
     public void endpoints() throws Exception {
         String healthCheckPath = "/healthcheck";
@@ -55,8 +59,11 @@ public class HttpHealthCheckedEndpointGroupTest {
                 new StaticEndpointGroup(
                         Endpoint.of("127.0.0.1", 1234),
                         Endpoint.of("127.0.0.1", 2345)),
-                healthCheckPath);
+                healthCheckPath,
+                metricRegistry);
         assertThat(endpointGroup.endpoints()).isEmpty();
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234").getValue()).isEqualTo(0);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345").getValue()).isEqualTo(0);
 
         ServiceServer serverOne = new ServiceServer(healthCheckPath, 1234).start();
         ServiceServer serverTwo = new ServiceServer(healthCheckPath, 2345).start();
@@ -65,6 +72,8 @@ public class HttpHealthCheckedEndpointGroupTest {
         assertThat(endpointGroup.endpoints()).containsExactly(
                 Endpoint.of("127.0.0.1", 1234),
                 Endpoint.of("127.0.0.1", 2345));
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234").getValue()).isEqualTo(1);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345").getValue()).isEqualTo(1);
 
         serverOne.stop();
         serverTwo.stop();
@@ -79,10 +88,13 @@ public class HttpHealthCheckedEndpointGroupTest {
                 new StaticEndpointGroup(
                         Endpoint.of("127.0.0.1", 1234),
                         Endpoint.of("127.0.0.1", 2345)),
-                healthCheckPath);
+                healthCheckPath,
+                metricRegistry);
         Thread.sleep(4000); // Wait until updating server list.
 
         assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", 1234));
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234").getValue()).isEqualTo(1);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345").getValue()).isEqualTo(0);
         serverOne.stop();
     }
 }
