@@ -31,6 +31,7 @@ import org.slf4j.Marker;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.internal.fastutil.objects.Object2ObjectOpenHashMap;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -45,7 +46,6 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
  * A <a href="http://logback.qos.ch/">Logback</a> {@link Appender} that exports the properties of the current

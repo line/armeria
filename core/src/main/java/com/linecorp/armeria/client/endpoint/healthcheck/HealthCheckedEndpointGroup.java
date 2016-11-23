@@ -27,13 +27,12 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-
-import jp.skypencil.guava.stream.GuavaCollectors;
+import com.linecorp.armeria.internal.futures.CompletableFutures;
+import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 /**
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.

@@ -1,5 +1,4 @@
 dependencies {
-    compile project(':core')
     compile 'com.google.guava:guava'
     compile 'com.squareup.retrofit2:retrofit'
 

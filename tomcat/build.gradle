@@ -18,8 +18,6 @@ buildscript {
 }
 
 dependencies {
-    compile project(':core')
-
     // Tomcat
     [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
         compile "org.apache.tomcat.embed:$it"
