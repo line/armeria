@@ -24,9 +24,9 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 /**
- * A skeletal {@link RpcRequest} implementation.
+ * Default {@link RpcRequest} implementation.
  */
-public class AbstractRpcRequest implements RpcRequest {
+public class DefaultRpcRequest implements RpcRequest {
 
     private final Class<?> serviceType;
     private final String method;
@@ -35,21 +35,21 @@ public class AbstractRpcRequest implements RpcRequest {
     /**
      * Creates a new instance.
      */
-    protected AbstractRpcRequest(Class<?> serviceType, String method, Iterable<?> args) {
+    public DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> args) {
         this(serviceType, method, ImmutableList.copyOf(args));
     }
 
     /**
      * Creates a new instance.
      */
-    protected AbstractRpcRequest(Class<?> serviceType, String method, Object... args) {
+    public DefaultRpcRequest(Class<?> serviceType, String method, Object... args) {
         this(serviceType, method, ImmutableList.copyOf(args));
     }
 
     /**
      * Creates a new instance.
      */
-    protected AbstractRpcRequest(Class<?> serviceType, String method, List<Object> args) {
+    private DefaultRpcRequest(Class<?> serviceType, String method, List<Object> args) {
         this.serviceType = requireNonNull(serviceType, "serviceType");
         this.method = requireNonNull(method, "method");
         this.args = args;
@@ -81,11 +81,11 @@ public class AbstractRpcRequest implements RpcRequest {
             return true;
         }
 
-        if (!(obj instanceof AbstractRpcRequest)) {
+        if (!(obj instanceof DefaultRpcRequest)) {
             return false;
         }
 
-        final AbstractRpcRequest that = (AbstractRpcRequest) obj;
+        final DefaultRpcRequest that = (DefaultRpcRequest) obj;
         return method().equals(that.method()) &&
                params().equals(that.params());
     }

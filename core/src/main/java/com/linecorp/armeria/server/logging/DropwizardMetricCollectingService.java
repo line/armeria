@@ -18,18 +18,19 @@ package com.linecorp.armeria.server.logging;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.internal.logging.DropwizardMetricConsumer;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.internal.logging.DropwizardMetricCollector;
+import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -54,7 +55,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @param <O> the {@link Response} type
  */
 public final class DropwizardMetricCollectingService<I extends Request, O extends Response>
-        extends LogCollectingService<I, O> {
+        extends DecoratingService<I, O, I, O> {
 
     /**
      * Returns a new {@link Service} decorator that tracks request stats using the Dropwizard metrics
@@ -66,7 +67,7 @@ public final class DropwizardMetricCollectingService<I extends Request, O extend
     public static <I extends Request, O extends Response>
     Function<Service<? super I, ? extends O>, DropwizardMetricCollectingService<I, O>> newDecorator(
             MetricRegistry metricRegistry,
-            BiFunction<? super ServiceRequestContext, ? super RequestLog, String> metricNameFunc) {
+            Function<? super RequestLog, String> metricNameFunc) {
 
         requireNonNull(metricRegistry, "metricRegistry");
         requireNonNull(metricNameFunc, "metricNameFunc");
@@ -87,41 +88,60 @@ public final class DropwizardMetricCollectingService<I extends Request, O extend
             MetricRegistry metricRegistry, String metricNamePrefix) {
 
         requireNonNull(metricNamePrefix, "metricNamePrefix");
-        return newDecorator(metricRegistry, (ctx, req) -> defaultMetricName(ctx, req, metricNamePrefix));
+        return newDecorator(metricRegistry, log -> defaultMetricName(log, metricNamePrefix));
     }
 
-    private static String defaultMetricName(
-            ServiceRequestContext ctx, RequestLog req, String metricNamePrefix) {
+    private static String defaultMetricName(RequestLog log, String metricNamePrefix) {
+
+        final ServiceRequestContext ctx = (ServiceRequestContext) log.context();
+        final Object requestEnvelope = log.requestEnvelope();
+        final Object requestContent = log.requestContent();
 
         String pathAsMetricName = null;
         String methodName = null;
 
-        if (req.hasAttr(RequestLog.HTTP_HEADERS)) {
-            final HttpHeaders headers = req.attr(RequestLog.HTTP_HEADERS).get();
+        if (requestEnvelope instanceof HttpHeaders) {
             pathAsMetricName = ctx.pathMapping().metricName();
-            methodName = headers.method().name();
+            methodName = ((HttpHeaders) requestEnvelope).method().name();
         }
 
-        if (req.hasAttr(RequestLog.RPC_REQUEST)) {
-            methodName = req.attr(RequestLog.RPC_REQUEST).get().method();
+        if (requestContent instanceof ThriftCall) {
+            methodName = ((ThriftCall) requestContent).header().name;
         }
 
         pathAsMetricName = MoreObjects.firstNonNull(pathAsMetricName, "__UNKNOWN_PATH__");
 
         if (methodName == null) {
-            methodName = MoreObjects.firstNonNull(req.method(), "__UNKNOWN_METHOD__");
+            methodName = MoreObjects.firstNonNull(log.method(), "__UNKNOWN_METHOD__");
         }
 
         return MetricRegistry.name(metricNamePrefix, pathAsMetricName, methodName);
     }
 
+    private final DropwizardMetricCollector collector;
+
     @SuppressWarnings("unchecked")
     DropwizardMetricCollectingService(
             Service<? super I, ? extends O> delegate,
             MetricRegistry metricRegistry,
-            BiFunction<? super ServiceRequestContext, ? super RequestLog, String> metricNameFunc) {
+            Function<? super RequestLog, String> metricNameFunc) {
 
-        super(delegate, new DropwizardMetricConsumer(
-                metricRegistry, (BiFunction<RequestContext, RequestLog, String>) metricNameFunc));
+        super(delegate);
+
+        collector = new DropwizardMetricCollector(
+                metricRegistry, (Function<RequestLog, String>) metricNameFunc);
+    }
+
+    @Override
+    public O serve(ServiceRequestContext ctx, I req) throws Exception {
+        ctx.log().addListener(collector::onRequestStart,
+                              RequestLogAvailability.REQUEST_ENVELOPE,
+                              RequestLogAvailability.REQUEST_CONTENT);
+        ctx.log().addListener(collector::onRequestEnd,
+                              RequestLogAvailability.REQUEST_END);
+        ctx.log().addListener(collector::onResponse,
+                              RequestLogAvailability.COMPLETE);
+
+        return delegate().serve(ctx, req);
     }
 }

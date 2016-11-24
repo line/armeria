@@ -16,18 +16,13 @@
 
 package com.linecorp.armeria.server.logging.structured;
 
-import java.util.regex.Pattern;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.thrift.ApacheThriftCall;
-import com.linecorp.armeria.common.thrift.ApacheThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 /**
@@ -35,12 +30,11 @@ import com.linecorp.armeria.common.util.TextFormatter;
  * information.
  */
 public class ApacheThriftStructuredLog extends StructuredLog {
-    private static final Pattern thriftIfaceClassSuffixRegexp = Pattern.compile("\\.(?:Async)?Iface$");
 
     private final String thriftServiceName;
     private final String thriftMethodName;
-    private final ApacheThriftCall thriftCall;
-    private final ApacheThriftReply thriftReply;
+    private final ThriftCall thriftCall;
+    private final ThriftReply thriftReply;
 
     ApacheThriftStructuredLog(long timestampMillis,
                               long responseTimeNanos,
@@ -48,8 +42,8 @@ public class ApacheThriftStructuredLog extends StructuredLog {
                               long responseSize,
                               String thriftServiceName,
                               String thriftMethodName,
-                              ApacheThriftCall thriftCall,
-                              ApacheThriftReply thriftReply) {
+                              ThriftCall thriftCall,
+                              ThriftReply thriftReply) {
         super(timestampMillis, responseTimeNanos, requestSize, responseSize);
         this.thriftServiceName = thriftServiceName;
         this.thriftMethodName = thriftMethodName;
@@ -58,16 +52,14 @@ public class ApacheThriftStructuredLog extends StructuredLog {
     }
 
     /**
-     * Constructs {@link ApacheThriftStructuredLog} from {@link RequestContext} and {@link ResponseLog}.
+     * Constructs {@link ApacheThriftStructuredLog} from {@link RequestContext} and {@link RequestLog}.
      * Can be used as {@link StructuredLogBuilder}.
      */
-    public ApacheThriftStructuredLog(RequestContext reqCtx, ResponseLog resLog) {
-        super(resLog);
+    public ApacheThriftStructuredLog(RequestLog reqLog) {
+        super(reqLog);
 
-        RequestLog req = resLog.request();
-
-        RpcRequest rpcRequest = req.attr(RequestLog.RPC_REQUEST).get();
-        if (rpcRequest == null) {
+        Object requestContent = reqLog.requestContent();
+        if (requestContent == null) {
             // Request might be responded as error before reading arguments.
             thriftServiceName = null;
             thriftMethodName = null;
@@ -76,18 +68,21 @@ public class ApacheThriftStructuredLog extends StructuredLog {
             return;
         }
 
-        if (!(rpcRequest instanceof ThriftCall)) {
+        if (!(requestContent instanceof ThriftCall)) {
             throw new IllegalArgumentException(
-                    "expected ThriftCall instance for " + RequestLog.RPC_REQUEST + " but was " + rpcRequest);
+                    "expected ApacheThriftCall instance for RequestLog.requestContent() but was " +
+                    requestContent);
         }
-        ThriftCall thriftCall = (ThriftCall) rpcRequest;
 
-        thriftServiceName = thriftIfaceClassSuffixRegexp.matcher(thriftCall.serviceType().getCanonicalName())
-                                                        .replaceAll("");
+        final ThriftCall thriftCall = (ThriftCall) requestContent;
 
-        thriftMethodName = thriftCall.method();
-        this.thriftCall = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
-        thriftReply = (ApacheThriftReply) resLog.attr(ResponseLog.RAW_RPC_RESPONSE).get();
+        // Get the service name from the args class name.
+        final String argsTypeName = thriftCall.args().getClass().getName();
+        thriftServiceName = argsTypeName.substring(0, argsTypeName.indexOf('$'));
+
+        thriftMethodName = thriftCall.header().name;
+        this.thriftCall = thriftCall;
+        thriftReply = (ThriftReply) reqLog.responseContent();
     }
 
     /**
@@ -111,32 +106,30 @@ public class ApacheThriftStructuredLog extends StructuredLog {
     }
 
     /**
-     * Returns the {@link ApacheThriftCall} object which includes Thrift call information of the log.
+     * Returns the {@link ThriftCall} object which includes Thrift call information of the log.
      *
-     * @return an instance of {@link ApacheThriftCall} which is associated to the log
+     * @return an instance of {@link ThriftCall} which is associated to the log
      */
     @JsonProperty
-    public ApacheThriftCall thriftCall() {
+    public ThriftCall thriftCall() {
         return thriftCall;
     }
 
     /**
-     * Returns the {@link ApacheThriftReply} object which includes Thrift reply information of the log.
+     * Returns the {@link ThriftReply} object which includes Thrift reply information of the log.
      *
-     * @return an instance of {@link ApacheThriftReply} which is associated to the log
+     * @return an instance of {@link ThriftReply} which is associated to the log
      */
     @JsonProperty
-    public ApacheThriftReply thriftReply() {
+    public ThriftReply thriftReply() {
         return thriftReply;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("timestampMillis", timestampMillis() +
-                                                  '(' + TextFormatter.epoch(timestampMillis()) + ')')
-                          .add("responseTimeNanos", String.valueOf(responseTimeNanos()) +
-                                                    '(' + TextFormatter.elapsed(responseTimeNanos()) + ')')
+                          .add("timestamp", TextFormatter.epoch(timestampMillis()))
+                          .add("responseTime", TextFormatter.elapsed(responseTimeNanos()))
                           .add("requestSize", TextFormatter.size(requestSize()))
                           .add("responseSize", TextFormatter.size(responseSize()))
                           .add("thriftServiceName", thriftServiceName)

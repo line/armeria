@@ -33,8 +33,7 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.http.HttpStatusClass;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
@@ -61,7 +60,7 @@ abstract class HttpResponseDecoder {
     }
 
     final HttpResponseWrapper addResponse(
-            int id, HttpRequest req, DecodedHttpResponse res, ResponseLogBuilder logBuilder,
+            int id, HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
             long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
@@ -111,12 +110,12 @@ abstract class HttpResponseDecoder {
     static final class HttpResponseWrapper implements HttpResponseWriter, Runnable {
         private final HttpRequest request;
         private final DecodedHttpResponse delegate;
-        private final ResponseLogBuilder logBuilder;
+        private final RequestLogBuilder logBuilder;
         private final long responseTimeoutMillis;
         private final long maxContentLength;
         private ScheduledFuture<?> responseTimeoutFuture;
 
-        HttpResponseWrapper(HttpRequest request, DecodedHttpResponse delegate, ResponseLogBuilder logBuilder,
+        HttpResponseWrapper(HttpRequest request, DecodedHttpResponse delegate, RequestLogBuilder logBuilder,
                             long responseTimeoutMillis, long maxContentLength) {
             this.request = request;
             this.delegate = delegate;
@@ -150,7 +149,7 @@ abstract class HttpResponseDecoder {
         public void run() {
             final ResponseTimeoutException cause = ResponseTimeoutException.get();
             delegate.close(cause);
-            logBuilder.end(cause);
+            logBuilder.endResponse(cause);
         }
 
         @Override
@@ -163,15 +162,15 @@ abstract class HttpResponseDecoder {
             if (o instanceof HttpHeaders) {
                 // NB: It's safe to call logBuilder.start() multiple times.
                 //     See AbstractMessageLog.start() for more information.
-                logBuilder.start();
+                logBuilder.startResponse();
                 final HttpHeaders headers = (HttpHeaders) o;
                 final HttpStatus status = headers.status();
                 if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
                     logBuilder.statusCode(status.code());
-                    logBuilder.attr(ResponseLog.HTTP_HEADERS).set(headers);
+                    logBuilder.responseEnvelope(headers);
                 }
             } else if (o instanceof HttpData) {
-                logBuilder.increaseContentLength(((HttpData) o).length());
+                logBuilder.increaseResponseLength(((HttpData) o).length());
             }
             return delegate.write(o);
         }
@@ -194,7 +193,7 @@ abstract class HttpResponseDecoder {
 
             if (cancelTimeout()) {
                 delegate.close();
-                logBuilder.end();
+                logBuilder.endResponse();
             }
         }
 
@@ -206,7 +205,7 @@ abstract class HttpResponseDecoder {
 
             if (cancelTimeout()) {
                 delegate.close(cause);
-                logBuilder.end(cause);
+                logBuilder.endResponse(cause);
             } else {
                 if (!Exceptions.isExpected(cause)) {
                     logger.warn("Unexpected exception:", cause);

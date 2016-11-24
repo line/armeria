@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -46,8 +45,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.Channel;
@@ -261,22 +258,12 @@ public class RequestContextTest {
         }
 
         @Override
-        public RequestLogBuilder requestLogBuilder() {
+        public RequestLog log() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ResponseLogBuilder responseLogBuilder() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public CompletableFuture<RequestLog> requestLogFuture() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public CompletableFuture<ResponseLog> responseLogFuture() {
+        public RequestLogBuilder logBuilder() {
             throw new UnsupportedOperationException();
         }
     }

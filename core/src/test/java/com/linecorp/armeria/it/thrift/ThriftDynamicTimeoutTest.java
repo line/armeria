@@ -29,8 +29,8 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -60,7 +60,7 @@ public class ThriftDynamicTimeoutTest extends AbstractServerTest {
     @Test
     public void testDynamicTimeout() throws Exception {
         final SleepService.Iface client = new ClientBuilder("tbinary+" + uri("/sleep"))
-                .decorator(ThriftCall.class, ThriftReply.class, DynamicTimeoutClient::new)
+                .decorator(RpcRequest.class, RpcResponse.class, DynamicTimeoutClient::new)
                 .defaultResponseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
 
         final long delay = 1500;
@@ -70,14 +70,14 @@ public class ThriftDynamicTimeoutTest extends AbstractServerTest {
     }
 
     private static final class DynamicTimeoutService
-            extends DecoratingService<ThriftCall, ThriftReply, ThriftCall, ThriftReply> {
+            extends DecoratingService<RpcRequest, RpcResponse, RpcRequest, RpcResponse> {
 
-        DynamicTimeoutService(Service<? super ThriftCall, ? extends ThriftReply> delegate) {
+        DynamicTimeoutService(Service<? super RpcRequest, ? extends RpcResponse> delegate) {
             super(delegate);
         }
 
         @Override
-        public ThriftReply serve(ServiceRequestContext ctx, ThriftCall req) throws Exception {
+        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
             ctx.setRequestTimeoutMillis(((Number) req.params().get(0)).longValue() +
                                         ctx.requestTimeoutMillis());
             return delegate().serve(ctx, req);
@@ -85,14 +85,14 @@ public class ThriftDynamicTimeoutTest extends AbstractServerTest {
     }
 
     private static final class DynamicTimeoutClient
-            extends DecoratingClient<ThriftCall, ThriftReply, ThriftCall, ThriftReply> {
+            extends DecoratingClient<RpcRequest, RpcResponse, RpcRequest, RpcResponse> {
 
-        DynamicTimeoutClient(Client<? super ThriftCall, ? extends ThriftReply> delegate) {
+        DynamicTimeoutClient(Client<? super RpcRequest, ? extends RpcResponse> delegate) {
             super(delegate);
         }
 
         @Override
-        public ThriftReply execute(ClientRequestContext ctx, ThriftCall req) throws Exception {
+        public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
             ctx.setResponseTimeoutMillis(((Number) req.params().get(0)).longValue() +
                                          ctx.responseTimeoutMillis());
             return delegate().execute(ctx, req);

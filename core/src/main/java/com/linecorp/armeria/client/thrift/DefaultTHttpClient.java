@@ -18,36 +18,34 @@ package com.linecorp.armeria.client.thrift;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UserClient;
+import com.linecorp.armeria.common.DefaultRpcRequest;
+import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 
-final class DefaultTHttpClient extends UserClient<ThriftCall, ThriftReply> implements THttpClient {
-
-    private final AtomicInteger nextSeqId = new AtomicInteger();
+final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
 
     DefaultTHttpClient(ClientBuilderParams params,
-                       Client<ThriftCall, ThriftReply> delegate,
+                       Client<RpcRequest, RpcResponse> delegate,
                        SessionProtocol sessionProtocol, Endpoint endpoint) {
         super(params, delegate, sessionProtocol, endpoint);
     }
 
     @Override
-    public ThriftReply execute(String path, Class<?> serviceType, String method, Object... args) {
+    public RpcResponse execute(String path, Class<?> serviceType, String method, Object... args) {
         return executeMultiplexed(path, serviceType, "", method, args);
     }
 
     @Override
-    public ThriftReply executeMultiplexed(
+    public RpcResponse executeMultiplexed(
             String path, Class<?> serviceType, String serviceName, String method, Object... args) {
         requireNonNull(serviceName, "serviceName");
-        final ThriftCall call = new ThriftCall(nextSeqId.getAndIncrement(), serviceType, method, args);
-        return execute(call.method(), path, serviceName, call, cause -> new ThriftReply(call.seqId(), cause));
+        final RpcRequest call = new DefaultRpcRequest(serviceType, method, args);
+        return execute(call.method(), path, serviceName, call, DefaultRpcResponse::new);
     }
 }

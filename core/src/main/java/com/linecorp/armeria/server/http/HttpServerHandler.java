@@ -286,13 +286,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 req, getSSLSession(channel));
 
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
-            final RequestLogBuilder reqLogBuilder = reqCtx.requestLogBuilder();
+            final RequestLogBuilder logBuilder = reqCtx.logBuilder();
             final HttpResponse res;
             try {
                 req.init(reqCtx);
                 res = service.serve(reqCtx, req);
             } catch (Throwable cause) {
-                reqLogBuilder.end(cause);
+                logBuilder.endRequest(cause);
+                logBuilder.endResponse(cause);
                 if (cause instanceof ResourceNotFoundException) {
                     respond(ctx, req, HttpStatus.NOT_FOUND);
                 } else if (cause instanceof ServiceUnavailableException) {
@@ -312,9 +313,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             res.closeFuture().handle(voidFunction((ret, cause) -> {
                 req.abort();
                 if (cause == null) {
-                    reqLogBuilder.end();
+                    logBuilder.endRequest();
                 } else {
-                    reqLogBuilder.end(cause);
+                    logBuilder.endRequest(cause);
                 }
                 eventLoop.execute(() -> {
                     if (--unfinishedRequests == 0 && handledLastRequest) {

@@ -16,65 +16,291 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.Arrays;
+import java.util.Set;
+
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.thrift.ApacheThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftReply;
 
 import io.netty.channel.Channel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 
 /**
- * Information collected while processing a {@link Request}.
+ * A set of informational properties collected while processing a {@link Request} and its {@link Response}.
+ * The properties provided by this class are not always fully available. Check the availability of each
+ * property using {@link #isAvailable(RequestLogAvailability)} or {@link #availabilities()}. Attempting to
+ * access the properties that are not available yet will cause a {@link RequestLogAvailabilityException}.
+ * Use {@link #addListener(RequestLogListener, RequestLogAvailability)} to get notified when the interested
+ * properties are available.
  *
- * @see RequestLogBuilder
+ * @see RequestContext#log()
+ * @see RequestLogAvailability
+ * @see RequestLogListener
  */
-public interface RequestLog extends MessageLog {
-    /**
-     * The {@link AttributeKey} of the {@link HttpHeaders} of the processed {@link HttpRequest}.
-     */
-    AttributeKey<HttpHeaders> HTTP_HEADERS = AttributeKey.valueOf(RequestLog.class, "HTTP_HEADERS");
+public interface RequestLog {
 
     /**
-     * The {@link AttributeKey} of the processed {@link RpcRequest}.
+     * Returns the set of satisfied {@link RequestLogAvailability}s.
      */
-    AttributeKey<RpcRequest> RPC_REQUEST = AttributeKey.valueOf(RequestLog.class, "RPC_REQUEST");
+    Set<RequestLogAvailability> availabilities();
 
     /**
-     * The {@link AttributeKey} of the processed {@link RpcRequest} in its protocol-dependent low-level form.
-     *
-     * <p>For a Thrift request, the value of this {@link Attribute} is an {@link ApacheThriftCall}.
-     *
-     * <p>For a Protocol Buffers request, the value of this {@link Attribute} is a {@code Message} or
-     * a {@code MessageLite}.
+     * Returns {@code true} if the specified {@link RequestLogAvailability} is satisfied.
      */
-    AttributeKey<Object> RAW_RPC_REQUEST = AttributeKey.valueOf(RequestLog.class, "RAW_RPC_REQUEST");
+    boolean isAvailable(RequestLogAvailability availability);
+
+    /**
+     * Returns {@code true} if all of the specified {@link RequestLogAvailability}s are satisfied.
+     */
+    default boolean isAvailable(RequestLogAvailability... availabilities) {
+        for (RequestLogAvailability k : requireNonNull(availabilities, "availabilities")) {
+            if (!isAvailable(k)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if all of the specified {@link RequestLogAvailability}s are satisfied.
+     */
+    default boolean isAvailable(Iterable<RequestLogAvailability> availabilities) {
+        for (RequestLogAvailability k : requireNonNull(availabilities, "availabilities")) {
+            if (!isAvailable(k)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Ensures that the specified {@link RequestLogAvailability} is satisfied.
+     *
+     * @throws RequestLogAvailabilityException if not satisfied yet
+     */
+    default void ensureAvailability(RequestLogAvailability availability) {
+        if (!isAvailable(availability)) {
+            throw new RequestLogAvailabilityException(availability.name());
+        }
+    }
+
+    /**
+     * Ensures that all of the specified {@link RequestLogAvailability}s are satisfied.
+     *
+     * @throws RequestLogAvailabilityException if not satisfied yet
+     */
+    default void ensureAvailability(RequestLogAvailability... availabilities) {
+        if (!isAvailable(availabilities)) {
+            throw new RequestLogAvailabilityException(Arrays.toString(availabilities));
+        }
+    }
+
+    /**
+     * Ensures that all of the specified {@link RequestLogAvailability}s are satisfied.
+     *
+     * @throws RequestLogAvailabilityException if not satisfied yet
+     */
+    default void ensureAvailability(Iterable<RequestLogAvailability> properties) {
+        if (!isAvailable(properties)) {
+            throw new RequestLogAvailabilityException(properties.toString());
+        }
+    }
+
+    /**
+     * Adds the specified {@link RequestLogListener} so that it's notified when the specified
+     * {@link RequestLogAvailability} is satisfied.
+     */
+    void addListener(RequestLogListener listener, RequestLogAvailability availability);
+
+    /**
+     * Adds the specified {@link RequestLogListener} so that it's notified when all of the specified
+     * {@link RequestLogAvailability}s are satisfied.
+     */
+    void addListener(RequestLogListener listener, RequestLogAvailability... availabilities);
+
+    /**
+     * Adds the specified {@link RequestLogListener} so that it's notified when all of the specified
+     * {@link RequestLogAvailability}s are satisfied.
+     */
+    void addListener(RequestLogListener listener, Iterable<RequestLogAvailability> availabilities);
+
+    /**
+     * Returns the {@link RequestContext} associated with the {@link Request} being handled.
+     * This method returns non-{@code null} regardless the current {@link RequestLogAvailability}.
+     */
+    RequestContext context();
+
+    /**
+     * Returns the time when the processing of the request started, in millis since the epoch.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long requestStartTimeMillis();
+
+    /**
+     * Returns the duration that was taken to consume or produce the request completely, in nanoseconds.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long requestDurationNanos();
+
+    /**
+     * Returns the length of the request content.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long requestLength();
+
+    /**
+     * Returns the cause of request processing failure.
+     *
+     * @return the cause. {@code null} if the request was processed completely.
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    Throwable requestCause();
+
+    /**
+     * Returns the time when the processing of the response started, in millis since the epoch.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long responseStartTimeMillis();
+
+    /**
+     * Returns the duration that was taken to consume or produce the response completely, in nanoseconds.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long responseDurationNanos();
+
+    /**
+     * Returns the length of the response content.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long responseLength();
+
+    /**
+     * Returns the cause of response processing failure.
+     *
+     * @return the cause. {@code null} if the response was processed completely.
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    Throwable responseCause();
+
+    /**
+     * Returns the amount of time taken since the {@link Request} processing started and until the
+     * {@link Response} processing ended. This property is available only when both
+     * {@link RequestLogAvailability#REQUEST_START} and {@link RequestLogAvailability#RESPONSE_END} are
+     * available.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long totalDurationNanos();
 
     /**
      * Returns the Netty {@link Channel} which handled the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
      */
     Channel channel();
 
     /**
+     * Returns the {@link SessionProtocol} of the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    SessionProtocol sessionProtocol();
+
+    /**
+     * Returns the {@link SerializationFormat} of the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    SerializationFormat serializationFormat();
+
+    /**
      * Returns the {@link Scheme} of the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
      */
     Scheme scheme();
 
     /**
      * Returns the host name of the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
      */
     String host();
 
     /**
      * Returns the method of the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
      */
     String method();
 
     /**
      * Returns the path of the {@link Request}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
      */
     String path();
+
+    /**
+     * Returns the status code specific to the {@link Response} of the current {@link SessionProtocol}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    int statusCode();
+
+    /**
+     * Returns the {@link SessionProtocol}-level envelope object of the {@link Request}.
+     *
+     * @return {@link HttpHeaders} for HTTP, or {@code null} for others
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    Object requestEnvelope();
+
+    /**
+     * Returns the content object of the {@link Request}, which is specific to the {@link SerializationFormat}.
+     *
+     * @return {@link ThriftCall} for Thrift, or {@code null} for others
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    Object requestContent();
+
+    /**
+     * Returns the {@link SessionProtocol}-level envelope object of the {@link Response}.
+     *
+     * @return {@link HttpHeaders} for HTTP, or {@code null} for others
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    Object responseEnvelope();
+
+    /**
+     * Returns the content object of the {@link Response}, which is specific to the {@link SerializationFormat}.
+     *
+     * @return {@link ThriftReply} for Thrift, or {@code null} for others
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    Object responseContent();
+
+    /**
+     * Returns the string representation of the {@link Request}.
+     */
+    String toStringRequestOnly();
+
+    /**
+     * Returns the string representation of the {@link Response}.
+     */
+    String toStringResponseOnly();
 }

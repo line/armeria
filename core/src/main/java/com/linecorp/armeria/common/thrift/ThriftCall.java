@@ -18,102 +18,67 @@ package com.linecorp.armeria.common.thrift;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import javax.annotation.Nonnull;
-
 import org.apache.thrift.TBase;
-import org.apache.thrift.TFieldIdEnum;
-import org.apache.thrift.meta_data.FieldMetaData;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AbstractRpcRequest;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
- * A Thrift {@link RpcRequest}.
+ * A container of a Thrift one-way or two-way call object ({@link TBase}) and its header ({@link TMessage}).
+ * It is exported to {@link RequestLog#requestContent()} when a Thrift call is processed.
  */
-public final class ThriftCall extends AbstractRpcRequest {
+public final class ThriftCall extends ThriftMessage {
 
-    private final int seqId;
-
-    /**
-     * Creates a new instance.
-     */
-    public ThriftCall(int seqId, Class<?> serviceType, String method, Iterable<?> args) {
-        this(seqId, serviceType, method, ImmutableList.copyOf(args));
-    }
+    private final TBase<?, ?> args;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance that contains a Thrift {@link TMessageType#CALL} or {@link TMessageType#ONEWAY}
+     * message.
      */
-    public ThriftCall(int seqId, Class<?> serviceType, String method, Object... args) {
-        this(seqId, serviceType, method, ImmutableList.copyOf(args));
-    }
+    public ThriftCall(TMessage header, TBase<?, ?> args) {
+        super(header);
+        if (header.type != TMessageType.CALL && header.type != TMessageType.ONEWAY) {
+            throw new IllegalArgumentException(
+                    "header.type: " + typeStr(header.type) + " (expected: CALL or ONEWAY)");
+        }
 
-    /**
-     * Creates a new instance.
-     */
-    public ThriftCall(int seqId, Class<?> serviceType, String method, TBase<?, ?> thriftArgs) {
-        this(seqId, serviceType, method, toList(thriftArgs));
-    }
-
-    @Nonnull
-    private static List<Object> toList(TBase<?, ?> thriftArgs) {
-        requireNonNull(thriftArgs, "thriftArgs");
-
-        @SuppressWarnings("unchecked")
-        final TBase<TBase<?, ?>, TFieldIdEnum> castThriftArgs = (TBase<TBase<?, ?>, TFieldIdEnum>) thriftArgs;
-        return Collections.unmodifiableList(
-                FieldMetaData.getStructMetaDataMap(castThriftArgs.getClass()).keySet().stream()
-                             .map(field -> ThriftFieldAccess.get(castThriftArgs, field))
-                             .collect(Collectors.toList()));
-    }
-
-    private ThriftCall(int seqId, Class<?> serviceType, String method, List<Object> args) {
-        super(serviceType, method, args);
-        this.seqId = seqId;
+        this.args = requireNonNull(args, "args");
     }
 
     /**
-     * Returns the {@code seqId} of this call.
+     * Returns the arguments of this call.
      */
-    public int seqId() {
-        return seqId;
+    public TBase<?, ?> args() {
+        return args;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        return super.equals(o) && args.equals(((ThriftCall) o).args);
     }
 
     @Override
     public int hashCode() {
-        return (seqId * 31 + method().hashCode()) * 31 + params().hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof ThriftCall)) {
-            return false;
-        }
-
-        if (this == obj) {
-            return true;
-        }
-
-        final ThriftCall that = (ThriftCall) obj;
-        return seqId() == that.seqId() &&
-               method().equals(that.method()) &&
-               params().equals(that.params());
+        return 31 * super.hashCode() + args.hashCode();
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("seqId", seqId())
-                          .add("serviceType", simpleServiceName())
-                          .add("method", method())
-                          .add("args", params()).toString();
+                          .add("seqId", header().seqid)
+                          .add("type", typeStr())
+                          .add("name", header().name)
+                          .add("args", args).toString();
     }
 }

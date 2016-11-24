@@ -20,8 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.DefaultRpcRequest;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 
 public class ServiceTest {
 
@@ -31,9 +32,9 @@ public class ServiceTest {
     @Test
     public void testLambdaExpressionDecorator() throws Exception {
         final FooService inner = new FooService();
-        final Service<ThriftCall, ThriftReply> outer = inner.decorate((delegate, ctx, req) -> {
-            ThriftCall newReq = new ThriftCall(
-                    req.seqId(), req.serviceType(), "new_" + req.method(), req.params());
+        final Service<RpcRequest, RpcResponse> outer = inner.decorate((delegate, ctx, req) -> {
+            RpcRequest newReq = new DefaultRpcRequest(
+                    req.serviceType(), "new_" + req.method(), req.params());
             return delegate.serve(ctx, newReq);
         });
 
@@ -53,7 +54,7 @@ public class ServiceTest {
         return (Class<Service<?, ?>>) service.getClass();
     }
 
-    private static final class FooService implements Service<ThriftCall, ThriftReply> {
+    private static final class FooService implements Service<RpcRequest, RpcResponse> {
 
         ServiceConfig cfg;
 
@@ -63,7 +64,7 @@ public class ServiceTest {
         }
 
         @Override
-        public ThriftReply serve(ServiceRequestContext ctx, ThriftCall req) throws Exception {
+        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
             // Will never reach here.
             throw new Error();
         }

@@ -20,87 +20,92 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.codahale.metrics.MetricRegistry;
 
-import com.linecorp.armeria.client.logging.LogCollectingClient;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.server.logging.LogCollectingService;
+import com.linecorp.armeria.common.thrift.ThriftReply;
 
 /**
- * (Internal use only) {@link MessageLogConsumer} that accepts metric data from {@link LogCollectingClient} or
- * {@link LogCollectingService} and stores it into the {@link MetricRegistry}.
+ * (Internal use only) Collects the metric data and stores it into the {@link MetricRegistry}.
  */
-public final class DropwizardMetricConsumer implements MessageLogConsumer {
+public final class DropwizardMetricCollector {
 
     private final MetricRegistry metricRegistry;
-    private final BiFunction<RequestContext, RequestLog, String> metricNameFunc;
+    private final Function<RequestLog, String> metricNameFunc;
     private final Map<String, DropwizardRequestMetrics> methodRequestMetrics;
 
     /**
      * Creates a new instance.
      */
-    public DropwizardMetricConsumer(
-            MetricRegistry metricRegistry, BiFunction<RequestContext, RequestLog, String> metricNameFunc) {
+    public DropwizardMetricCollector(
+            MetricRegistry metricRegistry, Function<RequestLog, String> metricNameFunc) {
 
         this.metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
         this.metricNameFunc = requireNonNull(metricNameFunc, "metricNameFunc");
         methodRequestMetrics = new ConcurrentHashMap<>();
     }
 
-    @Override
-    public void onRequest(RequestContext ctx, RequestLog req) {
-        final DropwizardRequestMetrics metrics = getRequestMetrics(ctx, req);
-        if (req.cause() == null) {
-            metrics.markStart();
-        } else {
-            metrics.markFailure();
-        }
+    public void onRequestStart(RequestLog log) {
+        final DropwizardRequestMetrics metrics = getRequestMetrics(log);
+        metrics.markStart();
     }
 
-    @Override
-    public void onResponse(RequestContext ctx, ResponseLog res) {
-        final RequestLog req = res.request();
-        final DropwizardRequestMetrics metrics = getRequestMetrics(ctx, req);
-        metrics.updateTime(res.responseTimeNanos());
-        if (isSuccess(res)) {
-            metrics.markSuccess();
-        } else {
+    public void onRequestEnd(RequestLog log) {
+        final DropwizardRequestMetrics metrics = getRequestMetrics(log);
+        metrics.requestBytes(log.requestLength());
+        if (log.requestCause() != null) {
             metrics.markFailure();
-        }
-        metrics.requestBytes(req.contentLength());
-        metrics.responseBytes(res.contentLength());
-        if (req.cause() == null) {
             metrics.markComplete();
         }
     }
 
-    private static boolean isSuccess(ResponseLog res) {
-        if (res.cause() != null) {
+    public void onResponse(RequestLog log) {
+        if (log.requestCause() != null) {
+            return;
+        }
+
+        final DropwizardRequestMetrics metrics = getRequestMetrics(log);
+        metrics.updateTime(log.totalDurationNanos());
+        metrics.responseBytes(log.responseLength());
+
+        if (isSuccess(log)) {
+            metrics.markSuccess();
+        } else {
+            metrics.markFailure();
+        }
+
+        metrics.markComplete();
+    }
+
+    private static boolean isSuccess(RequestLog log) {
+        if (log.responseCause() != null) {
             return false;
         }
 
-        if (SessionProtocol.ofHttp().contains(res.request().scheme().sessionProtocol())) {
-            if (res.statusCode() >= 400) {
+        if (SessionProtocol.ofHttp().contains(log.sessionProtocol())) {
+            if (log.statusCode() >= 400) {
                 return false;
             }
         } else {
-            if (res.statusCode() != 0) {
+            if (log.statusCode() != 0) {
                 return false;
             }
         }
 
-        return !res.hasAttr(ResponseLog.RPC_RESPONSE) ||
-               res.attr(ResponseLog.RPC_RESPONSE).get().getCause() == null;
+        final Object responseContent = log.responseContent();
+        if (responseContent instanceof ThriftReply) {
+            final ThriftReply reply = (ThriftReply) responseContent;
+            return !reply.isException() && !(reply.result() instanceof Throwable);
+        }
+
+        return true;
     }
 
-    private DropwizardRequestMetrics getRequestMetrics(RequestContext ctx, RequestLog req) {
-        final String metricName = metricNameFunc.apply(ctx, req);
+    private DropwizardRequestMetrics getRequestMetrics(RequestLog log) {
+        final String metricName = metricNameFunc.apply(log);
         return methodRequestMetrics.computeIfAbsent(
                 metricName,
                 name -> new DropwizardRequestMetrics(

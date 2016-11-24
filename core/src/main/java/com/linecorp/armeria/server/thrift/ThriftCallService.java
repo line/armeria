@@ -18,10 +18,8 @@ package com.linecorp.armeria.server.thrift;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
@@ -33,18 +31,20 @@ import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A {@link Service} that handles a {@link ThriftCall}.
+ * A {@link Service} that handles a Thrift {@link RpcRequest}.
  *
  * @see THttpService
  */
-public final class ThriftCallService implements Service<ThriftCall, ThriftReply> {
+public final class ThriftCallService implements Service<RpcRequest, RpcResponse> {
 
     /**
      * Creates a new {@link ThriftCallService} with the specified service implementation.
@@ -75,8 +75,8 @@ public final class ThriftCallService implements Service<ThriftCall, ThriftReply>
             throw new IllegalArgumentException("empty implementations");
         }
 
-        entries = Collections.unmodifiableMap(implementations.entrySet().stream().collect(
-                Collectors.toMap(Map.Entry::getKey, ThriftServiceEntry::new)));
+        entries = implementations.entrySet().stream().collect(
+                GuavaCollectors.toImmutableMap(Map.Entry::getKey, ThriftServiceEntry::new));
     }
 
     /**
@@ -90,7 +90,7 @@ public final class ThriftCallService implements Service<ThriftCall, ThriftReply>
     }
 
     @Override
-    public ThriftReply serve(ServiceRequestContext ctx, ThriftCall call) throws Exception {
+    public RpcResponse serve(ServiceRequestContext ctx, RpcRequest call) throws Exception {
         final int colonPos = call.method().indexOf(':');
         final String method;
         final String serviceName;
@@ -108,19 +108,19 @@ public final class ThriftCallService implements Service<ThriftCall, ThriftReply>
             // Ensure that such a method exists.
             final ThriftFunction f = e.metadata.function(method);
             if (f != null) {
-                final ThriftReply reply = new ThriftReply(call.seqId());
+                final DefaultRpcResponse reply = new DefaultRpcResponse();
                 invoke(ctx, e.implementation, f, call.params(), reply);
                 return reply;
             }
         }
 
-        return new ThriftReply(call.seqId(), new TApplicationException(
+        return new DefaultRpcResponse(new TApplicationException(
                 TApplicationException.UNKNOWN_METHOD, "unknown method: " + call.method()));
     }
 
     private static void invoke(
             ServiceRequestContext ctx,
-            Object impl, ThriftFunction func, List<Object> args, ThriftReply reply) {
+            Object impl, ThriftFunction func, List<Object> args, DefaultRpcResponse reply) {
 
         try {
             final TBase<TBase<?, ?>, TFieldIdEnum> tArgs = func.newArgs(args);
@@ -136,7 +136,7 @@ public final class ThriftCallService implements Service<ThriftCall, ThriftReply>
 
     private static void invokeAsynchronously(
             Object impl, ThriftFunction func,
-            TBase<TBase<?, ?>, TFieldIdEnum> args, ThriftReply reply) throws TException {
+            TBase<TBase<?, ?>, TFieldIdEnum> args, DefaultRpcResponse reply) throws TException {
 
         final AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object> f = func.asyncFunc();
         f.start(impl, args, new AsyncMethodCallback<Object>() {
@@ -158,7 +158,7 @@ public final class ThriftCallService implements Service<ThriftCall, ThriftReply>
 
     private static void invokeSynchronously(
             ServiceRequestContext ctx,
-            Object impl, ThriftFunction func, TBase<TBase<?, ?>, TFieldIdEnum> args, ThriftReply reply) {
+            Object impl, ThriftFunction func, TBase<TBase<?, ?>, TFieldIdEnum> args, DefaultRpcResponse reply) {
 
         final ProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>> f = func.syncFunc();
         ctx.blockingTaskExecutor().execute(() -> {

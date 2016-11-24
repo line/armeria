@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.logback.RequestContextExporter.ExportEntry;
+import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -91,13 +92,11 @@ final class RequestContextExporterBuilder {
     }
 
     Set<AsciiString> getHttpRequestHeaders() {
-        return Collections.unmodifiableSet(
-                httpReqHeaders.stream().map(e -> e.key).collect(Collectors.toSet()));
+        return httpReqHeaders.stream().map(e -> e.key).collect(GuavaCollectors.toImmutableSet());
     }
 
     Set<AsciiString> getHttpResponseHeaders() {
-        return Collections.unmodifiableSet(
-                httpResHeaders.stream().map(e -> e.key).collect(Collectors.toSet()));
+        return httpResHeaders.stream().map(e -> e.key).collect(GuavaCollectors.toImmutableSet());
     }
 
     void export(String mdcKey) {

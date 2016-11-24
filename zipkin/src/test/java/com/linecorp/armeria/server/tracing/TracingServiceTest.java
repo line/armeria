@@ -16,11 +16,7 @@
 
 package com.linecorp.armeria.server.tracing;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -29,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.Test;
@@ -40,11 +37,13 @@ import com.github.kristofa.brave.Sampler;
 import com.github.kristofa.brave.SpanId;
 import com.github.kristofa.brave.TraceData;
 
+import com.linecorp.armeria.common.DefaultRpcRequest;
+import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 import com.linecorp.armeria.server.Service;
@@ -60,30 +59,30 @@ public class TracingServiceTest {
 
     private static final String TEST_METHOD = "hello";
 
-    @Test
+    @Test(timeout = 10000)
     public void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
         SpanCollectingReporter reporter = testServiceInvocation(true /* sampled */);
 
-        // only one span should be submitted
-        assertThat(reporter.spans(), hasSize(1));
-
         // check span name
-        Span span = reporter.spans().get(0);
-        assertThat(span.name, is(TEST_METHOD));
+        Span span = reporter.spans().take();
+        assertThat(span.name).isEqualTo(TEST_METHOD);
+
+        // only one span should be submitted
+        assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
 
         // check # of annotations
         List<Annotation> annotations = span.annotations;
-        assertThat(annotations, hasSize(2));
+        assertThat(annotations).hasSize(2);
 
         // check annotation values
         List<String> values = annotations.stream().map(anno -> anno.value).collect(Collectors.toList());
-        assertThat(values, is(containsInAnyOrder("sr", "ss")));
+        assertThat(values).containsExactlyInAnyOrder("sr", "ss");
 
         // check service name
         List<String> serviceNames = annotations.stream()
                                                .map(anno -> anno.endpoint.serviceName)
                                                .collect(Collectors.toList());
-        assertThat(serviceNames, is(contains(TEST_SERVICE, TEST_SERVICE)));
+        assertThat(serviceNames).containsExactly(TEST_SERVICE, TEST_SERVICE);
     }
 
     @Test
@@ -91,7 +90,7 @@ public class TracingServiceTest {
         SpanCollectingReporter reporter = testServiceInvocation(false /* not sampled */);
 
         // don't submit any spans
-        assertThat(reporter.spans(), hasSize(0));
+        assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
     private static SpanCollectingReporter testServiceInvocation(boolean sampled) throws Exception {
@@ -103,7 +102,7 @@ public class TracingServiceTest {
                 .build();
 
         @SuppressWarnings("unchecked")
-        Service<ThriftCall, ThriftReply> delegate = mock(Service.class);
+        Service<RpcRequest, RpcResponse> delegate = mock(Service.class);
 
         TraceData traceData = TraceData.builder()
                                        .sample(sampled)
@@ -112,45 +111,47 @@ public class TracingServiceTest {
 
         TracingServiceImpl stub = new TracingServiceImpl(delegate, brave, traceData);
 
-        ThriftCall req = new ThriftCall(0, HelloService.Iface.class, "hello", "trustin");
-        DefaultRequestLog reqLog = new DefaultRequestLog();
-        reqLog.start(mock(Channel.class), SessionProtocol.H2C, "localhost", TEST_METHOD, "/");
-        reqLog.end();
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final RpcRequest req = new DefaultRpcRequest(HelloService.Iface.class, "hello", "trustin");
+        final DefaultRequestLog log = new DefaultRequestLog(ctx);
+        log.startRequest(mock(Channel.class), SessionProtocol.H2C, "localhost", TEST_METHOD, "/");
+        log.endRequest();
 
-        ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         // AbstractTracingService prefers RpcRequest.method() to ctx.method(), so "POST" should be ignored.
         when(ctx.method()).thenReturn("POST");
-        when(ctx.requestLogFuture()).thenReturn(reqLog);
+        when(ctx.log()).thenReturn(log);
+        when(ctx.logBuilder()).thenReturn(log);
         ctx.onEnter(ArgumentMatchers.isA(Runnable.class));
         ctx.onExit(ArgumentMatchers.isA(Runnable.class));
 
-        ThriftReply res = new ThriftReply(0, "Hello, trustin!");
+        RpcResponse res = new DefaultRpcResponse("Hello, trustin!");
         when(delegate.serve(ctx, req)).thenReturn(res);
 
         // do invoke
         stub.serve(ctx, req);
 
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
+
+        log.endResponse();
         return reporter;
     }
 
-    private static class TracingServiceImpl extends AbstractTracingService<ThriftCall, ThriftReply> {
+    private static class TracingServiceImpl extends AbstractTracingService<RpcRequest, RpcResponse> {
 
         private final TraceData traceData;
 
-        TracingServiceImpl(Service<ThriftCall, ThriftReply> delegate, Brave brave, TraceData traceData) {
+        TracingServiceImpl(Service<RpcRequest, RpcResponse> delegate, Brave brave, TraceData traceData) {
             super(delegate, brave);
             this.traceData = traceData;
         }
 
         @Override
-        protected TraceData getTraceData(ServiceRequestContext ctx, ThriftCall req) {
+        protected TraceData getTraceData(ServiceRequestContext ctx, RpcRequest req) {
             return traceData;
         }
 
         @Override
-        protected List<KeyValueAnnotation> annotations(ServiceRequestContext ctx, RequestLog req,
-                                                       ThriftReply res) {
+        protected List<KeyValueAnnotation> annotations(ServiceRequestContext ctx, RequestLog log) {
             return Collections.emptyList();
         }
     }

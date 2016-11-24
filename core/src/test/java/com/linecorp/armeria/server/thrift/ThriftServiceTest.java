@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.common.logging.DefaultResponseLog;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -603,12 +602,11 @@ public class ThriftServiceTest {
                                 CompletableFuture<HttpData> promise) throws Exception {
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final DefaultRequestLog reqLogBuilder = new DefaultRequestLog();
-        final DefaultResponseLog resLogBuilder = new DefaultResponseLog(reqLogBuilder, reqLogBuilder);
+        final DefaultRequestLog reqLogBuilder = new DefaultRequestLog(ctx);
 
         when(ctx.blockingTaskExecutor()).thenReturn(ImmediateEventExecutor.INSTANCE);
-        when(ctx.requestLogBuilder()).thenReturn(reqLogBuilder);
-        when(ctx.responseLogBuilder()).thenReturn(resLogBuilder);
+        when(ctx.log()).thenReturn(reqLogBuilder);
+        when(ctx.logBuilder()).thenReturn(reqLogBuilder);
         doNothing().when(ctx).invokeOnEnterCallbacks();
         doNothing().when(ctx).invokeOnExitCallbacks();
 

@@ -22,8 +22,6 @@
  * <ul>
  *   <li>{@link com.linecorp.armeria.common.logging.RequestLog}</li>
  *   <li>{@link com.linecorp.armeria.common.logging.RequestLogBuilder}</li>
- *   <li>{@link com.linecorp.armeria.common.logging.ResponseLog}</li>
- *   <li>{@link com.linecorp.armeria.common.logging.ResponseLogBuilder}</li>
  * </ul>
  */
 package com.linecorp.armeria.common.logging;

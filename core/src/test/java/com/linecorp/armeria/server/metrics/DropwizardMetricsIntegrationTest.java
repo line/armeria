@@ -25,8 +25,8 @@ import com.codahale.metrics.MetricRegistry;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.logging.DropwizardMetricCollectingClient;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -102,7 +102,7 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
 
     private void makeRequest(String name) {
         Iface client = new ClientBuilder("tbinary+" + uri("/helloservice"))
-                .decorator(ThriftCall.class, ThriftReply.class,
+                .decorator(RpcRequest.class, RpcResponse.class,
                            DropwizardMetricCollectingClient.newDecorator(
                                    metricRegistry, MetricRegistry.name("clients", "HelloService")))
                 .build(Iface.class);

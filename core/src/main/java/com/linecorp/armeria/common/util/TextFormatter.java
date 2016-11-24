@@ -34,9 +34,9 @@ public final class TextFormatter {
      */
     public static void appendSize(StringBuilder buf, long size) {
         if (size >= 104857600) { // >= 100 MiB
-            buf.append(size / 1048576).append("MiB");
+            buf.append(size / 1048576).append("MiB(").append(size).append("B)");
         } else if (size >= 102400) { // >= 100 KiB
-            buf.append(size / 1024).append("KiB");
+            buf.append(size / 1024).append("KiB(").append(size).append("B)");
         } else {
             buf.append(size).append('B');
         }
@@ -48,11 +48,11 @@ public final class TextFormatter {
      */
     public static void appendElapsed(StringBuilder buf, long elapsedNanos) {
         if (elapsedNanos >= 100000000000L) { // >= 100 s
-            buf.append(elapsedNanos / 1000000000L).append('s');
+            buf.append(elapsedNanos / 1000000000L).append("s(").append(elapsedNanos).append("ns)");
         } else if (elapsedNanos >= 100000000L) { // >= 100 ms
-            buf.append(elapsedNanos / 1000000L).append("ms");
+            buf.append(elapsedNanos / 1000000L).append("ms(").append(elapsedNanos).append("ns)");
         } else if (elapsedNanos >= 100000L) { // >= 100 us
-            buf.append(elapsedNanos / 1000L).append("\u00B5s"); // microseconds
+            buf.append(elapsedNanos / 1000L).append("\u00B5s(").append(elapsedNanos).append("ns)"); // microsecs
         } else {
             buf.append(elapsedNanos).append("ns");
         }
@@ -121,13 +121,26 @@ public final class TextFormatter {
                                           .withZone(ZoneId.of("GMT"));
 
     /**
-     * Formats given epoch time to typical human-readable format "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+     * Formats the given epoch time to typical human-readable format "yyyy-MM-dd'T'HH_mm:ss.SSSX" and appends
+     * it to the specified {@link StringBuilder}.
+     */
+    public static void appendEpoch(StringBuilder buf, long timeMillis) {
+        buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(timeMillis)))
+           .append('(').append(timeMillis).append(')');
+    }
+
+    /**
+     * Formats the given epoch time to typical human-readable format "yyyy-MM-dd'T'HH:mm:ss.SSSX"
      *
      * @param timeMillis epoch time in ms
      *
-     * @return human readable string representation of given epoch time
+     * @return the human readable string representation of the given epoch time
      */
-    public static String epoch(long timeMillis) {
-        return dateTimeFormatter.format(Instant.ofEpochMilli(timeMillis));
+    public static StringBuilder epoch(long timeMillis) {
+        // 24 (human readable part) + 3 (parens) + 19 (max digits of a long integer)
+        final StringBuilder buf = new StringBuilder(46);
+        appendEpoch(buf, timeMillis);
+        return buf;
     }
+
 }

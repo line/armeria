@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.thrift.ThriftCall;
 
 /**
  * A request. It is usually one of the following:
@@ -28,7 +27,7 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
  *       <li>e.g. {@link HttpRequest} whose initial information is its initial HTTP headers</li>
  *     </ul>
  *   </li>
- *   <li>A simple object whose content is readily available. e.g. {@link ThriftCall}</li>
+ *   <li>A simple object whose content is readily available. e.g. {@link RpcRequest}</li>
  * </ul>
  */
 public interface Request {}

@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -38,6 +37,7 @@ import org.apache.thrift.meta_data.FieldMetaData;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 final class FunctionInfo {
 
@@ -118,10 +118,10 @@ final class FunctionInfo {
 
         final Map<? extends TFieldIdEnum, FieldMetaData> argsMetaData =
                 FieldMetaData.getStructMetaDataMap(argsClass);
-        parameters = Collections.unmodifiableList(
-                argsMetaData.values().stream()
-                            .map(fieldMetaData -> FieldInfo.of(fieldMetaData, functionNamespace, docStrings))
-                            .collect(Collectors.toList()));
+        parameters = argsMetaData.values().stream()
+                                 .map(fieldMetaData -> FieldInfo.of(fieldMetaData,
+                                                                    functionNamespace, docStrings))
+                                 .collect(GuavaCollectors.toImmutableList());
 
         FieldInfo fieldInfo = null;
         if (resultClass != null) { // Function isn't "oneway" function

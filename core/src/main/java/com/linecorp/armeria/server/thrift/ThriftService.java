@@ -22,9 +22,9 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -87,7 +87,7 @@ public final class ThriftService extends THttpService {
                                  defaultSerializationFormat, allowedSerializationFormatsSet);
     }
 
-    private ThriftService(Service<ThriftCall, ThriftReply> delegate,
+    private ThriftService(Service<RpcRequest, RpcResponse> delegate,
                           SerializationFormat defaultSerializationFormat,
                           Set<SerializationFormat> allowedSerializationFormats) {
         super(delegate, defaultSerializationFormat, allowedSerializationFormats);

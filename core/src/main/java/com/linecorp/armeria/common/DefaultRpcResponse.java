@@ -27,28 +27,28 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A skeletal {@link RpcResponse} implementation.
+ * Default {@link RpcResponse} implementation.
  */
-public class AbstractRpcResponse extends CompletableFuture<Object> implements RpcResponse {
+public class DefaultRpcResponse extends CompletableFuture<Object> implements RpcResponse {
 
     private static final CancellationException CANCELLED = Exceptions.clearTrace(new CancellationException());
 
-    private static final AtomicReferenceFieldUpdater<AbstractRpcResponse, Throwable> causeUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractRpcResponse.class, Throwable.class, "cause");
+    private static final AtomicReferenceFieldUpdater<DefaultRpcResponse, Throwable> causeUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(DefaultRpcResponse.class, Throwable.class, "cause");
 
     private volatile Throwable cause;
 
     /**
      * Creates a new incomplete response.
      */
-    protected AbstractRpcResponse() {}
+    public DefaultRpcResponse() {}
 
     /**
      * Creates a new successfully complete response.
      *
      * @param result the result or an RPC call
      */
-    protected AbstractRpcResponse(Object result) {
+    public DefaultRpcResponse(Object result) {
         complete(result);
     }
 
@@ -57,13 +57,13 @@ public class AbstractRpcResponse extends CompletableFuture<Object> implements Rp
      *
      * @param cause the cause of failure
      */
-    protected AbstractRpcResponse(Throwable cause) {
+    public DefaultRpcResponse(Throwable cause) {
         requireNonNull(cause, "cause");
         completeExceptionally(cause);
     }
 
     @Override
-    public final Throwable getCause() {
+    public final Throwable cause() {
         return cause;
     }
 
@@ -92,7 +92,7 @@ public class AbstractRpcResponse extends CompletableFuture<Object> implements Rp
                                   .add("cause", cause).toString();
             } else {
                 return MoreObjects.toStringHelper(this)
-                                  .add("value", getNow(null)).toString();
+                                  .addValue(getNow(null)).toString();
             }
         }
 

@@ -18,13 +18,14 @@ package com.linecorp.armeria.server.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import org.slf4j.Logger;
+
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -34,7 +35,12 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public class LoggingService<I extends Request, O extends Response> extends LogCollectingService<I, O> {
+public class LoggingService<I extends Request, O extends Response> extends DecoratingService<I, O, I, O> {
+
+    private static final String REQUEST_FORMAT = "Request: {}";
+    private static final String RESPONSE_FORMAT = "Response: {}";
+
+    private final LogLevel level;
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
@@ -48,28 +54,30 @@ public class LoggingService<I extends Request, O extends Response> extends LogCo
      * {@link LogLevel}.
      */
     public LoggingService(Service<? super I, ? extends O> delegate, LogLevel level) {
-        super(delegate, new LoggingConsumer(level));
+        super(delegate);
+        this.level = requireNonNull(level, "level");
     }
 
-    private static final class LoggingConsumer implements MessageLogConsumer {
+    @Override
+    public O serve(ServiceRequestContext ctx, I req) throws Exception {
+        ctx.log().addListener(this::logRequest, RequestLogAvailability.REQUEST_END);
+        ctx.log().addListener(this::logResponse, RequestLogAvailability.COMPLETE);
+        return delegate().serve(ctx, req);
+    }
 
-        private static final String REQUEST_FORMAT = "Request: {}";
-        private static final String RESPONSE_FORMAT = "Response: {}";
 
-        private final LogLevel level;
-
-        LoggingConsumer(LogLevel level) {
-            this.level = requireNonNull(level, "level");
+    // FIXME(trustin): Format properly.
+    private void logRequest(RequestLog log) {
+        final Logger logger = ((ServiceRequestContext) log.context()).logger();
+        if (level.isEnabled(logger)) {
+            level.log(logger, REQUEST_FORMAT, log.toStringRequestOnly());
         }
+    }
 
-        @Override
-        public void onRequest(RequestContext ctx, RequestLog req) {
-            level.log(((ServiceRequestContext) ctx).logger(), REQUEST_FORMAT, req);
-        }
-
-        @Override
-        public void onResponse(RequestContext ctx, ResponseLog res) {
-            level.log(((ServiceRequestContext) ctx).logger(), RESPONSE_FORMAT, res);
+    private void logResponse(RequestLog log) {
+        final Logger logger = ((ServiceRequestContext) log.context()).logger();
+        if (level.isEnabled(logger)) {
+            level.log(logger, RESPONSE_FORMAT, log.toStringResponseOnly());
         }
     }
 }
