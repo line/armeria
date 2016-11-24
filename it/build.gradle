@@ -1,4 +1,3 @@
 dependencies {
-    testCompile project(':core')
     testCompile 'org.apache.hbase:hbase-shaded-client'
 }

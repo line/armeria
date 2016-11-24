@@ -1,6 +1,4 @@
 dependencies {
-    compile project(':core')
-
     // ZooKeeper
     compile 'org.apache.zookeeper:zookeeper'
 

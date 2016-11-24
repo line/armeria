@@ -181,7 +181,7 @@ configure(javaProjects) {
                 exclude 'com.google.code.findbugs:annotations'
             }
 
-            // Retrfit2
+            // Retrofit2
             dependencySet(group: 'com.squareup.retrofit2', version: ext.versionOf('retrofit2')) {
                 entry 'retrofit'
                 entry 'adapter-guava'
@@ -232,6 +232,11 @@ configure(javaProjects) {
     }
 
     dependencies {
+        // All projects currently require ':core' (except itself)
+        if (project.name != 'core') {
+            compile project(':core')
+        }
+
         // JSR305
         compile 'com.google.code.findbugs:jsr305' // Can't use compileOnly due to Javadoc errors
 
@@ -417,15 +422,8 @@ configure(javaProjects) {
                 }
 
                 project.mkdir(propsFile.parent)
-                if (propsFile.exists()) {
-                    logger.debug("Updating ${propsFile} ..")
-                    props.load(propsFile.newInputStream())
-                } else {
-                    logger.debug("Creating ${propsFile} ..")
-                    propsFile.createNewFile()
-                }
-
-                props.store(propsFile.newWriter(), null)
+                logger.info("Writing ${propsFile} ..")
+                propsFile.withOutputStream { props.store(it, null) }
             }
         }
         // Ensure version.properties is available during the build.

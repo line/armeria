@@ -1,9 +1,4 @@
 dependencies {
-    compile project(':core')
-
-    // FastUtil
-    compile 'it.unimi.dsi:fastutil'
-
     // Logback
     compile 'ch.qos.logback:logback-classic'
 }

@@ -22,11 +22,10 @@ env:
   global:
     - JAVA_HOME=$HOME/.jdk/default
     - PATH=$JAVA_HOME/bin:$PATH
-    - GRADLE_OPTS=-Xmx256m
+    - GRADLE_OPTS=-Xmx384m
 
 before_install:
   - .travis/install-jdk.sh
-  - .travis/clean-m2-repo.sh
   - ./gradlew --version
 
 install:
