@@ -128,7 +128,7 @@ You might want to use the following  ``pom.xml`` as a template if you are starti
       <modelVersion>4.0.0</modelVersion>
       <groupId>com.example</groupId>
       <artifactId>myproject</artifactId>
-      <version>0.1.0.Final-SNAPSHOT</version>
+      <version>0.1.0-SNAPSHOT</version>
       <packaging>jar</packaging>
       <name>My Armeria project</name>
 

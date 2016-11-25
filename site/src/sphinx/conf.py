@@ -16,7 +16,7 @@ copyright = properties.get('inceptionYear') + '-' + str(date.today().year) + ', 
 # Set the project version and release.
 # Use the last known stable release if the current version ends with '-SNAPSHOT'.
 if re.match(r'^.*-SNAPSHOT$', properties.get('version')):
-    release = '0.31.1.Final'
+    release = '0.31.1'
 else:
     release = properties.get('version')
 version = re.match(r'^[0-9]+\.[0-9]+', release).group(0)

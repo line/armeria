@@ -688,18 +688,18 @@ task release(group: 'Publishing',
         if (!project.hasProperty('releaseVersion') || !project.hasProperty('nextVersion')) {
             throw new InvalidUserDataException(
                     "Specify 'releaseVersion' and 'nextVersion' properties.${System.lineSeparator()}" +
-                            'e.g. ./gradlew release -PreleaseVersion=0.1.2.Final -PnextVersion=0.1.3.Final-SNAPSHOT')
+                            'e.g. ./gradlew release -PreleaseVersion=0.1.2 -PnextVersion=0.1.3-SNAPSHOT')
         }
 
         def releaseVersion = project.property('releaseVersion')
         def nextVersion = project.property('nextVersion')
 
         // Validate the specified version numbers.
-        if (!(releaseVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)$/)) {
+        if (!(releaseVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+$/)) {
             throw new InvalidUserDataException("invalid release version: ${releaseVersion}")
         }
-        if (!(nextVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)-SNAPSHOT$/)) {
-            throw new InvalidUserDataException("invalid next version: ${releaseVersion}")
+        if (!(nextVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$/)) {
+            throw new InvalidUserDataException("invalid next version: ${nextVersion}")
         }
 
         // Ensure the repository is upstream.
@@ -719,7 +719,7 @@ task release(group: 'Publishing',
 
         def gradlePropsFile = project.file("${project.projectDir}/gradle.properties")
         def gradlePropsContent = gradlePropsFile.getText('ISO-8859-1')
-        def versionPattern = /\nversion=[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)-SNAPSHOT(\r?\n)/
+        def versionPattern = /\nversion=[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT(\r?\n)/
         assert gradlePropsContent =~ versionPattern
 
         // Update the version to the release version, commit and tag.
@@ -738,7 +738,7 @@ task release(group: 'Publishing',
         // Update the version in the Sphinx conf.py as well.
         def sphinxConfFile = project.file("${project.projectDir}/site/src/sphinx/conf.py")
         def sphinxConfContent = sphinxConfFile.getText('UTF-8')
-        def sphinxConfVersionPattern = /\n( *)release = '[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)'(\r?\n)/
+        def sphinxConfVersionPattern = /\n( *)release = '[0-9]+\.[0-9]+\.[0-9]+'(\r?\n)/
         assert sphinxConfContent =~ sphinxConfVersionPattern
         sphinxConfFile.write(sphinxConfContent.replaceFirst(sphinxConfVersionPattern, "\n\$1release = '${releaseVersion}'\$2"))
         executeCommand(gitPath, 'add', sphinxConfFile.toString())
