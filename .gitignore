@@ -8,6 +8,7 @@
 *.jar
 !**/src/**/WEB-INF/lib/*.jar
 !/gradle/wrapper/gradle-wrapper.jar
+!/settings/intellij_idea/settings.jar
 *.war
 *.ear
 
