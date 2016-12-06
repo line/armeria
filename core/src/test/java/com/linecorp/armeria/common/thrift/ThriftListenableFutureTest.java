@@ -5,19 +5,17 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import org.junit.Test;
 
-public class ThriftCallbackListenableFutureTest {
+public class ThriftListenableFutureTest {
 
     @Test
     public void success() throws Exception {
-        ThriftCallbackListenableFuture<String> future = new ThriftCallbackListenableFuture<>();
-        future.onComplete("success");
+        ThriftListenableFuture<String> future = ThriftListenableFuture.successful("success");
         assertThat(future.get()).isEqualTo("success");
     }
 
     @Test
     public void error() throws Exception {
-        ThriftCallbackListenableFuture<String> future = new ThriftCallbackListenableFuture<>();
-        future.onError(new IllegalStateException());
+        ThriftListenableFuture<String> future = ThriftListenableFuture.failed(new IllegalStateException());
         assertThat(catchThrowable(future::get)).hasCauseInstanceOf(IllegalStateException.class);
     }
 
