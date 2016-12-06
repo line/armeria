@@ -173,7 +173,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
                                  MetricRegistry metricRegistry) {
             this.endpoint = endpoint;
             this.healthChecker = healthChecker;
-            metricRegistry.register(MetricRegistry.name("health-check", endpoint.authority()),
+            metricRegistry.register(MetricRegistry.name("health-check", endpoint.authority(), "healthy"),
                                     (Gauge<Integer>) () -> healthy ? 1 : 0);
         }
 

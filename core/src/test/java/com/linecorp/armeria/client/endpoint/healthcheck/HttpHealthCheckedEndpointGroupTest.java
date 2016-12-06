@@ -62,8 +62,10 @@ public class HttpHealthCheckedEndpointGroupTest {
                 metricRegistry,
                 healthCheckPath);
         assertThat(endpointGroup.endpoints()).isEmpty();
-        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234").getValue()).isEqualTo(0);
-        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345").getValue()).isEqualTo(0);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234.healthy").getValue()).isEqualTo(
+                0);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345.healthy").getValue()).isEqualTo(
+                0);
 
         ServiceServer serverOne = new ServiceServer(healthCheckPath, 1234).start();
         ServiceServer serverTwo = new ServiceServer(healthCheckPath, 2345).start();
@@ -72,8 +74,10 @@ public class HttpHealthCheckedEndpointGroupTest {
         assertThat(endpointGroup.endpoints()).containsExactly(
                 Endpoint.of("127.0.0.1", 1234),
                 Endpoint.of("127.0.0.1", 2345));
-        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234").getValue()).isEqualTo(1);
-        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345").getValue()).isEqualTo(1);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234.healthy").getValue())
+                .isEqualTo(1);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345.healthy").getValue())
+                .isEqualTo(1);
 
         serverOne.stop();
         serverTwo.stop();
@@ -93,8 +97,10 @@ public class HttpHealthCheckedEndpointGroupTest {
         Thread.sleep(4000); // Wait until updating server list.
 
         assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", 1234));
-        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234").getValue()).isEqualTo(1);
-        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345").getValue()).isEqualTo(0);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234.healthy").getValue())
+                .isEqualTo(1);
+        assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345.healthy").getValue())
+                .isEqualTo(0);
         serverOne.stop();
     }
 }
