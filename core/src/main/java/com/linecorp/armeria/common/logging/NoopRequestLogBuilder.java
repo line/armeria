@@ -45,6 +45,11 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void deferRequestContent() {}
 
     @Override
+    public boolean isRequestContentDeferred() {
+        return false;
+    }
+
+    @Override
     public void endRequest() {}
 
     @Override
@@ -70,6 +75,11 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
     public void deferResponseContent() {}
+
+    @Override
+    public boolean isResponseContentDeferred() {
+        return false;
+    }
 
     @Override
     public void endResponse() {}

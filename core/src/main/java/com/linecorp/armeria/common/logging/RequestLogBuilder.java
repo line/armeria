@@ -84,6 +84,11 @@ public interface RequestLogBuilder {
     void deferRequestContent();
 
     /**
+     * Returns {@code true} if {@link #deferRequestContent()} was ever called.
+     */
+    boolean isRequestContentDeferred();
+
+    /**
      * Sets {@link RequestLog#requestDurationNanos()} and finishes the collection of the information.
      */
     void endRequest();
@@ -134,6 +139,11 @@ public interface RequestLogBuilder {
      * {@code responseContent(null)} automatically.
      */
     void deferResponseContent();
+
+    /**
+     * Returns {@code true} if {@link #deferResponseContent()} was ever called.
+     */
+    boolean isResponseContentDeferred();
 
     /**
      * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information.

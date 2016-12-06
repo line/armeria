@@ -75,8 +75,6 @@ To get notified when a certain set of properties are available, you can add a li
 
 .. code-block:: java
 
-    package com.example;
-
     import com.linecorp.armeria.common.http.HttpRequest;
     import com.linecorp.armeria.common.http.HttpResponse;
     import com.linecorp.armeria.common.logging.RequestLog;
@@ -86,7 +84,7 @@ To get notified when a certain set of properties are available, you can add a li
 
     public class MyService extends AbstractHttpService {
         @Override
-        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
             final RequestLog log = ctx.log();
 
             log.addListener(log -> {
@@ -104,25 +102,53 @@ listener invoked when all properties are available.
 Set ``serializationFormat`` and ``requestContent`` early if possible
 --------------------------------------------------------------------
 Armeria depends on the ``serializationFormat`` and ``requestContent`` property to determine whether a request
-is an RPC call and what the method name of the call is. If you are sure the request you handle is not an RPC
-call, set the ``serializationFormat`` and ``requestContent`` property explicitly to ``NONE`` and ``null``
-so that Armeria and other log listeners get the information sooner:
+is an RPC and what the method name of the call is. If you are sure the request you handle is not an RPC, set
+the ``serializationFormat`` and ``requestContent`` property explicitly to ``NONE`` and ``null`` so that Armeria
+and other log listeners get the information sooner:
 
 .. code-block:: java
-
-    package com.example;
 
     import com.linecorp.armeria.common.SerializationFormat;
     import com.linecorp.armeria.common.http.HttpRequest;
     import com.linecorp.armeria.common.http.HttpResponse;
     import com.linecorp.armeria.server.ServiceRequestContext;
+    import com.linecorp.armeria.server.http.HttpService;
+
+    public class MyService implements HttpService {
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+            ctx.logBuilder().serializationFormat(SerializationFormat.NONE);
+            ctx.logBuilder().requestContent(null);
+            ...
+        }
+    }
+
+Consider using ``AbstractHttpService`` which sets the ``serializationFormat`` and ``requestContent``
+automatically for you:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.common.http.HttpResponseWriter;
     import com.linecorp.armeria.server.http.AbstractHttpService;
 
-    public class MyService extends AbstractHttpService {
+    public class MyService extenda AbstractHttpService {
         @Override
-        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            // This will set 'requestContent' to null implicitly.
-            ctx.logBuilder().serializationFormat(SerializationFormat.NONE);
-            return super.serve(ctx, req);
+        public void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+            // serializationFormat and requestContent will be set to NONE and null
+            // automatically when this method returns.
+            ...
+        }
+
+        @Override
+        public void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+            // Set serializationFormat explicitly.
+            ctx.logBuilder().serializationFormat(SerializationFormat.THRIFT_BINARY);
+            // This will prevent AbstractHttpService from setting requestContent to null
+            // automatically. You should call RequestLogBuilder.requestContent(...) later
+            // when the content is determined.
+            ctx.logBuilder().deferRequestContent();
+            // Alternatively, you can set requestContent right here:
+            // ctx.logBuilder().requestContent(...);
+            ...
         }
     }

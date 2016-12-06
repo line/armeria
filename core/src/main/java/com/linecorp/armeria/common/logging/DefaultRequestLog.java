@@ -66,8 +66,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @SuppressWarnings("unused")
     private volatile int flags;
     private final List<ListenerEntry> listeners = new ArrayList<>(4);
-    private boolean requestContentDeferred;
-    private boolean responseContentDeferred;
+    private volatile boolean requestContentDeferred;
+    private volatile boolean responseContentDeferred;
 
     private long requestStartTimeMillis;
     private long requestStartTimeNanos;
@@ -291,11 +291,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         updateAvailability(SCHEME);
-
-        // When serializationFormat is NONE, we are sure that the requestContent is null.
-        if (serializationFormat == SerializationFormat.NONE) {
-            requestContent(null);
-        }
     }
 
     @Override
@@ -374,6 +369,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
         requestContentDeferred = true;
+    }
+
+    @Override
+    public boolean isRequestContentDeferred() {
+        return requestContentDeferred;
     }
 
     @Override
@@ -520,6 +520,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
         responseContentDeferred = true;
+    }
+
+    @Override
+    public boolean isResponseContentDeferred() {
+        return responseContentDeferred;
     }
 
     @Override
