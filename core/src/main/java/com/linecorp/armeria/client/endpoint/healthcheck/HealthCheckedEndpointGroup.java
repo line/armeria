@@ -98,7 +98,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
             for (int i = 0; i < result.size(); i++) {
                 boolean healthy = result.get(i);
                 ServerConnection connection = checkedServers.get(i);
-                connection.healthy(healthy);
+                connection.setHealthy(healthy);
                 if (healthy) {
                     newHealthyEndpoints.add(connection.endpoint());
                 }
@@ -181,7 +181,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
             return endpoint;
         }
 
-        void healthy(boolean healthy) {
+        void setHealthy(boolean healthy) {
             this.healthy = healthy;
         }
     }
