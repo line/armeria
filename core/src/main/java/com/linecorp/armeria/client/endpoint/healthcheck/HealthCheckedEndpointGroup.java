@@ -55,8 +55,8 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
      */
     protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
                                          EndpointGroup delegate,
-                                         Duration healthCheckRetryInterval,
-                                         MetricRegistry metricRegistry) {
+                                         MetricRegistry metricRegistry,
+                                         Duration healthCheckRetryInterval) {
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.delegate = requireNonNull(delegate, "delegate");
         this.metricRegistry = requireNonNull(metricRegistry, "metricRegistry");

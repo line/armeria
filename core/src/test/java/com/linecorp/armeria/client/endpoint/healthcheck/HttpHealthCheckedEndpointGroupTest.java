@@ -59,8 +59,8 @@ public class HttpHealthCheckedEndpointGroupTest {
                 new StaticEndpointGroup(
                         Endpoint.of("127.0.0.1", 1234),
                         Endpoint.of("127.0.0.1", 2345)),
-                healthCheckPath,
-                metricRegistry);
+                metricRegistry,
+                healthCheckPath);
         assertThat(endpointGroup.endpoints()).isEmpty();
         assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:1234").getValue()).isEqualTo(0);
         assertThat(metricRegistry.getGauges().get("health-check.127.0.0.1:2345").getValue()).isEqualTo(0);
@@ -88,8 +88,8 @@ public class HttpHealthCheckedEndpointGroupTest {
                 new StaticEndpointGroup(
                         Endpoint.of("127.0.0.1", 1234),
                         Endpoint.of("127.0.0.1", 2345)),
-                healthCheckPath,
-                metricRegistry);
+                metricRegistry,
+                healthCheckPath);
         Thread.sleep(4000); // Wait until updating server list.
 
         assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", 1234));
