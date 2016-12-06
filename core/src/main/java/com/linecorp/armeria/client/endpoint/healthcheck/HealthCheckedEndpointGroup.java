@@ -24,8 +24,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -43,6 +44,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     private final ClientFactory clientFactory;
     private final EndpointGroup delegate;
     private final Duration healthCheckRetryInterval;
+    private final MetricRegistry metricRegistry;
 
     volatile List<ServerConnection> allServers = ImmutableList.of();
     volatile List<Endpoint> healthyEndpoints = ImmutableList.of();
@@ -53,9 +55,11 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
      */
     protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
                                          EndpointGroup delegate,
+                                         MetricRegistry metricRegistry,
                                          Duration healthCheckRetryInterval) {
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.delegate = requireNonNull(delegate, "delegate");
+        this.metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
         this.healthCheckRetryInterval = requireNonNull(healthCheckRetryInterval, "healthCheckRetryInterval");
     }
 
@@ -90,12 +94,16 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
                               .collect(GuavaCollectors.toImmutableList()),
                 t -> false);
         return healthCheckResults.handle(voidFunction((result, thrown) -> {
-            healthyEndpoints = IntStream
-                    .range(0, result.size())
-                    .filter(i -> result.get(i) != null && result.get(i))
-                    .mapToObj(checkedServers::get)
-                    .map(ServerConnection::endpoint)
-                    .collect(GuavaCollectors.toImmutableList());
+            ImmutableList.Builder<Endpoint> newHealthyEndpoints = ImmutableList.builder();
+            for (int i = 0; i < result.size(); i++) {
+                boolean healthy = result.get(i);
+                ServerConnection connection = checkedServers.get(i);
+                connection.setHealthy(healthy);
+                if (healthy) {
+                    newHealthyEndpoints.add(connection.endpoint());
+                }
+            }
+            healthyEndpoints = newHealthyEndpoints.build();
         }));
     }
 
@@ -115,7 +123,8 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
                     if (connection != null) {
                         return connection;
                     }
-                    return new ServerConnection(endpoint, createEndpointHealthChecker(endpoint));
+                    return new ServerConnection(endpoint, createEndpointHealthChecker(endpoint),
+                                                metricRegistry);
                 })
                 .collect(GuavaCollectors.toImmutableList());
     }
@@ -158,14 +167,22 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     private static final class ServerConnection {
         private final Endpoint endpoint;
         private final EndpointHealthChecker healthChecker;
+        private volatile boolean healthy;
 
-        private ServerConnection(Endpoint endpoint, EndpointHealthChecker healthChecker) {
+        private ServerConnection(Endpoint endpoint, EndpointHealthChecker healthChecker,
+                                 MetricRegistry metricRegistry) {
             this.endpoint = endpoint;
             this.healthChecker = healthChecker;
+            metricRegistry.register(MetricRegistry.name("health-check", endpoint.authority(), "healthy"),
+                                    (Gauge<Integer>) () -> healthy ? 1 : 0);
         }
 
         Endpoint endpoint() {
             return endpoint;
+        }
+
+        void setHealthy(boolean healthy) {
+            this.healthy = healthy;
         }
     }
 }
