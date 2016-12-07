@@ -33,9 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.structured.ApacheThriftStructuredLog;
 import com.linecorp.armeria.server.logging.structured.StructuredLogBuilder;
@@ -71,7 +70,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
          * @return A byte-array represented key or null
          */
         @Nullable
-        byte[] selectKey(RequestContext reqCtx, ResponseLog resLog, E structuredLog);
+        byte[] selectKey(RequestLog log, E structuredLog);
     }
 
     /**
@@ -89,10 +88,8 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      */
     public static <I extends Request, O extends Response, L>
     Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, L>> newDecorator(
-            Producer<byte[], L> producer,
-            String topic,
-            StructuredLogBuilder<L> logBuilder,
-            KeySelector<L> keySelector) {
+            Producer<byte[], L> producer, String topic,
+            StructuredLogBuilder<L> logBuilder, KeySelector<L> keySelector) {
         return service -> new KafkaStructuredLoggingService<>(
                 service, logBuilder, producer, topic, keySelector, false);
     }
@@ -111,8 +108,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      */
     public static <I extends Request, O extends Response, L>
     Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, L>> newDecorator(
-            Producer<byte[], L> producer,
-            String topic,
+            Producer<byte[], L> producer, String topic,
             StructuredLogBuilder<L> logBuilder) {
         return newDecorator(producer, topic, logBuilder, null);
     }
@@ -133,10 +129,8 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      */
     public static <I extends Request, O extends Response, L>
     Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, L>> newDecorator(
-            String bootstrapServers,
-            String topic,
-            StructuredLogBuilder<L> logBuilder,
-            KeySelector<L> keySelector) {
+            String bootstrapServers, String topic,
+            StructuredLogBuilder<L> logBuilder, KeySelector<L> keySelector) {
         Producer<byte[], L> producer = new KafkaProducer<>(newDefaultConfig(bootstrapServers));
         return service -> new KafkaStructuredLoggingService<>(
                 service, logBuilder, producer, topic, keySelector, true);
@@ -204,19 +198,19 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
                                   StructuredLogBuilder<L> logBuilder,
                                   Producer<byte[], L> producer,
                                   String topic,
-                                  KeySelector<L> keySelector,
+                                  @Nullable KeySelector<L> keySelector,
                                   boolean needToCloseProducer) {
         super(delegate, logBuilder);
 
         this.producer = requireNonNull(producer, "producer");
         this.topic = requireNonNull(topic, "topic");
-        this.keySelector = keySelector == null ? (ctx, res, log) -> null : keySelector;
+        this.keySelector = keySelector == null ? (res, log) -> null : keySelector;
         this.needToCloseProducer = needToCloseProducer;
     }
 
     @Override
-    protected void writeLog(RequestContext reqCtx, ResponseLog resLog, L structuredLog) {
-        byte[] key = keySelector.selectKey(reqCtx, resLog, structuredLog);
+    protected void writeLog(RequestLog log, L structuredLog) {
+        byte[] key = keySelector.selectKey(log, structuredLog);
 
         ProducerRecord<byte[], L> producerRecord = new ProducerRecord<>(topic, key, structuredLog);
         producer.send(producerRecord, (metadata, exception) -> {

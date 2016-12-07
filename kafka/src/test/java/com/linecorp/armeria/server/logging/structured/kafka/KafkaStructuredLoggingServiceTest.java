@@ -57,7 +57,7 @@ public class KafkaStructuredLoggingServiceTest {
                 Producer<byte[], SimpleStructuredLog> producer,
                 KeySelector<SimpleStructuredLog> keySelector,
                 boolean needToCloseProducer) {
-            super(mock(Service.class), null, producer, TOPIC_NAME, keySelector, needToCloseProducer);
+            super(mock(Service.class), log -> null, producer, TOPIC_NAME, keySelector, needToCloseProducer);
         }
     }
 
@@ -73,7 +73,7 @@ public class KafkaStructuredLoggingServiceTest {
                 new KafkaStructuredLoggingServiceExposed(producer, null, false);
 
         SimpleStructuredLog log = new SimpleStructuredLog("kawamuray");
-        service.writeLog(null, null, log);
+        service.writeLog(null, log);
 
         verify(producer, times(1)).send(captor.capture(), any(Callback.class));
 
@@ -85,10 +85,10 @@ public class KafkaStructuredLoggingServiceTest {
     @Test
     public void testWithKeySelector() {
         KafkaStructuredLoggingServiceExposed service = new KafkaStructuredLoggingServiceExposed(
-                producer, (ctx, res, log) -> log.name.getBytes(), false);
+                producer, (res, log) -> log.name.getBytes(), false);
 
         SimpleStructuredLog log = new SimpleStructuredLog("kawamuray");
-        service.writeLog(null, null, log);
+        service.writeLog(null, log);
 
         verify(producer, times(1)).send(captor.capture(), any(Callback.class));
 

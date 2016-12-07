@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
@@ -40,6 +41,9 @@ import org.apache.thrift.transport.TTransportException;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.InvalidResponseException;
+import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
@@ -50,10 +54,6 @@ import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.thrift.ApacheThriftCall;
-import com.linecorp.armeria.common.thrift.ApacheThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -62,7 +62,9 @@ import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
 
-final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
+final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
+
+    private final AtomicInteger nextSeqId = new AtomicInteger();
 
     private final Client<HttpRequest, HttpResponse> httpClient;
     private final String path;
@@ -82,15 +84,13 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
     }
 
     @Override
-    public ThriftReply execute(ClientRequestContext ctx, ThriftCall call) throws Exception {
-        final int seqId = call.seqId();
+    public RpcResponse execute(ClientRequestContext ctx, RpcRequest call) throws Exception {
+        final int seqId = nextSeqId.incrementAndGet();
         final String method = call.method();
         final List<Object> args = call.params();
-        final ThriftReply reply = new ThriftReply(seqId);
+        final DefaultRpcResponse reply = new DefaultRpcResponse();
 
-        ctx.requestLogBuilder().serializationFormat(serializationFormat);
-        ctx.requestLogBuilder().attr(RequestLog.RPC_REQUEST).set(call);
-        ctx.responseLogBuilder().attr(ResponseLog.RPC_RESPONSE).set(reply);
+        ctx.logBuilder().serializationFormat(serializationFormat);
 
         final ThriftFunction func;
         try {
@@ -114,9 +114,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
             tArgs.write(tProtocol);
             tProtocol.writeMessageEnd();
 
-            ctx.requestLogBuilder()
-               .attr(RequestLog.RAW_RPC_REQUEST)
-               .set(new ApacheThriftCall(header, tArgs));
+            ctx.logBuilder().requestContent(new ThriftCall(header, tArgs));
 
             final DefaultHttpRequest httpReq = new DefaultHttpRequest(
                     HttpHeaders.of(HttpMethod.POST, path)
@@ -124,30 +122,32 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
             httpReq.write(HttpData.of(outTransport.getArray(), 0, outTransport.length()));
             httpReq.close();
 
+            ctx.logBuilder().deferResponseContent();
+
             final CompletableFuture<AggregatedHttpMessage> future =
                     httpClient.execute(ctx, httpReq).aggregate();
 
             future.handle(voidFunction((res, cause) -> {
                 if (cause != null) {
-                    completeExceptionally(reply, func,
+                    completeExceptionally(ctx, reply, func,
                                           cause instanceof ExecutionException ? cause.getCause() : cause);
                     return;
                 }
 
                 final HttpStatus status = res.headers().status();
                 if (status.code() != HttpStatus.OK.code()) {
-                    completeExceptionally(reply, func, new InvalidResponseException(status.toString()));
+                    completeExceptionally(ctx, reply, func, new InvalidResponseException(status.toString()));
                     return;
                 }
 
                 try {
                     reply.complete(decodeResponse(ctx, func, res.content()));
                 } catch (Throwable t) {
-                    completeExceptionally(reply, func, t);
+                    completeExceptionally(ctx, reply, func, t);
                 }
             })).exceptionally(CompletionActions::log);
         } catch (Throwable cause) {
-            completeExceptionally(reply, func, cause);
+            completeExceptionally(ctx, reply, func, cause);
         }
 
         return reply;
@@ -175,6 +175,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
             ClientRequestContext ctx, ThriftFunction func, HttpData content) throws TException {
 
         if (func.isOneWay()) {
+            ctx.logBuilder().responseContent(null);
             return null;
         }
 
@@ -189,9 +190,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         final TMessage header = inputProtocol.readMessageBegin();
         final TApplicationException appEx = readApplicationException(func, inputProtocol, header);
         if (appEx != null) {
-            ctx.responseLogBuilder()
-               .attr(ResponseLog.RAW_RPC_RESPONSE)
-               .set(new ApacheThriftReply(header, appEx));
+            ctx.logBuilder().responseContent(new ThriftReply(header, appEx));
             throw appEx;
         }
 
@@ -199,9 +198,7 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         result.read(inputProtocol);
         inputProtocol.readMessageEnd();
 
-        ctx.responseLogBuilder()
-           .attr(ResponseLog.RAW_RPC_RESPONSE)
-           .set(new ApacheThriftReply(header, result));
+        ctx.logBuilder().responseContent(new ThriftReply(header, result));
 
         for (TFieldIdEnum fieldIdEnum : func.exceptionFields()) {
             if (result.isSet(fieldIdEnum)) {
@@ -237,7 +234,9 @@ final class THttpClientDelegate implements Client<ThriftCall, ThriftReply> {
         return appEx;
     }
 
-    private static void completeExceptionally(ThriftReply reply, ThriftFunction thriftMethod, Throwable cause) {
+    private static void completeExceptionally(ClientRequestContext ctx, DefaultRpcResponse reply,
+                                              ThriftFunction thriftMethod, Throwable cause) {
+        ctx.logBuilder().responseContent(null);
         reply.completeExceptionally(decodeException(cause, thriftMethod.declaredExceptions()));
     }
 

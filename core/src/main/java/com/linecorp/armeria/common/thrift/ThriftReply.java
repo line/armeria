@@ -16,62 +16,122 @@
 
 package com.linecorp.armeria.common.thrift;
 
-import com.google.common.base.MoreObjects;
+import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.AbstractRpcResponse;
-import com.linecorp.armeria.common.RpcResponse;
+import java.util.Objects;
+
+import org.apache.thrift.TApplicationException;
+import org.apache.thrift.TBase;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
+
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
- * A Thrift {@link RpcResponse}.
+ * A container of a Thrift reply or exception object ({@link TBase} or {@link TApplicationException}) and
+ * its header ({@link TMessage}). It is exported to {@link RequestLog#responseContent()} when a Thrift call
+ * is processed.
  */
-public final class ThriftReply extends AbstractRpcResponse {
+public final class ThriftReply extends ThriftMessage {
 
-    private final int seqId;
+    private final TBase<?, ?> result;
+    private final TApplicationException exception;
 
     /**
-     * Creates a new incomplete instance.
+     * Creates a new instance that contains a Thrift {@link TMessageType#REPLY} message.
      */
-    public ThriftReply(int seqId) {
-        this.seqId = seqId;
+    public ThriftReply(TMessage header, TBase<?, ?> result) {
+        super(header);
+        if (header.type != TMessageType.REPLY) {
+            throw new IllegalArgumentException(
+                    "header.type: " + typeStr(header.type) + " (expected: REPLY)");
+        }
+
+        this.result = requireNonNull(result, "result");
+        exception = null;
     }
 
     /**
-     * Creates a new successfully complete instance.
+     * Creates a new instance that contains a Thrift {@link TMessageType#EXCEPTION} message.
      */
-    public ThriftReply(int seqId, Object result) {
-        super(result);
-        this.seqId = seqId;
+    public ThriftReply(TMessage header, TApplicationException exception) {
+        super(header);
+        if (header.type != TMessageType.EXCEPTION) {
+            throw new IllegalArgumentException(
+                    "header.type: " + typeStr(header.type) + " (expected: EXCEPTION)");
+        }
+
+        result = null;
+        this.exception = requireNonNull(exception, "exception");
     }
 
     /**
-     * Creates a new exceptionally complete instance.
+     * Returns {@code true} if the type of this reply is {@link TMessageType#EXCEPTION}.
      */
-    public ThriftReply(int seqId, Throwable cause) {
-        super(cause);
-        this.seqId = seqId;
+    public boolean isException() {
+        return exception != null;
     }
 
     /**
-     * Returns the {@code seqId} of the reply.
+     * Returns the result of this reply.
+     *
+     * @throws IllegalStateException if the type of this reply is not {@link TMessageType#REPLY}
      */
-    public int seqId() {
-        return seqId;
+    public TBase<?, ?> result() {
+        if (isException()) {
+            throw new IllegalStateException("not a reply but an exception");
+        }
+        return result;
+    }
+
+    /**
+     * Returns the exception of this reply.
+     *
+     * @throws IllegalStateException if the type of this reply is not {@link TMessageType#EXCEPTION}
+     */
+    public TApplicationException exception() {
+        if (!isException()) {
+            throw new IllegalStateException("not an exception but a reply");
+        }
+        return exception;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        final ThriftReply that = (ThriftReply) o;
+        return super.equals(that) &&
+               Objects.equals(result, that.result) &&
+               Objects.equals(exception, that.exception);
+    }
+
+    @Override
+    public int hashCode() {
+        return (super.hashCode() * 31 + Objects.hashCode(result)) * 31 + Objects.hashCode(exception);
     }
 
     @Override
     public String toString() {
-        if (!isDone()) {
-            return super.toString();
+        final ToStringHelper helper = MoreObjects.toStringHelper(this)
+                                                 .add("seqId", header().seqid)
+                                                 .add("type", typeStr())
+                                                 .add("name", header().name);
+        if (result != null) {
+            helper.add("result", result);
+        } else {
+            helper.add("exception", exception);
         }
 
-        if (isCompletedExceptionally()) {
-            return MoreObjects.toStringHelper(this)
-                              .add("seqId", seqId())
-                              .add("cause", getCause()).toString();
-        } else {
-            return MoreObjects.toStringHelper(this)
-                              .add("seqId", seqId())
-                              .add("value", getNow(null)).toString();
-        }
+        return helper.toString();
     }
 }

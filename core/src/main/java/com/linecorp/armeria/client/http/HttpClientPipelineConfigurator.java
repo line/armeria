@@ -39,7 +39,7 @@ import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpObject;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.FlushConsolidationHandler;
@@ -413,7 +413,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             });
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, null, res, ResponseLogBuilder.NOOP, 0, UPGRADE_RESPONSE_MAX_LENGTH);
+            responseDecoder.addResponse(0, null, res, RequestLogBuilder.NOOP, 0, UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();
         }
 

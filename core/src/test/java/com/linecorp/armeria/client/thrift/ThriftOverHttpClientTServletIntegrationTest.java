@@ -73,11 +73,11 @@ import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
-import com.linecorp.armeria.common.thrift.ThriftReply;
-import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Processor;
 
@@ -275,7 +275,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             String uri, AtomicReference<SessionProtocol> sessionProtocol) {
 
         return new ClientBuilder(uri)
-                .decorator(ThriftCall.class, ThriftReply.class,
+                .decorator(RpcRequest.class, RpcResponse.class,
                            c -> new SessionProtocolCapturer<>(c, sessionProtocol))
                 .build(HelloService.Iface.class);
     }
@@ -310,9 +310,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
         @Override
         public O execute(ClientRequestContext ctx, I req) throws Exception {
-            ctx.requestLogFuture()
-               .thenAccept(log -> sessionProtocol.set(log.scheme().sessionProtocol()))
-               .exceptionally(CompletionActions::log);
+            ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
+                                  RequestLogAvailability.REQUEST_START);
             return delegate().execute(ctx, req);
         }
     }

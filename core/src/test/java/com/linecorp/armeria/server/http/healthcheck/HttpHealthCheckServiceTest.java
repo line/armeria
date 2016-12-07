@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -67,6 +68,7 @@ public class HttpHealthCheckServiceTest {
 
     @Before
     public void setUp() {
+        when(context.logBuilder()).thenReturn(new DefaultRequestLog(context));
         service = new HttpHealthCheckService(health1, health2, health3);
         service.serverHealth.setHealthy(true);
     }

@@ -16,17 +16,18 @@
 
 package com.linecorp.armeria.server.logging.structured;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.logging.LogCollectingService;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A decorating service which provides support of structured and optionally externalized request/response
@@ -37,8 +38,9 @@ import com.linecorp.armeria.server.logging.LogCollectingService;
  * @param <L> the type of the structured log representation
  */
 public abstract class StructuredLoggingService<I extends Request, O extends Response, L>
-        extends LogCollectingService<I, O> {
+        extends DecoratingService<I, O, I, O> {
 
+    private final StructuredLogBuilder<L> logBuilder;
     private Server associatedServer;
 
     /**
@@ -51,18 +53,7 @@ public abstract class StructuredLoggingService<I extends Request, O extends Resp
     protected StructuredLoggingService(Service<? super I, ? extends O> delegate,
                                        StructuredLogBuilder<L> logBuilder) {
         super(delegate);
-        init(new MessageLogConsumer() {
-            @Override
-            public void onRequest(RequestContext ctx, RequestLog req) throws Exception { /* noop */ }
-
-            @Override
-            public void onResponse(RequestContext ctx, ResponseLog res) throws Exception {
-                L structuredLog = logBuilder.build(ctx, res);
-                if (structuredLog != null) {
-                    writeLog(ctx, res, structuredLog);
-                }
-            }
-        });
+        this.logBuilder = requireNonNull(logBuilder, "logBuilder");
     }
 
     @Override
@@ -86,14 +77,23 @@ public abstract class StructuredLoggingService<I extends Request, O extends Resp
         });
     }
 
+    @Override
+    public O serve(ServiceRequestContext ctx, I req) throws Exception {
+        ctx.log().addListener(log -> {
+            L structuredLog = logBuilder.build(log);
+            if (structuredLog != null) {
+                writeLog(log, structuredLog);
+            }
+        }, RequestLogAvailability.COMPLETE);
+        return delegate().serve(ctx, req);
+    }
+
     /**
      * Writes given {@code structuredLog} to the underlying system.
-     *
-     * @param reqCtx the request context of which a {@code structuredLog} being written
-     * @param resLog the response structuredLog which is a source of constructed {@code structuredLog}
+     *  @param log the {@link RequestLog} which is a source of constructed {@code structuredLog}
      * @param structuredLog the content of a structuredLog
      */
-    protected abstract void writeLog(RequestContext reqCtx, ResponseLog resLog, L structuredLog);
+    protected abstract void writeLog(RequestLog log, L structuredLog);
 
     /**
      * Cleanup resources which were opened for logging.

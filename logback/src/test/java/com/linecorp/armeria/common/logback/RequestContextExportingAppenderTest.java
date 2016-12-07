@@ -32,6 +32,8 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -51,10 +53,7 @@ import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -64,6 +63,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.service.core.thrift.v1.ArmeriaService.hello_args;
+import com.linecorp.armeria.service.core.thrift.v1.ArmeriaService.hello_result;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -82,6 +83,13 @@ public class RequestContextExportingAppenderTest {
 
     private static final AttributeKey<CustomValue> MY_ATTR =
             AttributeKey.valueOf(RequestContextExportingAppenderTest.class, "MY_ATTR");
+
+    private static final ThriftCall THRIFT_CALL =
+            new ThriftCall(new TMessage("hello", TMessageType.CALL, 1),
+                           new hello_args("world"));
+    private static final ThriftReply THRIFT_REPLY =
+            new ThriftReply(new TMessage("hello", TMessageType.REPLY, 1),
+                            new hello_result("Hello, world!"));
 
     private static final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
     private static final Logger rootLogger =
@@ -276,10 +284,9 @@ public class RequestContextExportingAppenderTest {
 
         final ServiceRequestContext ctx = newServiceContext("/foo");
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
-            final RequestLogBuilder req = ctx.requestLogBuilder();
-            final ResponseLogBuilder res = ctx.responseLogBuilder();
-            req.end();
-            res.end();
+            final RequestLogBuilder log = ctx.logBuilder();
+            log.endRequest();
+            log.endResponse();
 
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
@@ -290,12 +297,12 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "5678")
                            .containsEntry("req.direction", "INBOUND")
-                           .containsEntry("req.authority", "some-host.server.com:8080")
+                           .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
                            .containsEntry("scheme", "none+h2")
                            .containsEntry("req.content_length", "0")
-                           .containsEntry("res.status_code", "0")
+                           .containsEntry("res.status_code", "-1")
                            .containsEntry("res.content_length", "0")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
@@ -321,18 +328,17 @@ public class RequestContextExportingAppenderTest {
 
         final ServiceRequestContext ctx = newServiceContext("/foo");
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
-            final RequestLogBuilder req = ctx.requestLogBuilder();
-            final ResponseLogBuilder res = ctx.responseLogBuilder();
-            req.serializationFormat(SerializationFormat.THRIFT_BINARY);
-            req.contentLength(64);
-            req.attr(RequestLog.HTTP_HEADERS).set(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
-            req.attr(RequestLog.RPC_REQUEST).set(new ThriftCall(1, Object.class, "hello", "world"));
-            req.end();
-            res.statusCode(200);
-            res.contentLength(128);
-            res.attr(ResponseLog.HTTP_HEADERS).set(HttpHeaders.of(HttpHeaderNames.DATE, "some-date"));
-            res.attr(ResponseLog.RPC_RESPONSE).set(new ThriftReply(1, "Hello, world!"));
-            res.end();
+            final RequestLogBuilder log = ctx.logBuilder();
+            log.serializationFormat(SerializationFormat.THRIFT_BINARY);
+            log.requestLength(64);
+            log.requestEnvelope(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
+            log.requestContent(THRIFT_CALL);
+            log.endRequest();
+            log.statusCode(200);
+            log.responseLength(128);
+            log.responseEnvelope(HttpHeaders.of(HttpHeaderNames.DATE, "some-date"));
+            log.responseContent(THRIFT_REPLY);
+            log.endResponse();
 
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
@@ -343,16 +349,16 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "5678")
                            .containsEntry("req.direction", "INBOUND")
-                           .containsEntry("req.authority", "some-host.server.com:8080")
+                           .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.rpc_method", "hello")
-                           .containsEntry("req.rpc_params", "[world]")
+                           .containsEntry("req.rpc_params", "hello_args(name:world)")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
-                           .containsEntry("res.rpc_result", "Hello, world!")
+                           .containsEntry("res.rpc_result", "hello_result(success:Hello, world!)")
                            .containsEntry("req.http_headers.user-agent", "some-client")
                            .containsEntry("res.http_headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
@@ -451,18 +457,17 @@ public class RequestContextExportingAppenderTest {
 
         final ClientRequestContext ctx = newClientContext("/bar");
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
-            final RequestLogBuilder req = ctx.requestLogBuilder();
-            final ResponseLogBuilder res = ctx.responseLogBuilder();
-            req.serializationFormat(SerializationFormat.THRIFT_BINARY);
-            req.contentLength(64);
-            req.attr(RequestLog.HTTP_HEADERS).set(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
-            req.attr(RequestLog.RPC_REQUEST).set(new ThriftCall(1, Object.class, "hello", "world"));
-            req.end();
-            res.statusCode(200);
-            res.contentLength(128);
-            res.attr(ResponseLog.HTTP_HEADERS).set(HttpHeaders.of(HttpHeaderNames.DATE, "some-date"));
-            res.attr(ResponseLog.RPC_RESPONSE).set(new ThriftReply(1, "Hello, world!"));
-            res.end();
+            final RequestLogBuilder log = ctx.logBuilder();
+            log.serializationFormat(SerializationFormat.THRIFT_BINARY);
+            log.requestLength(64);
+            log.requestEnvelope(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
+            log.requestContent(THRIFT_CALL);
+            log.endRequest();
+            log.statusCode(200);
+            log.responseLength(128);
+            log.responseEnvelope(HttpHeaders.of(HttpHeaderNames.DATE, "some-date"));
+            log.responseContent(THRIFT_REPLY);
+            log.endResponse();
 
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
@@ -473,16 +478,16 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("remote.ip", "1.2.3.4")
                            .containsEntry("remote.port", "8080")
                            .containsEntry("req.direction", "OUTBOUND")
-                           .containsEntry("req.authority", "some-host.server.com:8080")
+                           .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/bar")
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.rpc_method", "hello")
-                           .containsEntry("req.rpc_params", "[world]")
+                           .containsEntry("req.rpc_params", "hello_args(name:world)")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
-                           .containsEntry("res.rpc_result", "Hello, world!")
+                           .containsEntry("res.rpc_result", "hello_result(success:Hello, world!)")
                            .containsEntry("req.http_headers.user-agent", "some-client")
                            .containsEntry("res.http_headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
@@ -519,7 +524,7 @@ public class RequestContextExportingAppenderTest {
             }
         };
 
-        ctx.requestLogBuilder().start(
+        ctx.logBuilder().startRequest(
                 ch, ctx.sessionProtocol(), "some-host.server.com", ctx.method(), ctx.path());
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));

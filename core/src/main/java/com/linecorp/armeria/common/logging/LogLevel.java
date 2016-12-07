@@ -44,6 +44,26 @@ public enum LogLevel {
     ERROR;
 
     /**
+     * Returns {@code true} if this level is enabled.
+     */
+    public boolean isEnabled(Logger logger) {
+        switch (this) {
+            case TRACE:
+                return logger.isTraceEnabled();
+            case DEBUG:
+                return logger.isDebugEnabled();
+            case INFO:
+                return logger.isInfoEnabled();
+            case WARN:
+                return logger.isWarnEnabled();
+            case ERROR:
+                return logger.isErrorEnabled();
+            default:
+                throw new Error();
+        }
+    }
+
+    /**
      * Logs a message at this level.
      */
     public void log(Logger logger, String message) {

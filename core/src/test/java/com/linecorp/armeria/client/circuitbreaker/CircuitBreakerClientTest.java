@@ -44,9 +44,11 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
+import com.linecorp.armeria.common.DefaultRpcRequest;
+import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
@@ -61,19 +63,19 @@ public class CircuitBreakerClientTest {
             new DefaultEventLoop(), SessionProtocol.H2C,
             Endpoint.of("dummyhost", 8080),
             "POST", "/", "", ClientOptions.DEFAULT,
-            new ThriftCall(0, HelloService.Iface.class, "methodA", "a", "b"));
+            new DefaultRpcRequest(HelloService.Iface.class, "methodA", "a", "b"));
 
     private static final ClientRequestContext ctxB = new DefaultClientRequestContext(
             new DefaultEventLoop(), SessionProtocol.H2C,
             Endpoint.of("dummyhost", 8080),
             "POST", "/", "", ClientOptions.DEFAULT,
-            new ThriftCall(0, HelloService.Iface.class, "methodB", "c", "d"));
+            new DefaultRpcRequest(HelloService.Iface.class, "methodB", "c", "d"));
 
-    private static final ThriftCall req = ctx.request();
-    private static final ThriftCall reqB = ctxB.request();
-    private static final ThriftReply successRes = new ThriftReply(0, (Object) null);
-    private static final ThriftReply failureRes =
-            new ThriftReply(0, Exceptions.clearTrace(new Exception("bug")));
+    private static final RpcRequest req = ctx.request();
+    private static final RpcRequest reqB = ctxB.request();
+    private static final RpcResponse successRes = new DefaultRpcResponse((Object) null);
+    private static final RpcResponse failureRes =
+            new DefaultRpcResponse(Exceptions.clearTrace(new Exception("bug")));
 
     @Test
     public void testSingletonDecorator() throws Exception {
@@ -134,11 +136,11 @@ public class CircuitBreakerClientTest {
                 .build();
 
         @SuppressWarnings("unchecked")
-        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
+        Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
+        CircuitBreakerClient<RpcRequest, RpcResponse> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         stub.execute(ctx, req);
 
@@ -148,13 +150,13 @@ public class CircuitBreakerClientTest {
     @Test
     public void testDelegateIfFailToGetCircuitBreaker() throws Exception {
         @SuppressWarnings("unchecked")
-        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
+        Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> {
             throw Exceptions.clearTrace(new IllegalArgumentException("bug!"));
         };
-        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
+        CircuitBreakerClient<RpcRequest, RpcResponse> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         stub.execute(ctx, req);
 
@@ -179,20 +181,20 @@ public class CircuitBreakerClientTest {
                 .build();
 
         @SuppressWarnings("unchecked")
-        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
+        Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
         // return failed future
         when(delegate.execute(ctx, req)).thenReturn(failureRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
+        CircuitBreakerClient<RpcRequest, RpcResponse> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
-            ThriftReply future = stub.execute(ctx, req);
+            RpcResponse future = stub.execute(ctx, req);
             // The future is `failureRes` itself
             assertThat(future.isCompletedExceptionally(), is(true));
             // This is not a CircuitBreakerException
-            assertThat(future.getCause(), is(not(instanceOf(FailFastException.class))));
+            assertThat(future.cause(), is(not(instanceOf(FailFastException.class))));
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 
@@ -211,11 +213,11 @@ public class CircuitBreakerClientTest {
         when(delegate.execute(ctx, req)).thenReturn(successRes);
 
         // HALF OPEN
-        ThriftReply future2 = stub.execute(ctx, req);
+        RpcResponse future2 = stub.execute(ctx, req);
         assertThat(future2.get(), is(nullValue()));
 
         // CLOSED
-        ThriftReply future3 = stub.execute(ctx, req);
+        RpcResponse future3 = stub.execute(ctx, req);
         assertThat(future3.get(), is(nullValue()));
     }
 
@@ -236,14 +238,14 @@ public class CircuitBreakerClientTest {
                 .build();
 
         @SuppressWarnings("unchecked")
-        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
+        Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
         // Always return failed future for methodA
         when(delegate.execute(ctx, req)).thenReturn(failureRes);
         // Always return success future for methodB
         when(delegate.execute(ctxB, reqB)).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
+        CircuitBreakerClient<RpcRequest, RpcResponse> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -286,14 +288,14 @@ public class CircuitBreakerClientTest {
                         .build();
 
         @SuppressWarnings("unchecked")
-        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
+        Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
         // Always return failed future for methodA
         when(delegate.execute(ctx, req)).thenReturn(failureRes);
         // Always return success future for methodB
         when(delegate.execute(ctxB, reqB)).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = new KeyedCircuitBreakerMapping<>(KeySelector.METHOD, factory);
-        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
+        CircuitBreakerClient<RpcRequest, RpcResponse> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         // CLOSED (methodA)
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -315,7 +317,7 @@ public class CircuitBreakerClientTest {
         }
 
         // CLOSED (methodB)
-        ThriftReply future2 = stub.execute(ctxB, reqB);
+        RpcResponse future2 = stub.execute(ctxB, reqB);
         assertThat(future2.get(), is(nullValue()));
     }
 
@@ -340,44 +342,44 @@ public class CircuitBreakerClientTest {
                 .build();
 
         @SuppressWarnings("unchecked")
-        Client<ThriftCall, ThriftReply> delegate = mock(Client.class);
+        Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
         // return failed future
         when(delegate.execute(ctx, req)).thenReturn(failureRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        CircuitBreakerClient<ThriftCall, ThriftReply> stub = new CircuitBreakerClient<>(delegate, mapping);
+        CircuitBreakerClient<RpcRequest, RpcResponse> stub = new CircuitBreakerClient<>(delegate, mapping);
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
-            ThriftReply future = stub.execute(ctx, req);
+            RpcResponse future = stub.execute(ctx, req);
             // The future is `failedFuture` itself
             assertThat(future.isCompletedExceptionally(), is(true));
             // This is not a CircuitBreakerException
-            assertThat(future.getCause(), is(not(instanceOf(FailFastException.class))));
+            assertThat(future.cause(), is(not(instanceOf(FailFastException.class))));
             ticker.advance(Duration.ofMillis(1).toNanos());
         }
 
         // OPEN
-        ThriftReply future1 = stub.execute(ctx, req);
+        RpcResponse future1 = stub.execute(ctx, req);
         // The circuit is still CLOSED
         assertThat(future1.isCompletedExceptionally(), is(true));
-        assertThat(future1.getCause(), is(not(instanceOf(FailFastException.class))));
+        assertThat(future1.cause(), is(not(instanceOf(FailFastException.class))));
     }
 
-    private static void invoke(Function<Client<? super ThriftCall, ? extends ThriftReply>,
-                                        ? extends Client<ThriftCall, ThriftReply>> decorator) throws Exception {
+    private static void invoke(Function<Client<? super RpcRequest, ? extends RpcResponse>,
+                                        ? extends Client<RpcRequest, RpcResponse>> decorator) throws Exception {
 
         @SuppressWarnings("unchecked")
-        Client<ThriftCall, ThriftReply> client = mock(Client.class);
-        Client<ThriftCall, ThriftReply> decorated = decorator.apply(client);
+        Client<RpcRequest, RpcResponse> client = mock(Client.class);
+        Client<RpcRequest, RpcResponse> decorated = decorator.apply(client);
 
         decorated.execute(ctx, req);
     }
 
     private static void failFastInvocation(
             CircuitBreaker circuitBreaker,
-            Function<Client<? super ThriftCall, ? extends ThriftReply>,
-                     ? extends Client<ThriftCall, ThriftReply>> decorator, int count) throws Exception {
+            Function<Client<? super RpcRequest, ? extends RpcResponse>,
+                     ? extends Client<RpcRequest, RpcResponse>> decorator, int count) throws Exception {
 
         for (int i = 0; i < count; i++) {
             try {

@@ -36,19 +36,20 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.MessageLogConsumer;
+import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.thrift.ApacheThriftCall;
-import com.linecorp.armeria.common.thrift.ApacheThriftReply;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.logging.LogCollectingService;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
@@ -65,7 +66,6 @@ public abstract class AbstractThriftOverHttpTest {
 
     private static volatile boolean recordMessageLogs;
     private static final BlockingQueue<RequestLog> requestLogs = new LinkedBlockingQueue<>();
-    private static final BlockingQueue<ResponseLog> responseLogs = new LinkedBlockingQueue<>();
 
     abstract static class HelloServiceBase implements AsyncIface {
         @Override
@@ -115,23 +115,18 @@ public abstract class AbstractThriftOverHttpTest {
 
             sb.decorator(LoggingService::new);
 
-            final Function<Service<ThriftCall, ThriftReply>,
-                    LogCollectingService<ThriftCall, ThriftReply>> logCollectingDecorator =
-                    s -> new LogCollectingService<>(s, new MessageLogConsumer() {
+            final Function<Service<HttpRequest, HttpResponse>,
+                           Service<HttpRequest, HttpResponse>> logCollectingDecorator =
+                    s -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
                         @Override
-                        public void onRequest(RequestContext ctx, RequestLog req) throws Exception {
+                        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             if (recordMessageLogs) {
-                                requestLogs.add(req);
+                                ctx.log().addListener(requestLogs::add,
+                                                      RequestLogAvailability.COMPLETE);
                             }
+                            return delegate().serve(ctx, req);
                         }
-
-                        @Override
-                        public void onResponse(RequestContext ctx, ResponseLog res) throws Exception {
-                            if (recordMessageLogs) {
-                                responseLogs.add(res);
-                            }
-                        }
-                    });
+                    };
 
             sb.decorator(logCollectingDecorator);
         } catch (Exception e) {
@@ -159,7 +154,6 @@ public abstract class AbstractThriftOverHttpTest {
     public void beforeTest() {
         recordMessageLogs = false;
         requestLogs.clear();
-        responseLogs.clear();
     }
 
     @Test
@@ -205,24 +199,21 @@ public abstract class AbstractThriftOverHttpTest {
             client.hello("Trustin");
         }
 
-        final RequestLog req = requestLogs.take();
-        final ResponseLog res = responseLogs.take();
+        final RequestLog log = requestLogs.take();
 
-        assertThat(req.hasAttr(RequestLog.HTTP_HEADERS)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RPC_REQUEST)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RAW_RPC_REQUEST)).isTrue();
+        assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
 
-        final ApacheThriftCall rawRequest = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
+        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("Trustin");
 
-        assertThat(res.hasAttr(ResponseLog.HTTP_HEADERS)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RPC_RESPONSE)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RAW_RPC_RESPONSE)).isTrue();
+        assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.responseContent()).isInstanceOf(ThriftReply.class);
 
-        final ApacheThriftReply rawResponse = (ApacheThriftReply) res.attr(ResponseLog.RAW_RPC_RESPONSE).get();
+        final ThriftReply rawResponse = (ThriftReply) log.responseContent();
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.REPLY);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.result()).isInstanceOf(HelloService.hello_result.class);
@@ -240,25 +231,21 @@ public abstract class AbstractThriftOverHttpTest {
             assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TApplicationException.class);
         }
 
-        final RequestLog req = requestLogs.take();
-        final ResponseLog res = responseLogs.take();
+        final RequestLog log = requestLogs.take();
 
-        assertThat(req.hasAttr(RequestLog.HTTP_HEADERS)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RPC_REQUEST)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RAW_RPC_REQUEST)).isTrue();
+        assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
 
-        final ApacheThriftCall rawRequest = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
+        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("Trustin");
 
-        assertThat(res.hasAttr(ResponseLog.HTTP_HEADERS)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RPC_RESPONSE)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RAW_RPC_RESPONSE)).isTrue();
+        assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.responseContent()).isInstanceOf(ThriftReply.class);
 
-        final ApacheThriftReply rawResponse = (ApacheThriftReply) res.attr(ResponseLog.RAW_RPC_RESPONSE)
-                                                                     .get();
+        final ThriftReply rawResponse = (ThriftReply) log.responseContent();
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.EXCEPTION);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.exception()).isNotNull();

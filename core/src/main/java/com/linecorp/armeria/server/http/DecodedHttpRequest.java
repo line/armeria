@@ -22,7 +22,6 @@ import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpObject;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -52,7 +51,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
-        ctx.requestLogBuilder().attr(RequestLog.HTTP_HEADERS).set(headers());
+        ctx.logBuilder().requestEnvelope(headers());
     }
 
     int id() {
@@ -91,7 +90,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
             final int length = ((HttpData) obj).length();
             inboundTrafficController.inc(length);
             assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
-            ctx.requestLogBuilder().contentLength(transferredBytes);
+            ctx.logBuilder().requestLength(transferredBytes);
         }
         return published;
     }

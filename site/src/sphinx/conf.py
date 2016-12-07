@@ -1,35 +1,47 @@
 # -*- coding: utf-8 -*-
 import sys, os, re
 from datetime import date
-from java.util import Properties
-from java.io import FileInputStream
+
+def load_properties(filepath, sep='=', comment_char='#'):
+    """
+    Read the file passed as parameter as a properties file.
+    """
+    props = {}
+    with open(filepath, "rt") as f:
+        for line in f:
+            l = line.strip()
+            if l and not l.startswith(comment_char):
+                key_value = l.split(sep)
+                key = key_value[0].strip()
+                value = sep.join(key_value[1:]).strip().strip('"')
+                props[key] = value
+    return props
+
 
 # Load the properties file.
-properties = Properties()
-properties.load(FileInputStream('gradle.properties'))
+properties = load_properties(os.path.dirname(os.path.abspath(__file__)) + '/../../../gradle.properties')
 
 # Set the basic project information.
 project = 'Armeria'
 project_short = 'Armeria'
-copyright = properties.get('inceptionYear') + '-' + str(date.today().year) + ', LINE Corporation'
+copyright = properties['inceptionYear'] + '-' + str(date.today().year) + ', LINE Corporation'
 
 # Set the project version and release.
 # Use the last known stable release if the current version ends with '-SNAPSHOT'.
-if re.match(r'^.*-SNAPSHOT$', properties.get('version')):
+if re.match(r'^.*-SNAPSHOT$', properties['version']):
     release = '0.32.0'
 else:
-    release = properties.get('version')
+    release = properties['version']
 version = re.match(r'^[0-9]+\.[0-9]+', release).group(0)
 
 # Export the loaded properties and some useful values into epilogs
 rst_epilog = '\n'
 rst_epilog += '.. |baseurl| replace:: http://line.github.io/armeria/\n'
-propIter = properties.entrySet().iterator()
-while propIter.hasNext():
-    propEntry = propIter.next()
-    if propEntry.getKey() in [ 'release', 'version' ]:
+for k in properties.keys():
+    v = properties[k]
+    if k in [ 'release', 'version' ]:
         continue
-    rst_epilog += '.. |' + propEntry.getKey() + '| replace:: ' + propEntry.getValue() + '\n'
+    rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
 rst_epilog += '\n'
 
 needs_sphinx = '1.0'

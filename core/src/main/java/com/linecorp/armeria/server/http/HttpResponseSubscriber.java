@@ -36,8 +36,7 @@ import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.http.HttpStatusClass;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.http.HttpObjectEncoder;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.RequestTimeoutChangeListener;
@@ -86,8 +85,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         return reqCtx.service();
     }
 
-    private ResponseLogBuilder logBuilder() {
-        return reqCtx.responseLogBuilder();
+    private RequestLogBuilder logBuilder() {
+        return reqCtx.logBuilder();
     }
 
     @Override
@@ -153,7 +152,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         boolean endOfStream = o.isEndOfStream();
         switch (state) {
             case NEEDS_HEADERS: {
-                logBuilder().start();
+                logBuilder().startResponse();
                 if (!(o instanceof HttpHeaders)) {
                     throw newIllegalStateException(
                             "published an HttpData without a preceding Http2Headers: " + o +
@@ -174,7 +173,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                 final int statusCode = status.code();
                 logBuilder().statusCode(statusCode);
-                logBuilder().attr(ResponseLog.HTTP_HEADERS).set(headers);
+                logBuilder().responseEnvelope(headers);
 
                 if (req.method() == HttpMethod.HEAD) {
                     // HEAD responses always close the stream with the initial headers, even if not explicitly
@@ -270,7 +269,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         if (o instanceof HttpData) {
             final HttpData data = (HttpData) o;
             future = responseEncoder.writeData(ctx, req.id(), req.streamId(), data, endOfStream);
-            logBuilder().increaseContentLength(data.length());
+            logBuilder().increaseResponseLength(data.length());
         } else if (o instanceof HttpHeaders) {
             future = responseEncoder.writeHeaders(ctx, req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
         } else {
@@ -279,7 +278,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         if (endOfStream) {
-            logBuilder().end();
+            logBuilder().endResponse();
         }
 
         future.addListener(this);
@@ -290,7 +289,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private void fail(Throwable cause) {
         setDone();
-        logBuilder().end(cause);
+        logBuilder().endResponse(cause);
     }
 
     private void setDone() {

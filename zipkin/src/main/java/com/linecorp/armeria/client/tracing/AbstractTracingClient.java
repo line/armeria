@@ -16,13 +16,10 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -41,7 +38,8 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.thrift.ThriftCall;
 
 /**
  * An abstract {@link DecoratingClient} that traces outgoing {@link Request}s.
@@ -90,14 +88,9 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
         // So we have to clear the span from current thread.
         clientInterceptor.clearSpan();
 
-        final O res = delegate().execute(ctx, req);
+        ctx.log().addListener(log -> closeSpan(ctx, span, log), RequestLogAvailability.COMPLETE);
 
-        ctx.requestLogFuture().thenAcceptBoth(
-                res.closeFuture(),
-                (log, unused) -> closeSpan(ctx, span, log, res))
-           .exceptionally(CompletionActions::log);
-
-        return res;
+        return delegate().execute(ctx, req);
     }
 
     /**
@@ -108,48 +101,38 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
     /**
      * Returns the client-side annotations that should be added to a Zipkin span.
      */
-    @SuppressWarnings("UnusedParameters")
-    protected List<KeyValueAnnotation> annotations(ClientRequestContext ctx, RequestLog req, O res) {
+    protected List<KeyValueAnnotation> annotations(ClientRequestContext ctx, RequestLog log) {
 
         final KeyValueAnnotation clientUriAnnotation = KeyValueAnnotation.create(
-                "client.uri", req.scheme().uriText() + "://" + req.host() + ctx.path() + '#' + req.method());
-
-        final CompletableFuture<?> f = res.closeFuture();
-        if (!f.isDone()) {
-            return Collections.singletonList(clientUriAnnotation);
-        }
+                "client.uri", log.scheme().uriText() + "://" + log.host() + ctx.path() + '#' + log.method());
 
         final List<KeyValueAnnotation> annotations = new ArrayList<>(3);
         annotations.add(clientUriAnnotation);
 
-        // Need to use a callback because CompletableFuture does not have a getter for the cause of failure.
-        // The callback will be invoked immediately because the future is done already.
-        f.handle(voidFunction((result, cause) -> {
-            final String clientResultText = cause == null ? "success" : "failure";
-            annotations.add(KeyValueAnnotation.create("client.result", clientResultText));
-
-            if (cause != null) {
-                annotations.add(KeyValueAnnotation.create("client.cause", cause.toString()));
-            }
-        })).exceptionally(CompletionActions::log);
+        final Throwable cause = log.responseCause();
+        final String clientResultText = cause == null ? "success" : "failure";
+        annotations.add(KeyValueAnnotation.create("client.result", clientResultText));
+        if (cause != null) {
+            annotations.add(KeyValueAnnotation.create("client.cause", cause.toString()));
+        }
 
         return annotations;
     }
 
-    private void closeSpan(ClientRequestContext ctx, Span span, RequestLog req, O res) {
-        if (req.hasAttr(RequestLog.RPC_REQUEST)) {
-            span.setName(req.attr(RequestLog.RPC_REQUEST).get().method());
+    private void closeSpan(ClientRequestContext ctx, Span span, RequestLog log) {
+        final Object requestContent = log.requestContent();
+        if (requestContent instanceof ThriftCall) {
+            span.setName(((ThriftCall) requestContent).header().name);
         }
-        clientInterceptor.closeSpan(span, createResponseAdapter(ctx, req, res));
+        clientInterceptor.closeSpan(span, createResponseAdapter(ctx, log));
     }
 
     /**
      * Creates a new {@link ClientResponseAdapter} from the specified request-response information.
      */
-    protected ClientResponseAdapter createResponseAdapter(
-            ClientRequestContext ctx, RequestLog req, O res) {
+    protected ClientResponseAdapter createResponseAdapter(ClientRequestContext ctx, RequestLog req) {
 
-        final List<KeyValueAnnotation> annotations = annotations(ctx, req, res);
+        final List<KeyValueAnnotation> annotations = annotations(ctx, req);
         return () -> annotations;
     }
 

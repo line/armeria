@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nullable;
@@ -32,11 +31,8 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.common.logging.DefaultResponseLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -51,8 +47,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private final String mappedPath;
     private final SSLSession sslSession;
 
-    private final DefaultRequestLog requestLog;
-    private final DefaultResponseLog responseLog;
+    private final DefaultRequestLog log;
     private final Logger logger;
 
     private ExecutorService blockingTaskExecutor;
@@ -83,9 +78,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.mappedPath = mappedPath;
         this.sslSession = sslSession;
 
-        requestLog = new DefaultRequestLog();
-        requestLog.start(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method, path);
-        responseLog = new DefaultResponseLog(requestLog, requestLog);
+        log = new DefaultRequestLog(this);
+        log.startRequest(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method, path);
         logger = newLogger(cfg);
 
         final ServerConfig serverCfg = cfg.server().config();
@@ -202,23 +196,13 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public RequestLogBuilder requestLogBuilder() {
-        return requestLog;
+    public RequestLog log() {
+        return log;
     }
 
     @Override
-    public ResponseLogBuilder responseLogBuilder() {
-        return responseLog;
-    }
-
-    @Override
-    public CompletableFuture<RequestLog> requestLogFuture() {
-        return requestLog;
-    }
-
-    @Override
-    public CompletableFuture<ResponseLog> responseLogFuture() {
-        return responseLog;
+    public RequestLogBuilder logBuilder() {
+        return log;
     }
 
     /**

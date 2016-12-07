@@ -48,27 +48,27 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.SessionOption;
 import com.linecorp.armeria.client.SessionOptionValue;
 import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
-import com.linecorp.armeria.client.logging.LogCollectingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.logging.MessageLogConsumer;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.thrift.ApacheThriftCall;
-import com.linecorp.armeria.common.thrift.ApacheThriftReply;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -108,7 +108,6 @@ public class ThriftOverHttpClientTest {
 
     private static volatile boolean recordMessageLogs;
     private static final BlockingQueue<RequestLog> requestLogs = new LinkedBlockingQueue<>();
-    private static final BlockingQueue<ResponseLog> responseLogs = new LinkedBlockingQueue<>();
 
     private static final HelloService.AsyncIface helloHandler = (name, resultHandler)
             -> resultHandler.onComplete("Hello, " + name + '!');
@@ -275,29 +274,23 @@ public class ThriftOverHttpClientTest {
                         poolHandlerDecoratorOptVal,
                         SessionOption.USE_HTTP2_PREFACE.newValue(false))));
 
-        final Function<Client<ThriftCall, ThriftReply>,
-                       LogCollectingClient<ThriftCall, ThriftReply>> logCollectingDecorator =
-                s -> new LogCollectingClient<>(s, new MessageLogConsumer() {
+        final Function<Client<RpcRequest, RpcResponse>,
+                       Client<RpcRequest, RpcResponse>> logCollectingDecorator =
+                s -> new DecoratingClient<RpcRequest, RpcResponse, RpcRequest, RpcResponse>(s) {
                     @Override
-                    public void onRequest(RequestContext ctx, RequestLog req) throws Exception {
+                    public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
                         if (recordMessageLogs) {
-                            requestLogs.add(req);
+                            ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
                         }
+                        return delegate().execute(ctx, req);
                     }
-
-                    @Override
-                    public void onResponse(RequestContext ctx, ResponseLog res) throws Exception {
-                        if (recordMessageLogs) {
-                            responseLogs.add(res);
-                        }
-                    }
-                });
+                };
 
         final ClientDecorationBuilder decoBuilder = new ClientDecorationBuilder();
-        decoBuilder.add(ThriftCall.class, ThriftReply.class, logCollectingDecorator);
+        decoBuilder.add(RpcRequest.class, RpcResponse.class, logCollectingDecorator);
 
         if (ENABLE_LOGGING_DECORATORS) {
-            decoBuilder.add(ThriftCall.class, ThriftReply.class, LoggingClient::new);
+            decoBuilder.add(RpcRequest.class, RpcResponse.class, LoggingClient::new);
         }
 
         clientOptions = ClientOptions.of(ClientOption.DECORATION.newValue(decoBuilder.build()));
@@ -318,7 +311,6 @@ public class ThriftOverHttpClientTest {
 
         recordMessageLogs = false;
         requestLogs.clear();
-        responseLogs.clear();
     }
 
     private ClientFactory clientFactory() {
@@ -522,24 +514,21 @@ public class ThriftOverHttpClientTest {
         recordMessageLogs = true;
         client.hello("trustin");
 
-        final RequestLog req = requestLogs.take();
-        final ResponseLog res = responseLogs.take();
+        final RequestLog log = requestLogs.take();
 
-        assertThat(req.hasAttr(RequestLog.HTTP_HEADERS)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RPC_REQUEST)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RAW_RPC_REQUEST)).isTrue();
+        assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
 
-        final ApacheThriftCall rawRequest = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
+        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        assertThat(res.hasAttr(ResponseLog.HTTP_HEADERS)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RPC_RESPONSE)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RAW_RPC_RESPONSE)).isTrue();
+        assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.responseContent()).isInstanceOf(ThriftReply.class);
 
-        final ApacheThriftReply rawResponse = (ApacheThriftReply) res.attr(ResponseLog.RAW_RPC_RESPONSE).get();
+        final ThriftReply rawResponse = (ThriftReply) log.responseContent();
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.REPLY);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.result()).isInstanceOf(HelloService.hello_result.class);
@@ -554,22 +543,19 @@ public class ThriftOverHttpClientTest {
         recordMessageLogs = true;
         client.hello("trustin");
 
-        final RequestLog req = requestLogs.take();
-        final ResponseLog res = responseLogs.take();
+        final RequestLog log = requestLogs.take();
 
-        assertThat(req.hasAttr(RequestLog.HTTP_HEADERS)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RPC_REQUEST)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RAW_RPC_REQUEST)).isTrue();
+        assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
 
-        final ApacheThriftCall rawRequest = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
+        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.ONEWAY);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(OnewayHelloService.hello_args.class);
         assertThat(((OnewayHelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        assertThat(res.hasAttr(ResponseLog.HTTP_HEADERS)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RPC_RESPONSE)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RAW_RPC_RESPONSE)).isFalse();
+        assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.responseContent()).isNull();
     }
 
     @Test(timeout = 10000)
@@ -580,24 +566,21 @@ public class ThriftOverHttpClientTest {
 
         assertThatThrownBy(() -> client.hello("trustin")).isInstanceOf(TApplicationException.class);
 
-        final RequestLog req = requestLogs.take();
-        final ResponseLog res = responseLogs.take();
+        final RequestLog log = requestLogs.take();
 
-        assertThat(req.hasAttr(RequestLog.HTTP_HEADERS)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RPC_REQUEST)).isTrue();
-        assertThat(req.hasAttr(RequestLog.RAW_RPC_REQUEST)).isTrue();
+        assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
 
-        final ApacheThriftCall rawRequest = (ApacheThriftCall) req.attr(RequestLog.RAW_RPC_REQUEST).get();
+        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        assertThat(res.hasAttr(ResponseLog.HTTP_HEADERS)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RPC_RESPONSE)).isTrue();
-        assertThat(res.hasAttr(ResponseLog.RAW_RPC_RESPONSE)).isTrue();
+        assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.responseContent()).isInstanceOf(ThriftReply.class);
 
-        final ApacheThriftReply rawResponse = (ApacheThriftReply) res.attr(ResponseLog.RAW_RPC_RESPONSE).get();
+        final ThriftReply rawResponse = (ThriftReply) log.responseContent();
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.EXCEPTION);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.exception()).isNotNull();

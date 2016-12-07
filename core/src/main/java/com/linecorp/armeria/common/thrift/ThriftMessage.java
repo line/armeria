@@ -24,11 +24,11 @@ import org.apache.thrift.protocol.TMessageType;
 /**
  * A container of a Thrift message produced by Apache Thrift.
  */
-public abstract class ApacheThriftMessage {
+public abstract class ThriftMessage {
 
     private final TMessage header;
 
-    ApacheThriftMessage(TMessage header) {
+    ThriftMessage(TMessage header) {
         this.header = requireNonNull(header, "header");
     }
 
@@ -54,7 +54,7 @@ public abstract class ApacheThriftMessage {
             return false;
         }
 
-        return header.equals(((ApacheThriftMessage) o).header);
+        return header.equals(((ThriftMessage) o).header);
     }
 
     final String typeStr() {

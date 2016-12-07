@@ -31,7 +31,14 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
      * @return the cause, or
      *         {@code null} if this {@link RpcResponse} completed successfully or did not complete yet.
      */
-    Throwable getCause();
+    Throwable cause();
+
+    /**
+     * Returns {@code true} if this {@link RpcResponse} completed exceptionally.
+     *
+     * @see CompletableFuture#isCompletedExceptionally()
+     */
+    boolean isCompletedExceptionally();
 
     /**
      * Returns a {@link CompletableFuture} which completes when this {@link RpcResponse} completes.

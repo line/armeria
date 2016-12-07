@@ -90,7 +90,8 @@ task trimInternalDependencies(type: ProGuardTask) {
     keepclasses 'com.spotify.futures.CompletableFutures'
 
     // FastUtil
-    keepclasses 'it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap'
+    keepclasses 'it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap',
+                'it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap'
 
     // Guava Stream
     keepclasses 'jp.skypencil.guava.stream.GuavaCollectors'

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -24,21 +26,132 @@ import io.netty.channel.Channel;
 /**
  * Updates a {@link RequestLog} with newly available information.
  */
-public interface RequestLogBuilder extends MessageLogBuilder {
+public interface RequestLogBuilder {
+
     /**
-     * Starts the collection of information. This method will update the following properties:
+     * A dummy {@link RequestLogBuilder} that discards everything it collected.
+     */
+    RequestLogBuilder NOOP = new NoopRequestLogBuilder();
+
+    // Methods related with a request:
+
+    /**
+     * Starts the collection of information for the {@link Request}. This method sets the following
+     * properties:
      * <ul>
-     *   <li>{@link RequestLog#scheme()} with {@link SerializationFormat#UNKNOWN}</li>
+     *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
+     *   <li>{@link RequestLog#sessionProtocol()}</li>
      *   <li>{@link RequestLog#host()}</li>
      *   <li>{@link RequestLog#method()}</li>
      *   <li>{@link RequestLog#path()}</li>
      * </ul>
-     * This method will do nothing if called twice.
      */
-    void start(Channel channel, SessionProtocol sessionProtocol, String host, String method, String path);
+    void startRequest(
+            Channel channel, SessionProtocol sessionProtocol, String host, String method, String path);
 
     /**
-     * Updates the {@link SerializationFormat}.
+     * Sets the {@link SerializationFormat}.
      */
     void serializationFormat(SerializationFormat serializationFormat);
+
+    /**
+     * Increases the {@link RequestLog#requestLength()} by {@code deltaBytes}.
+     */
+    void increaseRequestLength(long deltaBytes);
+
+    /**
+     * Sets the {@link RequestLog#requestLength()}.
+     */
+    void requestLength(long requestLength);
+
+    /**
+     * Sets the {@link RequestLog#requestEnvelope()}.
+     */
+    void requestEnvelope(Object requestEnvelope);
+
+    /**
+     * Sets the {@link RequestLog#requestContent()}.
+     */
+    void requestContent(Object requestContent);
+
+    /**
+     * Allows the {@link #requestContent(Object)} called after {@link #endRequest()}.
+     * By default, if {@link #requestContent(Object)} was not called yet, {@link #endRequest()} will call
+     * {@code requestContent(null)} automatically. This method turns off this default behavior.
+     * Note, however, this method will not prevent {@link #endRequest(Throwable)} from calling
+     * {@code requestContent(null)} automatically.
+     */
+    void deferRequestContent();
+
+    /**
+     * Returns {@code true} if {@link #deferRequestContent()} was ever called.
+     */
+    boolean isRequestContentDeferred();
+
+    /**
+     * Sets {@link RequestLog#requestDurationNanos()} and finishes the collection of the information.
+     */
+    void endRequest();
+
+    /**
+     * Sets {@link RequestLog#requestDurationNanos()} and finishes the collection of the information.
+     */
+    void endRequest(Throwable requestCause);
+
+    // Methods related with a response:
+
+    /**
+     * Starts the collection of information for the {@link Response}. This method sets
+     * {@link RequestLog#responseStartTimeMillis()}.
+     */
+    void startResponse();
+
+    /**
+     * Sets the status code specific to the current {@link SessionProtocol}.
+     */
+    void statusCode(int statusCode);
+
+    /**
+     * Increases the {@link RequestLog#responseLength()} by {@code deltaBytes}.
+     */
+    void increaseResponseLength(long deltaBytes);
+
+    /**
+     * Sets the {@link RequestLog#responseLength()}.
+     */
+    void responseLength(long responseLength);
+
+    /**
+     * Sets the {@link RequestLog#responseEnvelope()}.
+     */
+    void responseEnvelope(Object responseEnvelope);
+
+    /**
+     * Sets the {@link RequestLog#responseContent()}.
+     */
+    void responseContent(Object responseContent);
+
+    /**
+     * Allows the {@link #responseContent(Object)} called after {@link #endResponse()}.
+     * By default, if {@link #responseContent(Object)} was not called yet, {@link #endResponse()} will call
+     * {@code responseContent(null)} automatically. This method turns off this default behavior.
+     * Note, however, this method will not prevent {@link #endResponse(Throwable)} from calling
+     * {@code responseContent(null)} automatically.
+     */
+    void deferResponseContent();
+
+    /**
+     * Returns {@code true} if {@link #deferResponseContent()} was ever called.
+     */
+    boolean isResponseContentDeferred();
+
+    /**
+     * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information.
+     */
+    void endResponse();
+
+    /**
+     * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information.
+     */
+    void endResponse(Throwable responseCause);
 }

@@ -32,13 +32,13 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.DefaultClientBuilderParams;
 import com.linecorp.armeria.client.http.HttpClientFactory;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 
 /**
  * A {@link DecoratingClientFactory} that creates a Thrift-over-HTTP client.
@@ -89,8 +89,8 @@ public class THttpClientFactory extends DecoratingClientFactory {
         final Scheme scheme = validateScheme(uri);
         final SerializationFormat serializationFormat = scheme.serializationFormat();
 
-        final Client<ThriftCall, ThriftReply> delegate = options.decoration().decorate(
-                ThriftCall.class, ThriftReply.class,
+        final Client<RpcRequest, RpcResponse> delegate = options.decoration().decorate(
+                RpcRequest.class, RpcResponse.class,
                 new THttpClientDelegate(newHttpClient(uri, scheme, options),
                                         uri.getPath(), serializationFormat));
 

@@ -18,8 +18,7 @@ package com.linecorp.armeria.server.logging.structured;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * An interface that a structured log constructor should implement.
@@ -29,14 +28,13 @@ import com.linecorp.armeria.common.logging.ResponseLog;
 @FunctionalInterface
 public interface StructuredLogBuilder<L> {
     /**
-     * Builds a structured log instance based on given {@link RequestContext} and {@link ResponseLog}.
+     * Builds a structured log instance based on a given {@link RequestLog}.
      *
-     * @param reqCtx an instance of {@link RequestContext} which holds context information of the request
-     * @param resLog an instance of {@link ResponseLog} which holds response and request information
+     * @param log an instance of {@link RequestLog} which holds request and response information
      *
      * @return an instance of {@link L} which represents an entry of structured logs or null if a builder thinks
      *         the given information isn't eligible to issue a structured log entry
      */
     @Nullable
-    L build(RequestContext reqCtx, ResponseLog resLog);
+    L build(RequestLog log);
 }

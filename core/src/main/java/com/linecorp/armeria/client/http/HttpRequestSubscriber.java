@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -145,9 +144,9 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             }
         }
 
-        logBuilder.start(ch, session.protocol(),
-                         host, firstHeaders.method().name(), firstHeaders.path());
-        logBuilder.attr(RequestLog.HTTP_HEADERS).set(firstHeaders);
+        logBuilder.startRequest(
+                ch, session.protocol(), host, firstHeaders.method().name(), firstHeaders.path());
+        logBuilder.requestEnvelope(firstHeaders);
 
         if (request.isEmpty()) {
             setDone();
@@ -224,7 +223,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (o instanceof HttpData) {
             final HttpData data = (HttpData) o;
             future = encoder.writeData(ctx, id, streamId(), data, endOfStream);
-            logBuilder.increaseContentLength(data.length());
+            logBuilder.increaseRequestLength(data.length());
         } else if (o instanceof HttpHeaders) {
             future = encoder.writeHeaders(ctx, id, streamId(), (HttpHeaders) o, endOfStream);
         } else {
@@ -233,7 +232,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         if (endOfStream) {
-            logBuilder.end();
+            logBuilder.endRequest();
         }
 
         future.addListener(this);
@@ -248,7 +247,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private void fail(Throwable cause) {
         setDone();
-        logBuilder.end(cause);
+        logBuilder.endRequest(cause);
     }
 
     private void setDone() {

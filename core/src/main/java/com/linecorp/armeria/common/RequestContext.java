@@ -33,8 +33,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -202,26 +200,14 @@ public interface RequestContext extends AttributeMap {
     <T> T request();
 
     /**
+     * Returns the {@link RequestLog} that contains the information about the current {@link Request}.
+     */
+    RequestLog log();
+
+    /**
      * Returns the {@link RequestLogBuilder} that collects the information about the current {@link Request}.
      */
-    RequestLogBuilder requestLogBuilder();
-
-    /**
-     * Returns the {@link ResponseLogBuilder} that collects the information about the current {@link Response}.
-     */
-    ResponseLogBuilder responseLogBuilder();
-
-    /**
-     * Returns the {@link CompletableFuture} that completes when the {@link #requestLogBuilder()} finished
-     * collecting the {@link Request} information.
-     */
-    CompletableFuture<RequestLog> requestLogFuture();
-
-    /**
-     * Returns the {@link CompletableFuture} that completes when the {@link #responseLogBuilder()} finished
-     * collecting the {@link Response} information.
-     */
-    CompletableFuture<ResponseLog> responseLogFuture();
+    RequestLogBuilder logBuilder();
 
     /**
      * Returns all {@link Attribute}s set in this context.

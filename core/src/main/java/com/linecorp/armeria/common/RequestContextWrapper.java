@@ -20,15 +20,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.util.Iterator;
-import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
@@ -96,23 +93,13 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public RequestLogBuilder requestLogBuilder() {
-        return delegate().requestLogBuilder();
+    public RequestLog log() {
+        return delegate().log();
     }
 
     @Override
-    public ResponseLogBuilder responseLogBuilder() {
-        return delegate().responseLogBuilder();
-    }
-
-    @Override
-    public CompletableFuture<RequestLog> requestLogFuture() {
-        return delegate().requestLogFuture();
-    }
-
-    @Override
-    public CompletableFuture<ResponseLog> responseLogFuture() {
-        return delegate().responseLogFuture();
+    public RequestLogBuilder logBuilder() {
+        return delegate().logBuilder();
     }
 
     @Override
