@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.common.thrift;
 
+/**
+ * Static factory methods pertaining to the {@link ThriftCompletableFuture} and {@link ThriftListenableFuture}.
+ */
 public final class ThriftFutures {
     /**
      * Returns a new {@link ThriftCompletableFuture} instance that has its value set immediately.
