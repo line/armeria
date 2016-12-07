@@ -26,24 +26,6 @@ import com.google.common.util.concurrent.ListenableFuture;
  * when making an asynchronous client-side Thrift RPC.
  */
 public class ThriftListenableFuture<T> extends AbstractFuture<T> implements AsyncMethodCallback<T> {
-    /**
-     * Returns a new instance that has its value set immediately.
-     */
-    public static <T> ThriftListenableFuture<T> successful(T value) {
-        ThriftListenableFuture<T> future = new ThriftListenableFuture<>();
-        future.onComplete(value);
-        return future;
-    }
-
-    /**
-     * Returns a new instance that has an exception set immediately.
-     */
-    public static <T> ThriftListenableFuture<T> failed(Exception e) {
-        ThriftListenableFuture<T> future = new ThriftListenableFuture<>();
-        future.onError(e);
-        return future;
-    }
-
     @Override
     public void onComplete(T t) {
         set(t);

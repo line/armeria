@@ -25,24 +25,6 @@ import org.apache.thrift.async.AsyncMethodCallback;
  * when making an asynchronous client-side Thrift RPC.
  */
 public class ThriftCompletableFuture<T> extends CompletableFuture<T> implements AsyncMethodCallback<T> {
-    /**
-     * Returns a new instance that has its value set immediately.
-     */
-    public static <T> ThriftCompletableFuture<T> successful(T value) {
-        ThriftCompletableFuture<T> future = new ThriftCompletableFuture<T>();
-        future.onComplete(value);
-        return future;
-    }
-
-    /**
-     * Returns a new instance that has an exception set immediately.
-     */
-    public static <T> ThriftCompletableFuture<T> failed(Exception e) {
-        ThriftCompletableFuture<T> future = new ThriftCompletableFuture<>();
-        future.onError(e);
-        return future;
-    }
-
     @Override
     public void onComplete(T t) {
         complete(t);
