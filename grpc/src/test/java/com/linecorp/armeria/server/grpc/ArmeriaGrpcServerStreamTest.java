@@ -83,6 +83,7 @@ public class ArmeriaGrpcServerStreamTest {
     public void setUp() {
         stream = new ArmeriaGrpcServerStream(responseWriter, MAX_MESSAGE_SIZE);
         stream.transportState().setListener(serverListener);
+        stream.transportState().onStreamAllocated();
         stream.messageReader().onSubscribe(subscription);
         verify(subscription).request(1);
         verify(serverListener, atLeastOnce()).onReady();

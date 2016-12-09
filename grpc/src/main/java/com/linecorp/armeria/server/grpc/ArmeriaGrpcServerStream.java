@@ -33,6 +33,7 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.internal.AbstractServerStream;
 import io.grpc.internal.GrpcUtil;
+import io.grpc.internal.ServerStreamListener;
 import io.grpc.internal.TransportFrameUtil;
 import io.grpc.internal.WritableBuffer;
 import io.netty.util.AsciiString;
@@ -70,6 +71,11 @@ final class ArmeriaGrpcServerStream extends AbstractServerStream {
     @Override
     protected AbstractServerStream.Sink abstractServerStreamSink() {
         return sink;
+    }
+
+    @Override
+    public void setListener(ServerStreamListener serverStreamListener) {
+        transportState.setListener(serverStreamListener);
     }
 
     private class Sink implements AbstractServerStream.Sink {
