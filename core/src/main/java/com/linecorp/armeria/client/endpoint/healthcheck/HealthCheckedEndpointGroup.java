@@ -25,8 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.MetricSet;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -44,7 +43,6 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     private final ClientFactory clientFactory;
     private final EndpointGroup delegate;
     private final Duration healthCheckRetryInterval;
-    private final MetricRegistry metricRegistry;
 
     volatile List<ServerConnection> allServers = ImmutableList.of();
     volatile List<Endpoint> healthyEndpoints = ImmutableList.of();
@@ -55,11 +53,9 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
      */
     protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
                                          EndpointGroup delegate,
-                                         MetricRegistry metricRegistry,
                                          Duration healthCheckRetryInterval) {
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.delegate = requireNonNull(delegate, "delegate");
-        this.metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
         this.healthCheckRetryInterval = requireNonNull(healthCheckRetryInterval, "healthCheckRetryInterval");
     }
 
@@ -80,9 +76,10 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     }
 
     private void scheduleCheckAndUpdateHealthyServers() {
-        clientFactory.eventLoopGroup().schedule(() -> {
-            checkAndUpdateHealthyServers().thenRun(this::scheduleCheckAndUpdateHealthyServers);
-        }, healthCheckRetryInterval.toMillis(), TimeUnit.MILLISECONDS);
+        clientFactory.eventLoopGroup()
+                     .schedule(() -> checkAndUpdateHealthyServers()
+                                       .thenRun(this::scheduleCheckAndUpdateHealthyServers),
+                               healthCheckRetryInterval.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     private CompletableFuture<Void> checkAndUpdateHealthyServers() {
@@ -96,11 +93,8 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
         return healthCheckResults.handle(voidFunction((result, thrown) -> {
             ImmutableList.Builder<Endpoint> newHealthyEndpoints = ImmutableList.builder();
             for (int i = 0; i < result.size(); i++) {
-                boolean healthy = result.get(i);
-                ServerConnection connection = checkedServers.get(i);
-                connection.setHealthy(healthy);
-                if (healthy) {
-                    newHealthyEndpoints.add(connection.endpoint());
+                if (result.get(i)) {
+                    newHealthyEndpoints.add(checkedServers.get(i).endpoint());
                 }
             }
             healthyEndpoints = newHealthyEndpoints.build();
@@ -123,8 +117,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
                     if (connection != null) {
                         return connection;
                     }
-                    return new ServerConnection(endpoint, createEndpointHealthChecker(endpoint),
-                                                metricRegistry);
+                    return new ServerConnection(endpoint, createEndpointHealthChecker(endpoint));
                 })
                 .collect(GuavaCollectors.toImmutableList());
     }
@@ -133,6 +126,13 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
      * Creates a new {@link EndpointHealthChecker} instance that will check {@code endpoint} healthiness.
      */
     protected abstract EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint);
+
+    /**
+     * Creates healthcheck {@link MetricSet} for this {@link HealthCheckedEndpointGroup}.
+     */
+    public MetricSet metricSet(String metricName) {
+        return new EndpointHealthStateGaugeSet(this, metricName);
+    }
 
     @Override
     public List<Endpoint> endpoints() {
@@ -164,25 +164,17 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
         CompletableFuture<Boolean> isHealthy(Endpoint endpoint);
     }
 
-    private static final class ServerConnection {
+    static final class ServerConnection {
         private final Endpoint endpoint;
         private final EndpointHealthChecker healthChecker;
-        private volatile boolean healthy;
 
-        private ServerConnection(Endpoint endpoint, EndpointHealthChecker healthChecker,
-                                 MetricRegistry metricRegistry) {
+        private ServerConnection(Endpoint endpoint, EndpointHealthChecker healthChecker) {
             this.endpoint = endpoint;
             this.healthChecker = healthChecker;
-            metricRegistry.register(MetricRegistry.name("health-check", endpoint.authority(), "healthy"),
-                                    (Gauge<Integer>) () -> healthy ? 1 : 0);
         }
 
         Endpoint endpoint() {
             return endpoint;
-        }
-
-        void setHealthy(boolean healthy) {
-            this.healthy = healthy;
         }
     }
 }
