@@ -44,8 +44,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
-import com.linecorp.armeria.common.DefaultRpcRequest;
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -63,19 +61,19 @@ public class CircuitBreakerClientTest {
             new DefaultEventLoop(), SessionProtocol.H2C,
             Endpoint.of("dummyhost", 8080),
             "POST", "/", "", ClientOptions.DEFAULT,
-            new DefaultRpcRequest(HelloService.Iface.class, "methodA", "a", "b"));
+            RpcRequest.of(HelloService.Iface.class, "methodA", "a", "b"));
 
     private static final ClientRequestContext ctxB = new DefaultClientRequestContext(
             new DefaultEventLoop(), SessionProtocol.H2C,
             Endpoint.of("dummyhost", 8080),
             "POST", "/", "", ClientOptions.DEFAULT,
-            new DefaultRpcRequest(HelloService.Iface.class, "methodB", "c", "d"));
+            RpcRequest.of(HelloService.Iface.class, "methodB", "c", "d"));
 
     private static final RpcRequest req = ctx.request();
     private static final RpcRequest reqB = ctxB.request();
-    private static final RpcResponse successRes = new DefaultRpcResponse((Object) null);
-    private static final RpcResponse failureRes =
-            new DefaultRpcResponse(Exceptions.clearTrace(new Exception("bug")));
+    private static final RpcResponse successRes = RpcResponse.of(null);
+    private static final RpcResponse failureRes = RpcResponse.ofFailure(
+            Exceptions.clearTrace(new Exception("bug")));
 
     @Test
     public void testSingletonDecorator() throws Exception {

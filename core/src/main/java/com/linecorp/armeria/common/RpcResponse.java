@@ -25,6 +25,21 @@ import java.util.concurrent.Future;
  * call.
  */
 public interface RpcResponse extends Response, Future<Object>, CompletionStage<Object> {
+
+    /**
+     * Creates a new successfully complete {@link RpcResponse}.
+     */
+    static RpcResponse of(Object value) {
+        return new DefaultRpcResponse(value);
+    }
+
+    /**
+     * Creates a new exceptionally complete {@link RpcResponse}.
+     */
+    static RpcResponse ofFailure(Throwable cause) {
+        return new DefaultRpcResponse(cause);
+    }
+
     /**
      * Returns the cause of the failure if this {@link RpcResponse} completed exceptionally.
      *

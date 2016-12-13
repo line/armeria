@@ -18,10 +18,15 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 
 /**
  * Default {@link RpcRequest} implementation.
@@ -30,29 +35,63 @@ public class DefaultRpcRequest implements RpcRequest {
 
     private final Class<?> serviceType;
     private final String method;
-    private final List<Object> args;
+    private final List<Object> params;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance with no parameter.
      */
-    public DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> args) {
-        this(serviceType, method, ImmutableList.copyOf(args));
+    public DefaultRpcRequest(Class<?> serviceType, String method) {
+        this(serviceType, method, Collections.emptyList());
     }
 
     /**
-     * Creates a new instance.
+     * Creates a new instance with a single parameter.
      */
-    public DefaultRpcRequest(Class<?> serviceType, String method, Object... args) {
-        this(serviceType, method, ImmutableList.copyOf(args));
+    public DefaultRpcRequest(Class<?> serviceType, String method, @Nullable Object parameter) {
+        this(serviceType, method, Collections.singletonList(parameter));
     }
 
     /**
-     * Creates a new instance.
+     * Creates a new instance with the specified parameters.
      */
-    private DefaultRpcRequest(Class<?> serviceType, String method, List<Object> args) {
+    public DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> params) {
+        this(serviceType, method, copyParams(params));
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    public DefaultRpcRequest(Class<?> serviceType, String method, Object... params) {
+        this(serviceType, method, copyParams(params));
+    }
+
+    private DefaultRpcRequest(Class<?> serviceType, String method, List<Object> params) {
         this.serviceType = requireNonNull(serviceType, "serviceType");
         this.method = requireNonNull(method, "method");
-        this.args = args;
+        this.params = params;
+    }
+
+    private static List<Object> copyParams(Iterable<?> params) {
+        requireNonNull(params, "params");
+
+        // Note we do not use ImmutableList.copyOf() here,
+        // because it does not allow a null element and we should allow a null argument.
+        final List<Object> copy;
+        if (params instanceof Collection) {
+            copy = new ArrayList<>(((Collection<?>) params).size());
+        } else {
+            copy = new ArrayList<>(8);
+        }
+
+        for (Object p : params) {
+            copy.add(p);
+        }
+
+        return Collections.unmodifiableList(copy);
+    }
+
+    private static List<Object> copyParams(Object... params) {
+        return Collections.unmodifiableList(Arrays.asList(requireNonNull(params, "params")));
     }
 
     @Override
@@ -67,7 +106,7 @@ public class DefaultRpcRequest implements RpcRequest {
 
     @Override
     public final List<Object> params() {
-        return args;
+        return params;
     }
 
     @Override
@@ -95,7 +134,7 @@ public class DefaultRpcRequest implements RpcRequest {
         return MoreObjects.toStringHelper(this)
                           .add("serviceType", simpleServiceName())
                           .add("method", method())
-                          .add("args", params()).toString();
+                          .add("params", params()).toString();
     }
 
     /**

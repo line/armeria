@@ -40,8 +40,6 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.DefaultRpcRequest;
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -103,8 +101,8 @@ public class TracingClientTest {
                 .build();
 
         // prepare parameters
-        final RpcRequest req = new DefaultRpcRequest(HelloService.Iface.class, "hello", "Armeria");
-        final RpcResponse res = new DefaultRpcResponse("Hello, Armeria!");
+        final RpcRequest req = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
+        final RpcResponse res = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
                 "POST", "/", "", ClientOptions.DEFAULT, req);

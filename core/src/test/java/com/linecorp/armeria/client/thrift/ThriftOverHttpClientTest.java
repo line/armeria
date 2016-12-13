@@ -324,6 +324,7 @@ public class ThriftOverHttpClientTest {
         HelloService.Iface client = Clients.newClient(clientFactory(), getURI(Handlers.HELLO),
                                                       Handlers.HELLO.iface(), clientOptions);
         assertThat(client.hello("kukuman")).isEqualTo("Hello, kukuman!");
+        assertThat(client.hello(null)).isEqualTo("Hello, null!");
 
         for (int i = 0; i < 10; i++) {
             assertThat(client.hello("kukuman" + i)).isEqualTo("Hello, kukuman" + i + '!');
