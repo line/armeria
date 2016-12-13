@@ -24,18 +24,15 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.AbstractServiceServer;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.http.healthcheck.HttpHealthCheckService;
-
-import io.netty.util.internal.PlatformDependent;
 
 public class HttpHealthCheckedEndpointGroupTest {
 
-    private static class ServiceServer {
+    private static class ServiceServer extends AbstractServiceServer {
         private Server server;
         private final String healthCheckPath;
 
@@ -43,32 +40,9 @@ public class HttpHealthCheckedEndpointGroupTest {
             this.healthCheckPath = healthCheckPath;
         }
 
-        private void configureServer() throws Exception {
-            server = new ServerBuilder()
-                    .serviceAt(healthCheckPath, new HttpHealthCheckService())
-                    .port(0, SessionProtocol.HTTP)
-                    .build();
-
-            try {
-                server.start().get();
-            } catch (InterruptedException e) {
-                PlatformDependent.throwException(e);
-            }
-        }
-
-        public ServiceServer start() throws Exception {
-            configureServer();
-            return this;
-        }
-
-        public int port() {
-            ServerPort port = server.activePort()
-                                    .orElseThrow(() -> new IllegalStateException("server not started yet"));
-            return port.localAddress().getPort();
-        }
-
-        public void stop() {
-            server.stop();
+        @Override
+        protected void configureServer(ServerBuilder sb) throws Exception {
+            sb.serviceAt(healthCheckPath, new HttpHealthCheckService());
         }
     }
 

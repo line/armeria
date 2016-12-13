@@ -26,56 +26,20 @@ import org.junit.rules.TestName;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
-import io.netty.util.internal.PlatformDependent;
-
 public class StaticEndpointGroupTest {
-    private static final HelloService.Iface HELLO_SERVICE_HANDLER_ONE = dump -> "host:127.0.0.1:1234";
-    private static final HelloService.Iface HELLO_SERVICE_HANDLER_TWO = dump -> "host:127.0.0.1:2345";
-    private static final HelloService.Iface HELLO_SERVICE_HANDLER_THREE = dump -> "host:127.0.0.1:3456";
-
     @Rule
     public TestName name = new TestName();
 
-    private static class ServiceServer {
-        private Server server;
-        private final HelloService.Iface handler;
-        private final int port;
+    private static class ServiceServer extends AbstractServiceServer {
+        private final HelloService.Iface handler = dump -> "host:127.0.0.1:" + port();
 
-        ServiceServer(HelloService.Iface handler, int port) {
-            this.handler = handler;
-            this.port = port;
-        }
-
-        private void configureServer() throws Exception {
-            final ServerBuilder sb = new ServerBuilder();
-
-            THttpService ipService = THttpService.of(handler);
-
-            sb.serviceAt("/serverIp", ipService);
-            sb.port(port, SessionProtocol.HTTP);
-
-            server = sb.build();
-
-            try {
-                server.start().get();
-            } catch (InterruptedException e) {
-                PlatformDependent.throwException(e);
-            }
-
-        }
-
-        public void start() throws Exception {
-            configureServer();
-        }
-
-        public void stop() {
-            server.stop();
+        @Override
+        protected void configureServer(ServerBuilder sb) throws Exception {
+            sb.serviceAt("/serverIp", THttpService.of(handler));
         }
     }
 
@@ -196,64 +160,60 @@ public class StaticEndpointGroupTest {
 
     @Test
     public void testRoundRobinServerGroup() throws Exception {
-        ServiceServer serverOne = new ServiceServer(HELLO_SERVICE_HANDLER_ONE, 1234);
-        serverOne.start();
-
-        ServiceServer serverTwo = new ServiceServer(HELLO_SERVICE_HANDLER_TWO, 2345);
-        serverTwo.start();
-
-        ServiceServer serverThree = new ServiceServer(HELLO_SERVICE_HANDLER_THREE, 3456);
-        serverThree.start();
+        ServiceServer serverOne = new ServiceServer().start();
+        ServiceServer serverTwo = new ServiceServer().start();
+        ServiceServer serverThree = new ServiceServer().start();
 
         EndpointGroup endpointGroup = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234),
-                Endpoint.of("127.0.0.1", 2345),
-                Endpoint.of("127.0.0.1", 3456));
+                Endpoint.of("127.0.0.1", serverOne.port()),
+                Endpoint.of("127.0.0.1", serverTwo.port()),
+                Endpoint.of("127.0.0.1", serverThree.port()));
         String groupName = name.getMethodName();
         String endpointGroupMark = "group:";
 
         EndpointGroupRegistry.register(groupName, endpointGroup, WEIGHTED_ROUND_ROBIN);
 
         HelloService.Iface ipService = Clients.newClient("ttext+http://" + endpointGroupMark + groupName + "/serverIp",
-                HelloService.Iface.class);
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:1234"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:3456"));
+                                                         HelloService.Iface.class);
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
 
         StaticEndpointGroup serverGroup2 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 2),
-                Endpoint.of("127.0.0.1", 2345, 4),
-                Endpoint.of("127.0.0.1", 3456, 2));
+                Endpoint.of("127.0.0.1", serverOne.port(), 2),
+                Endpoint.of("127.0.0.1", serverTwo.port(), 4),
+                Endpoint.of("127.0.0.1", serverThree.port(), 2));
 
         EndpointGroupRegistry.register(groupName, serverGroup2, WEIGHTED_ROUND_ROBIN);
 
         ipService = Clients.newClient("tbinary+http://" + endpointGroupMark + groupName + "/serverIp",
-                HelloService.Iface.class);
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:1234"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:3456"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:1234"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:3456"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
+                                      HelloService.Iface.class);
 
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
 
         //new round
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:1234"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:3456"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:1234"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:3456"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:2345"));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
 
         //direct connect to ip host
-        ipService = Clients.newClient("tbinary+http://127.0.0.1:1234/serverIp",
-                HelloService.Iface.class);
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:1234"));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:1234"));
+        ipService = Clients.newClient("tbinary+http://127.0.0.1:" + serverOne.port() + "/serverIp",
+                                      HelloService.Iface.class);
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
+
 
         serverOne.stop();
         serverTwo.stop();
