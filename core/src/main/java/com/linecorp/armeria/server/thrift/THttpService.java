@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -48,7 +49,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.net.MediaType;
 
-import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -65,7 +65,6 @@ import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.Service;
@@ -565,7 +564,7 @@ public class THttpService extends AbstractHttpService {
             ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId, String methodName,
             ThriftFunction func, TBase<TBase<?, ?>, TFieldIdEnum> args, HttpResponseWriter res) {
 
-        final RpcRequest call = new DefaultRpcRequest(func.serviceType(), methodName, toList(args));
+        final RpcRequest call = toRpcRequest(func.serviceType(), methodName, args);
         final RpcResponse reply;
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
@@ -601,14 +600,34 @@ public class THttpService extends AbstractHttpService {
         })).exceptionally(CompletionActions::log);
     }
 
-    private static List<Object> toList(TBase<?, ?> thriftArgs) {
+    private static RpcRequest toRpcRequest(Class<?> serviceType, String method, TBase<?, ?> thriftArgs) {
         requireNonNull(thriftArgs, "thriftArgs");
 
         @SuppressWarnings("unchecked")
         final TBase<TBase<?, ?>, TFieldIdEnum> castThriftArgs = (TBase<TBase<?, ?>, TFieldIdEnum>) thriftArgs;
-        return FieldMetaData.getStructMetaDataMap(castThriftArgs.getClass()).keySet().stream()
-                            .map(field -> ThriftFieldAccess.get(castThriftArgs, field))
-                            .collect(GuavaCollectors.toImmutableList());
+
+        // NB: The map returned by FieldMetaData.getStructMetaDataMap() is an EnumMap,
+        //     so the parameter ordering is preserved correctly during iteration.
+        final Set<? extends TFieldIdEnum> fields =
+                FieldMetaData.getStructMetaDataMap(castThriftArgs.getClass()).keySet();
+
+        // Handle the case where the number of arguments is 0 or 1.
+        final int numFields = fields.size();
+        switch (numFields) {
+            case 0:
+                return RpcRequest.of(serviceType, method);
+            case 1:
+                return RpcRequest.of(serviceType, method,
+                                     ThriftFieldAccess.get(castThriftArgs, fields.iterator().next()));
+        }
+
+        // Handle the case where the number of arguments is greater than 1.
+        final List<Object> list = new ArrayList<>(numFields);
+        for (TFieldIdEnum field : fields) {
+            list.add(ThriftFieldAccess.get(castThriftArgs, field));
+        }
+
+        return RpcRequest.of(serviceType, method, list);
     }
 
     private static void handleException(

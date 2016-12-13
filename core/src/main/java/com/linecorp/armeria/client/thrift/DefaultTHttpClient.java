@@ -22,7 +22,6 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UserClient;
-import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -45,7 +44,7 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
     public RpcResponse executeMultiplexed(
             String path, Class<?> serviceType, String serviceName, String method, Object... args) {
         requireNonNull(serviceName, "serviceName");
-        final RpcRequest call = new DefaultRpcRequest(serviceType, method, args);
+        final RpcRequest call = RpcRequest.of(serviceType, method, args);
         return execute(call.method(), path, serviceName, call, DefaultRpcResponse::new);
     }
 }

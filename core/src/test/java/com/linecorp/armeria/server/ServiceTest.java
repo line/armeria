@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -33,8 +32,7 @@ public class ServiceTest {
     public void testLambdaExpressionDecorator() throws Exception {
         final FooService inner = new FooService();
         final Service<RpcRequest, RpcResponse> outer = inner.decorate((delegate, ctx, req) -> {
-            RpcRequest newReq = new DefaultRpcRequest(
-                    req.serviceType(), "new_" + req.method(), req.params());
+            RpcRequest newReq = RpcRequest.of(req.serviceType(), "new_" + req.method(), req.params());
             return delegate.serve(ctx, newReq);
         });
 

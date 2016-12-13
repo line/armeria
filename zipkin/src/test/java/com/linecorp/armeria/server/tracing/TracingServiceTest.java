@@ -37,8 +37,6 @@ import com.github.kristofa.brave.Sampler;
 import com.github.kristofa.brave.SpanId;
 import com.github.kristofa.brave.TraceData;
 
-import com.linecorp.armeria.common.DefaultRpcRequest;
-import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -112,7 +110,7 @@ public class TracingServiceTest {
         TracingServiceImpl stub = new TracingServiceImpl(delegate, brave, traceData);
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final RpcRequest req = new DefaultRpcRequest(HelloService.Iface.class, "hello", "trustin");
+        final RpcRequest req = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
         final DefaultRequestLog log = new DefaultRequestLog(ctx);
         log.startRequest(mock(Channel.class), SessionProtocol.H2C, "localhost", TEST_METHOD, "/");
         log.endRequest();
@@ -124,7 +122,7 @@ public class TracingServiceTest {
         ctx.onEnter(ArgumentMatchers.isA(Runnable.class));
         ctx.onExit(ArgumentMatchers.isA(Runnable.class));
 
-        RpcResponse res = new DefaultRpcResponse("Hello, trustin!");
+        RpcResponse res = RpcResponse.of("Hello, trustin!");
         when(delegate.serve(ctx, req)).thenReturn(res);
 
         // do invoke

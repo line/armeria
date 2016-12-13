@@ -174,6 +174,35 @@ public class ThriftServiceTest {
     }
 
     @Test
+    public void testSync_HelloService_hello_with_null() throws Exception {
+        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        client.send_hello(null);
+        assertThat(out.length(), is(greaterThan(0)));
+
+        THttpService service = THttpService.of(
+                (HelloService.Iface) name -> String.valueOf(name != null), defaultSerializationFormat);
+
+        invoke(service);
+
+        assertThat(client.recv_hello(), is("false"));
+    }
+
+    @Test
+    public void testAsync_HelloService_hello_with_null() throws Exception {
+        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        client.send_hello(null);
+        assertThat(out.length(), is(greaterThan(0)));
+
+        THttpService service = THttpService.of(
+                (HelloService.AsyncIface) (name, resultHandler) ->
+                        resultHandler.onComplete(String.valueOf(name != null)), defaultSerializationFormat);
+
+        invoke(service);
+
+        assertThat(client.recv_hello(), is("false"));
+    }
+
+    @Test
     public void testIdentity_HelloService_hello() throws Exception {
         HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
         client.send_hello(FOO);
