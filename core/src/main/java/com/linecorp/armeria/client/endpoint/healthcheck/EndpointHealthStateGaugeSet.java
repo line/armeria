@@ -52,12 +52,12 @@ class EndpointHealthStateGaugeSet implements MetricSet {
                 (Gauge<Integer>) endpointGroup.allServers::size,
                 METRIC_NAME_PREFIX + metricName + ".healthy.count",
                 (Gauge<Integer>) endpointGroup.healthyEndpoints::size,
-                METRIC_NAME_PREFIX + metricName + ".healthy.servers",
+                METRIC_NAME_PREFIX + metricName + ".healthy.endpoints",
                 (Gauge<Set<String>>) () -> ImmutableSet.copyOf(endpointGroup.healthyEndpoints)
                                                        .stream()
                                                        .map(Endpoint::authority)
                                                        .collect(GuavaCollectors.toImmutableSet()),
-                METRIC_NAME_PREFIX + metricName + ".unhealthy.servers",
+                METRIC_NAME_PREFIX + metricName + ".unhealthy.endpoints",
                 (Gauge<Set<String>>) () -> {
                     Set<String> all = ImmutableSet.copyOf(endpointGroup.allServers)
                                                   .stream()

@@ -94,9 +94,9 @@ public class HttpHealthCheckedEndpointGroupTest {
                 .isEqualTo(2);
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
                 .isEqualTo(2);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.servers").getValue())
+        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.port(), "127.0.0.1:" + serverTwo.port()));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.servers").getValue())
+        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of());
         serverOne.stop();
         serverTwo.stop();
@@ -120,9 +120,9 @@ public class HttpHealthCheckedEndpointGroupTest {
                 .isEqualTo(2);
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
                 .isEqualTo(1);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.servers").getValue())
+        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.port()));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.servers").getValue())
+        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of("127.0.0.1:2345"));
         serverOne.stop();
     }
@@ -146,9 +146,9 @@ public class HttpHealthCheckedEndpointGroupTest {
                 .isEqualTo(3);
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
                 .isEqualTo(3);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.servers").getValue())
+        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.port()));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.servers").getValue())
+        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of());
         serverOne.stop();
     }
