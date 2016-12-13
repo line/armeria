@@ -76,10 +76,9 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     }
 
     private void scheduleCheckAndUpdateHealthyServers() {
-        clientFactory.eventLoopGroup()
-                     .schedule(() -> checkAndUpdateHealthyServers()
-                                       .thenRun(this::scheduleCheckAndUpdateHealthyServers),
-                               healthCheckRetryInterval.toMillis(), TimeUnit.MILLISECONDS);
+        clientFactory.eventLoopGroup().schedule(
+                () -> checkAndUpdateHealthyServers().thenRun(this::scheduleCheckAndUpdateHealthyServers),
+                healthCheckRetryInterval.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     private CompletableFuture<Void> checkAndUpdateHealthyServers() {
@@ -130,7 +129,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     /**
      * Creates healthcheck {@link MetricSet} for this {@link HealthCheckedEndpointGroup}.
      */
-    public MetricSet metricSet(String metricName) {
+    public MetricSet newMetricSet(String metricName) {
         return new EndpointHealthStateGaugeSet(this, metricName);
     }
 

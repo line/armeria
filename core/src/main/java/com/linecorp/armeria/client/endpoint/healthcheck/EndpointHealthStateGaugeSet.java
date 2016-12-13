@@ -25,15 +25,17 @@ import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricSet;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.ServerConnection;
 import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 /**
  * {@link Metric}s for a {@link HealthCheckedEndpointGroup}.
  */
 class EndpointHealthStateGaugeSet implements MetricSet {
-    private static final String METRIC_NAME_PREFIX = "healthcheck.";
+    private static final String METRIC_NAME_PREFIX = "endpointHealth.";
     private final HealthCheckedEndpointGroup endpointGroup;
     private final String metricName;
 
@@ -46,14 +48,28 @@ class EndpointHealthStateGaugeSet implements MetricSet {
     @Override
     public Map<String, Metric> getMetrics() {
         return ImmutableMap.of(
-                METRIC_NAME_PREFIX + metricName + ".all.server.count",
+                METRIC_NAME_PREFIX + metricName + ".all.count",
                 (Gauge<Integer>) endpointGroup.allServers::size,
-                METRIC_NAME_PREFIX + metricName + ".healthy.server.count",
+                METRIC_NAME_PREFIX + metricName + ".healthy.count",
                 (Gauge<Integer>) endpointGroup.healthyEndpoints::size,
                 METRIC_NAME_PREFIX + metricName + ".healthy.servers",
                 (Gauge<Set<String>>) () -> ImmutableSet.copyOf(endpointGroup.healthyEndpoints)
                                                        .stream()
                                                        .map(Endpoint::authority)
-                                                       .collect(GuavaCollectors.toImmutableSet()));
+                                                       .collect(GuavaCollectors.toImmutableSet()),
+                METRIC_NAME_PREFIX + metricName + ".unhealthy.servers",
+                (Gauge<Set<String>>) () -> {
+                    Set<String> all = ImmutableSet.copyOf(endpointGroup.allServers)
+                                                  .stream()
+                                                  .map(ServerConnection::endpoint)
+                                                  .map(Endpoint::authority)
+                                                  .collect(GuavaCollectors.toImmutableSet());
+                    Set<String> healthy = ImmutableSet.copyOf(endpointGroup.healthyEndpoints)
+                                                      .stream()
+                                                      .map(Endpoint::authority)
+                                                      .collect(GuavaCollectors.toImmutableSet());
+                    return Sets.difference(all, healthy);
+                }
+        );
     }
 }
