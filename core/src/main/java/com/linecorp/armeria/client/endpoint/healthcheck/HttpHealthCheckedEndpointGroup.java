@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-import com.codahale.metrics.MetricRegistry;
-
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
@@ -39,19 +37,17 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
      */
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
-                                                    MetricRegistry metricRegistry,
                                                     String healthCheckPath) {
-        return of(delegate, metricRegistry, healthCheckPath, DEFAULT_HEALTHCHECK_RETRY_INTERVAL);
+        return of(delegate, healthCheckPath, DEFAULT_HEALTHCHECK_RETRY_INTERVAL);
     }
 
     /**
      * Creates a new {@link HttpHealthCheckedEndpointGroup} instance.
      */
     public static HttpHealthCheckedEndpointGroup of(EndpointGroup delegate,
-                                                    MetricRegistry metricRegistry,
                                                     String healthCheckPath,
                                                     Duration healthCheckRetryInterval) {
-        return of(ClientFactory.DEFAULT, delegate, metricRegistry, healthCheckPath, healthCheckRetryInterval);
+        return of(ClientFactory.DEFAULT, delegate, healthCheckPath, healthCheckRetryInterval);
     }
 
     /**
@@ -59,12 +55,10 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
      */
     public static HttpHealthCheckedEndpointGroup of(ClientFactory clientFactory,
                                                     EndpointGroup delegate,
-                                                    MetricRegistry metricRegistry,
                                                     String healthCheckPath,
                                                     Duration healthCheckRetryInterval) {
         return new HttpHealthCheckedEndpointGroup(clientFactory,
                                                   delegate,
-                                                  metricRegistry,
                                                   healthCheckPath,
                                                   healthCheckRetryInterval);
     }
@@ -74,10 +68,9 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
      */
     private HttpHealthCheckedEndpointGroup(ClientFactory clientFactory,
                                            EndpointGroup delegate,
-                                           MetricRegistry metricRegistry,
                                            String healthCheckPath,
                                            Duration healthCheckRetryInterval) {
-        super(clientFactory, delegate, metricRegistry, healthCheckRetryInterval);
+        super(clientFactory, delegate, healthCheckRetryInterval);
         this.healthCheckPath = requireNonNull(healthCheckPath, "healthCheckPath");
         init();
     }
