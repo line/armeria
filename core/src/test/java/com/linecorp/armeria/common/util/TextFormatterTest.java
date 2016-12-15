@@ -23,6 +23,7 @@ import org.junit.Test;
 public class TextFormatterTest {
     @Test
     public void testFormatEpoch() throws Exception {
-        assertThat(TextFormatter.epoch(1478601399123L)).isEqualTo("2016-11-08T10:36:39.123Z");
+        assertThat(TextFormatter.epoch(1478601399123L).toString())
+                .isEqualTo("2016-11-08T10:36:39.123Z(1478601399123)");
     }
 }

@@ -1,6 +1,6 @@
 #!/bin/bash -e
-JDK_VERSION='jdk1.8.0_92'
-JDK_DOWNLOAD_URL='http://download.oracle.com/otn-pub/java/jdk/8u92-b14/jdk-8u92-linux-x64.tar.gz'
+JDK_VERSION='jdk1.8.0_112'
+JDK_DOWNLOAD_URL='http://download.oracle.com/otn-pub/java/jdk/8u112-b15/jdk-8u112-linux-x64.tar.gz'
 
 JDK_HOME="$HOME/.jdk/$JDK_VERSION"
 JDK_TARBALL="$HOME/.jdk/${JDK_VERSION}.tar.gz"

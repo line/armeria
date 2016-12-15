@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.common.logging.DefaultResponseLog;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -172,6 +171,35 @@ public class ThriftServiceTest {
         invoke(service);
 
         assertThat(client.recv_hello(), is("Hello, foo!"));
+    }
+
+    @Test
+    public void testSync_HelloService_hello_with_null() throws Exception {
+        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        client.send_hello(null);
+        assertThat(out.length(), is(greaterThan(0)));
+
+        THttpService service = THttpService.of(
+                (HelloService.Iface) name -> String.valueOf(name != null), defaultSerializationFormat);
+
+        invoke(service);
+
+        assertThat(client.recv_hello(), is("false"));
+    }
+
+    @Test
+    public void testAsync_HelloService_hello_with_null() throws Exception {
+        HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+        client.send_hello(null);
+        assertThat(out.length(), is(greaterThan(0)));
+
+        THttpService service = THttpService.of(
+                (HelloService.AsyncIface) (name, resultHandler) ->
+                        resultHandler.onComplete(String.valueOf(name != null)), defaultSerializationFormat);
+
+        invoke(service);
+
+        assertThat(client.recv_hello(), is("false"));
     }
 
     @Test
@@ -603,12 +631,11 @@ public class ThriftServiceTest {
                                 CompletableFuture<HttpData> promise) throws Exception {
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final DefaultRequestLog reqLogBuilder = new DefaultRequestLog();
-        final DefaultResponseLog resLogBuilder = new DefaultResponseLog(reqLogBuilder, reqLogBuilder);
+        final DefaultRequestLog reqLogBuilder = new DefaultRequestLog(ctx);
 
         when(ctx.blockingTaskExecutor()).thenReturn(ImmediateEventExecutor.INSTANCE);
-        when(ctx.requestLogBuilder()).thenReturn(reqLogBuilder);
-        when(ctx.responseLogBuilder()).thenReturn(resLogBuilder);
+        when(ctx.log()).thenReturn(reqLogBuilder);
+        when(ctx.logBuilder()).thenReturn(reqLogBuilder);
         doNothing().when(ctx).invokeOnEnterCallbacks();
         doNothing().when(ctx).invokeOnExitCallbacks();
 

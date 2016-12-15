@@ -19,8 +19,10 @@ package com.linecorp.armeria.server.thrift;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -32,6 +34,7 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
+import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
@@ -47,6 +50,8 @@ import com.google.common.collect.Sets;
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
@@ -55,15 +60,12 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.thrift.ApacheThriftCall;
-import com.linecorp.armeria.common.thrift.ApacheThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -277,7 +279,7 @@ public class THttpService extends AbstractHttpService {
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
      * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
      */
-    public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator() {
+    public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator() {
         return newDecorator(SerializationFormat.THRIFT_BINARY);
     }
 
@@ -290,7 +292,7 @@ public class THttpService extends AbstractHttpService {
      * @param defaultSerializationFormat the default serialization format to use when not specified by the
      *                                   client
      */
-    public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator(
+    public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat) {
 
         return delegate -> new THttpService(delegate,
@@ -308,7 +310,7 @@ public class THttpService extends AbstractHttpService {
      * @param otherAllowedSerializationFormats other serialization formats that should be supported by this
      *                                         service in addition to the default
      */
-    public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator(
+    public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat,
             SerializationFormat... otherAllowedSerializationFormats) {
 
@@ -327,7 +329,7 @@ public class THttpService extends AbstractHttpService {
      * @param otherAllowedSerializationFormats other serialization formats that should be supported by this
      *                                         service in addition to the default
      */
-    public static Function<Service<ThriftCall, ThriftReply>, THttpService> newDecorator(
+    public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
@@ -339,13 +341,13 @@ public class THttpService extends AbstractHttpService {
                                             defaultSerializationFormat, allowedSerializationFormatsSet);
     }
 
-    private final Service<ThriftCall, ThriftReply> delegate;
+    private final Service<RpcRequest, RpcResponse> delegate;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> allowedSerializationFormats;
     private final ThriftCallService thriftService;
 
     // TODO(trustin): Make this contructor private once we remove ThriftService.
-    THttpService(Service<ThriftCall, ThriftReply> delegate,
+    THttpService(Service<RpcRequest, RpcResponse> delegate,
                  SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> allowedSerializationFormats) {
 
@@ -400,7 +402,8 @@ public class THttpService extends AbstractHttpService {
             return;
         }
 
-        ctx.requestLogBuilder().serializationFormat(serializationFormat);
+        ctx.logBuilder().serializationFormat(serializationFormat);
+        ctx.logBuilder().deferRequestContent();
         req.aggregate().handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -523,9 +526,7 @@ public class THttpService extends AbstractHttpService {
                     inProto.readMessageEnd();
                 }
 
-                ctx.requestLogBuilder()
-                   .attr(RequestLog.RAW_RPC_REQUEST)
-                   .set(new ApacheThriftCall(header, args));
+                ctx.logBuilder().requestContent(new ThriftCall(header, args));
             } catch (Exception e) {
                 // Failed to decode the invocation parameters.
                 logger.debug("{} Failed to decode Thrift arguments:", ctx, e);
@@ -538,6 +539,7 @@ public class THttpService extends AbstractHttpService {
             }
         } finally {
             inTransport.clear();
+            ctx.logBuilder().requestContent(null);
         }
 
         invoke(ctx, serializationFormat, seqId, header.name, f, args, res);
@@ -562,13 +564,11 @@ public class THttpService extends AbstractHttpService {
             ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId, String methodName,
             ThriftFunction func, TBase<TBase<?, ?>, TFieldIdEnum> args, HttpResponseWriter res) {
 
-        final ThriftCall call = new ThriftCall(seqId, func.serviceType(), methodName, args);
-        final ThriftReply reply;
-        ctx.requestLogBuilder().attr(RequestLog.RPC_REQUEST).set(call);
+        final RpcRequest call = toRpcRequest(func.serviceType(), methodName, args);
+        final RpcResponse reply;
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             reply = delegate.serve(ctx, call);
-            ctx.responseLogBuilder().attr(ResponseLog.RPC_RESPONSE).set(reply);
         } catch (Throwable cause) {
             handleException(ctx, serializationFormat, seqId, func, cause, res);
             return;
@@ -598,6 +598,36 @@ public class THttpService extends AbstractHttpService {
                 }
             }
         })).exceptionally(CompletionActions::log);
+    }
+
+    private static RpcRequest toRpcRequest(Class<?> serviceType, String method, TBase<?, ?> thriftArgs) {
+        requireNonNull(thriftArgs, "thriftArgs");
+
+        @SuppressWarnings("unchecked")
+        final TBase<TBase<?, ?>, TFieldIdEnum> castThriftArgs = (TBase<TBase<?, ?>, TFieldIdEnum>) thriftArgs;
+
+        // NB: The map returned by FieldMetaData.getStructMetaDataMap() is an EnumMap,
+        //     so the parameter ordering is preserved correctly during iteration.
+        final Set<? extends TFieldIdEnum> fields =
+                FieldMetaData.getStructMetaDataMap(castThriftArgs.getClass()).keySet();
+
+        // Handle the case where the number of arguments is 0 or 1.
+        final int numFields = fields.size();
+        switch (numFields) {
+            case 0:
+                return RpcRequest.of(serviceType, method);
+            case 1:
+                return RpcRequest.of(serviceType, method,
+                                     ThriftFieldAccess.get(castThriftArgs, fields.iterator().next()));
+        }
+
+        // Handle the case where the number of arguments is greater than 1.
+        final List<Object> list = new ArrayList<>(numFields);
+        for (TFieldIdEnum field : fields) {
+            list.add(ThriftFieldAccess.get(castThriftArgs, field));
+        }
+
+        return RpcRequest.of(serviceType, method, list);
     }
 
     private static void handleException(
@@ -650,9 +680,7 @@ public class THttpService extends AbstractHttpService {
             result.write(outProto);
             outProto.writeMessageEnd();
 
-            ctx.responseLogBuilder()
-               .attr(ResponseLog.RAW_RPC_RESPONSE)
-               .set(new ApacheThriftReply(header, result));
+            ctx.logBuilder().responseContent(new ThriftReply(header, result));
         } catch (TException e) {
             throw new Error(e); // Should never reach here.
         }
@@ -685,9 +713,7 @@ public class THttpService extends AbstractHttpService {
             appException.write(outProto);
             outProto.writeMessageEnd();
 
-            ctx.responseLogBuilder()
-               .attr(ResponseLog.RAW_RPC_RESPONSE)
-               .set(new ApacheThriftReply(header, appException));
+            ctx.logBuilder().responseContent(new ThriftReply(header, appException));
         } catch (TException e) {
             throw new Error(e); // Should never reach here.
         }

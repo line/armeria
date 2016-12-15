@@ -10,7 +10,6 @@ You might want to use the following  ``build.gradle`` as a starting point if you
     apply plugin: 'eclipse'
 
     repositories {
-        mavenLocal()
         mavenCentral()
     }
 
@@ -19,19 +18,14 @@ You might want to use the following  ``build.gradle`` as a starting point if you
     }
 
     dependencies {
-        compile group: 'com.linecorp.armeria', name: 'armeria', version: '\ |release|\ '
+        ['armeria', 'armeria-jetty', 'armeria-kafka', 'armeria-logback', 'armeria-retrofit2',
+         'armeria-tomcat', 'armeria-zipkin', 'armeria-zookeeper'].each {
+            compile group: 'com.linecorp.armeria', name: it, version: '\ |release|\ '
+        }
 
         // Logging
         runtime group: 'ch.qos.logback', name: 'logback-classic', version: '\ |logback.version|\ '
-
-        // Embedded Tomcat
-        [ "core", "jasper", "el" ].each { module ->
-            runtime group: 'org.apache.tomcat.embed', name: "tomcat-embed-$module", version: '\ |tomcat.version|\ '
-        }
         runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: '\ |slf4j.version|\ '
-
-        // JVM agent to enable TLS ALPN extension
-        javaAgent group: 'org.mortbay.jetty.alpn', name: 'jetty-alpn-agent', version: '\ |jetty-alpn-agent.version|\ '
     }
 
     // Require Java 8 to build the project.
@@ -40,19 +34,4 @@ You might want to use the following  ``build.gradle`` as a starting point if you
         targetCompatibility '1.8'
     }
 
-    // Copy the JVM agent that enables TLS ALPN extension to the build directory.
-    task copyJavaAgents(type: Copy) {
-        from configurations.javaAgent
-        into "$buildDir/javaAgents"
-        rename { String fileName ->
-            fileName.replaceFirst("-[0-9]+\\\\.[0-9]+\\\\.[0-9]+(?:\\\\.[^\\\\.]+)?\\\\.jar", ".jar")
-        }
-    }
-
-    // Load the JVM agent that enables TLS ALPN extension for all Java executions.
-    tasks.withType(JavaForkOptions) {
-        dependsOn 'copyJavaAgents'
-        // If using spring-boot plugin, you can use the 'agent' property:
-        // See: http://jdpgrailsdev.github.io/blog/2014/04/08/spring_boot_gradle_newrelic.html
-        jvmArgs "-javaagent:$buildDir/javaAgents/jetty-alpn-agent.jar"
-    }
+You may not need all Armeria modules depending on your use case. Please remove unused ones.

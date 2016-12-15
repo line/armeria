@@ -26,12 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.reflections.Configuration;
-import org.reflections.Reflections;
-import org.reflections.scanners.ResourcesScanner;
-import org.reflections.util.ClasspathHelper;
-import org.reflections.util.ConfigurationBuilder;
-import org.reflections.util.FilterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +35,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.internal.reflections.Configuration;
+import com.linecorp.armeria.internal.reflections.Reflections;
+import com.linecorp.armeria.internal.reflections.scanners.ResourcesScanner;
+import com.linecorp.armeria.internal.reflections.util.ClasspathHelper;
+import com.linecorp.armeria.internal.reflections.util.ConfigurationBuilder;
+import com.linecorp.armeria.internal.reflections.util.FilterBuilder;
 
 /**
  * {@link ThriftDocString} is a DocString extractor for Thrift IDL JSON.

@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.server.http;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -64,37 +66,50 @@ public abstract class AbstractHttpService implements HttpService {
      */
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        switch (req.method()) {
-            case OPTIONS:
-                doOptions(ctx, req, res);
-                break;
-            case GET:
-                doGet(ctx, req, res);
-                break;
-            case HEAD:
-                doHead(ctx, req, res);
-                break;
-            case POST:
-                doPost(ctx, req, res);
-                break;
-            case PUT:
-                doPut(ctx, req, res);
-                break;
-            case PATCH:
-                doPatch(ctx, req, res);
-                break;
-            case DELETE:
-                doDelete(ctx, req, res);
-                break;
-            case TRACE:
-                doTrace(ctx, req, res);
-                break;
-            default:
-                res.respond(HttpStatus.METHOD_NOT_ALLOWED);
-        }
+        try {
+            final DefaultHttpResponse res = new DefaultHttpResponse();
+            switch (req.method()) {
+                case OPTIONS:
+                    doOptions(ctx, req, res);
+                    break;
+                case GET:
+                    doGet(ctx, req, res);
+                    break;
+                case HEAD:
+                    doHead(ctx, req, res);
+                    break;
+                case POST:
+                    doPost(ctx, req, res);
+                    break;
+                case PUT:
+                    doPut(ctx, req, res);
+                    break;
+                case PATCH:
+                    doPatch(ctx, req, res);
+                    break;
+                case DELETE:
+                    doDelete(ctx, req, res);
+                    break;
+                case TRACE:
+                    doTrace(ctx, req, res);
+                    break;
+                default:
+                    res.respond(HttpStatus.METHOD_NOT_ALLOWED);
+            }
 
-        return res;
+            return res;
+        } finally {
+            final RequestLogBuilder logBuilder = ctx.logBuilder();
+            if (!logBuilder.isRequestContentDeferred()) {
+                // Set the requestContent to null by default.
+                // An implementation can override this behavior by setting the requestContent in do*()
+                // implementation or by calling deferRequestContent().
+                logBuilder.requestContent(null);
+            }
+
+            // do*() methods are expected to set the serialization format before returning.
+            logBuilder.serializationFormat(SerializationFormat.NONE);
+        }
     }
 
     /**

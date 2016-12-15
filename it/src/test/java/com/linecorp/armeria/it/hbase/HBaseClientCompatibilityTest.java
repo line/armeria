@@ -20,6 +20,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Modifier;
+
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.shaded.org.apache.zookeeper.data.Stat;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -32,8 +34,6 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.server.Server;
-
-import javassist.Modifier;
 
 public class HBaseClientCompatibilityTest {
 
@@ -48,8 +48,8 @@ public class HBaseClientCompatibilityTest {
         assertThat(Version.identify(Server.class.getClassLoader())).isNotNull();
         // Make sure newer Guava is available in the class path.
         assertThat(Stopwatch.class.getDeclaredConstructor().getModifiers()).is(new Condition<>(
-                value -> Modifier.isPackage(value) || Modifier.isPrivate(value),
-                "Recent Guava Stopwatch should have package-local or private default constructor."));
+                value -> !Modifier.isPublic(value),
+                "Recent Guava Stopwatch should have non-public default constructor."));
 
         final MetaTableLocator locator = new MetaTableLocator();
         final ZooKeeperWatcher zkw = mock(ZooKeeperWatcher.class);

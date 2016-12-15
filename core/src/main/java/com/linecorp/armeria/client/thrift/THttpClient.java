@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.thrift;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
-import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * A generic Thrift-over-HTTP client.
@@ -45,7 +45,7 @@ public interface THttpClient extends ClientBuilderParams {
      * @param method the method name
      * @param args the arguments of the call
      */
-    ThriftReply execute(String path, Class<?> serviceType, String method, Object... args);
+    RpcResponse execute(String path, Class<?> serviceType, String method, Object... args);
 
     /**
      * Executes the specified multiplexed Thrift call.
@@ -56,6 +56,6 @@ public interface THttpClient extends ClientBuilderParams {
      * @param method the method name
      * @param args the arguments of the call
      */
-    ThriftReply executeMultiplexed(
+    RpcResponse executeMultiplexed(
             String path, Class<?> serviceType, String serviceName, String method, Object... args);
 }

@@ -30,7 +30,8 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.thrift.ThriftMessage;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
@@ -48,11 +49,15 @@ public class TMultiplexedProtocolIntegrationTest extends AbstractServerTest {
         sb.port(0, SessionProtocol.HTTP);
         sb.serviceAt(
                 "/", THttpService.of(ImmutableMap.of("", (Iface) name -> "none:" + name,
-                                                     "foo", (Iface) name -> "foo:" + name,
-                                                     "bar", (Iface) name -> "bar:" + name)).decorate(
+                                                     "foo", name -> "foo:" + name,
+                                                     "bar", name -> "bar:" + name)).decorate(
                         (delegate, ctx, req) -> {
-                            ctx.requestLogFuture().thenAccept(
-                                    log -> methodNames.add(log.attr(RequestLog.RPC_REQUEST).get().method()));
+                            ctx.log().addListener(log -> {
+                                final ThriftMessage call = (ThriftMessage) log.requestContent();
+                                if (call != null) {
+                                    methodNames.add(call.header().name);
+                                }
+                            }, RequestLogAvailability.REQUEST_CONTENT);
                             return delegate.serve(ctx, req);
                         }));
     }

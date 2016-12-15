@@ -153,7 +153,7 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
             runThreadLocalHeaderManipulator(ctx);
             return delegate().execute(ctx, req);
         } catch (Throwable cause) {
-            ctx.responseLogBuilder().end(cause);
+            ctx.logBuilder().endResponse(cause);
             return fallback.apply(cause);
         }
     }

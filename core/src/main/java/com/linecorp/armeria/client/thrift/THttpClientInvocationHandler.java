@@ -30,7 +30,7 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.CompletionActions;
 
 final class THttpClientInvocationHandler implements InvocationHandler, ClientBuilderParams {
@@ -116,7 +116,7 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
         }
 
         try {
-            final ThriftReply reply = thriftClient.executeMultiplexed(
+            final RpcResponse reply = thriftClient.executeMultiplexed(
                     path, params.clientType(), fragment, method.getName(), args);
 
             if (callback != null) {

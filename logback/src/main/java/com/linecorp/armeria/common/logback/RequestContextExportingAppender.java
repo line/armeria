@@ -30,7 +30,8 @@ import org.slf4j.Marker;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.internal.fastutil.objects.Object2ObjectOpenHashMap;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -45,7 +46,6 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
  * A <a href="http://logback.qos.ch/">Logback</a> {@link Appender} that exports the properties of the current
@@ -209,25 +209,14 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
         final RequestContext ctx = RequestContext.mapCurrent(Function.identity(), () -> null);
         if (ctx != null) {
             final State state = state(ctx);
-            final RequestLog req;
-            final ResponseLog res;
+            final RequestLog log = ctx.log();
+            final Set<RequestLogAvailability> availabilities = log.availabilities();
 
-            if (ctx.requestLogFuture().isDone()) {
-                req = ctx.requestLogFuture().join();
-            } else {
-                req = null;
-            }
-
-            if (ctx.responseLogFuture().isDone()) {
-                res = ctx.responseLogFuture().join();
-            } else {
-                res = null;
-            }
-
-            final LogAvailability availability = LogAvailability.of(req, res);
-            if (state.availability != availability) {
-                state.availability = availability;
-                export(state, ctx, req, res);
+            // Note: This equality check is extremely fast.
+            //       See RequestLogAvailabilitySet for more information.
+            if (!availabilities.equals(state.availabilities)) {
+                state.availabilities = availabilities;
+                export(state, ctx, log);
             }
 
             final Map<String, String> originalMdcMap = eventObject.getMDCPropertyMap();
@@ -268,9 +257,8 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
      * to the export list via {@code add*()} calls and {@code <export />} tags. Override this method to export
      * additional properties.
      */
-    protected void export(Map<String, String> out, RequestContext ctx,
-                          @Nullable RequestLog req, @Nullable ResponseLog res) {
-        exporter.export(out, ctx, req, res);
+    protected void export(Map<String, String> out, RequestContext ctx, @Nullable RequestLog log) {
+        exporter.export(out, ctx, log);
     }
 
     @Override
@@ -328,28 +316,10 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
         return aai.detachAppender(name);
     }
 
-    private enum LogAvailability {
-        NONE, REQ, RES, REQ_AND_RES;
-
-        static LogAvailability of(RequestLog req, ResponseLog res) {
-            if (req != null) {
-                if (res != null) {
-                    return REQ_AND_RES;
-                } else {
-                    return REQ;
-                }
-            } else if (res != null) {
-                return RES;
-            } else {
-                return NONE;
-            }
-        }
-    }
-
     private static final class State extends Object2ObjectOpenHashMap<String, String> {
         private static final long serialVersionUID = -7084248226635055988L;
 
-        LogAvailability availability;
+        Set<RequestLogAvailability> availabilities;
     }
 
     private static final class LoggingEventWrapper implements ILoggingEvent {

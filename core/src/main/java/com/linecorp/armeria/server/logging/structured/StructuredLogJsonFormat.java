@@ -32,8 +32,8 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
-import com.linecorp.armeria.common.thrift.ApacheThriftCall;
-import com.linecorp.armeria.common.thrift.ApacheThriftReply;
+import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.text.TTextProtocol;
 
 /**
@@ -56,8 +56,8 @@ public final class StructuredLogJsonFormat {
         module.addSerializer(TMessage.class, new TMessageSerializer());
         module.addSerializer(TBase.class, new TBaseSerializer());
         module.addSerializer(TApplicationException.class, new TAplicationExceptionSerializer());
-        module.addSerializer(ApacheThriftCall.class, new ApacheThriftCallSerializer());
-        module.addSerializer(ApacheThriftReply.class, new ApacheThriftReplySerializer());
+        module.addSerializer(ThriftCall.class, new ApacheThriftCallSerializer());
+        module.addSerializer(ThriftReply.class, new ApacheThriftReplySerializer());
         objectMapper.registerModule(module);
 
         for (SimpleModule userModule : userModules) {
@@ -128,13 +128,13 @@ public final class StructuredLogJsonFormat {
         }
     }
 
-    private static class ApacheThriftCallSerializer extends StdSerializer<ApacheThriftCall> {
+    private static class ApacheThriftCallSerializer extends StdSerializer<ThriftCall> {
         protected ApacheThriftCallSerializer() {
-            super(ApacheThriftCall.class);
+            super(ThriftCall.class);
         }
 
         @Override
-        public void serialize(ApacheThriftCall value, JsonGenerator gen, SerializerProvider provider)
+        public void serialize(ThriftCall value, JsonGenerator gen, SerializerProvider provider)
                 throws IOException {
             gen.writeStartObject();
 
@@ -145,13 +145,13 @@ public final class StructuredLogJsonFormat {
         }
     }
 
-    private static class ApacheThriftReplySerializer extends StdSerializer<ApacheThriftReply> {
+    private static class ApacheThriftReplySerializer extends StdSerializer<ThriftReply> {
         protected ApacheThriftReplySerializer() {
-            super(ApacheThriftReply.class);
+            super(ThriftReply.class);
         }
 
         @Override
-        public void serialize(ApacheThriftReply value, JsonGenerator gen, SerializerProvider provider)
+        public void serialize(ThriftReply value, JsonGenerator gen, SerializerProvider provider)
                 throws IOException {
             if (value == null) {
                 // Oneway function doesn't provide reply

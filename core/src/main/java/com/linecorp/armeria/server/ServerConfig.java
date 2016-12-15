@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -145,10 +146,9 @@ public final class ServerConfig {
         this.defaultVirtualHost = defaultVirtualHost;
 
         // Build the complete list of the services available in this server.
-        services = Collections.unmodifiableList(
-                virtualHostsCopy.stream()
-                                .flatMap(h -> h.serviceConfigs().stream())
-                                .collect(Collectors.toList()));
+        services = virtualHostsCopy.stream()
+                                   .flatMap(h -> h.serviceConfigs().stream())
+                                   .collect(GuavaCollectors.toImmutableList());
     }
 
     static int validateNumWorkers(int numWorkers) {

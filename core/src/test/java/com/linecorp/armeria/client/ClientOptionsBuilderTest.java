@@ -25,12 +25,12 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientDecoration.Entry;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 
 public class ClientOptionsBuilderTest {
     @Test
@@ -75,11 +75,11 @@ public class ClientOptionsBuilderTest {
         // Add another decorator to ensure that the builder does not replace the previous one.
         b.option(ClientOption.DECORATION.newValue(
                 new ClientDecorationBuilder()
-                        .add(ThriftCall.class, ThriftReply.class, decorator)
+                        .add(RpcRequest.class, RpcResponse.class, decorator)
                         .build()));
         assertThat(b.build().decoration().entries()).containsExactly(
                 new Entry<>(HttpRequest.class, HttpResponse.class, decorator),
-                new Entry<>(ThriftCall.class, ThriftReply.class, decorator));
+                new Entry<>(RpcRequest.class, RpcResponse.class, decorator));
     }
 
     @Test

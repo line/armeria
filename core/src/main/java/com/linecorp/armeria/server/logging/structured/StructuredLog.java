@@ -21,7 +21,6 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 /**
@@ -42,17 +41,15 @@ public abstract class StructuredLog {
     }
 
     /**
-     * Constructs {@link StructuredLog} from {@link RequestContext} and {@link ResponseLog}.
+     * Constructs {@link StructuredLog} from {@link RequestContext} and {@link RequestLog}.
      * Can be used as {@link StructuredLogBuilder}.
      */
-    protected StructuredLog(ResponseLog resLog) {
-        RequestLog reqLog = resLog.request();
+    protected StructuredLog(RequestLog reqLog) {
+        timestampMillis = reqLog.requestStartTimeMillis();
+        responseTimeNanos = reqLog.totalDurationNanos();
 
-        timestampMillis = reqLog.startTimeMillis();
-        responseTimeNanos = resLog.responseTimeNanos();
-
-        requestSize = reqLog.contentLength();
-        responseSize = resLog.contentLength();
+        requestSize = reqLog.requestLength();
+        responseSize = reqLog.responseLength();
     }
 
     /**
@@ -98,10 +95,8 @@ public abstract class StructuredLog {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("timestampMillis", timestampMillis +
-                                                  '(' + TextFormatter.epoch(timestampMillis) + ')')
-                          .add("responseTimeNanos", String.valueOf(responseTimeNanos) +
-                                                    '(' + TextFormatter.elapsed(responseTimeNanos) + ')')
+                          .add("timestamp", TextFormatter.epoch(timestampMillis))
+                          .add("responseTime", TextFormatter.elapsed(responseTimeNanos))
                           .add("requestSize", TextFormatter.size(requestSize))
                           .add("responseSize", TextFormatter.size(responseSize))
                           .toString();

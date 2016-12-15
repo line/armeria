@@ -19,18 +19,15 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.common.logging.DefaultResponseLog;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -45,8 +42,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private final Endpoint endpoint;
     private final String fragment;
 
-    private final DefaultRequestLog requestLog;
-    private final DefaultResponseLog responseLog;
+    private final DefaultRequestLog log;
 
     private long writeTimeoutMillis;
     private long responseTimeoutMillis;
@@ -71,8 +67,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         this.endpoint = requireNonNull(endpoint, "endpoint");
         this.fragment = requireNonNull(fragment, "fragment");
 
-        requestLog = new DefaultRequestLog();
-        responseLog = new DefaultResponseLog(requestLog, requestLog);
+        log = new DefaultRequestLog(this);
 
         writeTimeoutMillis = options.defaultWriteTimeoutMillis();
         responseTimeoutMillis = options.defaultResponseTimeoutMillis();
@@ -90,7 +85,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     protected Channel channel() {
-        return requestLog.channel();
+        if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+            return log.channel();
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -162,23 +161,13 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public RequestLogBuilder requestLogBuilder() {
-        return requestLog;
+    public RequestLog log() {
+        return log;
     }
 
     @Override
-    public ResponseLogBuilder responseLogBuilder() {
-        return responseLog;
-    }
-
-    @Override
-    public CompletableFuture<RequestLog> requestLogFuture() {
-        return requestLog;
-    }
-
-    @Override
-    public CompletableFuture<ResponseLog> responseLogFuture() {
-        return responseLog;
+    public RequestLogBuilder logBuilder() {
+        return log;
     }
 
     @Override

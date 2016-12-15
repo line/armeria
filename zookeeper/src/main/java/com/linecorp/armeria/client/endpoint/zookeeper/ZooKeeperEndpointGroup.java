@@ -42,8 +42,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.routing.EndpointGroup;
-import com.linecorp.armeria.client.routing.EndpointGroupException;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of

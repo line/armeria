@@ -27,8 +27,8 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.common.thrift.ApacheThriftCall;
-import com.linecorp.armeria.common.thrift.ApacheThriftReply;
+import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_result;
@@ -43,7 +43,7 @@ public class StructuredLogJsonFormatTest {
     private static final String THRIFT_SERVICE_NAME = HelloService.class.getCanonicalName();
     private static final String THRIFT_METHOD_NAME = "hello";
 
-    private static ApacheThriftStructuredLog buildLog(ApacheThriftCall call, ApacheThriftReply reply) {
+    private static ApacheThriftStructuredLog buildLog(ThriftCall call, ThriftReply reply) {
         return new ApacheThriftStructuredLog(
                 TIMESTAMP_MILLIS,
                 RESPONSE_TIME_NANOS,
@@ -57,10 +57,10 @@ public class StructuredLogJsonFormatTest {
     @Test
     public void testSerializingRegularFunctionCall() throws IOException {
         ApacheThriftStructuredLog log = buildLog(
-                new ApacheThriftCall(
+                new ThriftCall(
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.CALL, 0),
                         new hello_args().setName("kawamuray")),
-                new ApacheThriftReply(
+                new ThriftReply(
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.REPLY, 0),
                         new hello_result().setSuccess("Hello kawamuray")));
 
@@ -103,10 +103,10 @@ public class StructuredLogJsonFormatTest {
     @Test
     public void testSerializingExceptionalFunctionCall() throws IOException {
         ApacheThriftStructuredLog log = buildLog(
-                new ApacheThriftCall(
+                new ThriftCall(
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.CALL, 0),
                         new hello_args().setName("kawamuray")),
-                new ApacheThriftReply(
+                new ThriftReply(
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.EXCEPTION, 0),
                         new TApplicationException(1, "don't wanna say hello")));
 
@@ -150,7 +150,7 @@ public class StructuredLogJsonFormatTest {
     @Test
     public void testSerializingOnewayFunctionCall() throws IOException {
         ApacheThriftStructuredLog log = buildLog(
-                new ApacheThriftCall(
+                new ThriftCall(
                         new TMessage(THRIFT_METHOD_NAME, TMessageType.ONEWAY, 0),
                         new hello_args().setName("kawamuray")),
                 null);

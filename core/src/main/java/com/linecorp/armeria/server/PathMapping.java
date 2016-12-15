@@ -143,7 +143,7 @@ public interface PathMapping {
     /**
      * Returns the metric name.
      *
-     * @return the metric name whose components are separated by the specified {@code separator}.
+     * @return the metric name whose components are separated by a dot (.)
      */
     String metricName();
 

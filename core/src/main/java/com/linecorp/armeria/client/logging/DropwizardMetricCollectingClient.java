@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.logging;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.codahale.metrics.MetricRegistry;
@@ -26,12 +25,14 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.internal.logging.DropwizardMetricConsumer;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.thrift.ThriftCall;
+import com.linecorp.armeria.internal.logging.DropwizardMetricCollector;
 
 /**
  * Decorates a {@link Client} to collect metrics into Dropwizard {@link MetricRegistry}.
@@ -54,7 +55,7 @@ import com.linecorp.armeria.internal.logging.DropwizardMetricConsumer;
  * @param <O> the response type
  */
 public final class DropwizardMetricCollectingClient<I extends Request, O extends Response>
-        extends LogCollectingClient<I, O> {
+        extends DecoratingClient<I, O, I, O> {
 
     /**
      * Returns a {@link Client} decorator that tracks request stats using the Dropwizard metrics library.
@@ -65,7 +66,7 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
     public static <I extends Request, O extends Response>
     Function<Client<? super I, ? extends O>, DropwizardMetricCollectingClient<I, O>> newDecorator(
             MetricRegistry metricRegistry,
-            BiFunction<? super ClientRequestContext, ? super RequestLog, String> metricNameFunc) {
+            Function<? super RequestLog, String> metricNameFunc) {
 
         requireNonNull(metricRegistry, "metricRegistry");
         requireNonNull(metricNameFunc, "metricNameFunc");
@@ -84,34 +85,51 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
             MetricRegistry metricRegistry, String metricNamePrefix) {
 
         requireNonNull(metricNamePrefix, "metricNamePrefix");
-        return newDecorator(metricRegistry, (ctx, req) -> defaultMetricName(req, metricNamePrefix));
+        return newDecorator(metricRegistry, log -> defaultMetricName(log, metricNamePrefix));
     }
 
-    private static String defaultMetricName(RequestLog req, String metricNamePrefix) {
+    private static String defaultMetricName(RequestLog log, String metricNamePrefix) {
         String methodName = null;
 
-        if (req.hasAttr(RequestLog.HTTP_HEADERS)) {
-            final HttpHeaders headers = req.attr(RequestLog.HTTP_HEADERS).get();
-            methodName = headers.method().name();
+        final Object envelope = log.requestEnvelope();
+        final Object content = log.requestContent();
+        if (envelope instanceof HttpHeaders) {
+            methodName = ((HttpHeaders) envelope).method().name();
         }
 
-        if (req.hasAttr(RequestLog.RPC_REQUEST)) {
-            methodName = req.attr(RequestLog.RPC_REQUEST).get().method();
+        if (content instanceof ThriftCall) {
+            methodName = ((ThriftCall) content).header().name;
         }
 
         if (methodName == null) {
-            methodName = MoreObjects.firstNonNull(req.method(), "__UNKNOWN_METHOD__");
+            methodName = MoreObjects.firstNonNull(log.method(), "__UNKNOWN_METHOD__");
         }
 
         return MetricRegistry.name(metricNamePrefix, methodName);
     }
 
+    private final DropwizardMetricCollector collector;
+
     @SuppressWarnings("unchecked")
     DropwizardMetricCollectingClient(
             Client<? super I, ? extends O> delegate,
             MetricRegistry metricRegistry,
-            BiFunction<? super ClientRequestContext, ? super RequestLog, String> metricNameFunc) {
-        super(delegate, new DropwizardMetricConsumer(
-                metricRegistry, (BiFunction<RequestContext, RequestLog, String>) metricNameFunc));
+            Function<? super RequestLog, String> metricNameFunc) {
+        super(delegate);
+        collector = new DropwizardMetricCollector(
+                metricRegistry, (Function<RequestLog, String>) metricNameFunc);
+    }
+
+    @Override
+    public O execute(ClientRequestContext ctx, I req) throws Exception {
+        ctx.log().addListener(collector::onRequestStart,
+                              RequestLogAvailability.REQUEST_ENVELOPE,
+                              RequestLogAvailability.REQUEST_CONTENT);
+        ctx.log().addListener(collector::onRequestEnd,
+                              RequestLogAvailability.REQUEST_END);
+        ctx.log().addListener(collector::onResponse,
+                              RequestLogAvailability.COMPLETE);
+
+        return delegate().execute(ctx, req);
     }
 }

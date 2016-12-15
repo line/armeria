@@ -23,7 +23,7 @@ For example, the following configuration:
         </encoder>
       </appender>
 
-      <appender name="RCIA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+      <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
         <appender-ref ref="CONSOLE" />
         <export>remote.ip</export>
         <export>tls.cipher</export>
@@ -38,7 +38,7 @@ For example, the following configuration:
       ...
     </configuration>
 
-will define an appender called ``RCIA`` which exports the following:
+will define an appender called ``RCEA`` which exports the following:
 
 - ``remote.ip``
 
@@ -121,7 +121,7 @@ as the 3rd component of the ``<export />`` element in the XML configuration:
     <?xml version="1.0" encoding="UTF-8"?>
     <configuration>
       ...
-      <appender name="RCIA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+      <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
         ...
         <export>attrs.some_value:com.example.AttrKeys#SOME_VALUE:com.example.MyStringifier</export>
         ...

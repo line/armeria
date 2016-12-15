@@ -100,34 +100,74 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: inherit;
 }
 
+/* Code blocks and literals */
 pre, code, kbd, var, samp, tt,
 .rst-content div[class^='highlight'] pre,
 .rst-content pre.literal-block,
-.rst-content tt.literal {
+.rst-content code.literal,
+.rst-content tt.literal,
+.wy-menu-vertical li code,
+.wy-menu-vertical li tt {
   font-family: 'Source Code Pro', 'Consolas', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
                'DejaVu Sans Mono', monospace;
-  font-weight: 500;
+  font-weight: inherit;
+  word-break: break-all;
+  letter-spacing: -0.04em;
 }
 
+/* Code blocks */
 pre,
 .rst-content div[class^='highlight'] pre,
 .rst-content pre.literal-block {
-  padding: 12px;
-  font-size: 13px;
+  padding: 8px 12px 12px 12px;
+  font-size: 90%;
   overflow: auto;
   color: inherit;
 }
 
+/* Literals */
 code, kbd, var, samp, tt,
-.rst-content tt.literal,
-.rst-content code.literal {
+tt.literal, .rst-content tt.literal,
+code.literal, .rst-content code.literal {
   padding-left: 0;
   padding-right: 0;
-  background: inherit;
+  background: rgba(0,0,0,0.05);
+  border-radius: 3px;
   font-size: inherit;
+  color: inherit;
   border: none;
+  white-space: pre-wrap;
 }
 
+/* Literals in vertical menu */
+.wy-menu-vertical li tt,
+.wy-menu-vertical li code {
+  padding-left: 0;
+  padding-right: 0;
+  font-size: inherit;
+  color: inherit;
+  border: none;
+  white-space: pre-wrap;
+}
+
+/* Add small padding around a literal. */
+code::before, code::after,
+kbd::before, kbd::after,
+var::before, var::after,
+samp::before, samp::after {
+  letter-spacing: -0.3em;
+  content: "\00a0";
+}
+
+/* Do not add small padding around a literal in vertical menu. */
+.wy-menu-vertical li tt::before,
+.wy-menu-vertical li tt::after,
+.wy-menu-vertical li code::before,
+.wy-menu-vertical li code::after {
+  content: "";
+}
+
+/* Use justify-align with hypenation */
 p {
   text-align: justify;
   word-wrap: break-word;
@@ -139,6 +179,13 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
 }
 
+/* Do not use monospace font for download links */
 .rst-content tt.download {
   font-family: inherit;
 }
+
+/* Adjust table padding */
+.rst-content table.docutils th, .rst-content table.docutils td {
+  padding: 6px 10px;
+}
+
