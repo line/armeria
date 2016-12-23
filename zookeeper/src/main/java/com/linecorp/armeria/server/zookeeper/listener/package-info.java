@@ -13,8 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 /**
- * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
+ * A ZooKeeper Server Listener.When you add this listener, server will be automatically registered
+ * into the ZooKeeper.
+ *
+ * {@link com.linecorp.armeria.server.zookeeper.listener.ZooKeeperListener} can register server to a ZooKeeper
+ * cluster.The registered ZooKeeper node is EPHEMERAL, so when server stops, the underlying ZooKeeper session
+ * will be closed. The node will be automatically removed by ZooKeeper cluster.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper.client;
+package com.linecorp.armeria.server.zookeeper.listener;

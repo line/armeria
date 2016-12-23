@@ -13,8 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 /**
- * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
+ * A ZooKeeper Server ZKConnector implementation
  */
-package com.linecorp.armeria.client.endpoint.zookeeper.common;
+package com.linecorp.armeria.server.zookeeper;

@@ -13,8 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 /**
- * A ZooKeeper Server Listener
+ * Common classes will be used by Server and Client implementations.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper.server.listener;
+package com.linecorp.armeria.common.zookeeper;

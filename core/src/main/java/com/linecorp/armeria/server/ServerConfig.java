@@ -50,6 +50,7 @@ public final class ServerConfig {
     private final DomainNameMapping<VirtualHost> virtualHostMapping;
     private final List<ServiceConfig> services;
 
+    private final int numBosses;
     private final int numWorkers;
     private final int maxPendingRequests;
     private final int maxConnections;
@@ -69,7 +70,7 @@ public final class ServerConfig {
     ServerConfig(
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
-            int numWorkers, int maxPendingRequests, int maxConnections,
+            int numBosses, int numWorkers, int maxPendingRequests, int maxConnections,
             long idleTimeoutMillis, long defaultRequestTimeoutMillis,
             long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
@@ -80,6 +81,7 @@ public final class ServerConfig {
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
 
         // Set the primitive properties.
+        this.numBosses = validateNumBosses(numBosses);
         this.numWorkers = validateNumWorkers(numWorkers);
         this.maxPendingRequests = validateMaxPendingRequests(maxPendingRequests);
         this.maxConnections = validateMaxConnections(maxConnections);
@@ -149,6 +151,13 @@ public final class ServerConfig {
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(GuavaCollectors.toImmutableList());
+    }
+
+    static int validateNumBosses(int numBosses) {
+        if (numBosses <= 0) {
+            throw new IllegalArgumentException("numBosses: " + numBosses + " (expected: > 0)");
+        }
+        return numBosses;
     }
 
     static int validateNumWorkers(int numWorkers) {
@@ -317,6 +326,13 @@ public final class ServerConfig {
      */
     public List<ServiceConfig> serviceConfigs() {
         return services;
+    }
+
+    /**
+     * Returns the number of boss threads.
+     */
+    public int numBosses() {
+        return numBosses;
     }
 
     /**

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper.common;
+package com.linecorp.armeria.common.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.zookeeper.KeeperException.Code.get;
@@ -39,45 +39,38 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 /**
  * A ZooKeeper connector, maintains a ZooKeeper connection.
  */
-public abstract class Connector {
+public abstract class ZKConnector {
 
-    private static final Logger logger = LoggerFactory.getLogger(Connector.class);
-
+    private static final Logger logger = LoggerFactory.getLogger(ZKConnector.class);
     private static final int MAX_RETRY_DELAY_MILLIS = 60 * 1000; // One minute
+    private static final int INITIAL_RETRY_DELAY_MILLIS = 1000;
     private final String zkConnectionStr;
-
-
-
     private final String zNodePath;
     private final int sessionTimeout;
-    private int retryDelayMills = 1000; // Start with one second
+    private int retryDelayMills = INITIAL_RETRY_DELAY_MILLIS; // Start with one second
     private ZooKeeper zooKeeper;
     private BlockingQueue<KeeperState> stateQueue;
     private CountDownLatch latch;
     private boolean activeClose;
 
     /**
-     * Creates a connector
+     * Creates a connector.
      *
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
-     *                        each corresponding to a ZooKeeperProxy server
+     *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
      */
-    protected Connector(String zkConnectionStr, String zNodePath, int sessionTimeout
-    ) {
-
+    protected ZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.sessionTimeout = sessionTimeout;
-
     }
 
     /**
      * Do connect.
      */
     protected void connect() {
-
         try {
             activeClose = false;
             latch = new CountDownLatch(1);
@@ -89,52 +82,84 @@ public abstract class Connector {
                 //(so that it won't throw exception under ZooKeeper connection recovery test)
                 stateQueue.put(KeeperState.Disconnected);
             }
-
         } catch (Exception e) {
             throw new ZooKeeperException(
                     "failed to connect to ZooKeeper:  " + zkConnectionStr + " (" + e + ')', e);
         }
-
     }
 
     protected void resetRetryDelay() {
-        retryDelayMills = 1000;
+        retryDelayMills = INITIAL_RETRY_DELAY_MILLIS;
     }
 
     /**
      * Do a synchronized wait.
      */
     protected void doWait() {
-        // Recover the ZooKeeperProxy connection using an exponential back-off strategy.
+        // Recover the ZooKeeper connection using an exponential back-off strategy.
         try {
             Thread.sleep(retryDelayMills);
         } catch (InterruptedException e) {
-            throw new ZooKeeperException("Failed to recover a ZooKeeperProxy connection", e);
+            throw new ZooKeeperException("Failed to recover a ZooKeeper connection", e);
         }
         retryDelayMills = Math.min(MAX_RETRY_DELAY_MILLIS, retryDelayMills * 2);
     }
 
     /**
-     *  Closes the underlying Zookeeper connection.
+     * Closes the underlying Zookeeper connection.
+     * @param active if it is closed by user actively ? or passively by program because of underlying
+     *               connection expires
      */
     public void close(boolean active) {
         try {
             activeClose = active;
             zooKeeper.close();
-
         } catch (Exception e) {
-            throw new EndpointGroupException("Failed to close underlying ZooKeeperProxy connection", e);
+            throw new EndpointGroupException("Failed to close underlying ZooKeeper connection", e);
         }
-
     }
 
-    protected String getzNodePath() {
+    /**
+     * Return the zNode path.
+     * @return zNode path
+     */
+    public String getzNodePath() {
         return zNodePath;
     }
 
+    /**
+     * After connection established, sub class can get the zNode value or get its all children's value, delegate
+     * the actions to child class.
+     * @param zooKeeper pass the ZooKeeper client handle to sub class
+     */
     protected abstract void postConnected(ZooKeeper zooKeeper);
 
+    /**
+     * If a zNode change event occurs, this method will be called.
+     * @param zooKeeper ZooKeeper client handle
+     * @param path the path of the zNode triggered this event
+     */
     protected abstract void nodeChange(ZooKeeper zooKeeper, String path);
+
+    @VisibleForTesting
+    protected BlockingQueue<KeeperState> stateQueue() {
+        return stateQueue;
+    }
+
+    /**
+     * Open state recording.
+     */
+    @VisibleForTesting
+    protected void enableStateRecording() {
+        if (stateQueue == null) {
+            stateQueue = new ArrayBlockingQueue<>(10);
+        }
+    }
+
+    @VisibleForTesting
+    protected ZooKeeper underlyingClient() {
+        return zooKeeper;
+    }
 
     final class ZkWatcher implements Watcher, StatCallback {
 
@@ -155,7 +180,7 @@ public abstract class Connector {
                         // - reconnection due to session timeout or
                         // - reconnection due to session expiration
                         // Once connected, reset the retry delay.
-                        retryDelayMills = 1000;
+                        retryDelayMills = INITIAL_RETRY_DELAY_MILLIS;
                         latch.countDown();
                         break;
                     case Expired:
@@ -170,7 +195,7 @@ public abstract class Connector {
                                 connect();
                             }
                         } catch (ZooKeeperException e) {
-                            logger.warn("Failed to attempt to recover a ZooKeeperProxy connection", e);
+                            logger.warn("Failed to attempt to recover a ZooKeeper connection", e);
                         }
                         break;
                 }
@@ -180,10 +205,9 @@ public abstract class Connector {
                     try {
                         zooKeeper.exists(path, true, this, null);
                     } catch (Exception e) {
-                        throw new EndpointGroupException("Failed to process a ZooKeeperProxy watch event", e);
+                        throw new EndpointGroupException("Failed to process a ZooKeeper watch event", e);
                     }
                 }
-
             }
         }
 
@@ -207,11 +231,10 @@ public abstract class Connector {
                     try {
                         zooKeeper.exists(path, true, this, null);
                     } catch (Exception ex) {
-                        throw new ZooKeeperException("Failed to process ZooKeeperProxy callback event", ex);
+                        throw new ZooKeeperException("Failed to process ZooKeeper callback event", ex);
                     }
                     return;
             }
-
             if (!activeClose) {
                 nodeChange(zooKeeper, path);
                 //enqueue an end flag to force the main thread to wait until this callback finished  before exit
@@ -219,12 +242,11 @@ public abstract class Connector {
                     enqueueState(KeeperState.Disconnected);
                 }
             }
-
         }
 
         /**
          * Enqueue the state.
-         * @param state ZooKeeperProxy state
+         * @param state ZooKeeper state
          */
         private void enqueueState(KeeperState state) {
             if (stateQueue == null) {
@@ -236,26 +258,6 @@ public abstract class Connector {
                 throw new EndpointGroupException("Failed to enqueue the state.", e);
             }
         }
-    }
-
-    @VisibleForTesting
-    public BlockingQueue<KeeperState> stateQueue() {
-        return stateQueue;
-    }
-
-    /**
-     * Open state recording.
-     */
-    @VisibleForTesting
-    public void enableStateRecording() {
-        if (stateQueue == null) {
-            stateQueue = new ArrayBlockingQueue<>(10);
-        }
-    }
-
-    @VisibleForTesting
-    public ZooKeeper underlyingClient() {
-        return zooKeeper;
     }
 }
 

@@ -1,4 +1,4 @@
-package com.linecorp.armeria.client.endpoint.zookeeper.client;
+package com.linecorp.armeria.client.zookeeper;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -9,10 +9,10 @@ import org.apache.zookeeper.ZooKeeper;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.Codec;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.Connector;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.DefaultCodec;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.ZooKeeperException;
+import com.linecorp.armeria.common.zookeeper.DefaultNodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ZKConnector;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -20,43 +20,41 @@ import com.linecorp.armeria.client.endpoint.zookeeper.common.ZooKeeperException;
  * ZooKeeper session expires, it will automatically reconnect to the ZooKeeper with exponential retry delay,
  * starting from 1 second up to 60 seconds.
  */
-public class NodeValueEndpointGroup extends Connector implements EndpointGroup {
+public class NodeValueEndpointGroup extends ZKConnector implements EndpointGroup {
+    private final NodeValueCodec nodeValueCodec;
     private List<Endpoint> prevValue;
-    private final Codec codec;
 
     /**
      * Creates a new instance for client.
      *  @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
-     *                        each corresponding to a ZooKeeperProxy server
+     *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
      */
     public NodeValueEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, new DefaultCodec());
+        this(zkConnectionStr, zNodePath, sessionTimeout, new DefaultNodeValueCodec());
     }
 
     /**
      * Creates a new instance for client.
      *  @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
-     *                        each corresponding to a ZooKeeperProxy server
+     *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
      */
     public NodeValueEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                  Codec codec) {
+                                  NodeValueCodec nodeValueCodec) {
         super(zkConnectionStr, zNodePath, sessionTimeout);
-        this.codec = codec;
+        this.nodeValueCodec = nodeValueCodec;
         connect();
     }
 
     @Override
     protected void postConnected(ZooKeeper zooKeeper) {
-
         try {
             prevValue = new ArrayList<>(doGetEndpoints(zooKeeper, getzNodePath()));
         } catch (Exception e) {
             throw new ZooKeeperException(e);
-
         }
     }
 
@@ -74,7 +72,7 @@ public class NodeValueEndpointGroup extends Connector implements EndpointGroup {
             }
             resetRetryDelay();
             assert nodeData != null;
-            return codec.decodeAll(new String(nodeData, StandardCharsets.UTF_8));
+            return nodeValueCodec.decodeAll(new String(nodeData, StandardCharsets.UTF_8));
         } catch (Exception ex) {
             throw new ZooKeeperException(ex);
         }
@@ -90,7 +88,6 @@ public class NodeValueEndpointGroup extends Connector implements EndpointGroup {
         } catch (Exception e) {
             throw new ZooKeeperException(e);
         }
-
     }
 
     @Override
@@ -102,6 +99,5 @@ public class NodeValueEndpointGroup extends Connector implements EndpointGroup {
     public List<Endpoint> endpoints() {
         return prevValue;
     }
-
 }
 

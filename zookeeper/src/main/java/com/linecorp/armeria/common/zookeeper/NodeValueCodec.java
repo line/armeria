@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper.common;
+package com.linecorp.armeria.common.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,11 +23,11 @@ import java.util.Set;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
- * Converts a zNode value into a list of {@link Endpoint}s.
+ * Decode and encode between list of zNode value strings and list of {@link Endpoint}s.
  */
-public interface Codec {
+public interface NodeValueCodec {
     /**
-     * Converts a zNode value into a list of {@link Endpoint}s.
+     * Decode a zNode value into a list of {@link Endpoint}s.
      *
      * @param zNodeValue zNode value
      * @return the list of {@link Endpoint}s
@@ -35,7 +35,7 @@ public interface Codec {
     Set<Endpoint> decodeAll(byte[] zNodeValue);
 
     /**
-     * Converts a zNode value into a list of {@link Endpoint}s.
+     * Decode a zNode value into a set of {@link Endpoint}s.
      *
      * @param zNodeValue zNode value
      * @return the list of {@link Endpoint}s
@@ -45,10 +45,24 @@ public interface Codec {
         return decodeAll(zNodeValue.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Decode a zNode value to a {@link Endpoint}.
+     * @param zNodeValue ZooKeeper node value
+     * @return an {@link Endpoint}
+     */
     Endpoint decode(byte[] zNodeValue);
 
-    byte[] encodeAll(Set<Endpoint> endpoints);
+    /**
+     * Encode a set of {@link Endpoint}s into a bytes array representation
+     * @param endpoints set of {@link Endpoint}s
+     * @return a bytes array
+     */
+    byte[] encodeAll(Iterable<Endpoint> endpoints);
 
+    /**
+     * Encode single {@link Endpoint} into a bytes array representation
+     * @param endpoint  an {@link Endpoint}
+     * @return a bytes array
+     */
     byte[] encode(Endpoint endpoint);
-
 }

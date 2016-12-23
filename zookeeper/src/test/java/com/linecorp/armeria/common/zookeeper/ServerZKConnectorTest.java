@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper;
+package com.linecorp.armeria.common.zookeeper;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.Assert.assertEquals;
 
@@ -25,13 +24,12 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.Connector;
-import com.linecorp.armeria.client.endpoint.zookeeper.server.listener.ZooKeeperListener;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -43,24 +41,25 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
+import com.linecorp.armeria.server.zookeeper.listener.ZooKeeperListener;
 
 import junitextensions.OptionAssert;
 import zookeeperjunit.ZooKeeperAssert;
 
-public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, OptionAssert {
+public class ServerZKConnectorTest extends TestBase implements ZooKeeperAssert, OptionAssert {
 
     protected static final KeeperState[] expectedStates = {
             KeeperState.Disconnected, KeeperState.Expired,
             KeeperState.SyncConnected, KeeperState.SyncConnected, KeeperState.Disconnected
     };
     List<Server> servers;
-    List<Connector> connectors;
+    List<ZKConnector> zkConnectors;
     List<ZooKeeperListener> listeners;
 
     @Before
     public void startServer() {
         servers = new ArrayList<>();
-        connectors = new ArrayList<>();
+        zkConnectors = new ArrayList<>();
         listeners = new ArrayList<>();
         try {
             for (Endpoint endpoint : sampleEndpoints) {
@@ -68,23 +67,18 @@ public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, Op
                 Server server = sb.serviceAt("/", new EchoService()).port(endpoint.port(), SessionProtocol.HTTP)
                                   .build();
                 ZooKeeperListener listener;
-
-                listener = new ZooKeeperListener(zkInstance.connectString().get(), zNode,
+                listener = new ZooKeeperListener(instance().connectString().get(), zNode,
                                                  sessionTimeout,
                                                  endpoint);
                 server.addListener(listener);
-
                 server.start().get();
                 listeners.add(listener);
-                connectors.add(listener.getConnector());
+                zkConnectors.add(listener.getConnector());
                 servers.add(server);
-
             }
-
         } catch (Exception e) {
             fail(e.getMessage());
         }
-
     }
 
     @Test
@@ -92,15 +86,14 @@ public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, Op
         //all servers start and with zNode created
         sampleEndpoints.forEach(
                 endpoint -> assertExists(zNode + '/' + endpoint.host() + '_' + endpoint.port()));
-        zkInstance.connect().forEach(zkClient -> {
-
+        instance().connect().forEach(zkClient -> {
             try {
                 sampleEndpoints.forEach(endpoint -> {
                     try {
-                        assertThat(codec.decode(
+                        Assertions.assertThat(NODE_VALUE_CODEC.decode(
                                 zkClient.getData(zNode + '/' + endpoint.host() + '_' + endpoint.port()).get()))
-                                .isEqualTo(
-                                        endpoint);
+                                  .isEqualTo(
+                                          endpoint);
                     } catch (Throwable throwable) {
                         fail(throwable.getMessage());
                     }
@@ -109,7 +102,7 @@ public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, Op
                 if (servers.size() > 1) {
                     servers.get(0).stop().get();
                     servers.remove(0);
-                    connectors.remove(0);
+                    zkConnectors.remove(0);
                     ZooKeeperListener stoppedServerListener = listeners.remove(0);
                     assertNotExists(zNode + '/' + stoppedServerListener.getEndpoint().host() + '_' +
                                     stoppedServerListener.getEndpoint().port());
@@ -117,13 +110,10 @@ public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, Op
                     assertExists(zNode + '/' + listeners.get(0).getEndpoint().host() + '_' +
                                  listeners.get(0).getEndpoint().port());
                 }
-
             } catch (Throwable throwable) {
                 fail(throwable.getMessage());
             }
-
         });
-
     }
 
     /**
@@ -132,7 +122,7 @@ public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, Op
     @Test
     public void testNodeRecover() {
         Endpoint sampleEndpoint = listeners.get(0).getEndpoint();
-        zkInstance.connect().forEach(
+        instance().connect().forEach(
                 zkClient -> zkClient.delete(zNode + '/' + sampleEndpoint.host() + '_' + sampleEndpoint.port()));
         try {
             //wait few seconds to let the server recover automatically
@@ -140,23 +130,18 @@ public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, Op
         } catch (InterruptedException e) {
             fail(e.getMessage());
         }
-
         assertExists(zNode + '/' + sampleEndpoint.host() + '_' + sampleEndpoint.port());
-
     }
 
     @Test
     public void testConnectionRecovery() throws Exception {
-
-        Connector connector = connectors.get(0);
-        connector.enableStateRecording();
-
-        ZooKeeper zkHandler1 = connector.underlyingClient();
+        ZKConnector zkConnector = zkConnectors.get(0);
+        zkConnector.enableStateRecording();
+        ZooKeeper zkHandler1 = zkConnector.underlyingClient();
         CountDownLatch latch = new CountDownLatch(1);
         ZooKeeper zkHandler2;
-
         //create a new handler with the same sessionId and password
-        zkHandler2 = new ZooKeeper(zkInstance.connectString().get(), sessionTimeout, event -> {
+        zkHandler2 = new ZooKeeper(instance().connectString().get(), sessionTimeout, event -> {
             if (event.getState() == KeeperState.SyncConnected) {
                 latch.countDown();
             }
@@ -164,15 +149,11 @@ public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, Op
         latch.await();
         //once connected, close the new handler to cause the original handler session expire
         zkHandler2.close();
-
         for (KeeperState state : expectedStates) {
-            assertEquals(state, connector.stateQueue().take());
-
+            assertEquals(state, zkConnector.stateQueue().take());
         }
-
         //connection will recover and our ZooKeeper node also exists
         testServerNodeCreateAndDelete();
-
     }
 
     @After
@@ -200,5 +181,4 @@ public class ServerConnectorTest extends TestBase implements ZooKeeperAssert, Op
             res.close();
         }
     }
-
 }

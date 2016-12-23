@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper;
+package com.linecorp.armeria.common.zookeeper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,21 +22,17 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.Codec;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.DefaultCodec;
 
-public class CodecTest {
+public class NodeValueCodecTest {
     @Test
     public void convert() {
-        final Codec codec = new DefaultCodec();
-
-        assertThat(codec.decodeAll("foo.com, bar.com:8080, 10.0.2.15:0:500, 192.168.1.2:8443:700"))
+        final NodeValueCodec nodeValueCodec = new DefaultNodeValueCodec();
+        assertThat(nodeValueCodec.decodeAll("foo.com, bar.com:8080, 10.0.2.15:0:500, 192.168.1.2:8443:700"))
                 .containsExactlyInAnyOrder(Endpoint.of("foo.com"),
-                                 Endpoint.of("bar.com", 8080),
-                                 Endpoint.of("10.0.2.15").withWeight(500),
-                                 Endpoint.of("192.168.1.2", 8443, 700));
-
-        assertThatThrownBy(() -> codec.decodeAll("http://foo.com:8001, bar.com:8002"))
+                                           Endpoint.of("bar.com", 8080),
+                                           Endpoint.of("10.0.2.15").withWeight(500),
+                                           Endpoint.of("192.168.1.2", 8443, 700));
+        assertThatThrownBy(() -> nodeValueCodec.decodeAll("http://foo.com:8001, bar.com:8002"))
                 .isInstanceOf(EndpointGroupException.class);
     }
 }

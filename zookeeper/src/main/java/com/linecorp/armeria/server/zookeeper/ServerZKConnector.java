@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper.server;
+package com.linecorp.armeria.server.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,14 +25,17 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.Codec;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.Connector;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.DefaultCodec;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.ZooKeeperException;
+import com.linecorp.armeria.common.zookeeper.DefaultNodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ZKConnector;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 
-public class ServerConnector extends Connector {
+/**
+ * A Server connection maintains the underlying connection and hearing notice from a ZooKeeper cluster.
+ */
+public class ServerZKConnector extends ZKConnector {
     private final Endpoint endpoint;
-    private final Codec codec;
+    private final NodeValueCodec nodeValueCodec;
 
     /**
      * Create a server connector.
@@ -40,13 +43,13 @@ public class ServerConnector extends Connector {
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
      * @param sessionTimeout  session timeout
      * @param endpoint        register information
-     * @param codec           codec used
+     * @param nodeValueCodec           nodeValueCodec used
      */
-    public ServerConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint,
-                           Codec codec) {
+    public ServerZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint,
+                             NodeValueCodec nodeValueCodec) {
         super(zkConnectionStr, zNodePath, sessionTimeout);
         this.endpoint = requireNonNull(endpoint, "endpoint");
-        this.codec = requireNonNull(codec, "codec");
+        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
     }
 
     /**
@@ -56,8 +59,8 @@ public class ServerConnector extends Connector {
      * @param sessionTimeout  session timeout
      * @param endpoint        register information
      */
-    public ServerConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, endpoint, new DefaultCodec());
+    public ServerZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
+        this(zkConnectionStr, zNodePath, sessionTimeout, endpoint, new DefaultNodeValueCodec());
         connect();
     }
 
@@ -79,7 +82,6 @@ public class ServerConnector extends Connector {
         } catch (Exception ex) {
             throw new ZooKeeperException(ex);
         }
-
     }
 
     @Override
@@ -99,12 +101,9 @@ public class ServerConnector extends Connector {
         //parent node exist, register the current host, and leave a watch on it
         if (zooKeeper.exists(getzNodePath() + '/' + endpoint.host() + '_' + endpoint.port(), true) == null) {
             zooKeeper.create(getzNodePath() + '/' + endpoint.host() + '_' + endpoint.port(),
-                             codec.encode(endpoint),
+                             nodeValueCodec.encode(endpoint),
                              Ids.OPEN_ACL_UNSAFE,
                              CreateMode.EPHEMERAL);
-
         }
-
     }
-
 }

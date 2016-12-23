@@ -13,8 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.client.http.retrofit2;
 
-/**
- * A ZooKeeper Server Connector implementation
- */
-package com.linecorp.armeria.client.endpoint.zookeeper.server;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Response;
+
+final class CompletableCallback extends CompletableFuture<Response> implements Callback {
+
+    @Override
+    public void onFailure(Call call, IOException e) {
+        completeExceptionally(e);
+    }
+
+    @Override
+    public void onResponse(Call call, Response response) {
+        complete(response);
+    }
+}

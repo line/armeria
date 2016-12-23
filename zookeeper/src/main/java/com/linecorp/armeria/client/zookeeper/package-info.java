@@ -13,9 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 /**
- * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} and
- * {@link com.linecorp.armeria.server.ServerListener} implementation.
+ * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
+ *
+ * {@link com.linecorp.armeria.client.zookeeper.NodeChildEndpointGroup} can get
+ * {@link com.linecorp.armeria.client.Endpoint}s from a zNode's all children value.
+ *
+ * {@link com.linecorp.armeria.client.zookeeper.NodeValueEndpointGroup} can get
+ * {@link com.linecorp.armeria.client.Endpoint}s from a zNode's value
+ *
  */
-package com.linecorp.armeria.client.endpoint.zookeeper;
+package com.linecorp.armeria.client.zookeeper;

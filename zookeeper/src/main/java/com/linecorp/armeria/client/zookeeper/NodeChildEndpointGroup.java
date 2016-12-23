@@ -14,58 +14,59 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint.zookeeper.client;
+package com.linecorp.armeria.client.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.zookeeper.ZooKeeper;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.Codec;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.Connector;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.DefaultCodec;
-import com.linecorp.armeria.client.endpoint.zookeeper.common.ZooKeeperException;
+import com.linecorp.armeria.common.zookeeper.DefaultNodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ZKConnector;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
- * {@link Endpoint}s from a ZooKeeper zNode's all child node's value and updates it when the children of the
+ * {@link Endpoint}s from a ZooKeeper zNode's all children node's value and updates it when the children of the
  * zNode changes. When a ZooKeeper session expires, it will automatically reconnect to the ZooKeeper with
  * exponential retry delay,starting from 1 second up to 60 seconds.
  */
-public class NodeChildEndpointGroup extends Connector implements EndpointGroup {
+public class NodeChildEndpointGroup extends ZKConnector implements EndpointGroup {
+    private final NodeValueCodec nodeValueCodec;
     private List<Endpoint> prevData;
-    private final Codec codec;
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
      * node value
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
-     *                        each corresponding to a ZooKeeperProxy server
+     *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
      */
     public NodeChildEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, new DefaultCodec());
+        this(zkConnectionStr, zNodePath, sessionTimeout, new DefaultNodeValueCodec());
     }
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
      * node value
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
-     *                        each corresponding to a ZooKeeperProxy server
+     *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
-     * @param codec           the codec
+     * @param nodeValueCodec           the nodeValueCodec
      */
     public NodeChildEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                  Codec codec) {
+                                  NodeValueCodec nodeValueCodec) {
         super(zkConnectionStr, zNodePath, sessionTimeout);
-        this.codec = requireNonNull(codec, "codec");
+        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         connect();
     }
 
@@ -93,18 +94,16 @@ public class NodeChildEndpointGroup extends Connector implements EndpointGroup {
             return children.stream().map(
                     child -> {
                         try {
-                            return codec.decode(
+                            return nodeValueCodec.decode(
                                     zooKeeper.getData(zNodePath + '/' + child, false, null));
                         } catch (Exception e) {
                             throw new ZooKeeperException(e);
                         }
-
                     }
-            ).filter(endpoint -> (endpoint != null)).collect(Collectors.toList());
+            ).filter(Objects::nonNull).collect(Collectors.toList());
         } catch (Exception e) {
             throw new ZooKeeperException(e);
         }
-
     }
 
     @Override
@@ -114,7 +113,6 @@ public class NodeChildEndpointGroup extends Connector implements EndpointGroup {
 
     @Override
     protected void nodeChange(ZooKeeper zooKeeper, String zNodePath) {
-
         List<Endpoint> newData = doGetEndpoints(zooKeeper, zNodePath);
         if (!Arrays.equals(prevData.toArray(), newData.toArray())) {
             prevData = newData;

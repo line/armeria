@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper.common;
+package com.linecorp.armeria.common.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
@@ -26,7 +26,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
 /**
- * Default {@link Codec} implementation which assumes zNode value is a comma-separated
+ * Default {@link NodeValueCodec} implementation which assumes zNode value is a comma-separated
  * string. Each element of the zNode value represents an endpoint whose format is
  * {@code <host>[:<port_number>[:weight]]}, such as:
  * <ul>
@@ -35,27 +35,18 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupException;
  *   <li>{@code "10.0.2.15:0:500} - default port number, weight 500</li>
  *   <li>{@code "192.168.1.2:8443:700} - port number 8443, weight 700</li>
  * </ul>
- * Note that the port number must be specified to specify a weight.
+ * the segment and field delimiter can be specified, default will be "," and ":"
+ * Note that the port number must be specified when you want to specify the weight.
  */
-public class DefaultCodec implements Codec {
+public class DefaultNodeValueCodec implements NodeValueCodec {
 
     private final String segmentDelimiter;
     private final String fieldDelimiter;
 
     /**
-     * Create a ZooKeeper node value codec.
-     * @param segmentDelimiter delimiter of segment
-     * @param fieldDelimiter   delimiter of fields
+     * Create a default codec with segment delimiter ',' and field delimiter ':'.
      */
-    public DefaultCodec(String segmentDelimiter, String fieldDelimiter) {
-        this.segmentDelimiter = requireNonNull(segmentDelimiter, "segmentDelimiter");
-        this.fieldDelimiter = requireNonNull(fieldDelimiter, "fieldDelimiter");
-    }
-
-    /**
-     * Create a default codec with segment delimiter ',' and filed delimiter ':'.
-     */
-    public DefaultCodec() {
+    public DefaultNodeValueCodec() {
         segmentDelimiter = ",";
         fieldDelimiter = ":";
     }
@@ -95,7 +86,6 @@ public class DefaultCodec implements Codec {
                         "invalid endpoint list: " + segment);
         }
         return endpoint;
-
     }
 
     @Override
@@ -115,12 +105,11 @@ public class DefaultCodec implements Codec {
         if (endpoints.isEmpty()) {
             throw new EndpointGroupException("ZNode does not contain any endpoints.");
         }
-
         return endpoints;
     }
 
     @Override
-    public byte[] encodeAll(Set<Endpoint> endpoints) {
+    public byte[] encodeAll(Iterable<Endpoint> endpoints) {
         requireNonNull(endpoints, "endpoints");
         StringBuffer nodeValue = new StringBuffer();
         endpoints.forEach(endpoint -> nodeValue.append(endpoint.host()).append(fieldDelimiter).append(
@@ -137,5 +126,4 @@ public class DefaultCodec implements Codec {
         return (endpoint.host() + fieldDelimiter + endpoint.port() + fieldDelimiter + endpoint.weight())
                 .getBytes(StandardCharsets.UTF_8);
     }
-
 }
