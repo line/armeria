@@ -15,7 +15,6 @@
  */
 
 /**
- * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} and
- * {@link com.linecorp.armeria.server.ServerListener} implementation.
+ * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper;
+package com.linecorp.armeria.client.endpoint.zookeeper.common;

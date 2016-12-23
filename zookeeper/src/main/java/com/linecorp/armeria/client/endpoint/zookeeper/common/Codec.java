@@ -13,27 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper;
+package com.linecorp.armeria.client.endpoint.zookeeper.common;
 
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.Set;
 
 import com.linecorp.armeria.client.Endpoint;
 
 /**
  * Converts a zNode value into a list of {@link Endpoint}s.
  */
-@FunctionalInterface
-public interface ZooKeeperNodeValueConverter {
+public interface Codec {
     /**
      * Converts a zNode value into a list of {@link Endpoint}s.
      *
      * @param zNodeValue zNode value
      * @return the list of {@link Endpoint}s
      */
-    List<Endpoint> convert(byte[] zNodeValue);
+    Set<Endpoint> decodeAll(byte[] zNodeValue);
 
     /**
      * Converts a zNode value into a list of {@link Endpoint}s.
@@ -41,8 +40,15 @@ public interface ZooKeeperNodeValueConverter {
      * @param zNodeValue zNode value
      * @return the list of {@link Endpoint}s
      */
-    default List<Endpoint> convert(String zNodeValue) {
+    default Set<Endpoint> decodeAll(String zNodeValue) {
         requireNonNull(zNodeValue, "zNodeValue");
-        return convert(zNodeValue.getBytes(StandardCharsets.UTF_8));
+        return decodeAll(zNodeValue.getBytes(StandardCharsets.UTF_8));
     }
+
+    Endpoint decode(byte[] zNodeValue);
+
+    byte[] encodeAll(Set<Endpoint> endpoints);
+
+    byte[] encode(Endpoint endpoint);
+
 }
