@@ -75,6 +75,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  */
 public final class ServerBuilder {
 
+    private static final int DEFAULT_NUM_BOSSES = 1;
     private static final int DEFAULT_NUM_WORKERS;
     private static final int DEFAULT_MAX_PENDING_REQUESTS = 8;
     private static final int DEFAULT_MAX_CONNECTIONS = 65536;
@@ -122,6 +123,7 @@ public final class ServerBuilder {
     private boolean updatedDefaultVirtualHostBuilder;
 
     private VirtualHost defaultVirtualHost;
+    private int numBosses = DEFAULT_NUM_BOSSES;
     private int numWorkers = DEFAULT_NUM_WORKERS;
     private int maxPendingRequests = DEFAULT_MAX_PENDING_REQUESTS;
     private int maxConnections = DEFAULT_MAX_CONNECTIONS;
@@ -172,6 +174,14 @@ public final class ServerBuilder {
      */
     public ServerBuilder virtualHost(VirtualHost virtualHost) {
         virtualHosts.add(requireNonNull(virtualHost, "virtualHost"));
+        return this;
+    }
+
+    /**
+     * Sets the number of boss threads.
+     */
+    public ServerBuilder numBosses(int numBosses) {
+        this.numBosses = ServerConfig.validateNumBosses(numBosses);
         return this;
     }
 
@@ -531,8 +541,8 @@ public final class ServerBuilder {
         }
 
         return new Server(new ServerConfig(
-                ports, defaultVirtualHost, virtualHosts, numWorkers, maxPendingRequests, maxConnections,
-                idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                ports, defaultVirtualHost, virtualHosts, numBosses, numWorkers, maxPendingRequests,
+                maxConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix));
     }

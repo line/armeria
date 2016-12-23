@@ -234,14 +234,14 @@ public final class Server implements AutoCloseable {
                         new DefaultThreadFactory("armeria-server-boss-epoll", false);
                 final ThreadFactory workerThreadFactory =
                         new DefaultThreadFactory("armeria-server-epoll", false);
-                bossGroup = new EpollEventLoopGroup(1, bossThreadFactory);
+                bossGroup = new EpollEventLoopGroup(config.numBosses(), bossThreadFactory);
                 workerGroup = new EpollEventLoopGroup(config.numWorkers(), workerThreadFactory);
             } else {
                 final ThreadFactory bossThreadFactory =
                         new DefaultThreadFactory("armeria-server-boss-nio", false);
                 final ThreadFactory workerThreadFactory =
                         new DefaultThreadFactory("armeria-server-nio", false);
-                bossGroup = new NioEventLoopGroup(1, bossThreadFactory);
+                bossGroup = new NioEventLoopGroup(config.numBosses(), bossThreadFactory);
                 workerGroup = new NioEventLoopGroup(config.numWorkers(), workerThreadFactory);
             }
 
