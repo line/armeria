@@ -17,13 +17,11 @@ package com.linecorp.armeria.client.http.retrofit2;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
-import com.google.common.base.Strings;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import com.linecorp.armeria.client.http.HttpClient;
-import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
@@ -31,11 +29,8 @@ import com.linecorp.armeria.common.http.HttpResponse;
 
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.MediaType;
-import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.ResponseBody;
 import okio.Buffer;
 
 /**
@@ -47,6 +42,7 @@ public class ArmeriaCallFactory implements Call.Factory {
 
     /**
      * Creates a {@link Call.Factory} using the specified {@link HttpClient} instance.
+     *
      * @param httpClient The {@link HttpClient} instance to be used.
      */
     public ArmeriaCallFactory(HttpClient httpClient) {
@@ -58,17 +54,23 @@ public class ArmeriaCallFactory implements Call.Factory {
         return new ArmeriaCall(this, request);
     }
 
-    private static class ArmeriaCall implements Call {
+    static class ArmeriaCall implements Call {
+
+        private enum ExecutionState {
+            IDLE, RUNNING, CANCELED, FINISHED
+        }
+
+        private static final AtomicReferenceFieldUpdater<ArmeriaCall, ExecutionState> executionStateUpdater =
+                AtomicReferenceFieldUpdater.newUpdater(ArmeriaCall.class, ExecutionState.class,
+                                                       "executionState");
 
         private final ArmeriaCallFactory callFactory;
+
         private final Request request;
 
-        // Guarded by this.
-        private boolean executed;
+        private volatile HttpResponse httpResponse;
 
-        volatile boolean canceled;
-
-        private CompletableFuture<AggregatedHttpMessage> future;
+        private volatile ExecutionState executionState = ExecutionState.IDLE;
 
         ArmeriaCall(ArmeriaCallFactory callFactory, Request request) {
             this.callFactory = callFactory;
@@ -129,80 +131,55 @@ public class ArmeriaCallFactory implements Call.Factory {
             return request;
         }
 
-        private synchronized CompletableFuture<AggregatedHttpMessage> createRequest() {
-            if (executed) {
-                throw new IllegalStateException("Already Executed");
+        private synchronized void createRequest() {
+            if (httpResponse != null) {
+                throw new IllegalStateException("executed already");
             }
-            final CompletableFuture<AggregatedHttpMessage> future = doCall(callFactory.httpClient, request)
-                    .aggregate();
-            executed = true;
-            return future;
+            executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
+            httpResponse = doCall(callFactory.httpClient, request);
         }
 
         @Override
         public Response execute() throws IOException {
-            future = createRequest();
+            CompletableCallback completableCallback = new CompletableCallback();
+            enqueue(completableCallback);
             try {
-                return convertResponse(future.get());
-            } catch (InterruptedException e) {
+                return completableCallback.join();
+            } catch (CancellationException e) {
                 throw new IOException(e);
-            } catch (ExecutionException e) {
+            } catch (CompletionException e) {
                 throw new IOException(e.getCause());
             }
         }
 
         @Override
-        public void enqueue(Callback responseCallback) {
-            future = createRequest();
-            future.whenComplete((response, throwable) -> {
-                if (throwable != null) {
-                    responseCallback.onFailure(this, new IOException(throwable.getMessage(), throwable));
-                } else {
-                    if (!canceled) {
-                        try {
-                            responseCallback.onResponse(this, convertResponse(response));
-                        } catch (IOException e) {
-                            responseCallback.onFailure(this, e);
-                        }
-                    } else {
-                        responseCallback.onFailure(this, new IOException("Canceled"));
-                    }
-                }
-            });
+        public void enqueue(Callback callback) {
+            createRequest();
+            httpResponse.subscribe(new ArmeriaCallSubscriber(this, callback, request));
         }
 
         @Override
         public void cancel() {
-            canceled = true;
-            if (future != null) {
-                future.cancel(true);
-            }
+            executionStateUpdater.set(this, ExecutionState.CANCELED);
         }
 
         @Override
-        public synchronized boolean isExecuted() {
-            return executed;
+        public boolean isExecuted() {
+            return httpResponse != null;
         }
 
         @Override
         public boolean isCanceled() {
-            return canceled;
+            return executionState == ExecutionState.CANCELED;
         }
 
-        private Response convertResponse(AggregatedHttpMessage httpMessage) {
-            Response.Builder builder = new Response.Builder();
-            String contentType = httpMessage.headers().get(HttpHeaderNames.CONTENT_TYPE);
-            httpMessage.headers().forEach(header -> {
-                builder.addHeader(header.getKey().toString(), header.getValue());
-            });
-            builder.request(request);
-            builder.code(httpMessage.status().code());
-            builder.message(httpMessage.status().reasonPhrase());
-            builder.protocol(Protocol.HTTP_1_1);
-            builder.body(ResponseBody.create(
-                    Strings.isNullOrEmpty(contentType) ? null : MediaType.parse(contentType),
-                    httpMessage.content().array()));
-            return builder.build();
+        boolean tryFinish() {
+            return executionStateUpdater.compareAndSet(this,
+                                                       ExecutionState.IDLE,
+                                                       ExecutionState.FINISHED) ||
+                   executionStateUpdater.compareAndSet(this,
+                                                       ExecutionState.RUNNING,
+                                                       ExecutionState.FINISHED);
         }
     }
 }

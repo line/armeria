@@ -10,6 +10,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -39,6 +42,8 @@ import com.linecorp.armeria.server.http.AbstractHttpService;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.adapter.guava.GuavaCallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -94,6 +99,9 @@ public class ArmeriaCallFactoryTest {
     interface Service {
         @GET("/pojo")
         ListenableFuture<Pojo> pojo();
+
+        @GET("/pojo")
+        Call<Pojo> pojoReturnCall();
 
         @GET("/pojos")
         ListenableFuture<List<Pojo>> pojos();
@@ -257,4 +265,48 @@ public class ArmeriaCallFactoryTest {
         assertThat(response.isSuccessful());
     }
 
+    @Test
+    public void pojo_returnCall() throws Exception {
+        Pojo pojo = service.pojoReturnCall().execute().body();
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void pojo_returnCallCancelBeforeEnqueue() throws Exception {
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        Call<Pojo> pojoCall = service.pojoReturnCall();
+        pojoCall.cancel();
+        pojoCall.enqueue(new Callback<Pojo>() {
+            @Override
+            public void onResponse(Call<Pojo> call, Response<Pojo> response) {
+            }
+
+            @Override
+            public void onFailure(Call<Pojo> call, Throwable t) {
+                countDownLatch.countDown();
+            }
+        });
+        assertThat(countDownLatch.await(3, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    public void pojo_returnCallCancelAfterComplete() throws Exception {
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        AtomicInteger failCount = new AtomicInteger(0);
+        Call<Pojo> pojoCall = service.pojoReturnCall();
+        pojoCall.enqueue(new Callback<Pojo>() {
+            @Override
+            public void onResponse(Call<Pojo> call, Response<Pojo> response) {
+                countDownLatch.countDown();
+            }
+
+            @Override
+            public void onFailure(Call<Pojo> call, Throwable t) {
+                failCount.incrementAndGet();
+            }
+        });
+        assertThat(countDownLatch.await(3, TimeUnit.SECONDS)).isTrue();
+        pojoCall.cancel();
+        assertThat(failCount.intValue()).isZero();
+    }
 }
