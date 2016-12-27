@@ -25,35 +25,15 @@ import java.util.regex.Pattern;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
-/**
- * Default {@link NodeValueCodec} implementation which assumes zNode value is a comma-separated
- * string. Each element of the zNode value represents an endpoint whose format is
- * {@code <host>[:<port_number>[:weight]]}, such as:
- * <ul>
- *   <li>{@code "foo.com"} - default port number, default weight (1000)</li>
- *   <li>{@code "bar.com:8080} - port number 8080, default weight (1000)</li>
- *   <li>{@code "10.0.2.15:0:500} - default port number, weight 500</li>
- *   <li>{@code "192.168.1.2:8443:700} - port number 8443, weight 700</li>
- * </ul>
- * the segment and field delimiter can be specified, default will be "," and ":"
- * Note that the port number must be specified when you want to specify the weight.
- */
-public class DefaultNodeValueCodec implements NodeValueCodec {
+final class DefaultNodeValueCodec implements NodeValueCodec {
 
-    private final String segmentDelimiter;
-    private final String fieldDelimiter;
+    static final DefaultNodeValueCodec INSTANCE = new DefaultNodeValueCodec();
 
-    /**
-     * Create a default codec with segment delimiter ',' and field delimiter ':'.
-     */
-    public DefaultNodeValueCodec() {
-        segmentDelimiter = ",";
-        fieldDelimiter = ":";
-    }
+    private static final String segmentDelimiter = ",";
+    private static final String fieldDelimiter = ":";
 
     @Override
-    public Endpoint decode(byte[] zNodeValue) {
-        final String segment = new String(zNodeValue, StandardCharsets.UTF_8);
+    public Endpoint decode(String segment) {
         final String[] tokens = segment.split(fieldDelimiter);
         final Endpoint endpoint;
         switch (tokens.length) {
@@ -89,13 +69,12 @@ public class DefaultNodeValueCodec implements NodeValueCodec {
     }
 
     @Override
-    public Set<Endpoint> decodeAll(byte[] data) {
+    public Set<Endpoint> decodeAll(String valueString) {
         Set<Endpoint> endpoints = new HashSet<>();
-        String valueString = new String(data, StandardCharsets.UTF_8);
         final Pattern SEGMENT_DELIMITER = Pattern.compile("\\s*" + segmentDelimiter + "\\s*");
         try {
             for (String segment : SEGMENT_DELIMITER.split(valueString)) {
-                endpoints.add(decode(segment.getBytes(StandardCharsets.UTF_8)));
+                endpoints.add(decode(segment));
             }
         } catch (EndpointGroupException e) {
             throw e;
@@ -111,7 +90,7 @@ public class DefaultNodeValueCodec implements NodeValueCodec {
     @Override
     public byte[] encodeAll(Iterable<Endpoint> endpoints) {
         requireNonNull(endpoints, "endpoints");
-        StringBuffer nodeValue = new StringBuffer();
+        StringBuilder nodeValue = new StringBuilder();
         endpoints.forEach(endpoint -> nodeValue.append(endpoint.host()).append(fieldDelimiter).append(
                 endpoint.port()).append(fieldDelimiter).append(endpoint.weight()).append(segmentDelimiter));
         //delete the last unused segment delimiter

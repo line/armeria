@@ -72,7 +72,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     public void connectZk() {
         //crate endpoint group and initialize node value
         if (testedClass.equals(NodeValueEndpointGroup.class)) {
-            setNodeValue(NODE_VALUE_CODEC.encodeAll(sampleEndpoints));
+            setNodeValue(NodeValueCodec.DEFAULT.encodeAll(sampleEndpoints));
             try {
                 endpointGroup = new NodeValueEndpointGroup(
                         instance().connectString().get(), zNode, sessionTimeout);
@@ -113,7 +113,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001, 2),
                                                  Endpoint.of("127.0.0.1", 8002, 3));
         if (testedClass.equals(NodeValueEndpointGroup.class)) {
-            setNodeValue(NODE_VALUE_CODEC.encodeAll(expected));
+            setNodeValue(NodeValueCodec.DEFAULT.encodeAll(expected));
         } else if (testedClass.equals(NodeChildEndpointGroup.class)) {
             //add two more node
             setNodeChild(expected);
@@ -177,7 +177,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
                         try {
                             closeableZooKeeper
                                     .create(zNode + '/' + endpoint.host() + '_' + endpoint.port(),
-                                            NODE_VALUE_CODEC.encode(endpoint),
+                                            NodeValueCodec.DEFAULT.encode(endpoint),
                                             Ids.OPEN_ACL_UNSAFE,
                                             CreateMode.EPHEMERAL);
                             assertExists(zNode + '/' + endpoint.host() + '_' + endpoint.port());

@@ -26,13 +26,21 @@ import com.linecorp.armeria.client.Endpoint;
  * Decode and encode between list of zNode value strings and list of {@link Endpoint}s.
  */
 public interface NodeValueCodec {
+
     /**
-     * Decode a zNode value into a list of {@link Endpoint}s.
-     *
-     * @param zNodeValue zNode value
-     * @return the list of {@link Endpoint}s
+     * Default {@link NodeValueCodec} implementation which assumes zNode value is a comma-separated
+     * string. Each element of the zNode value represents an endpoint whose format is
+     * {@code <host>[:<port_number>[:weight]]}, such as:
+     * <ul>
+     *   <li>{@code "foo.com"} - default port number, default weight (1000)</li>
+     *   <li>{@code "bar.com:8080} - port number 8080, default weight (1000)</li>
+     *   <li>{@code "10.0.2.15:0:500} - default port number, weight 500</li>
+     *   <li>{@code "192.168.1.2:8443:700} - port number 8443, weight 700</li>
+     * </ul>
+     * the segment and field delimiter can be specified, default will be "," and ":"
+     * Note that the port number must be specified when you want to specify the weight.
      */
-    Set<Endpoint> decodeAll(byte[] zNodeValue);
+    NodeValueCodec DEFAULT = DefaultNodeValueCodec.INSTANCE;
 
     /**
      * Decode a zNode value into a set of {@link Endpoint}s.
@@ -40,9 +48,27 @@ public interface NodeValueCodec {
      * @param zNodeValue zNode value
      * @return the list of {@link Endpoint}s
      */
-    default Set<Endpoint> decodeAll(String zNodeValue) {
+    default Set<Endpoint> decodeAll(byte[] zNodeValue) {
         requireNonNull(zNodeValue, "zNodeValue");
-        return decodeAll(zNodeValue.getBytes(StandardCharsets.UTF_8));
+        return decodeAll(new String(zNodeValue, StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Decode a zNode value into a set of {@link Endpoint}s.
+     *
+     * @param zNodeValue zNode value
+     * @return the list of {@link Endpoint}s
+     */
+    Set<Endpoint> decodeAll(String zNodeValue);
+
+    /**
+     * Decode a zNode value to a {@link Endpoint}.
+     * @param zNodeValue ZooKeeper node value
+     * @return an {@link Endpoint}
+     */
+    default Endpoint decode(byte[] zNodeValue) {
+        requireNonNull(zNodeValue, "zNodeValue");
+        return decode(new String(zNodeValue, StandardCharsets.UTF_8));
     }
 
     /**
@@ -50,7 +76,7 @@ public interface NodeValueCodec {
      * @param zNodeValue ZooKeeper node value
      * @return an {@link Endpoint}
      */
-    Endpoint decode(byte[] zNodeValue);
+    Endpoint decode(String zNodeValue);
 
     /**
      * Encode a set of {@link Endpoint}s into a bytes array representation

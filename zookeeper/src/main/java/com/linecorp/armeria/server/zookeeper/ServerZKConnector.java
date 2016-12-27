@@ -25,7 +25,6 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.zookeeper.DefaultNodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.ZKConnector;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
@@ -60,7 +59,7 @@ public class ServerZKConnector extends ZKConnector {
      * @param endpoint        register information
      */
     public ServerZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, endpoint, new DefaultNodeValueCodec());
+        this(zkConnectionStr, zNodePath, sessionTimeout, endpoint, NodeValueCodec.DEFAULT);
         connect();
     }
 

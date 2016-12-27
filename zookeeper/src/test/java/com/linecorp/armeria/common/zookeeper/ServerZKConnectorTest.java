@@ -90,7 +90,7 @@ public class ServerZKConnectorTest extends TestBase implements ZooKeeperAssert, 
             try {
                 sampleEndpoints.forEach(endpoint -> {
                     try {
-                        Assertions.assertThat(NODE_VALUE_CODEC.decode(
+                        Assertions.assertThat(NodeValueCodec.DEFAULT.decode(
                                 zkClient.getData(zNode + '/' + endpoint.host() + '_' + endpoint.port()).get()))
                                   .isEqualTo(
                                           endpoint);

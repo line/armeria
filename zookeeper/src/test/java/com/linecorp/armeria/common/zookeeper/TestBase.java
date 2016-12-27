@@ -38,19 +38,18 @@ public class TestBase {
     protected static final Logger logger = LoggerFactory.getLogger(EndpointGroupTest.class);
     protected static final String zNode = "/testEndPoints";
     protected static final int sessionTimeout = 300000;
-    protected static final NodeValueCodec NODE_VALUE_CODEC = new DefaultNodeValueCodec();
     protected static final Set<Endpoint> sampleEndpoints = ImmutableSet.of(Endpoint.of("127.0.0.1", 1234, 2),
                                                                            Endpoint.of("127.0.0.1", 2345, 4),
                                                                            Endpoint.of("127.0.0.1", 3456, 2));
     private static final Duration duration = Duration.ofSeconds(5);
     @ClassRule
-    public static TemporaryFolder ROOT_FOlDER = new TemporaryFolder();
+    public static final TemporaryFolder ROOT_FOLDER = new TemporaryFolder();
     private static ZKInstance zkInstance;
 
     @BeforeClass
     public static void start() {
         try {
-            zkInstance = ZKFactory.apply().withRootDir(ROOT_FOlDER.newFolder("zookeeper")).create();
+            zkInstance = ZKFactory.apply().withRootDir(ROOT_FOLDER.newFolder("zookeeper")).create();
             zkInstance.start().result(duration);
         } catch (Throwable throwable) {
             fail();

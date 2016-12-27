@@ -26,13 +26,14 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 public class NodeValueCodecTest {
     @Test
     public void convert() {
-        final NodeValueCodec nodeValueCodec = new DefaultNodeValueCodec();
-        assertThat(nodeValueCodec.decodeAll("foo.com, bar.com:8080, 10.0.2.15:0:500, 192.168.1.2:8443:700"))
+        assertThat(NodeValueCodec.DEFAULT
+                           .decodeAll("foo.com, bar.com:8080, 10.0.2.15:0:500, 192.168.1.2:8443:700"))
                 .containsExactlyInAnyOrder(Endpoint.of("foo.com"),
                                            Endpoint.of("bar.com", 8080),
                                            Endpoint.of("10.0.2.15").withWeight(500),
                                            Endpoint.of("192.168.1.2", 8443, 700));
-        assertThatThrownBy(() -> nodeValueCodec.decodeAll("http://foo.com:8001, bar.com:8002"))
+        assertThatThrownBy(() -> NodeValueCodec.DEFAULT
+                .decodeAll("http://foo.com:8001, bar.com:8002"))
                 .isInstanceOf(EndpointGroupException.class);
     }
 }

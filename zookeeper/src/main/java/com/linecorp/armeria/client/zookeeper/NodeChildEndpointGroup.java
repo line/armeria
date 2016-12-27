@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -27,7 +26,6 @@ import org.apache.zookeeper.ZooKeeper;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.zookeeper.DefaultNodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.ZKConnector;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
@@ -51,7 +49,7 @@ public class NodeChildEndpointGroup extends ZKConnector implements EndpointGroup
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
      */
     public NodeChildEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, new DefaultNodeValueCodec());
+        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT);
     }
 
     /**
@@ -114,7 +112,7 @@ public class NodeChildEndpointGroup extends ZKConnector implements EndpointGroup
     @Override
     protected void nodeChange(ZooKeeper zooKeeper, String zNodePath) {
         List<Endpoint> newData = doGetEndpoints(zooKeeper, zNodePath);
-        if (!Arrays.equals(prevData.toArray(), newData.toArray())) {
+        if (!prevData.equals(newData)) {
             prevData = newData;
         }
     }

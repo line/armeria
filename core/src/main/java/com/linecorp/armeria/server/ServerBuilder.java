@@ -57,7 +57,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * // Build a server.
  * Server s = sb.build();
  * }</pre>
- * 
+ *
  * <h2>Example 2</h2>
  * <pre>{@code
  * ServerBuilder sb = new ServerBuilder();
@@ -117,6 +117,7 @@ public final class ServerBuilder {
     }
 
     private final List<ServerPort> ports = new ArrayList<>();
+    private final List<ServerListener> serverListeners = new ArrayList<>();
     private final List<VirtualHost> virtualHosts = new ArrayList<>();
     private final List<ChainedVirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
     private final ChainedVirtualHostBuilder defaultVirtualHostBuilder = new ChainedVirtualHostBuilder(this);
@@ -443,11 +444,19 @@ public final class ServerBuilder {
         return this;
     }
 
+    /**
+     * Adds the specified {@link ServerListener}.
+     */
+    public ServerBuilder serverListener(ServerListener serverListener) {
+        requireNonNull(serverListener, "serverListener");
+        serverListeners.add(serverListener);
+        return this;
+    }
 
     /**
      * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
      * specified by {@link VirtualHost}.
-     * 
+     *
      * @return {@link VirtualHostBuilder} for build the default virtual host
      */
     public ChainedVirtualHostBuilder withDefaultVirtualHost() {
@@ -458,7 +467,7 @@ public final class ServerBuilder {
     /**
      * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
      * specified by {@link VirtualHost}.
-     * 
+     *
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for build the virtual host
      */
@@ -471,7 +480,7 @@ public final class ServerBuilder {
     /**
      * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
      * specified by {@link VirtualHost}.
-     * 
+     *
      * @param defaultHostname default hostname of this virtual host
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for build the virtual host
@@ -540,11 +549,13 @@ public final class ServerBuilder {
             virtualHosts = this.virtualHosts;
         }
 
-        return new Server(new ServerConfig(
+        Server server = new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, numBosses, numWorkers, maxPendingRequests,
                 maxConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix));
+        serverListeners.forEach(listener -> server.addListener(listener));
+        return server;
     }
 
     @Override

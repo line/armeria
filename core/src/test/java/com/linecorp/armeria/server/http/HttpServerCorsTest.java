@@ -18,11 +18,15 @@ package com.linecorp.armeria.server.http;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -33,6 +37,7 @@ import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.cors.CorsServiceBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.test.AbstractServerTest;
 
 import io.netty.util.AsciiString;
@@ -43,6 +48,9 @@ public class HttpServerCorsTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
+        sb.defaultRequestTimeout(Duration.ofMinutes(10));
+//        sb.port(8080, SessionProtocol.H2);
+        sb.gracefulShutdownTimeout(10000, 10000);
         sb.serviceAt("/cors", new AbstractHttpService() {
             @Override
             protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
@@ -66,7 +74,7 @@ public class HttpServerCorsTest extends AbstractServerTest {
         }.decorate(CorsServiceBuilder.forOrigin("http://example.com")
                                      .allowRequestMethods(HttpMethod.POST)
                                      .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                                     .newDecorator()));
+                                     .newDecorator()).decorate(LoggingService::new));
     }
 
     @Test
@@ -77,7 +85,7 @@ public class HttpServerCorsTest extends AbstractServerTest {
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
                            .set(HttpHeaderNames.ORIGIN, "http://example.com")
                            .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "POST")
-        ).aggregate().get();
+        ).aggregate().get(10, TimeUnit.MINUTES);
 
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));

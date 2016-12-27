@@ -9,7 +9,6 @@ import org.apache.zookeeper.ZooKeeper;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.zookeeper.DefaultNodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.ZKConnector;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
@@ -32,7 +31,7 @@ public class NodeValueEndpointGroup extends ZKConnector implements EndpointGroup
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
      */
     public NodeValueEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, new DefaultNodeValueCodec());
+        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT);
     }
 
     /**
