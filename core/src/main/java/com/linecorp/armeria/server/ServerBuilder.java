@@ -445,9 +445,10 @@ public final class ServerBuilder {
     }
 
     /**
-     * Adds the {@link ServerListener}.
+     * Adds the specified {@link ServerListener}.
      */
-    public ServerBuilder serverListner(ServerListener serverListener) {
+    public ServerBuilder serverListener(ServerListener serverListener) {
+        requireNonNull(serverListener, "serverListener");
         serverListeners.add(serverListener);
         return this;
     }
