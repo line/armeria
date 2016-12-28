@@ -15,6 +15,6 @@
  */
 
 /**
- * Health check service for load balancers.
+ * HTTP health check service for load balancers.
  */
 package com.linecorp.armeria.server.http.healthcheck;

@@ -15,6 +15,6 @@
  */
 
 /**
- * Applies HTTP encoding (e.g. GZIP compression) to responses.
+ * HTTP content encoding service.
  */
 package com.linecorp.armeria.server.http.encoding;
