@@ -31,6 +31,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.MoreExecutors;
 
 public class DeferredStreamMessageTest {
 
@@ -140,13 +141,22 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testStreaming() throws Exception {
+    public void testStreamingWithoutExecutor() throws Exception {
+        testStreaming(false);
+    }
+
+    @Test
+    public void testStreamingWithExecutor() throws Exception {
+        testStreaming(true);
+    }
+
+    private void testStreaming(boolean useExecutor) {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
         m.delegate(d);
 
         final List<Object> streamed = new ArrayList<>();
-        m.subscribe(new Subscriber<Object>() {
+        final Subscriber<Object> subscriber = new Subscriber<Object>() {
             @Override
             public void onSubscribe(Subscription s) {
                 streamed.add("onSubscribe");
@@ -167,7 +177,12 @@ public class DeferredStreamMessageTest {
             public void onComplete() {
                 streamed.add("onComplete");
             }
-        });
+        };
+        if (useExecutor) {
+            m.subscribe(subscriber, MoreExecutors.directExecutor());
+        } else {
+            m.subscribe(subscriber);
+        }
 
         assertThat(streamed).containsExactly("onSubscribe");
         d.write("A");
