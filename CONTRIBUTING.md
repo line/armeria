@@ -28,6 +28,12 @@ After importing the project, import the IDE settings as well.
 - [`settings.jar`](https://raw.githubusercontent.com/line/armeria/master/settings/intellij_idea/settings.jar) -
   See [Importing settings from a JAR archive](https://www.jetbrains.com/help/idea/2016.3/exporting-and-importing-settings.html#d2016665e55).
 - Make sure to use 'LINE OSS' code style and inspection profile.
+- Although optional, if you want to run Checkstyle from IDEA, install the
+  [Checkstyle-IDEA plugin](https://github.com/jshiell/checkstyle-idea), import and activate
+  the rule file at `settings/checkstyle/checkstyle.xml`.
+  - It will ask for the value of the `checkstyleConfigDir` property.
+    Set it to `<project root path>/settings/checkstyle`.
+  - Set the 'Scan scope' to 'All sources (including tests)'.
 
 #### Eclipse
 
@@ -41,6 +47,13 @@ After importing the project, import the IDE settings as well.
   <details><summary>Click here to see the screenshot.</summary>
     <img src="https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/save_actions.png">
   </details>
+- Although optional, if you want to run Checkstyle from Eclipse, Install the
+  [Eclipse Checkstyle Plugin](http://eclipse-cs.sourceforge.net/), import and activate
+  the rule file at `settings/checkstyle/checkstyle.xml`.
+  - Set the 'Type' to 'External Configuration File'.
+  - Click the 'Additional properties...' button. A new dialog will show up.
+  - Click the 'Find unresolved properties' button. It will find the `checkstyleConfigDir` property.
+    Choose 'Yes' to add it. Set it to `<project root path>/settings/checkstyle`.
 
 ### Checklist for your pull request
 

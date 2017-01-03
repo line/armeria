@@ -15,6 +15,6 @@
  */
 
 /**
- * HTTP content encoding service.
+ * HTTP authorization service.
  */
-package com.linecorp.armeria.server.http.encoding;
+package com.linecorp.armeria.server.http.auth;

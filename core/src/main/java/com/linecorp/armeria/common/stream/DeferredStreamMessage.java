@@ -152,7 +152,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> s, Executor executor) {
+    public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         subscribe0(subscriber, executor);
