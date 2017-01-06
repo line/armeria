@@ -25,6 +25,11 @@ import com.linecorp.armeria.client.Endpoint;
 public interface EndpointSelectionStrategy {
 
     /**
+     * Simple round-robin strategy.
+     */
+    EndpointSelectionStrategy ROUND_ROBIN = new RoundRobinStrategy();
+
+    /**
      * Weighted round-robin strategy.
      */
     EndpointSelectionStrategy WEIGHTED_ROUND_ROBIN = new WeightedRoundRobinStrategy();

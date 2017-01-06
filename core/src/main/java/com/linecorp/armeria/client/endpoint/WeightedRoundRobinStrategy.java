@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +31,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
     @Override
     @SuppressWarnings("unchecked")
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
-        return new RoundRobinSelector(endpointGroup);
+        return new WeightedRoundRobinSelector(endpointGroup);
     }
 
     /**
@@ -45,27 +44,12 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
      *   <li>if endpoint weights are 3,5,7, then select result is abcabcabcbcbcbb abcabcabcbcbcbb ...</li>
      * </ul>
      */
-    static final class RoundRobinSelector implements EndpointSelector {
+    static final class WeightedRoundRobinSelector implements EndpointSelector {
         private final EndpointGroup endpointGroup;
-
         private final AtomicLong sequence = new AtomicLong();
 
-        private int minWeight = Integer.MAX_VALUE;
-
-        private int maxWeight = Integer.MIN_VALUE;
-
-        private int sumWeight;
-
-        RoundRobinSelector(EndpointGroup endpointGroup) {
-            requireNonNull(endpointGroup, "endpointGroup");
-
-            this.endpointGroup = endpointGroup;
-            endpointGroup.endpoints().forEach(e -> {
-                int weight = e.weight();
-                minWeight = Math.min(minWeight, weight);
-                maxWeight = Math.max(maxWeight, weight);
-                sumWeight += weight;
-            });
+        WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
+            this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
         }
 
         @Override
@@ -80,16 +64,28 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
         @Override
         public Endpoint select() {
-            List<Endpoint> endpoints = endpointGroup.endpoints();
             long currentSequence = sequence.getAndIncrement();
 
-            if (minWeight < maxWeight) {
-                HashMap<Endpoint, AtomicInteger> endpointWeights = new LinkedHashMap<>();
-                for (Endpoint endpoint : endpoints) {
-                    endpointWeights.put(endpoint, new AtomicInteger(endpoint.weight()));
-                }
+            List<Endpoint> endpoints = endpointGroup.endpoints();
+            if (endpoints.isEmpty()) {
+                throw new EndpointGroupException(endpoints + " is empty");
+            }
+            int minWeight = Integer.MAX_VALUE;
+            int maxWeight = Integer.MIN_VALUE;
+            int totalWeight = 0;
 
-                int mod = (int) (currentSequence % sumWeight);
+            // TODO(ide) Build endpointWeights map is too expensive. Add endpoint change notification mechanism.
+            Map<Endpoint, AtomicInteger> endpointWeights = new LinkedHashMap<>(endpoints.size());
+            for (Endpoint endpoint : endpoints) {
+                int weight = endpoint.weight();
+                endpointWeights.put(endpoint, new AtomicInteger(weight));
+                minWeight = Math.min(minWeight, weight);
+                maxWeight = Math.max(maxWeight, weight);
+                totalWeight += weight;
+            }
+
+            if (minWeight < maxWeight) {
+                int mod = (int) (currentSequence % totalWeight);
                 for (int i = 0; i < maxWeight; i++) {
                     for (Map.Entry<Endpoint, AtomicInteger> entry : endpointWeights.entrySet()) {
                         AtomicInteger weight = entry.getValue();
@@ -103,11 +99,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                     }
                 }
             }
-            if (endpoints.isEmpty()) {
-                throw new EndpointGroupException(endpointGroup + " is empty");
-            }
-            //endpoints weight equal
-            return endpoints.get((int) (currentSequence % endpoints.size()));
+            return endpoints.get((int) (Math.abs(currentSequence) % endpoints.size()));
         }
     }
 }
