@@ -99,7 +99,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                     }
                 }
             }
-            return endpoints.get((int) (Math.abs(currentSequence) % endpoints.size()));
+            return endpoints.get((int) Math.abs(currentSequence % endpoints.size()));
         }
     }
 }

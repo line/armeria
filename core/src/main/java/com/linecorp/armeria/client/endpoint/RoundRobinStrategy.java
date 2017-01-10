@@ -58,12 +58,12 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
         @Override
         public Endpoint select() {
             List<Endpoint> endpoints = endpointGroup.endpoints();
-            long currentSequence = sequence.getAndIncrement();
+            int currentSequence = sequence.getAndIncrement();
 
             if (endpoints.isEmpty()) {
                 throw new EndpointGroupException(endpointGroup + " is empty");
             }
-            return endpoints.get((int) (Math.abs(currentSequence) % endpoints.size()));
+            return endpoints.get(Math.abs(currentSequence % endpoints.size()));
         }
     }
 }
