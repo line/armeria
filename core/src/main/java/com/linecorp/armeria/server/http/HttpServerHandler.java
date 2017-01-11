@@ -56,6 +56,7 @@ import com.linecorp.armeria.internal.http.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.http.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.http.HttpObjectEncoder;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.server.GracefulShutdownSupport;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.ServerConfig;
@@ -149,6 +150,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private final ServerConfig config;
+    private final GracefulShutdownSupport gracefulShutdownSupport;
+
     private SessionProtocol protocol;
     private HttpObjectEncoder responseEncoder;
 
@@ -156,14 +159,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private boolean isReading;
     private boolean handledLastRequest;
 
-    HttpServerHandler(ServerConfig config, SessionProtocol protocol) {
+    HttpServerHandler(ServerConfig config,
+                      GracefulShutdownSupport gracefulShutdownSupport,
+                      SessionProtocol protocol) {
+
         assert protocol == SessionProtocol.H1 ||
                protocol == SessionProtocol.H1C ||
                protocol == SessionProtocol.H2;
 
         this.config = requireNonNull(config, "config");
-        this.protocol = requireNonNull(protocol, "protocol");
+        this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
+        this.protocol = requireNonNull(protocol, "protocol");
         if (protocol == SessionProtocol.H1 || protocol == SessionProtocol.H1C) {
             responseEncoder = new Http1ObjectEncoder(true);
         }
@@ -309,6 +316,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
+            gracefulShutdownSupport.inc();
             unfinishedRequests++;
             res.closeFuture().handle(voidFunction((ret, cause) -> {
                 req.abort();
@@ -318,6 +326,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     logBuilder.endRequest(cause);
                 }
                 eventLoop.execute(() -> {
+                    gracefulShutdownSupport.dec();
                     if (--unfinishedRequests == 0 && handledLastRequest) {
                         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                     }

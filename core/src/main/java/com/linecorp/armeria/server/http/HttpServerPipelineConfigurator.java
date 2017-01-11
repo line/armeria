@@ -19,13 +19,13 @@ package com.linecorp.armeria.server.http;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.FlushConsolidationHandler;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.http.Http2GoAwayListener;
+import com.linecorp.armeria.server.GracefulShutdownSupport;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerPort;
 
@@ -72,7 +72,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
     private final ServerConfig config;
     private final ServerPort port;
     private final DomainNameMapping<SslContext> sslContexts;
-    private final Optional<? extends ChannelHandler> gracefulShutdownHandler;
+    private final GracefulShutdownSupport gracefulShutdownSupport;
 
     /**
      * Creates a new instance.
@@ -80,12 +80,12 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
     public HttpServerPipelineConfigurator(
             ServerConfig config, ServerPort port,
             DomainNameMapping<SslContext> sslContexts,
-            Optional<? extends ChannelHandler> gracefulShutdownHandler) {
+            GracefulShutdownSupport gracefulShutdownSupport) {
 
         this.config = requireNonNull(config, "config");
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
-        this.gracefulShutdownHandler = requireNonNull(gracefulShutdownHandler);
+        this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
     }
 
     @Override
@@ -107,14 +107,13 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
     private void configureHttp(ChannelPipeline p) {
         p.addLast(new Http2PrefaceOrHttpHandler());
         configureRequestCountingHandlers(p);
-        p.addLast(new HttpServerHandler(config, SessionProtocol.H1C));
+        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1C));
     }
 
     private void configureRequestCountingHandlers(ChannelPipeline p) {
         if (config.idleTimeoutMillis() > 0) {
             p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis()));
         }
-        gracefulShutdownHandler.ifPresent(p::addLast);
     }
 
     private void configureHttps(ChannelPipeline p) {
@@ -172,7 +171,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p));
             configureRequestCountingHandlers(p);
-            p.addLast(new HttpServerHandler(config, SessionProtocol.H2));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H2));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -180,7 +179,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
             p.addLast(new HttpServerCodec());
             p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
             configureRequestCountingHandlers(p);
-            p.addLast(new HttpServerHandler(config, SessionProtocol.H1));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1));
         }
     }
 
