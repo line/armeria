@@ -41,19 +41,19 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
+import com.linecorp.armeria.server.zookeeper.ServerZKConnector;
 import com.linecorp.armeria.server.zookeeper.listener.ZooKeeperListener;
 
 import junitextensions.OptionAssert;
 import zookeeperjunit.ZooKeeperAssert;
 
 public class ServerZKConnectorTest extends TestBase implements ZooKeeperAssert, OptionAssert {
-
     protected static final KeeperState[] expectedStates = {
             KeeperState.Disconnected, KeeperState.Expired,
             KeeperState.SyncConnected, KeeperState.SyncConnected, KeeperState.Disconnected
     };
     List<Server> servers;
-    List<ZKConnector> zkConnectors;
+    List<ServerZKConnector> zkConnectors;
     List<ZooKeeperListener> listeners;
 
     @Before
@@ -116,26 +116,9 @@ public class ServerZKConnectorTest extends TestBase implements ZooKeeperAssert, 
         });
     }
 
-    /**
-     * suppose we delete a normal server's ZooKeeper node, it will recover automatically.
-     */
-    @Test
-    public void testNodeRecover() {
-        Endpoint sampleEndpoint = listeners.get(0).getEndpoint();
-        instance().connect().forEach(
-                zkClient -> zkClient.delete(zNode + '/' + sampleEndpoint.host() + '_' + sampleEndpoint.port()));
-        try {
-            //wait few seconds to let the server recover automatically
-            Thread.sleep(2 * 1000);
-        } catch (InterruptedException e) {
-            fail(e.getMessage());
-        }
-        assertExists(zNode + '/' + sampleEndpoint.host() + '_' + sampleEndpoint.port());
-    }
-
     @Test
     public void testConnectionRecovery() throws Exception {
-        ZKConnector zkConnector = zkConnectors.get(0);
+        ServerZKConnector zkConnector = zkConnectors.get(0);
         zkConnector.enableStateRecording();
         ZooKeeper zkHandler1 = zkConnector.underlyingClient();
         CountDownLatch latch = new CountDownLatch(1);

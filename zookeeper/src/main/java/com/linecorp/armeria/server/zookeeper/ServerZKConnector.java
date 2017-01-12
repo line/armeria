@@ -17,24 +17,26 @@ package com.linecorp.armeria.server.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.ZKConnector;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
+import com.linecorp.armeria.common.zookeeper.ZKListener;
 
 /**
  * A Server connection maintains the underlying connection and hearing notice from a ZooKeeper cluster.
  */
-public class ServerZKConnector extends ZKConnector {
+public class ServerZKConnector {
     private final Endpoint endpoint;
     private final NodeValueCodec nodeValueCodec;
+    private final ZKConnector zkConnector;
 
     /**
      * Create a server connector.
@@ -46,9 +48,24 @@ public class ServerZKConnector extends ZKConnector {
      */
     public ServerZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint,
                              NodeValueCodec nodeValueCodec) {
-        super(zkConnectionStr, zNodePath, sessionTimeout);
+        zkConnector = new ZKConnector(zkConnectionStr, zNodePath, sessionTimeout, new ZKListener() {
+            @Override
+            public void nodeChildChange(Map<String, String> newChildrenValue) {
+            }
+
+            @Override
+            public void nodeValueChange(String newValue) {
+            }
+
+            @Override
+            public void connected() {
+                zkConnector.createChild(endpoint.host() + '_' + endpoint.port(),
+                                        nodeValueCodec.encode(endpoint));
+            }
+        });
         this.endpoint = requireNonNull(endpoint, "endpoint");
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
+        zkConnector.connect();
     }
 
     /**
@@ -60,49 +77,24 @@ public class ServerZKConnector extends ZKConnector {
      */
     public ServerZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
         this(zkConnectionStr, zNodePath, sessionTimeout, endpoint, NodeValueCodec.DEFAULT);
-        connect();
     }
 
-    @Override
-    protected void postConnected(ZooKeeper zooKeeper) {
-        try {
-            //first check the parent node
-            if (zooKeeper.exists(getzNodePath(), false) == null) {
-                //parent node not exist, create it
-                try {
-                    zooKeeper.create(getzNodePath(), endpoint.host().getBytes(StandardCharsets.UTF_8),
-                                     Ids.OPEN_ACL_UNSAFE,
-                                     CreateMode.PERSISTENT);
-                } catch (KeeperException exception) {
-                    //other server has created the node in concurrently
-                }
-            }
-            checkNode(zooKeeper);
-        } catch (Exception ex) {
-            throw new ZooKeeperException(ex);
-        }
+    public void close(boolean active) {
+        zkConnector.close(active);
     }
 
-    @Override
-    protected void nodeChange(ZooKeeper zooKeeper, String path) {
-        if (path.equals(getzNodePath() + '/' + endpoint.host() + '_' + endpoint.port())) {
-            //child node changed
-            try {
-                //check node
-                checkNode(zooKeeper);
-            } catch (Exception e) {
-                throw new ZooKeeperException(e);
-            }
-        }
+    @VisibleForTesting
+    public void enableStateRecording() {
+        zkConnector.enableStateRecording();
     }
 
-    private void checkNode(ZooKeeper zooKeeper) throws KeeperException, InterruptedException {
-        //parent node exist, register the current host, and leave a watch on it
-        if (zooKeeper.exists(getzNodePath() + '/' + endpoint.host() + '_' + endpoint.port(), true) == null) {
-            zooKeeper.create(getzNodePath() + '/' + endpoint.host() + '_' + endpoint.port(),
-                             nodeValueCodec.encode(endpoint),
-                             Ids.OPEN_ACL_UNSAFE,
-                             CreateMode.EPHEMERAL);
-        }
+    @VisibleForTesting
+    public ZooKeeper underlyingClient() {
+        return zkConnector.underlyingClient();
+    }
+
+    @VisibleForTesting
+    public BlockingQueue<KeeperState> stateQueue() {
+        return zkConnector.stateQueue();
     }
 }

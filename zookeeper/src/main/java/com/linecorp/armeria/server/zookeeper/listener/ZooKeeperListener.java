@@ -49,6 +49,7 @@ public class ZooKeeperListener implements ServerListener {
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.endpoint = requireNonNull(endpoint, "endpoint");
         this.sessionTimeout = sessionTimeout;
+
     }
 
     @Override

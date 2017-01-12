@@ -15,12 +15,15 @@
  */
 package com.linecorp.armeria.common.zookeeper;
 
+import static com.linecorp.armeria.common.zookeeper.ListenerType.NodeChild;
+import static com.linecorp.armeria.common.zookeeper.ListenerType.NodeValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
@@ -41,55 +44,47 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.zookeeper.NodeChildEndpointGroup;
-import com.linecorp.armeria.client.zookeeper.NodeValueEndpointGroup;
+import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
 
 import junitextensions.OptionAssert;
 import zookeeperjunit.ZooKeeperAssert;
 
 @RunWith(Parameterized.class)
 public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, OptionAssert {
-
     protected static final KeeperState[] expectedStates = {
             KeeperState.Disconnected, KeeperState.Expired,
             KeeperState.SyncConnected, KeeperState.Disconnected
     };
-
     @SuppressWarnings("VisibilityModifier")
     @Parameter
-    public Class testedClass;
-    private EndpointGroup endpointGroup;
+    public ListenerType listenerType;
+    private ZooKeeperEndpointGroup endpointGroup;
 
     @Parameters
     public static Collection endpointGroups() {
-        return Arrays.asList(NodeChildEndpointGroup.class,
-                             NodeValueEndpointGroup.class
-        );
+        return Collections.unmodifiableSet(EnumSet.of( NodeChild));
     }
 
     @Before
     public void connectZk() {
         //crate endpoint group and initialize node value
-        if (testedClass.equals(NodeValueEndpointGroup.class)) {
-            setNodeValue(NodeValueCodec.DEFAULT.encodeAll(sampleEndpoints));
-            try {
-                endpointGroup = new NodeValueEndpointGroup(
-                        instance().connectString().get(), zNode, sessionTimeout);
-            } catch (ZooKeeperException e) {
-                fail();
-            }
-        } else if (testedClass.equals(NodeChildEndpointGroup.class)) {
-            setNodeChild(sampleEndpoints);
-            try {
-                endpointGroup = new NodeChildEndpointGroup(
-                        instance().connectString().get(), zNode, sessionTimeout);
-            } catch (ZooKeeperException e) {
-                fail();
-            }
+        switch (listenerType) {
+            case NodeValue:
+                setNodeValue(NodeValueCodec.DEFAULT.encodeAll(sampleEndpoints));
+                break;
+            case NodeChild:
+                setNodeChild(sampleEndpoints);
+                break;
+        }
+        try {
+            endpointGroup = new ZooKeeperEndpointGroup(
+                    instance().connectString().get(), zNode, sessionTimeout, listenerType);
+        } catch (ZooKeeperException e) {
+            e.printStackTrace();
+            fail();
         }
         //enable state recording
-        ((ZKConnector) endpointGroup).enableStateRecording();
+        endpointGroup.enableStateRecording();
     }
 
     @After
@@ -99,6 +94,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
             //clear node data
             instance().connect().forEach(zooKeeper -> zooKeeper.deleteRecursively(zNode));
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
     }
@@ -112,22 +108,25 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     public void testUpdateEndpointGroup() {
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001, 2),
                                                  Endpoint.of("127.0.0.1", 8002, 3));
-        if (testedClass.equals(NodeValueEndpointGroup.class)) {
-            setNodeValue(NodeValueCodec.DEFAULT.encodeAll(expected));
-        } else if (testedClass.equals(NodeChildEndpointGroup.class)) {
-            //add two more node
-            setNodeChild(expected);
-            //construct the final expected node list
-            Builder<Endpoint> builder = ImmutableSet.builder();
-            builder.addAll(sampleEndpoints).addAll(expected);
-            expected = builder.build();
+        switch (listenerType) {
+            case NodeValue:
+                setNodeValue(NodeValueCodec.DEFAULT.encodeAll(expected));
+                break;
+            case NodeChild:
+                //add two more node
+                setNodeChild(expected);
+                //construct the final expected node list
+                Builder<Endpoint> builder = ImmutableSet.builder();
+                builder.addAll(sampleEndpoints).addAll(expected);
+                expected = builder.build();
+                break;
         }
         assertThat(endpointGroup.endpoints()).hasSameElementsAs(expected);
     }
 
     @Test
     public void testConnectionRecovery() throws Exception {
-        ZooKeeper zkHandler1 = ((ZKConnector) endpointGroup).underlyingClient();
+        ZooKeeper zkHandler1 = endpointGroup.underlyingClient();
         CountDownLatch latch = new CountDownLatch(1);
         ZooKeeper zkHandler2;
         //create a new handler with the same sessionId and password
@@ -140,7 +139,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
         //once connected, close the new handler to cause the original handler session expire
         zkHandler2.close();
         for (KeeperState state : expectedStates) {
-            assertEquals(state, ((ZKConnector) endpointGroup).stateQueue().take());
+            assertEquals(state, endpointGroup.stateQueue().take());
         }
         testGetEndpointGroup();
     }
@@ -167,7 +166,6 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
                             closeableZooKeeper
                                     .create(zNode, null, Ids.OPEN_ACL_UNSAFE,
                                             CreateMode.PERSISTENT);
-                            assertExists(zNode);
                         }
                     } catch (Throwable throwable) {
                         fail();
@@ -180,7 +178,6 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
                                             NodeValueCodec.DEFAULT.encode(endpoint),
                                             Ids.OPEN_ACL_UNSAFE,
                                             CreateMode.EPHEMERAL);
-                            assertExists(zNode + '/' + endpoint.host() + '_' + endpoint.port());
                         } catch (Exception e) {
                             fail();
                             logger.error("failed to create node children", e.getMessage());
