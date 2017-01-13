@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import com.linecorp.armeria.client.backoff.Backoff;
 import com.linecorp.armeria.client.endpoint.AbstractServiceServer;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -36,7 +37,7 @@ public class RetryingRpcClientTest {
             HelloService.Iface client = new ClientBuilder(
                     "tbinary+http://127.0.0.1:" + server.port() + "/thrift")
                     .decorator(RpcRequest.class, RpcResponse.class,
-                               RetryingRpcClient.newDecorator(3))
+                               RetryingRpcClient.newDecorator())
                     .build(HelloService.Iface.class);
             when(serviceHandler.hello(anyString()))
                     .thenThrow(new IllegalArgument())
@@ -53,7 +54,8 @@ public class RetryingRpcClientTest {
             HelloService.Iface client = new ClientBuilder(
                     "tbinary+http://127.0.0.1:" + server.port() + "/thrift")
                     .decorator(RpcRequest.class, RpcResponse.class,
-                               RetryingRpcClient.newDecorator(1))
+                               RetryingRpcClient.newDecorator(RetryRequestStrategy.always(),
+                                                              () -> Backoff.withoutDelay().withMaxAttempts(1)))
                     .build(HelloService.Iface.class);
             when(serviceHandler.hello(anyString()))
                     .thenThrow(new IllegalArgument());

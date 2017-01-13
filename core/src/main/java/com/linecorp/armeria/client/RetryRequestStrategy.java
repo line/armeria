@@ -1,6 +1,7 @@
 package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 
 /**
  * Provides custom condition on whether a failed request should be retried.
@@ -8,13 +9,13 @@ import com.linecorp.armeria.common.Request;
  * @param <O> the response type
  */
 @FunctionalInterface
-public interface RetryRequestStrategy<I, O> {
+public interface RetryRequestStrategy<I extends Request, O extends Response> {
 
-    static <I extends Request, O> RetryRequestStrategy<I, O> always() {
+    static <I extends Request, O extends Response> RetryRequestStrategy<I, O> always() {
         return (unused1, unused2, unused3) -> true;
     }
 
-    static <I extends Request, O> RetryRequestStrategy<I, O> never() {
+    static <I extends Request, O extends Response> RetryRequestStrategy<I, O> never() {
         return (unused1, unused2, unused3) -> false;
     }
 

@@ -35,4 +35,9 @@ final class CompositeBackoff implements Backoff {
     public long nextIntervalMillis() {
         return backoffs.stream().mapToLong(Backoff::nextIntervalMillis).sum();
     }
+
+    @Override
+    public int maxRetries() {
+        return backoffs.stream().mapToInt(Backoff::maxRetries).max().getAsInt();
+    }
 }

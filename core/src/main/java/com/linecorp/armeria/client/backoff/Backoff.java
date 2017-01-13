@@ -63,6 +63,14 @@ public interface Backoff {
     long nextIntervalMillis();
 
     /**
+     * Returns max number of attempts a client can retry a request in a single retry operation.
+     * Default attemtps is {@code 5}.
+     */
+    default int maxRetries() {
+        return 3;
+    }
+
+    /**
      * Returns a {@link Backoff} that provides an interval that increases using
      * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
      */
@@ -71,9 +79,9 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff}, with the specified maximum backoff time.
+     * Returns a {@link Backoff}, with the specified attempts.
      */
-    default Backoff upTo(long maxBackoffMillis) {
-        return () -> Math.max(maxBackoffMillis, nextIntervalMillis());
+    default Backoff withMaxAttempts(int maxRetries) {
+        return new AttemptLimitingBackoff(this, maxRetries);
     }
 }

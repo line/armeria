@@ -33,19 +33,18 @@ import io.netty.channel.EventLoop;
 /**
  * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.
  */
-public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
+public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     private static final RetryException RETRY_EXCEPTION = Exceptions.clearTrace(new RetryException());
 
-    private final RetryRequestStrategy<? super RpcRequest, Object> retryStrategy;
+    private final RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy;
 
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
     public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
-    newDecorator(int retries) {
+    newDecorator() {
         return delegate -> new RetryingRpcClient(delegate,
                                                  RetryRequestStrategy.always(),
-                                                 retries,
                                                  Backoff::withoutDelay);
     }
 
@@ -53,9 +52,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
     public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
-    newDecorator(int retries,
-                 RetryRequestStrategy<? super RpcRequest, Object> retryRequestStrategy) {
-        return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy, retries,
+    newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy) {
+        return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy,
                                                  Backoff::withoutDelay);
     }
 
@@ -63,26 +61,26 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
     public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
-    newDecorator(int retries,
-                 RetryRequestStrategy<? super RpcRequest, Object> retryRequestStrategy,
+    newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy,
                  Supplier<? extends Backoff> backoffSupplier) {
-        return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy, retries, backoffSupplier);
+        return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy, backoffSupplier);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    private RetryingRpcClient(Client<? super RpcRequest, ? extends RpcResponse> delegate,
-                              RetryRequestStrategy<? super RpcRequest, Object> retryStrategy,
-                              int retries, Supplier<? extends Backoff> backoffSupplier) {
-        super(delegate, retries, backoffSupplier);
+    protected RetryingRpcClient(Client<? super RpcRequest, ? extends RpcResponse> delegate,
+                                RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy,
+                                Supplier<? extends Backoff> backoffSupplier) {
+        super(delegate, backoffSupplier);
         this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
     }
 
     @Override
     public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         DefaultRpcResponse responseFuture = new DefaultRpcResponse();
-        retry(maxRetries(), newBackoff(), ctx, req, () -> {
+        Backoff backoff = newBackoff();
+        retry(backoff.maxRetries(), backoff, ctx, req, () -> {
             try {
                 return delegate().execute(ctx, req);
             } catch (Exception e) {
@@ -103,7 +101,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                     return;
                 }
                 exception = thrown;
-            } else if (!retryStrategy.shouldRetry(req, result, null)) {
+            } else if (!retryStrategy.shouldRetry(req, response, null)) {
                 exception = RETRY_EXCEPTION;
             } else {
                 responseFuture.complete(result);
