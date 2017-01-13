@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.backoff.Backoff;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.EventLoop;
 
@@ -33,7 +34,7 @@ import io.netty.channel.EventLoop;
  * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.
  */
 public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
-    private static final RetryException RETRY_EXCEPTION = new RetryException("need to retry request");
+    private static final RetryException RETRY_EXCEPTION = Exceptions.clearTrace(new RetryException());
 
     private final RetryRequestStrategy<? super RpcRequest, Object> retryStrategy;
 
@@ -127,9 +128,5 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
     private static final class RetryException extends RuntimeException {
         private static final long serialVersionUID = -3816065469543230534L;
-
-        private RetryException(String message) {
-            super(message);
-        }
     }
 }
