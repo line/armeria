@@ -65,16 +65,15 @@ public class LoggingService<I extends Request, O extends Response> extends Decor
         return delegate().serve(ctx, req);
     }
 
-
     // FIXME(trustin): Format properly.
-    private void logRequest(RequestLog log) {
+    protected void logRequest(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
         if (level.isEnabled(logger)) {
             level.log(logger, REQUEST_FORMAT, log.toStringRequestOnly());
         }
     }
 
-    private void logResponse(RequestLog log) {
+    protected void logResponse(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
         if (level.isEnabled(logger)) {
             level.log(logger, RESPONSE_FORMAT, log.toStringResponseOnly());
