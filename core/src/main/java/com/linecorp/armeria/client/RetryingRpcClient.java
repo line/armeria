@@ -33,6 +33,8 @@ import io.netty.channel.EventLoop;
  * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.
  */
 public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
+    private static final RetryException RETRY_EXCEPTION = new RetryException("need to retry request");
+
     private final RetryRequestStrategy<? super RpcRequest, Object> retryStrategy;
 
     /**
@@ -101,7 +103,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 }
                 exception = thrown;
             } else if (!retryStrategy.shouldRetry(req, result, null)) {
-                exception = new RuntimeException("need to retry request");
+                exception = RETRY_EXCEPTION;
             } else {
                 responseFuture.complete(result);
                 return;
@@ -121,5 +123,13 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 }
             }
         }));
+    }
+
+    private static final class RetryException extends RuntimeException {
+        private static final long serialVersionUID = -3816065469543230534L;
+
+        private RetryException(String message) {
+            super(message);
+        }
     }
 }
