@@ -70,4 +70,10 @@ public interface Backoff {
         return new CompositeBackoff(this, random(minJitterMillis, maxJitterMillis));
     }
 
+    /**
+     * Returns a {@link Backoff}, with the specified maximum backoff time.
+     */
+    default Backoff upTo(long maxBackoffMillis) {
+        return () -> Math.max(maxBackoffMillis, nextIntervalMillis());
+    }
 }

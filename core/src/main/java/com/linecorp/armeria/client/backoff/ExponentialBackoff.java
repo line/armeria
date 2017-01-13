@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client.backoff;
 
-public final class ExponentialBackoff implements Backoff {
+final class ExponentialBackoff implements Backoff {
     private long currentIntervalMillis;
     private final long maxIntervalMillis;
     private final float multiplier;

@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client.backoff;
 
-public final class FixedBackoff implements Backoff {
+final class FixedBackoff implements Backoff {
     static final Backoff NO_DELAY = new FixedBackoff(0);
 
     private final long intervalMillis;

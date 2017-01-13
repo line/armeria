@@ -20,7 +20,7 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
-public final class CompositeBackoff implements Backoff {
+final class CompositeBackoff implements Backoff {
     private final List<Backoff> backoffs;
 
     CompositeBackoff(Collection<? extends Backoff> backoffs) {
