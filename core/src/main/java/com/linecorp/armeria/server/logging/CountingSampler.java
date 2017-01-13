@@ -63,7 +63,7 @@ final class CountingSampler extends Sampler {
     };
 
     private final BitSet sampleDecisions;
-    private int i; // guarded by this
+    private int counter; // guarded by this
 
     /** Fills a bitset with decisions according to the supplied rate. */
     private CountingSampler(float rate) {
@@ -73,7 +73,7 @@ final class CountingSampler extends Sampler {
 
     /**
      * @param rate 0 means never sample, 1 means always sample. Otherwise minimum sample rate is 0.01,
-     * or 1% of traces
+     *             or 1% of traces
      */
     public static Sampler create(final float rate) {
         if (rate == 0) {
@@ -88,7 +88,6 @@ final class CountingSampler extends Sampler {
 
     /**
      * Reservoir sampling algorithm borrowed from Stack Overflow.
-     *
      * http://stackoverflow.com/questions/12817946/generate-a-random-bitset-with-n-1s
      */
     private static BitSet randomBitSet(int size, int cardinality, Random rnd) {
@@ -116,9 +115,9 @@ final class CountingSampler extends Sampler {
      */
     @Override
     public synchronized boolean isSampled() {
-        boolean result = sampleDecisions.get(i++);
-        if (i == 100) {
-            i = 0;
+        boolean result = sampleDecisions.get(counter++);
+        if (counter == 100) {
+            counter = 0;
         }
         return result;
     }

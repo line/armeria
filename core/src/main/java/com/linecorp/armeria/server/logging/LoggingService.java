@@ -65,7 +65,9 @@ public class LoggingService<I extends Request, O extends Response> extends Decor
         return delegate().serve(ctx, req);
     }
 
-    // FIXME(trustin): Format properly.
+    /**
+     * Logs a stringified request of {@link RequestLog}.
+     */
     protected void logRequest(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
         if (level.isEnabled(logger)) {
@@ -73,6 +75,9 @@ public class LoggingService<I extends Request, O extends Response> extends Decor
         }
     }
 
+    /**
+     * Logs a stringified response of {@link RequestLog}.
+     */
     protected void logResponse(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
         if (level.isEnabled(logger)) {
