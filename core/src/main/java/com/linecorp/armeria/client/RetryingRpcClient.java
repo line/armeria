@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.client.backoff.Backoff;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -31,7 +32,7 @@ import io.netty.channel.EventLoop;
 /**
  * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.
  */
-public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
+public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     private final RetryRequestStrategy<? super RpcRequest, Object> retryStrategy;
 
     /**
@@ -40,7 +41,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
     newDecorator(int retries) {
         return delegate -> new RetryingRpcClient(delegate,
-                                                 RetryRequestStrategy.alwaysFalse(),
+                                                 RetryRequestStrategy.always(),
                                                  retries,
                                                  Backoff::withoutDelay);
     }
@@ -91,14 +92,23 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     private void retry(int times, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
                        Supplier<RpcResponse> action, DefaultRpcResponse responseFuture) {
         RpcResponse response = action.get();
-        response.thenAccept(result -> {
-            if (retryStrategy.shouldRetry(req, result)) {
-                throw new RuntimeException("need to retry request");
+        response.handle(voidFunction((result, thrown) -> {
+            final Throwable exception;
+            if (thrown != null) {
+                if (!retryStrategy.shouldRetry(req, null, thrown)) {
+                    responseFuture.completeExceptionally(thrown);
+                    return;
+                }
+                exception = thrown;
+            } else if (!retryStrategy.shouldRetry(req, result, null)) {
+                exception = new RuntimeException("need to retry request");
+            } else {
+                responseFuture.complete(result);
+                return;
             }
-            responseFuture.complete(result);
-        }).exceptionally(voidFunction(thrown -> {
+
             if (times <= 0) {
-                responseFuture.completeExceptionally(thrown);
+                responseFuture.completeExceptionally(exception);
             } else {
                 long nextInterval = backoff.nextIntervalMillis();
                 EventLoop eventLoop = ctx.eventLoop().next();

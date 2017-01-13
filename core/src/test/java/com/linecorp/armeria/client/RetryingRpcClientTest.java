@@ -1,11 +1,13 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.apache.thrift.TApplicationException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -42,6 +44,21 @@ public class RetryingRpcClientTest {
                     .thenReturn("world");
             assertThat(client.hello("hello")).isEqualTo("world");
             verify(serviceHandler, times(3)).hello("hello");
+        }
+    }
+
+    @Test
+    public void execute_retry_failure() throws Exception {
+        try (ServiceServer server = new ServiceServer(serviceHandler).start()) {
+            HelloService.Iface client = new ClientBuilder(
+                    "tbinary+http://127.0.0.1:" + server.port() + "/thrift")
+                    .decorator(RpcRequest.class, RpcResponse.class,
+                               RetryingRpcClient.newDecorator(1))
+                    .build(HelloService.Iface.class);
+            when(serviceHandler.hello(anyString()))
+                    .thenThrow(new IllegalArgument());
+            assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(TApplicationException.class);
+            verify(serviceHandler, times(2)).hello("hello");
         }
     }
 

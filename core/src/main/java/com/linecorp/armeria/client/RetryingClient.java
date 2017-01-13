@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.client.backoff.Backoff;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -37,8 +38,8 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    RetryingClient(Client<? super I, ? extends O> delegate,
-                   int maxRetries, Supplier<? extends Backoff> backoffSupplier) {
+    protected RetryingClient(Client<? super I, ? extends O> delegate,
+                             int maxRetries, Supplier<? extends Backoff> backoffSupplier) {
         super(delegate);
         checkArgument(maxRetries >= 0, "maxRetries >= 0");
         this.maxRetries = maxRetries;
