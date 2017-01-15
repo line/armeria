@@ -22,7 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
-import com.linecorp.armeria.server.zookeeper.ServerZKConnector;
+import com.linecorp.armeria.server.zookeeper.ServerRegister;
 
 /**
  * A ZooKeeper Server Listener.When you add this listener, server will be automatically registered
@@ -34,7 +34,7 @@ public class ZooKeeperListener implements ServerListener {
     private final String zNodePath;
     private final int sessionTimeout;
     private final Endpoint endpoint;
-    private ServerZKConnector connector;
+    private ServerRegister connector;
 
     /**
      * A ZooKeeper server listener, used for register server into ZooKeeper.
@@ -54,7 +54,7 @@ public class ZooKeeperListener implements ServerListener {
 
     @Override
     public void serverStarting(Server server) throws Exception {
-        connector = new ServerZKConnector(zkConnectionStr, zNodePath, sessionTimeout, endpoint);
+        connector = new ServerRegister(zkConnectionStr, zNodePath, sessionTimeout, endpoint);
     }
 
     @Override
@@ -71,7 +71,7 @@ public class ZooKeeperListener implements ServerListener {
     }
 
     @VisibleForTesting
-    public ServerZKConnector getConnector() {
+    public ServerRegister getConnector() {
         return connector;
     }
 

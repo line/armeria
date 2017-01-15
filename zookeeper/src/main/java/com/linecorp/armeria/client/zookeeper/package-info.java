@@ -15,12 +15,5 @@
  */
 /**
  * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
- *
- * {@link com.linecorp.armeria.client.zookeeper.NodeChildEndpointGroup} can get
- * {@link com.linecorp.armeria.client.Endpoint}s from a zNode's all children value.
- *
- * {@link com.linecorp.armeria.client.zookeeper.NodeValueEndpointGroup} can get
- * {@link com.linecorp.armeria.client.Endpoint}s from a zNode's value
- *
  */
 package com.linecorp.armeria.client.zookeeper;

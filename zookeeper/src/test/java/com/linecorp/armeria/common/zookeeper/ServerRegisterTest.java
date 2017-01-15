@@ -41,19 +41,19 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
-import com.linecorp.armeria.server.zookeeper.ServerZKConnector;
+import com.linecorp.armeria.server.zookeeper.ServerRegister;
 import com.linecorp.armeria.server.zookeeper.listener.ZooKeeperListener;
 
 import junitextensions.OptionAssert;
 import zookeeperjunit.ZooKeeperAssert;
 
-public class ServerZKConnectorTest extends TestBase implements ZooKeeperAssert, OptionAssert {
+public class ServerRegisterTest extends TestBase implements ZooKeeperAssert, OptionAssert {
     protected static final KeeperState[] expectedStates = {
             KeeperState.Disconnected, KeeperState.Expired,
             KeeperState.SyncConnected, KeeperState.SyncConnected, KeeperState.Disconnected
     };
     List<Server> servers;
-    List<ServerZKConnector> zkConnectors;
+    List<ServerRegister> zkConnectors;
     List<ZooKeeperListener> listeners;
 
     @Before
@@ -118,7 +118,7 @@ public class ServerZKConnectorTest extends TestBase implements ZooKeeperAssert, 
 
     @Test
     public void testConnectionRecovery() throws Exception {
-        ServerZKConnector zkConnector = zkConnectors.get(0);
+        ServerRegister zkConnector = zkConnectors.get(0);
         zkConnector.enableStateRecording();
         ZooKeeper zkHandler1 = zkConnector.underlyingClient();
         CountDownLatch latch = new CountDownLatch(1);

@@ -33,21 +33,21 @@ import com.linecorp.armeria.common.zookeeper.ZKListener;
 /**
  * A Server connection maintains the underlying connection and hearing notice from a ZooKeeper cluster.
  */
-public class ServerZKConnector {
-    private final Endpoint endpoint;
-    private final NodeValueCodec nodeValueCodec;
+public class ServerRegister {
     private final ZKConnector zkConnector;
 
     /**
-     * Create a server connector.
+     * Create a server register.
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
      * @param sessionTimeout  session timeout
      * @param endpoint        register information
-     * @param nodeValueCodec           nodeValueCodec used
+     * @param nodeValueCodec  nodeValueCodec used
      */
-    public ServerZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint,
-                             NodeValueCodec nodeValueCodec) {
+    public ServerRegister(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint,
+                          NodeValueCodec nodeValueCodec) {
+        requireNonNull(nodeValueCodec);
+        requireNonNull(endpoint);
         zkConnector = new ZKConnector(zkConnectionStr, zNodePath, sessionTimeout, new ZKListener() {
             @Override
             public void nodeChildChange(Map<String, String> newChildrenValue) {
@@ -63,19 +63,17 @@ public class ServerZKConnector {
                                         nodeValueCodec.encode(endpoint));
             }
         });
-        this.endpoint = requireNonNull(endpoint, "endpoint");
-        this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         zkConnector.connect();
     }
 
     /**
-     * Create a server connector.
+     * Create a server register.
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
      * @param sessionTimeout  session timeout
      * @param endpoint        register information
      */
-    public ServerZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
+    public ServerRegister(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
         this(zkConnectionStr, zNodePath, sessionTimeout, endpoint, NodeValueCodec.DEFAULT);
     }
 

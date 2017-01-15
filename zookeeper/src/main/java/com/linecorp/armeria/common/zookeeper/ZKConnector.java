@@ -50,11 +50,11 @@ public final class ZKConnector {
     private final String zkConnectionStr;
     private final String zNodePath;
     private final int sessionTimeout;
+    private final ZKListener listener;
     private ZooKeeper zooKeeper;
     private BlockingQueue<KeeperState> stateQueue;
     private CountDownLatch latch;
     private boolean activeClose;
-    private ZKListener listener;
     private String prevNodeValue;
     private Map<String, String> prevChildValue;
 
@@ -65,6 +65,7 @@ public final class ZKConnector {
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
+     * @param listener        {@link ZKListener}
      */
     public ZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, ZKListener listener) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
@@ -95,7 +96,12 @@ public final class ZKConnector {
         }
     }
 
-    public void createChild(String key, byte[] value) {
+    /**
+     * Utility method to create a node .
+     * @param nodePath node name
+     * @param value    node value
+     */
+    public void createChild(String nodePath, byte[] value) {
         try {
             //first check the parent node
             if (zooKeeper.exists(zNodePath, false) == null) {
@@ -104,11 +110,10 @@ public final class ZKConnector {
                                  Ids.OPEN_ACL_UNSAFE,
                                  CreateMode.PERSISTENT);
             }
-            if (zooKeeper.exists(zNodePath + "/" + key, true) == null) {
-                zooKeeper.create(zNodePath + "/" + key, value, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            if (zooKeeper.exists(zNodePath + '/' + nodePath, true) == null) {
+                zooKeeper.create(zNodePath + '/' + nodePath, value, Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
             }
         } catch (Exception e) {
-            e.printStackTrace();
             throw new ZooKeeperException(
                     "failed to create ZooKeeper Node:  " + zkConnectionStr + " (" + e + ')', e);
         }
@@ -128,24 +133,27 @@ public final class ZKConnector {
         }
     }
 
+    /**
+     * Notify listener that ZooKeeper connection has been established.
+     */
     private void notifyConnected() {
         listener.connected();
     }
 
     /**
-     * After connection established, sub class can get the zNode value or get its all children's value, delegate
-     * the actions to child class.
+     * Notify listener that a node value or node children has changed.
      */
     private void notifyChange() {
-        //forget it if event was triggered by user's active closing EndpointGroup
+        //forget it if event was triggered by user's actively closing EndpointGroup
         if (activeClose) {
-            logger.debug("active close ...");
             return;
         }
         List<String> children;
         byte[] newValueBytes;
         try {
-            if (zooKeeper.exists(zNodePath, true) == null) {return; }
+            if (zooKeeper.exists(zNodePath, true) == null) {
+                return;
+            }
             children = zooKeeper.getChildren(zNodePath, true);
             newValueBytes = zooKeeper.getData(zNodePath, false, null);
             if (newValueBytes != null) {
@@ -173,11 +181,13 @@ public final class ZKConnector {
                 }
             }
         } catch (Exception ex) {
-            throw new ZooKeeperException("Failed to process ZooKeeper callback event", ex);
+            throw new ZooKeeperException("Failed to notify ZooKeeper listener", ex);
         }
-//        logger.debug("......"+(newValueBytes==null?"":new String(newValueBytes))+"--"+prevNodeValue+"////"+children+"-"+prevChildValue);
     }
 
+    /**
+     * A ZooKeeper watch.
+     */
     final class ZkWatcher implements Watcher, StatCallback {
         @Override
         public void process(WatchedEvent event) {
