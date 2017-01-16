@@ -13,20 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.backoff;
+package com.linecorp.armeria.client.retry;
 
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.LongSupplier;
+final class FixedBackoff implements Backoff {
+    static final Backoff NO_DELAY = new FixedBackoff(0);
 
-public final class RandomBackoff implements Backoff {
-    private final LongSupplier nextInterval;
+    private final long intervalMillis;
 
-    RandomBackoff(long minIntervalMillis, long maxIntervalMillis) {
-        nextInterval = () -> ThreadLocalRandom.current().nextLong(minIntervalMillis, maxIntervalMillis);
+    FixedBackoff(long intervalMillis) {
+        this.intervalMillis = intervalMillis;
     }
 
     @Override
-    public long nextIntervalMillis() {
-        return nextInterval.getAsLong();
+    public long nextIntervalMillis(int numAttemptsSoFar) {
+        return intervalMillis;
     }
 }

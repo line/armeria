@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
@@ -22,7 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.linecorp.armeria.client.backoff.Backoff;
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -80,7 +81,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         DefaultRpcResponse responseFuture = new DefaultRpcResponse();
         Backoff backoff = newBackoff();
-        retry(backoff.maxRetries(), backoff, ctx, req, () -> {
+        retry(0, backoff, ctx, req, () -> {
             try {
                 return delegate().execute(ctx, req);
             } catch (Exception e) {
@@ -90,7 +91,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
         return responseFuture;
     }
 
-    private void retry(int times, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
+    private void retry(int numAttemptsSoFar, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
                        Supplier<RpcResponse> action, DefaultRpcResponse responseFuture) {
         RpcResponse response = action.get();
         response.handle(voidFunction((result, thrown) -> {
@@ -108,16 +109,17 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
                 return;
             }
 
-            if (times <= 0) {
+            long nextInterval = backoff.nextIntervalMillis(numAttemptsSoFar);
+            if (nextInterval < 0) {
                 responseFuture.completeExceptionally(exception);
             } else {
-                long nextInterval = backoff.nextIntervalMillis();
                 EventLoop eventLoop = ctx.eventLoop().next();
                 if (nextInterval <= 0) {
-                    eventLoop.submit(() -> retry(times - 1, backoff, ctx, req, action, responseFuture));
+                    eventLoop.submit(() -> retry(numAttemptsSoFar + 1, backoff, ctx, req, action,
+                                                 responseFuture));
                 } else {
                     eventLoop.schedule(
-                            () -> retry(times - 1, backoff, ctx, req, action, responseFuture),
+                            () -> retry(numAttemptsSoFar + 1, backoff, ctx, req, action, responseFuture),
                             nextInterval, TimeUnit.MILLISECONDS);
                 }
             }

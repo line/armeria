@@ -1,4 +1,4 @@
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -14,7 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.linecorp.armeria.client.backoff.Backoff;
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.endpoint.AbstractServiceServer;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;

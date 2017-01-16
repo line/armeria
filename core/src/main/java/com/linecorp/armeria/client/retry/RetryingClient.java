@@ -13,13 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.client.retry;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Supplier;
 
-import com.linecorp.armeria.client.backoff.Backoff;
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 

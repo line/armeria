@@ -17,4 +17,4 @@
 /**
  * Back off strategies.
  */
-package com.linecorp.armeria.client.backoff;
+package com.linecorp.armeria.client.retry;

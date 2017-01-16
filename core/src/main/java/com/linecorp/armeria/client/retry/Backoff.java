@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.backoff;
+package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.backoff.FixedBackoff.NO_DELAY;
+import static com.linecorp.armeria.client.retry.FixedBackoff.NO_DELAY;
 
 /**
  * Control back off between attemtps in a single retry operation.
@@ -51,31 +51,17 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff} that provides a random interval between two attempts.
-     */
-    static Backoff random(long minJitterMillis, long maxJitterMillis) {
-        return new RandomBackoff(minJitterMillis, maxJitterMillis);
-    }
-
-    /**
      * Returns a new back off value in milliseconds.
+     * @param numAttemptsSoFar a number of attempts a client retried.
      */
-    long nextIntervalMillis();
-
-    /**
-     * Returns max number of attempts a client can retry a request in a single retry operation.
-     * Default attemtps is {@code 5}.
-     */
-    default int maxRetries() {
-        return 3;
-    }
+    long nextIntervalMillis(int numAttemptsSoFar);
 
     /**
      * Returns a {@link Backoff} that provides an interval that increases using
      * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
      */
     default Backoff withJitter(long minJitterMillis, long maxJitterMillis) {
-        return new CompositeBackoff(this, random(minJitterMillis, maxJitterMillis));
+        return new JitterAddingBackoff(this, minJitterMillis, maxJitterMillis);
     }
 
     /**

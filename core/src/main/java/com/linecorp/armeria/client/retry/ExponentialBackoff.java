@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.backoff;
+package com.linecorp.armeria.client.retry;
 
 final class ExponentialBackoff implements Backoff {
     private long currentIntervalMillis;
@@ -27,7 +27,7 @@ final class ExponentialBackoff implements Backoff {
     }
 
     @Override
-    public long nextIntervalMillis() {
+    public long nextIntervalMillis(int numAttemptsSoFar) {
         long nextInterval = currentIntervalMillis;
         currentIntervalMillis = Math.min((long) (currentIntervalMillis * multiplier), maxIntervalMillis);
         return nextInterval;

@@ -1,4 +1,4 @@
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.client.retry;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
