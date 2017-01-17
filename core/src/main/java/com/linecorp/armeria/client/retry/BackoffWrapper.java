@@ -1,10 +1,15 @@
 package com.linecorp.armeria.client.retry;
 
-class BackoffWrapper implements Backoff {
+import static com.google.common.base.Preconditions.checkNotNull;
+
+/**
+ * Wraps an existing {@link Backoff}.
+ */
+public class BackoffWrapper implements Backoff {
     private final Backoff delegate;
 
     protected BackoffWrapper(Backoff delegate) {
-        this.delegate = delegate;
+        this.delegate = checkNotNull(delegate, "delegate");
     }
 
     @Override

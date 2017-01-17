@@ -52,7 +52,8 @@ public interface Backoff {
 
     /**
      * Returns a new back off value in milliseconds.
-     * @param numAttemptsSoFar a number of attempts a client retried.
+     * @param numAttemptsSoFar the number of attempts made by a client so far, including the first attempt and
+     *                         its following retries.
      */
     long nextIntervalMillis(int numAttemptsSoFar);
 
@@ -65,9 +66,9 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff}, with the specified attempts.
+     * Returns a {@link Backoff} which limits the number of attempts up to the specified value.
      */
-    default Backoff withMaxAttempts(int maxRetries) {
-        return new AttemptLimitingBackoff(this, maxRetries);
+    default Backoff withMaxAttempts(int maxAttempts) {
+        return new AttemptLimitingBackoff(this, maxAttempts);
     }
 }

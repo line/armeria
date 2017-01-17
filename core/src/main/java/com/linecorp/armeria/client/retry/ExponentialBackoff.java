@@ -15,12 +15,26 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.linecorp.armeria.client.retry.MathUtils.safeMultiply;
+
+import com.google.common.base.MoreObjects;
+
 final class ExponentialBackoff implements Backoff {
     private long currentIntervalMillis;
     private final long maxIntervalMillis;
     private final float multiplier;
 
     ExponentialBackoff(long minIntervalMillis, long maxIntervalMillis, float multiplier) {
+        if (multiplier <= 1.0) {
+            throw new IllegalArgumentException("multiplier: " + multiplier + " (expected: > 1.0)");
+        }
+        if (minIntervalMillis < 0) {
+            throw new IllegalArgumentException("minIntervalMillis: " + minIntervalMillis + " (expected: >= 0)");
+        }
+        if (minIntervalMillis < maxIntervalMillis) {
+            throw new IllegalArgumentException("maxIntervalMillis: " + maxIntervalMillis +
+                                               " (expected: > minIntervalMillis: " + minIntervalMillis + ')');
+        }
         currentIntervalMillis = minIntervalMillis;
         this.maxIntervalMillis = maxIntervalMillis;
         this.multiplier = multiplier;
@@ -29,7 +43,16 @@ final class ExponentialBackoff implements Backoff {
     @Override
     public long nextIntervalMillis(int numAttemptsSoFar) {
         long nextInterval = currentIntervalMillis;
-        currentIntervalMillis = Math.min((long) (currentIntervalMillis * multiplier), maxIntervalMillis);
+        currentIntervalMillis = Math.min(safeMultiply(currentIntervalMillis, multiplier), maxIntervalMillis);
         return nextInterval;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("currentIntervalMillis", currentIntervalMillis)
+                          .add("maxIntervalMillis", maxIntervalMillis)
+                          .add("multiplier", multiplier)
+                          .toString();
     }
 }

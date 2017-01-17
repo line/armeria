@@ -22,7 +22,16 @@ final class RandomBackoff implements Backoff {
     private final LongSupplier nextInterval;
 
     RandomBackoff(long minIntervalMillis, long maxIntervalMillis) {
-        nextInterval = () -> ThreadLocalRandom.current().nextLong(minIntervalMillis, maxIntervalMillis);
+        if (minIntervalMillis < 0) {
+            throw new IllegalArgumentException("minIntervalMillis: " + minIntervalMillis + " (expected: >= 0)");
+        }
+        if (minIntervalMillis < maxIntervalMillis) {
+            throw new IllegalArgumentException("maxIntervalMillis: " + maxIntervalMillis +
+                                               " (expected: > minIntervalMillis: " + minIntervalMillis + ')');
+        }
+        nextInterval = minIntervalMillis == maxIntervalMillis ?
+                       () -> minIntervalMillis :
+                       () -> ThreadLocalRandom.current().nextLong(minIntervalMillis, maxIntervalMillis);
     }
 
     @Override

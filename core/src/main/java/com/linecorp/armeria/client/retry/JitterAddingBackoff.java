@@ -15,15 +15,15 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.LongSupplier;
+import static com.linecorp.armeria.client.retry.MathUtils.safeAdd;
 
 final class JitterAddingBackoff extends BackoffWrapper {
-    private final LongSupplier jitter;
+    private final RandomBackoff jitter;
 
     JitterAddingBackoff(Backoff delegate, long minIntervalMillis, long maxIntervalMillis) {
         super(delegate);
-        jitter = () -> ThreadLocalRandom.current().nextLong(minIntervalMillis, maxIntervalMillis);
+        jitter = new RandomBackoff(minIntervalMillis, maxIntervalMillis);
+
     }
 
     @Override
@@ -32,6 +32,6 @@ final class JitterAddingBackoff extends BackoffWrapper {
         if (nextIntervalMillis < 0) {
             return nextIntervalMillis;
         }
-        return Math.max(0, nextIntervalMillis + jitter.getAsLong());
+        return Math.max(0, safeAdd(nextIntervalMillis, jitter.nextIntervalMillis(numAttemptsSoFar)));
     }
 }
