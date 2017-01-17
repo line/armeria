@@ -13,16 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.http;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
+import java.util.EnumSet;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -34,6 +40,7 @@ import org.junit.Test;
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
@@ -41,6 +48,18 @@ import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.http.TestConverters.NaiveIntConverter;
+import com.linecorp.armeria.server.http.TestConverters.NaiveNumberConverter;
+import com.linecorp.armeria.server.http.TestConverters.NaiveStringConverter;
+import com.linecorp.armeria.server.http.TestConverters.TypedNumberConverter;
+import com.linecorp.armeria.server.http.TestConverters.TypedStringConverter;
+import com.linecorp.armeria.server.http.dynamic.Converter;
+import com.linecorp.armeria.server.http.dynamic.DynamicHttpService;
+import com.linecorp.armeria.server.http.dynamic.DynamicHttpServiceBuilder;
+import com.linecorp.armeria.server.http.dynamic.Get;
+import com.linecorp.armeria.server.http.dynamic.Path;
+import com.linecorp.armeria.server.http.dynamic.PathParam;
+import com.linecorp.armeria.server.http.dynamic.Post;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 public class HttpServiceTest {
@@ -91,10 +110,94 @@ public class HttpServiceTest {
                               res.respond(HttpStatus.NO_CONTENT);
                           }
                       }.decorate(LoggingService::new));
+
+            // Dynamic Service with DynamicHttpServiceBuilder and direct mappings
+            sb.service(PathMapping.ofPrefix("/dynamic1"), new DynamicHttpServiceBuilder()
+                    // Default ResponseConverter for Integer
+                    .addConverter(Integer.class, new NaiveIntConverter())
+                    // Default ResponseConverter for Number
+                    .addConverter(Number.class, new NaiveNumberConverter())
+                    // Default ResponseConverter for String
+                    .addConverter(String.class, new NaiveStringConverter())
+                    // Case 1: returns Integer type and handled by default Integer -> HttpResponse converter.
+                    .addMapping(HttpMethod.GET, "/int/{var}",
+                                (ctx, req, args) -> Integer.parseInt(args.get("var"))
+                    )
+                    // Case 2: returns Long type and handled by default Number -> HttpResponse converter.
+                    .addMapping(HttpMethod.POST, "/long/{var}",
+                                (ctx, req, args) -> Long.parseLong(args.get("var"))
+                    )
+                    // Case 3: returns String type and handled by custom String -> HttpResponse converter.
+                    .addMapping(EnumSet.of(HttpMethod.GET), "/string/{var}",
+                                (ctx, req, args) -> args.get("var"), new TypedStringConverter()
+                    )
+                    .build().decorate(LoggingService::new));
+            // Dynamic Service with DynamicHttpServiceBuilder and direct mappings
+            sb.service(PathMapping.ofPrefix("/dynamic2"), new DynamicHttpServiceBuilder()
+                    // Default ResponseConverter for Integer
+                    .addConverter(Integer.class, new NaiveIntConverter())
+                    // Case 4, 5, 6
+                    .addMappings(new ResponseStrategy())
+                    .build().decorate(LoggingService::new));
+            // Dynamic Service with inheritance
+            // Case 7, 8, 9
+            sb.service(PathMapping.ofPrefix("/dynamic3"), new DynamicService());
         } catch (Exception e) {
             throw new Error(e);
         }
         server = sb.build();
+    }
+
+    @Converter(target = Number.class, value = TypedNumberConverter.class)
+    @Converter(target = String.class, value = TypedStringConverter.class)
+    public static class ResponseStrategy {
+        // Case 4: returns Integer type and handled by builder-default Integer -> HttpResponse converter.
+        @Get
+        @Path("/int/:var")
+        public int returnInt(@PathParam("var") int var) {
+            return var;
+        }
+
+        // Case 5: returns Long type and handled by class-default Number -> HttpResponse converter.
+        @Post
+        @Path("/long/{var}")
+        public CompletionStage<Long> returnLong(@PathParam("var") long var) {
+            return CompletableFuture.supplyAsync(() -> var);
+        }
+
+        // Case 6: returns String type and handled by custom String -> HttpResponse converter.
+        @Get
+        @Path("/string/:var")
+        @Converter(NaiveStringConverter.class)
+        public CompletionStage<String> returnString(@PathParam("var") String var) {
+            return CompletableFuture.supplyAsync(() -> var);
+        }
+    }
+
+    @Converter(target = Number.class, value = TypedNumberConverter.class)
+    @Converter(target = String.class, value = TypedStringConverter.class)
+    public static class DynamicService extends DynamicHttpService {
+        // Case 7: returns Integer type and handled by class-default Number -> HttpResponse converter.
+        @Get
+        @Path("/int/{var}")
+        public CompletionStage<Integer> returnInt(@PathParam("var") int var) {
+            return CompletableFuture.supplyAsync(() -> var);
+        }
+
+        // Case 8: returns Long type and handled by class-default Number -> HttpResponse converter.
+        @Post
+        @Path("/long/:var")
+        public Long returnLong(@PathParam("var") long var) {
+            return var;
+        }
+
+        // Case 9: returns String type and handled by custom String -> HttpResponse converter.
+        @Get
+        @Path("/string/{var}")
+        @Converter(NaiveStringConverter.class)
+        public String returnString(@PathParam("var") String var) {
+            return var;
+        }
     }
 
     @BeforeClass
@@ -126,6 +229,93 @@ public class HttpServiceTest {
             try (CloseableHttpResponse res = hc.execute(new HttpDelete(newUri("/hello/bar")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("405 Method Not Allowed"));
+            }
+        }
+    }
+
+    @Test
+    public void testDynamicHttpServices() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Run case 1.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic1/int/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 42"));
+            }
+            // Run case 2.
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic1/long/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Number: 42"));
+            }
+            // Run case 3.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic1/string/blah")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[blah]"));
+            }
+            // Run case 1 but illegal parameter.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/int/fourty-two")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
+            }
+            // Run case 2 but without parameter (non-existing url).
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic1/long/")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+            }
+            // Run case 3 but with not-mapped HTTP method (Post).
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic1/string/blah")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+            }
+            // Run case 4.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/int/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 42"));
+            }
+            // Run case 5.
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic2/long/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
+            }
+            // Run case 6.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/string/blah")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String: blah"));
+            }
+            // Run case 4 but illegal parameter.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/int/fourty-two")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
+            }
+            // Run case 5 but without parameter (non-existing url).
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic2/long/")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+            }
+            // Run case 6 but with not-mapped HTTP method (Post).
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic2/string/blah")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+            }
+            // Run case 7.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic3/int/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
+            }
+            // Run case 8.
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic3/long/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
+            }
+            // Run case 9.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic3/string/blah")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String: blah"));
+            }
+            // Run case 7 but illegal parameter.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic3/int/fourty-two")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
+            }
+            // Run case 8 but without parameter (non-existing url).
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic3/long/")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+            }
+            // Run case 9 but with not-mapped HTTP method (Post).
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic3/string/blah")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
             }
         }
     }
