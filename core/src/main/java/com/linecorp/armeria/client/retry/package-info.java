@@ -15,6 +15,6 @@
  */
 
 /**
- * Back off strategies.
+ * A {@link com.linecorp.armeria.client.Client} decorator that handles failures and retries requests.
  */
 package com.linecorp.armeria.client.retry;
