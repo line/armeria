@@ -114,14 +114,14 @@ public class ArmeriaCallFactory implements Call.Factory {
                     (key, values) -> headers.add(HttpHeaderNames.of(key), values));
             if (request.body() != null) {
                 headers.set(HttpHeaderNames.CONTENT_TYPE, request.body().contentType().toString());
-                Buffer contentBuffer = new Buffer();
-                try {
+                try (Buffer contentBuffer = new Buffer()) {
                     request.body().writeTo(contentBuffer);
+
+                    return httpClient.execute(headers, contentBuffer.readByteArray());
                 } catch (IOException e) {
                     throw new IllegalArgumentException(
                             "Failed to convert RequestBody to HttpData. " + request.method(), e);
                 }
-                return httpClient.execute(headers, contentBuffer.readByteArray());
             }
             return httpClient.execute(headers);
         }

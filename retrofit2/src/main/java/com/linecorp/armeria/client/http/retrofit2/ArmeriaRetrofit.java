@@ -15,7 +15,13 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
+import java.net.URI;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
 import com.linecorp.armeria.client.http.HttpClient;
+import com.linecorp.armeria.common.Scheme;
 
 import retrofit2.Retrofit;
 
@@ -37,16 +43,24 @@ import retrofit2.Retrofit;
  * </pre>
  */
 public final class ArmeriaRetrofit {
-    private static final String UNUSED_URL = "http://0.0.0.0";
-
     /**
      * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
      * {@link HttpClient} instance.
      */
     public static Retrofit.Builder builder(HttpClient httpClient) {
         return new Retrofit.Builder()
-                .baseUrl(UNUSED_URL)
+                .baseUrl(convertToSerializationFormatRemovedUri(httpClient.uri()))
                 .callFactory(new ArmeriaCallFactory(httpClient));
+    }
+
+    @VisibleForTesting
+    static String convertToSerializationFormatRemovedUri(URI uri) {
+        String uriStr = uri.toString();
+        int schemeOffset = uriStr.indexOf("://");
+        Preconditions.checkArgument(schemeOffset >= 0, "uri does not contains the scheme component.");
+        return Scheme.tryParse(uri.getScheme())
+                     .map(scheme -> scheme.sessionProtocol().uriText() + uriStr.substring(schemeOffset))
+                     .orElse(uriStr);
     }
 
     private ArmeriaRetrofit() {}
