@@ -18,9 +18,15 @@ package com.linecorp.armeria.it.thrift;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.base.Stopwatch;
 
@@ -41,32 +47,72 @@ import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.test.AbstractServerTest;
 
 /**
- * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters.
+ * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters
+ * and disable the request/response timeout dynamically.
  */
+@RunWith(Parameterized.class)
 public class ThriftDynamicTimeoutTest extends AbstractServerTest {
 
     private static final SleepService.AsyncIface sleepService = (delay, resultHandler) ->
             RequestContext.current().eventLoop().schedule(
                     () -> resultHandler.onComplete(delay), delay, TimeUnit.MILLISECONDS);
 
+    private static final SleepService.AsyncIface fakeSleepService = (delay, resultHandler) ->
+            RequestContext.current().eventLoop().execute(
+                    () -> resultHandler.onComplete(delay));
+
+    /**
+     * Runs the tests with:
+     * - the client with dynamic timeout enabled and
+     * - the client that disables timeout dynamically.
+     */
+    @Parameters
+    public static Collection<Function<Client<RpcRequest, RpcResponse>,
+                                      Client<RpcRequest, RpcResponse>>> parameters() {
+        return Arrays.asList(DynamicTimeoutClient::new, TimeoutDisablingClient::new);
+    }
+
+    private final Function<Client<RpcRequest, RpcResponse>,
+            Client<RpcRequest, RpcResponse>> clientDecorator;
+
+    public ThriftDynamicTimeoutTest(Function<Client<RpcRequest, RpcResponse>,
+            Client<RpcRequest, RpcResponse>> clientDecorator) {
+        this.clientDecorator = clientDecorator;
+    }
+
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
+        // Used for testing if changing the timeout dynamically works.
         sb.serviceAt("/sleep", ThriftCallService.of(sleepService)
                                                 .decorate(DynamicTimeoutService::new)
                                                 .decorate(THttpService.newDecorator()));
+        // Used for testing if disabling the timeout dynamically works.
+        sb.serviceAt("/fakeSleep", ThriftCallService.of(fakeSleepService)
+                                                    .decorate(TimeoutDisablingService::new)
+                                                    .decorate(THttpService.newDecorator()));
         sb.defaultRequestTimeout(Duration.ofSeconds(1));
     }
 
     @Test
     public void testDynamicTimeout() throws Exception {
         final SleepService.Iface client = new ClientBuilder("tbinary+" + uri("/sleep"))
-                .decorator(RpcRequest.class, RpcResponse.class, DynamicTimeoutClient::new)
+                .decorator(RpcRequest.class, RpcResponse.class, clientDecorator)
                 .defaultResponseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
 
         final long delay = 1500;
         final Stopwatch sw = Stopwatch.createStarted();
         client.sleep(delay);
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(delay);
+    }
+
+    @Test(timeout = 10000)
+    public void testDisabledTimeout() throws Exception {
+        final SleepService.Iface client = new ClientBuilder("tbinary+" + uri("/fakeSleep"))
+                .decorator(RpcRequest.class, RpcResponse.class, clientDecorator)
+                .defaultResponseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
+
+        // This call should take very short amount of time because the fakeSleep service does not sleep.
+        client.sleep(30000);
     }
 
     private static final class DynamicTimeoutService
@@ -84,6 +130,21 @@ public class ThriftDynamicTimeoutTest extends AbstractServerTest {
         }
     }
 
+
+    private static final class TimeoutDisablingService
+            extends DecoratingService<RpcRequest, RpcResponse, RpcRequest, RpcResponse> {
+
+        TimeoutDisablingService(Service<? super RpcRequest, ? extends RpcResponse> delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
+            ctx.setRequestTimeoutMillis(0);
+            return delegate().serve(ctx, req);
+        }
+    }
+
     private static final class DynamicTimeoutClient
             extends DecoratingClient<RpcRequest, RpcResponse, RpcRequest, RpcResponse> {
 
@@ -95,6 +156,20 @@ public class ThriftDynamicTimeoutTest extends AbstractServerTest {
         public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
             ctx.setResponseTimeoutMillis(((Number) req.params().get(0)).longValue() +
                                          ctx.responseTimeoutMillis());
+            return delegate().execute(ctx, req);
+        }
+    }
+
+    private static final class TimeoutDisablingClient
+            extends DecoratingClient<RpcRequest, RpcResponse, RpcRequest, RpcResponse> {
+
+        TimeoutDisablingClient(Client<? super RpcRequest, ? extends RpcResponse> delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
+            ctx.setResponseTimeoutMillis(0);
             return delegate().execute(ctx, req);
         }
     }
