@@ -17,6 +17,8 @@
 package com.linecorp.armeria.common;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -75,6 +77,26 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final <T extends Future<?>> GenericFutureListener<T>
     makeContextAware(GenericFutureListener<T> listener) {
         return future -> invokeOperationComplete(listener, future);
+    }
+
+    @Override
+    public final <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
+        final CompletableFuture<T> future = new CompletableFuture<>();
+        stage.whenComplete((result, cause) -> {
+            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+                if (cause != null) {
+                    future.completeExceptionally(cause);
+                } else {
+                    future.complete(result);
+                }
+            }
+        });
+        return future;
+    }
+
+    @Override
+    public final <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
+        return RequestContext.super.makeContextAware(future);
     }
 
     private <T extends Future<?>> void invokeOperationComplete(
