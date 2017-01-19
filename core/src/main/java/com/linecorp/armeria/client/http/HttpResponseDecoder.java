@@ -218,6 +218,8 @@ abstract class HttpResponseDecoder {
             if (responseTimeoutFuture == null) {
                 return true;
             }
+
+            this.responseTimeoutFuture = null;
             return responseTimeoutFuture.cancel(false);
         }
 

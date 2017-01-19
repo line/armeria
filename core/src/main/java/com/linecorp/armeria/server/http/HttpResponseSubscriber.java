@@ -333,6 +333,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             return true;
         }
 
+        this.timeoutFuture = null;
         return timeoutFuture.cancel(false);
     }
 
