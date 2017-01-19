@@ -20,6 +20,7 @@ import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -285,6 +286,20 @@ public interface RequestContext extends AttributeMap {
      */
     @Deprecated
     <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener);
+
+    /**
+     * Returns a {@link CompletionStage} that makes sure the current {@link CompletionStage} is set and
+     * then invokes the input {@code stage}.
+     */
+    <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage);
+
+    /**
+     * Returns a {@link CompletableFuture} that makes sure the current {@link CompletableFuture} is set and
+     * then invokes the input {@code future}.
+     */
+    default <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
+        return makeContextAware((CompletionStage<T>) future).toCompletableFuture();
+    }
 
     /**
      * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
