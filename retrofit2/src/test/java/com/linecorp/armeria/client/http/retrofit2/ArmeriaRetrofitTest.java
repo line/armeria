@@ -11,18 +11,24 @@ import com.linecorp.armeria.client.http.HttpClient;
 
 public class ArmeriaRetrofitTest {
     @Test
-    public void convertToSerializationFormatRemovedUri() throws Exception {
+    public void convertToOkHttpCompatUri() throws Exception {
         URI uri = Clients.newClient(URI.create("none+http://example.com:8080/a/b/c"), HttpClient.class)
                          .uri();
-        assertThat(ArmeriaRetrofit.convertToSerializationFormatRemovedUri(uri))
+        assertThat(ArmeriaRetrofit.convertToOkHttpCompatUri(uri))
                 .isEqualTo("http://example.com:8080/a/b/c");
     }
 
     @Test
-    public void convertToSerializationFormatRemovedUri_noSerializationFormat() throws Exception {
+    public void convertToOkHttpCompatUri_noSerializationFormat() throws Exception {
         URI uri = URI.create("http://example.com:8080/");
-        assertThat(ArmeriaRetrofit.convertToSerializationFormatRemovedUri(uri))
+        assertThat(ArmeriaRetrofit.convertToOkHttpCompatUri(uri))
                 .isEqualTo("http://example.com:8080/");
     }
 
+    @Test
+    public void convertToOkHttpCompatUri_convertOkhttpNotSupportedAuthority() throws Exception {
+        URI uri = URI.create("http://group:myGroup/path");
+        assertThat(ArmeriaRetrofit.convertToOkHttpCompatUri(uri))
+                .isEqualTo("http://group_myGroup/path");
+    }
 }

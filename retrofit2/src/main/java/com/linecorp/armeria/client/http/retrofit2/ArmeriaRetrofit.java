@@ -15,14 +15,18 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import com.google.common.escape.Escaper;
+import com.google.common.escape.Escapers;
 
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
 
+import okhttp3.HttpUrl;
 import retrofit2.Retrofit;
 
 /**
@@ -43,24 +47,41 @@ import retrofit2.Retrofit;
  * </pre>
  */
 public final class ArmeriaRetrofit {
+    private static final Escaper GROUP_NAME_ESCAPER = Escapers.builder()
+                                                              .addEscape('@', "_")
+                                                              .addEscape('/', "_")
+                                                              .addEscape('\\', "_")
+                                                              .addEscape('?', "_")
+                                                              .addEscape('#', "_")
+                                                              .addEscape(':', "_")
+                                                              .build();
+
     /**
      * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
      * {@link HttpClient} instance.
      */
     public static Retrofit.Builder builder(HttpClient httpClient) {
         return new Retrofit.Builder()
-                .baseUrl(convertToSerializationFormatRemovedUri(httpClient.uri()))
+                .baseUrl(convertToOkHttpCompatUri(httpClient.uri()))
                 .callFactory(new ArmeriaCallFactory(httpClient));
     }
 
     @VisibleForTesting
-    static String convertToSerializationFormatRemovedUri(URI uri) {
+    static String convertToOkHttpCompatUri(URI uri) {
+        requireNonNull(uri.getScheme(), "uri does not contain the scheme component.");
         String uriStr = uri.toString();
-        int schemeOffset = uriStr.indexOf("://");
-        Preconditions.checkArgument(schemeOffset >= 0, "uri does not contains the scheme component.");
-        return Scheme.tryParse(uri.getScheme())
-                     .map(scheme -> scheme.sessionProtocol().uriText() + uriStr.substring(schemeOffset))
-                     .orElse(uriStr);
+
+        String protocol = Scheme.tryParse(uri.getScheme())
+                                .map(scheme -> scheme.sessionProtocol().uriText())
+                                .orElse(uri.getScheme());
+        String authority = uri.getAuthority();
+        String path = uri.getPath();
+        String maybeOkHttpCompatUri = protocol + "://" + authority + path;
+        if (HttpUrl.parse(maybeOkHttpCompatUri) == null) {
+            return protocol + "://" + GROUP_NAME_ESCAPER.escape(authority) + path;
+        } else {
+            return maybeOkHttpCompatUri;
+        }
     }
 
     private ArmeriaRetrofit() {}

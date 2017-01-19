@@ -4,6 +4,7 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.ROUND_ROBIN;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,6 +29,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -295,6 +299,26 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
                 new HttpUrl.Builder().scheme("http")
                                      .host("127.0.0.1")
                                      .port(httpPort())
+                                     .addPathSegment("postForm")
+                                     .build());
+    }
+
+    @Test
+    public void respectsHttpClientUri_endpointGroup() throws Exception {
+        EndpointGroupRegistry.register("group", new StaticEndpointGroup(Endpoint.of("127.0.0.1", httpPort())),
+                                       ROUND_ROBIN);
+        Service service = ArmeriaRetrofit.builder(Clients.newClient(ClientFactory.DEFAULT,
+                                                                    "none+http://group:group/",
+                                                                    HttpClient.class))
+                                         .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                                         .addCallAdapterFactory(GuavaCallAdapterFactory.create())
+                                         .build()
+                                         .create(Service.class);
+        Response<Void> response = service.postForm("Cony", 26).get();
+        // TODO(ide) Use the actual `host:port`. See https://github.com/line/armeria/issues/379
+        assertThat(response.raw().request().url()).isEqualTo(
+                new HttpUrl.Builder().scheme("http")
+                                     .host("group_group")
                                      .addPathSegment("postForm")
                                      .build());
     }
