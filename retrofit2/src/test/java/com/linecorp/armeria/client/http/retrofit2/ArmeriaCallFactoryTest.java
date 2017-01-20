@@ -4,6 +4,7 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
+import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.ROUND_ROBIN;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,9 +15,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -30,18 +29,21 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
+import com.linecorp.armeria.test.AbstractServerTest;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import okhttp3.HttpUrl;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -55,8 +57,7 @@ import retrofit2.http.Headers;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
 
-public class ArmeriaCallFactoryTest {
-
+public class ArmeriaCallFactoryTest extends AbstractServerTest {
     public static class Pojo {
         @JsonProperty("name")
         String name;
@@ -120,113 +121,94 @@ public class ArmeriaCallFactoryTest {
     }
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final Server server;
 
-    private static int httpPort;
-
-    static {
-        final SelfSignedCertificate ssc;
-        final ServerBuilder sb = new ServerBuilder()
-                .port(0, SessionProtocol.HTTP)
-                .serviceAt("/pojo", new AbstractHttpService() {
-                    @Override
-                    protected void doGet(ServiceRequestContext ctx,
-                                         HttpRequest req, HttpResponseWriter res) throws Exception {
-                        res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                    "{\"name\":\"Cony\", \"age\":26}");
-                    }
-                })
-                .serviceAt("/pojos", new AbstractHttpService() {
-                    @Override
-                    protected void doGet(ServiceRequestContext ctx,
-                                         HttpRequest req, HttpResponseWriter res) throws Exception {
-                        res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                    "[{\"name\":\"Cony\", \"age\":26}," +
-                                    "{\"name\":\"Leonard\", \"age\":21}]");
-                    }
-                })
-                .serviceAt("/queryString", new AbstractHttpService() {
-                    @Override
-                    protected void doGet(ServiceRequestContext ctx,
-                                         HttpRequest req, HttpResponseWriter res) throws Exception {
-                        req.aggregate().handle(voidFunction((aReq, cause) -> {
-                            Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
-                                    .parameters();
-                            res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                        "{\"name\":\"" + params.get("name").get(0) + "\", " +
-                                        "\"age\":" + params.get("age").get(0) + '}');
-                        }));
-                    }
-                })
-                .serviceAt("/post", new AbstractHttpService() {
-                    @Override
-                    protected void doPost(ServiceRequestContext ctx,
-                                          HttpRequest req, HttpResponseWriter res) throws Exception {
-                        req.aggregate().handle(voidFunction((aReq, cause) -> {
-                            if (cause != null) {
-                                res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
-                                            MediaType.PLAIN_TEXT_UTF_8,
-                                            Throwables.getStackTraceAsString(cause));
-                                return;
-                            }
-                            String text = aReq.content().toStringUtf8();
-                            final Pojo request;
-                            try {
-                                request = OBJECT_MAPPER.readValue(text, Pojo.class);
-                            } catch (IOException e) {
-                                res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
-                                            MediaType.PLAIN_TEXT_UTF_8,
-                                            Throwables.getStackTraceAsString(e));
-                                return;
-                            }
-                            assertThat(request).isEqualTo(new Pojo("Cony", 26));
-                            res.respond(HttpStatus.OK);
-                        }));
-                    }
-                })
-                .serviceAt("/postForm", new AbstractHttpService() {
-                    @Override
-                    protected void doPost(ServiceRequestContext ctx,
-                                          HttpRequest req, HttpResponseWriter res) throws Exception {
-                        req.aggregate().handle(voidFunction((aReq, cause) -> {
-                            if (cause != null) {
-                                res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
-                                            MediaType.PLAIN_TEXT_UTF_8,
-                                            Throwables.getStackTraceAsString(cause));
-                                return;
-                            }
-                            Map<String, List<String>> params = new QueryStringDecoder(
-                                    aReq.content().toStringUtf8(), false)
-                                    .parameters();
-                            assertThat(params).isEqualTo(ImmutableMap.of("name", ImmutableList.of("Cony"),
-                                                                         "age", ImmutableList.of("26")));
-                            res.respond(HttpStatus.OK);
-                        }));
-                    }
-                });
-        server = sb.build();
+    @Override
+    protected void configureServer(ServerBuilder sb) throws Exception {
+        sb.port(0, SessionProtocol.HTTP)
+          .serviceAt("/pojo", new AbstractHttpService() {
+              @Override
+              protected void doGet(ServiceRequestContext ctx,
+                                   HttpRequest req, HttpResponseWriter res) throws Exception {
+                  res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                              "{\"name\":\"Cony\", \"age\":26}");
+              }
+          })
+          .serviceAt("/pojos", new AbstractHttpService() {
+              @Override
+              protected void doGet(ServiceRequestContext ctx,
+                                   HttpRequest req, HttpResponseWriter res) throws Exception {
+                  res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                              "[{\"name\":\"Cony\", \"age\":26}," +
+                              "{\"name\":\"Leonard\", \"age\":21}]");
+              }
+          })
+          .serviceAt("/queryString", new AbstractHttpService() {
+              @Override
+              protected void doGet(ServiceRequestContext ctx,
+                                   HttpRequest req, HttpResponseWriter res) throws Exception {
+                  req.aggregate().handle(voidFunction((aReq, cause) -> {
+                      Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
+                              .parameters();
+                      res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                  "{\"name\":\"" + params.get("name").get(0) + "\", " +
+                                  "\"age\":" + params.get("age").get(0) + '}');
+                  }));
+              }
+          })
+          .serviceAt("/post", new AbstractHttpService() {
+              @Override
+              protected void doPost(ServiceRequestContext ctx,
+                                    HttpRequest req, HttpResponseWriter res) throws Exception {
+                  req.aggregate().handle(voidFunction((aReq, cause) -> {
+                      if (cause != null) {
+                          res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                                      MediaType.PLAIN_TEXT_UTF_8,
+                                      Throwables.getStackTraceAsString(cause));
+                          return;
+                      }
+                      String text = aReq.content().toStringUtf8();
+                      final Pojo request;
+                      try {
+                          request = OBJECT_MAPPER.readValue(text, Pojo.class);
+                      } catch (IOException e) {
+                          res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                                      MediaType.PLAIN_TEXT_UTF_8,
+                                      Throwables.getStackTraceAsString(e));
+                          return;
+                      }
+                      assertThat(request).isEqualTo(new Pojo("Cony", 26));
+                      res.respond(HttpStatus.OK);
+                  }));
+              }
+          })
+          .serviceAt("/postForm", new AbstractHttpService() {
+              @Override
+              protected void doPost(ServiceRequestContext ctx,
+                                    HttpRequest req, HttpResponseWriter res) throws Exception {
+                  req.aggregate().handle(voidFunction((aReq, cause) -> {
+                      if (cause != null) {
+                          res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                                      MediaType.PLAIN_TEXT_UTF_8,
+                                      Throwables.getStackTraceAsString(cause));
+                          return;
+                      }
+                      Map<String, List<String>> params = new QueryStringDecoder(
+                              aReq.content().toStringUtf8(), false)
+                              .parameters();
+                      assertThat(params).isEqualTo(ImmutableMap.of("name", ImmutableList.of("Cony"),
+                                                                   "age", ImmutableList.of("26")));
+                      res.respond(HttpStatus.OK);
+                  }));
+              }
+          });
     }
 
     private Service service;
 
-    @BeforeClass
-    public static void init() throws Exception {
-        server.start().get();
-
-        httpPort = server.activePorts().values().stream()
-                         .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress()
-                         .getPort();
-    }
-
-    @AfterClass
-    public static void destroy() throws Exception {
-        server.stop();
-    }
-
     @Before
     public void setUp() {
         service = ArmeriaRetrofit.builder(Clients.newClient(ClientFactory.DEFAULT,
-                                                            "none+http://127.0.0.1:" + httpPort,
+                                                            "none+http://127.0.0.1:" + httpPort(),
                                                             HttpClient.class))
                                  .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                                  .addCallAdapterFactory(GuavaCallAdapterFactory.create())
@@ -256,13 +238,13 @@ public class ArmeriaCallFactoryTest {
     @Test
     public void post() throws Exception {
         Response<Void> response = service.post(new Pojo("Cony", 26)).get();
-        assertThat(response.isSuccessful());
+        assertThat(response.isSuccessful()).isTrue();
     }
 
     @Test
     public void formEncoded() throws Exception {
         Response<Void> response = service.postForm("Cony", 26).get();
-        assertThat(response.isSuccessful());
+        assertThat(response.isSuccessful()).isTrue();
     }
 
     @Test
@@ -308,5 +290,36 @@ public class ArmeriaCallFactoryTest {
         assertThat(countDownLatch.await(3, TimeUnit.SECONDS)).isTrue();
         pojoCall.cancel();
         assertThat(failCount.intValue()).isZero();
+    }
+
+    @Test
+    public void respectsHttpClientUri() throws Exception {
+        Response<Void> response = service.postForm("Cony", 26).get();
+        assertThat(response.raw().request().url()).isEqualTo(
+                new HttpUrl.Builder().scheme("http")
+                                     .host("127.0.0.1")
+                                     .port(httpPort())
+                                     .addPathSegment("postForm")
+                                     .build());
+    }
+
+    @Test
+    public void respectsHttpClientUri_endpointGroup() throws Exception {
+        EndpointGroupRegistry.register("group", new StaticEndpointGroup(Endpoint.of("127.0.0.1", httpPort())),
+                                       ROUND_ROBIN);
+        Service service = ArmeriaRetrofit.builder(Clients.newClient(ClientFactory.DEFAULT,
+                                                                    "none+http://group:group/",
+                                                                    HttpClient.class))
+                                         .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                                         .addCallAdapterFactory(GuavaCallAdapterFactory.create())
+                                         .build()
+                                         .create(Service.class);
+        Response<Void> response = service.postForm("Cony", 26).get();
+        // TODO(ide) Use the actual `host:port`. See https://github.com/line/armeria/issues/379
+        assertThat(response.raw().request().url()).isEqualTo(
+                new HttpUrl.Builder().scheme("http")
+                                     .host("group_group")
+                                     .addPathSegment("postForm")
+                                     .build());
     }
 }
