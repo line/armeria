@@ -1,3 +1,18 @@
+/*
+ * Copyright 2017 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package com.linecorp.armeria.client.http.retrofit2;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -11,24 +26,23 @@ import com.linecorp.armeria.client.http.HttpClient;
 
 public class ArmeriaRetrofitTest {
     @Test
-    public void convertToOkHttpCompatUri() throws Exception {
-        URI uri = Clients.newClient(URI.create("none+http://example.com:8080/a/b/c"), HttpClient.class)
-                         .uri();
-        assertThat(ArmeriaRetrofit.convertToOkHttpCompatUri(uri))
+    public void convertToOkHttpUrl() throws Exception {
+        URI uri = Clients.newClient(URI.create("none+http://example.com:8080/a/b/c"), HttpClient.class).uri();
+        assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(uri)))
                 .isEqualTo("http://example.com:8080/a/b/c");
     }
 
     @Test
-    public void convertToOkHttpCompatUri_noSerializationFormat() throws Exception {
+    public void convertToOkHttpUrl_noSerializationFormat() throws Exception {
         URI uri = URI.create("http://example.com:8080/");
-        assertThat(ArmeriaRetrofit.convertToOkHttpCompatUri(uri))
+        assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(uri)))
                 .isEqualTo("http://example.com:8080/");
     }
 
     @Test
-    public void convertToOkHttpCompatUri_convertOkhttpNotSupportedAuthority() throws Exception {
+    public void convertToOkHttpUrl_convertOkhttpNotSupportedAuthority() throws Exception {
         URI uri = URI.create("http://group:myGroup/path");
-        assertThat(ArmeriaRetrofit.convertToOkHttpCompatUri(uri))
-                .isEqualTo("http://group_myGroup/path");
+        assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(uri)))
+                .isEqualTo("http://group_mygroup/path"); // NB: lower-cased by OkHttp
     }
 }

@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.endpoint;
 
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import org.junit.After;
 import org.junit.Before;
@@ -30,7 +32,7 @@ public class EndpointGroupRegistryTest {
     @Before
     @After
     public void setUp() {
-        // Just in case the group 'foo' was registered somewhere.
+        // Just in case the group 'foo' was registered somewhere else.
         EndpointGroupRegistry.unregister("foo");
     }
 
@@ -45,13 +47,38 @@ public class EndpointGroupRegistryTest {
         // Register a new group.
         assertThat(EndpointGroupRegistry.register("foo", group1, WEIGHTED_ROUND_ROBIN)).isTrue();
         assertThat(EndpointGroupRegistry.get("foo")).isSameAs(group1);
+        assertThat(EndpointGroupRegistry.get("fOO")).isSameAs(group1); // Ensure case-insensitivity
 
         // Replace the group.
-        assertThat(EndpointGroupRegistry.register("foo", group2, WEIGHTED_ROUND_ROBIN)).isFalse();
+        assertThat(EndpointGroupRegistry.register("Foo", group2, WEIGHTED_ROUND_ROBIN)).isFalse();
         assertThat(EndpointGroupRegistry.get("foo")).isSameAs(group2);
 
         // Unregister the group.
-        assertThat(EndpointGroupRegistry.unregister("foo")).isTrue();
+        assertThat(EndpointGroupRegistry.unregister("FOO")).isTrue();
         assertThat(EndpointGroupRegistry.get("foo")).isNull();
+    }
+
+    @Test
+    public void testBadGroupNames() throws Exception {
+        final EndpointGroup g = mock(EndpointGroup.class);
+        final EndpointSelectionStrategy s = EndpointSelectionStrategy.ROUND_ROBIN;
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a:b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a+b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a@b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a#b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a/b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a\\b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a?b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a*b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EndpointGroupRegistry.register("a#b", g, s))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

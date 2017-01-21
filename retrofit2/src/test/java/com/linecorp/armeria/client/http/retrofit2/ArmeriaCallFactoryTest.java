@@ -84,7 +84,6 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
 
         @Override
         public int hashCode() {
-            final int PRIME = 59;
             int result = 1;
             result = result * 31 + (name == null ? 43 : name.hashCode());
             result = result * 31 + age;
@@ -93,7 +92,7 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
 
         @Override
         public String toString() {
-            return "Pojo[name=" + name + ", age=" + age + "]";
+            return "Pojo[name=" + name + ", age=" + age + ']';
         }
     }
 
@@ -305,10 +304,10 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
 
     @Test
     public void respectsHttpClientUri_endpointGroup() throws Exception {
-        EndpointGroupRegistry.register("group", new StaticEndpointGroup(Endpoint.of("127.0.0.1", httpPort())),
+        EndpointGroupRegistry.register("foo", new StaticEndpointGroup(Endpoint.of("127.0.0.1", httpPort())),
                                        ROUND_ROBIN);
         Service service = ArmeriaRetrofit.builder(Clients.newClient(ClientFactory.DEFAULT,
-                                                                    "none+http://group:group/",
+                                                                    "none+http://group:foo/",
                                                                     HttpClient.class))
                                          .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                                          .addCallAdapterFactory(GuavaCallAdapterFactory.create())
@@ -318,7 +317,7 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
         // TODO(ide) Use the actual `host:port`. See https://github.com/line/armeria/issues/379
         assertThat(response.raw().request().url()).isEqualTo(
                 new HttpUrl.Builder().scheme("http")
-                                     .host("group_group")
+                                     .host("group_foo")
                                      .addPathSegment("postForm")
                                      .build());
     }

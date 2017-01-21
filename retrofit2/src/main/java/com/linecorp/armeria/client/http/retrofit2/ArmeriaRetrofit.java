@@ -62,25 +62,24 @@ public final class ArmeriaRetrofit {
      */
     public static Retrofit.Builder builder(HttpClient httpClient) {
         return new Retrofit.Builder()
-                .baseUrl(convertToOkHttpCompatUri(httpClient.uri()))
+                .baseUrl(convertToOkHttpUrl(httpClient.uri()))
                 .callFactory(new ArmeriaCallFactory(httpClient));
     }
 
     @VisibleForTesting
-    static String convertToOkHttpCompatUri(URI uri) {
+    static HttpUrl convertToOkHttpUrl(URI uri) {
         requireNonNull(uri.getScheme(), "uri does not contain the scheme component.");
-        String uriStr = uri.toString();
 
         String protocol = Scheme.tryParse(uri.getScheme())
                                 .map(scheme -> scheme.sessionProtocol().uriText())
                                 .orElse(uri.getScheme());
         String authority = uri.getAuthority();
         String path = uri.getPath();
-        String maybeOkHttpCompatUri = protocol + "://" + authority + path;
-        if (HttpUrl.parse(maybeOkHttpCompatUri) == null) {
-            return protocol + "://" + GROUP_NAME_ESCAPER.escape(authority) + path;
+        final HttpUrl okHttpUrl = HttpUrl.parse(protocol + "://" + authority + path);
+        if (okHttpUrl == null) {
+            return HttpUrl.parse(protocol + "://" + GROUP_NAME_ESCAPER.escape(authority) + path);
         } else {
-            return maybeOkHttpCompatUri;
+            return okHttpUrl;
         }
     }
 
