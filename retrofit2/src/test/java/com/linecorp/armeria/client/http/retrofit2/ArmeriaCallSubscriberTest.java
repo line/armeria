@@ -47,7 +47,7 @@ public class ArmeriaCallSubscriberTest {
         @Override
         public void onFailure(Call call, IOException e) {
             callbackCallingCount++;
-            this.exception = e;
+            exception = e;
         }
 
         @Override

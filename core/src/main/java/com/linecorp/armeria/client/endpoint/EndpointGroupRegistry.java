@@ -18,8 +18,10 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -28,11 +30,17 @@ import com.linecorp.armeria.client.Endpoint;
  */
 public final class EndpointGroupRegistry {
 
+    private static final Pattern GROUP_NAME_PATTERN = Pattern.compile("^[-_.a-z]+$");
     private static final Map<String, EndpointSelector> serverGroups = new ConcurrentHashMap<>();
 
     /**
      * Registers the specified {@link EndpointGroup}. If there's already an {@link EndpointGroup} with the
      * specified {@code groupName}, this method will replace it with the new one.
+     *
+     * @param groupName the case-insensitive name of the {@link EndpointGroup} that matches
+     *                  the regular expression {@code /^[-_.a-zA-Z]+$/}
+     * @param endpointGroup the {@link EndpointGroup} to register
+     * @param endpointSelectionStrategy the {@link EndpointSelectionStrategy} of the registered group
      *
      * @return {@code true} if there was no {@link EndpointGroup} with the specified {@code groupName}.
      *         {@code false} if there was already an {@link EndpointGroup} with the specified {@code groupName}
@@ -40,7 +48,12 @@ public final class EndpointGroupRegistry {
      */
     public static boolean register(String groupName, EndpointGroup endpointGroup,
                                    EndpointSelectionStrategy endpointSelectionStrategy) {
-        requireNonNull(groupName, "groupName");
+        groupName = normalizeGroupName(groupName);
+        if (!GROUP_NAME_PATTERN.matcher(groupName).matches()) {
+            throw new IllegalArgumentException(
+                    "groupName: " + groupName + " (expected: " + GROUP_NAME_PATTERN.pattern() + ')');
+        }
+
         requireNonNull(endpointGroup, "group");
         requireNonNull(endpointSelectionStrategy, "endpointSelectionStrategy");
 
@@ -51,37 +64,35 @@ public final class EndpointGroupRegistry {
     }
 
     /**
-     * Unregisters the {@link EndpointGroup} with the specified {@code groupName}. Note that this is
-     * potentially a dangerous operation; make sure the {@code groupName} of the unregistered
+     * Unregisters the {@link EndpointGroup} with the specified case-insensitive {@code groupName}.
+     * Note that this is potentially a dangerous operation; make sure the {@code groupName} of the unregistered
      * {@link EndpointGroup} is not in use by any clients.
      *
      * @return {@code true} if the {@link EndpointGroup} with the specified {@code groupName} has been removed.
      *         {@code false} if there's no such {@link EndpointGroup} in the registry.
      */
     public static boolean unregister(String groupName) {
-        requireNonNull(groupName, "groupName");
+        groupName = normalizeGroupName(groupName);
         return serverGroups.remove(groupName) != null;
     }
 
     /**
-     * Returns the {@link EndpointSelector} for the specified {@code groupName}.
+     * Returns the {@link EndpointSelector} for the specified case-insensitive {@code groupName}.
      *
      * @return the {@link EndpointSelector}, or {@code null} if {@code groupName} has not been registered yet.
      */
     public static EndpointSelector getNodeSelector(String groupName) {
-        requireNonNull(groupName, "groupName");
-
+        groupName = normalizeGroupName(groupName);
         return serverGroups.get(groupName);
     }
 
     /**
-     * Get the {@link EndpointGroup} for the specified {@code groupName}.
+     * Get the {@link EndpointGroup} for the specified case-insensitive {@code groupName}.
      *
      * @return the {@link EndpointSelector}, or {@code null} if {@code groupName} has not been registered yet.
      */
     public static EndpointGroup get(String groupName) {
-        requireNonNull(groupName, "groupName");
-
+        groupName = normalizeGroupName(groupName);
         EndpointSelector endpointSelector = serverGroups.get(groupName);
         if (endpointSelector == null) {
             return null;
@@ -91,15 +102,20 @@ public final class EndpointGroupRegistry {
 
     /**
      * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
-     * {@code groupName}.
+     * case-insensitive {@code groupName}.
      */
     public static Endpoint selectNode(String groupName) {
+        groupName = normalizeGroupName(groupName);
         EndpointSelector endpointSelector = getNodeSelector(groupName);
         if (endpointSelector == null) {
             throw new EndpointGroupException("non-existent EndpointGroup: " + groupName);
         }
 
         return endpointSelector.select();
+    }
+
+    private static String normalizeGroupName(String groupName) {
+        return requireNonNull(groupName, "groupName").toLowerCase(Locale.ENGLISH);
     }
 
     private EndpointGroupRegistry() {}
