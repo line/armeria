@@ -25,6 +25,7 @@ import com.google.common.escape.Escapers;
 
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import okhttp3.HttpUrl;
 import retrofit2.Retrofit;
@@ -70,9 +71,12 @@ public final class ArmeriaRetrofit {
     static HttpUrl convertToOkHttpUrl(URI uri) {
         requireNonNull(uri.getScheme(), "uri does not contain the scheme component.");
 
-        String protocol = Scheme.tryParse(uri.getScheme())
-                                .map(scheme -> scheme.sessionProtocol().uriText())
-                                .orElse(uri.getScheme());
+        SessionProtocol sessionProtocol =
+                Scheme.tryParse(uri.getScheme())
+                      .map(Scheme::sessionProtocol)
+                      .orElseGet(() -> SessionProtocol.valueOf(uri.getScheme().toUpperCase()));
+
+        String protocol = sessionProtocol.isTls() ? "https" : "http";
         String authority = uri.getAuthority();
         String path = uri.getPath();
         final HttpUrl okHttpUrl = HttpUrl.parse(protocol + "://" + authority + path);

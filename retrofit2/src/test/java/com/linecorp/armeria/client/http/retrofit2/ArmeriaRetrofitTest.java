@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.http.retrofit2;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.URI;
 
@@ -30,6 +31,26 @@ public class ArmeriaRetrofitTest {
         URI uri = Clients.newClient(URI.create("none+http://example.com:8080/a/b/c"), HttpClient.class).uri();
         assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(uri)))
                 .isEqualTo("http://example.com:8080/a/b/c");
+    }
+
+    @Test
+    public void convertToOkHttpUrl_sessionProtocol() throws Exception {
+        assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(URI.create("h1c://example.com:8080/"))))
+                .isEqualTo("http://example.com:8080/");
+        assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(URI.create("h2c://example.com:8080/"))))
+                .isEqualTo("http://example.com:8080/");
+        assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(URI.create("h1://example.com:8080/"))))
+                .isEqualTo("https://example.com:8080/");
+        assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(URI.create("h2://example.com:8080/"))))
+                .isEqualTo("https://example.com:8080/");
+        assertThat(String.valueOf(ArmeriaRetrofit.convertToOkHttpUrl(URI.create("https://example.com:8080/"))))
+                .isEqualTo("https://example.com:8080/");
+    }
+
+    @Test
+    public void convertToOkHttpUrl_wrongSessionProtocol() throws Exception {
+        assertThatThrownBy(() -> ArmeriaRetrofit.convertToOkHttpUrl(URI.create("foo://example.com:8080/")))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
