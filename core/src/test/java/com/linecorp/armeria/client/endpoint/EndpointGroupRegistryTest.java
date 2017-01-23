@@ -39,23 +39,23 @@ public class EndpointGroupRegistryTest {
     @Test
     public void testRegistration() throws Exception {
         // Unregister a non-existent group.
-        assertThat(EndpointGroupRegistry.unregister("foo")).isFalse();
+        assertThat(EndpointGroupRegistry.unregister("foo3")).isFalse();
 
         final EndpointGroup group1 = new StaticEndpointGroup(Endpoint.of("a.com"));
         final EndpointGroup group2 = new StaticEndpointGroup(Endpoint.of("b.com"));
 
         // Register a new group.
-        assertThat(EndpointGroupRegistry.register("foo", group1, WEIGHTED_ROUND_ROBIN)).isTrue();
-        assertThat(EndpointGroupRegistry.get("foo")).isSameAs(group1);
-        assertThat(EndpointGroupRegistry.get("fOO")).isSameAs(group1); // Ensure case-insensitivity
+        assertThat(EndpointGroupRegistry.register("foo3", group1, WEIGHTED_ROUND_ROBIN)).isTrue();
+        assertThat(EndpointGroupRegistry.get("foo3")).isSameAs(group1);
+        assertThat(EndpointGroupRegistry.get("fOO3")).isSameAs(group1); // Ensure case-insensitivity
 
         // Replace the group.
-        assertThat(EndpointGroupRegistry.register("Foo", group2, WEIGHTED_ROUND_ROBIN)).isFalse();
-        assertThat(EndpointGroupRegistry.get("foo")).isSameAs(group2);
+        assertThat(EndpointGroupRegistry.register("Foo3", group2, WEIGHTED_ROUND_ROBIN)).isFalse();
+        assertThat(EndpointGroupRegistry.get("foo3")).isSameAs(group2);
 
         // Unregister the group.
-        assertThat(EndpointGroupRegistry.unregister("FOO")).isTrue();
-        assertThat(EndpointGroupRegistry.get("foo")).isNull();
+        assertThat(EndpointGroupRegistry.unregister("FOO3")).isTrue();
+        assertThat(EndpointGroupRegistry.get("foo3")).isNull();
     }
 
     @Test
