@@ -30,7 +30,7 @@ import com.linecorp.armeria.client.Endpoint;
  */
 public final class EndpointGroupRegistry {
 
-    private static final Pattern GROUP_NAME_PATTERN = Pattern.compile("^[-_.a-z]+$");
+    private static final Pattern GROUP_NAME_PATTERN = Pattern.compile("^[-_.0-9a-z]+$");
     private static final Map<String, EndpointSelector> serverGroups = new ConcurrentHashMap<>();
 
     /**
@@ -38,7 +38,7 @@ public final class EndpointGroupRegistry {
      * specified {@code groupName}, this method will replace it with the new one.
      *
      * @param groupName the case-insensitive name of the {@link EndpointGroup} that matches
-     *                  the regular expression {@code /^[-_.a-zA-Z]+$/}
+     *                  the regular expression {@code /^[-_.0-9a-zA-Z]+$/}
      * @param endpointGroup the {@link EndpointGroup} to register
      * @param endpointSelectionStrategy the {@link EndpointSelectionStrategy} of the registered group
      *
