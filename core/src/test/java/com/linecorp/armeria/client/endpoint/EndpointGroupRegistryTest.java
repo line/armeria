@@ -32,8 +32,8 @@ public class EndpointGroupRegistryTest {
     @Before
     @After
     public void setUp() {
-        // Just in case the group 'foo' was registered somewhere else.
-        EndpointGroupRegistry.unregister("foo");
+        // Just in case the group 'foo3' was registered somewhere else.
+        EndpointGroupRegistry.unregister("foo3");
     }
 
     @Test
