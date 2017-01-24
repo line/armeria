@@ -23,6 +23,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -259,6 +262,30 @@ public interface RequestContext extends AttributeMap {
      * the input {@code runnable}.
      */
     Runnable makeContextAware(Runnable runnable);
+
+    /**
+     * Returns a {@link Function} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code function}.
+     */
+    <T, R> Function<T, R> makeContextAware(Function<T, R> function);
+
+    /**
+     * Returns a {@link BiFunction} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code function}.
+     */
+    <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function);
+
+    /**
+     * Returns a {@link Consumer} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code action}.
+     */
+    <T> Consumer<T> makeContextAware(Consumer<T> action);
+
+    /**
+     * Returns a {@link BiConsumer} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code action}.
+     */
+    <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action);
 
     /**
      * Returns a {@link FutureListener} that makes sure the current {@link RequestContext} is set and then
