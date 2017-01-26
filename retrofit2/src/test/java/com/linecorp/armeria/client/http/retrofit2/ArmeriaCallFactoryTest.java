@@ -53,6 +53,7 @@ import retrofit2.http.Body;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.Headers;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
@@ -117,6 +118,9 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
         @FormUrlEncoded
         ListenableFuture<Response<Void>> postForm(@Field("name") String name,
                                                   @Field("age") int age);
+
+        @POST("/postCustomContentType")
+        ListenableFuture<Response<Void>> postCustomContentType(@Header("Content-Type") String contentType);
     }
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -199,7 +203,26 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
                       res.respond(HttpStatus.OK);
                   }));
               }
-          });
+          })
+          .serviceAt("/postCustomContentType", new AbstractHttpService() {
+            @Override
+            protected void doPost(ServiceRequestContext ctx,
+                                  HttpRequest req, HttpResponseWriter res) throws Exception {
+                req.aggregate().handle(voidFunction((aReq, cause) -> {
+                    if (cause != null) {
+                        res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
+                                    MediaType.PLAIN_TEXT_UTF_8,
+                                    Throwables.getStackTraceAsString(cause));
+                        return;
+                    }
+                    Map<String, List<String>> params = new QueryStringDecoder(
+                            aReq.content().toStringUtf8(), false)
+                            .parameters();
+                    assertThat(params).isEmpty();
+                    res.respond(HttpStatus.OK);
+                }));
+            }
+        });
     }
 
     private Service service;
@@ -320,5 +343,14 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
                                      .host("group_foo")
                                      .addPathSegment("postForm")
                                      .build());
+    }
+
+    /**
+     * Tests https://github.com/line/armeria/pull/386
+     */
+    @Test
+    public void nullContentType() throws Exception {
+        Response<Void> response = service.postCustomContentType(null).get();
+        assertThat(response.code()).isEqualTo(200);
     }
 }
