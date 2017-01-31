@@ -776,7 +776,7 @@ task release(group: 'Publishing',
         println '   rm -fr .[bd]* *'
         println '   rsync -aiP ../upstream-armeria/site/build/site/ .'
         println '   git add -A .'
-        println '   git commit --amend'
+        println "   git commit --amend -m 'Deploy the web site'"
         println '   git push --force'
     }
 }
