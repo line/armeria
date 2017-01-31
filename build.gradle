@@ -753,10 +753,10 @@ task release(group: 'Publishing',
         println()
         println "Tagged: ${tag}"
         println '-' * (tag.length() + 8)
-        println "1. Upload the artifacts to the staging repository:"
+        println "1. Upload the artifacts to the staging repository and prepare the web site:"
         println()
         println "   git checkout $tag"
-        println "   ./gradlew clean publish"
+        println "   ./gradlew clean publish site"
         println()
         println '2. Close and release the staging repository at:'
         println()
@@ -770,11 +770,14 @@ task release(group: 'Publishing',
         println()
         println "   https://github.com/line/armeria/releases/tag/${tag}"
         println()
-        println '5. Generate and deploy the new web site:'
+        println "5. Copy the web site generated to the 'gh-pages' branch. e.g."
         println()
-        println "   git checkout $tag"
-        println '   ./gradlew site'
-        println '   .. copy the web site to the gh-pages branch ..'
+        println '   cd ../site-armeria'
+        println '   rm -fr .[bd]* *'
+        println '   rsync -aiP ../upstream-armeria/site/build/site/ .'
+        println '   git add -A .'
+        println '   git commit --amend'
+        println '   git push --force'
     }
 }
 
