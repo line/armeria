@@ -49,6 +49,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -459,11 +460,14 @@ public class THttpService extends AbstractHttpService {
         final HttpData content = req.content();
         inTransport.reset(content.array(), content.offset(), content.length());
 
-        final TMessage header;
         final int seqId;
         final ThriftFunction f;
-        final TBase<TBase<?, ?>, TFieldIdEnum> args;
+        final RpcRequest decodedReq;
+
         try {
+            final TMessage header;
+            final TBase<TBase<?, ?>, TFieldIdEnum> args;
+
             try {
                 header = inProto.readMessageBegin();
             } catch (Exception e) {
@@ -494,7 +498,7 @@ public class THttpService extends AbstractHttpService {
                         TApplicationException.INVALID_MESSAGE_TYPE,
                         "unexpected TMessageType: " + typeString(typeValue));
 
-                respond(ctx, serializationFormat, seqId, methodName, cause, res);
+                handlePreDecodeException(ctx, res, cause, serializationFormat, seqId, methodName);
                 return;
             }
 
@@ -505,7 +509,7 @@ public class THttpService extends AbstractHttpService {
                 final TApplicationException cause = new TApplicationException(
                         TApplicationException.UNKNOWN_METHOD, "unknown method: " + header.name);
 
-                respond(ctx, serializationFormat, seqId, methodName, cause, res);
+                handlePreDecodeException(ctx, res, cause, serializationFormat, seqId, methodName);
                 return;
             }
 
@@ -526,7 +530,8 @@ public class THttpService extends AbstractHttpService {
                     inProto.readMessageEnd();
                 }
 
-                ctx.logBuilder().requestContent(new ThriftCall(header, args));
+                decodedReq = toRpcRequest(f.serviceType(), header.name, args);
+                ctx.logBuilder().requestContent(decodedReq, new ThriftCall(header, args));
             } catch (Exception e) {
                 // Failed to decode the invocation parameters.
                 logger.debug("{} Failed to decode Thrift arguments:", ctx, e);
@@ -534,15 +539,15 @@ public class THttpService extends AbstractHttpService {
                 final TApplicationException cause = new TApplicationException(
                         TApplicationException.PROTOCOL_ERROR, "failed to decode arguments: " + e);
 
-                respond(ctx, serializationFormat, seqId, methodName, cause, res);
+                handlePreDecodeException(ctx, res, cause, serializationFormat, seqId, methodName);
                 return;
             }
         } finally {
             inTransport.clear();
-            ctx.logBuilder().requestContent(null);
+            ctx.logBuilder().requestContent(null, null);
         }
 
-        invoke(ctx, serializationFormat, seqId, header.name, f, args, res);
+        invoke(ctx, serializationFormat, seqId, f, decodedReq, res);
     }
 
     private static String typeString(byte typeValue) {
@@ -561,41 +566,33 @@ public class THttpService extends AbstractHttpService {
     }
 
     private void invoke(
-            ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId, String methodName,
-            ThriftFunction func, TBase<TBase<?, ?>, TFieldIdEnum> args, HttpResponseWriter res) {
+            ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId,
+            ThriftFunction func, RpcRequest call, HttpResponseWriter res) {
 
-        final RpcRequest call = toRpcRequest(func.serviceType(), methodName, args);
         final RpcResponse reply;
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             reply = delegate.serve(ctx, call);
         } catch (Throwable cause) {
-            handleException(ctx, serializationFormat, seqId, func, cause, res);
+            handleException(ctx, new DefaultRpcResponse(cause), res, serializationFormat, seqId, func, cause);
             return;
         }
 
         reply.handle(voidFunction((result, cause) -> {
             if (cause != null) {
-                handleException(ctx, serializationFormat, seqId, func, cause, res);
+                handleException(ctx, reply, res, serializationFormat, seqId, func, cause);
                 return;
             }
 
             if (func.isOneWay()) {
-                respond(serializationFormat, HttpData.EMPTY_DATA, res);
+                handleOneWaySuccess(ctx, reply, res, serializationFormat);
                 return;
             }
 
             try {
-                TBase<TBase<?, ?>, TFieldIdEnum> wrappedResult = func.newResult();
-                func.setSuccess(wrappedResult, result);
-                respond(ctx, serializationFormat, seqId, func.name(), wrappedResult, res);
+                handleSuccess(ctx, reply, res, serializationFormat, seqId, func, result);
             } catch (Throwable t) {
-                final TBase<TBase<?, ?>, TFieldIdEnum> exceptionResult = func.newResult();
-                if (func.setException(exceptionResult, t)) {
-                    respond(ctx, serializationFormat, seqId, func.name(), exceptionResult, res);
-                } else {
-                    respond(ctx, serializationFormat, seqId, func.name(), t, res);
-                }
+                handleException(ctx, new DefaultRpcResponse(t), res, serializationFormat, seqId, func, t);
             }
         })).exceptionally(CompletionActions::log);
     }
@@ -630,34 +627,47 @@ public class THttpService extends AbstractHttpService {
         return RpcRequest.of(serviceType, method, list);
     }
 
+    private static void handleSuccess(
+            ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
+            SerializationFormat serializationFormat, int seqId, ThriftFunction func, Object returnValue) {
+
+        TBase<TBase<?, ?>, TFieldIdEnum> wrappedResult = func.newResult();
+        func.setSuccess(wrappedResult, returnValue);
+        respond(serializationFormat,
+                encodeSuccess(ctx, rpcRes, serializationFormat, func.name(), seqId, wrappedResult),
+                httpRes);
+    }
+
+    private static void handleOneWaySuccess(
+            ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
+            SerializationFormat serializationFormat) {
+        ctx.logBuilder().responseContent(rpcRes, null);
+        respond(serializationFormat, HttpData.EMPTY_DATA, httpRes);
+    }
+
     private static void handleException(
-            ServiceRequestContext ctx,
-            SerializationFormat serializationFormat,
-            int seqId, ThriftFunction func, Throwable cause, HttpResponseWriter res) {
+            ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
+            SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
 
         final TBase<TBase<?, ?>, TFieldIdEnum> result = func.newResult();
+        final HttpData content;
         if (func.setException(result, cause)) {
-            respond(ctx, serializationFormat, seqId, func.name(), result, res);
+            content = encodeSuccess(ctx, rpcRes, serializationFormat, func.name(), seqId, result);
         } else {
-            respond(ctx, serializationFormat, seqId, func.name(), cause, res);
+            content = encodeException(ctx, rpcRes, serializationFormat, seqId, func.name(), cause);
         }
+
+
+        respond(serializationFormat, content, httpRes);
     }
 
-    private static void respond(ServiceRequestContext ctx,
-                                SerializationFormat serializationFormat, int seqId,
-                                String methodName, TBase<TBase<?, ?>, TFieldIdEnum> result,
-                                HttpResponseWriter res) {
-        respond(serializationFormat,
-                encodeSuccess(ctx, serializationFormat, methodName, seqId, result),
-                res);
-    }
+    private static void handlePreDecodeException(
+            ServiceRequestContext ctx, HttpResponseWriter httpRes, Throwable cause,
+            SerializationFormat serializationFormat, int seqId, String methodName) {
 
-    private static void respond(ServiceRequestContext ctx,
-                                SerializationFormat serializationFormat, int seqId,
-                                String methodName, Throwable cause, HttpResponseWriter res) {
-
-        final HttpData content = encodeException(ctx, serializationFormat, seqId, methodName, cause);
-        respond(serializationFormat, content, res);
+        final HttpData content = encodeException(
+                ctx, new DefaultRpcResponse(cause), serializationFormat, seqId, methodName, cause);
+        respond(serializationFormat, content, httpRes);
     }
 
     private static void respond(SerializationFormat serializationFormat,
@@ -667,6 +677,7 @@ public class THttpService extends AbstractHttpService {
     }
 
     private static HttpData encodeSuccess(ServiceRequestContext ctx,
+                                          RpcResponse reply,
                                           SerializationFormat serializationFormat,
                                           String methodName, int seqId,
                                           TBase<TBase<?, ?>, TFieldIdEnum> result) {
@@ -680,7 +691,7 @@ public class THttpService extends AbstractHttpService {
             result.write(outProto);
             outProto.writeMessageEnd();
 
-            ctx.logBuilder().responseContent(new ThriftReply(header, result));
+            ctx.logBuilder().responseContent(reply, new ThriftReply(header, result));
         } catch (TException e) {
             throw new Error(e); // Should never reach here.
         }
@@ -689,6 +700,7 @@ public class THttpService extends AbstractHttpService {
     }
 
     private static HttpData encodeException(ServiceRequestContext ctx,
+                                            RpcResponse reply,
                                             SerializationFormat serializationFormat,
                                             int seqId, String methodName, Throwable cause) {
 
@@ -713,7 +725,7 @@ public class THttpService extends AbstractHttpService {
             appException.write(outProto);
             outProto.writeMessageEnd();
 
-            ctx.logBuilder().responseContent(new ThriftReply(header, appException));
+            ctx.logBuilder().responseContent(reply, new ThriftReply(header, appException));
         } catch (TException e) {
             throw new Error(e); // Should never reach here.
         }

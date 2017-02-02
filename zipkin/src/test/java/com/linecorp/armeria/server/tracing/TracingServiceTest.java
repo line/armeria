@@ -17,7 +17,8 @@
 package com.linecorp.armeria.server.tracing;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -29,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.junit.Test;
-import org.mockito.ArgumentMatchers;
 
 import com.github.kristofa.brave.Brave;
 import com.github.kristofa.brave.KeyValueAnnotation;
@@ -119,8 +119,8 @@ public class TracingServiceTest {
         when(ctx.method()).thenReturn("POST");
         when(ctx.log()).thenReturn(log);
         when(ctx.logBuilder()).thenReturn(log);
-        ctx.onEnter(ArgumentMatchers.isA(Runnable.class));
-        ctx.onExit(ArgumentMatchers.isA(Runnable.class));
+        ctx.onEnter(isA(Runnable.class));
+        ctx.onExit(isA(Runnable.class));
 
         RpcResponse res = RpcResponse.of("Hello, trustin!");
         when(delegate.serve(ctx, req)).thenReturn(res);

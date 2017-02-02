@@ -70,16 +70,16 @@ public interface RequestLogBuilder {
     void requestEnvelope(Object requestEnvelope);
 
     /**
-     * Sets the {@link RequestLog#requestContent()}.
+     * Sets the {@link RequestLog#requestContent()} and the {@link RequestLog#rawRequestContent()}.
      */
-    void requestContent(Object requestContent);
+    void requestContent(Object requestContent, Object rawRequestContent);
 
     /**
-     * Allows the {@link #requestContent(Object)} called after {@link #endRequest()}.
-     * By default, if {@link #requestContent(Object)} was not called yet, {@link #endRequest()} will call
-     * {@code requestContent(null)} automatically. This method turns off this default behavior.
+     * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.
+     * By default, if {@link #requestContent(Object, Object)} was not called yet, {@link #endRequest()} will
+     * call {@code requestContent(null, null)} automatically. This method turns off this default behavior.
      * Note, however, this method will not prevent {@link #endRequest(Throwable)} from calling
-     * {@code requestContent(null)} automatically.
+     * {@code requestContent(null, null)} automatically.
      */
     void deferRequestContent();
 
@@ -127,16 +127,16 @@ public interface RequestLogBuilder {
     void responseEnvelope(Object responseEnvelope);
 
     /**
-     * Sets the {@link RequestLog#responseContent()}.
+     * Sets the {@link RequestLog#responseContent()} and the {@link RequestLog#rawResponseContent()}.
      */
-    void responseContent(Object responseContent);
+    void responseContent(Object responseContent, Object rawResponseContent);
 
     /**
-     * Allows the {@link #responseContent(Object)} called after {@link #endResponse()}.
-     * By default, if {@link #responseContent(Object)} was not called yet, {@link #endResponse()} will call
-     * {@code responseContent(null)} automatically. This method turns off this default behavior.
+     * Allows the {@link #responseContent(Object, Object)} called after {@link #endResponse()}.
+     * By default, if {@link #responseContent(Object, Object)} was not called yet, {@link #endResponse()} will
+     * call {@code responseContent(null, null)} automatically. This method turns off this default behavior.
      * Note, however, this method will not prevent {@link #endResponse(Throwable)} from calling
-     * {@code responseContent(null)} automatically.
+     * {@code responseContent(null, null)} automatically.
      */
     void deferResponseContent();
 

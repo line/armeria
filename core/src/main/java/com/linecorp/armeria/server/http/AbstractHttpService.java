@@ -104,7 +104,7 @@ public abstract class AbstractHttpService implements HttpService {
                 // Set the requestContent to null by default.
                 // An implementation can override this behavior by setting the requestContent in do*()
                 // implementation or by calling deferRequestContent().
-                logBuilder.requestContent(null);
+                logBuilder.requestContent(null, null);
             }
 
             // do*() methods are expected to set the serialization format before returning.

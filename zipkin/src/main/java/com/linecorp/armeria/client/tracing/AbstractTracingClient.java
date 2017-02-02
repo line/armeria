@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.thrift.ThriftCall;
 
 /**
  * An abstract {@link DecoratingClient} that traces outgoing {@link Request}s.
@@ -121,8 +120,8 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
 
     private void closeSpan(ClientRequestContext ctx, Span span, RequestLog log) {
         final Object requestContent = log.requestContent();
-        if (requestContent instanceof ThriftCall) {
-            span.setName(((ThriftCall) requestContent).header().name);
+        if (requestContent instanceof RpcRequest) {
+            span.setName(((RpcRequest) requestContent).method());
         }
         clientInterceptor.closeSpan(span, createResponseAdapter(ctx, log));
     }

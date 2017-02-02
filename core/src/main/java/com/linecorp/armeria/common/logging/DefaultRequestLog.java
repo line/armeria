@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -92,7 +93,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private Object requestEnvelope;
     private Object responseEnvelope;
     private Object requestContent;
+    private Object rawRequestContent;
     private Object responseContent;
+    private Object rawResponseContent;
 
     private volatile int requestStrFlags = -1;
     private volatile int responseStrFlags = -1;
@@ -354,13 +357,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void requestContent(Object requestContent) {
+    public void requestContent(Object requestContent, Object rawRequestContent) {
         if (isAvailabilityAlreadyUpdated(REQUEST_CONTENT)) {
             return;
         }
 
         this.requestContent = requestContent;
+        this.rawRequestContent = rawRequestContent;
         updateAvailability(REQUEST_CONTENT);
+    }
+
+    @Override
+    public Object rawRequestContent() {
+        ensureAvailability(REQUEST_CONTENT);
+        return rawRequestContent;
     }
 
     @Override
@@ -505,13 +515,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void responseContent(Object responseContent) {
+    public void responseContent(Object responseContent, Object rawResponseContent) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_CONTENT)) {
             return;
         }
 
+        if (responseContent instanceof RpcResponse &&
+            !((RpcResponse) responseContent).isDone()) {
+            throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
+        }
+
         this.responseContent = responseContent;
+        this.rawResponseContent = rawResponseContent;
         updateAvailability(RESPONSE_CONTENT);
+    }
+
+    @Override
+    public Object rawResponseContent() {
+        ensureAvailability(RESPONSE_CONTENT);
+        return rawResponseContent;
     }
 
     @Override
@@ -712,12 +734,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 buf.append(", statusCode=").append(statusCode);
             }
 
-            if (isAvailable(flags, REQUEST_ENVELOPE) && requestEnvelope != null) {
-                buf.append(", envelope=").append(requestEnvelope);
+            if (isAvailable(flags, RESPONSE_ENVELOPE) && responseEnvelope != null) {
+                buf.append(", envelope=").append(responseEnvelope);
             }
 
-            if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
-                buf.append(", content=").append(requestContent);
+            if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
+                buf.append(", content=").append(responseContent);
             }
         }
         buf.append('}');

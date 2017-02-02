@@ -25,10 +25,10 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.internal.logging.DropwizardMetricCollector;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
@@ -105,8 +105,8 @@ public final class DropwizardMetricCollectingService<I extends Request, O extend
             methodName = ((HttpHeaders) requestEnvelope).method().name();
         }
 
-        if (requestContent instanceof ThriftCall) {
-            methodName = ((ThriftCall) requestContent).header().name;
+        if (requestContent instanceof RpcRequest) {
+            methodName = ((RpcRequest) requestContent).method();
         }
 
         pathAsMetricName = MoreObjects.firstNonNull(pathAsMetricName, "__UNKNOWN_PATH__");
