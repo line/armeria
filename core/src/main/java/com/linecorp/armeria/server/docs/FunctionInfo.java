@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
@@ -37,7 +38,6 @@ import org.apache.thrift.meta_data.FieldMetaData;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
-import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 final class FunctionInfo {
 
@@ -121,7 +121,7 @@ final class FunctionInfo {
         parameters = argsMetaData.values().stream()
                                  .map(fieldMetaData -> FieldInfo.of(fieldMetaData,
                                                                     functionNamespace, docStrings))
-                                 .collect(GuavaCollectors.toImmutableList());
+                                 .collect(toImmutableList());
 
         FieldInfo fieldInfo = null;
         if (resultClass != null) { // Function isn't "oneway" function

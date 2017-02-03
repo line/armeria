@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
@@ -32,7 +34,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.internal.futures.CompletableFutures;
-import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 /**
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
@@ -87,7 +88,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
         CompletableFuture<List<Boolean>> healthCheckResults = CompletableFutures.successfulAsList(
                 checkedServers.stream()
                               .map(connection -> connection.healthChecker.isHealthy(connection.endpoint()))
-                              .collect(GuavaCollectors.toImmutableList()),
+                              .collect(toImmutableList()),
                 t -> false);
         return healthCheckResults.handle(voidFunction((result, thrown) -> {
             ImmutableList.Builder<Endpoint> newHealthyEndpoints = ImmutableList.builder();
@@ -106,8 +107,8 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     private List<ServerConnection> updateServerList() {
         Map<Endpoint, ServerConnection> allServersByEndpoint = allServers
                 .stream()
-                .collect(GuavaCollectors.toImmutableMap(ServerConnection::endpoint,
-                                                        Function.identity()));
+                .collect(toImmutableMap(ServerConnection::endpoint,
+                                        Function.identity()));
         return allServers = delegate
                 .endpoints()
                 .stream()
@@ -118,7 +119,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
                     }
                     return new ServerConnection(endpoint, createEndpointHealthChecker(endpoint));
                 })
-                .collect(GuavaCollectors.toImmutableList());
+                .collect(toImmutableList());
     }
 
     /**

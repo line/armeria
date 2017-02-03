@@ -105,9 +105,6 @@ configure(javaProjects) {
                 }
             }
 
-            // Guava-helper
-            dependency "jp.skypencil.guava:helper:${ext.versionOf('guava-helper')}"
-
             // Hamcrest
             dependency "org.hamcrest:hamcrest-library:${ext.versionOf('hamcrest')}"
 

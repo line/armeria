@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -29,7 +30,6 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.ServerConnection;
-import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 /**
  * {@link Metric}s for a {@link HealthCheckedEndpointGroup}.
@@ -56,18 +56,18 @@ class EndpointHealthStateGaugeSet implements MetricSet {
                 (Gauge<Set<String>>) () -> ImmutableSet.copyOf(endpointGroup.healthyEndpoints)
                                                        .stream()
                                                        .map(Endpoint::authority)
-                                                       .collect(GuavaCollectors.toImmutableSet()),
+                                                       .collect(toImmutableSet()),
                 METRIC_NAME_PREFIX + metricName + ".unhealthy.endpoints",
                 (Gauge<Set<String>>) () -> {
                     Set<String> all = ImmutableSet.copyOf(endpointGroup.allServers)
                                                   .stream()
                                                   .map(ServerConnection::endpoint)
                                                   .map(Endpoint::authority)
-                                                  .collect(GuavaCollectors.toImmutableSet());
+                                                  .collect(toImmutableSet());
                     Set<String> healthy = ImmutableSet.copyOf(endpointGroup.healthyEndpoints)
                                                       .stream()
                                                       .map(Endpoint::authority)
-                                                      .collect(GuavaCollectors.toImmutableSet());
+                                                      .collect(toImmutableSet());
                     return Sets.difference(all, healthy);
                 }
         );

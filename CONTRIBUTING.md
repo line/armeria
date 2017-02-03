@@ -235,7 +235,7 @@ Map<String, String> map = Maps.newHashMap(); // B (Guava)
 List<String> list = Collections.unmodifiableList(  // A (JDK)
         otherList.stream().filter(...).collect(Collectors.toList()));
 List<String> list = otherList.stream().filter(...) // B (Guava)
-        .collect(GuavaCollectors.toImmutableList());
+        .collect(toImmutableList());
 ```
 
 #### Prefer early-return style
