@@ -24,7 +24,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+
+import com.google.common.collect.Streams;
 
 /**
  * A set of configuration options and their respective values.
@@ -65,7 +66,7 @@ public abstract class AbstractOptions {
         requireNonNull(values, "values");
 
         valueMap = new IdentityHashMap<>();
-        putAll(valueFilter, StreamSupport.stream(values.spliterator(), false));
+        putAll(valueFilter, Streams.stream(values));
     }
 
     /**
@@ -103,7 +104,7 @@ public abstract class AbstractOptions {
         requireNonNull(values, "values");
 
         valueMap = new IdentityHashMap<>(baseOptions.valueMap);
-        putAll(valueFilter, StreamSupport.stream(values.spliterator(), false));
+        putAll(valueFilter, Streams.stream(values));
     }
 
     /**

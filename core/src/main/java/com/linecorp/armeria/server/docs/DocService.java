@@ -26,13 +26,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import javax.annotation.Nullable;
 
 import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Streams;
 import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -96,8 +96,8 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
         requireNonNull(sampleRequests, "sampleRequests");
-        this.sampleRequests = StreamSupport.stream(sampleRequests.spliterator(), false)
-                                           .collect(Collectors.toMap(Object::getClass, Function.identity()));
+        this.sampleRequests = Streams.stream(sampleRequests)
+                                     .collect(Collectors.toMap(Object::getClass, Function.identity()));
         this.sampleHttpHeaders = sampleHttpHeaders;
     }
 
