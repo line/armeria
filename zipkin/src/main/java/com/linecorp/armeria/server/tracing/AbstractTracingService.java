@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -128,8 +127,8 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
 
     private void closeSpan(ServiceRequestContext ctx, ServerSpan serverSpan, RequestLog log) {
         final Object requestContent = log.requestContent();
-        if (requestContent instanceof ThriftCall) {
-            serverSpan.getSpan().setName(((ThriftCall) requestContent).header().name);
+        if (requestContent instanceof RpcRequest) {
+            serverSpan.getSpan().setName(((RpcRequest) requestContent).method());
         }
         serverInterceptor.closeSpan(serverSpan, createResponseAdapter(ctx, log));
     }

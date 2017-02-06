@@ -29,9 +29,9 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.thrift.ThriftMessage;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
@@ -53,9 +53,9 @@ public class TMultiplexedProtocolIntegrationTest extends AbstractServerTest {
                                                      "bar", name -> "bar:" + name)).decorate(
                         (delegate, ctx, req) -> {
                             ctx.log().addListener(log -> {
-                                final ThriftMessage call = (ThriftMessage) log.requestContent();
+                                final RpcRequest call = (RpcRequest) log.requestContent();
                                 if (call != null) {
-                                    methodNames.add(call.header().name);
+                                    methodNames.add(call.method());
                                 }
                             }, RequestLogAvailability.REQUEST_CONTENT);
                             return delegate.serve(ctx, req);

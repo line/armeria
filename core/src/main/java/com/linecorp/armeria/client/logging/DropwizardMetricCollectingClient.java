@@ -28,10 +28,10 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.internal.logging.DropwizardMetricCollector;
 
 /**
@@ -97,8 +97,8 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
             methodName = ((HttpHeaders) envelope).method().name();
         }
 
-        if (content instanceof ThriftCall) {
-            methodName = ((ThriftCall) content).header().name;
+        if (content instanceof RpcRequest) {
+            methodName = ((RpcRequest) content).method();
         }
 
         if (methodName == null) {

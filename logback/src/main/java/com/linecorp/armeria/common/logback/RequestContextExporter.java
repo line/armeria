@@ -54,12 +54,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
@@ -358,13 +358,13 @@ final class RequestContextExporter {
         }
 
         final Object requestContent = log.requestContent();
-        if (requestContent instanceof ThriftCall) {
-            final ThriftCall rpcReq = (ThriftCall) requestContent;
+        if (requestContent instanceof RpcRequest) {
+            final RpcRequest rpcReq = (RpcRequest) requestContent;
             if (builtIns.contains(REQ_RPC_METHOD)) {
-                out.put(REQ_RPC_METHOD.mdcKey, rpcReq.header().name);
+                out.put(REQ_RPC_METHOD.mdcKey, rpcReq.method());
             }
             if (builtIns.contains(REQ_RPC_PARAMS)) {
-                out.put(REQ_RPC_PARAMS.mdcKey, String.valueOf(rpcReq.args()));
+                out.put(REQ_RPC_PARAMS.mdcKey, String.valueOf(rpcReq.params()));
             }
         }
     }
@@ -375,11 +375,16 @@ final class RequestContextExporter {
         }
 
         final Object responseContent = log.responseContent();
-        if (responseContent instanceof ThriftReply) {
-            final ThriftReply rpcRes = (ThriftReply) responseContent;
+        if (responseContent instanceof RpcResponse) {
+            final RpcResponse rpcRes = (RpcResponse) responseContent;
             if (builtIns.contains(RES_RPC_RESULT) &&
-                !rpcRes.isException() && !(rpcRes.result() instanceof Throwable)) {
-                out.put(RES_RPC_RESULT.mdcKey, String.valueOf(rpcRes.result()));
+                !rpcRes.isCompletedExceptionally()) {
+                try {
+                    out.put(RES_RPC_RESULT.mdcKey, String.valueOf(rpcRes.get()));
+                } catch (Exception e) {
+                    // Should never reach here because RpcResponse must be completed.
+                    throw new Error(e);
+                }
             }
         }
     }

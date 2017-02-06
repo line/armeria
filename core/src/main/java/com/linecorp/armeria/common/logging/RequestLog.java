@@ -24,6 +24,8 @@ import java.util.Set;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -271,12 +273,22 @@ public interface RequestLog {
     Object requestEnvelope();
 
     /**
-     * Returns the content object of the {@link Request}, which is specific to the {@link SerializationFormat}.
+     * Returns the high-level content object of the {@link Request}, which is specific
+     * to the {@link SerializationFormat}.
+     *
+     * @return {@link RpcRequest} for RPC, or {@code null} for others
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    Object requestContent();
+
+    /**
+     * Returns the low-level content object of the {@link Request}, which is specific
+     * to the {@link SerializationFormat}.
      *
      * @return {@link ThriftCall} for Thrift, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    Object requestContent();
+    Object rawRequestContent();
 
     /**
      * Returns the {@link SessionProtocol}-level envelope object of the {@link Response}.
@@ -287,12 +299,22 @@ public interface RequestLog {
     Object responseEnvelope();
 
     /**
-     * Returns the content object of the {@link Response}, which is specific to the {@link SerializationFormat}.
+     * Returns the high-level content object of the {@link Response}, which is specific
+     * to the {@link SerializationFormat}.
+     *
+     * @return {@link RpcResponse} for RPC, or {@code null} for others
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    Object responseContent();
+
+    /**
+     * Returns the low-level content object of the {@link Response}, which is specific
+     * to the {@link SerializationFormat}.
      *
      * @return {@link ThriftReply} for Thrift, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    Object responseContent();
+    Object rawResponseContent();
 
     /**
      * Returns the string representation of the {@link Request}.

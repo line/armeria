@@ -518,18 +518,28 @@ public class ThriftOverHttpClientTest {
         final RequestLog log = requestLogs.take();
 
         assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
+        assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
+        assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
-        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
+        final RpcRequest request = (RpcRequest) log.requestContent();
+        assertThat(request.serviceType()).isEqualTo(HelloService.Iface.class);
+        assertThat(request.method()).isEqualTo("hello");
+        assertThat(request.params()).containsExactly("trustin");
+
+        final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
         assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.responseContent()).isInstanceOf(ThriftReply.class);
+        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+        assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
 
-        final ThriftReply rawResponse = (ThriftReply) log.responseContent();
+        final RpcResponse response = (RpcResponse) log.responseContent();
+        assertThat(response.get()).isEqualTo("Hello, trustin!");
+
+        final ThriftReply rawResponse = (ThriftReply) log.rawResponseContent();
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.REPLY);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.result()).isInstanceOf(HelloService.hello_result.class);
@@ -547,16 +557,26 @@ public class ThriftOverHttpClientTest {
         final RequestLog log = requestLogs.take();
 
         assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
+        assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
+        assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
-        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
+        final RpcRequest request = (RpcRequest) log.requestContent();
+        assertThat(request.serviceType()).isEqualTo(OnewayHelloService.Iface.class);
+        assertThat(request.method()).isEqualTo("hello");
+        assertThat(request.params()).containsExactly("trustin");
+
+        final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.ONEWAY);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(OnewayHelloService.hello_args.class);
         assertThat(((OnewayHelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
         assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.responseContent()).isNull();
+        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+        assertThat(log.rawResponseContent()).isNull();
+
+        final RpcResponse response = (RpcResponse) log.responseContent();
+        assertThat(response.get()).isNull();
     }
 
     @Test(timeout = 10000)
@@ -570,18 +590,28 @@ public class ThriftOverHttpClientTest {
         final RequestLog log = requestLogs.take();
 
         assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
+        assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
+        assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
-        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
+        final RpcRequest request = (RpcRequest) log.requestContent();
+        assertThat(request.serviceType()).isEqualTo(HelloService.Iface.class);
+        assertThat(request.method()).isEqualTo("hello");
+        assertThat(request.params()).containsExactly("trustin");
+
+        final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
         assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.responseContent()).isInstanceOf(ThriftReply.class);
+        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+        assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
 
-        final ThriftReply rawResponse = (ThriftReply) log.responseContent();
+        final RpcResponse response = (RpcResponse) log.responseContent();
+        assertThat(response.cause()).isNotNull();
+
+        final ThriftReply rawResponse = (ThriftReply) log.rawResponseContent();
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.EXCEPTION);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.exception()).isNotNull();

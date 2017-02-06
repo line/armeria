@@ -35,6 +35,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -202,18 +204,28 @@ public abstract class AbstractThriftOverHttpTest {
         final RequestLog log = requestLogs.take();
 
         assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
+        assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
+        assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
-        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
+        final RpcRequest request = (RpcRequest) log.requestContent();
+        assertThat(request.serviceType()).isEqualTo(HelloService.AsyncIface.class);
+        assertThat(request.method()).isEqualTo("hello");
+        assertThat(request.params()).containsExactly("Trustin");
+
+        final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("Trustin");
 
         assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.responseContent()).isInstanceOf(ThriftReply.class);
+        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+        assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
 
-        final ThriftReply rawResponse = (ThriftReply) log.responseContent();
+        final RpcResponse response = (RpcResponse) log.responseContent();
+        assertThat(response.get()).isEqualTo("Hello, Trustin!");
+
+        final ThriftReply rawResponse = (ThriftReply) log.rawResponseContent();
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.REPLY);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.result()).isInstanceOf(HelloService.hello_result.class);
@@ -234,18 +246,28 @@ public abstract class AbstractThriftOverHttpTest {
         final RequestLog log = requestLogs.take();
 
         assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.requestContent()).isInstanceOf(ThriftCall.class);
+        assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
+        assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
-        final ThriftCall rawRequest = (ThriftCall) log.requestContent();
+        final RpcRequest request = (RpcRequest) log.requestContent();
+        assertThat(request.serviceType()).isEqualTo(HelloService.AsyncIface.class);
+        assertThat(request.method()).isEqualTo("hello");
+        assertThat(request.params()).containsExactly("Trustin");
+
+        final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
         assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
         assertThat(rawRequest.header().name).isEqualTo("hello");
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("Trustin");
 
         assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.responseContent()).isInstanceOf(ThriftReply.class);
+        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+        assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
 
-        final ThriftReply rawResponse = (ThriftReply) log.responseContent();
+        final RpcResponse response = (RpcResponse) log.responseContent();
+        assertThat(response.cause()).isNotNull();
+
+        final ThriftReply rawResponse = (ThriftReply) log.rawResponseContent();
         assertThat(rawResponse.header().type).isEqualTo(TMessageType.EXCEPTION);
         assertThat(rawResponse.header().name).isEqualTo("hello");
         assertThat(rawResponse.exception()).isNotNull();
