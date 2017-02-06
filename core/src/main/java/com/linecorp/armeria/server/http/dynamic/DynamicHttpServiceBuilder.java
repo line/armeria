@@ -70,7 +70,7 @@ public final class DynamicHttpServiceBuilder {
                                                 DynamicHttpFunction function) {
         DynamicHttpFunction f = DynamicHttpFunctions.of(function, converters);
         DynamicHttpFunctionEntry entry = new DynamicHttpFunctionEntry(
-                Sets.newEnumSet(methods, HttpMethod.class), DynamicPath.of(path), f);
+                Sets.immutableEnumSet(methods), DynamicPath.of(path), f);
         validate(entry);
         entries.add(entry);
         return this;
@@ -121,6 +121,6 @@ public final class DynamicHttpServiceBuilder {
      * Creates a new {@link DynamicHttpService} with the configuration properties set so far.
      */
     public DynamicHttpService build() {
-        return new DynamicHttpService(entries.toArray(new DynamicHttpFunctionEntry[entries.size()]));
+        return new DynamicHttpService(entries);
     }
 }

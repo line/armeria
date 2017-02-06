@@ -16,15 +16,17 @@
 
 package com.linecorp.armeria.server.http.dynamic;
 
-import java.lang.annotation.Annotation;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.Sets.toImmutableEnumSet;
+
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -67,7 +69,7 @@ final class Methods {
     private static List<Method> requestMappingMethods(Object object) {
         return Arrays.stream(object.getClass().getMethods())
                      .filter(m -> m.getAnnotation(Path.class) != null)
-                     .collect(Collectors.toList());
+                     .collect(toImmutableList());
     }
 
     /**
@@ -83,16 +85,11 @@ final class Methods {
      * @see Delete
      * @see Trace
      */
-    private static EnumSet<HttpMethod> httpMethods(Method method) {
-        EnumSet<HttpMethod> ret = EnumSet.noneOf(HttpMethod.class);
-        for (Annotation annotation : method.getAnnotations()) {
-            HttpMethod mappedMethod = HTTP_METHOD_MAP.get(annotation.annotationType());
-            if (mappedMethod != null) {
-                ret.add(mappedMethod);
-            }
-        }
-
-        return ret;
+    private static Set<HttpMethod> httpMethods(Method method) {
+        return Arrays.stream(method.getAnnotations())
+                     .map(annotation -> HTTP_METHOD_MAP.get(annotation.annotationType()))
+                     .filter(Objects::nonNull)
+                     .collect(toImmutableEnumSet());
     }
 
     /**
@@ -120,13 +117,10 @@ final class Methods {
                 throw new IllegalArgumentException(
                         "@Converter annotation can't be marked on a method with a target specified.");
             }
-            ResponseConverter ret = null;
             try {
-                ret = converter.value().newInstance();
+                return converter.value().newInstance();
             } catch (Exception e) {
                 throw new IllegalStateException(e);
-            } finally {
-                return ret;
             }
         }
 
@@ -160,11 +154,10 @@ final class Methods {
     /**
      * Returns the array of {@link ParameterEntry}, which holds the type and {@link PathParam} value.
      */
-    static ParameterEntry[] parameterEntries(Method method) {
-        int parameterCount = method.getParameterCount();
+    static List<ParameterEntry> parameterEntries(Method method) {
         return Arrays.stream(method.getParameters())
                      .map(p -> new ParameterEntry(p.getType(), p.getAnnotation(PathParam.class).value()))
-                     .toArray(ParameterEntry[]::new);
+                     .collect(toImmutableList());
     }
 
     /**
@@ -173,7 +166,7 @@ final class Methods {
      */
     private static DynamicHttpFunctionEntry entry(Object object, Method method,
                                                   Map<Class<?>, ResponseConverter> converters) {
-        EnumSet<HttpMethod> methods = Methods.httpMethods(method);
+        Set<HttpMethod> methods = httpMethods(method);
         if (methods.isEmpty()) {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
@@ -210,7 +203,7 @@ final class Methods {
         return Methods.requestMappingMethods(object)
                       .stream()
                       .map((Method method) -> entry(object, method, converters))
-                      .collect(Collectors.toList());
+                      .collect(toImmutableList());
     }
 
     private Methods() {}

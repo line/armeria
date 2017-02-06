@@ -18,8 +18,8 @@ package com.linecorp.armeria.server.http.dynamic;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.EnumSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -36,7 +36,7 @@ final class DynamicHttpFunctionEntry {
     /**
      * EnumSet of HTTP Method, e.g., GET, POST, PUT, ...
      */
-    private final EnumSet<HttpMethod> methods;
+    private final Set<HttpMethod> methods;
 
     /**
      * Path with placeholders, e.g., "/const1/{var1}/{var2}/const2"
@@ -52,8 +52,8 @@ final class DynamicHttpFunctionEntry {
     /**
      * Creates a new instance.
      */
-    DynamicHttpFunctionEntry(EnumSet<HttpMethod> methods, DynamicPath path, DynamicHttpFunction function) {
-        this.methods = EnumSet.copyOf(requireNonNull(methods, "methods"));
+    DynamicHttpFunctionEntry(Set<HttpMethod> methods, DynamicPath path, DynamicHttpFunction function) {
+        this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
         this.path = requireNonNull(path, "path");
         this.function = requireNonNull(function, "function");
     }

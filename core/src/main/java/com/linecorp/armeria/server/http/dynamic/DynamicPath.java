@@ -16,16 +16,18 @@
 
 package com.linecorp.armeria.server.http.dynamic;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -151,11 +153,7 @@ final class DynamicPath {
             return null;
         }
 
-        ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-        for (String variable : variables) {
-            String value = matcher.group(variable);
-            builder.put(variable, value);
-        }
-        return builder.build();
+        return variables.stream()
+                        .collect(toImmutableMap(Function.identity(), matcher::group));
     }
 }
