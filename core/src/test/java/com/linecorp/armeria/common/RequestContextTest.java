@@ -23,10 +23,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +40,6 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -85,7 +86,7 @@ public class RequestContextTest {
         EventLoop eventLoop = new DefaultEventLoop();
         when(channel.eventLoop()).thenReturn(eventLoop);
         RequestContext context = createContext();
-        Set<Integer> callbacksCalled = new ConcurrentHashSet<>();
+        Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());
         EventExecutor executor = context.contextAwareEventLoop();
         CountDownLatch latch = new CountDownLatch(18);
         executor.execute(() -> checkCallback(1, context, callbacksCalled, latch));

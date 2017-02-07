@@ -48,7 +48,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
 import io.netty.channel.DefaultEventLoop;
 
@@ -61,13 +60,13 @@ public class CircuitBreakerClientTest {
             new DefaultEventLoop(), SessionProtocol.H2C,
             Endpoint.of("dummyhost", 8080),
             "POST", "/", "", ClientOptions.DEFAULT,
-            RpcRequest.of(HelloService.Iface.class, "methodA", "a", "b"));
+            RpcRequest.of(Object.class, "methodA", "a", "b"));
 
     private static final ClientRequestContext ctxB = new DefaultClientRequestContext(
             new DefaultEventLoop(), SessionProtocol.H2C,
             Endpoint.of("dummyhost", 8080),
             "POST", "/", "", ClientOptions.DEFAULT,
-            RpcRequest.of(HelloService.Iface.class, "methodB", "c", "d"));
+            RpcRequest.of(Object.class, "methodB", "c", "d"));
 
     private static final RpcRequest req = ctx.request();
     private static final RpcRequest reqB = ctxB.request();

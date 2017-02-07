@@ -3,4 +3,6 @@ dependencies {
     [ 'brave-core', 'brave-http' ].each {
         compile "io.zipkin.brave:$it"
     }
+
+    testCompile project(':thrift')
 }

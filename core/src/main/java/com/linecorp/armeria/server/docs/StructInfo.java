@@ -20,56 +20,40 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.meta_data.FieldMetaData;
-import org.apache.thrift.meta_data.StructMetaData;
-import org.apache.thrift.protocol.TType;
+import com.google.common.collect.ImmutableList;
 
-final class StructInfo extends TypeInfo implements ClassInfo {
-
-    static StructInfo of(StructMetaData structMetaData) {
-        return of(structMetaData, Collections.emptyMap());
-    }
-
-    static StructInfo of(StructMetaData structMetaData, Map<String, String> docStrings) {
-        final Class<?> structClass = structMetaData.structClass;
-        final String name = structClass.getName();
-
-        assert structMetaData.type == TType.STRUCT;
-        assert !structMetaData.isBinary();
-
-        final Map<?, FieldMetaData> metaDataMap =
-                FieldMetaData.getStructMetaDataMap(structMetaData.structClass);
-        final List<FieldInfo> fields = metaDataMap.values().stream()
-                .map(fieldMetaData -> FieldInfo.of(fieldMetaData, name, docStrings))
-                .collect(Collectors.toList());
-
-        return new StructInfo(name, fields, docStrings.get(name));
-    }
-
-    static StructInfo of(String name, List<FieldInfo> fields) {
-        return of(name, fields, Collections.emptyMap());
-    }
-
-    static StructInfo of(String name, List<FieldInfo> fields, Map<String, String> docStrings) {
-        return new StructInfo(name, fields, docStrings.get(name));
-    }
+/**
+ * Metadata about a struct type.
+ */
+public final class StructInfo implements ClassInfo {
 
     private final String name;
     private final List<FieldInfo> fields;
     private final String docString;
 
-    private StructInfo(String name, List<FieldInfo> fields, @Nullable String docString) {
-        super(ValueType.STRUCT, false);
+    /**
+     * Creates a new instance.
+     */
+    public StructInfo(String name, Iterable<FieldInfo> fields) {
+        this(name, fields, null);
+    }
 
+    /**
+     * Creates a new instance.
+     */
+    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
-        this.fields = Collections.unmodifiableList(requireNonNull(fields, "fields"));
+        this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
         this.docString = docString;
+    }
+
+    @Override
+    public Type type() {
+        return Type.STRUCT;
     }
 
     @Override
@@ -102,18 +86,14 @@ final class StructInfo extends TypeInfo implements ClassInfo {
             return false;
         }
 
-        if (!super.equals(o)) {
-            return false;
-        }
-
-        StructInfo that = (StructInfo) o;
+        final StructInfo that = (StructInfo) o;
         return Objects.equals(name, that.name) &&
                Objects.equals(fields, that.fields);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), name, fields);
+        return Objects.hash(type(), name, fields);
     }
 
     @Override

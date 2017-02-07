@@ -48,13 +48,6 @@ dependencies {
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'
 
-    // Thrift
-    compile 'org.apache.thrift:libthrift'
-
-    // Jetty, for testing TServlet interoperability.
-    testCompile 'org.eclipse.jetty:jetty-webapp'
-    testCompile 'org.eclipse.jetty.http2:http2-server'
-
     // Internal dependencies which will be shaded by the 'internalDeps' task below.
     internalDependency 'com.spotify:completable-futures'
     internalDependency 'it.unimi.dsi:fastutil'

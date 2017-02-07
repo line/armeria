@@ -34,6 +34,7 @@ import com.google.common.net.MediaType;
  * Serialization format of a remote procedure call and its reply.
  */
 public enum SerializationFormat {
+    // FIXME(trustin): Make serialization formats registered via SPI instead of using non-extensible enum.
 
     /**
      * No serialization format. Used when no serialization/deserialization is desired.

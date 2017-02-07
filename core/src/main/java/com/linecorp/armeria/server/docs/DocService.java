@@ -16,20 +16,16 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofCatchAll;
 import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofExact;
-import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
+import java.util.ServiceLoader;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
-
-import org.apache.thrift.TBase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Streams;
@@ -40,65 +36,38 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
 import com.linecorp.armeria.server.http.HttpService;
 import com.linecorp.armeria.server.http.file.HttpFileService;
 import com.linecorp.armeria.server.http.file.HttpVfs;
-import com.linecorp.armeria.server.thrift.THttpService;
 
 /**
- * An {@link HttpService} that provides information about the {@link THttpService}s running in a
+ * An {@link HttpService} that provides information about the {@link Service}s running in a
  * {@link Server}. It does not require any configuration besides adding it to a {@link VirtualHost}; it
- * discovers all {@link THttpService}s in the {@link Server} automatically.
+ * discovers all the eligible {@link Service}s automatically.
+ *
+ * <h3>How is the documentation generated?</h3>
+ *
+ * <p>{@link DocService} looks up the {@link ServiceSpecificationGenerator}s available in the current JVM
+ * using Java SPI (Service Provider Interface). The {@link ServiceSpecificationGenerator} implementations will
+ * generate {@link ServiceSpecification} for the {@link Service}s it supports.
  */
 public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final Map<Class<?>, ? extends TBase<?, ?>> sampleRequests;
-    private final Map<Class<?>, Map<String, String>> sampleHttpHeaders;
-
     private Server server;
 
     /**
-     * Creates a new instance, pre-populating debug forms with the provided {@code sampleRequests}.
-     * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
-     * pre-populated (e.g., a populated hello_args object for the hello method on HelloService).
+     * Creates a new instance.
      */
-    @SafeVarargs
-    public <T extends TBase<?, ?>> DocService(T... sampleRequests) {
-        this(Arrays.asList(requireNonNull(sampleRequests, "sampleRequests")));
-    }
-
-    /**
-     * Creates a new instance, pre-populating debug forms with the provided {@code sampleRequests}.
-     * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
-     * pre-populated (e.g., a populated hello_args object for the hello method on HelloService).
-     */
-    public DocService(Iterable<? extends TBase<?, ?>> sampleRequests) {
-        this(sampleRequests, Collections.emptyMap());
-    }
-
-    /**
-     * Creates a new instance, prepopulating debug forms with the provided {@code sampleRequests}
-     * and {@code sampleHttpHeaders}.
-     *
-     * {@code sampleRequests} should be a list of Thrift argument objects for methods that should be
-     * prepopulated (e.g., a populated hello_args object for the hello method on HelloService).
-     * {@code sampleHttpHeaders} should be a map of Thrift Service class to String-String map. The Thrift
-     * Service class is like HelloService.class, and String-String map is HTTP Header name to value map.
-     */
-    public DocService(Iterable<? extends TBase<?, ?>> sampleRequests,
-                      Map<Class<?>, Map<String, String>> sampleHttpHeaders) {
+    public DocService() {
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
-        requireNonNull(sampleRequests, "sampleRequests");
-        this.sampleRequests = Streams.stream(sampleRequests)
-                                     .collect(Collectors.toMap(Object::getClass, Function.identity()));
-        this.sampleHttpHeaders = sampleHttpHeaders;
     }
 
     @Override
@@ -125,13 +94,32 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 final List<ServiceConfig> services =
                         config.serviceConfigs().stream()
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
-                              .collect(Collectors.toList());
+                              .collect(toImmutableList());
+
+                final ServiceLoader<ServiceSpecificationGenerator> loader = ServiceLoader.load(
+                        ServiceSpecificationGenerator.class, DocService.class.getClassLoader());
+                final ServiceSpecification spec = ServiceSpecification.merge(
+                        Streams.stream(loader)
+                               .map(gen -> gen.generate(findSupportedServices(gen, services)))
+                               .collect(Collectors.toList()));
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
-                                             .writeValueAsBytes(Specification.forServiceConfigs(
-                                                     services, sampleRequests, sampleHttpHeaders)));
+                                             .writeValueAsBytes(spec));
             }
         });
+    }
+
+    private static List<ServiceConfig> findSupportedServices(
+            ServiceSpecificationGenerator generator, List<ServiceConfig> services) {
+        final Set<Class<? extends Service<?, ?>>> supportedServiceTypes = generator.supportedServiceTypes();
+        return services.stream()
+                       .filter(serviceCfg -> isSupported(serviceCfg, supportedServiceTypes))
+                       .collect(toImmutableList());
+    }
+
+    private static boolean isSupported(
+            ServiceConfig serviceCfg, Set<Class<? extends Service<?, ?>>> supportedServiceTypes) {
+        return supportedServiceTypes.stream().anyMatch(type -> serviceCfg.service().as(type).isPresent());
     }
 
     DocServiceVfs vfs() {

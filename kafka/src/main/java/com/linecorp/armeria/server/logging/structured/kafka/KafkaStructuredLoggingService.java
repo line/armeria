@@ -36,10 +36,10 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.logging.structured.ApacheThriftStructuredLog;
 import com.linecorp.armeria.server.logging.structured.StructuredLogBuilder;
-import com.linecorp.armeria.server.logging.structured.StructuredLogJsonFormat;
 import com.linecorp.armeria.server.logging.structured.StructuredLoggingService;
+import com.linecorp.armeria.server.thrift.ThriftStructuredLog;
+import com.linecorp.armeria.server.thrift.ThriftStructuredLogJsonFormat;
 
 /**
  * Kafka backend for service log logging.
@@ -115,7 +115,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
 
     /**
      * Creates a decorator which provides {@link StructuredLoggingService} with default {@link Producer}.
-     * {@link StructuredLogJsonFormat} is used to serialize logs.
+     * {@link ThriftStructuredLogJsonFormat} is used to serialize logs.
      *
      * @param bootstrapServers a {@code bootstrap.servers} config to specify destination Kafka cluster
      * @param topic a name of topic which is used to send logs
@@ -139,7 +139,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
     /**
      * Creates a decorator which provides {@link StructuredLoggingService} with default {@link Producer}
      * and defaulting key to null.
-     * {@link StructuredLogJsonFormat} is used to serialize logs.
+     * {@link ThriftStructuredLogJsonFormat} is used to serialize logs.
      *
      * @param bootstrapServers a {@code bootstrap.servers} config to specify destination Kafka cluster
      * @param topic a name of topic which is used to send logs
@@ -159,8 +159,8 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
     /**
      * Creates a decorator which provides {@link StructuredLoggingService} with default {@link Producer}
      * and defaulting key to null.
-     * {@link ApacheThriftStructuredLog} is used to construct log entries.
-     * {@link StructuredLogJsonFormat} is used to serialize logs.
+     * {@link ThriftStructuredLog} is used to construct log entries.
+     * {@link ThriftStructuredLogJsonFormat} is used to serialize logs.
      *
      * @param bootstrapServers a {@code bootstrap.servers} config to specify destination Kafka cluster
      * @param topic a name of topic which is used to send logs
@@ -170,9 +170,9 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
     public static <I extends Request, O extends Response>
-    Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, ApacheThriftStructuredLog>>
+    Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, ThriftStructuredLog>>
     newDecorator(String bootstrapServers, String topic) {
-        return newDecorator(bootstrapServers, topic, ApacheThriftStructuredLog::new);
+        return newDecorator(bootstrapServers, topic, ThriftStructuredLog::new);
     }
 
     private static Properties newDefaultConfig(String bootstrapServers) {

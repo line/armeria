@@ -16,91 +16,72 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Map;
-import java.util.Objects;
-
-import org.apache.thrift.meta_data.EnumMetaData;
-import org.apache.thrift.meta_data.FieldValueMetaData;
-import org.apache.thrift.meta_data.ListMetaData;
-import org.apache.thrift.meta_data.MapMetaData;
-import org.apache.thrift.meta_data.SetMetaData;
-import org.apache.thrift.meta_data.StructMetaData;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-class TypeInfo {
-    static final TypeInfo VOID = new TypeInfo(ValueType.VOID, false);
+/**
+ * Metadata about the type of a field or a return value.
+ */
+public interface TypeInfo {
 
-    static TypeInfo of(FieldValueMetaData fieldValueMetaData, Map<String, String> docStrings) {
-        if (fieldValueMetaData instanceof StructMetaData) {
-            return StructInfo.of((StructMetaData) fieldValueMetaData, docStrings);
-        }
+    /**
+     * The 'void' type. Used only as a return type.
+     */
+    TypeInfo VOID = Type.VOID.asTypeInfo();
 
-        if (fieldValueMetaData instanceof EnumMetaData) {
-            return EnumInfo.of((EnumMetaData) fieldValueMetaData, docStrings);
-        }
+    /**
+     * The 'boolean' type.
+     */
+    TypeInfo BOOL = Type.BOOL.asTypeInfo();
 
-        if (fieldValueMetaData instanceof ListMetaData) {
-            return ListInfo.of((ListMetaData) fieldValueMetaData, docStrings);
-        }
+    /**
+     * The signed 8-bit integer type.
+     */
+    TypeInfo I8 = Type.I8.asTypeInfo();
 
-        if (fieldValueMetaData instanceof SetMetaData) {
-            return SetInfo.of((SetMetaData) fieldValueMetaData, docStrings);
-        }
+    /**
+     * The double float type.
+     */
+    TypeInfo DOUBLE = Type.DOUBLE.asTypeInfo();
 
-        if (fieldValueMetaData instanceof MapMetaData) {
-            return MapInfo.of((MapMetaData) fieldValueMetaData, docStrings);
-        }
+    /**
+     * The signed 16-bit integer type.
+     */
+    TypeInfo I16 = Type.I16.asTypeInfo();
 
-        return new TypeInfo(ValueType.of(fieldValueMetaData.type), fieldValueMetaData.isBinary());
-    }
+    /**
+     * The signed 32-bit integer type.
+     */
+    TypeInfo I32 = Type.I32.asTypeInfo();
 
-    static TypeInfo of(ValueType type, boolean binary) {
-        return new TypeInfo(type, binary);
-    }
+    /**
+     * The signed 64-bit integer type.
+     */
+    TypeInfo I64 = Type.I64.asTypeInfo();
 
-    private final ValueType type;
-    private final boolean binary;
+    /**
+     * The 'string' type.
+     */
+    TypeInfo STRING = Type.STRING.asTypeInfo();
 
-    protected TypeInfo(ValueType type, boolean binary) {
-        this.type = requireNonNull(type, "type");
-        this.binary = requireNonNull(binary, "binary");
-    }
+    /**
+     * The 'binary' type.
+     */
+    TypeInfo BINARY = Type.BINARY.asTypeInfo();
 
-    public ValueType type() {
-        return type;
-    }
-
+    /**
+     * Returns the type of a field or a return value.
+     */
     @JsonProperty
-    public boolean isBinary() {
-        return binary;
-    }
+    Type type();
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        TypeInfo typeInfo = (TypeInfo) o;
-        return Objects.equals(binary, typeInfo.binary) &&
-               Objects.equals(type, typeInfo.type);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(type, binary);
-    }
-
-    @JsonProperty("type")
-    @Override
-    public String toString() {
-        return binary ? "BINARY" : type.name();
-    }
+    /**
+     * Returns the type signature string of a field or a return value. For example:
+     * <ul>
+     *   <li>{@code STRING} (base types)</li>
+     *   <li>{@code LIST<com.linecorp.bar.BarStruct>} (containers)</li>
+     *   <li>{@code com.linecorp.foo.FooStruct} (structs and enums)</li>
+     * </ul>
+     */
+    @JsonProperty
+    String signature();
 }

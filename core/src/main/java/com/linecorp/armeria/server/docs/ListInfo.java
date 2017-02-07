@@ -18,43 +18,35 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.Objects;
 
-import org.apache.thrift.meta_data.ListMetaData;
-import org.apache.thrift.protocol.TType;
+/**
+ * Metadata about a list-type value.
+ */
+public final class ListInfo implements CollectionInfo {
 
-final class ListInfo extends TypeInfo implements CollectionInfo {
+    private final TypeInfo elementTypeInfo;
 
-    static ListInfo of(ListMetaData listMetaData) {
-        return of(listMetaData, Collections.emptyMap());
-    }
-
-    static ListInfo of(ListMetaData listMetaData, Map<String, String> docStrings) {
-        requireNonNull(listMetaData, "listMetaData");
-
-        assert listMetaData.type == TType.LIST;
-        assert !listMetaData.isBinary();
-
-        return new ListInfo(of(listMetaData.elemMetaData, docStrings));
-    }
-
-    static ListInfo of(TypeInfo elementType) {
-        return new ListInfo(elementType);
-    }
-
-    private TypeInfo elementType;
-
-    private ListInfo(TypeInfo elementType) {
-        super(ValueType.LIST, false);
-
-        this.elementType = requireNonNull(elementType, "elementType");
+    /**
+     * Creates a new instance.
+     */
+    public ListInfo(TypeInfo elementTypeInfo) {
+        this.elementTypeInfo = requireNonNull(elementTypeInfo, "elementTypeInfo");
     }
 
     @Override
-    public TypeInfo elementType() {
-        return elementType;
+    public Type type() {
+        return Type.LIST;
+    }
+
+    @Override
+    public String signature() {
+        return "LIST<" + elementTypeInfo.signature() + '>';
+    }
+
+    @Override
+    public TypeInfo elementTypeInfo() {
+        return elementTypeInfo;
     }
 
     @Override
@@ -67,21 +59,17 @@ final class ListInfo extends TypeInfo implements CollectionInfo {
             return false;
         }
 
-        if (!super.equals(o)) {
-            return false;
-        }
-
-        ListInfo listInfo = (ListInfo) o;
-        return Objects.equals(elementType, listInfo.elementType);
+        final ListInfo that = (ListInfo) o;
+        return elementTypeInfo.equals(that.elementTypeInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), elementType);
+        return Objects.hash(type(), elementTypeInfo);
     }
 
     @Override
     public String toString() {
-        return "LIST<" + elementType + '>';
+        return signature();
     }
 }
