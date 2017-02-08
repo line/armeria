@@ -123,6 +123,11 @@ public class HttpServiceTest {
                     .addMapping(HttpMethod.GET, "/int/{var}",
                                 (ctx, req, args) -> Integer.parseInt(args.get("var"))
                     )
+                    .addMapping(HttpMethod.GET, "/int-async/{var}",
+                                (ctx, req, args) ->
+                                        CompletableFuture.completedFuture(Integer.parseInt(args.get("var")))
+                                                         .thenApply(n -> n + 1)
+                    )
                     // Case 2: returns Long type and handled by default Number -> HttpResponse converter.
                     .addMapping(HttpMethod.POST, "/long/{var}",
                                 (ctx, req, args) -> Long.parseLong(args.get("var"))
@@ -171,6 +176,29 @@ public class HttpServiceTest {
         @Converter(NaiveStringConverter.class)
         public CompletionStage<String> returnString(@PathParam("var") String var) {
             return CompletableFuture.supplyAsync(() -> var);
+        }
+
+        // Asynchronously returns Integer type and handled by builder-default Integer -> HttpResponse converter.
+        @Get
+        @Path("/int-async/:var")
+        public CompletableFuture<Integer> returnIntAsync(@PathParam("var") int var) {
+            return CompletableFuture.completedFuture(var).thenApply(n -> n + 1);
+        }
+
+        // Throws an exception synchronously
+        @Get
+        @Path("/exception/:var")
+        public int exception(@PathParam("var") int var) {
+            throw new IllegalArgumentException("bad var!");
+        }
+
+        // Throws an exception asynchronously
+        @Get
+        @Path("/exception-async/:var")
+        public CompletableFuture<Integer> exceptionAsync(@PathParam("var") int var) {
+            CompletableFuture<Integer> future = new CompletableFuture<>();
+            future.completeExceptionally(new IllegalArgumentException("bad var!"));
+            return future;
         }
     }
 
@@ -241,6 +269,11 @@ public class HttpServiceTest {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 42"));
             }
+            // Run asynchronous case 1.
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic1/int-async/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 43"));
+            }
             // Run case 2.
             try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic1/long/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
@@ -268,6 +301,10 @@ public class HttpServiceTest {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 42"));
             }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/int-async/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 43"));
+            }
             // Run case 5.
             try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic2/long/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
@@ -290,6 +327,16 @@ public class HttpServiceTest {
             try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic2/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
             }
+            // Exceptions in business logic
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(newUri("/dynamic2/exception/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
+            }
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(newUri("/dynamic2/exception-async/1")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
+            }
+
             // Run case 7.
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic3/int/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));

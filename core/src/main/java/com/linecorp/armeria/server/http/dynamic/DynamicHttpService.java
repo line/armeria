@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.server.http.dynamic;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
+import java.util.Collections;
+import java.util.List;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpMethod;
@@ -33,18 +35,17 @@ import com.linecorp.armeria.server.http.HttpService;
  */
 public class DynamicHttpService extends AbstractHttpService {
 
-    private final DynamicHttpFunctionEntry[] entries;
+    private final List<DynamicHttpFunctionEntry> entries;
 
     /**
      * Create a {@link DynamicHttpService} instance.
      */
     protected DynamicHttpService() {
-        this.entries = Iterables.toArray(Methods.entries(this, Maps.newHashMap()),
-                                         DynamicHttpFunctionEntry.class);
+        this.entries = ImmutableList.copyOf(Methods.entries(this, Collections.emptyMap()));
     }
 
-    DynamicHttpService(DynamicHttpFunctionEntry[] entries) {
-        this.entries = entries;
+    DynamicHttpService(Iterable<DynamicHttpFunctionEntry> entries) {
+        this.entries = ImmutableList.copyOf(entries);
     }
 
     @Override

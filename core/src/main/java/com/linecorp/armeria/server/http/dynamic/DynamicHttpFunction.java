@@ -6,7 +6,8 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * Path variable-enabled function.
+ * Path variable-enabled function. When implementing, make sure to run logic inside
+ * {@code ctx.blockingCodeExecutor()} if it may block.
  *
  * <p>Mapped path variables are passed via arguments parameter.
  */

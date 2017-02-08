@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.http.dynamic;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -104,18 +105,8 @@ final class DynamicHttpFunctions {
      * {@link ResponseConverter} object.
      */
     static DynamicHttpFunction of(DynamicHttpFunction function, ResponseConverter converter) {
-        return (ServiceRequestContext ctx, HttpRequest req, Map<String, String> args) -> {
-            Object ret = function.serve(ctx, req, args);
-            if (ret instanceof CompletionStage) {
-                // If the function runs asynchronously
-                return ((CompletionStage) ret).thenApply(obj -> convert(obj, converter))
-                                              .toCompletableFuture()
-                                              .get();
-            } else {
-                // If the function runs synchronously
-                return convert(ret, converter);
-            }
-        };
+        return (ctx, req, args) ->
+                executeSyncOrAsync(function, ctx, req, args).thenApply(obj -> convert(obj, converter));
     }
 
     /**
@@ -124,18 +115,18 @@ final class DynamicHttpFunctions {
      */
     static DynamicHttpFunction of(DynamicHttpFunction function,
                                   Map<Class<?>, ResponseConverter> converters) {
-        return (ServiceRequestContext ctx, HttpRequest req, Map<String, String> args) -> {
-            Object ret = function.serve(ctx, req, args);
-            if (ret instanceof CompletionStage) {
-                // If the function runs asynchronously
-                return ((CompletionStage) ret).thenApply(obj -> convert(obj, converters))
-                                              .toCompletableFuture()
-                                              .get();
-            } else {
-                // If the function runs synchronously
-                return convert(ret, converters);
-            }
-        };
+        return (ctx, req, args) ->
+                executeSyncOrAsync(function, ctx, req, args).thenApply(obj -> convert(obj, converters));
+    }
+
+    private static CompletionStage<?> executeSyncOrAsync(
+            DynamicHttpFunction function,
+            ServiceRequestContext ctx,
+            HttpRequest req,
+            Map<String, String> args) throws Exception {
+        Object ret = function.serve(ctx, req, args);
+        return ret instanceof CompletionStage ?
+               (CompletionStage<?>) ret : CompletableFuture.completedFuture(ret);
     }
 
     private DynamicHttpFunctions() {}

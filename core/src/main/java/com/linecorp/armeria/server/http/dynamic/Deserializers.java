@@ -16,11 +16,6 @@
 
 package com.linecorp.armeria.server.http.dynamic;
 
-import java.util.Map;
-import java.util.function.Function;
-
-import com.google.common.collect.ImmutableMap;
-
 /**
  * Provides deserializing functionality for reflection.
  *
@@ -30,37 +25,36 @@ import com.google.common.collect.ImmutableMap;
  */
 final class Deserializers {
 
-    private static final Map<Class<?>, Function<String, Object>> FUNCTIONS =
-            ImmutableMap.<Class<?>, Function<String, Object>>builder()
-                    .put(Byte.TYPE, Byte::parseByte)
-                    .put(Short.TYPE, Short::parseShort)
-                    .put(Integer.TYPE, Integer::parseInt)
-                    .put(Long.TYPE, Long::parseLong)
-                    .put(Float.TYPE, Float::parseFloat)
-                    .put(Double.TYPE, Double::parseDouble)
-                    .put(String.class, s -> s)
-                    .build();
-
     /**
      * Deserialize given {@code str} to {@code T} type object. e.g., "42" -> 42.
      *
      * @throws IllegalArgumentException if {@code str} can't be deserialized to {@code T} type object.
      */
-    public static <T> T deserialize(String str, Class<T> clazz) {
-        if (!canDeserialize(clazz)) {
-            throw new IllegalArgumentException("Class " + clazz.getSimpleName() + " can't be deserialized.");
-        }
-        Function<String, Object> function = FUNCTIONS.get(clazz);
+    @SuppressWarnings("unchecked")
+    static <T> T deserialize(String str, Class<T> clazz) {
         try {
-            return (T) function.apply(str);
+            if (clazz == Byte.TYPE) {
+                return (T) Byte.valueOf(str);
+            } else if (clazz == Short.TYPE) {
+                return (T) Short.valueOf(str);
+            } else if (clazz == Integer.TYPE) {
+                return (T) Integer.valueOf(str);
+            } else if (clazz == Long.TYPE) {
+                return (T) Long.valueOf(str);
+            } else if (clazz == Float.TYPE) {
+                return (T) Float.valueOf(str);
+            } else if (clazz == Double.TYPE) {
+                return (T) Double.valueOf(str);
+            } else if (clazz == String.class) {
+                return (T) str;
+            } else {
+                throw new IllegalArgumentException(
+                        "Class " + clazz.getSimpleName() + " can't be deserialized.");
+            }
         } catch (Exception e) {
             throw new IllegalArgumentException(
                     "Can't deserialize " + str + " to type " + clazz.getSimpleName(), e);
         }
-    }
-
-    private static boolean canDeserialize(Class<?> clazz) {
-        return FUNCTIONS.containsKey(clazz);
     }
 
     private Deserializers() {}
