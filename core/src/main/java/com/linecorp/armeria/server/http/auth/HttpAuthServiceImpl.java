@@ -16,46 +16,46 @@
 
 package com.linecorp.armeria.server.http.auth;
 
-import static java.util.Objects.requireNonNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import java.util.function.Predicate;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.internal.futures.CompletableFutures;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A default implementation of {@link HttpAuthService}.
  */
 final class HttpAuthServiceImpl extends HttpAuthService {
 
-    private final Predicate<? super HttpHeaders>[] predicates;
+    private final List<? extends Authorizer<HttpRequest>> authorizers;
 
     HttpAuthServiceImpl(Service<? super HttpRequest, ? extends HttpResponse> delegate,
-                        Predicate<? super HttpHeaders>... predicates) {
+                        Iterable<? extends Authorizer<HttpRequest>> authorizers) {
         super(delegate);
-        for (Predicate<? super HttpHeaders> predicate : predicates) {
-            requireNonNull(predicate);
-        }
-        this.predicates = predicates;
+        this.authorizers = ImmutableList.copyOf(authorizers);
     }
 
     @Override
-    public boolean authorize(HttpHeaders headers) {
-        for (Predicate<? super HttpHeaders> predicate : predicates) {
-            if (predicate.test(headers)) {
-                return true;
-            }
-        }
-
-        return false;
+    public CompletionStage<Boolean> authorize(HttpRequest req, ServiceRequestContext ctx) {
+        CompletableFuture<List<Boolean>> results =
+                CompletableFutures.allAsList(
+                        authorizers.stream()
+                                   .map(a -> a.authorize(ctx, req))
+                                   .collect(toImmutableList()));
+        return results.thenApply(r -> r.stream().anyMatch(s -> s));
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this).addValue(predicates).toString();
+        return MoreObjects.toStringHelper(this).addValue(authorizers).toString();
     }
 }
