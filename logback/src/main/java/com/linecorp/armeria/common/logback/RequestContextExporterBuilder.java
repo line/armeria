@@ -1,5 +1,6 @@
 package com.linecorp.armeria.common.logback;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -13,7 +14,6 @@ import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.logback.RequestContextExporter.ExportEntry;
-import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -92,11 +92,11 @@ final class RequestContextExporterBuilder {
     }
 
     Set<AsciiString> getHttpRequestHeaders() {
-        return httpReqHeaders.stream().map(e -> e.key).collect(GuavaCollectors.toImmutableSet());
+        return httpReqHeaders.stream().map(e -> e.key).collect(toImmutableSet());
     }
 
     Set<AsciiString> getHttpResponseHeaders() {
-        return httpResHeaders.stream().map(e -> e.key).collect(GuavaCollectors.toImmutableSet());
+        return httpResHeaders.stream().map(e -> e.key).collect(toImmutableSet());
     }
 
     void export(String mdcKey) {

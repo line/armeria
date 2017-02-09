@@ -46,7 +46,11 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.DefaultRpcRequest;
+import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
@@ -84,6 +88,8 @@ public class RequestContextExportingAppenderTest {
     private static final AttributeKey<CustomValue> MY_ATTR =
             AttributeKey.valueOf(RequestContextExportingAppenderTest.class, "MY_ATTR");
 
+    private static final RpcRequest RPC_REQ = new DefaultRpcRequest(Object.class, "hello", "world");
+    private static final RpcResponse RPC_RES = new DefaultRpcResponse("Hello, world!");
     private static final ThriftCall THRIFT_CALL =
             new ThriftCall(new TMessage("hello", TMessageType.CALL, 1),
                            new hello_args("world"));
@@ -332,12 +338,12 @@ public class RequestContextExportingAppenderTest {
             log.serializationFormat(SerializationFormat.THRIFT_BINARY);
             log.requestLength(64);
             log.requestEnvelope(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
-            log.requestContent(THRIFT_CALL);
+            log.requestContent(RPC_REQ, THRIFT_CALL);
             log.endRequest();
             log.statusCode(200);
             log.responseLength(128);
             log.responseEnvelope(HttpHeaders.of(HttpHeaderNames.DATE, "some-date"));
-            log.responseContent(THRIFT_REPLY);
+            log.responseContent(RPC_RES, THRIFT_REPLY);
             log.endResponse();
 
             final ILoggingEvent e = log(events);
@@ -355,10 +361,10 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.rpc_method", "hello")
-                           .containsEntry("req.rpc_params", "hello_args(name:world)")
+                           .containsEntry("req.rpc_params", "[world]")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
-                           .containsEntry("res.rpc_result", "hello_result(success:Hello, world!)")
+                           .containsEntry("res.rpc_result", "Hello, world!")
                            .containsEntry("req.http_headers.user-agent", "some-client")
                            .containsEntry("res.http_headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")
@@ -461,12 +467,12 @@ public class RequestContextExportingAppenderTest {
             log.serializationFormat(SerializationFormat.THRIFT_BINARY);
             log.requestLength(64);
             log.requestEnvelope(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
-            log.requestContent(THRIFT_CALL);
+            log.requestContent(RPC_REQ, THRIFT_CALL);
             log.endRequest();
             log.statusCode(200);
             log.responseLength(128);
             log.responseEnvelope(HttpHeaders.of(HttpHeaderNames.DATE, "some-date"));
-            log.responseContent(THRIFT_REPLY);
+            log.responseContent(RPC_RES, THRIFT_REPLY);
             log.endResponse();
 
             final ILoggingEvent e = log(events);
@@ -484,10 +490,10 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.rpc_method", "hello")
-                           .containsEntry("req.rpc_params", "hello_args(name:world)")
+                           .containsEntry("req.rpc_params", "[world]")
                            .containsEntry("res.status_code", "200")
                            .containsEntry("res.content_length", "128")
-                           .containsEntry("res.rpc_result", "hello_result(success:Hello, world!)")
+                           .containsEntry("res.rpc_result", "Hello, world!")
                            .containsEntry("req.http_headers.user-agent", "some-client")
                            .containsEntry("res.http_headers.date", "some-date")
                            .containsEntry("tls.session_id", "0101020305080d15")

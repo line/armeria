@@ -58,6 +58,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * Listens to {@link ServerPort}s and delegates client requests to {@link Service}s.
@@ -86,7 +87,7 @@ public final class Server implements AutoCloseable {
      * A handler that is shared by all ports and channels to be able to keep
      * track of all requests being processed by the server.
      */
-    private volatile GracefulShutdownHandler gracefulShutdownHandler;
+    private volatile GracefulShutdownSupport gracefulShutdownSupport;
 
     Server(ServerConfig config) {
         this.config = requireNonNull(config, "config");
@@ -249,10 +250,10 @@ public final class Server implements AutoCloseable {
             final List<ServerPort> ports = config().ports();
             final AtomicInteger remainingPorts = new AtomicInteger(ports.size());
             if (config().gracefulShutdownQuietPeriod().isZero()) {
-                gracefulShutdownHandler = null;
+                gracefulShutdownSupport = GracefulShutdownSupport.disabled();
             } else {
-                gracefulShutdownHandler =
-                        GracefulShutdownHandler.create(config().gracefulShutdownQuietPeriod(),
+                gracefulShutdownSupport =
+                        GracefulShutdownSupport.create(config().gracefulShutdownQuietPeriod(),
                                                        config().blockingTaskExecutor());
             }
 
@@ -270,8 +271,7 @@ public final class Server implements AutoCloseable {
         b.group(bossGroup, workerGroup);
         b.channel(NativeLibraries.isEpollAvailable() ? EpollServerSocketChannel.class
                                                      : NioServerSocketChannel.class);
-        b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
-                                                          Optional.ofNullable(gracefulShutdownHandler)));
+        b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts, gracefulShutdownSupport));
 
         return b.bind(port.localAddress());
     }
@@ -341,25 +341,26 @@ public final class Server implements AutoCloseable {
         assert future != null;
 
         final EventLoopGroup bossGroup = this.bossGroup;
-        final GracefulShutdownHandler gracefulShutdownHandler = this.gracefulShutdownHandler;
+        final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
 
-        if (gracefulShutdownHandler == null) {
+        if (gracefulShutdownSupport == null) {
             stop1(future, bossGroup);
             return;
         }
 
-        // Check every 100 ms for the server to have completed processing
-        // requests.
-        bossGroup.scheduleAtFixedRate(() -> {
-            if (gracefulShutdownHandler.completedQuietPeriod()) {
+        // Check every 100 ms for the server to have completed processing requests.
+        final ScheduledFuture<?> quietPeriodFuture = bossGroup.scheduleAtFixedRate(() -> {
+            if (gracefulShutdownSupport.completedQuietPeriod()) {
                 stop1(future, bossGroup);
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
 
         // Make sure the event loop stops after the timeout, regardless of what
-        // the GracefulShutdownHandler says.
-        bossGroup.schedule(() -> stop1(future, bossGroup),
-                           config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
+        // the GracefulShutdownSupport says.
+        bossGroup.schedule(() -> {
+            quietPeriodFuture.cancel(false);
+            stop1(future, bossGroup);
+        }, config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
     }
 
     private void stop1(CompletableFuture<Void> future, EventLoopGroup bossGroup) {

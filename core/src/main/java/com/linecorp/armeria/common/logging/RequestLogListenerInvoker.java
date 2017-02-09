@@ -38,7 +38,7 @@ public final class RequestLogListenerInvoker {
         try (SafeCloseable ignored = RequestContext.push(log.context())) {
             listener.onRequestLog(log);
         } catch (Throwable e) {
-            logger.warn("onRequestLog() failed with an exception: {}", e);
+            logger.warn("onRequestLog() failed with an exception:", e);
         }
     }
 

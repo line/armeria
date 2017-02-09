@@ -18,16 +18,23 @@ package com.linecorp.armeria.common;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -173,6 +180,105 @@ public class RequestContextTest {
             assertTrue(entered.get());
         }));
         promise.setSuccess(null);
+    }
+
+    @Test
+    public void makeContextAwareCompletableFutureInSameThread() throws Exception {
+        RequestContext context = createContext();
+        CompletableFuture<String> originalFuture = new CompletableFuture<>();
+        CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+        CompletableFuture<String> resultFuture = contextAwareFuture.whenComplete((result, cause) -> {
+            assertEquals("success", result);
+            assertNull(cause);
+            assertEquals(context, RequestContext.current());
+            assertTrue(entered.get());
+        });
+        originalFuture.complete("success");
+        assertFalse(entered.get());
+        resultFuture.get(); // this will propagate assertions.
+    }
+
+    @Test
+    public void makeContextAwareCompletableFutureWithExecutor() throws Exception {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            RequestContext context = createContext();
+            Thread testMainThread = Thread.currentThread();
+            AtomicReference<Thread> callbackThread = new AtomicReference<>();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            CompletableFuture<String> originalFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    // In CompletableFuture chaining, if previous callback was already completed,
+                    // next chained callback will run in same thread instead of executor's thread.
+                    // We should add callbacks before they were completed. This latch is for preventing it.
+                    latch.await();
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException(e);
+                }
+                final Thread currentThread = Thread.currentThread();
+                callbackThread.set(currentThread);
+                assertNotEquals(testMainThread, currentThread);
+                return "success";
+            }, executor);
+
+            CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+
+            CompletableFuture<String> resultFuture = contextAwareFuture.whenComplete((result, cause) -> {
+                final Thread currentThread = Thread.currentThread();
+                assertNotEquals(testMainThread, currentThread);
+                assertEquals(callbackThread.get(), currentThread);
+                assertEquals("success", result);
+                assertNull(cause);
+                assertEquals(context, RequestContext.current());
+                assertTrue(entered.get());
+            });
+
+            latch.countDown();
+            resultFuture.get(); // this will wait and propagate assertions.
+        } finally {
+            executor.shutdown();
+        }
+    }
+
+    @Test
+    public void makeContextAwareCompletableFutureWithAsyncChaining() throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            RequestContext context = createContext();
+            Thread testMainThread = Thread.currentThread();
+            CountDownLatch latch = new CountDownLatch(1);
+
+            CompletableFuture<String> originalFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException(e);
+                }
+                final Thread currentThread = Thread.currentThread();
+                assertNotEquals(testMainThread, currentThread);
+                return "success";
+            }, executor);
+
+            BiConsumer<String, Throwable> handler = (result, cause) -> {
+                final Thread currentThread = Thread.currentThread();
+                assertNotEquals(testMainThread, currentThread);
+                assertEquals("success", result);
+                assertNull(cause);
+                assertEquals(context, RequestContext.current());
+                assertTrue(entered.get());
+            };
+
+            CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+            CompletableFuture<String> future1 = contextAwareFuture.whenCompleteAsync(handler, executor);
+            CompletableFuture<String> future2 = future1.whenCompleteAsync(handler, executor);
+
+            latch.countDown(); // fire
+
+            future2.get(); // this will propagate assertions in callbacks if it failed.
+        } finally {
+            executor.shutdown();
+        }
     }
 
     @Test

@@ -15,8 +15,19 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
-import com.linecorp.armeria.client.http.HttpClient;
+import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.escape.Escaper;
+import com.google.common.escape.Escapers;
+
+import com.linecorp.armeria.client.http.HttpClient;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
+
+import okhttp3.HttpUrl;
 import retrofit2.Retrofit;
 
 /**
@@ -37,7 +48,14 @@ import retrofit2.Retrofit;
  * </pre>
  */
 public final class ArmeriaRetrofit {
-    private static final String UNUSED_URL = "http://0.0.0.0";
+    private static final Escaper GROUP_NAME_ESCAPER = Escapers.builder()
+                                                              .addEscape('@', "_")
+                                                              .addEscape('/', "_")
+                                                              .addEscape('\\', "_")
+                                                              .addEscape('?', "_")
+                                                              .addEscape('#', "_")
+                                                              .addEscape(':', "_")
+                                                              .build();
 
     /**
      * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
@@ -45,8 +63,28 @@ public final class ArmeriaRetrofit {
      */
     public static Retrofit.Builder builder(HttpClient httpClient) {
         return new Retrofit.Builder()
-                .baseUrl(UNUSED_URL)
+                .baseUrl(convertToOkHttpUrl(httpClient.uri()))
                 .callFactory(new ArmeriaCallFactory(httpClient));
+    }
+
+    @VisibleForTesting
+    static HttpUrl convertToOkHttpUrl(URI uri) {
+        requireNonNull(uri.getScheme(), "uri does not contain the scheme component.");
+
+        SessionProtocol sessionProtocol =
+                Scheme.tryParse(uri.getScheme())
+                      .map(Scheme::sessionProtocol)
+                      .orElseGet(() -> SessionProtocol.valueOf(uri.getScheme().toUpperCase()));
+
+        String protocol = sessionProtocol.isTls() ? "https" : "http";
+        String authority = uri.getAuthority();
+        String path = uri.getPath();
+        final HttpUrl okHttpUrl = HttpUrl.parse(protocol + "://" + authority + path);
+        if (okHttpUrl == null) {
+            return HttpUrl.parse(protocol + "://" + GROUP_NAME_ESCAPER.escape(authority) + path);
+        } else {
+            return okHttpUrl;
+        }
     }
 
     private ArmeriaRetrofit() {}

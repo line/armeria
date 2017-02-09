@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -34,7 +35,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -76,7 +76,7 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
         }
 
         entries = implementations.entrySet().stream().collect(
-                GuavaCollectors.toImmutableMap(Map.Entry::getKey, ThriftServiceEntry::new));
+                toImmutableMap(Map.Entry::getKey, ThriftServiceEntry::new));
     }
 
     /**

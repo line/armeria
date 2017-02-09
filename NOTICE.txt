@@ -65,6 +65,11 @@ by Adobe Systems Incorporated:
 Modified redistributions
 ========================
 
+This product contains a modified part of Brave, distributed by Zipkin.io:
+
+  * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/openzipkin/brave/
+
 This product contains a modified part of GRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)

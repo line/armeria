@@ -58,7 +58,7 @@ public class ApacheThriftStructuredLog extends StructuredLog {
     public ApacheThriftStructuredLog(RequestLog reqLog) {
         super(reqLog);
 
-        Object requestContent = reqLog.requestContent();
+        Object requestContent = reqLog.rawRequestContent();
         if (requestContent == null) {
             // Request might be responded as error before reading arguments.
             thriftServiceName = null;
@@ -82,7 +82,7 @@ public class ApacheThriftStructuredLog extends StructuredLog {
 
         thriftMethodName = thriftCall.header().name;
         this.thriftCall = thriftCall;
-        thriftReply = (ThriftReply) reqLog.responseContent();
+        thriftReply = (ThriftReply) reqLog.rawResponseContent();
     }
 
     /**

@@ -24,9 +24,9 @@ import java.util.function.Function;
 
 import com.codahale.metrics.MetricRegistry;
 
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 
 /**
  * (Internal use only) Collects the metric data and stores it into the {@link MetricRegistry}.
@@ -96,9 +96,8 @@ public final class DropwizardMetricCollector {
         }
 
         final Object responseContent = log.responseContent();
-        if (responseContent instanceof ThriftReply) {
-            final ThriftReply reply = (ThriftReply) responseContent;
-            return !reply.isException() && !(reply.result() instanceof Throwable);
+        if (responseContent instanceof RpcResponse) {
+            return !((RpcResponse) responseContent).isCompletedExceptionally();
         }
 
         return true;

@@ -58,7 +58,6 @@ dependencies {
     // Internal dependencies which will be shaded by the 'internalDeps' task below.
     internalDependency 'com.spotify:completable-futures'
     internalDependency 'it.unimi.dsi:fastutil'
-    internalDependency 'jp.skypencil.guava:helper'
     internalDependency 'org.reflections:reflections'
 
     // Used by the 'relocateInternalDependencies', because ShadowTask doesn't let me specify a file.
@@ -93,9 +92,6 @@ task trimInternalDependencies(type: ProGuardTask) {
     keepclasses 'it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap',
                 'it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap'
 
-    // Guava Stream
-    keepclasses 'jp.skypencil.guava.stream.GuavaCollectors'
-
     // Reflections
     keepclasses 'org.reflections.Configuration',
                 'org.reflections.Reflections',
@@ -116,7 +112,6 @@ task relocateInternalDependencies(type: ShadowJar, dependsOn: tasks.trimInternal
 
     relocate 'com.spotify.futures',       'com.linecorp.armeria.internal.futures'
     relocate 'it.unimi.dsi.fastutil',     'com.linecorp.armeria.internal.fastutil'
-    relocate 'jp.skypencil.guava.stream', 'com.linecorp.armeria.internal.guava.stream'
     relocate 'org.reflections',           'com.linecorp.armeria.internal.reflections'
 }
 

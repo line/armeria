@@ -84,7 +84,7 @@ public class StructuredLoggingServiceTest extends AbstractServerTest {
         sb.serviceAt("/hello", loggingService);
     }
 
-    @Test
+    @Test(timeout = 10000)
     public void testStructuredLogging() throws Exception {
         HelloService.Iface client = newClient();
         client.hello("kawamuray");

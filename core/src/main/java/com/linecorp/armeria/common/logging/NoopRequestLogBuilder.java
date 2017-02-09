@@ -39,7 +39,7 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void requestEnvelope(Object requestEnvelope) {}
 
     @Override
-    public void requestContent(Object requestContent) {}
+    public void requestContent(Object requestContent, Object rawRequestContent) {}
 
     @Override
     public void deferRequestContent() {}
@@ -71,7 +71,7 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void responseEnvelope(Object responseEnvelope) {}
 
     @Override
-    public void responseContent(Object responseContent) {}
+    public void responseContent(Object responseContent, Object rawResponseContent) {}
 
     @Override
     public void deferResponseContent() {}

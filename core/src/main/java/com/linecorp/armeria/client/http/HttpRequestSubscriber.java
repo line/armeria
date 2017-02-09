@@ -285,6 +285,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             return true;
         }
 
+        this.timeoutFuture = null;
         return timeoutFuture.cancel(false);
     }
 

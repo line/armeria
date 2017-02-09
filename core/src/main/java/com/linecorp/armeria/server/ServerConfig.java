@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -28,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.internal.guava.stream.GuavaCollectors;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -150,7 +150,7 @@ public final class ServerConfig {
         // Build the complete list of the services available in this server.
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
-                                   .collect(GuavaCollectors.toImmutableList());
+                                   .collect(toImmutableList());
     }
 
     static int validateNumBosses(int numBosses) {

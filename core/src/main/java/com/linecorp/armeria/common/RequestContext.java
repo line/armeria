@@ -20,8 +20,12 @@ import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -260,6 +264,30 @@ public interface RequestContext extends AttributeMap {
     Runnable makeContextAware(Runnable runnable);
 
     /**
+     * Returns a {@link Function} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code function}.
+     */
+    <T, R> Function<T, R> makeContextAware(Function<T, R> function);
+
+    /**
+     * Returns a {@link BiFunction} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code function}.
+     */
+    <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function);
+
+    /**
+     * Returns a {@link Consumer} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code action}.
+     */
+    <T> Consumer<T> makeContextAware(Consumer<T> action);
+
+    /**
+     * Returns a {@link BiConsumer} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code action}.
+     */
+    <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action);
+
+    /**
      * Returns a {@link FutureListener} that makes sure the current {@link RequestContext} is set and then
      * invokes the input {@code listener}.
      *
@@ -285,6 +313,20 @@ public interface RequestContext extends AttributeMap {
      */
     @Deprecated
     <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener);
+
+    /**
+     * Returns a {@link CompletionStage} that makes sure the current {@link CompletionStage} is set and
+     * then invokes the input {@code stage}.
+     */
+    <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage);
+
+    /**
+     * Returns a {@link CompletableFuture} that makes sure the current {@link CompletableFuture} is set and
+     * then invokes the input {@code future}.
+     */
+    default <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
+        return makeContextAware((CompletionStage<T>) future).toCompletableFuture();
+    }
 
     /**
      * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using

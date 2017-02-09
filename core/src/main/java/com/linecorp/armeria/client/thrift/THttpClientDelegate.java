@@ -114,7 +114,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             tArgs.write(tProtocol);
             tProtocol.writeMessageEnd();
 
-            ctx.logBuilder().requestContent(new ThriftCall(header, tArgs));
+            ctx.logBuilder().requestContent(call, new ThriftCall(header, tArgs));
 
             final DefaultHttpRequest httpReq = new DefaultHttpRequest(
                     HttpHeaders.of(HttpMethod.POST, path)
@@ -129,25 +129,25 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
             future.handle(voidFunction((res, cause) -> {
                 if (cause != null) {
-                    completeExceptionally(ctx, reply, func,
-                                          cause instanceof ExecutionException ? cause.getCause() : cause);
+                    handlePreDecodeException(ctx, reply, func,
+                                             cause instanceof ExecutionException ? cause.getCause() : cause);
                     return;
                 }
 
                 final HttpStatus status = res.headers().status();
                 if (status.code() != HttpStatus.OK.code()) {
-                    completeExceptionally(ctx, reply, func, new InvalidResponseException(status.toString()));
+                    handlePreDecodeException(ctx, reply, func, new InvalidResponseException(status.toString()));
                     return;
                 }
 
                 try {
-                    reply.complete(decodeResponse(ctx, func, res.content()));
+                    handle(ctx, reply, func, res.content());
                 } catch (Throwable t) {
-                    completeExceptionally(ctx, reply, func, t);
+                    handlePreDecodeException(ctx, reply, func, t);
                 }
             })).exceptionally(CompletionActions::log);
         } catch (Throwable cause) {
-            completeExceptionally(ctx, reply, func, cause);
+            handlePreDecodeException(ctx, reply, func, cause);
         }
 
         return reply;
@@ -171,12 +171,12 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         return metadataMap.computeIfAbsent(serviceType, ThriftServiceMetadata::new);
     }
 
-    private Object decodeResponse(
-            ClientRequestContext ctx, ThriftFunction func, HttpData content) throws TException {
+    private void handle(ClientRequestContext ctx, DefaultRpcResponse reply,
+                        ThriftFunction func, HttpData content) throws TException {
 
         if (func.isOneWay()) {
-            ctx.logBuilder().responseContent(null);
-            return null;
+            handleSuccess(ctx, reply, null, null);
+            return;
         }
 
         if (content.isEmpty()) {
@@ -190,32 +190,40 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         final TMessage header = inputProtocol.readMessageBegin();
         final TApplicationException appEx = readApplicationException(func, inputProtocol, header);
         if (appEx != null) {
-            ctx.logBuilder().responseContent(new ThriftReply(header, appEx));
-            throw appEx;
+            handleException(ctx, reply, new ThriftReply(header, appEx), appEx);
+            return;
         }
 
         TBase<? extends TBase<?, ?>, TFieldIdEnum> result = func.newResult();
         result.read(inputProtocol);
         inputProtocol.readMessageEnd();
 
-        ctx.logBuilder().responseContent(new ThriftReply(header, result));
+        final ThriftReply rawResponseContent = new ThriftReply(header, result);
 
         for (TFieldIdEnum fieldIdEnum : func.exceptionFields()) {
             if (result.isSet(fieldIdEnum)) {
-                throw (TException) ThriftFieldAccess.get(result, fieldIdEnum);
+                final TException cause = (TException) ThriftFieldAccess.get(result, fieldIdEnum);
+                handleException(ctx, reply, rawResponseContent, cause);
+                return;
             }
         }
 
-        TFieldIdEnum successField = func.successField();
+        final TFieldIdEnum successField = func.successField();
         if (successField == null) { // void method
-            return null;
-        }
-        if (result.isSet(successField)) {
-            return ThriftFieldAccess.get(result, successField);
+            handleSuccess(ctx, reply, null, rawResponseContent);
+            return;
         }
 
-        throw new TApplicationException(TApplicationException.MISSING_RESULT,
-                                        result.getClass().getName() + '.' + successField.getFieldName());
+        if (result.isSet(successField)) {
+            final Object returnValue = ThriftFieldAccess.get(result, successField);
+            handleSuccess(ctx, reply, returnValue, rawResponseContent);
+            return;
+        }
+
+        handleException(
+                ctx, reply, rawResponseContent,
+                new TApplicationException(TApplicationException.MISSING_RESULT,
+                                          result.getClass().getName() + '.' + successField.getFieldName()));
     }
 
     private static TApplicationException readApplicationException(ThriftFunction func,
@@ -234,14 +242,26 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         return appEx;
     }
 
-    private static void completeExceptionally(ClientRequestContext ctx, DefaultRpcResponse reply,
-                                              ThriftFunction thriftMethod, Throwable cause) {
-        ctx.logBuilder().responseContent(null);
-        reply.completeExceptionally(decodeException(cause, thriftMethod.declaredExceptions()));
+    private static void handleSuccess(ClientRequestContext ctx, DefaultRpcResponse reply,
+                                      Object returnValue, ThriftReply rawResponseContent) {
+        reply.complete(returnValue);
+        ctx.logBuilder().responseContent(reply, rawResponseContent);
+    }
+
+    private static void handleException(ClientRequestContext ctx, DefaultRpcResponse reply,
+                                        ThriftReply rawResponseContent, Exception cause) {
+        reply.completeExceptionally(cause);
+        ctx.logBuilder().responseContent(reply, rawResponseContent);
+    }
+
+    private static void handlePreDecodeException(ClientRequestContext ctx, DefaultRpcResponse reply,
+                                                 ThriftFunction thriftMethod, Throwable cause) {
+        handleException(ctx, reply, null,
+                        decodeException(cause, thriftMethod.declaredExceptions()));
     }
 
     private static Exception decodeException(Throwable cause, Class<?>[] declaredThrowableExceptions) {
-        if (cause instanceof RuntimeException || cause instanceof TTransportException) {
+        if (cause instanceof RuntimeException || cause instanceof TException) {
             return (Exception) cause;
         }
 

@@ -29,7 +29,9 @@ import com.linecorp.armeria.common.http.HttpResponse;
 
 import okhttp3.Call;
 import okhttp3.Callback;
+import okhttp3.MediaType;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import okio.Buffer;
 
@@ -112,16 +114,21 @@ public class ArmeriaCallFactory implements Call.Factory {
             }
             request.headers().toMultimap().forEach(
                     (key, values) -> headers.add(HttpHeaderNames.of(key), values));
-            if (request.body() != null) {
-                headers.set(HttpHeaderNames.CONTENT_TYPE, request.body().contentType().toString());
-                Buffer contentBuffer = new Buffer();
-                try {
-                    request.body().writeTo(contentBuffer);
+            final RequestBody body = request.body();
+            if (body != null) {
+                final MediaType contentType = body.contentType();
+                if (contentType != null) {
+                    headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+                }
+
+                try (Buffer contentBuffer = new Buffer()) {
+                    body.writeTo(contentBuffer);
+
+                    return httpClient.execute(headers, contentBuffer.readByteArray());
                 } catch (IOException e) {
                     throw new IllegalArgumentException(
                             "Failed to convert RequestBody to HttpData. " + request.method(), e);
                 }
-                return httpClient.execute(headers, contentBuffer.readByteArray());
             }
             return httpClient.execute(headers);
         }

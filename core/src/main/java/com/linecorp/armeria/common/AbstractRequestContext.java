@@ -17,7 +17,13 @@
 package com.linecorp.armeria.common;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -62,6 +68,42 @@ public abstract class AbstractRequestContext implements RequestContext {
     }
 
     @Override
+    public final <T, R> Function<T, R> makeContextAware(Function<T, R> function) {
+        return t -> {
+            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+                return function.apply(t);
+            }
+        };
+    }
+
+    @Override
+    public final <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
+        return (t, u) -> {
+            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+                return function.apply(t, u);
+            }
+        };
+    }
+
+    @Override
+    public final <T> Consumer<T> makeContextAware(Consumer<T> action) {
+        return t -> {
+            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+                action.accept(t);
+            }
+        };
+    }
+
+    @Override
+    public final <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
+        return (t, u) -> {
+            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+                action.accept(t, u);
+            }
+        };
+    }
+
+    @Override
     public final <T> FutureListener<T> makeContextAware(FutureListener<T> listener) {
         return future -> invokeOperationComplete(listener, future);
     }
@@ -75,6 +117,26 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final <T extends Future<?>> GenericFutureListener<T>
     makeContextAware(GenericFutureListener<T> listener) {
         return future -> invokeOperationComplete(listener, future);
+    }
+
+    @Override
+    public final <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
+        final CompletableFuture<T> future = new RequestContextAwareCompletableFuture<>(this);
+        stage.whenComplete((result, cause) -> {
+            try (SafeCloseable ignored = propagateContextIfNotPresent()) {
+                if (cause != null) {
+                    future.completeExceptionally(cause);
+                } else {
+                    future.complete(result);
+                }
+            }
+        });
+        return future;
+    }
+
+    @Override
+    public final <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
+        return RequestContext.super.makeContextAware(future);
     }
 
     private <T extends Future<?>> void invokeOperationComplete(
