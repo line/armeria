@@ -15,17 +15,17 @@
  */
 package com.linecorp.armeria.server.http;
 
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -68,7 +68,7 @@ public class HttpServerIdleTimeoutHandlerTest {
         readRequest();
         Thread.sleep(idleTimeoutMillis);
         ch.runPendingTasks();
-        Assert.assertTrue(ch.isOpen());
+        assertTrue(ch.isOpen());
     }
 
     @Test
@@ -76,7 +76,7 @@ public class HttpServerIdleTimeoutHandlerTest {
         readRequest();
         waitUntilTimeout();
         //pending request count is 2
-        Assert.assertTrue(ch.isOpen());
+        assertTrue(ch.isOpen());
 
         writeResponse();
         //pending request count turns to 0
@@ -111,7 +111,7 @@ public class HttpServerIdleTimeoutHandlerTest {
 
         @Override
         public SessionProtocol protocol() {
-            return SessionProtocol.H2C;
+            return HttpSessionProtocols.H2C;
         }
 
         @Override

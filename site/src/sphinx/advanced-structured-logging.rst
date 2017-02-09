@@ -129,6 +129,7 @@ automatically for you:
 .. code-block:: java
 
     import com.linecorp.armeria.common.http.HttpResponseWriter;
+    import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
     import com.linecorp.armeria.server.http.AbstractHttpService;
 
     public class MyService extenda AbstractHttpService {
@@ -142,7 +143,7 @@ automatically for you:
         @Override
         public void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
             // Set serializationFormat explicitly.
-            ctx.logBuilder().serializationFormat(SerializationFormat.THRIFT_BINARY);
+            ctx.logBuilder().serializationFormat(ThriftSerializationFormats.BINARY);
             // This will prevent AbstractHttpService from setting requestContent to null
             // automatically. You should call RequestLogBuilder.requestContent(...) later
             // when the content is determined.

@@ -74,7 +74,7 @@ public final class ArmeriaRetrofit {
         SessionProtocol sessionProtocol =
                 Scheme.tryParse(uri.getScheme())
                       .map(Scheme::sessionProtocol)
-                      .orElseGet(() -> SessionProtocol.valueOf(uri.getScheme().toUpperCase()));
+                      .orElseGet(() -> SessionProtocol.of(uri.getScheme()));
 
         String protocol = sessionProtocol.isTls() ? "https" : "http";
         String authority = uri.getAuthority();

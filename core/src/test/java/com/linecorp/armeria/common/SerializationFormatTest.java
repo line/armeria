@@ -1,37 +1,39 @@
 package com.linecorp.armeria.common;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
+import static com.google.common.net.MediaType.parse;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
 public class SerializationFormatTest {
-
     @Test
-    public void fromMimeType_exactMatch() {
+    public void findByMediaType_exactMatch() {
         for (SerializationFormat format : SerializationFormat.values()) {
             if (format == SerializationFormat.UNKNOWN) {
                 continue;
             }
-            assertSame(format, SerializationFormat.fromMediaType(format.mediaType().toString()).get());
+            assertThat(SerializationFormat.find(format.mediaType()).get()).isSameAs(format);
         }
     }
 
     @Test
-    public void fromMimeType_normalizes() {
-        assertSame(SerializationFormat.THRIFT_BINARY,
-                   SerializationFormat.fromMediaType("application/x-thrift; protocol=tbinary").get());
-        assertSame(SerializationFormat.THRIFT_COMPACT,
-                   SerializationFormat.fromMediaType("application/x-thrift;protocol=TCompact").get());
-        assertSame(SerializationFormat.THRIFT_JSON,
-                   SerializationFormat.fromMediaType("application/x-thrift ; protocol=\"TjSoN\"").get());
-        assertSame(SerializationFormat.THRIFT_TEXT,
-                   SerializationFormat.fromMediaType("application/x-thrift ; version=3;protocol=ttext").get());
+    public void findByMediaType_notRecognized() {
+        assertThat(SerializationFormat.find(parse("foo/bar"))).isEmpty();
     }
 
     @Test
-    public void fromMimeType_notRecognized() {
-        assertFalse(SerializationFormat.fromMediaType("foo/bar").isPresent());
-        assertFalse(SerializationFormat.fromMediaType(null).isPresent());
+    @SuppressWarnings("deprecation")
+    public void nullThriftSerializationFormats() {
+        assertThat(SerializationFormat.THRIFT_BINARY).isNull();
+        assertThat(SerializationFormat.THRIFT_COMPACT).isNull();
+        assertThat(SerializationFormat.THRIFT_JSON).isNull();
+        assertThat(SerializationFormat.THRIFT_TEXT).isNull();
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void failingOfThrift() {
+        assertThatThrownBy(SerializationFormat::ofThrift).isInstanceOf(IllegalStateException.class);
     }
 }

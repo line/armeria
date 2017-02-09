@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -63,7 +65,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
@@ -71,6 +72,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -178,7 +180,7 @@ public class ThriftOverHttpClientTest {
         }
 
         String path(SerializationFormat serializationFormat) {
-            return '/' + name() + '/' + serializationFormat.name();
+            return '/' + name() + '/' + serializationFormat.uriText();
         }
     }
 
@@ -187,14 +189,14 @@ public class ThriftOverHttpClientTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            sb.port(0, SessionProtocol.HTTP);
-            sb.port(0, SessionProtocol.HTTPS);
+            sb.port(0, HTTP);
+            sb.port(0, HTTPS);
 
             ssc = new SelfSignedCertificate("127.0.0.1");
-            sb.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
+            sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
 
             for (Handlers h : Handlers.values()) {
-                for (SerializationFormat defaultSerializationFormat : SerializationFormat.ofThrift()) {
+                for (SerializationFormat defaultSerializationFormat : ThriftSerializationFormats.values()) {
                     Service<HttpRequest, HttpResponse> service =
                             THttpService.of(h.handler(), defaultSerializationFormat);
                     if (ENABLE_LOGGING_DECORATORS) {
@@ -212,7 +214,7 @@ public class ThriftOverHttpClientTest {
     @Parameterized.Parameters(name = "serFmt: {0}, sessProto: {1}, useHttp2Preface: {3}")
     public static Collection<Object[]> parameters() throws Exception {
         List<Object[]> parameters = new ArrayList<>();
-        for (SerializationFormat serializationFormat : SerializationFormat.ofThrift()) {
+        for (SerializationFormat serializationFormat : ThriftSerializationFormats.values()) {
             parameters.add(new Object[] { serializationFormat, "http",  false, true });
             parameters.add(new Object[] { serializationFormat, "http",  false, false });
             parameters.add(new Object[] { serializationFormat, "https", true,  false });
@@ -247,10 +249,10 @@ public class ThriftOverHttpClientTest {
         server.start().get();
 
         httpPort = server.activePorts().values().stream()
-                         .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress()
+                         .filter(p -> p.protocol() == HTTP).findAny().get().localAddress()
                          .getPort();
         httpsPort = server.activePorts().values().stream()
-                          .filter(p -> p.protocol() == SessionProtocol.HTTPS).findAny().get().localAddress()
+                          .filter(p -> p.protocol() == HTTPS).findAny().get().localAddress()
                           .getPort();
 
         final SessionOptionValue<TrustManagerFactory> trustManagerFactoryOptVal =

@@ -20,13 +20,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.EnumSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.locks.StampedLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.LruMap;
@@ -163,22 +165,22 @@ public final class SessionProtocolNegotiationCache {
     }
 
     private static final class CacheEntry {
-        private volatile EnumSet<SessionProtocol> unsupported = EnumSet.noneOf(SessionProtocol.class);
+        private volatile Set<SessionProtocol> unsupported = ImmutableSet.of();
 
         CacheEntry(String key) {
             // Key is unused. It's just here to simplify the Map.computeIfAbsent() call in getOrCreate().
         }
 
         boolean addUnsupported(SessionProtocol protocol) {
-            EnumSet<SessionProtocol> unsupported = this.unsupported;
+            final Set<SessionProtocol> unsupported = this.unsupported;
             if (unsupported.contains(protocol)) {
                 return false;
             }
 
-            final EnumSet<SessionProtocol> copy = EnumSet.copyOf(unsupported);
-            copy.add(protocol);
-
-            this.unsupported = copy;
+            this.unsupported = ImmutableSet.<SessionProtocol>builder()
+                                           .addAll(unsupported)
+                                           .add(protocol)
+                                           .build();
             return true;
         }
 

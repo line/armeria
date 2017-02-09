@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -34,7 +35,6 @@ import org.junit.Test;
 
 import com.google.common.net.MediaType;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
@@ -90,15 +90,15 @@ public class SniServerTest extends AbstractServerTest {
             }
         });
 
-        a.sslContext(SessionProtocol.HTTPS, sscA.certificate(), sscA.privateKey());
-        b.sslContext(SessionProtocol.HTTPS, sscB.certificate(), sscB.privateKey());
-        c.sslContext(SessionProtocol.HTTPS, sscC.certificate(), sscC.privateKey());
+        a.sslContext(HTTPS, sscA.certificate(), sscA.privateKey());
+        b.sslContext(HTTPS, sscB.certificate(), sscB.privateKey());
+        c.sslContext(HTTPS, sscC.certificate(), sscC.privateKey());
 
         sb.virtualHost(a.build());
         sb.virtualHost(b.build());
         sb.defaultVirtualHost(c.build());
 
-        sb.port(0, SessionProtocol.HTTPS);
+        sb.port(0, HTTPS);
     }
 
     @AfterClass

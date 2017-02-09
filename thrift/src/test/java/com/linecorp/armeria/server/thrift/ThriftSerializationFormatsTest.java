@@ -1,6 +1,12 @@
 package com.linecorp.armeria.server.thrift;
 
-import static org.junit.Assert.assertEquals;
+import static com.google.common.net.MediaType.parse;
+import static com.linecorp.armeria.common.SerializationFormat.find;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,24 +35,38 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
     @Override
     protected void configureServer(ServerBuilder sb) {
         sb.serviceAt("/hello", THttpService.of(HELLO_SERVICE))
-          .serviceAt("/hellobinaryonly", THttpService.ofFormats(HELLO_SERVICE,
-                                                                SerializationFormat.THRIFT_BINARY));
+          .serviceAt("/hellobinaryonly", THttpService.ofFormats(HELLO_SERVICE, BINARY));
+    }
+
+    @Test
+    public void findByMediaType() {
+        // The 'protocol' parameter has to be case-insensitive.
+        assertThat(find(parse("application/x-thrift; protocol=tbinary"))).containsSame(BINARY);
+        assertThat(find(parse("application/x-thrift;protocol=TCompact"))).containsSame(COMPACT);
+        assertThat(find(parse("application/x-thrift ; protocol=\"TjSoN\""))).containsSame(JSON);
+        assertThat(find(parse("application/x-thrift ; version=3;protocol=ttext"))).containsSame(TEXT);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void backwardCompatibility() {
+        assertThat(SerializationFormat.ofThrift()).containsExactlyInAnyOrder(BINARY, COMPACT, JSON, TEXT);
+        assertThat(SerializationFormat.THRIFT_BINARY).isNotNull();
+        assertThat(SerializationFormat.THRIFT_COMPACT).isNotNull();
+        assertThat(SerializationFormat.THRIFT_JSON).isNotNull();
+        assertThat(SerializationFormat.THRIFT_TEXT).isNotNull();
     }
 
     @Test
     public void defaults() throws Exception {
-        HelloService.Iface client =
-                Clients.newClient("tbinary+" + uri("/hello"), HelloService.Iface.class);
-        String res = client.hello("Trustin");
-        assertEquals("Hello, Trustin!", res);
+        HelloService.Iface client = Clients.newClient("tbinary+" + uri("/hello"), HelloService.Iface.class);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void notDefault() throws Exception {
-        HelloService.Iface client =
-                Clients.newClient("ttext+" + uri("/hello"), HelloService.Iface.class);
-        String res = client.hello("Trustin");
-        assertEquals("Hello, Trustin!", res);
+        HelloService.Iface client = Clients.newClient("ttext+" + uri("/hello"), HelloService.Iface.class);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
@@ -67,8 +87,7 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
                 Clients.newClient("tbinary+" + uri("/hello"),
                                   HelloService.Iface.class,
                                   ClientOption.HTTP_HEADERS.newValue(headers));
-        String res = client.hello("Trustin");
-        assertEquals("Hello, Trustin!", res);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test

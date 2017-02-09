@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.http;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,7 +45,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
@@ -72,7 +72,7 @@ public class HttpClientIntegrationTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            sb.port(0, SessionProtocol.HTTP);
+            sb.port(0, HTTP);
 
             sb.serviceAt("/httptestbody", new AbstractHttpService() {
 
@@ -148,8 +148,8 @@ public class HttpClientIntegrationTest {
     public static void init() throws Exception {
         server.start().get();
         httpPort = server.activePorts().values().stream()
-                .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress()
-                .getPort();
+                         .filter(p -> p.protocol() == HTTP).findAny().get()
+                         .localAddress().getPort();
         clientFactory = ClientFactory.DEFAULT;
     }
 

@@ -16,6 +16,12 @@
 
 package com.linecorp.armeria.server.http;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
@@ -33,7 +39,6 @@ import java.io.EOFException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -56,6 +61,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.MediaType;
 
@@ -117,7 +123,7 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Parameters(name = "{index}: {0}")
     public static Collection<SessionProtocol> parameters() {
-        return EnumSet.complementOf(EnumSet.of(SessionProtocol.HTTP, SessionProtocol.HTTPS));
+        return ImmutableList.of(H1C, H1, H2C, H2);
     }
 
     private static volatile long serverRequestTimeoutMillis;
@@ -137,11 +143,11 @@ public class HttpServerTest extends AbstractServerTest {
     protected void configureServer(ServerBuilder sb) throws Exception {
 
         sb.numWorkers(1);
-        sb.port(0, SessionProtocol.HTTP);
-        sb.port(0, SessionProtocol.HTTPS);
+        sb.port(0, HTTP);
+        sb.port(0, HTTPS);
 
         SelfSignedCertificate ssc = new SelfSignedCertificate();
-        sb.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
+        sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
 
         sb.serviceUnder("/delay", new AbstractHttpService() {
             @Override

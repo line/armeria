@@ -15,6 +15,6 @@
  */
 
 /**
- * Thrift-related utility classes.
+ * Thrift-related common classes.
  */
 package com.linecorp.armeria.common.thrift;

@@ -85,18 +85,25 @@ public final class ThriftProtocolFactories {
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not for Thrift
      */
     public static TProtocolFactory get(SerializationFormat serializationFormat) {
-        switch (requireNonNull(serializationFormat, "serializationFormat")) {
-        case THRIFT_BINARY:
+        requireNonNull(serializationFormat, "serializationFormat");
+
+        if (serializationFormat == ThriftSerializationFormats.BINARY) {
             return BINARY;
-        case THRIFT_COMPACT:
-            return COMPACT;
-        case THRIFT_JSON:
-            return JSON;
-        case THRIFT_TEXT:
-            return TEXT;
-        default:
-            throw new IllegalArgumentException("non-Thrift serializationFormat: " + serializationFormat);
         }
+
+        if (serializationFormat == ThriftSerializationFormats.COMPACT) {
+            return COMPACT;
+        }
+
+        if (serializationFormat == ThriftSerializationFormats.JSON) {
+            return JSON;
+        }
+
+        if (serializationFormat == ThriftSerializationFormats.TEXT) {
+            return TEXT;
+        }
+
+        throw new IllegalArgumentException("non-Thrift serializationFormat: " + serializationFormat);
     }
 
     /**
@@ -108,13 +115,13 @@ public final class ThriftProtocolFactories {
         requireNonNull(protoFactory, "protoFactory");
 
         if (protoFactory instanceof TBinaryProtocol.Factory) {
-            return SerializationFormat.THRIFT_BINARY;
+            return ThriftSerializationFormats.BINARY;
         } else if (protoFactory instanceof TCompactProtocol.Factory) {
-            return SerializationFormat.THRIFT_COMPACT;
+            return ThriftSerializationFormats.COMPACT;
         } else if (protoFactory instanceof TJSONProtocol.Factory) {
-            return SerializationFormat.THRIFT_JSON;
+            return ThriftSerializationFormats.JSON;
         } else if (protoFactory instanceof TTextProtocol.Factory) {
-            return SerializationFormat.THRIFT_TEXT;
+            return ThriftSerializationFormats.TEXT;
         } else {
             throw new IllegalArgumentException(
                     "unsupported TProtocolFactory: " + protoFactory.getClass().getName());

@@ -23,9 +23,9 @@ import com.linecorp.armeria.client.ClientFactoryProvider;
 import com.linecorp.armeria.client.SessionOptions;
 
 /**
- * A {@link ClientFactoryProvider} that creates a {@link HttpClientFactory}.
+ * {@link ClientFactoryProvider} that creates a {@link HttpClientFactory}.
  */
-public class HttpClientFactoryProvider implements ClientFactoryProvider {
+public final class HttpClientFactoryProvider implements ClientFactoryProvider {
     @Override
     public ClientFactory newFactory(SessionOptions options,
                                     ClassToInstanceMap<ClientFactory> dependencies) {

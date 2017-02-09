@@ -33,9 +33,9 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.http.HttpClient;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -127,7 +127,7 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.port(0, SessionProtocol.HTTP)
+        sb.port(0, HttpSessionProtocols.HTTP)
           .serviceAt("/pojo", new AbstractHttpService() {
               @Override
               protected void doGet(ServiceRequestContext ctx,

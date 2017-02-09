@@ -366,6 +366,7 @@ public class TTextProtocol extends TProtocol {
     /////////////////////////////////////////
     @Override
     public TMessage readMessageBegin() throws TException {
+        root = null;
         try {
             readRoot();
         } catch (IOException e) {
@@ -403,6 +404,7 @@ public class TTextProtocol extends TProtocol {
     public void readMessageEnd() throws TException {
         // We've already finished parsing the top level struct in
         // readMessageBegin, so nothing to do here.
+        root = null;
     }
 
     @Override

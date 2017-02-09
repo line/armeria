@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.http.file;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
@@ -46,7 +47,6 @@ import org.junit.Test;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -98,7 +98,7 @@ public class HttpFileServiceTest {
         server.start().get();
 
         httpPort = server.activePorts().values().stream()
-                .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress().getPort();
+                         .filter(p -> p.protocol() == HTTP).findAny().get().localAddress().getPort();
     }
 
     @AfterClass

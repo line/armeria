@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.tracing;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -29,7 +30,6 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
@@ -76,7 +76,7 @@ public class HttpTracingClientTest extends HttpTracingTestBase {
 
     private static ClientRequestContext newClientContext(HttpRequest req) {
         return new DefaultClientRequestContext(
-                new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
+                new DefaultEventLoop(), H2C, Endpoint.of("localhost", 8080),
                 req.method().toString(), req.path(), "", ClientOptions.DEFAULT, req);
     }
 }
