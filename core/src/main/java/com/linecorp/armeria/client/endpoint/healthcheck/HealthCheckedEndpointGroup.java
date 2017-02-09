@@ -29,11 +29,11 @@ import java.util.function.Function;
 
 import com.codahale.metrics.MetricSet;
 import com.google.common.collect.ImmutableList;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.internal.futures.CompletableFutures;
 
 /**
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
