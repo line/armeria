@@ -74,7 +74,7 @@ public abstract class HttpAuthService
 
     /**
      * Determine if {@code request} is authorized for this service. If the result resolves to
-     * {@code true} if the request is authorized of {@code false} otherwise. If the future
+     * {@code true}, the request is authorized, or {@code false} otherwise. If the future
      * resolves exceptionally, the request will not be authorized.
      */
     protected abstract CompletionStage<Boolean> authorize(HttpRequest request, ServiceRequestContext ctx);
@@ -91,9 +91,9 @@ public abstract class HttpAuthService
      * Invoked when {@code req} is failed. By default, this method responds with the
      * {@link HttpStatus#UNAUTHORIZED} status.
      */
-    protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable t)
+    protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable cause)
             throws Exception {
-        logger.warn("Unexpected exception during authorization.", t);
+        logger.warn("Unexpected exception during authorization:", cause);
         final DefaultHttpResponse res = new DefaultHttpResponse();
         res.respond(HttpStatus.UNAUTHORIZED);
         return res;
@@ -110,8 +110,8 @@ public abstract class HttpAuthService
                 } else {
                     res.delegate(onSuccess(ctx, req));
                 }
-            } catch (Exception e) {
-                res.close(e);
+            } catch (Throwable cause) {
+                res.close(cause);
             }
         }, ctx.contextAwareEventLoop());
 

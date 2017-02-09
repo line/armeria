@@ -32,7 +32,7 @@ public interface Authorizer<T> {
      * Authorizes the given {@code data}.
      *
      * @return a {@link CompletionStage} that will resolve to {@code true} if the request is
-     *     authorized of {@code false} otherwise. If the future resolves exceptionally, the request
+     *     authorized, or {@code false} otherwise. If the future resolves exceptionally, the request
      *     will not be authorized.
      */
     CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data);

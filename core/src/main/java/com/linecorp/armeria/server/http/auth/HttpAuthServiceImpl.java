@@ -16,18 +16,18 @@
 
 package com.linecorp.armeria.server.http.auth;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.internal.futures.CompletableFutures;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -35,6 +35,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * A default implementation of {@link HttpAuthService}.
  */
 final class HttpAuthServiceImpl extends HttpAuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(HttpAuthServiceImpl.class);
 
     private final List<? extends Authorizer<HttpRequest>> authorizers;
 
@@ -46,12 +48,19 @@ final class HttpAuthServiceImpl extends HttpAuthService {
 
     @Override
     public CompletionStage<Boolean> authorize(HttpRequest req, ServiceRequestContext ctx) {
-        CompletableFuture<List<Boolean>> results =
-                CompletableFutures.allAsList(
-                        authorizers.stream()
-                                   .map(a -> a.authorize(ctx, req))
-                                   .collect(toImmutableList()));
-        return results.thenApply(r -> r.stream().anyMatch(s -> s));
+        CompletableFuture<Boolean> result = CompletableFuture.completedFuture(false);
+        for (Authorizer<HttpRequest> authorizer : authorizers) {
+            result = result.exceptionally(t -> {
+                logger.warn("Unexpected exception during authorization:", t);
+                return false;
+            }).thenComposeAsync(previousResult -> {
+                if (previousResult) {
+                    return CompletableFuture.completedFuture(true);
+                }
+                return authorizer.authorize(ctx, req);
+            }, ctx.contextAwareEventLoop());
+        }
+        return result;
     }
 
     @Override

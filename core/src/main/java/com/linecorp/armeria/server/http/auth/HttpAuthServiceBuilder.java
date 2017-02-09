@@ -31,8 +31,7 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Service;
 
 /**
- * Builds a new {@link HttpAuthService}. {@link Authorizer}s are executed without short-circuiting -
- * all authorizers will be executed regardless of the result of any individual one.
+ * Builds a new {@link HttpAuthService}.
  */
 public final class HttpAuthServiceBuilder {
 
