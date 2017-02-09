@@ -19,19 +19,17 @@ package com.linecorp.armeria.server.grpc.interop;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-import com.google.common.util.concurrent.UncheckedExecutionException;
-
-import com.linecorp.armeria.server.ServerListener;
-
-import io.grpc.Server;
+import io.grpc.Status;
+import io.grpc.internal.InternalServer;
+import io.grpc.internal.LogId;
+import io.grpc.internal.ServerListener;
+import io.grpc.internal.ServerTransport;
 
 /**
  * Wraps an armeria server so GRPC interop tests can operate it.
  */
-public class ArmeriaGrpcServer extends Server implements ServerListener {
+public class ArmeriaGrpcServer implements InternalServer {
 
     private final com.linecorp.armeria.server.Server armeriaServer;
 
@@ -44,13 +42,28 @@ public class ArmeriaGrpcServer extends Server implements ServerListener {
     }
 
     @Override
-    public Server start() throws IOException {
+    public void start(ServerListener listener) throws IOException {
         try {
             armeriaServer.start().get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
-        return this;
+        listener.transportCreated(new ServerTransport() {
+            @Override
+            public void shutdown() {
+                armeriaServer.stop();
+            }
+
+            @Override
+            public void shutdownNow(Status reason) {
+                armeriaServer.stop();
+            }
+
+            @Override
+            public LogId getLogId() {
+                return null;
+            }
+        });
     }
 
     @Override
@@ -59,65 +72,7 @@ public class ArmeriaGrpcServer extends Server implements ServerListener {
     }
 
     @Override
-    public Server shutdown() {
+    public void shutdown() {
         armeriaServer.stop();
-        return this;
-    }
-
-    @Override
-    public Server shutdownNow() {
-        shutdownFuture = armeriaServer.stop();
-        return this;
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return isShutdown;
-    }
-
-    @Override
-    public boolean isTerminated() {
-        return isTerminated;
-    }
-
-    @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        try {
-            shutdownFuture.get(timeout, unit);
-        } catch (ExecutionException e) {
-            throw new UncheckedExecutionException(e);
-        } catch (TimeoutException e) {
-            // Ignore.
-        }
-        return isTerminated;
-    }
-
-    @Override
-    public void awaitTermination() throws InterruptedException {
-        try {
-            shutdownFuture.get();
-        } catch (ExecutionException e) {
-            throw new UncheckedExecutionException(e);
-        }
-    }
-
-    @Override
-    public void serverStarting(com.linecorp.armeria.server.Server server) throws Exception {
-
-    }
-
-    @Override
-    public void serverStarted(com.linecorp.armeria.server.Server server) throws Exception {
-
-    }
-
-    @Override
-    public void serverStopping(com.linecorp.armeria.server.Server server) throws Exception {
-        isShutdown = true;
-    }
-
-    @Override
-    public void serverStopped(com.linecorp.armeria.server.Server server) throws Exception {
-        isTerminated = true;
     }
 }
