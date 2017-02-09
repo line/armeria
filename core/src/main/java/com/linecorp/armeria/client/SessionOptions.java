@@ -83,6 +83,45 @@ public final class SessionOptions extends AbstractOptions {
         return new SessionOptions(DEFAULT, options);
     }
 
+    /**
+     * Merges the specified {@link SessionOptions} and {@link SessionOptionValue}s.
+     *
+     * @return the merged {@link SessionOptions}
+     */
+    public static SessionOptions of(SessionOptions baseOptions, SessionOptionValue<?>... options) {
+        // TODO(trustin): Reduce the cost of creating a derived SessionOptions.
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+        if (options.length == 0) {
+            return baseOptions;
+        }
+        return new SessionOptions(baseOptions, options);
+    }
+
+    /**
+     * Merges the specified {@link SessionOptions} and {@link SessionOptionValue}s.
+     *
+     * @return the merged {@link SessionOptions}
+     */
+    public static SessionOptions of(SessionOptions baseOptions, Iterable<SessionOptionValue<?>> options) {
+        // TODO(trustin): Reduce the cost of creating a derived SessionOptions.
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+        return new SessionOptions(baseOptions, options);
+    }
+
+    /**
+     * Merges the specified two {@link SessionOptions} into one.
+     *
+     * @return the merged {@link SessionOptions}
+     */
+    public static SessionOptions of(SessionOptions baseOptions, SessionOptions options) {
+        // TODO(trustin): Reduce the cost of creating a derived SessionOptions.
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+        return new SessionOptions(baseOptions, options);
+    }
+
     private static <T> SessionOptionValue<T> validateValue(SessionOptionValue<T> optionValue) {
         requireNonNull(optionValue, "value");
 
@@ -127,6 +166,10 @@ public final class SessionOptions extends AbstractOptions {
     private SessionOptions(
             SessionOptions baseOptions, Iterable<SessionOptionValue<?>> options) {
         super(SessionOptions::validateValue, baseOptions, options);
+    }
+
+    private SessionOptions(SessionOptions clientOptions, SessionOptions options) {
+        super(clientOptions, options);
     }
 
     /**

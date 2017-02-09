@@ -24,16 +24,14 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.AbstractServiceServer;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.http.healthcheck.HttpHealthCheckService;
+import com.linecorp.armeria.test.AbstractServiceServer;
 
 public class HttpHealthCheckedEndpointGroupTest {
 
     private static class ServiceServer extends AbstractServiceServer {
-        private Server server;
         private final String healthCheckPath;
 
         ServiceServer(String healthCheckPath) {

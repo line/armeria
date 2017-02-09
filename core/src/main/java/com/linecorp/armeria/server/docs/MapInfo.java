@@ -18,53 +18,50 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.Objects;
-
-import org.apache.thrift.meta_data.MapMetaData;
-import org.apache.thrift.protocol.TType;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-final class MapInfo extends TypeInfo {
+/**
+ * Metadata about a map-type value.
+ */
+public final class MapInfo implements TypeInfo {
 
-    static MapInfo of(MapMetaData mapMetaData) {
-        return of(mapMetaData, Collections.emptyMap());
+    private final TypeInfo keyTypeInfo;
+    private final TypeInfo valueTypeInfo;
+
+    /**
+     * Creates a new instance.
+     */
+    public MapInfo(TypeInfo keyTypeInfo, TypeInfo valueTypeInfo) {
+        this.keyTypeInfo = requireNonNull(keyTypeInfo, "keyTypeInfo");
+        this.valueTypeInfo = requireNonNull(valueTypeInfo, "valueTypeInfo");
     }
 
-    static MapInfo of(MapMetaData mapMetaData, Map<String, String> docStrings) {
-        requireNonNull(mapMetaData, "mapMetaData");
-
-        assert mapMetaData.type == TType.MAP;
-        assert !mapMetaData.isBinary();
-
-        return new MapInfo(TypeInfo.of(mapMetaData.keyMetaData, docStrings),
-                           TypeInfo.of(mapMetaData.valueMetaData, docStrings));
+    @Override
+    public Type type() {
+        return Type.MAP;
     }
 
-    static MapInfo of(TypeInfo keyType, TypeInfo valueType) {
-        return new MapInfo(keyType, valueType);
+    @Override
+    public String signature() {
+        return "MAP<" + keyTypeInfo.signature() + ", " + valueTypeInfo.signature() + '>';
     }
 
-    private final TypeInfo keyType;
-    private final TypeInfo valueType;
-
-    private MapInfo(TypeInfo keyType, TypeInfo valueType) {
-        super(ValueType.MAP, false);
-
-        this.keyType = requireNonNull(keyType, "keyType");
-        this.valueType = requireNonNull(valueType, "valueType");
-    }
-
+    /**
+     * Returns the metadata about the key type of the map.
+     */
     @JsonProperty
-    public TypeInfo keyType() {
-        return keyType;
+    public TypeInfo keyTypeInfo() {
+        return keyTypeInfo;
     }
 
+    /**
+     * Returns the metadata about the value type of the map.
+     */
     @JsonProperty
-    public TypeInfo valueType() {
-        return valueType;
+    public TypeInfo valueTypeInfo() {
+        return valueTypeInfo;
     }
 
     @Override
@@ -77,22 +74,18 @@ final class MapInfo extends TypeInfo {
             return false;
         }
 
-        if (!super.equals(o)) {
-            return false;
-        }
-
-        MapInfo mapInfo = (MapInfo) o;
-        return Objects.equals(keyType, mapInfo.keyType) &&
-               Objects.equals(valueType, mapInfo.valueType);
+        final MapInfo that = (MapInfo) o;
+        return keyTypeInfo.equals(that.keyTypeInfo) &&
+               valueTypeInfo.equals(that.valueTypeInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), keyType, valueType);
+        return Objects.hash(type(), keyTypeInfo, valueTypeInfo);
     }
 
     @Override
     public String toString() {
-        return "MAP<" + keyType + ", " + valueType + '>';
+        return signature();
     }
 }

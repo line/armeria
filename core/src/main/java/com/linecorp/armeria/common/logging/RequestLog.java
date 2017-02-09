@@ -30,8 +30,6 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
 
 import io.netty.channel.Channel;
 
@@ -285,7 +283,7 @@ public interface RequestLog {
      * Returns the low-level content object of the {@link Request}, which is specific
      * to the {@link SerializationFormat}.
      *
-     * @return {@link ThriftCall} for Thrift, or {@code null} for others
+     * @return {@code ThriftCall} for Thrift, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     Object rawRequestContent();
@@ -311,7 +309,7 @@ public interface RequestLog {
      * Returns the low-level content object of the {@link Response}, which is specific
      * to the {@link SerializationFormat}.
      *
-     * @return {@link ThriftReply} for Thrift, or {@code null} for others
+     * @return {@code ThriftReply} for Thrift, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     Object rawResponseContent();

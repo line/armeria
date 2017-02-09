@@ -18,7 +18,13 @@ package com.linecorp.armeria.server.docs;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-interface CollectionInfo {
+/**
+ * Metadata about a list type or a set type.
+ */
+public interface CollectionInfo extends TypeInfo {
+    /**
+     * Returns the metadata about the element type of this collection.
+     */
     @JsonProperty
-    TypeInfo elementType();
+    TypeInfo elementTypeInfo();
 }

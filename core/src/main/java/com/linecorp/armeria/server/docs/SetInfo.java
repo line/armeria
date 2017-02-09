@@ -18,43 +18,35 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.Objects;
 
-import org.apache.thrift.meta_data.SetMetaData;
-import org.apache.thrift.protocol.TType;
+/**
+ * Metadata about a set-type value.
+ */
+public final class SetInfo implements CollectionInfo {
 
-final class SetInfo extends TypeInfo implements CollectionInfo {
+    private final TypeInfo elementTypeInfo;
 
-    static SetInfo of(SetMetaData setMetaData) {
-        return of(setMetaData, Collections.emptyMap());
-    }
-
-    static SetInfo of(SetMetaData setMetaData, Map<String, String> docStrings) {
-        requireNonNull(setMetaData, "setMetaData");
-
-        assert setMetaData.type == TType.SET;
-        assert !setMetaData.isBinary();
-
-        return new SetInfo(of(setMetaData.elemMetaData, docStrings));
-    }
-
-    static SetInfo of(TypeInfo elementType) {
-        return new SetInfo(elementType);
-    }
-
-    private final TypeInfo elementType;
-
-    private SetInfo(TypeInfo elementType) {
-        super(ValueType.SET, false);
-
-        this.elementType = requireNonNull(elementType, "elementType");
+    /**
+     * Creates a new instance.
+     */
+    public SetInfo(TypeInfo elementTypeInfo) {
+        this.elementTypeInfo = requireNonNull(elementTypeInfo, "elementTypeInfo");
     }
 
     @Override
-    public TypeInfo elementType() {
-        return elementType;
+    public Type type() {
+        return Type.SET;
+    }
+
+    @Override
+    public String signature() {
+        return "SET<" + elementTypeInfo + '>';
+    }
+
+    @Override
+    public TypeInfo elementTypeInfo() {
+        return elementTypeInfo;
     }
 
     @Override
@@ -67,21 +59,17 @@ final class SetInfo extends TypeInfo implements CollectionInfo {
             return false;
         }
 
-        if (!super.equals(o)) {
-            return false;
-        }
-
-        SetInfo setInfo = (SetInfo) o;
-        return Objects.equals(elementType, setInfo.elementType);
+        final SetInfo that = (SetInfo) o;
+        return Objects.equals(elementTypeInfo, that.elementTypeInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), elementType);
+        return Objects.hash(type(), elementTypeInfo);
     }
 
     @Override
     public String toString() {
-        return "SET<" + elementType + '>';
+        return signature();
     }
 }

@@ -16,83 +16,26 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableSortedMap.toImmutableSortedMap;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.TBase;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Streams;
 
-final class ServiceInfo {
+import com.linecorp.armeria.server.Service;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
-
-    static ServiceInfo of(
-            Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
-            Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
-            Map<String, String> sampleHttpHeaders) throws ClassNotFoundException {
-        requireNonNull(serviceClass, "serviceClass");
-
-        final String name = serviceClass.getName();
-
-        final ClassLoader serviceClassLoader = serviceClass.getClassLoader();
-        final Class<?> interfaceClass = Class.forName(name + "$Iface", false, serviceClassLoader);
-        final Method[] methods = interfaceClass.getDeclaredMethods();
-        final Map<String, String> docStrings = ThriftDocString.getAllDocStrings(serviceClassLoader);
-
-        final List<FunctionInfo> functions = new ArrayList<>(methods.length);
-        final Set<ClassInfo> classes = new LinkedHashSet<>();
-        for (Method method : methods) {
-            final FunctionInfo function = FunctionInfo.of(method, sampleRequests, name, docStrings);
-            functions.add(function);
-
-            addClassIfPossible(classes, function.returnType());
-            function.parameters().forEach(p -> addClassIfPossible(classes, p.type()));
-            function.exceptions().forEach(e -> {
-                e.fields().forEach(f -> addClassIfPossible(classes, f.type()));
-                addClassIfPossible(classes, e);
-            });
-        }
-
-        String httpHeaders = "";
-        if (sampleHttpHeaders != null) {
-            try {
-                httpHeaders = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(sampleHttpHeaders);
-            } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException("Failed to serialize the given httpHeaders", e);
-            }
-        }
-
-        return new ServiceInfo(name, functions, classes, endpoints, docStrings.get(name), httpHeaders);
-    }
-
-    private static void addClassIfPossible(Set<ClassInfo> classes, TypeInfo typeInfo) {
-        if (typeInfo instanceof ClassInfo) {
-            final ClassInfo classInfo = (ClassInfo) typeInfo;
-            classInfo.fields().forEach(f -> addClassIfPossible(classes, f.type()));
-            classes.add(classInfo);
-        } else if (typeInfo instanceof CollectionInfo) {
-            addClassIfPossible(classes, ((CollectionInfo) typeInfo).elementType());
-        } else if (typeInfo instanceof MapInfo) {
-            final MapInfo mapInfo = (MapInfo) typeInfo;
-            addClassIfPossible(classes, mapInfo.keyType());
-            addClassIfPossible(classes, mapInfo.valueType());
-        }
-    }
+/**
+ * Metadata about a {@link Service}.
+ */
+public final class ServiceInfo {
 
     private final String name;
     private final Map<String, FunctionInfo> functions;
@@ -101,12 +44,15 @@ final class ServiceInfo {
     private final String docString;
     private final String sampleHttpHeaders;
 
-    private ServiceInfo(String name,
-                        List<FunctionInfo> functions,
-                        Collection<ClassInfo> classes,
-                        Iterable<EndpointInfo> endpoints,
-                        @Nullable String docString,
-                        @Nullable String sampleHttpHeaders) {
+    /**
+     * Creates a new instance.
+     */
+    public ServiceInfo(String name,
+                       Iterable<FunctionInfo> functions,
+                       Iterable<ClassInfo> classes,
+                       Iterable<EndpointInfo> endpoints,
+                       @Nullable String docString,
+                       @Nullable String sampleHttpHeaders) {
 
         this.name = requireNonNull(name, "name");
 
@@ -114,58 +60,71 @@ final class ServiceInfo {
         requireNonNull(classes, "classes");
         requireNonNull(endpoints, "endpoints");
 
-        final Map<String, FunctionInfo> functions0 = new TreeMap<>();
-        for (FunctionInfo function : functions) {
-            functions0.put(function.name(), function);
-        }
-        this.functions = Collections.unmodifiableMap(functions0);
-
-        final Map<String, ClassInfo> classes0 = new TreeMap<>();
-        for (ClassInfo classInfo : classes) {
-            classes0.put(classInfo.name(), classInfo);
-        }
-        this.classes = Collections.unmodifiableMap(classes0);
-
-        final Map<String, EndpointInfo> endpoints0 = new TreeMap<>();
-        for (EndpointInfo i : endpoints) {
-            endpoints0.put(i.hostnamePattern() + ':' + i.path(), i);
-        }
-        this.endpoints = Collections.unmodifiableMap(endpoints0);
-
+        this.functions = Streams.stream(functions)
+                                .collect(toImmutableSortedMap(Comparator.naturalOrder(),
+                                                              FunctionInfo::name, Function.identity()));
+        this.classes = Streams.stream(classes)
+                              .collect(toImmutableSortedMap(Comparator.naturalOrder(),
+                                                            ClassInfo::name, Function.identity()));
+        this.endpoints = Streams.stream(endpoints)
+                                .collect(toImmutableSortedMap(Comparator.naturalOrder(),
+                                                              e -> e.hostnamePattern() + ':' + e.path(),
+                                                              Function.identity()));
         this.docString = docString;
         this.sampleHttpHeaders = sampleHttpHeaders;
     }
 
+    /**
+     * Returns the fully qualified type name of the service.
+     */
     @JsonProperty
     public String name() {
         return name;
     }
 
+    /**
+     * Returns the simple type name of the service, which does not contain the package name.
+     */
     @JsonProperty
     public String simpleName() {
         return name.substring(name.lastIndexOf('.') + 1);
     }
 
+    /**
+     * Returns the metadata about the functions available in the service.
+     */
     @JsonProperty
     public Map<String, FunctionInfo> functions() {
         return functions;
     }
 
+    /**
+     * Returns the metadata about the structs, enums and exceptions related with the service.
+     */
     @JsonProperty
     public Map<String, ClassInfo> classes() {
         return classes;
     }
 
+    /**
+     * Returns the endpoints exposed by the service.
+     */
     @JsonProperty
     public Collection<EndpointInfo> endpoints() {
         return endpoints.values();
     }
 
+    /**
+     * Returns the documentation string.
+     */
     @JsonProperty
     public String docString() {
         return docString;
     }
 
+    /**
+     * Returns the sample HTTP headers of the service, serialized in JSON format.
+     */
     @JsonProperty
     public String sampleHttpHeaders() {
         return sampleHttpHeaders;
@@ -181,7 +140,7 @@ final class ServiceInfo {
             return false;
         }
 
-        ServiceInfo that = (ServiceInfo) o;
+        final ServiceInfo that = (ServiceInfo) o;
         return Objects.equals(name, that.name) &&
                Objects.equals(functions, that.functions) &&
                Objects.equals(classes, that.classes) &&
