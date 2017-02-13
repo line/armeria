@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
- * {@link Endpoint}s from a ZooKeeper depending on {@link StoreType} and updates it when the children of the
+ * {@link Endpoint}s from a ZooKeeper depending on {@link Mode} and updates it when the children of the
  * zNode changes.
  */
 public class ZooKeeperEndpointGroup implements EndpointGroup {
@@ -47,33 +47,33 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value or a node's value depending on value store type {@link StoreType}
+     * node value or a node's value depending on value store type {@link Mode}
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
-     * @param storeType       where data was stored, as a node value or as a node's all children
+     * @param mode       where data was stored, as a node value or as a node's all children
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                  StoreType storeType) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT, storeType);
+                                  Mode mode) {
+        this(zkConnectionStr, zNodePath, sessionTimeout, NodeValueCodec.DEFAULT, mode);
     }
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value or a node's value depending on value store type {@link StoreType}
+     * node value or a node's value depending on value store type {@link Mode}
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
      * @param nodeValueCodec  the nodeValueCodec
-     * @param storeType       where data was stored, as a node value or as a node's all children
+     * @param mode       where data was stored, as a node value or as a node's all children
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                                  NodeValueCodec nodeValueCodec, StoreType storeType) {
-        requireNonNull(storeType, "storeType");
+                                  NodeValueCodec nodeValueCodec, Mode mode) {
+        requireNonNull(mode, "mode");
         zooKeeperConnector = new ZooKeeperConnector(zkConnectionStr, zNodePath, sessionTimeout,
-                                                    createListener(storeType));
+                                                    createListener(mode));
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
         zooKeeperConnector.connect();
     }
@@ -89,12 +89,19 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
     }
 
     /**
-     * Create a {@link ZooKeeperListener} listens specific ZooKeeper events.
-     * @param storeType            storeType
-     * @return                     {@link ZooKeeperListener}
+     * Value store type. As a node value or as a node's all Children.
      */
-    private ZooKeeperListener createListener(StoreType storeType) {
-        switch (storeType) {
+    public enum Mode {
+        IN_CHILD_NODES, IN_NODE_VALUE
+    }
+
+    /**
+     * Create a {@link ZooKeeperListener} listens specific ZooKeeper events.
+     * @param mode mode
+     * @return  {@link ZooKeeperListener}
+     */
+    private ZooKeeperListener createListener(Mode mode) {
+        switch (mode) {
             case IN_CHILD_NODES:
                 return new ZooKeeperListener() {
                     @Override
@@ -135,7 +142,7 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
                     }
                 };
             default:
-                throw new ZooKeeperException("unknown listener type: " + storeType);
+                throw new ZooKeeperException("unknown listener type: " + mode);
         }
     }
 
