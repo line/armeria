@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.zookeeper.listener;
+package com.linecorp.armeria.server.zookeeper;
 
 import static java.util.Objects.requireNonNull;
 
@@ -22,19 +22,18 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
-import com.linecorp.armeria.server.zookeeper.ServerRegister;
 
 /**
  * A ZooKeeper Server Listener.When you add this listener, server will be automatically registered
  * into the ZooKeeper.
  */
-public class ZooKeeperListener implements ServerListener {
+public class ZooKeeperUpdatingListener implements ServerListener {
 
     private final String zkConnectionStr;
     private final String zNodePath;
     private final int sessionTimeout;
     private final Endpoint endpoint;
-    private ServerRegister connector;
+    private ZooKeeperRegistration connector;
 
     /**
      * A ZooKeeper server listener, used for register server into ZooKeeper.
@@ -43,8 +42,8 @@ public class ZooKeeperListener implements ServerListener {
      * @param sessionTimeout  session timeout
      * @param endpoint        register endpoint information
      */
-    public ZooKeeperListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
-                             Endpoint endpoint) {
+    public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
+                                     Endpoint endpoint) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.endpoint = requireNonNull(endpoint, "endpoint");
@@ -54,7 +53,7 @@ public class ZooKeeperListener implements ServerListener {
 
     @Override
     public void serverStarting(Server server) throws Exception {
-        connector = new ServerRegister(zkConnectionStr, zNodePath, sessionTimeout, endpoint);
+        connector = new ZooKeeperRegistration(zkConnectionStr, zNodePath, sessionTimeout, endpoint);
     }
 
     @Override
@@ -71,12 +70,12 @@ public class ZooKeeperListener implements ServerListener {
     }
 
     @VisibleForTesting
-    public ServerRegister getConnector() {
+    ZooKeeperRegistration getConnector() {
         return connector;
     }
 
     @VisibleForTesting
-    public Endpoint getEndpoint() {
+    Endpoint getEndpoint() {
         return endpoint;
     }
 }

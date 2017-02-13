@@ -5,7 +5,7 @@ import java.util.Map;
 /**
  * A ZooKeeper listener.
  */
-public interface ZKListener {
+public interface ZooKeeperListener {
     /**
      * notify when node's children value changed.
      * @param newChildrenValue new children values

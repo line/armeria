@@ -14,6 +14,13 @@
  * under the License.
  */
 /**
- * A ZooKeeper Server ZKConnector implementation
+ * Automatically server registration by using ZooKeeper.
+ * {@link com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener} can automatically register a
+ * server to a ZooKeeper cluster. The registered ZooKeeper node is EPHEMERAL, so when server stops or a network
+ * partition occurs, the underlying ZooKeeper session will be closed and the node will be automatically removed
+ * by ZooKeeper cluster. As a result, the clients that use a ZooKeeperEndpointGroup will be notified and they
+ * will update their endpoint list automatically, so that they do not attempt to connect to the unreachable
+ * servers.
+ *
  */
 package com.linecorp.armeria.server.zookeeper;

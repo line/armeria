@@ -31,9 +31,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.common.zookeeper.ZKConnector;
-import com.linecorp.armeria.common.zookeeper.ZKListener;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperConnector;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
 
 /**
  * A ZooKeeper-based {@link EndpointGroup} implementation. This {@link EndpointGroup} retrieves the list of
@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
  */
 public class ZooKeeperEndpointGroup implements EndpointGroup {
     private final NodeValueCodec nodeValueCodec;
-    private final ZKConnector zkConnector;
+    private final ZooKeeperConnector zooKeeperConnector;
     private List<Endpoint> prevData;
 
     /**
@@ -71,10 +71,11 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
      */
     public ZooKeeperEndpointGroup(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                   NodeValueCodec nodeValueCodec, StoreType storeType) {
-        requireNonNull(storeType);
-        zkConnector = new ZKConnector(zkConnectionStr, zNodePath, sessionTimeout, createListener(storeType));
+        requireNonNull(storeType, "storeType");
+        zooKeeperConnector = new ZooKeeperConnector(zkConnectionStr, zNodePath, sessionTimeout,
+                                                    createListener(storeType));
         this.nodeValueCodec = requireNonNull(nodeValueCodec, "nodeValueCodec");
-        zkConnector.connect();
+        zooKeeperConnector.connect();
     }
 
     @Override
@@ -84,18 +85,18 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
 
     @Override
     public void close() {
-        zkConnector.close(true);
+        zooKeeperConnector.close(true);
     }
 
     /**
-     * Create a {@link ZKListener} listens specific ZooKeeper events.
+     * Create a {@link ZooKeeperListener} listens specific ZooKeeper events.
      * @param storeType            storeType
-     * @return                     {@link ZKListener}
+     * @return                     {@link ZooKeeperListener}
      */
-    private ZKListener createListener(StoreType storeType) {
+    private ZooKeeperListener createListener(StoreType storeType) {
         switch (storeType) {
-            case NodeChild:
-                return new ZKListener() {
+            case IN_CHILD_NODES:
+                return new ZooKeeperListener() {
                     @Override
                     public void nodeChildChange(Map<String, String> newChildrenValue) {
                         List<Endpoint> newData = newChildrenValue.values().stream().map(
@@ -114,8 +115,8 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
                     public void connected() {
                     }
                 };
-            case NodeValue:
-                return new ZKListener() {
+            case IN_NODE_VALUE:
+                return new ZooKeeperListener() {
                     @Override
                     public void nodeChildChange(Map<String, String> newChildrenValue) {
                     }
@@ -139,17 +140,17 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
     }
 
     @VisibleForTesting
-    public void enableStateRecording() {
-        zkConnector.enableStateRecording();
+    void enableStateRecording() {
+        zooKeeperConnector.enableStateRecording();
     }
 
     @VisibleForTesting
-    public ZooKeeper underlyingClient() {
-        return zkConnector.underlyingClient();
+    ZooKeeper underlyingClient() {
+        return zooKeeperConnector.underlyingClient();
     }
 
     @VisibleForTesting
-    public BlockingQueue<KeeperState> stateQueue() {
-        return zkConnector.stateQueue();
+    BlockingQueue<KeeperState> stateQueue() {
+        return zooKeeperConnector.stateQueue();
     }
 }

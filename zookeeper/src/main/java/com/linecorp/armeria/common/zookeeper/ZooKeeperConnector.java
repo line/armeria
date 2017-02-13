@@ -45,12 +45,12 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 /**
  * A ZooKeeper connector, maintains a ZooKeeper connection.
  */
-public final class ZKConnector {
-    private static final Logger logger = LoggerFactory.getLogger(ZKConnector.class);
+public final class ZooKeeperConnector {
+    private static final Logger logger = LoggerFactory.getLogger(ZooKeeperConnector.class);
     private final String zkConnectionStr;
     private final String zNodePath;
     private final int sessionTimeout;
-    private final ZKListener listener;
+    private final ZooKeeperListener listener;
     private ZooKeeper zooKeeper;
     private BlockingQueue<KeeperState> stateQueue;
     private CountDownLatch latch;
@@ -65,9 +65,11 @@ public final class ZKConnector {
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
      * @param sessionTimeout  Zookeeper session timeout in milliseconds
-     * @param listener        {@link ZKListener}
+     * @param listener        {@link ZooKeeperListener}
      */
-    public ZKConnector(String zkConnectionStr, String zNodePath, int sessionTimeout, ZKListener listener) {
+    public ZooKeeperConnector(String zkConnectionStr, String zNodePath, int sessionTimeout,
+                              ZooKeeperListener listener
+    ) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
         this.sessionTimeout = sessionTimeout;

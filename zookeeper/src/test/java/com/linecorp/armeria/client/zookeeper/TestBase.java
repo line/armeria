@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.zookeeper;
+package com.linecorp.armeria.client.zookeeper;
 
 import static org.junit.Assert.fail;
 

@@ -27,14 +27,14 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
-import com.linecorp.armeria.common.zookeeper.ZKConnector;
-import com.linecorp.armeria.common.zookeeper.ZKListener;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperConnector;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
 
 /**
  * A Server connection maintains the underlying connection and hearing notice from a ZooKeeper cluster.
  */
-public class ServerRegister {
-    private final ZKConnector zkConnector;
+class ZooKeeperRegistration {
+    private final ZooKeeperConnector zooKeeperConnector;
 
     /**
      * Create a server register.
@@ -44,26 +44,29 @@ public class ServerRegister {
      * @param endpoint        register information
      * @param nodeValueCodec  nodeValueCodec used
      */
-    public ServerRegister(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint,
+    ZooKeeperRegistration(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint,
                           NodeValueCodec nodeValueCodec) {
         requireNonNull(nodeValueCodec);
         requireNonNull(endpoint);
-        zkConnector = new ZKConnector(zkConnectionStr, zNodePath, sessionTimeout, new ZKListener() {
-            @Override
-            public void nodeChildChange(Map<String, String> newChildrenValue) {
-            }
+        zooKeeperConnector = new ZooKeeperConnector(zkConnectionStr, zNodePath, sessionTimeout,
+                                                    new ZooKeeperListener() {
+                                                        @Override
+                                                        public void nodeChildChange(
+                                                                Map<String, String> newChildrenValue) {
+                                                        }
 
-            @Override
-            public void nodeValueChange(String newValue) {
-            }
+                                                        @Override
+                                                        public void nodeValueChange(String newValue) {
+                                                        }
 
-            @Override
-            public void connected() {
-                zkConnector.createChild(endpoint.host() + '_' + endpoint.port(),
-                                        nodeValueCodec.encode(endpoint));
-            }
-        });
-        zkConnector.connect();
+                                                        @Override
+                                                        public void connected() {
+                                                            zooKeeperConnector.createChild(
+                                                                    endpoint.host() + '_' + endpoint.port(),
+                                                                    nodeValueCodec.encode(endpoint));
+                                                        }
+                                                    });
+        zooKeeperConnector.connect();
     }
 
     /**
@@ -73,26 +76,26 @@ public class ServerRegister {
      * @param sessionTimeout  session timeout
      * @param endpoint        register information
      */
-    public ServerRegister(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
+    ZooKeeperRegistration(String zkConnectionStr, String zNodePath, int sessionTimeout, Endpoint endpoint) {
         this(zkConnectionStr, zNodePath, sessionTimeout, endpoint, NodeValueCodec.DEFAULT);
     }
 
     public void close(boolean active) {
-        zkConnector.close(active);
+        zooKeeperConnector.close(active);
     }
 
     @VisibleForTesting
-    public void enableStateRecording() {
-        zkConnector.enableStateRecording();
+    void enableStateRecording() {
+        zooKeeperConnector.enableStateRecording();
     }
 
     @VisibleForTesting
-    public ZooKeeper underlyingClient() {
-        return zkConnector.underlyingClient();
+    ZooKeeper underlyingClient() {
+        return zooKeeperConnector.underlyingClient();
     }
 
     @VisibleForTesting
-    public BlockingQueue<KeeperState> stateQueue() {
-        return zkConnector.stateQueue();
+    BlockingQueue<KeeperState> stateQueue() {
+        return zooKeeperConnector.stateQueue();
     }
 }

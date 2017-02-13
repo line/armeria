@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.zookeeper;
+package com.linecorp.armeria.client.zookeeper;
 
-import static com.linecorp.armeria.client.zookeeper.StoreType.NodeChild;
-import static com.linecorp.armeria.client.zookeeper.StoreType.NodeValue;
+import static com.linecorp.armeria.client.zookeeper.StoreType.IN_CHILD_NODES;
+import static com.linecorp.armeria.client.zookeeper.StoreType.IN_NODE_VALUE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -44,8 +44,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.zookeeper.StoreType;
-import com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup;
+import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 
 import junitextensions.OptionAssert;
 import zookeeperjunit.ZooKeeperAssert;
@@ -56,24 +56,24 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
             KeeperState.Disconnected, KeeperState.Expired,
             KeeperState.SyncConnected, KeeperState.Disconnected
     };
-    @SuppressWarnings("VisibilityModifier")
     @Parameter
+    @SuppressWarnings("VisibilityModifier")
     public StoreType storeType;
     private ZooKeeperEndpointGroup endpointGroup;
 
     @Parameters
     public static Collection<StoreType> endpointGroups() {
-        return Collections.unmodifiableSet(EnumSet.of(NodeChild,NodeValue));
+        return Collections.unmodifiableSet(EnumSet.of(IN_CHILD_NODES, IN_NODE_VALUE));
     }
 
     @Before
     public void connectZk() {
         //crate endpoint group and initialize node value
         switch (storeType) {
-            case NodeValue:
+            case IN_NODE_VALUE:
                 setNodeValue(NodeValueCodec.DEFAULT.encodeAll(sampleEndpoints));
                 break;
-            case NodeChild:
+            case IN_CHILD_NODES:
                 setNodeChild(sampleEndpoints);
                 break;
         }
@@ -108,10 +108,10 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001, 2),
                                                  Endpoint.of("127.0.0.1", 8002, 3));
         switch (storeType) {
-            case NodeValue:
+            case IN_NODE_VALUE:
                 setNodeValue(NodeValueCodec.DEFAULT.encodeAll(expected));
                 break;
-            case NodeChild:
+            case IN_CHILD_NODES:
                 //add two more node
                 setNodeChild(expected);
                 //construct the final expected node list

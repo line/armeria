@@ -15,8 +15,10 @@
  */
 package com.linecorp.armeria.common.zookeeper;
 
+/**
+ * An exception used in ZooKeeper communication.
+ */
 public class ZooKeeperException extends RuntimeException {
-
     private static final long serialVersionUID = 3042480872168265111L;
 
     /**

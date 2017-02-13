@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.zookeeper;
+package com.linecorp.armeria.server.zookeeper;
 
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.Assert.assertEquals;
@@ -30,6 +30,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.zookeeper.TestBase;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -37,24 +38,23 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
-import com.linecorp.armeria.server.zookeeper.ServerRegister;
-import com.linecorp.armeria.server.zookeeper.listener.ZooKeeperListener;
 
 import junitextensions.OptionAssert;
 import zookeeperjunit.ZooKeeperAssert;
 
-public class ServerRegisterTest extends TestBase implements ZooKeeperAssert, OptionAssert {
+public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAssert, OptionAssert {
     protected static final KeeperState[] expectedStates = {
             KeeperState.Disconnected, KeeperState.Expired,
             KeeperState.SyncConnected, KeeperState.SyncConnected, KeeperState.Disconnected
     };
     List<Server> servers;
-    List<ServerRegister> zkConnectors;
-    List<ZooKeeperListener> listeners;
+    List<ZooKeeperRegistration> zkConnectors;
+    List<ZooKeeperUpdatingListener> listeners;
 
     @Before
     public void startServer() {
@@ -66,10 +66,10 @@ public class ServerRegisterTest extends TestBase implements ZooKeeperAssert, Opt
                 ServerBuilder sb = new ServerBuilder();
                 Server server = sb.serviceAt("/", new EchoService()).port(endpoint.port(), SessionProtocol.HTTP)
                                   .build();
-                ZooKeeperListener listener;
-                listener = new ZooKeeperListener(instance().connectString().get(), zNode,
-                                                 sessionTimeout,
-                                                 endpoint);
+                ZooKeeperUpdatingListener listener;
+                listener = new ZooKeeperUpdatingListener(instance().connectString().get(), zNode,
+                                                         sessionTimeout,
+                                                         endpoint);
                 server.addListener(listener);
                 server.start().get();
                 listeners.add(listener);
@@ -103,7 +103,7 @@ public class ServerRegisterTest extends TestBase implements ZooKeeperAssert, Opt
                     servers.get(0).stop().get();
                     servers.remove(0);
                     zkConnectors.remove(0);
-                    ZooKeeperListener stoppedServerListener = listeners.remove(0);
+                    ZooKeeperUpdatingListener stoppedServerListener = listeners.remove(0);
                     assertNotExists(zNode + '/' + stoppedServerListener.getEndpoint().host() + '_' +
                                     stoppedServerListener.getEndpoint().port());
                     //the other server will not influenced
@@ -118,7 +118,7 @@ public class ServerRegisterTest extends TestBase implements ZooKeeperAssert, Opt
 
     @Test
     public void testConnectionRecovery() throws Exception {
-        ServerRegister zkConnector = zkConnectors.get(0);
+        ZooKeeperRegistration zkConnector = zkConnectors.get(0);
         zkConnector.enableStateRecording();
         ZooKeeper zkHandler1 = zkConnector.underlyingClient();
         CountDownLatch latch = new CountDownLatch(1);
