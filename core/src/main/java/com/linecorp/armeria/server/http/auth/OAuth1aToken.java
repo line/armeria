@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server.http.auth;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -110,7 +110,7 @@ public final class OAuth1aToken {
 
             // Empty values are ignored.
             if (!Strings.isNullOrEmpty(value)) {
-                String lowerCased = key.toLowerCase(Locale.US);
+                final String lowerCased = Ascii.toLowerCase(key);
                 if (DEFINED_PARAM_KEYS.contains(lowerCased)) {
                     // If given parameter is defined by Oauth1a protocol, add with lower-cased key.
                     builder.put(lowerCased, value);

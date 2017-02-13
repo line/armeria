@@ -22,12 +22,13 @@ import java.net.IDN;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
+
+import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -104,7 +105,7 @@ public final class VirtualHost {
             throw new IllegalArgumentException("defaultHostname: " + defaultHostname);
         }
 
-        return defaultHostname.toLowerCase(Locale.ENGLISH);
+        return Ascii.toLowerCase(defaultHostname);
     }
 
     /**
@@ -122,7 +123,7 @@ public final class VirtualHost {
             throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
         }
 
-        return hostnamePattern.toLowerCase(Locale.ENGLISH);
+        return Ascii.toLowerCase(hostnamePattern);
     }
 
     /**

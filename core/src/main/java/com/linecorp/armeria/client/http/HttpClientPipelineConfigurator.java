@@ -36,6 +36,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
+
 import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
@@ -437,10 +439,10 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 // The server rejected the upgrade request and sent its response in HTTP/1.
                 ReferenceCountUtil.release(msg);
                 assert upgradeEvt == UPGRADE_REJECTED;
-                onUpgradeResponse(
-                        ctx, false,
-                        "close".equalsIgnoreCase(
-                                ((FullHttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION)));
+
+                final String connection = ((FullHttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION);
+                onUpgradeResponse(ctx, false,
+                                  connection != null && Ascii.equalsIgnoreCase("close", connection));
                 return;
             }
 
