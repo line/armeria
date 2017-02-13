@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -180,7 +181,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
             SessionProtocol protocol,
             File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
 
-        if (requireNonNull(protocol, "protocol") != SessionProtocol.HTTPS) {
+        if (requireNonNull(protocol, "protocol") != HttpSessionProtocols.HTTPS) {
             throw new IllegalArgumentException("unsupported protocol: " + protocol);
         }
 

@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.thrift;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -37,7 +39,6 @@ import org.junit.Test;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
@@ -92,11 +93,11 @@ public abstract class AbstractThriftOverHttpTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            sb.port(0, SessionProtocol.HTTP);
-            sb.port(0, SessionProtocol.HTTPS);
+            sb.port(0, HTTP);
+            sb.port(0, HTTPS);
 
             ssc = new SelfSignedCertificate("127.0.0.1");
-            sb.sslContext(SessionProtocol.HTTPS, ssc.certificate(), ssc.privateKey());
+            sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
 
             sb.serviceAt("/hello", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!')));
@@ -142,9 +143,11 @@ public abstract class AbstractThriftOverHttpTest {
         server.start().get();
 
         httpPort = server.activePorts().values().stream()
-                .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress().getPort();
+                         .filter(p -> p.protocol() == HTTP).findAny().get()
+                         .localAddress().getPort();
         httpsPort = server.activePorts().values().stream()
-                .filter(p -> p.protocol() == SessionProtocol.HTTPS).findAny().get().localAddress().getPort();
+                          .filter(p -> p.protocol() == HTTPS).findAny().get()
+                          .localAddress().getPort();
     }
 
     @AfterClass

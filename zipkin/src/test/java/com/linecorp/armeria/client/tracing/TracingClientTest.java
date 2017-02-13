@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.tracing;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -42,7 +43,6 @@ import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 
@@ -104,10 +104,10 @@ public class TracingClientTest {
         final RpcRequest req = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final RpcResponse res = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = new DefaultClientRequestContext(
-                new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
+                new DefaultEventLoop(), H2C, Endpoint.of("localhost", 8080),
                 "POST", "/", "", ClientOptions.DEFAULT, req);
 
-        ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C, "localhost", "POST", "/");
+        ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost", "POST", "/");
         ctx.logBuilder().endRequest();
 
         @SuppressWarnings("unchecked")

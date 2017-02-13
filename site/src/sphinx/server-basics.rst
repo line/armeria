@@ -66,7 +66,8 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.SessionProtocol;
+    import com.linecorp.armeria.common.http.HttpSessionProtocols;
+    import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
     import com.linecorp.armeria.server.Server;
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.thrift.THttpService;
@@ -74,10 +75,10 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
     HelloService.AsyncIface helloHandler = new MyHelloService();
 
     ServerBuilder sb = new ServerBuilder();
-    sb.port(8080, SessionProtocol.HTTP);
+    sb.port(8080, HttpSessionProtocols.HTTP); // or just port(8080, "http")
     sb.serviceAt(
             "/hello",
-            THttpService.of(helloHandler, SerializationFormat.THRIFT_BINARY)
+            THttpService.of(helloHandler, ThriftSerializationFormats.BINARY)
                         .decorate(LoggingService::new)).build();
 
     Server server = sb.build();

@@ -31,7 +31,6 @@ import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -48,8 +47,9 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -90,20 +90,20 @@ public class ThriftServiceSpecificationGeneratorTest {
                         new VirtualHostBuilder().build(),
                         PathMapping.ofExact("/foo"),
                         THttpService.ofFormats(mock(FooService.AsyncIface.class),
-                                               SerializationFormat.THRIFT_COMPACT))));
+                                               ThriftSerializationFormats.COMPACT))));
 
         final Map<String, ServiceInfo> services = specification.services();
         assertThat(services).containsOnlyKeys(HelloService.class.getName(),
                                               FooService.class.getName());
 
         assertThat(services.get(HelloService.class.getName()).endpoints())
-                .containsExactly(new EndpointInfo("*", "/hello", "", SerializationFormat.THRIFT_BINARY,
-                                                  SerializationFormat.ofThrift()));
+                .containsExactly(new EndpointInfo("*", "/hello", "", ThriftSerializationFormats.BINARY,
+                                                  ThriftSerializationFormats.values()));
 
         assertThat(services.containsKey(FooService.class.getName())).isTrue();
         assertThat(services.get(FooService.class.getName()).endpoints())
-                .containsExactly(new EndpointInfo("*", "/foo", "", SerializationFormat.THRIFT_COMPACT,
-                                                  EnumSet.of(SerializationFormat.THRIFT_COMPACT)));
+                .containsExactly(new EndpointInfo("*", "/foo", "", ThriftSerializationFormats.COMPACT,
+                                                  ImmutableSet.of(ThriftSerializationFormats.COMPACT)));
     }
 
     @Test
@@ -149,20 +149,20 @@ public class ThriftServiceSpecificationGeneratorTest {
         final ServiceInfo service =
                 newServiceInfo(FooService.class,
                                Arrays.asList(
-                                       new EndpointInfo("*", "/foo", "a", SerializationFormat.THRIFT_BINARY,
-                                                        EnumSet.of(SerializationFormat.THRIFT_BINARY)),
-                                       new EndpointInfo("*", "/debug/foo", "b", SerializationFormat.THRIFT_TEXT,
-                                                        EnumSet.of(SerializationFormat.THRIFT_TEXT))),
+                                       new EndpointInfo("*", "/foo", "a", ThriftSerializationFormats.BINARY,
+                                                        ImmutableSet.of(ThriftSerializationFormats.BINARY)),
+                                       new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
+                                                        ImmutableSet.of(ThriftSerializationFormats.TEXT))),
                                ImmutableMap.of(bar3_args.class, new bar3_args().setIntVal(10)),
                                ImmutableMap.of("foobar", "barbaz"));
 
         assertThat(service.endpoints()).hasSize(2);
         // Should be sorted alphabetically
         assertThat(service.endpoints()).containsExactlyInAnyOrder(
-                new EndpointInfo("*", "/debug/foo", "b", SerializationFormat.THRIFT_TEXT,
-                                 EnumSet.of(SerializationFormat.THRIFT_TEXT)),
-                new EndpointInfo("*", "/foo", "a", SerializationFormat.THRIFT_BINARY,
-                                 EnumSet.of(SerializationFormat.THRIFT_BINARY)));
+                new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
+                                 ImmutableSet.of(ThriftSerializationFormats.TEXT)),
+                new EndpointInfo("*", "/foo", "a", ThriftSerializationFormats.BINARY,
+                                 ImmutableSet.of(ThriftSerializationFormats.BINARY)));
 
         final Map<String, FunctionInfo> functions = service.functions();
         assertThat(functions).hasSize(5);

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.it.tracing;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
@@ -35,7 +36,6 @@ import com.github.kristofa.brave.Sampler;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.tracing.HttpTracingClient;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.tracing.HelloService;
@@ -60,7 +60,7 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.port(0, SessionProtocol.HTTP);
+        sb.port(0, HTTP);
 
         sb.serviceAt("/foo", decorate("service/foo", THttpService.of(
                 (AsyncIface) (name, resultHandler) ->

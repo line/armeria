@@ -28,9 +28,9 @@ import org.junit.Test;
 
 import com.google.common.io.ByteStreams;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -42,7 +42,7 @@ public class HttpServerPathTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.port(0, SessionProtocol.HTTP);
+        sb.port(0, HttpSessionProtocols.HTTP);
         sb.serviceAt("/service/foo", new AbstractHttpService() {
             @Override
             protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)

@@ -38,7 +38,7 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
@@ -76,7 +76,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         try {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             ServerBuilder sb = new ServerBuilder()
-                    .port(0, SessionProtocol.HTTPS)
+                    .port(0, HttpSessionProtocols.HTTPS)
                     .defaultMaxRequestLength(16 * 1024 * 1024)
                     .sslContext(
                             GrpcSslContexts.forServer(ssc.certificate(), ssc.privateKey())

@@ -30,7 +30,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -46,7 +46,7 @@ public class TMultiplexedProtocolIntegrationTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.port(0, SessionProtocol.HTTP);
+        sb.port(0, HttpSessionProtocols.HTTP);
         sb.serviceAt(
                 "/", THttpService.of(ImmutableMap.of("", (Iface) name -> "none:" + name,
                                                      "foo", name -> "foo:" + name,

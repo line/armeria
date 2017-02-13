@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.http.healthcheck;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
@@ -34,7 +35,6 @@ import org.mockito.junit.MockitoRule;
 
 import com.google.common.io.ByteStreams;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -118,7 +118,7 @@ public class HttpHealthCheckServiceTest {
     @Test
     public void testGet() throws Exception {
         final ServerBuilder builder = new ServerBuilder();
-        builder.port(0, SessionProtocol.HTTP);
+        builder.port(0, HTTP);
         builder.serviceAt("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {
@@ -143,7 +143,7 @@ public class HttpHealthCheckServiceTest {
     @Test
     public void testHead() throws Exception {
         final ServerBuilder builder = new ServerBuilder();
-        builder.port(0, SessionProtocol.HTTP);
+        builder.port(0, HTTP);
         builder.serviceAt("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {

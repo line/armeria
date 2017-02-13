@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.test;
 
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -30,7 +30,7 @@ public abstract class AbstractServiceServer {
 
     @SuppressWarnings("unchecked")
     public <T extends AbstractServiceServer> T start() throws Exception {
-        ServerBuilder sb = new ServerBuilder().port(0, SessionProtocol.HTTP);
+        ServerBuilder sb = new ServerBuilder().port(0, HttpSessionProtocols.HTTP);
         configureServer(sb);
         server = sb.build();
 

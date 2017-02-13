@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.client.http;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ScheduledFuture;
@@ -191,18 +195,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             // Set the current protocol and its associated WaitsHolder implementation.
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
-            switch (protocol) {
-                case H1: case H1C:
-                    requestEncoder = new Http1ObjectEncoder(false);
-                    responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
-                    break;
-                case H2: case H2C:
-                    final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
-                    requestEncoder = new Http2ObjectEncoder(handler.encoder());
-                    responseDecoder = ctx.pipeline().get(Http2ClientConnectionHandler.class).responseDecoder();
-                    break;
-                default:
-                    throw new Error(); // Should never reach here.
+            if (protocol == H1 || protocol == H1C) {
+                requestEncoder = new Http1ObjectEncoder(false);
+                responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
+            } else if (protocol == H2 || protocol == H2C) {
+                final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
+                requestEncoder = new Http2ObjectEncoder(handler.encoder());
+                responseDecoder = ctx.pipeline().get(Http2ClientConnectionHandler.class).responseDecoder();
+            } else {
+                throw new Error(); // Should never reach here.
             }
 
             if (!sessionPromise.trySuccess(ctx.channel())) {
@@ -230,7 +231,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            channelFactory.connect(ctx.channel().remoteAddress(), SessionProtocol.H1C, sessionPromise);
+            channelFactory.connect(ctx.channel().remoteAddress(), H1C, sessionPromise);
         } else {
             // Fail all pending responses.
             failUnfinishedResponses(ClosedSessionException.get());

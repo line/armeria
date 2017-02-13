@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.client.http;
 
-import static junit.framework.TestCase.assertFalse;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
@@ -27,6 +27,7 @@ import org.junit.Test;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -112,7 +113,7 @@ public class HttpClientIdleTimeoutHandlerTest {
 
         @Override
         public SessionProtocol protocol() {
-            return SessionProtocol.H2C;
+            return HttpSessionProtocols.H2C;
         }
 
         @Override

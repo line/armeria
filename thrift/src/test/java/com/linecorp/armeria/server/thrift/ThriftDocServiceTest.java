@@ -15,15 +15,14 @@
  */
 package com.linecorp.armeria.server.thrift;
 
-import static com.linecorp.armeria.common.SerializationFormat.THRIFT_BINARY;
-import static com.linecorp.armeria.common.SerializationFormat.THRIFT_COMPACT;
-import static com.linecorp.armeria.common.SerializationFormat.THRIFT_TEXT;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,8 +36,9 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -71,11 +71,11 @@ public class ThriftDocServiceTest extends AbstractServerTest {
                 "hello", HELLO_SERVICE_HANDLER,
                 "sleep", SLEEP_SERVICE_HANDLER));
         final THttpService fooService = THttpService.ofFormats(mock(FooService.AsyncIface.class),
-                                                               THRIFT_COMPACT);
+                                                               COMPACT);
         final THttpService cassandraService = THttpService.ofFormats(mock(Cassandra.AsyncIface.class),
-                                                                     THRIFT_BINARY);
+                                                                     BINARY);
         final THttpService cassandraServiceDebug =
-                THttpService.ofFormats(mock(Cassandra.AsyncIface.class), THRIFT_TEXT);
+                THttpService.ofFormats(mock(Cassandra.AsyncIface.class), TEXT);
         final THttpService hbaseService = THttpService.of(mock(Hbase.AsyncIface.class));
         final THttpService onewayHelloService = THttpService.of(mock(OnewayHelloService.AsyncIface.class));
 
@@ -96,18 +96,18 @@ public class ThriftDocServiceTest extends AbstractServerTest {
     public void testOk() throws Exception {
         final Map<Class<?>, Iterable<EndpointInfo>> serviceMap = new HashMap<>();
         serviceMap.put(HelloService.class, Collections.singletonList(
-                new EndpointInfo("*", "/", "hello", THRIFT_BINARY, SerializationFormat.ofThrift())));
+                new EndpointInfo("*", "/", "hello", BINARY, ThriftSerializationFormats.values())));
         serviceMap.put(SleepService.class, Collections.singletonList(
-                new EndpointInfo("*", "/", "sleep", THRIFT_BINARY, SerializationFormat.ofThrift())));
+                new EndpointInfo("*", "/", "sleep", BINARY, ThriftSerializationFormats.values())));
         serviceMap.put(FooService.class, Collections.singletonList(
-                new EndpointInfo("*", "/foo", "", THRIFT_COMPACT, EnumSet.of(THRIFT_COMPACT))));
+                new EndpointInfo("*", "/foo", "", COMPACT, ImmutableSet.of(COMPACT))));
         serviceMap.put(Cassandra.class, Arrays.asList(
-                new EndpointInfo("*", "/cassandra", "", THRIFT_BINARY, EnumSet.of(THRIFT_BINARY)),
-                new EndpointInfo("*", "/cassandra/debug", "", THRIFT_TEXT, EnumSet.of(THRIFT_TEXT))));
+                new EndpointInfo("*", "/cassandra", "", BINARY, ImmutableSet.of(BINARY)),
+                new EndpointInfo("*", "/cassandra/debug", "", TEXT, ImmutableSet.of(TEXT))));
         serviceMap.put(Hbase.class, Collections.singletonList(
-                new EndpointInfo("*", "/hbase", "", THRIFT_BINARY, SerializationFormat.ofThrift())));
+                new EndpointInfo("*", "/hbase", "", BINARY, ThriftSerializationFormats.values())));
         serviceMap.put(OnewayHelloService.class, Collections.singletonList(
-                new EndpointInfo("*", "/oneway", "", THRIFT_BINARY, SerializationFormat.ofThrift())));
+                new EndpointInfo("*", "/oneway", "", BINARY, ThriftSerializationFormats.values())));
 
         final ObjectMapper mapper = new ObjectMapper();
         final String expectedJson = mapper.writeValueAsString(

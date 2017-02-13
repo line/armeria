@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.client.http;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import java.net.URI;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
@@ -30,9 +30,9 @@ import com.linecorp.armeria.client.NonDecoratingClientFactory;
 import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 
 import io.netty.bootstrap.Bootstrap;
 
@@ -41,15 +41,10 @@ import io.netty.bootstrap.Bootstrap;
  */
 public class HttpClientFactory extends NonDecoratingClientFactory {
 
-    private static final Set<Scheme> SUPPORTED_SCHEMES;
-
-    static {
-        final ImmutableSet.Builder<Scheme> builder = ImmutableSet.builder();
-        for (SessionProtocol p : SessionProtocol.ofHttp()) {
-            builder.add(Scheme.of(SerializationFormat.NONE, p));
-        }
-        SUPPORTED_SCHEMES = builder.build();
-    }
+    private static final Set<Scheme> SUPPORTED_SCHEMES =
+            HttpSessionProtocols.values().stream()
+                                .map(p -> Scheme.of(SerializationFormat.NONE, p))
+                                .collect(toImmutableSet());
 
     private final HttpClientDelegate delegate;
 

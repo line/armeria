@@ -39,6 +39,8 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 
 /**
  * A {@link DecoratingClientFactory} that creates a Thrift-over-HTTP client.
@@ -49,8 +51,8 @@ public class THttpClientFactory extends DecoratingClientFactory {
 
     static {
         final ImmutableSet.Builder<Scheme> builder = ImmutableSet.builder();
-        for (SessionProtocol p : SessionProtocol.ofHttp()) {
-            for (SerializationFormat f : SerializationFormat.ofThrift()) {
+        for (SessionProtocol p : HttpSessionProtocols.values()) {
+            for (SerializationFormat f : ThriftSerializationFormats.values()) {
                 builder.add(Scheme.of(f, p));
             }
         }
@@ -70,7 +72,7 @@ public class THttpClientFactory extends DecoratingClientFactory {
     private static ClientFactory validate(ClientFactory httpClientFactory) {
         requireNonNull(httpClientFactory, "httpClientFactory");
 
-        for (SessionProtocol p : SessionProtocol.ofHttp()) {
+        for (SessionProtocol p : HttpSessionProtocols.values()) {
             if (!httpClientFactory.supportedSchemes().contains(Scheme.of(SerializationFormat.NONE, p))) {
                 throw new IllegalArgumentException(p.uriText() + " not supported by: " + httpClientFactory);
             }

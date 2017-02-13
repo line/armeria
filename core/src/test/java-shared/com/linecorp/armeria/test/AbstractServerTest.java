@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.test;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
@@ -23,7 +25,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.AfterClass;
 import org.junit.Before;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -47,11 +48,11 @@ public abstract class AbstractServerTest {
         AbstractServerTest.server.set(server);
 
         httpPort = server.activePorts().values().stream()
-                         .filter(p1 -> p1.protocol() == SessionProtocol.HTTP).findAny()
+                         .filter(p1 -> p1.protocol() == HTTP).findAny()
                          .flatMap(p -> Optional.of(p.localAddress().getPort())).orElse(-1);
 
         httpsPort = server.activePorts().values().stream()
-                          .filter(p1 -> p1.protocol() == SessionProtocol.HTTPS).findAny()
+                          .filter(p1 -> p1.protocol() == HTTPS).findAny()
                           .flatMap(p -> Optional.of(p.localAddress().getPort())).orElse(-1);
     }
 
