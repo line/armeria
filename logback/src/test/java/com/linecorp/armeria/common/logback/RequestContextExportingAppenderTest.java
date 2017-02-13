@@ -57,6 +57,8 @@ import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.logback.HelloService.hello_args;
+import com.linecorp.armeria.common.logback.HelloService.hello_result;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -67,8 +69,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.service.core.thrift.v1.ArmeriaService.hello_args;
-import com.linecorp.armeria.service.core.thrift.v1.ArmeriaService.hello_result;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;

@@ -34,6 +34,8 @@ install:
 script:
   - ./gradlew --no-daemon --stacktrace -Pcoverage build
 
+before_cache:
+  - find $HOME/.gradle/caches -name '*.lock' -delete
+
 after_success:
   - bash <(curl -s https://codecov.io/bash)
-

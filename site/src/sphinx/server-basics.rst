@@ -81,7 +81,7 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
                         .decorate(LoggingService::new)).build();
 
     Server server = sb.build();
-    server.start();
+    server.start().join();
 
 In the example above, we created a new ``ServerBuilder`` and added a new ``ThriftService`` to it.
 The ``ThriftService`` is bound at the path ``/hello`` and will use the TBinary format.

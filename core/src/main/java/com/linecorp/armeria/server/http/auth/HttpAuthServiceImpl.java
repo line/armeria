@@ -16,46 +16,55 @@
 
 package com.linecorp.armeria.server.http.auth;
 
-import static java.util.Objects.requireNonNull;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
-import java.util.function.Predicate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A default implementation of {@link HttpAuthService}.
  */
 final class HttpAuthServiceImpl extends HttpAuthService {
 
-    private final Predicate<? super HttpHeaders>[] predicates;
+    private static final Logger logger = LoggerFactory.getLogger(HttpAuthServiceImpl.class);
+
+    private final List<? extends Authorizer<HttpRequest>> authorizers;
 
     HttpAuthServiceImpl(Service<? super HttpRequest, ? extends HttpResponse> delegate,
-                        Predicate<? super HttpHeaders>... predicates) {
+                        Iterable<? extends Authorizer<HttpRequest>> authorizers) {
         super(delegate);
-        for (Predicate<? super HttpHeaders> predicate : predicates) {
-            requireNonNull(predicate);
-        }
-        this.predicates = predicates;
+        this.authorizers = ImmutableList.copyOf(authorizers);
     }
 
     @Override
-    public boolean authorize(HttpHeaders headers) {
-        for (Predicate<? super HttpHeaders> predicate : predicates) {
-            if (predicate.test(headers)) {
-                return true;
-            }
+    public CompletionStage<Boolean> authorize(HttpRequest req, ServiceRequestContext ctx) {
+        CompletableFuture<Boolean> result = CompletableFuture.completedFuture(false);
+        for (Authorizer<HttpRequest> authorizer : authorizers) {
+            result = result.exceptionally(t -> {
+                logger.warn("Unexpected exception during authorization:", t);
+                return false;
+            }).thenComposeAsync(previousResult -> {
+                if (previousResult) {
+                    return CompletableFuture.completedFuture(true);
+                }
+                return authorizer.authorize(ctx, req);
+            }, ctx.contextAwareEventLoop());
         }
-
-        return false;
+        return result;
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this).addValue(predicates).toString();
+        return MoreObjects.toStringHelper(this).addValue(authorizers).toString();
     }
 }

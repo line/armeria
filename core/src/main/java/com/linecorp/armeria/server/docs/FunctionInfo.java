@@ -16,166 +16,92 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.TBase;
-import org.apache.thrift.TException;
-import org.apache.thrift.TFieldIdEnum;
-import org.apache.thrift.TSerializer;
-import org.apache.thrift.meta_data.FieldMetaData;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.server.Service;
 
-final class FunctionInfo {
-
-    static FunctionInfo of(Method method, Map<Class<?>, ? extends TBase<?, ?>> sampleRequests)
-            throws ClassNotFoundException {
-        return of(method, sampleRequests, null, Collections.emptyMap());
-    }
-
-    static FunctionInfo of(Method method,
-                           Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
-                           @Nullable String namespace,
-                           Map<String, String> docStrings) throws ClassNotFoundException {
-        requireNonNull(method, "method");
-
-        final String methodName = method.getName();
-
-        final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
-        final String serviceName = serviceClass.getName();
-        final ClassLoader classLoader = serviceClass.getClassLoader();
-
-        @SuppressWarnings("unchecked")
-        Class<? extends TBase<?, ?>> argsClass = (Class<? extends TBase<?, ?>>) Class.forName(
-                serviceName + '$' + methodName + "_args", false, classLoader);
-        String sampleJsonRequest;
-        TBase<?, ?> sampleRequest = sampleRequests.get(argsClass);
-        if (sampleRequest == null) {
-            sampleJsonRequest = "";
-        } else {
-            TSerializer serializer = new TSerializer(ThriftProtocolFactories.TEXT);
-            try {
-                sampleJsonRequest = serializer.toString(sampleRequest, StandardCharsets.UTF_8.name());
-            } catch (TException e) {
-                throw new IllegalArgumentException(
-                        "Failed to serialize to a memory buffer, this shouldn't ever happen.", e);
-            }
-        }
-
-        Class<?> resultClass;
-        try {
-            resultClass =  Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
-        } catch (ClassNotFoundException ignored) {
-            // Oneway function does not have a result type.
-            resultClass = null;
-        }
-
-        @SuppressWarnings("unchecked")
-        final FunctionInfo function =
-                new FunctionInfo(namespace,
-                                 methodName,
-                                 argsClass,
-                                 (Class<? extends TBase<?, ?>>) resultClass,
-                                 (Class<? extends TException>[]) method.getExceptionTypes(),
-                                 sampleJsonRequest,
-                                 docStrings);
-        return function;
-    }
+/**
+ * Metadata about a function of a {@link Service}.
+ */
+public final class FunctionInfo {
 
     private final String name;
-    private final TypeInfo returnType;
+    private final TypeInfo returnTypeInfo;
     private final List<FieldInfo> parameters;
     private final List<ExceptionInfo> exceptions;
     private final String sampleJsonRequest;
     private final String docString;
 
-    private FunctionInfo(String namespace,
-                         String name,
-                         Class<? extends TBase<?, ?>> argsClass,
-                         @Nullable Class<? extends TBase<?, ?>> resultClass,
-                         Class<? extends TException>[] exceptionClasses,
-                         String sampleJsonRequest,
-                         Map<String, String> docStrings) {
+    /**
+     * Creates a new instance.
+     */
+    public FunctionInfo(String name,
+                        TypeInfo returnTypeInfo,
+                        Iterable<FieldInfo> parameters,
+                        Iterable<ExceptionInfo> exceptions,
+                        @Nullable String sampleJsonRequest,
+                        @Nullable String docString) {
+
         this.name = requireNonNull(name, "name");
-        this.sampleJsonRequest = requireNonNull(sampleJsonRequest, "sampleJsonRequest");
-        final String functionNamespace = ThriftDocString.key(namespace, name);
-        this.docString = docStrings.get(functionNamespace);
-        requireNonNull(argsClass, "argsClass");
-        requireNonNull(exceptionClasses, "exceptionClasses");
-
-        final Map<? extends TFieldIdEnum, FieldMetaData> argsMetaData =
-                FieldMetaData.getStructMetaDataMap(argsClass);
-        parameters = argsMetaData.values().stream()
-                                 .map(fieldMetaData -> FieldInfo.of(fieldMetaData,
-                                                                    functionNamespace, docStrings))
-                                 .collect(toImmutableList());
-
-        FieldInfo fieldInfo = null;
-        if (resultClass != null) { // Function isn't "oneway" function
-            final Map<? extends TFieldIdEnum, FieldMetaData> resultMetaData =
-                    FieldMetaData.getStructMetaDataMap(resultClass);
-
-            for (FieldMetaData fieldMetaData : resultMetaData.values()) {
-                if ("success".equals(fieldMetaData.fieldName)) {
-                    fieldInfo = FieldInfo.of(fieldMetaData, functionNamespace, docStrings);
-                    break;
-                }
-            }
-        }
-        if (fieldInfo == null) {
-            returnType = TypeInfo.VOID;
-        } else {
-            returnType = fieldInfo.type();
-        }
-
-        final List<ExceptionInfo> exceptions0 = new ArrayList<>(exceptionClasses.length);
-        for (Class<? extends TException> exceptionClass : exceptionClasses) {
-            if (exceptionClass == TException.class) {
-                continue;
-            }
-            exceptions0.add(ExceptionInfo.of(exceptionClass, docStrings));
-        }
-        exceptions = Collections.unmodifiableList(exceptions0);
+        this.returnTypeInfo = requireNonNull(returnTypeInfo, "returnTypeInfo");
+        this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters"));
+        this.exceptions = ImmutableList.copyOf(requireNonNull(exceptions, "exceptions"));
+        this.sampleJsonRequest = sampleJsonRequest;
+        this.docString = docString;
     }
 
+    /**
+     * Returns the name of the function.
+     */
     @JsonProperty
     public String name() {
         return name;
     }
 
+    /**
+     * Returns the metadata about the return type of the function.
+     */
     @JsonProperty
-    public TypeInfo returnType() {
-        return returnType;
+    public TypeInfo returnTypeInfo() {
+        return returnTypeInfo;
     }
 
+    /**
+     * Returns the metadata about the parameters of the function.
+     */
     @JsonProperty
     public List<FieldInfo> parameters() {
         return parameters;
     }
 
+    /**
+     * Returns the metadata about the exceptions declared by the function.
+     */
     @JsonProperty
     public List<ExceptionInfo> exceptions() {
         return exceptions;
     }
 
+    /**
+     * Returns the sample request of the function, serialized in JSON format.
+     */
     @JsonProperty
     public String sampleJsonRequest() {
         return sampleJsonRequest;
     }
 
+    /**
+     * Returns the documentation string of the function.
+     */
     @JsonProperty
     public String docString() {
         return docString;
@@ -191,25 +117,25 @@ final class FunctionInfo {
             return false;
         }
 
-        FunctionInfo that = (FunctionInfo) o;
-        return Objects.equals(name, that.name) &&
-               Objects.equals(returnType, that.returnType) &&
-               Objects.equals(parameters, that.parameters) &&
-               Objects.equals(exceptions, that.exceptions);
+        final FunctionInfo that = (FunctionInfo) o;
+        return name.equals(that.name) &&
+               returnTypeInfo.equals(that.returnTypeInfo) &&
+               parameters.equals(that.parameters) &&
+               exceptions.equals(that.exceptions);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, returnType, parameters, exceptions);
+        return Objects.hash(name, returnTypeInfo, parameters, exceptions);
     }
 
     @Override
     public String toString() {
-        return "FunctionInfo{" +
-               "name='" + name + '\'' +
-               ", returnType=" + returnType +
-               ", parameters=" + parameters +
-               ", exceptions=" + exceptions +
-               '}';
+        return MoreObjects.toStringHelper(this)
+                          .add("name", name)
+                          .add("returnTypeInfo", returnTypeInfo)
+                          .add("parameters", parameters)
+                          .add("exceptions", exceptions)
+                          .toString();
     }
 }

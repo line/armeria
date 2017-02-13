@@ -20,26 +20,53 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-interface ClassInfo {
+/**
+ * Metadata about a struct type, an enum type or an exception type.
+ */
+public interface ClassInfo extends TypeInfo {
+
+    /**
+     * Returns the fully qualified type name.
+     */
     @JsonProperty
     String name();
 
+    /**
+     * Returns the simple type name, which does not include the package name.
+     */
     @JsonProperty
     default String simpleName() {
         return name().substring(name().lastIndexOf('.') + 1);
     }
 
+    /**
+     * Returns the package name.
+     */
     @JsonProperty
     default String packageName() {
         return name().substring(0, name().lastIndexOf('.'));
     }
 
+    @Override
+    default String signature() {
+        return name();
+    }
+
+    /**
+     * Returns the metadata about the fields of the type.
+     */
     @JsonProperty
     List<FieldInfo> fields();
 
+    /**
+     * Returns the constants defined by the type.
+     */
     @JsonProperty
     List<Object> constants();
 
+    /**
+     * Returns the documentation string.
+     */
     @JsonProperty
     String docString();
 }

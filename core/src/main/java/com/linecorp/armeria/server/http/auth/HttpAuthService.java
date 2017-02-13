@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.server.http.auth;
 
+import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
-import com.google.common.collect.Iterables;
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.DeferredHttpResponse;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
@@ -36,27 +41,28 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public abstract class HttpAuthService
         extends DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse> {
 
+    private static final Logger logger = LoggerFactory.getLogger(HttpAuthService.class);
+
     /**
      * Creates a new HTTP authorization {@link Service} decorator using the specified
-     * {@code predicates}.
+     * {@link Authorizer}s.
      *
-     * @param predicates {@link Iterable} authorization predicates
+     * @param authorizers a list of {@link Authorizer}s.
      */
     public static Function<Service<? super HttpRequest, ? extends HttpResponse>,
-            HttpAuthService> newDecorator(Iterable<? extends Predicate<? super HttpHeaders>> predicates) {
-        Predicate<? super HttpHeaders>[] array = Iterables.toArray(predicates, Predicate.class);
-        return newDecorator(array);
+            HttpAuthService> newDecorator(Iterable<? extends Authorizer<HttpRequest>> authorizers) {
+        return service -> new HttpAuthServiceImpl(service, authorizers);
     }
 
     /**
      * Creates a new HTTP authorization {@link Service} decorator using the specified
-     * {@code predicates}.
+     * {@link Authorizer}s.
      *
-     * @param predicates the array of authorization predicates
+     * @param authorizers the array of {@link Authorizer}s.
      */
     public static Function<Service<? super HttpRequest, ? extends HttpResponse>,
-            HttpAuthService> newDecorator(Predicate<? super HttpHeaders>... predicates) {
-        return service -> new HttpAuthServiceImpl(service, predicates);
+            HttpAuthService> newDecorator(Authorizer<HttpRequest>... authorizers) {
+        return newDecorator(ImmutableList.copyOf(authorizers));
     }
 
     /**
@@ -67,9 +73,11 @@ public abstract class HttpAuthService
     }
 
     /**
-     * Authorize {@code headers}. In other words, determine if it is successful or not.
+     * Determine if {@code request} is authorized for this service. If the result resolves to
+     * {@code true}, the request is authorized, or {@code false} otherwise. If the future
+     * resolves exceptionally, the request will not be authorized.
      */
-    protected abstract boolean authorize(HttpHeaders headers);
+    protected abstract CompletionStage<Boolean> authorize(HttpRequest request, ServiceRequestContext ctx);
 
     /**
      * Invoked when {@code req} is successful. By default, this method delegates the specified {@code req} to
@@ -83,7 +91,9 @@ public abstract class HttpAuthService
      * Invoked when {@code req} is failed. By default, this method responds with the
      * {@link HttpStatus#UNAUTHORIZED} status.
      */
-    protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable cause)
+            throws Exception {
+        logger.warn("Unexpected exception during authorization:", cause);
         final DefaultHttpResponse res = new DefaultHttpResponse();
         res.respond(HttpStatus.UNAUTHORIZED);
         return res;
@@ -91,10 +101,20 @@ public abstract class HttpAuthService
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (authorize(req.headers())) {
-            return onSuccess(ctx, req);
-        } else {
-            return onFailure(ctx, req);
-        }
+        DeferredHttpResponse res = new DeferredHttpResponse();
+
+        authorize(req, ctx).whenCompleteAsync((result, t) -> {
+            try {
+                if (t != null || !result) {
+                    res.delegate(onFailure(ctx, req, t));
+                } else {
+                    res.delegate(onSuccess(ctx, req));
+                }
+            } catch (Throwable cause) {
+                res.close(cause);
+            }
+        }, ctx.contextAwareEventLoop());
+
+        return res;
     }
 }

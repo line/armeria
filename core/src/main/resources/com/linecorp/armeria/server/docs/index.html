@@ -97,8 +97,8 @@
               {{#each function.parameters}}
               <tr>
                 <td><code>{{name}}</code></td>
-                <td>{{requirementType}}</td>
-                <td><code>{{{type.typeStr}}}</code></td>
+                <td>{{requirement}}</td>
+                <td><code>{{{typeInfo.signatureHtml}}}</code></td>
                 <td class="description">{{{docString}}}</td>
               </tr>
               {{else}}
@@ -114,7 +114,7 @@
           <div class="table-responsive">
             <table class="table table-striped table-condensed">
               <tr>
-                <td><code>{{{function.returnType.typeStr}}}</code></td>
+                <td><code>{{{function.returnTypeInfo.signatureHtml}}}</code></td>
               </tr>
             </table>
           </div>
@@ -125,7 +125,7 @@
             <table class="table table-striped table-condensed">
               {{#each function.exceptions}}
               <tr>
-                <td><code>{{{typeStr}}}</code></td>
+                <td><code>{{{signatureHtml}}}</code></td>
               </tr>
               {{/each}}
             </table>
@@ -224,8 +224,8 @@
               {{#each class.fields}}
               <tr>
                 <td><code>{{name}}</code></td>
-                <td>{{requirementType}}</td>
-                <td><code>{{{type.typeStr}}}</code></td>
+                <td>{{requirement}}</td>
+                <td><code>{{{typeInfo.signatureHtml}}}</code></td>
                 <td class="description">{{{docString}}}</td>
               </tr>
               {{/each}}

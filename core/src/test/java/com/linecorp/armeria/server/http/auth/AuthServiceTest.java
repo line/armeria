@@ -24,7 +24,7 @@ import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -37,7 +37,6 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
@@ -54,10 +53,10 @@ public class AuthServiceTest extends AbstractServerTest {
 
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
-        // Auth with arbitrary predicate
-        Predicate<HttpHeaders> predicate = (HttpHeaders headers) -> {
-            return "unit test".equals(headers.get(HttpHeaderNames.AUTHORIZATION));
-        };
+        // Auth with arbitrary authorizer
+        Authorizer<HttpRequest> authorizer = (ctx, req) ->
+                CompletableFuture.supplyAsync(
+                        () -> "unit test".equals(req.headers().get(HttpHeaderNames.AUTHORIZATION)));
         sb.serviceAt(
                 "/",
                 new AbstractHttpService() {
@@ -66,15 +65,15 @@ public class AuthServiceTest extends AbstractServerTest {
                             ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                         res.respond(HttpStatus.OK);
                     }
-                }.decorate(HttpAuthService.newDecorator(predicate))
+                }.decorate(HttpAuthService.newDecorator(authorizer))
                  .decorate(LoggingService::new));
 
         // Auth with HTTP basic
         final Map<String, String> usernameToPassword = ImmutableMap.of("brown", "cony", "pangyo", "choco");
-        Predicate<BasicToken> httpBasicPredicate = (BasicToken token) -> {
+        Authorizer<BasicToken> httpBasicAuthorizer = (ctx, token) -> {
             String username = token.username();
             String password = token.password();
-            return password.equals(usernameToPassword.get(username));
+            return CompletableFuture.completedFuture(password.equals(usernameToPassword.get(username)));
         };
         sb.serviceAt(
                 "/basic",
@@ -84,13 +83,12 @@ public class AuthServiceTest extends AbstractServerTest {
                             ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                         res.respond(HttpStatus.OK);
                     }
-                }.decorate(new HttpAuthServiceBuilder().addBasicAuth(httpBasicPredicate).newDecorator())
+                }.decorate(new HttpAuthServiceBuilder().addBasicAuth(httpBasicAuthorizer).newDecorator())
                  .decorate(LoggingService::new));
 
         // Auth with OAuth1a
-        Predicate<OAuth1aToken> oAuth1aPredicate = (OAuth1aToken token) -> {
-            return "dummy_signature".equals(token.signature());
-        };
+        Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
+                CompletableFuture.completedFuture("dummy_signature".equals(token.signature()));
         sb.serviceAt(
                 "/oauth1a",
                 new AbstractHttpService() {
@@ -99,13 +97,12 @@ public class AuthServiceTest extends AbstractServerTest {
                             ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                         res.respond(HttpStatus.OK);
                     }
-                }.decorate(new HttpAuthServiceBuilder().addOAuth1a(oAuth1aPredicate).newDecorator())
+                }.decorate(new HttpAuthServiceBuilder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
                  .decorate(LoggingService::new));
 
         // Auth with OAuth2
-        Predicate<OAuth2Token> oAuth2aPredicate = (OAuth2Token token) -> {
-            return "dummy_oauth2_token".equals(token.accessToken());
-        };
+        Authorizer<OAuth2Token> oAuth2aAuthorizer = (ctx, token) ->
+                CompletableFuture.completedFuture("dummy_oauth2_token".equals(token.accessToken()));
         sb.serviceAt(
                 "/oauth2",
                 new AbstractHttpService() {
@@ -114,7 +111,7 @@ public class AuthServiceTest extends AbstractServerTest {
                             ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                         res.respond(HttpStatus.OK);
                     }
-                }.decorate(new HttpAuthServiceBuilder().addOAuth2(oAuth2aPredicate).newDecorator())
+                }.decorate(new HttpAuthServiceBuilder().addOAuth2(oAuth2aAuthorizer).newDecorator())
                  .decorate(LoggingService::new));
 
         // Auth with all predicates above!
@@ -126,10 +123,10 @@ public class AuthServiceTest extends AbstractServerTest {
             }
         };
         HttpAuthService compositeAuth = new HttpAuthServiceBuilder()
-                .add(predicate)
-                .addBasicAuth(httpBasicPredicate)
-                .addOAuth1a(oAuth1aPredicate)
-                .addOAuth2(oAuth2aPredicate)
+                .add(authorizer)
+                .addBasicAuth(httpBasicAuthorizer)
+                .addOAuth1a(oAuth1aAuthorizer)
+                .addOAuth2(oAuth2aAuthorizer)
                 .build(compositeService);
         sb.serviceAt(
                 "/composite", compositeAuth.decorate(LoggingService::new));

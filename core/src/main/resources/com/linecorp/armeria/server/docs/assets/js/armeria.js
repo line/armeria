@@ -352,10 +352,10 @@ $(function () {
   function processFunction(functionInfo) {
     var parameters = functionInfo.parameters;
     for (var idx = 0; idx < parameters.length; idx++) {
-      processType(parameters[idx].type);
+      processType(parameters[idx].typeInfo);
     }
 
-    processType(functionInfo.returnType);
+    processType(functionInfo.returnTypeInfo);
 
     var exceptions = functionInfo.exceptions;
     for (var idx = 0; idx < exceptions.length; idx++) {
@@ -363,18 +363,18 @@ $(function () {
     }
   }
 
-  function processType(type) {
-    type.typeStr = escapeTag(type.type)
-        .replace(new RegExp('(?:\\w+\\.)+\\w+', 'g'),
-                 function (className) {
-                   var classInfo = specification.classes[className];
-                   if (!classInfo) {
-                     return className;
-                   }
+  function processType(typeInfo) {
+    typeInfo.signatureHtml = escapeTag(typeInfo.signature)
+            .replace(new RegExp('(?:\\w+\\.)+\\w+', 'g'),
+                     function (className) {
+                       var classInfo = specification.classes[className];
+                       if (!classInfo) {
+                         return className;
+                       }
 
-                   return '<a href="#!class/' + encodeURIComponent(className) + '" title="' + className + '">' +
-                          classInfo.simpleName + '</a>';
-                 });
+                       return '<a href="#!class/' + encodeURIComponent(className) +
+                              '" title="' + className + '">' + classInfo.simpleName + '</a>';
+                     });
   }
 
   function escapeHtml(string) {
@@ -411,7 +411,7 @@ $(function () {
 
     var fields = classInfo.fields;
     for (var idx = 0; idx < fields.length; idx++) {
-      processType(fields[idx].type);
+      processType(fields[idx].typeInfo);
     }
 
     makeActive('li#nav-' + className);

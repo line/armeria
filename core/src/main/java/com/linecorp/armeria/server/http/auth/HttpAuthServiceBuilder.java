@@ -16,12 +16,13 @@
 
 package com.linecorp.armeria.server.http.auth;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -34,85 +35,75 @@ import com.linecorp.armeria.server.Service;
  */
 public final class HttpAuthServiceBuilder {
 
-    private final List<Predicate<? super HttpHeaders>> predicates = new ArrayList<>();
+    private final List<Authorizer<HttpRequest>> authorizers = new ArrayList<>();
 
     /**
-     * Adds an authorization predicate.
+     * Adds an {@link Authorizer}.
      */
-    public HttpAuthServiceBuilder add(Predicate<? super HttpHeaders> predicate) {
-        predicates.add(predicate);
+    public HttpAuthServiceBuilder add(Authorizer<HttpRequest> authorizer) {
+        authorizers.add(requireNonNull(authorizer, "authorizer"));
         return this;
     }
 
     /**
-     * Adds multiple authorization predicates.
+     * Adds multiple {@link Authorizer}s.
      */
-    public HttpAuthServiceBuilder add(Iterable<? extends Predicate<? super HttpHeaders>> predicates) {
-        this.predicates.addAll(Lists.newArrayList(predicates));
+    public HttpAuthServiceBuilder add(Iterable<? extends Authorizer<HttpRequest>> authorizers) {
+        this.authorizers.addAll(Lists.newArrayList(requireNonNull(authorizers, "authorizers")));
         return this;
     }
 
     /**
-     * Adds an HTTP basic authorization predicate.
+     * Adds an HTTP basic {@link Authorizer}.
      */
-    public HttpAuthServiceBuilder addBasicAuth(Predicate<? super BasicToken> predicate) {
-        this.predicates.add(new Predicate<HttpHeaders>() {
-            private final Function<HttpHeaders, BasicToken> extractor = AuthTokenExtractors.BASIC;
-
-            @Override
-            public boolean test(HttpHeaders headers) {
-                BasicToken token = extractor.apply(headers);
-                return token != null ? predicate.test(token) : false;
-            }
-        });
+    public HttpAuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer) {
+        this.authorizers.add(
+                tokenAuthorizer(AuthTokenExtractors.BASIC, requireNonNull(authorizer, "authorizer")));
         return this;
     }
 
     /**
-     * Adds an OAuth1a authorization predicate.
+     * Adds an OAuth1a {@link Authorizer}.
      */
-    public HttpAuthServiceBuilder addOAuth1a(Predicate<? super OAuth1aToken> predicate) {
-        this.predicates.add(new Predicate<HttpHeaders>() {
-            private final Function<HttpHeaders, OAuth1aToken> extractor = AuthTokenExtractors.OAUTH1A;
-
-            @Override
-            public boolean test(HttpHeaders headers) {
-                OAuth1aToken token = extractor.apply(headers);
-                return token != null ? predicate.test(token) : false;
-            }
-        });
+    public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer) {
+        this.authorizers.add(
+                tokenAuthorizer(AuthTokenExtractors.OAUTH1A, requireNonNull(authorizer, "authorizer")));
         return this;
     }
 
     /**
-     * Adds an OAuth2 authorization predicate.
+     * Adds an OAuth2 {@link Authorizer}.
      */
-    public HttpAuthServiceBuilder addOAuth2(Predicate<? super OAuth2Token> predicate) {
-        this.predicates.add(new Predicate<HttpHeaders>() {
-            private final Function<HttpHeaders, OAuth2Token> extractor = AuthTokenExtractors.OAUTH2;
-
-            @Override
-            public boolean test(HttpHeaders headers) {
-                OAuth2Token token = extractor.apply(headers);
-                return token != null ? predicate.test(token) : false;
-            }
-        });
+    public HttpAuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer) {
+        this.authorizers.add(
+                tokenAuthorizer(AuthTokenExtractors.OAUTH2, requireNonNull(authorizer, "authorizer")));
         return this;
     }
 
     /**
      * Creates a new {@link HttpAuthService} instance with the given {@code delegate} and all of the
-     * authorization {@link Predicate}s.
+     * authorization {@link Authorizer}s.
      */
     public HttpAuthService build(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
-        return new HttpAuthServiceImpl(delegate, Iterables.toArray(predicates, Predicate.class));
+        return new HttpAuthServiceImpl(requireNonNull(delegate, "delegate"), authorizers);
     }
 
     /**
      * Creates a new {@link HttpAuthService} {@link Service} decorator that supports all of the given
-     * authorization {@link Predicate}s.
+     * authorization {@link Authorizer}s.
      */
     public Function<Service<? super HttpRequest, ? extends HttpResponse>, HttpAuthService> newDecorator() {
-        return HttpAuthService.newDecorator(predicates);
+        return HttpAuthService.newDecorator(authorizers);
+    }
+
+    private <T> Authorizer<HttpRequest> tokenAuthorizer(
+            Function<HttpHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
+        return (ctx, req) -> {
+            T token = tokenExtractor.apply(req.headers());
+            if (token == null) {
+                return CompletableFuture.completedFuture(false);
+            }
+            return authorizer.authorize(ctx, token);
+        };
     }
 }

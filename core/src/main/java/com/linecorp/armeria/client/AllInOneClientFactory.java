@@ -17,32 +17,36 @@
 package com.linecorp.armeria.client;
 
 import java.net.URI;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ClassToInstanceMap;
+import com.google.common.collect.ImmutableClassToInstanceMap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.client.http.HttpClientFactory;
-import com.linecorp.armeria.client.thrift.THttpClientFactory;
 import com.linecorp.armeria.common.Scheme;
 
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-
 /**
- * A {@link ClientFactory} which combines all known official {@link ClientFactory} implementations.
- * It currently combines the following {@link ClientFactory}s:
- * <ul>
- *   <li>{@link HttpClientFactory}</li>
- *   <li>{@link THttpClientFactory}</li>
- * </ul>
+ * A {@link ClientFactory} which combines all discovered {@link ClientFactory} implementations.
+ *
+ * <h3>How are the {@link ClientFactory}s discovered?</h3>
+ *
+ * <p>{@link AllInOneClientFactory} looks up the {@link ClientFactoryProvider}s available in the current JVM
+ * using Java SPI (Service Provider Interface). The {@link ClientFactoryProvider} implementations will create
+ * the {@link ClientFactory} implementations.
  */
-public class AllInOneClientFactory extends AbstractClientFactory {
+public class AllInOneClientFactory extends NonDecoratingClientFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(AllInOneClientFactory.class);
 
@@ -52,7 +56,6 @@ public class AllInOneClientFactory extends AbstractClientFactory {
         }
     }
 
-    private final ClientFactory mainFactory;
     private final Map<Scheme, ClientFactory> clientFactories;
 
     /**
@@ -84,38 +87,107 @@ public class AllInOneClientFactory extends AbstractClientFactory {
      * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
      */
     public AllInOneClientFactory(SessionOptions options, boolean useDaemonThreads) {
+        super(options, useDaemonThreads);
+
         // TODO(trustin): Allow specifying different options for different session protocols.
         //                We have only one session protocol at the moment, so this is OK so far.
-        final HttpClientFactory httpClientFactory = new HttpClientFactory(options, useDaemonThreads);
-        final THttpClientFactory thriftClientFactory = new THttpClientFactory(httpClientFactory);
+
+        // Do not let the delegates create or manage event loops by specifying the EventLoop explicitly.
+        // See NonDecoratingClientFactory.closeEventLoopGroup for more information.
+        final SessionOptions delegateOptions =
+                SessionOptions.of(options, SessionOption.EVENT_LOOP_GROUP.newValue(eventLoopGroup()));
+
+        final List<ClientFactoryProvider> providers =
+                Streams.stream(ServiceLoader.load(ClientFactoryProvider.class,
+                                                  AllInOneClientFactory.class.getClassLoader()))
+                       .collect(Collectors.toCollection(ArrayList::new));
+
+        if (providers.isEmpty()) {
+            throw new IllegalStateException("could not find any providers");
+        }
+
+        final List<ClientFactory> availableClientFactories = new ArrayList<>();
+        do {
+            boolean added = false;
+            for (Iterator<ClientFactoryProvider> i = providers.iterator(); i.hasNext();) {
+                final ClientFactoryProvider p = i.next();
+
+                // Find the ClientFactory instances who meet the type requirements specified in
+                // ClientFactoryProvider.dependencies().
+                final ClassToInstanceMap<ClientFactory> requiredClientFactories =
+                        findRequiredClientFactories(p, availableClientFactories);
+
+                if (requiredClientFactories == null) {
+                    // Dependencies are not met yet. Try instantiating others first.
+                    continue;
+                }
+
+                // Dependencies are met.
+                // Remove the provider from the list so that we instantiate a ClientFactory only once.
+                i.remove();
+
+                // Instantiate a ClientFactory and add it to the list of available factories as well.
+                availableClientFactories.add(p.newFactory(delegateOptions, requiredClientFactories));
+                added = true;
+            }
+
+            // If no factories were instantiated, it means none of the remaining providers could find
+            // its dependencies.
+            if (!added) {
+                throw new IllegalStateException("failed to find the dependencies for: " + providers);
+            }
+        } while (!providers.isEmpty());
 
         final ImmutableMap.Builder<Scheme, ClientFactory> builder = ImmutableMap.builder();
-        for (ClientFactory f : Arrays.asList(httpClientFactory, thriftClientFactory)) {
+        for (ClientFactory f : availableClientFactories) {
             f.supportedSchemes().forEach(s -> builder.put(s, f));
         }
 
         clientFactories = builder.build();
-        mainFactory = httpClientFactory;
+    }
+
+    /**
+     * Builds the dependency map for the specified {@link ClientFactoryProvider}.
+     *
+     * @return {@code null} if dependencies could not be fully met
+     */
+    @Nullable
+    private static ClassToInstanceMap<ClientFactory> findRequiredClientFactories(
+            ClientFactoryProvider provider, Iterable<ClientFactory> availableClientFactories) {
+
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        final Set<Class<ClientFactory>> dependencyTypes =
+                (Set<Class<ClientFactory>>) (Set) provider.dependencies();
+
+        if (dependencyTypes.isEmpty()) {
+            return ImmutableClassToInstanceMap.of();
+        }
+
+        final ImmutableClassToInstanceMap.Builder<ClientFactory> builder =
+                ImmutableClassToInstanceMap.builder();
+
+        for (Class<ClientFactory> dependencyType : dependencyTypes) {
+            boolean found = false;
+            for (ClientFactory f : availableClientFactories) {
+                if (dependencyType.isInstance(f)) {
+                    builder.put(dependencyType, f);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                // Could not find all dependencies.
+                return null;
+            }
+        }
+
+        return builder.build();
     }
 
     @Override
     public Set<Scheme> supportedSchemes() {
         return clientFactories.keySet();
-    }
-
-    @Override
-    public SessionOptions options() {
-        return mainFactory.options();
-    }
-
-    @Override
-    public EventLoopGroup eventLoopGroup() {
-        return mainFactory.eventLoopGroup();
-    }
-
-    @Override
-    public Supplier<EventLoop> eventLoopSupplier() {
-        return mainFactory.eventLoopSupplier();
     }
 
     @Override
@@ -137,6 +209,10 @@ public class AllInOneClientFactory extends AbstractClientFactory {
     }
 
     void doClose() {
-        clientFactories.values().forEach(ClientFactory::close);
+        try {
+            clientFactories.values().forEach(ClientFactory::close);
+        } finally {
+            super.close();
+        }
     }
 }

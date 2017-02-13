@@ -33,7 +33,10 @@ public abstract class StructuredLog {
     private final long requestSize;
     private final long responseSize;
 
-    StructuredLog(long timestampMillis, long responseTimeNanos, long requestSize, long responseSize) {
+    /**
+     * Creates a new instance.
+     */
+    protected StructuredLog(long timestampMillis, long responseTimeNanos, long requestSize, long responseSize) {
         this.timestampMillis = timestampMillis;
         this.responseTimeNanos = responseTimeNanos;
         this.requestSize = requestSize;
