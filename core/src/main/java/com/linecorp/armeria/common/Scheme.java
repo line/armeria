@@ -18,10 +18,10 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -53,8 +53,8 @@ public final class Scheme implements Comparable<Scheme> {
                 final String ftxt = f.uriText();
                 final String ptxt = p.uriText();
 
-                assert ftxt.equals(ftxt.toLowerCase(Locale.US));
-                assert ptxt.equals(ptxt.toLowerCase(Locale.US));
+                assert ftxt.equals(Ascii.toLowerCase(ftxt));
+                assert ptxt.equals(Ascii.toLowerCase(ptxt));
 
                 final Scheme scheme = new Scheme(f, p);
                 schemes.put(ftxt + '+' + ptxt, scheme);
@@ -77,7 +77,7 @@ public final class Scheme implements Comparable<Scheme> {
             return Optional.empty();
         }
 
-        return Optional.ofNullable(SCHEMES.get(scheme.toLowerCase(Locale.US)));
+        return Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(scheme)));
     }
 
     /**
@@ -88,7 +88,7 @@ public final class Scheme implements Comparable<Scheme> {
      *                                  there is no such {@link Scheme} available
      */
     public static Scheme parse(String scheme) {
-        final Scheme res = SCHEMES.get(requireNonNull(scheme, "scheme").toLowerCase(Locale.US));
+        final Scheme res = SCHEMES.get(Ascii.toLowerCase(requireNonNull(scheme, "scheme")));
         if (res == null) {
             throw new IllegalArgumentException("scheme: " + scheme);
         }

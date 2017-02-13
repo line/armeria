@@ -35,9 +35,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.Locale;
 import java.util.Map;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
 import io.netty.util.AsciiString;
@@ -423,8 +423,7 @@ public final class HttpHeaderNames {
      * the allocation rate of {@link AsciiString}.
      */
     public static AsciiString of(String name) {
-        requireNonNull(name, "name");
-        name = name.toLowerCase(Locale.US);
+        name = Ascii.toLowerCase(requireNonNull(name, "name"));
         final AsciiString asciiName = map.get(name);
         return asciiName != null ? asciiName : new AsciiString(name);
     }

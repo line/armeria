@@ -19,13 +19,14 @@ package com.linecorp.armeria.server.http.cors;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -196,7 +197,7 @@ public final class CorsService<I extends HttpRequest, O extends HttpResponse>
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
         return origin == null ||
                NULL_ORIGIN.equals(origin) && config.isNullOriginAllowed() ||
-               config.origins().contains(origin.toLowerCase(Locale.ENGLISH));
+               config.origins().contains(Ascii.toLowerCase(origin));
     }
 
     /**
@@ -227,7 +228,7 @@ public final class CorsService<I extends HttpRequest, O extends HttpResponse>
                 }
                 return true;
             }
-            if (config.origins().contains(origin.toLowerCase(Locale.ENGLISH))) {
+            if (config.origins().contains(Ascii.toLowerCase(origin))) {
                 setCorsOrigin(headers, origin);
                 setCorsVaryHeader(headers);
                 return true;
