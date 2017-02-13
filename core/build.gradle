@@ -61,6 +61,8 @@ dependencies {
 task trimInternalDependencies(type: ProGuardTask) {
     injars files(configurations.internalDependency.collect()), filter: '!META-INF/**'
     outjars internalDependenciesJarTrimmed
+    libraryjars files(configurations.runtime.collect() - configurations.internalDependency.collect())
+    libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
 
     dontoptimize
     dontobfuscate

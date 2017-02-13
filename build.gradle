@@ -362,7 +362,7 @@ configure(javaProjects) {
         //                https://github.com/johnrengelman/shadow/issues/203
         //entryCompression = ZipEntryCompression.STORED
 
-        from sourceSets.main.output
+        from sourceSets.main.output.classesDir
         configurations = [ project.configurations.compile ]
 
         relocations.each {
@@ -374,12 +374,11 @@ configure(javaProjects) {
             exclude(dependency({ true }))
         }
     }
-    jar.dependsOn relocateSourceReferencesToInternalDependencies
-    jar {
-        from(zipTree(relocateSourceReferencesToInternalDependencies.archivePath)) {
-            exclude 'META-INF/MANIFEST.MF'
-        }
+    task extractRelocatedJar(type: Copy, dependsOn: relocateSourceReferencesToInternalDependencies) {
+        from zipTree(relocateSourceReferencesToInternalDependencies.archivePath)
+        into sourceSets.main.output.classesDir
     }
+    jar.dependsOn extractRelocatedJar
 
     // Add common JVM options such as TLS ALPN agent, max memory and leak detection.
     tasks.withType(JavaForkOptions) {
