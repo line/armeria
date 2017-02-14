@@ -18,10 +18,11 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+
+import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -115,7 +116,7 @@ public final class EndpointGroupRegistry {
     }
 
     private static String normalizeGroupName(String groupName) {
-        return requireNonNull(groupName, "groupName").toLowerCase(Locale.ENGLISH);
+        return Ascii.toLowerCase(requireNonNull(groupName, "groupName"));
     }
 
     private EndpointGroupRegistry() {}

@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
-import java.util.EnumMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -52,7 +52,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
         baseBootstrap = requireNonNull(bootstrap);
         eventLoop = (EventLoop) bootstrap.config().group();
 
-        bootstrapMap = Collections.synchronizedMap(new EnumMap<>(SessionProtocol.class));
+        bootstrapMap = Collections.synchronizedMap(new IdentityHashMap<>());
         this.options = options;
     }
 

@@ -33,7 +33,7 @@ public interface ClientFactoryProvider {
     ClientFactory newFactory(SessionOptions options, ClassToInstanceMap<ClientFactory> dependencies);
 
     /**
-     * Returns the type of the {@link ClientFactory} required for this provide to create a new
+     * Returns the type of the {@link ClientFactory} required for this provider to create a new
      * {@link ClientFactory}. The {@link Map} which is given when
      * {@link #newFactory(SessionOptions, ClassToInstanceMap)} is invoked will contain the entries
      * for the classes returned by this method and their respective instances.

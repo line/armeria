@@ -19,12 +19,12 @@ package com.linecorp.armeria.server.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.Set;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -40,7 +40,7 @@ public final class ThriftService extends THttpService {
      */
     @Deprecated
     public static ThriftService of(Object implementation) {
-        return of(implementation, SerializationFormat.THRIFT_BINARY);
+        return of(implementation, ThriftSerializationFormats.BINARY);
     }
 
     /**
@@ -51,7 +51,7 @@ public final class ThriftService extends THttpService {
                                    SerializationFormat defaultSerializationFormat) {
 
         return new ThriftService(ThriftCallService.of(implementation),
-                                 defaultSerializationFormat, SerializationFormat.ofThrift());
+                                 defaultSerializationFormat, ThriftSerializationFormats.values());
     }
 
     /**
@@ -80,8 +80,9 @@ public final class ThriftService extends THttpService {
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
         requireNonNull(otherAllowedSerializationFormats, "otherAllowedSerializationFormats");
-        EnumSet<SerializationFormat> allowedSerializationFormatsSet = EnumSet.of(defaultSerializationFormat);
-        otherAllowedSerializationFormats.forEach(allowedSerializationFormatsSet::add);
+
+        final Set<SerializationFormat> allowedSerializationFormatsSet =
+                newAllowedSerializationFormats(defaultSerializationFormat, otherAllowedSerializationFormats);
 
         return new ThriftService(ThriftCallService.of(implementation),
                                  defaultSerializationFormat, allowedSerializationFormatsSet);

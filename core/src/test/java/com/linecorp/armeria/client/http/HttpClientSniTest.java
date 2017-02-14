@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.http;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
 import static org.junit.Assert.assertEquals;
 
 import java.net.InetAddress;
@@ -35,7 +36,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SessionOption;
 import com.linecorp.armeria.client.SessionOptions;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
@@ -72,7 +72,7 @@ public class HttpClientSniTest {
             sscA = new SelfSignedCertificate("a.com");
             sscB = new SelfSignedCertificate("b.com");
 
-            sb.port(0, SessionProtocol.HTTPS);
+            sb.port(0, HTTPS);
 
             final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
             final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
@@ -93,8 +93,8 @@ public class HttpClientSniTest {
                 }
             });
 
-            a.sslContext(SessionProtocol.HTTPS, sscA.certificate(), sscA.privateKey());
-            b.sslContext(SessionProtocol.HTTPS, sscB.certificate(), sscB.privateKey());
+            a.sslContext(HTTPS, sscA.certificate(), sscA.privateKey());
+            b.sslContext(HTTPS, sscB.certificate(), sscB.privateKey());
 
             sb.virtualHost(a.build());
             sb.defaultVirtualHost(b.build());
@@ -108,7 +108,7 @@ public class HttpClientSniTest {
     public static void init() throws Exception {
         server.start().get();
         httpsPort = server.activePorts().values().stream()
-                          .filter(p -> p.protocol() == SessionProtocol.HTTPS).findAny().get().localAddress()
+                          .filter(p -> p.protocol() == HTTPS).findAny().get().localAddress()
                           .getPort();
         clientFactory = new HttpClientFactory(SessionOptions.of(
                 SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE),

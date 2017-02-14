@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.internal.FlushConsolidationHandler;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
@@ -107,7 +107,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
     private void configureHttp(ChannelPipeline p) {
         p.addLast(new Http2PrefaceOrHttpHandler());
         configureRequestCountingHandlers(p);
-        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1C));
+        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, HttpSessionProtocols.H1C));
     }
 
     private void configureRequestCountingHandlers(ChannelPipeline p) {
@@ -171,7 +171,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p));
             configureRequestCountingHandlers(p);
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H2));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, HttpSessionProtocols.H2));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -179,7 +179,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
             p.addLast(new HttpServerCodec());
             p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
             configureRequestCountingHandlers(p);
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, HttpSessionProtocols.H1));
         }
     }
 

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.tracing;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -39,7 +40,6 @@ import com.github.kristofa.brave.TraceData;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.tracing.HelloService;
@@ -112,7 +112,7 @@ public class TracingServiceTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final RpcRequest req = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
         final DefaultRequestLog log = new DefaultRequestLog(ctx);
-        log.startRequest(mock(Channel.class), SessionProtocol.H2C, "localhost", TEST_METHOD, "/");
+        log.startRequest(mock(Channel.class), H2C, "localhost", TEST_METHOD, "/");
         log.endRequest();
 
         // AbstractTracingService prefers RpcRequest.method() to ctx.method(), so "POST" should be ignored.

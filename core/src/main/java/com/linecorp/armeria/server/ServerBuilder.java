@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
@@ -141,9 +142,17 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
+     * interfaces using the specified protocol. If no port is added (i.e. no {@code port()} method is called),
+     * a default of {@code 0} (randomly-assigned port) and {@code "http"} will be used.
+     */
+    public ServerBuilder port(int port, String protocol) {
+        return port(port, SessionProtocol.of(requireNonNull(protocol, "protocol")));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
      * interfaces using the specified {@link SessionProtocol}. If no port is added (i.e. no {@code port()}
-     * method is called), a default of {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP}
-     * will be used.
+     * method is called), a default of {@code 0} (randomly-assigned port) and {@code "http"} will be used.
      */
     public ServerBuilder port(int port, SessionProtocol protocol) {
         ports.add(new ServerPort(port, protocol));
@@ -152,8 +161,17 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
+     * protocol. If no port is added (i.e. no {@code port()} method is called), a default of {@code 0}
+     * (randomly-assigned port) and {@code "http"} will be used.
+     */
+    public ServerBuilder port(InetSocketAddress localAddress, String protocol) {
+        return port(localAddress, SessionProtocol.of(requireNonNull(protocol, "protocol")));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
      * {@link SessionProtocol}. If no port is added (i.e. no {@code port()} method is called), a default of
-     * {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP} will be used.
+     * {@code 0} (randomly-assigned port) and {@code "http"} will be used.
      */
     public ServerBuilder port(InetSocketAddress localAddress, SessionProtocol protocol) {
         ports.add(new ServerPort(localAddress, protocol));
@@ -162,7 +180,7 @@ public final class ServerBuilder {
 
     /**
      * Adds the specified {@link ServerPort}. If no port is added (i.e. no {@code port()} method is called),
-     * a default of {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP} will be used.
+     * a default of {@code 0} (randomly-assigned port) and {@code "http"} will be used.
      */
     public ServerBuilder port(ServerPort port) {
         ports.add(requireNonNull(port, "port"));
@@ -529,7 +547,7 @@ public final class ServerBuilder {
 
         final List<ServerPort> ports =
                 !this.ports.isEmpty() ? this.ports
-                                      : Collections.singletonList(new ServerPort(0, SessionProtocol.HTTP));
+                                      : Collections.singletonList(new ServerPort(0, HTTP));
 
         final VirtualHost defaultVirtualHost;
         if (this.defaultVirtualHost != null) {

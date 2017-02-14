@@ -24,11 +24,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpMethod;
@@ -97,7 +98,7 @@ public final class CorsServiceBuilder {
     CorsServiceBuilder(final String... origins) {
         final Set<String> originsCopy = new LinkedHashSet<>();
         for (String o : origins) {
-            originsCopy.add(o.toLowerCase(Locale.ENGLISH));
+            originsCopy.add(Ascii.toLowerCase(o));
         }
         this.origins = Collections.unmodifiableSet(originsCopy);
         anyOriginSupported = false;

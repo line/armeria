@@ -51,17 +51,17 @@ import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
 import com.linecorp.armeria.common.logback.HelloService.hello_result;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.Server;
@@ -202,17 +202,17 @@ public class RequestContextExportingAppenderTest {
 
             configurator.doConfigure(getClass().getResource("testXmlConfig.xml"));
 
-            final RequestContextExportingAppender rcia =
-                    (RequestContextExportingAppender) logger.getAppender("RCIA");
+            final RequestContextExportingAppender rcea =
+                    (RequestContextExportingAppender) logger.getAppender("RCEA");
 
-            assertThat(rcia).isNotNull();
-            assertThat(rcia.getBuiltIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
-            assertThat(rcia.getHttpRequestHeaders()).containsExactly(HttpHeaderNames.USER_AGENT);
-            assertThat(rcia.getHttpResponseHeaders()).containsExactly(HttpHeaderNames.SET_COOKIE);
+            assertThat(rcea).isNotNull();
+            assertThat(rcea.getBuiltIns()).containsExactly(BuiltInProperty.REMOTE_HOST);
+            assertThat(rcea.getHttpRequestHeaders()).containsExactly(HttpHeaderNames.USER_AGENT);
+            assertThat(rcea.getHttpResponseHeaders()).containsExactly(HttpHeaderNames.SET_COOKIE);
 
             final AttributeKey<Object> fooAttr = AttributeKey.valueOf("com.example.AttrKeys#FOO");
             final AttributeKey<Object> barAttr = AttributeKey.valueOf("com.example.AttrKeys#BAR");
-            assertThat(rcia.getAttributes()).containsOnly(new SimpleEntry<>("foo", fooAttr),
+            assertThat(rcea.getAttributes()).containsOnly(new SimpleEntry<>("foo", fooAttr),
                                                           new SimpleEntry<>("bar", barAttr));
         } finally {
             // Revert to the original configuration.
@@ -335,7 +335,7 @@ public class RequestContextExportingAppenderTest {
         final ServiceRequestContext ctx = newServiceContext("/foo");
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final RequestLogBuilder log = ctx.logBuilder();
-            log.serializationFormat(SerializationFormat.THRIFT_BINARY);
+            log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
             log.requestEnvelope(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
             log.requestContent(RPC_REQ, THRIFT_CALL);
@@ -409,7 +409,7 @@ public class RequestContextExportingAppenderTest {
 
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
                 serviceConfig,
-                ch, SessionProtocol.H2, req.method().name(), req.path(), req.path(),
+                ch, HttpSessionProtocols.H2, req.method().name(), req.path(), req.path(),
                 req, newSslSession());
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
@@ -464,7 +464,7 @@ public class RequestContextExportingAppenderTest {
         final ClientRequestContext ctx = newClientContext("/bar");
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final RequestLogBuilder log = ctx.logBuilder();
-            log.serializationFormat(SerializationFormat.THRIFT_BINARY);
+            log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
             log.requestEnvelope(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
             log.requestContent(RPC_REQ, THRIFT_CALL);
@@ -518,7 +518,7 @@ public class RequestContextExportingAppenderTest {
                                                           .authority("server.com:8080"));
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), SessionProtocol.H2,
+                mock(EventLoop.class), HttpSessionProtocols.H2,
                 Endpoint.of("server.com", 8080),
                 req.method().name(), req.path(), "",
                 ClientOptions.DEFAULT, req) {

@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -109,14 +110,8 @@ public class ThriftServiceTest {
     private static final String BAZ = "baz";
 
     @Parameters(name = "{0}")
-    public static Collection<Object[]> parameters() throws Exception {
-        List<Object[]> parameters = new ArrayList<>();
-
-        parameters.add(new Object[] { SerializationFormat.THRIFT_BINARY });
-        parameters.add(new Object[] { SerializationFormat.THRIFT_COMPACT });
-        parameters.add(new Object[] { SerializationFormat.THRIFT_JSON });
-
-        return parameters;
+    public static Collection<SerializationFormat> parameters() throws Exception {
+        return ThriftSerializationFormats.values();
     }
 
     private final SerializationFormat defaultSerializationFormat;

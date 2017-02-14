@@ -16,58 +16,122 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.Collections;
-import java.util.EnumSet;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.Set;
+
+import com.google.common.base.Ascii;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableBiMap;
+
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.
  */
-public enum SessionProtocol {
-    /**
-     * HTTP - cleartext, HTTP/2 preferred.
-     */
-    HTTP(false, "http", false, 80),
-    /**
-     * HTTP - over TLS, HTTP/2 preferred.
-     */
-    HTTPS(true, "https", false, 443),
-    /**
-     * HTTP/1 - over TLS.
-     */
-    H1(true, "h1", false, 443),
-    /**
-     * HTTP/1 - cleartext.
-     */
-    H1C(false, "h1c", false, 80),
-    /**
-     * HTTP/2 - over TLS.
-     */
-    H2(true, "h2", true, 443),
-    /**
-     * HTTP/2 - cleartext.
-     */
-    H2C(false, "h2c", true, 80);
+public final class SessionProtocol implements Comparable<SessionProtocol> {
 
-    private static final Set<SessionProtocol> HTTP_PROTOCOLS = Collections.unmodifiableSet(
-            EnumSet.of(HTTP, HTTPS, H1, H1C, H2, H2C));
+    private static final BiMap<String, SessionProtocol> uriTextToProtocols;
+    private static final Set<SessionProtocol> values;
 
-    /**
-     * Returns the set of all known HTTP session protocols. This method is useful when determining if a
-     * {@link SessionProtocol} is HTTP or not.
-     *
-     * <p>e.g. {@code if (SessionProtocol.ofHttp().contains(proto)) { ... }}
-     */
-    public static Set<SessionProtocol> ofHttp() {
-        return HTTP_PROTOCOLS;
+    static {
+        // Load all session protocols from the providers.
+        final BiMap<String, SessionProtocol> mutableUriTextToProtocols = HashBiMap.create();
+        ServiceLoader.load(SessionProtocolProvider.class, SessionProtocolProvider.class.getClassLoader())
+                     .forEach(provider -> provider.entries().forEach(e -> {
+                         checkState(!mutableUriTextToProtocols.containsKey(e.uriText),
+                                    "session protocol registered already: ", e.uriText);
+
+                         mutableUriTextToProtocols.put(e.uriText,
+                                 new SessionProtocol(e.uriText, e.useTls, e.isMultiplex, e.defaultPort));
+                     }));
+
+        uriTextToProtocols = ImmutableBiMap.copyOf(mutableUriTextToProtocols);
+        values = uriTextToProtocols.values();
     }
 
-    private final boolean useTls;
+    /**
+     * @deprecated Use {@link HttpSessionProtocols#HTTPS} instead.
+     */
+    @Deprecated
+    public static final SessionProtocol HTTPS = HttpSessionProtocols.HTTPS;
+
+    /**
+     * @deprecated Use {@link HttpSessionProtocols#HTTP}.
+     */
+    @Deprecated
+    public static final SessionProtocol HTTP = HttpSessionProtocols.HTTP;
+
+    /**
+     * @deprecated Use {@link HttpSessionProtocols#H1}.
+     */
+    @Deprecated
+    public static final SessionProtocol H1 = HttpSessionProtocols.H1;
+
+    /**
+     * @deprecated Use {@link HttpSessionProtocols#H1C}.
+     */
+    @Deprecated
+    public static final SessionProtocol H1C = HttpSessionProtocols.H1C;
+
+    /**
+     * @deprecated Use {@link HttpSessionProtocols#H2}.
+     */
+    @Deprecated
+    public static final SessionProtocol H2 = HttpSessionProtocols.H2;
+
+    /**
+     * @deprecated Use {@link HttpSessionProtocols#H2C}.
+     */
+    @Deprecated
+    public static final SessionProtocol H2C = HttpSessionProtocols.H2C;
+
+    /**
+     * @deprecated Use {@link HttpSessionProtocols#values()}.
+     */
+    @Deprecated
+    public static Set<SessionProtocol> ofHttp() {
+        return HttpSessionProtocols.values();
+    }
+
+    /**
+     * Returns all available {@link SessionProtocol}s.
+     */
+    public static Set<SessionProtocol> values() {
+        return values;
+    }
+
+    /**
+     * Returns the {@link SessionProtocol} with the specified {@link #uriText()}.
+     *
+     * @throws IllegalArgumentException if there's no such {@link SessionProtocol}
+     */
+    public static SessionProtocol of(String uriText) {
+        uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
+        final SessionProtocol value = uriTextToProtocols.get(uriText);
+        checkArgument(value != null, "unknown session protocol: ", uriText);
+        return value;
+    }
+
+    /**
+     * Finds the {@link SessionProtocol} with the specified {@link #uriText()}.
+     */
+    public static Optional<SessionProtocol> find(String uriText) {
+        uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
+        return Optional.ofNullable(uriTextToProtocols.get(uriText));
+    }
+
     private final String uriText;
+    private final boolean useTls;
     private final boolean isMultiplex;
     private final int defaultPort;
 
-    SessionProtocol(boolean useTls, String uriText, boolean isMultiplex, int defaultPort) {
+    private SessionProtocol(String uriText, boolean useTls, boolean isMultiplex, int defaultPort) {
         this.useTls = useTls;
         this.uriText = uriText;
         this.isMultiplex = isMultiplex;
@@ -101,5 +165,25 @@ public enum SessionProtocol {
      */
     public int defaultPort() {
         return defaultPort;
+    }
+
+    @Override
+    public int hashCode() {
+        return System.identityHashCode(this);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return this == obj;
+    }
+
+    @Override
+    public int compareTo(SessionProtocol o) {
+        return uriText.compareTo(o.uriText);
+    }
+
+    @Override
+    public String toString() {
+        return uriText;
     }
 }

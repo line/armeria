@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server.http;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static java.util.Objects.requireNonNull;
 
@@ -163,15 +167,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                       GracefulShutdownSupport gracefulShutdownSupport,
                       SessionProtocol protocol) {
 
-        assert protocol == SessionProtocol.H1 ||
-               protocol == SessionProtocol.H1C ||
-               protocol == SessionProtocol.H2;
+        assert protocol == H1 || protocol == H1C || protocol == H2;
 
         this.config = requireNonNull(config, "config");
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
         this.protocol = requireNonNull(protocol, "protocol");
-        if (protocol == SessionProtocol.H1 || protocol == SessionProtocol.H1C) {
+        if (protocol == H1 || protocol == H1C) {
             responseEncoder = new Http1ObjectEncoder(true);
         }
     }
@@ -211,13 +213,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             logger.debug("{} HTTP/2 settings: {}", ctx.channel(), h2settings);
         }
 
-        switch (protocol) {
-            case H1:
-                protocol = SessionProtocol.H2;
-                break;
-            case H1C:
-                protocol = SessionProtocol.H2C;
-                break;
+        if (protocol == H1) {
+            protocol = H2;
+        } else if (protocol == H1C) {
+            protocol = H2C;
         }
 
         final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
@@ -498,14 +497,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      * - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
      */
     private void addKeepAliveHeaders(HttpRequest req, AggregatedHttpMessage res) {
-        switch (protocol) {
-            case H1:
-            case H1C:
-                res.headers().set(HttpHeaderNames.CONNECTION, "keep-alive");
-                break;
-            default:
-                // Do not add the 'connection' header for HTTP/2 responses.
-                // See https://tools.ietf.org/html/rfc7540#section-8.1.2.2
+        if (protocol == H1 || protocol == H1C) {
+            res.headers().set(HttpHeaderNames.CONNECTION, "keep-alive");
+        } else {
+            // Do not add the 'connection' header for HTTP/2 responses.
+            // See https://tools.ietf.org/html/rfc7540#section-8.1.2.2
         }
 
         setContentLength(req, res);

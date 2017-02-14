@@ -16,10 +16,12 @@
 
 package com.linecorp.armeria.client.http;
 
-import static com.linecorp.armeria.common.SessionProtocol.H1;
-import static com.linecorp.armeria.common.SessionProtocol.H1C;
-import static com.linecorp.armeria.common.SessionProtocol.H2;
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
 import static java.util.Objects.requireNonNull;
 
@@ -33,6 +35,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
@@ -114,20 +118,13 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private InetSocketAddress remoteAddress;
 
     HttpClientPipelineConfigurator(SessionProtocol sessionProtocol, SessionOptions options) {
-        switch (sessionProtocol) {
-        case HTTP:
-        case HTTPS:
+        if (sessionProtocol == HTTP || sessionProtocol == HTTPS) {
             httpPreference = HttpPreference.HTTP2_PREFERRED;
-            break;
-        case H1:
-        case H1C:
+        } else if (sessionProtocol == H1 || sessionProtocol == H1C) {
             httpPreference = HttpPreference.HTTP1_REQUIRED;
-            break;
-        case H2:
-        case H2C:
+        } else if (sessionProtocol == H2 || sessionProtocol == H2C) {
             httpPreference = HttpPreference.HTTP2_REQUIRED;
-            break;
-        default:
+        } else {
             // Should never reach here.
             throw new Error();
         }
@@ -442,10 +439,10 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 // The server rejected the upgrade request and sent its response in HTTP/1.
                 ReferenceCountUtil.release(msg);
                 assert upgradeEvt == UPGRADE_REJECTED;
-                onUpgradeResponse(
-                        ctx, false,
-                        "close".equalsIgnoreCase(
-                                ((FullHttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION)));
+
+                final String connection = ((FullHttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION);
+                onUpgradeResponse(ctx, false,
+                                  connection != null && Ascii.equalsIgnoreCase("close", connection));
                 return;
             }
 

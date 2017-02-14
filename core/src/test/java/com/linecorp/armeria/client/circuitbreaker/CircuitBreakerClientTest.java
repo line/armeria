@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
@@ -46,7 +47,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.DefaultEventLoop;
@@ -57,13 +57,13 @@ public class CircuitBreakerClientTest {
 
     // Remote invocation parameters
     private static final ClientRequestContext ctx = new DefaultClientRequestContext(
-            new DefaultEventLoop(), SessionProtocol.H2C,
+            new DefaultEventLoop(), H2C,
             Endpoint.of("dummyhost", 8080),
             "POST", "/", "", ClientOptions.DEFAULT,
             RpcRequest.of(Object.class, "methodA", "a", "b"));
 
     private static final ClientRequestContext ctxB = new DefaultClientRequestContext(
-            new DefaultEventLoop(), SessionProtocol.H2C,
+            new DefaultEventLoop(), H2C,
             Endpoint.of("dummyhost", 8080),
             "POST", "/", "", ClientOptions.DEFAULT,
             RpcRequest.of(Object.class, "methodB", "c", "d"));

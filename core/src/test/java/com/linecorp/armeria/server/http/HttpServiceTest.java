@@ -39,10 +39,10 @@ import org.junit.Test;
 
 import com.google.common.net.MediaType;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
@@ -233,7 +233,7 @@ public class HttpServiceTest {
         server.start().get();
 
         httpPort = server.activePorts().values().stream()
-                         .filter(p -> p.protocol() == SessionProtocol.HTTP).findAny().get().localAddress()
+                         .filter(p -> p.protocol() == HttpSessionProtocols.HTTP).findAny().get().localAddress()
                          .getPort();
     }
 

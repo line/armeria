@@ -21,11 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.net.URLConnection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Ascii;
 import com.google.common.net.MediaType;
 
 final class MimeTypeUtil {
@@ -74,7 +74,7 @@ final class MimeTypeUtil {
                             MediaType mediaType, String... extensions) {
 
         for (String e : extensions) {
-            assert e.toLowerCase(Locale.US).equals(e);
+            assert Ascii.toLowerCase(e).equals(e);
             extensionToMediaType.put(e, mediaType);
         }
     }
@@ -94,7 +94,7 @@ final class MimeTypeUtil {
             return null;
         }
 
-        final String extension = path.substring(dotIdx + 1).toLowerCase(Locale.US);
+        final String extension = Ascii.toLowerCase(path.substring(dotIdx + 1));
         final MediaType mediaType = EXTENSION_TO_MEDIA_TYPE.get(extension);
         if (mediaType != null) {
             return mediaType;
