@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 
@@ -28,11 +29,10 @@ import com.linecorp.armeria.server.ServerListener;
  * into the ZooKeeper.
  */
 public class ZooKeeperUpdatingListener implements ServerListener {
-
     private final String zkConnectionStr;
     private final String zNodePath;
     private final int sessionTimeout;
-    private final Endpoint endpoint;
+    private Endpoint endpoint;
     private ZooKeeperRegistration connector;
 
     /**
@@ -46,13 +46,31 @@ public class ZooKeeperUpdatingListener implements ServerListener {
                                      Endpoint endpoint) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        this.endpoint = requireNonNull(endpoint, "endpoint");
+        this.endpoint = endpoint;
         this.sessionTimeout = sessionTimeout;
+    }
 
+    /**
+     * A ZooKeeper server listener, used for register server into ZooKeeper.
+     * @param zkConnectionStr ZooKeeper connection string
+     * @param zNodePath       ZooKeeper node path(under which this server will registered)
+     * @param sessionTimeout  session timeout
+     */
+    public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout) {
+        this(zkConnectionStr, zNodePath, sessionTimeout, null);
     }
 
     @Override
     public void serverStarting(Server server) throws Exception {
+        if (endpoint == null) {
+            if (!server.activePort().isPresent()) {
+                throw new ZooKeeperException("Server registration error, failed to get default server port.");
+            } else {
+                endpoint = Endpoint.of(server.defaultHostname(),
+                                       server.activePort().get()
+                                             .localAddress().getPort());
+            }
+        }
         connector = new ZooKeeperRegistration(zkConnectionStr, zNodePath, sessionTimeout, endpoint);
     }
 
@@ -62,7 +80,9 @@ public class ZooKeeperUpdatingListener implements ServerListener {
 
     @Override
     public void serverStopping(Server server) throws Exception {
-        connector.close(true);
+        if (connector != null) {
+            connector.close(true);
+        }
     }
 
     @Override

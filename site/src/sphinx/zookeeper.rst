@@ -49,7 +49,8 @@ Register your server:
 
 .. code-block:: java
 
-   ServerListener listener = new ZooKeeperUpdatingListener(zkConnectionStr, zNode, sessionTimeout, Endpoint.of("192.168.1.1", 8080);
+   //This construction will use server's default host name, port and weight to register, use the other constructor to specify the desired.
+   ServerListener listener = new ZooKeeperUpdatingListener(zkConnectionStr, zNode, sessionTimeout);
    server.addListener(listener);
    server.start();
    ...
