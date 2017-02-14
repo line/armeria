@@ -16,8 +16,13 @@
 
 package com.linecorp.armeria.common.http;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Iterator;
 import java.util.Map.Entry;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
@@ -25,12 +30,21 @@ import io.netty.util.AsciiString;
 /**
  * HTTP/2 headers.
  */
+@JsonSerialize(using = HttpHeadersJsonSerializer.class)
+@JsonDeserialize(using = HttpHeadersJsonDeserializer.class)
 public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, HttpHeaders> {
 
     /**
      * An immutable empty HTTP/2 headers.
      */
     HttpHeaders EMPTY_HEADERS = new DefaultHttpHeaders(false, 0).asImmutable();
+
+    /**
+     * Returns new empty HTTP headers.
+     */
+    static HttpHeaders of() {
+        return new DefaultHttpHeaders();
+    }
 
     /**
      * Returns new HTTP request headers.
@@ -85,6 +99,13 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
 
         return new DefaultHttpHeaders().add(name1, value1).add(name2, value2)
                                        .add(name3, value3).add(name4, value4);
+    }
+
+    /**
+     * Returns a copy of the specified {@link HttpHeaders}.
+     */
+    static HttpHeaders copyOf(HttpHeaders headers) {
+        return of().set(requireNonNull(headers, "headers"));
     }
 
     /**
