@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,17 +33,24 @@ import com.linecorp.armeria.common.Response;
 public abstract class RetryingClient<I extends Request, O extends Response>
         extends DecoratingClient<I, O, I, O> {
     private final Supplier<? extends Backoff> backoffSupplier;
+    private final RetryRequestStrategy<I, O> retryStrategy;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     protected RetryingClient(Client<? super I, ? extends O> delegate,
+                             RetryRequestStrategy<I, O> retryStrategy,
                              Supplier<? extends Backoff> backoffSupplier) {
         super(delegate);
         this.backoffSupplier = requireNonNull(backoffSupplier, "backoffSupplier");
+        this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
     }
 
     protected Backoff newBackoff() {
         return backoffSupplier.get();
+    }
+
+    protected RetryRequestStrategy<I, O> retryStrategy() {
+        return retryStrategy;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
-import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -37,15 +36,13 @@ import io.netty.channel.EventLoop;
 public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     private static final RetryException RETRY_EXCEPTION = Exceptions.clearTrace(new RetryException());
 
-    private final RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy;
-
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
     public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
     newDecorator() {
         return delegate -> new RetryingRpcClient(delegate,
-                                                 RetryRequestStrategy.always(),
+                                                 RetryRequestStrategy.never(),
                                                  Backoff::withoutDelay);
     }
 
@@ -70,11 +67,10 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected RetryingRpcClient(Client<? super RpcRequest, ? extends RpcResponse> delegate,
-                                RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy,
-                                Supplier<? extends Backoff> backoffSupplier) {
-        super(delegate, backoffSupplier);
-        this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
+    public RetryingRpcClient(Client<? super RpcRequest, ? extends RpcResponse> delegate,
+                             RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy,
+                             Supplier<? extends Backoff> backoffSupplier) {
+        super(delegate, retryStrategy, backoffSupplier);
     }
 
     @Override
@@ -97,12 +93,12 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
         response.handle(voidFunction((result, thrown) -> {
             final Throwable exception;
             if (thrown != null) {
-                if (!retryStrategy.shouldRetry(req, null, thrown)) {
+                if (!retryStrategy().shouldRetry(req, thrown)) {
                     responseFuture.completeExceptionally(thrown);
                     return;
                 }
                 exception = thrown;
-            } else if (!retryStrategy.shouldRetry(req, response, null)) {
+            } else if (retryStrategy().shouldRetry(req, response)) {
                 exception = RETRY_EXCEPTION;
             } else {
                 responseFuture.complete(result);
