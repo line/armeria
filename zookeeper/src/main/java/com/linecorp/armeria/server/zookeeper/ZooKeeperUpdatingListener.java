@@ -46,7 +46,7 @@ public class ZooKeeperUpdatingListener implements ServerListener {
                                      Endpoint endpoint) {
         this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
         this.zNodePath = requireNonNull(zNodePath, "zNodePath");
-        this.endpoint = endpoint;
+        this.endpoint = requireNonNull(endpoint, "endPoint");
         this.sessionTimeout = sessionTimeout;
     }
 
@@ -57,7 +57,9 @@ public class ZooKeeperUpdatingListener implements ServerListener {
      * @param sessionTimeout  session timeout
      */
     public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout) {
-        this(zkConnectionStr, zNodePath, sessionTimeout, null);
+        this.zkConnectionStr = requireNonNull(zkConnectionStr, "zkConnectionStr");
+        this.zNodePath = requireNonNull(zNodePath, "zNodePath");
+        this.sessionTimeout = sessionTimeout;
     }
 
     @Override
