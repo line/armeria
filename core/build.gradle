@@ -74,6 +74,8 @@ task trimInternalDependencies(type: ProGuardTask) {
     keepclasses 'com.spotify.futures.CompletableFutures'
 
     // FastUtil
+    keepinterfaces 'it.unimi.dsi.fastutil.ints.Int2ObjectMap',
+                   'it.unimi.dsi.fastutil.ints.Int2ObjectFunction'
     keepclasses 'it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap',
                 'it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap'
 
@@ -120,6 +122,11 @@ class ProGuardTask extends proguard.gradle.ProGuardTask {
     def keepclasses(String... classNames) {
         classNames.each {
             keep "public class $it { *; }"
+        }
+    }
+    def keepinterfaces(String... interfaceNames) {
+        interfaceNames.each {
+            keep "public interface $it { *; }"
         }
     }
 }
