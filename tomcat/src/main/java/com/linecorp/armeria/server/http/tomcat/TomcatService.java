@@ -89,30 +89,9 @@ public final class TomcatService implements HttpService {
     private static final Set<LifecycleState> TOMCAT_START_STATES = Sets.immutableEnumSet(
             LifecycleState.STARTED, LifecycleState.STARTING, LifecycleState.STARTING_PREP);
 
-    private static final int TOMCAT_MAJOR_VERSION;
     private static final URLEncoder TOMCAT_URL_ENCODER;
 
     static {
-        // Detect Tomcat version.
-        final Pattern pattern = Pattern.compile("^([1-9][0-9]*)\\.");
-        final String version = ServerInfo.getServerNumber();
-        final Matcher matcher = pattern.matcher(version);
-        int tomcatMajorVersion = -1;
-        if (matcher.find()) {
-            try {
-                tomcatMajorVersion = Integer.parseInt(matcher.group(1));
-            } catch (NumberFormatException ignored) {
-                // Probably greater than Integer.MAX_VALUE
-            }
-        }
-
-        TOMCAT_MAJOR_VERSION = tomcatMajorVersion;
-        if (TOMCAT_MAJOR_VERSION > 0) {
-            logger.info("Tomcat version: {} (major: {})", version, TOMCAT_MAJOR_VERSION);
-        } else {
-            logger.info("Tomcat version: {} (major: unknown)", version);
-        }
-
         // Initialize the default URLEncoder.
         // NB: We could have used URLEncoder.DEFAULT, but it's not available in pre-8.5.
         TOMCAT_URL_ENCODER = new URLEncoder();
