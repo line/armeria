@@ -55,7 +55,7 @@ final class RequestLogAvailabilitySet extends AbstractSet<RequestLogAvailability
                 continue;
             }
 
-            map.put(flags, new RequestLogAvailabilitySet(flags));
+            map.put(Integer.valueOf(flags), new RequestLogAvailabilitySet(flags));
         }
     }
 
