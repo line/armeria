@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import com.google.common.base.MoreObjects;
+
 final class FixedBackoff implements Backoff {
     static final Backoff NO_DELAY = new FixedBackoff(0);
 
@@ -30,5 +32,12 @@ final class FixedBackoff implements Backoff {
     @Override
     public long nextIntervalMillis(int numAttemptsSoFar) {
         return intervalMillis;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("intervalMillis", intervalMillis)
+                          .toString();
     }
 }

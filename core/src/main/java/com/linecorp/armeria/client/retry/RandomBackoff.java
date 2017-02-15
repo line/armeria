@@ -18,8 +18,12 @@ package com.linecorp.armeria.client.retry;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.LongSupplier;
 
+import com.google.common.base.MoreObjects;
+
 final class RandomBackoff implements Backoff {
     private final LongSupplier nextInterval;
+    private final long minIntervalMillis;
+    private final long maxIntervalMillis;
 
     RandomBackoff(long minIntervalMillis, long maxIntervalMillis) {
         if (minIntervalMillis < 0) {
@@ -29,6 +33,8 @@ final class RandomBackoff implements Backoff {
             throw new IllegalArgumentException("maxIntervalMillis: " + maxIntervalMillis +
                                                " (expected: > minIntervalMillis: " + minIntervalMillis + ')');
         }
+        this.minIntervalMillis = minIntervalMillis;
+        this.maxIntervalMillis = maxIntervalMillis;
         nextInterval = minIntervalMillis == maxIntervalMillis ?
                        () -> minIntervalMillis :
                        () -> ThreadLocalRandom.current().nextLong(minIntervalMillis, maxIntervalMillis);
@@ -37,5 +43,13 @@ final class RandomBackoff implements Backoff {
     @Override
     public long nextIntervalMillis(int numAttemptsSoFar) {
         return nextInterval.getAsLong();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("minIntervalMillis", minIntervalMillis)
+                          .add("maxIntervalMillis", maxIntervalMillis)
+                          .toString();
     }
 }

@@ -17,6 +17,8 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.MoreObjects;
+
 /**
  * Wraps an existing {@link Backoff}.
  */
@@ -34,5 +36,10 @@ public class BackoffWrapper implements Backoff {
 
     protected Backoff delegate() {
         return delegate;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this).add("delegate", delegate).toString();
     }
 }

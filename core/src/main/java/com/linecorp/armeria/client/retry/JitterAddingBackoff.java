@@ -17,6 +17,8 @@ package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.client.retry.MathUtils.safeAdd;
 
+import com.google.common.base.MoreObjects;
+
 final class JitterAddingBackoff extends BackoffWrapper {
     private final RandomBackoff jitter;
 
@@ -33,5 +35,13 @@ final class JitterAddingBackoff extends BackoffWrapper {
             return nextIntervalMillis;
         }
         return Math.max(0, safeAdd(nextIntervalMillis, jitter.nextIntervalMillis(numAttemptsSoFar)));
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("delegate", delegate())
+                          .add("jitter", jitter)
+                          .toString();
     }
 }
