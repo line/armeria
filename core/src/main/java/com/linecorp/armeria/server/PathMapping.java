@@ -155,6 +155,13 @@ public interface PathMapping {
     Optional<String> exactPath();
 
     /**
+     * Returns the prefix of this path mapping if it is a prefix mapping, or {@link Optional#empty}
+     * otherwise. This can be useful for services which provide logic after scanning the server's mapped
+     * services, e.g. {@link DocService}
+     */
+    Optional<String> prefix();
+
+    /**
      * Creates a new {@link PathMapping} that removes the specified {@code pathPrefix} from the matched path
      * so that the {@link ServiceRequestContext#mappedPath()} does not have the specified {@code pathPrefix}.
      * This method is useful when used with {@link #ofRegex(Pattern)} or {@link #ofGlob(String)}. For example:

@@ -75,10 +75,10 @@ public final class ExceptionInfo implements NamedTypeInfo {
     }
 
     @Override
-    public Set<Class<?>> findNamedTypes() {
-        final Set<Class<?>> collectedNamedTypes = new HashSet<>();
+    public Set<TypeSignature> findNamedTypes() {
+        final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
         fields().forEach(f -> ServiceInfo.findNamedTypes(collectedNamedTypes, f.typeSignature()));
-        return ImmutableSortedSet.copyOf(comparing(Class::getName), collectedNamedTypes);
+        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
     }
 
     @Override

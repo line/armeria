@@ -58,12 +58,13 @@ public final class ServiceSpecification {
      */
     public static ServiceSpecification generate(
             Iterable<ServiceInfo> services,
-            Function<? super Class<?>, ? extends NamedTypeInfo> namedTypeInfoFactory) {
+            Function<TypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory) {
 
         // Collect all named types referred by the services.
-        final Set<Class<?>> namedTypes = Streams.stream(services)
-                                                .flatMap(s -> s.findNamedTypes().stream())
-                                                .collect(toImmutableSortedSet(comparing(Class::getName)));
+        final Set<TypeSignature> namedTypes =
+                Streams.stream(services)
+                       .flatMap(s -> s.findNamedTypes().stream())
+                       .collect(toImmutableSortedSet(comparing(TypeSignature::name)));
 
         final Map<String, EnumInfo> enums = new HashMap<>();
         final Map<String, StructInfo> structs = new HashMap<>();
@@ -75,12 +76,12 @@ public final class ServiceSpecification {
     }
 
     private static void generateNamedTypeInfos(
-            Function<? super Class<?>, ? extends NamedTypeInfo> namedTypeInfoFactory,
+            Function<TypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory,
             Map<String, EnumInfo> enums, Map<String, StructInfo> structs,
-            Map<String, ExceptionInfo> exceptions, Set<Class<?>> namedTypes) {
+            Map<String, ExceptionInfo> exceptions, Set<TypeSignature> namedTypes) {
 
         namedTypes.forEach(type -> {
-            final String typeName = type.getName();
+            final String typeName = type.name();
             if (enums.containsKey(typeName) ||
                 structs.containsKey(typeName) ||
                 exceptions.containsKey(typeName)) {

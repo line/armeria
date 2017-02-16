@@ -143,7 +143,9 @@ $(function () {
       }
     } else if (node instanceof Object) {
       if (node.docString) {
-        node.docString = escapeHtml(node.docString).replace(/\n/g, '<br>');
+        var docString = Handlebars.Utils.escapeExpression(node.docString);
+        docString = docString.replace(/(\r\n|\n|\r)/gm, '<br>');
+        node.docString = new Handlebars.SafeString(docString);
       }
       for (var key in node) {
         escapeDocStrings(node[key]);
@@ -447,20 +449,6 @@ $(function () {
         return '<a href="#!namedType/' + encodeURIComponent(typeParamName) +
                '" title="' + typeParamName + '">' + typeParamInfo.simpleName + '</a>';
       });
-  }
-
-  function escapeHtml(string) {
-    var htmlEscapes = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-      '/': '&#x2F;',
-      '`': '&#x60;',
-      '=': '&#x3D;'
-    };
-    return string.replace(/[&<>"'`=\/]/g, function(s) { return htmlEscapes[s]; });
   }
 
   function escapeTag(value) {

@@ -17,9 +17,8 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import java.util.concurrent.Executors;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -36,10 +35,10 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.internal.GrpcUtil;
-import io.grpc.testing.integration.TestServiceImpl;
 import io.netty.util.AsciiString;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
@@ -59,7 +58,7 @@ public class GrpcServiceTest {
     public void setUp() {
         response = new DefaultHttpResponse();
         grpcService = new GrpcServiceBuilder()
-                .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                .addService(mock(TestServiceImplBase.class))
                 .build();
     }
 

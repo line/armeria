@@ -25,25 +25,35 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Resources;
+
 /**
- * Tests {@link ThriftDocString}.
+ * Tests {@link ThriftDocStringExtractor}.
  */
-public class ThriftDocStringTest {
+public class ThriftDocStringExtractorTest {
+
+    private ThriftDocStringExtractor extractor = new ThriftDocStringExtractor();
+
     @Test
-    public void testThriftTestJson() {
-        Map<String, String> docStrings = ThriftDocString.getDocStringsFromJsonResource(
-                getClass().getClassLoader(),
-                "META-INF/armeria/thrift/ThriftTest.json");
+    public void testThriftTestJson() throws Exception {
+        Map<String, String> docStrings = extractor.getDocStringsFromFiles(
+                ImmutableMap.of(
+                        "META-INF/armeria/thrift/ThriftTest.json",
+                        Resources.toByteArray(Resources.getResource(
+                                "META-INF/armeria/thrift/ThriftTest.json"))));
         assertThat(docStrings.get("thrift.test.Numberz"), is("Docstring!"));
         assertThat(docStrings.get("thrift.test.ThriftTest/testVoid"),
                    is("Prints \"testVoid()\" and returns nothing."));
     }
 
     @Test
-    public void testCassandraJson() {
-        Map<String, String> docStrings = ThriftDocString.getDocStringsFromJsonResource(
-                getClass().getClassLoader(),
-                "META-INF/armeria/thrift/cassandra.json");
+    public void testCassandraJson() throws Exception {
+        Map<String, String> docStrings = extractor.getDocStringsFromFiles(
+                ImmutableMap.of(
+                        "META-INF/armeria/thrift/ThriftTest.json",
+                        Resources.toByteArray(Resources.getResource(
+                                "META-INF/armeria/thrift/cassandra.json"))));
         assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.Compression"),
                    is("CQL query compression"));
         assertThat(docStrings.get("com.linecorp.armeria.service.test.thrift.cassandra.CqlResultType"),
@@ -52,7 +62,7 @@ public class ThriftDocStringTest {
 
     @Test
     public void testGetAllDocStrings() throws IOException {
-        Map<String, String> docStrings = ThriftDocString.getAllDocStrings(getClass().getClassLoader());
+        Map<String, String> docStrings = extractor.getAllDocStrings(getClass().getClassLoader());
         assertThat(docStrings.containsKey("thrift.test.Numberz"), is(true));
         assertThat(docStrings.containsKey("com.linecorp.armeria.service.test.thrift.cassandra.Compression"),
                    is(true));
