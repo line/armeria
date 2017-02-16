@@ -537,14 +537,24 @@ configure(javaProjects) {
                         // Work around the bug where the maven-publish plugin sets the scope of all
                         // dependencies to 'runtime'.
                         // https://discuss.gradle.org/t/maven-publish-plugin-generated-pom-making-dependency-scope-runtime/7494
-                        def compileDeps = configurations.compile.dependencies.collectEntries { [it.name, it] } +
-                                configurations.compileOnly.dependencies.collectEntries { [it.name, it] }
+                        def collectDeps = { String cfgName ->
+                            configurations[cfgName].dependencies.collectEntries {
+                                def name;
+                                if (it instanceof ProjectDependency) {
+                                    name = it.dependencyProject.archivesBaseName
+                                } else {
+                                    name = it.name
+                                }
 
-                        def allDeps = compileDeps +
-                                configurations.runtime.dependencies.collectEntries { [it.name, it] }
+                                ["${it.group}:${name}", it]
+                            }
+                        }
+
+                        def compileDeps = collectDeps('compile') + collectDeps('compileOnly')
+                        def allDeps = compileDeps + collectDeps('runtime')
 
                         dependencies.children().each {
-                            if (compileDeps.containsKey(it.artifactId.text())) {
+                            if (compileDeps.containsKey("${it.groupId.text()}:${it.artifactId.text()}")) {
                                 it.scope*.value = 'compile'
                             }
 
