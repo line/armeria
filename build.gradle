@@ -1,9 +1,13 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 buildscript {
     repositories {
         mavenCentral()
+        jcenter()
     }
     dependencies {
         classpath 'io.spring.gradle:dependency-management-plugin:0.6.1.RELEASE'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
         classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
     }
 }
@@ -19,6 +23,11 @@ ext.requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b ->
 ext.isPublishing = {
     gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null
 }
+ext.relocations = [
+        ['com.spotify.futures', 'com.linecorp.armeria.internal.futures'],
+        ['it.unimi.dsi.fastutil', 'com.linecorp.armeria.internal.fastutil'],
+        ['org.reflections', 'com.linecorp.armeria.internal.reflections'],
+]
 
 // Configure all projects
 allprojects {
@@ -346,6 +355,31 @@ configure(javaProjects) {
         }
     }
 
+    task relocateSourceReferencesToInternalDependencies(type: ShadowJar) {
+        destinationDir = jar.destinationDir
+        archiveName = jar.baseName + '-relocated.jar'
+        // TODO(trustin): Uncomment this for faster building once shadow 2.0 is out.
+        //                https://github.com/johnrengelman/shadow/issues/203
+        //entryCompression = ZipEntryCompression.STORED
+
+        from sourceSets.main.output.classesDir
+        configurations = [ project.configurations.compile ]
+
+        relocations.each {
+            relocate it[0], it[1]
+        }
+
+        // Only want to rewrite source references, not bundle dependencies.
+        dependencies {
+            exclude(dependency({ true }))
+        }
+    }
+    task extractRelocatedJar(type: Copy, dependsOn: relocateSourceReferencesToInternalDependencies) {
+        from zipTree(relocateSourceReferencesToInternalDependencies.archivePath)
+        into sourceSets.main.output.classesDir
+    }
+    jar.dependsOn extractRelocatedJar
+
     // Add common JVM options such as TLS ALPN agent, max memory and leak detection.
     tasks.withType(JavaForkOptions) {
         dependsOn 'copyJavaAgents'
@@ -530,8 +564,16 @@ configure(javaProjects) {
                         // - the compileOnly dependencies
                         // - the dependencies provided by the platform
                         // - the dependencies in the 'javaAgent' configuration
+                        // - the shaded dependencies
                         dependencies.children().removeAll {
-                            it.artifactId.text() in ['jsr305', 'alpn-api', 'jetty-alpn-agent']
+                            it.artifactId.text() in [
+                                    'alpn-api',
+                                    'completable-futures',
+                                    'fastutil',
+                                    'jetty-alpn-agent',
+                                    'jsr305',
+                                    'reflections',
+                            ]
                         }
 
                         // Work around the bug where the maven-publish plugin sets the scope of all
