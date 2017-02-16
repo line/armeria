@@ -92,7 +92,7 @@ public class ThriftDocServiceTest extends AbstractServerTest {
         sb.serviceAt("/hbase", hbaseService);
         sb.serviceAt("/oneway", onewayHelloService);
 
-        sb.serviceUnder("/docs/", new DocService(EXAMPLE_HTTP_HEADERS).decorate(LoggingService::new));
+        sb.serviceUnder("/docs/", new DocService(EXAMPLE_HTTP_HEADERS.asMap()).decorate(LoggingService::new));
         // FIXME(trustin): Bring the example requests back.
     }
 

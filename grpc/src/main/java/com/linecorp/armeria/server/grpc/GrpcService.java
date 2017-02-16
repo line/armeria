@@ -23,8 +23,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import com.google.common.net.MediaType;
-
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;

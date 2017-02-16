@@ -1,4 +1,4 @@
-dependencies {
+managedDependencies {
     // gRPC
     [ 'grpc-core', 'grpc-stub', 'grpc-protobuf' ].each {
         compile "io.grpc:$it"

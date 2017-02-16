@@ -18,11 +18,11 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.net.MediaType.create;
+import static com.linecorp.armeria.common.MediaType.create;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -37,9 +37,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.net.MediaType;
 
 /**
  * Serialization format of a remote procedure call and its reply.
@@ -294,8 +292,8 @@ public final class SerializationFormat implements Comparable<SerializationFormat
                 continue;
             }
 
-            final ListMultimap<String, String> requiredParameters = type.parameters();
-            final ListMultimap<String, String> actualParameters = mediaType.parameters();
+            final Map<String, List<String>> requiredParameters = type.parameters();
+            final Map<String, List<String>> actualParameters = mediaType.parameters();
             if (containsAllParameters(requiredParameters, actualParameters)) {
                 return true;
             }
@@ -304,22 +302,19 @@ public final class SerializationFormat implements Comparable<SerializationFormat
         return false;
     }
 
-    private static boolean containsAllParameters(ListMultimap<String, String> requiredParameters,
-                                                 ListMultimap<String, String> actualParameters) {
+    private static boolean containsAllParameters(Map<String, List<String>> requiredParameters,
+                                                 Map<String, List<String>> actualParameters) {
 
         if (requiredParameters.isEmpty()) {
             return true;
         }
 
-        for (Entry<String, Collection<String>> requiredEntry : requiredParameters.asMap().entrySet()) {
-            // OK to downcast to List, according to ListMultimap documentation:
-            // "Though the method signature doesn't say so explicitly, the map returned by {@link #asMap}
-            // has {@code List} values."
-            final List<String> requiredValues = (List<String>) requiredEntry.getValue();
+        for (Entry<String, List<String>> requiredEntry : requiredParameters.entrySet()) {
+            final List<String> requiredValues = requiredEntry.getValue();
             final List<String> actualValues = actualParameters.get(requiredEntry.getKey());
 
             assert !requiredValues.isEmpty();
-            if (actualValues.isEmpty()) {
+            if (actualValues == null || actualValues.isEmpty()) {
                 // Does not contain any required values.
                 return false;
             }

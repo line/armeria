@@ -63,7 +63,6 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
-import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -74,6 +73,7 @@ import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;

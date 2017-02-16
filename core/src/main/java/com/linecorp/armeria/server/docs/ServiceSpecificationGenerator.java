@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.server.docs;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
-
-import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.server.Service;
@@ -39,9 +39,9 @@ public interface ServiceSpecificationGenerator {
      *
      * @param serviceConfigs the {@link ServiceConfig}s of the {@link Service}s that are instances of the
      *                       {@link #supportedServiceTypes()}
-     * @param exampleHeaders the {@link ListMultimap} of the example {@link HttpHeaders} whose key is the
+     * @param exampleHeaders the {@link Map} of the example {@link HttpHeaders} whose key is the
      *                       type of the relevant services
      */
     ServiceSpecification generate(Set<ServiceConfig> serviceConfigs,
-                                  ListMultimap<Class<?>, HttpHeaders> exampleHeaders);
+                                  Map<Class<?>, List<HttpHeaders>> exampleHeaders);
 }

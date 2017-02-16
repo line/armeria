@@ -21,8 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import com.google.common.net.MediaType;
-
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.DecoratingService;

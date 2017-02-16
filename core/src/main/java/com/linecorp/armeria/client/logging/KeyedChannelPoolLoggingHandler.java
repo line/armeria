@@ -20,12 +20,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Ticker;
-
 import com.linecorp.armeria.client.pool.DecoratingKeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.util.TextFormatter;
+import com.linecorp.armeria.common.util.Ticker;
 
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
@@ -79,10 +78,6 @@ public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHa
             case RELEASED:
                 lastUsedNanos = System.nanoTime();
             }
-        }
-
-        StringBuilder status(EventType eventType) {
-            return status(eventType, new StringBuilder(16));
         }
 
         @SuppressWarnings("checkstyle:fallthrough")

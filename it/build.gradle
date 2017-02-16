@@ -1,3 +1,3 @@
-dependencies {
+managedDependencies {
     testCompile 'org.apache.hbase:hbase-shaded-client'
 }

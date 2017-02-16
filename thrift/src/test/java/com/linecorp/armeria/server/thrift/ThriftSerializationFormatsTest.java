@@ -1,6 +1,6 @@
 package com.linecorp.armeria.server.thrift;
 
-import static com.google.common.net.MediaType.parse;
+import static com.linecorp.armeria.common.MediaType.parse;
 import static com.linecorp.armeria.common.SerializationFormat.find;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;

@@ -52,9 +52,6 @@ import org.apache.thrift.protocol.TType;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
@@ -89,7 +86,7 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
 
     @Override
     public ServiceSpecification generate(Set<ServiceConfig> serviceConfigs,
-                                         ListMultimap<Class<?>, HttpHeaders> exampleHeaders) {
+                                         Map<Class<?>, List<HttpHeaders>> exampleHeaders) {
 
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
@@ -108,9 +105,9 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
                                     service.defaultSerializationFormat(),
                                     service.allowedSerializationFormats())));
 
-                    exampleHeaders.forEach((type, headers) -> {
+                    exampleHeaders.forEach((type, headersList) -> {
                         if (serviceClass.isAssignableFrom(type)) {
-                            builder.exampleHttpHeaders(headers);
+                            builder.exampleHttpHeaders(headersList);
                         }
                     });
                 }
@@ -502,11 +499,7 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
 
         EntryBuilder exampleHttpHeaders(Iterable<HttpHeaders> exampleHeaders) {
             requireNonNull(exampleHeaders, "exampleHeaders");
-            Iterators.addAll(this.exampleHeaders,
-                             Streams.stream(exampleHeaders)
-                                    .map(HttpHeaders::copyOf)
-                                    .map(HttpHeaders::asImmutable)
-                                    .iterator());
+            exampleHeaders.forEach(this::exampleHttpHeaders);
             return this;
         }
 

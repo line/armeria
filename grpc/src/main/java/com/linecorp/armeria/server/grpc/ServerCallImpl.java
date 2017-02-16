@@ -48,7 +48,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static io.grpc.internal.GrpcUtil.ACCEPT_ENCODING_SPLITER;
 import static io.grpc.internal.GrpcUtil.MESSAGE_ACCEPT_ENCODING_KEY;
 import static io.grpc.internal.GrpcUtil.MESSAGE_ENCODING_KEY;
 import static java.util.Objects.requireNonNull;
@@ -58,6 +57,7 @@ import java.io.InputStream;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 
 import io.grpc.Attributes;
@@ -76,6 +76,10 @@ import io.grpc.internal.ServerStreamListener;
 
 // Copied as is from grpc. Too bad it's not public :(
 final class ServerCallImpl<ReqT, RespT> extends ServerCall<ReqT, RespT> {
+
+    // This field has been copied from GrpcUtil to avoid the conflict with armeria-grpc-shaded.
+    private static final Splitter ACCEPT_ENCODING_SPLITER = Splitter.on(',').trimResults();
+
     private final ServerStream stream;
     private final MethodDescriptor<ReqT, RespT> method;
     private final String messageAcceptEncoding;

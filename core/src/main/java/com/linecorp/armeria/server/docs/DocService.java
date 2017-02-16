@@ -23,6 +23,8 @@ import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofEx
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,11 +33,11 @@ import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
-import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
@@ -72,22 +74,30 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
      * Creates a new instance.
      */
     public DocService() {
-        this(ImmutableListMultimap.of());
+        this(ImmutableMap.of());
     }
 
     /**
      * Creates a new instance with example HTTP headers.
      *
-     * @param exampleHeaders a {@link Multimap} of example {@link HttpHeaders} whose key is the type of
+     * @param exampleHeaders a {@link Map} of example {@link HttpHeaders} whose key is the type of
      *                       a service. Use the key {@code Object.class} to add the example HTTP headers
      *                       to all services.
      */
-    public DocService(Multimap<Class<?>, ? extends HttpHeaders> exampleHeaders) {
+    public DocService(Map<Class<?>, ? extends Iterable<HttpHeaders>> exampleHeaders) {
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
 
-        this.exampleHeaders = ImmutableListMultimap.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        final ImmutableListMultimap.Builder<Class<?>, HttpHeaders> builder = ImmutableListMultimap.builder();
+        for (Entry<Class<?>, ? extends Iterable<HttpHeaders>> e : exampleHeaders.entrySet()) {
+            final Class<?> k = e.getKey();
+            for (HttpHeaders v : e.getValue()) {
+                builder.put(k, HttpHeaders.copyOf(v).asImmutable());
+            }
+        }
+        this.exampleHeaders = builder.build();
     }
 
     @Override
@@ -131,6 +141,9 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
     private ServiceSpecification generate(ServiceSpecificationGenerator gen, List<ServiceConfig> services) {
         final Set<ServiceConfig> supportedServices = findSupportedServices(gen, services);
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        final Map<Class<?>, List<HttpHeaders>> exampleHeaders =
+                (Map<Class<?>, List<HttpHeaders>>) (Map) this.exampleHeaders.asMap();
         return gen.generate(supportedServices, exampleHeaders);
     }
 

@@ -1,35 +1,13 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
-ext.internalDependenciesJarTrimmed =
-        file("${buildDir}/libs/internal-dependencies-trimmed.jar")
-ext.internalDependenciesJarRelocated =
-        file("${buildDir}/libs/internal-dependencies-relocated.jar")
-
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
     }
     dependencies {
-        classpath 'net.sf.proguard:proguard-gradle:5.3.1'
-        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
+        classpath 'net.sf.proguard:proguard-gradle:5.3.2'
     }
 }
 
-configurations {
-    internalDependency {
-        // Disable the transitive dependencies so that they are never pulled in accidentally.
-        transitive = false
-    }
-    compile.extendsFrom(internalDependency)
-    trimmedInternalDependency
-}
-
-dependencies {
-    // Guava
-    compile 'com.google.guava:guava'
-    testCompile 'com.google.guava:guava-testlib'
-
+managedDependencies {
     // Jackson
     [ 'jackson-core', 'jackson-annotations', 'jackson-databind' ].each {
         compile "com.fasterxml.jackson.core:$it"
@@ -42,26 +20,48 @@ dependencies {
     [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
         compile "io.netty:$it"
     }
-    compile "io.netty:netty-transport-native-epoll:${versionOf('netty')}:linux-x86_64"
+    compile 'io.netty:netty-transport-native-epoll:linux-x86_64'
     compile 'io.netty:netty-tcnative-boringssl-static'
     runtime 'org.javassist:javassist'
 
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'
-
-    // Internal dependencies which will be shaded by the 'internalDeps' task below.
-    internalDependency 'com.spotify:completable-futures'
-    internalDependency 'it.unimi.dsi:fastutil'
-    internalDependency 'org.reflections:reflections'
-
-    // Used by the 'relocateInternalDependencies', because ShadowTask doesn't let me specify a file.
-    trimmedInternalDependency files(internalDependenciesJarTrimmed)
 }
 
-task trimInternalDependencies(type: ProGuardTask) {
-    injars files(configurations.internalDependency.collect()), filter: '!META-INF/**'
-    outjars internalDependenciesJarTrimmed
-    libraryjars files(configurations.runtime.collect() - configurations.internalDependency.collect())
+tasks.shadedJar.baseName = "${tasks.jar.baseName}-untrimmed"
+
+task trimShadedJar(type: ProGuardTask,
+                   group: 'Build',
+                   description: 'Shrinks the shaded JAR by removing unused classes.') {
+
+    publishedJavaProjects.each {
+        dependsOn it.tasks.shadedJar
+        dependsOn it.tasks.shadedTestJar
+    }
+
+    def shadedFile = tasks.shadedJar.archivePath
+    def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-shaded-'))
+
+    injars shadedFile
+    // NB: By specifying 'outjar' *before* other 'injars' below, ProGuard will put only the classes
+    //     from 'shadedFile' into 'shadedAndTrimmedFile'. See 'restructuring the output archives'
+    //     for more information: https://www.guardsquare.com/en/proguard/manual/examples#restructuring
+    outjars shadedAndTrimmedFile
+
+    // Include the shaded JARs from other modules as well
+    // so that ProGuard does not trim the classes and methods that are used actually.
+    injars tasks.shadedTestJar.archivePath
+    publishedJavaProjects.each {
+        if (it != project) {
+            injars it.tasks.shadedJar.archivePath
+            injars it.tasks.shadedTestJar.archivePath,
+                   filter: '!META-INF/**,' +
+                           '!com/linecorp/armeria/internal/shaded/**,' +
+                           '!com/linecorp/armeria/service/test/**'
+        }
+    }
+
+    libraryjars files(configurations.runtime.collect())
     libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
 
     dontoptimize
@@ -69,63 +69,27 @@ task trimInternalDependencies(type: ProGuardTask) {
     dontwarn // Ignore the harmless 'missing classes' warnings related with the optional dependencies.
 
     keepattributes 'Signature, InnerClasses, Annotation'
-
-    // CompletableFutures
-    keepclasses 'com.spotify.futures.CompletableFutures'
-
-    // FastUtil
-    keepinterfaces 'it.unimi.dsi.fastutil.ints.Int2ObjectMap',
-                   'it.unimi.dsi.fastutil.ints.Int2ObjectFunction'
-    keepclasses 'it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap',
-                'it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap'
-
-    // Reflections
-    keepclasses 'org.reflections.Configuration',
-                'org.reflections.Reflections',
-                'org.reflections.scanners.ResourcesScanner',
-                'org.reflections.util.ClasspathHelper',
-                'org.reflections.util.ConfigurationBuilder',
-                'org.reflections.util.FilterBuilder'
+    keep "class !${shadedPackage}.**,com.linecorp.armeria.** { *; }"
 }
 
-task relocateInternalDependencies(type: ShadowJar, dependsOn: tasks.trimInternalDependencies) {
-    destinationDir = internalDependenciesJarRelocated.parentFile
-    archiveName = internalDependenciesJarRelocated.name
-    // TODO(trustin): Uncomment this for faster building once shadow 2.0 is out.
-    //                https://github.com/johnrengelman/shadow/issues/203
-    //entryCompression = ZipEntryCompression.STORED
+tasks.assemble.dependsOn tasks.trimShadedJar
 
-    configurations = [ project.configurations.trimmedInternalDependency ]
-
-    relocations.each {
-        relocate it[0], it[1]
+// Add the trimmed JAR to archives so that the 'signArchives' task signs it.
+artifacts {
+    trimShadedJar.outJarFiles.each {
+        archives it
     }
 }
 
-task extractRelocatedDependencies(type: Copy, dependsOn: relocateInternalDependencies) {
-    from(zipTree(internalDependenciesJarRelocated)) {
-        exclude 'META-INF/MANIFEST.MF'
-    }
-    into sourceSets.main.output.classesDir
-}
-jar.dependsOn extractRelocatedDependencies
-
-// Exclude the internal dependencies from the coverage report.
-test {
-    jacoco {
-        excludes += [ '**/internal/deps/**' ]
+// Make sure trimShadedJar task is executed before signing.
+model {
+    tasks.signArchives {
+        dependsOn tasks.trimShadedJar
     }
 }
 
 class ProGuardTask extends proguard.gradle.ProGuardTask {
-    def keepclasses(String... classNames) {
-        classNames.each {
-            keep "public class $it { *; }"
-        }
-    }
-    def keepinterfaces(String... interfaceNames) {
-        interfaceNames.each {
-            keep "public interface $it { *; }"
-        }
+    def keepclass(String className) {
+        keep "class ${className},${className}\$* { *; }"
     }
 }

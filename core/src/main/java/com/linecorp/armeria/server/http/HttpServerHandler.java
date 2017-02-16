@@ -36,8 +36,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
-import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;

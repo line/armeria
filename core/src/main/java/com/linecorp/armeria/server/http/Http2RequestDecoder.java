@@ -23,9 +23,8 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 
 import java.nio.charset.StandardCharsets;
 
-import com.google.common.net.MediaType;
-
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;

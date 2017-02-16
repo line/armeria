@@ -1,6 +1,8 @@
 dependencies {
+    testCompile project(':thrift')
+}
+
+managedDependencies {
     // Logback
     compile 'ch.qos.logback:logback-classic'
-
-    testCompile project(':thrift')
 }

@@ -46,7 +46,6 @@ import org.apache.thrift.protocol.TType;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -102,8 +101,8 @@ public class ThriftServiceSpecificationGeneratorTest {
 
         final ServiceSpecification specification = generator.generate(
                 ImmutableSet.of(helloService, fooService),
-                ImmutableListMultimap.of(HelloService.class, helloExampleHeaders,
-                                         FooService.class, fooExampleHeaders));
+                ImmutableMap.of(HelloService.class, ImmutableList.of(helloExampleHeaders),
+                                FooService.class,   ImmutableList.of(fooExampleHeaders)));
 
         final Map<String, ServiceInfo> services = specification.services();
         assertThat(services).containsOnlyKeys(HelloService.class.getName(), FooService.class.getName());

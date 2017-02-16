@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,8 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.net.MediaType;
-import com.google.common.util.concurrent.ListenableFuture;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
@@ -33,6 +32,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.http.HttpClient;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
@@ -47,7 +47,7 @@ import okhttp3.HttpUrl;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import retrofit2.adapter.guava.GuavaCallAdapterFactory;
+import retrofit2.adapter.java8.Java8CallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 import retrofit2.http.Body;
 import retrofit2.http.Field;
@@ -99,28 +99,28 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
 
     interface Service {
         @GET("/pojo")
-        ListenableFuture<Pojo> pojo();
+        CompletableFuture<Pojo> pojo();
 
         @GET("/pojo")
         Call<Pojo> pojoReturnCall();
 
         @GET("/pojos")
-        ListenableFuture<List<Pojo>> pojos();
+        CompletableFuture<List<Pojo>> pojos();
 
         @GET("/queryString")
-        ListenableFuture<Pojo> queryString(@Query("name") String name, @Query("age") int age);
+        CompletableFuture<Pojo> queryString(@Query("name") String name, @Query("age") int age);
 
         @POST("/post")
         @Headers("content-type: application/json; charset=UTF-8")
-        ListenableFuture<Response<Void>> post(@Body Pojo pojo);
+        CompletableFuture<Response<Void>> post(@Body Pojo pojo);
 
         @POST("/postForm")
         @FormUrlEncoded
-        ListenableFuture<Response<Void>> postForm(@Field("name") String name,
-                                                  @Field("age") int age);
+        CompletableFuture<Response<Void>> postForm(@Field("name") String name,
+                                                   @Field("age") int age);
 
         @POST("/postCustomContentType")
-        ListenableFuture<Response<Void>> postCustomContentType(@Header("Content-Type") String contentType);
+        CompletableFuture<Response<Void>> postCustomContentType(@Header("Content-Type") String contentType);
     }
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -233,7 +233,7 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
                                                             "none+http://127.0.0.1:" + httpPort(),
                                                             HttpClient.class))
                                  .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                                 .addCallAdapterFactory(GuavaCallAdapterFactory.create())
+                                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                                  .build()
                                  .create(Service.class);
     }
@@ -333,7 +333,7 @@ public class ArmeriaCallFactoryTest extends AbstractServerTest {
                                                                     "none+http://group:foo/",
                                                                     HttpClient.class))
                                          .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                                         .addCallAdapterFactory(GuavaCallAdapterFactory.create())
+                                         .addCallAdapterFactory(Java8CallAdapterFactory.create())
                                          .build()
                                          .create(Service.class);
         Response<Void> response = service.postForm("Cony", 26).get();

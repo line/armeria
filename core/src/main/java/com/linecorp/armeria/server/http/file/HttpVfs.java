@@ -27,8 +27,7 @@ import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
-import com.google.common.net.MediaType;
-
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpData;
 
 /**
