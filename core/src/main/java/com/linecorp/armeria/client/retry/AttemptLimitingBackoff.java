@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.base.MoreObjects;
 
 final class AttemptLimitingBackoff extends BackoffWrapper {
@@ -22,6 +24,7 @@ final class AttemptLimitingBackoff extends BackoffWrapper {
 
     AttemptLimitingBackoff(Backoff backoff, int maxAttempts) {
         super(backoff);
+        checkArgument(maxAttempts > 0, "maxAttempts: %s (expected: > 0)", maxAttempts);
         this.maxAttempts = maxAttempts;
     }
 

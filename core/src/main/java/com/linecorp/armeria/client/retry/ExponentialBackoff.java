@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.MathUtils.safeMultiply;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.MoreObjects;
 
@@ -25,16 +25,10 @@ final class ExponentialBackoff implements Backoff {
     private final float multiplier;
 
     ExponentialBackoff(long minIntervalMillis, long maxIntervalMillis, float multiplier) {
-        if (multiplier <= 1.0) {
-            throw new IllegalArgumentException("multiplier: " + multiplier + " (expected: > 1.0)");
-        }
-        if (minIntervalMillis < 0) {
-            throw new IllegalArgumentException("minIntervalMillis: " + minIntervalMillis + " (expected: >= 0)");
-        }
-        if (minIntervalMillis < maxIntervalMillis) {
-            throw new IllegalArgumentException("maxIntervalMillis: " + maxIntervalMillis +
-                                               " (expected: > minIntervalMillis: " + minIntervalMillis + ')');
-        }
+        checkArgument(multiplier <= 1.0, "multiplier: %s (expected: > 1.0)", multiplier);
+        checkArgument(minIntervalMillis < 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
+        checkArgument(minIntervalMillis <= maxIntervalMillis, "maxIntervalMillis: %s (expected: >= %s)",
+                      maxIntervalMillis, minIntervalMillis);
         currentIntervalMillis = minIntervalMillis;
         this.maxIntervalMillis = maxIntervalMillis;
         this.multiplier = multiplier;
@@ -42,9 +36,19 @@ final class ExponentialBackoff implements Backoff {
 
     @Override
     public long nextIntervalMillis(int numAttemptsSoFar) {
+        if (currentIntervalMillis >= maxIntervalMillis) {
+            return maxIntervalMillis;
+        }
         long nextInterval = currentIntervalMillis;
-        currentIntervalMillis = Math.min(safeMultiply(currentIntervalMillis, multiplier), maxIntervalMillis);
+        currentIntervalMillis = saturatedMultiply(currentIntervalMillis, multiplier);
         return nextInterval;
+    }
+
+    static long saturatedMultiply(long left, float right) {
+        if (left > Long.MAX_VALUE / right) {
+            return Long.MAX_VALUE;
+        }
+        return (long) (left * right);
     }
 
     @Override

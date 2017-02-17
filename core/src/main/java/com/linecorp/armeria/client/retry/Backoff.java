@@ -18,19 +18,19 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.FixedBackoff.NO_DELAY;
 
 /**
- * Control back off between attemtps in a single retry operation.
+ * Control back off between attempts in a single retry operation.
  */
 @FunctionalInterface
 public interface Backoff {
     /**
-     * Returns a {@link Backoff} that provides zero interval.
+     * Returns a {@link Backoff} that that will never wait between attempts.
      */
     static Backoff withoutDelay() {
         return NO_DELAY;
     }
 
     /**
-     * Returns a {@link Backoff} that provides a fixed interval between two attempts.
+     * Returns a {@link Backoff} that waits a fixed interval between attempts.
      */
     static Backoff fixed(long intervalMillis) {
         return new FixedBackoff(intervalMillis);
@@ -44,14 +44,14 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff} that provides an interval (that increases exponentially) between two attempts.
+     * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
      */
     static Backoff exponential(long minIntervalMillis, long maxIntervalMillis, float multiplier) {
         return new ExponentialBackoff(minIntervalMillis, maxIntervalMillis, multiplier);
     }
 
     /**
-     * Returns a new back off value in milliseconds.
+     * Returns the amount of time to wait before attempting a retry, in milliseconds.
      * @param numAttemptsSoFar the number of attempts made by a client so far, including the first attempt and
      *                         its following retries.
      */

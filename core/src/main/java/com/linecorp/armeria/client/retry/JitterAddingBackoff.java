@@ -15,7 +15,9 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.client.retry.MathUtils.safeAdd;
+import static com.google.common.math.LongMath.saturatedAdd;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.base.MoreObjects;
 
@@ -24,7 +26,7 @@ final class JitterAddingBackoff extends BackoffWrapper {
 
     JitterAddingBackoff(Backoff delegate, long minIntervalMillis, long maxIntervalMillis) {
         super(delegate);
-        jitter = new RandomBackoff(minIntervalMillis, maxIntervalMillis);
+        jitter = new RandomBackoff(minIntervalMillis, maxIntervalMillis, ThreadLocalRandom::current);
 
     }
 
@@ -34,7 +36,7 @@ final class JitterAddingBackoff extends BackoffWrapper {
         if (nextIntervalMillis < 0) {
             return nextIntervalMillis;
         }
-        return Math.max(0, safeAdd(nextIntervalMillis, jitter.nextIntervalMillis(numAttemptsSoFar)));
+        return Math.max(0, saturatedAdd(nextIntervalMillis, jitter.nextIntervalMillis(numAttemptsSoFar)));
     }
 
     @Override

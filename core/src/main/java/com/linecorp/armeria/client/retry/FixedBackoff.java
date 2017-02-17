@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.base.MoreObjects;
 
 final class FixedBackoff implements Backoff {
@@ -23,9 +25,7 @@ final class FixedBackoff implements Backoff {
     private final long intervalMillis;
 
     FixedBackoff(long intervalMillis) {
-        if (intervalMillis < 0) {
-            throw new IllegalArgumentException("intervalMillis: " + intervalMillis + " (expected: >= 0)");
-        }
+        checkArgument(intervalMillis < 0, "intervalMillis: %s (expected: >= 0)", intervalMillis);
         this.intervalMillis = intervalMillis;
     }
 

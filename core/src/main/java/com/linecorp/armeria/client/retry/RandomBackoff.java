@@ -15,8 +15,12 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import java.util.concurrent.ThreadLocalRandom;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Random;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 
@@ -25,19 +29,20 @@ final class RandomBackoff implements Backoff {
     private final long minIntervalMillis;
     private final long maxIntervalMillis;
 
-    RandomBackoff(long minIntervalMillis, long maxIntervalMillis) {
-        if (minIntervalMillis < 0) {
-            throw new IllegalArgumentException("minIntervalMillis: " + minIntervalMillis + " (expected: >= 0)");
-        }
-        if (minIntervalMillis < maxIntervalMillis) {
-            throw new IllegalArgumentException("maxIntervalMillis: " + maxIntervalMillis +
-                                               " (expected: > minIntervalMillis: " + minIntervalMillis + ')');
-        }
+    RandomBackoff(long minIntervalMillis, long maxIntervalMillis,
+                  Supplier<Random> randomSupplier) {
+        checkArgument(minIntervalMillis > 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
+        checkArgument(minIntervalMillis <= maxIntervalMillis, "maxIntervalMillis: %s (expected: >= %s)",
+                      maxIntervalMillis, minIntervalMillis);
         this.minIntervalMillis = minIntervalMillis;
         this.maxIntervalMillis = maxIntervalMillis;
+        requireNonNull(randomSupplier, "randomSupplier");
         nextInterval = minIntervalMillis == maxIntervalMillis ?
                        () -> minIntervalMillis :
-                       () -> ThreadLocalRandom.current().nextLong(minIntervalMillis, maxIntervalMillis);
+                       () -> randomSupplier.get()
+                                           .longs(minIntervalMillis, maxIntervalMillis)
+                                           .iterator()
+                                           .nextLong();
     }
 
     @Override
