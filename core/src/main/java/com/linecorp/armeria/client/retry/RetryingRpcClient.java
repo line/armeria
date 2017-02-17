@@ -40,16 +40,6 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
     public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
-    newDecorator() {
-        return delegate -> new RetryingRpcClient(delegate,
-                                                 RetryRequestStrategy.never(),
-                                                 Backoff::withoutDelay);
-    }
-
-    /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
-     */
-    public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
     newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy) {
         return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy,
                                                  Backoff::withoutDelay);
@@ -109,7 +99,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
             if (nextInterval < 0) {
                 responseFuture.completeExceptionally(exception);
             } else {
-                EventLoop eventLoop = ctx.eventLoop().next();
+                EventLoop eventLoop = ctx.contextAwareEventLoop().next();
                 if (nextInterval <= 0) {
                     eventLoop.submit(() -> retry(numAttemptsSoFar + 1, backoff, ctx, req, action,
                                                  responseFuture));

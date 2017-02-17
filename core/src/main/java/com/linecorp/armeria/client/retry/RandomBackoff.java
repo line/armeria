@@ -38,11 +38,9 @@ final class RandomBackoff implements Backoff {
         this.maxIntervalMillis = maxIntervalMillis;
         requireNonNull(randomSupplier, "randomSupplier");
         nextInterval = minIntervalMillis == maxIntervalMillis ?
-                       () -> minIntervalMillis :
-                       () -> randomSupplier.get()
-                                           .longs(minIntervalMillis, maxIntervalMillis)
-                                           .iterator()
-                                           .nextLong();
+                       () -> minIntervalMillis : () -> randomSupplier.get().longs(minIntervalMillis,
+                                                                                  maxIntervalMillis)
+                                                                     .iterator().nextLong();
     }
 
     @Override

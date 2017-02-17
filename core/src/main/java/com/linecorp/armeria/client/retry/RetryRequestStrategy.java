@@ -25,6 +25,9 @@ import com.linecorp.armeria.common.Response;
  */
 @FunctionalInterface
 public interface RetryRequestStrategy<I extends Request, O extends Response> {
+    /**
+     * A {@link RetryRequestStrategy} that defines a retry request should not be performed.
+     */
     static <I extends Request, O extends Response> RetryRequestStrategy<I, O> never() {
         return new RetryRequestStrategy<I, O>() {
             @Override
