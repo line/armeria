@@ -26,11 +26,10 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 
 final class DefaultNodeValueCodec implements NodeValueCodec {
-
     static final DefaultNodeValueCodec INSTANCE = new DefaultNodeValueCodec();
-
     private static final String segmentDelimiter = ",";
     private static final String fieldDelimiter = ":";
+    private static final Pattern SEGMENT_DELIMITER = Pattern.compile("\\s*" + segmentDelimiter + "\\s*");
 
     @Override
     public Endpoint decode(String segment) {
@@ -71,13 +70,10 @@ final class DefaultNodeValueCodec implements NodeValueCodec {
     @Override
     public Set<Endpoint> decodeAll(String valueString) {
         Set<Endpoint> endpoints = new HashSet<>();
-        final Pattern SEGMENT_DELIMITER = Pattern.compile("\\s*" + segmentDelimiter + "\\s*");
         try {
             for (String segment : SEGMENT_DELIMITER.split(valueString)) {
                 endpoints.add(decode(segment));
             }
-        } catch (EndpointGroupException e) {
-            throw e;
         } catch (Exception e) {
             throw new EndpointGroupException("invalid endpoint list: " + valueString, e);
         }

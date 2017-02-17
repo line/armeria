@@ -40,7 +40,7 @@ public class ZooKeeperUpdatingListener implements ServerListener {
      * @param zkConnectionStr ZooKeeper connection string
      * @param zNodePath       ZooKeeper node path(under which this server will registered)
      * @param sessionTimeout  session timeout
-     * @param endpoint        register endpoint information
+     * @param endpoint        the endpoint of the server being registered
      */
     public ZooKeeperUpdatingListener(String zkConnectionStr, String zNodePath, int sessionTimeout,
                                      Endpoint endpoint) {
