@@ -138,6 +138,13 @@ public class HttpClientIntegrationTest {
                 }
             });
 
+            sb.serviceAt("/hello/world", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "success");
+                }
+            });
+
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -299,5 +306,25 @@ public class HttpClientIntegrationTest {
         } finally {
             Closeables.close(s, true);
         }
+    }
+
+    @Test
+    public void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
+        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort + "/hello",
+                                              HttpClient.class);
+
+        AggregatedHttpMessage response = client.get("/world").aggregate().get();
+
+        assertEquals("success", response.content().toStringUtf8());
+    }
+
+    @Test
+    public void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
+        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort + "/",
+                                              HttpClient.class);
+
+        AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.content().toStringUtf8());
     }
 }
