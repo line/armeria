@@ -146,10 +146,8 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
             EventLoop eventLoop, String method, String path, String fragment, I req,
             Function<Throwable, O> fallback) {
 
-        final String requestPath = uri().isOpaque() ? path : uri().getPath() + path;
-
         final ClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop, sessionProtocol, endpoint, method, requestPath, fragment, options(), req);
+                eventLoop, sessionProtocol, endpoint, method, path, fragment, options(), req);
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             runThreadLocalHeaderManipulator(ctx);
