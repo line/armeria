@@ -141,10 +141,6 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         if (!headers.contains(HttpHeaderNames.USER_AGENT)) {
             headers.set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
         }
-
-        if (!headers.path().equals(ctx.path())) {
-            headers.set(HttpHeaderNames.PATH, ctx.path());
-        }
     }
 
     private static void sanitizePath(HttpRequest req) {
