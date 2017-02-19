@@ -46,8 +46,10 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     private HttpResponse execute(EventLoop eventLoop, HttpRequest req) {
-        final String requestPath = uri().isOpaque() ? req.path() : uri().getPath() + req.path();
-        return execute(eventLoop, req.method().name(), requestPath, "", req, cause -> {
+        final String respectingClientUriPath = uri().isOpaque() ? req.path() : uri().getPath() + req.path();
+        req.path(respectingClientUriPath);
+
+        return execute(eventLoop, req.method().name(), respectingClientUriPath, "", req, cause -> {
             final DefaultHttpResponse res = new DefaultHttpResponse();
             res.close(cause);
             return res;
