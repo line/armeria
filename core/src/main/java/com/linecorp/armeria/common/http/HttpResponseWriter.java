@@ -23,8 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
 import java.util.Locale;
 
-import com.google.common.net.MediaType;
-
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.StreamWriter;
 
 /**
@@ -69,7 +68,7 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
         respond(status,
-                mediaType, content.getBytes(mediaType.charset().or(StandardCharsets.UTF_8)));
+                mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
     }
 
     /**
@@ -90,7 +89,7 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
         respond(status,
                 mediaType,
                 String.format(Locale.ENGLISH, format, args).getBytes(
-                        mediaType.charset().or(StandardCharsets.UTF_8)));
+                        mediaType.charset().orElse(StandardCharsets.UTF_8)));
     }
 
     /**

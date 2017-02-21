@@ -2,6 +2,7 @@ import net.davidecavestro.gradle.jxr.JxrLog
 import org.apache.maven.jxr.JXR
 
 import java.time.LocalDateTime
+import java.util.stream.Collectors
 
 buildscript {
     repositories {
@@ -10,7 +11,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'kr.motd.gradle:sphinx-gradle-plugin:1.0.2.Final'
+        classpath 'kr.motd.gradle:sphinx-gradle-plugin:1.0.3.Final'
         classpath 'gradle.plugin.net.davidecavestro:gradle-jxr-plugin:0.2.1'
     }
 }
@@ -110,6 +111,73 @@ task xref(group: 'Documentation',
     }
 }
 
+task test(group: 'Verification',
+          description: 'Ensures the public API does not expose the shaded classes.',
+          dependsOn: tasks.javadoc) {
+
+    def javadocDir = file("${tasks.javadoc.destinationDir}/com/linecorp/armeria")
+    def reportFile = file("${project.buildDir}/test-results/referenced-classes.txt")
+    inputs.dir javadocDir
+    outputs.file reportFile
+
+    doLast {
+        def inheritancePrefixes = [
+                'methods.inherited.from.class.',
+                'fields.inherited.from.class.',
+                'nested.classes.inherited.from.class.'
+        ]
+        def whitelistedPrefixes = ['java.', 'javax.']
+        def blacklistedPrefixes = [ 'com.linecorp.armeria.internal.' ] +
+                                  rootProject.ext.relocations.collect { it[1] + '.' }
+        def errors = []
+
+        reportFile.parentFile.mkdirs()
+        reportFile.withPrintWriter('UTF-8') { reportOut ->
+            fileTree(javadocDir).sort().each { File f ->
+                if (!f.name.endsWith('.html') || f.name == 'package-tree.html') {
+                    return
+                }
+
+                if (f.path.replace(File.separator, '/').endsWith(
+                        'com/linecorp/armeria/common/thrift/ThriftListenableFuture.html')) {
+                    // ThriftListenableFuture exposes Guava's ListenableFuture by contract.
+                    return
+                }
+
+                // Look for all the class names in the Javadoc.
+                def matcher = f.text =~ /([a-z]+\.(?:[a-z]+\.)+[A-Z][._A-Za-z0-9$]*[_A-Za-z0-9])/
+                def classNames = matcher.findAll().stream().flatMap({ it.stream() }).map({ name ->
+                    for (prefix in inheritancePrefixes) {
+                        if (name.startsWith(prefix)) {
+                            return name.substring(prefix.length())
+                        }
+                    }
+                    return name
+                }).filter({ name ->
+                    whitelistedPrefixes.find { name.startsWith(it) } == null
+                }).collect(Collectors.toSet())
+
+                // .. and make sure none of them are blacklisted.
+                classNames.sort().each { className ->
+                    def reportLine = "${f.name.replaceFirst(/\.html$/, '')} -> ${className}"
+                    reportOut.println reportLine
+
+                    blacklistedPrefixes.each { prefix ->
+                        if (className.startsWith(prefix)) {
+                            errors += reportLine
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!errors.empty) {
+            throw new Exception("Blacklisted class(es) in the public API:${System.lineSeparator()}- " +
+                                errors.join("${System.lineSeparator()}- "))
+        }
+    }
+}
+
 tasks.site {
     group = 'Documentation'
     description = 'Generates the project web site.'
@@ -117,4 +185,13 @@ tasks.site {
     dependsOn javadoc
 }
 
-tasks.build.dependsOn(tasks.site)
+tasks.assemble {
+    dependsOn tasks.site
+}
+
+tasks.check {
+    dependsOn tasks.test
+}
+
+tasks.build.dependsOn tasks.assemble
+tasks.build.dependsOn tasks.check

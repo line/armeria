@@ -22,8 +22,11 @@ import static com.linecorp.armeria.common.thrift.ThriftFutures.successfulComplet
 import static com.linecorp.armeria.common.thrift.ThriftFutures.successfulListenableFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.Assume.assumeFalse;
 
 import org.junit.Test;
+
+import com.google.common.util.concurrent.ListenableFuture;
 
 public class ThriftFuturesTest {
 
@@ -41,13 +44,20 @@ public class ThriftFuturesTest {
 
     @Test
     public void testSuccessfulListenableFuture() throws Exception {
+        assumeUnshadedGuava();
         ThriftListenableFuture<String> future = successfulListenableFuture("success");
         assertThat(future.get()).isEqualTo("success");
     }
 
     @Test
     public void testFailedListenableFuture() throws Exception {
+        assumeUnshadedGuava();
         ThriftListenableFuture<String> future = failedListenableFuture(new IllegalStateException());
         assertThat(catchThrowable(future::get)).hasCauseInstanceOf(IllegalStateException.class);
+    }
+
+    private static void assumeUnshadedGuava() {
+        assumeFalse("Can't run tests related with ListenableFuture when Guava is shaded.",
+                    ListenableFuture.class.getName().startsWith("com.linecorp.armeria.internal.shaded."));
     }
 }

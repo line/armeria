@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.yaml.snakeyaml.Yaml
 
 buildscript {
     repositories {
@@ -6,52 +7,78 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'io.spring.gradle:dependency-management-plugin:0.6.1.RELEASE'
         classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
         classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+        classpath 'net.rdrei.android.buildtimetracker:gradle-plugin:0.9.0'
+        classpath 'org.yaml:snakeyaml:1.17'
     }
 }
 
 apply plugin: 'com.google.osdetector'
+apply plugin: 'build-time-tracker'
 
-ext.javaProjects = subprojects.findAll { it.name != 'site' }
-ext.publishedJavaProjects = javaProjects.findAll { it.name != 'it' }
-ext.gitPath = getGitPath()
-ext.repoStatus = getRepoStatus()
-ext.versionOf = { project.property("${it}.version") }
-ext.requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
-ext.isPublishing = {
-    gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null
+ext {
+    // The path to the 'git' command
+    gitPath = getGitPath()
+
+    // The Git repository status
+    repoStatus = getRepoStatus()
+
+    // The list of Java projects
+    javaProjects = subprojects.findAll { it.name != 'site' }
+
+    // The list of Java projects whose artifacts are published to the Maven repository
+    publishedJavaProjects = javaProjects.findAll { it.name != 'it' && it.name != 'shaded-test' }
+
+    // The list of Gradle task names specified in the startup parameters.
+    requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
+
+    // Dependency management map, used by managedDependency() defined below.
+    dependencyManagement = new Yaml().loadAs(file("${project.projectDir}/dependencies.yml").text, Map)
+
+    // Constants related with dependency shading
+    shadedPackage = 'com.linecorp.armeria.internal.shaded'
+    relocations = [
+            // "groupId:artifactId", "original package name", "relocated package name"
+            ['com.google.guava:guava', 'com.google.common', "${shadedPackage}.guava"],
+            ['com.google.guava:guava', 'com.google.thirdparty.publicsuffix', "${shadedPackage}.publicsuffix"],
+            ['com.spotify:completable-futures', 'com.spotify.futures', "${shadedPackage}.futures"],
+            ['it.unimi.dsi:fastutil', 'it.unimi.dsi.fastutil', "${shadedPackage}.fastutil"],
+            ['org.reflections:reflections', 'org.reflections', "${shadedPackage}.reflections"]
+    ]
 }
-ext.relocations = [
-        ['com.spotify.futures', 'com.linecorp.armeria.internal.futures'],
-        ['it.unimi.dsi.fastutil', 'com.linecorp.armeria.internal.fastutil'],
-        ['org.reflections', 'com.linecorp.armeria.internal.reflections'],
-]
+
+// Print the build time summary to the console
+buildtimetracker {
+  reporters {
+    summary {
+      ordered true
+    }
+  }
+}
 
 // Configure all projects
 allprojects {
     apply plugin: 'eclipse'
     apply plugin: 'idea'
+
+    // Define common repositories.
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 
 // Configure all Java projects
 configure(javaProjects) {
 
-    // Apply common plugins and define repositories.
+    // Apply common plugins.
     apply plugin: 'java'
     apply plugin: 'jacoco'
     apply plugin: 'checkstyle'
 
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
-
-    apply plugin: 'io.spring.dependency-management'
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
 
     // Set the artifact ID.
     if (project.name == 'core') {
@@ -63,8 +90,11 @@ configure(javaProjects) {
     // Common properties and functions.
     ext {
         pomFile = file("${project.buildDir}/generated-pom.xml")
-        isReleaseVersion = !(project.version =~ /-SNAPSHOT$/)
-        versionOf = rootProject.ext.versionOf
+
+        isReleaseVersion = { !(project.version =~ /-SNAPSHOT$/) }
+        isPublishing = { gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null }
+        isSigning = { signing.signatory != null && (project.ext.isReleaseVersion() || project.hasProperty('sign')) }
+
         onIdeImport = { Closure action ->
             if (!requestedTaskNames.empty) {
                 return
@@ -80,156 +110,44 @@ configure(javaProjects) {
         }
     }
 
-    // Use the dependency management plugin to keep the versions and exclusions in a single place.
-    dependencyManagement {
-        dependencies {
-            // AssertJ
-            dependency "org.assertj:assertj-core:${ext.versionOf('assertj')}"
-
-            // Completable-futures
-            dependency "com.spotify:completable-futures:${ext.versionOf('completable-futures')}"
-
-            // FastUtil
-            dependency "it.unimi.dsi:fastutil:${ext.versionOf('fastutil')}"
-
-            // gRPC
-            dependencySet(group: 'io.grpc', version: ext.versionOf('grpc')) {
-                entry('grpc-core') {
-                    exclude 'com.google.code.findbugs:jsr305'
-                }
-                entry 'grpc-stub'
-                entry 'grpc-protobuf'
-                entry('grpc-interop-testing') {
-                    exclude 'io.netty:netty-codec-http2'
-                    exclude 'com.google.guava:guava-jdk5'
-                }
+    // Add the 'managedDependencies' DSL which allows us to add dependencies without versions and exclusions.
+    project.metaClass.managedDependencies = { Closure action ->
+        def addManagedDependency = { String scope, String name ->
+            def components = name.split(':')
+            if (components.length != 2 && components.length != 3) {
+                throw new IllegalDependencyNotation(name)
             }
 
-            // Guava
-            dependencySet(group: 'com.google.guava', version: ext.versionOf('guava')) {
-                entry 'guava'
-                entry('guava-testlib') {
-                    exclude 'com.google.code.findbugs:jsr305'
-                    exclude 'com.google.errorprone:error_prone_annotations'
+            def groupId = components[0]
+            def artifactId = components[1]
+            def classifier = components.length == 3 ? components[2] : null
+            if (!rootProject.ext.dependencyManagement[groupId] ||
+                !rootProject.ext.dependencyManagement[groupId][artifactId]) {
+                throw new UnknownDomainObjectException("unknown dependency: ${name}")
+            }
+
+            def props = rootProject.ext.dependencyManagement[groupId][artifactId]
+            project.dependencies."$scope"(group: groupId, name: artifactId,
+                    version: props.version, classifier: classifier) {
+                if (props.exclusions) {
+                    props.exclusions.each {
+                        def exclusionComponents = it.split(':')
+                        if (exclusionComponents.length != 2) {
+                            throw new IllegalDependencyNotation(it)
+                        }
+                        exclude group: exclusionComponents[0], module: exclusionComponents[1]
+                    }
                 }
             }
-
-            // Hamcrest
-            dependency "org.hamcrest:hamcrest-library:${ext.versionOf('hamcrest')}"
-
-            // HBase client
-            dependency("org.apache.hbase:hbase-shaded-client:${ext.versionOf('hbase-client')}") {
-                exclude 'org.slf4j:slf4j-log4j12'
-            }
-
-            // HttpClient
-            dependency("org.apache.httpcomponents:httpclient:${ext.versionOf('httpclient')}") {
-                exclude 'commons-logging:commons-logging'
-            }
-
-            // Jackson
-            dependencySet(group: 'com.fasterxml.jackson.core', version: ext.versionOf('jackson')) {
-                entry 'jackson-core'
-                entry 'jackson-annotations'
-                entry 'jackson-databind'
-            }
-
-            // Jetty
-            dependencySet(group: 'org.eclipse.jetty', version: ext.versionOf('jetty')) {
-                entry 'jetty-server'
-                entry 'jetty-webapp'
-                entry 'jetty-annotations'
-                entry 'apache-jsp'
-                entry 'apache-jstl'
-            }
-            dependency "org.eclipse.jetty.http2:http2-server:${ext.versionOf('jetty')}"
-
-            // Jetty ALPN support
-            dependency "org.eclipse.jetty.alpn:alpn-api:${ext.versionOf('jetty-alpn-api')}"
-            dependency "org.mortbay.jetty.alpn:jetty-alpn-agent:${ext.versionOf('jetty-alpn-agent')}"
-
-            // JSON-unit
-            dependencySet(group: 'net.javacrumbs.json-unit', version: ext.versionOf('jsonunit')) {
-                entry 'json-unit'
-                entry 'json-unit-fluent'
-            }
-
-            // JSR305
-            dependency 'com.google.code.findbugs:jsr305:3.0.1'
-
-            // jUnit
-            dependency "junit:junit:${ext.versionOf('junit')}"
-
-            // Logback
-            dependency "ch.qos.logback:logback-classic:${ext.versionOf('logback')}"
-
-            // Metrics
-            dependency "io.dropwizard.metrics:metrics-core:${ext.versionOf('metrics')}"
-
-            // Mockito
-            dependency "org.mockito:mockito-core:${ext.versionOf('mockito')}"
-
-            // Netty
-            dependencySet(group: 'io.netty', version: ext.versionOf('netty')) {
-                entry 'netty-transport'
-                entry 'netty-handler'
-                entry 'netty-codec-http2'
-                entry 'netty-resolver-dns'
-            }
-            dependency "io.netty:netty-tcnative-boringssl-static:${ext.versionOf('netty-tcnative')}"
-            dependency "org.javassist:javassist:${ext.versionOf('javassist')}"
-
-            // Reactive Streams
-            dependency "org.reactivestreams:reactive-streams:${ext.versionOf('reactive-streams')}"
-
-            // Reflections
-            dependency("org.reflections:reflections:${ext.versionOf('reflections')}") {
-                exclude 'com.google.code.findbugs:annotations'
-            }
-
-            // Retrofit2
-            dependencySet(group: 'com.squareup.retrofit2', version: ext.versionOf('retrofit2')) {
-                entry 'retrofit'
-                entry 'adapter-guava'
-                entry 'converter-jackson'
-            }
-
-            // SLF4J
-            dependencySet(group: 'org.slf4j', version: ext.versionOf('slf4j')) {
-                entry 'slf4j-api'
-                entry 'jul-to-slf4j'
-                entry 'jcl-over-slf4j'
-                entry 'log4j-over-slf4j'
-            }
-
-            // Thrift
-            dependency("org.apache.thrift:libthrift:${ext.versionOf('thrift')}") {
-                exclude 'org.apache.httpcomponents:httpcore'
-                exclude 'org.apache.httpcomponents:httpclient'
-            }
-
-            // Tomcat
-            dependencySet(group: 'org.apache.tomcat.embed', version: ext.versionOf('tomcat')) {
-                entry 'tomcat-embed-core'
-                entry 'tomcat-embed-jasper'
-                entry 'tomcat-embed-el'
-            }
-
-            // Zipkin
-            dependencySet(group: 'io.zipkin.brave', version: ext.versionOf('brave')) {
-                entry 'brave-core'
-                entry 'brave-http'
-            }
-
-            // ZooKeeper
-            dependency "org.apache.zookeeper:zookeeper:${ext.versionOf('zookeeper')}"
-
-            // ZooKeeper JUnit
-            dependency "org.dmonix.junit:zookeeper-junit:${ext.versionOf('zookeeper-junit')}"
-
-            // Kafka
-            dependency "org.apache.kafka:kafka-clients:${ext.versionOf('kafka')}"
         }
+
+        def actionDelegate = new Object()
+        action.delegate = actionDelegate
+        configurations.names.each {
+            actionDelegate.metaClass."$it" = addManagedDependency.curry(it)
+        }
+
+        action()
     }
 
     // Common dependencies
@@ -242,12 +160,23 @@ configure(javaProjects) {
         if (project.name != 'core') {
             compile project(':core')
         }
+    }
 
-        // JSR305
-        compile 'com.google.code.findbugs:jsr305' // Can't use compileOnly due to Javadoc errors
+    managedDependencies {
+        // completable-futures
+        compile 'com.spotify:completable-futures'
+
+        // FastUtil
+        compile 'it.unimi.dsi:fastutil'
+
+        // Guava
+        compile 'com.google.guava:guava'
+
+        // JSR305 (Can't use compileOnly due to Javadoc errors)
+        compile 'com.google.code.findbugs:jsr305'
 
         // Jetty ALPN support
-        compileOnly('org.eclipse.jetty.alpn:alpn-api')
+        compileOnly 'org.eclipse.jetty.alpn:alpn-api'
         javaAgent 'org.mortbay.jetty.alpn:jetty-alpn-agent'
 
         // Logging
@@ -258,14 +187,18 @@ configure(javaProjects) {
             testRuntime "org.slf4j:$it"
         }
 
+        // Reflections
+        compile 'org.reflections:reflections'
+
         // Test-time dependencies
+        testCompile 'com.google.guava:guava-testlib'
         testCompile 'junit:junit'
+        testCompile 'net.javacrumbs.json-unit:json-unit'
+        testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
         testCompile 'org.hamcrest:hamcrest-library'
         testCompile 'org.assertj:assertj-core'
         testCompile 'org.mockito:mockito-core'
         testCompile 'org.apache.httpcomponents:httpclient'
-        testCompile 'net.javacrumbs.json-unit:json-unit'
-        testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     }
 
     // Copy test resources to the same directory with test classes, because some tests such as
@@ -306,9 +239,8 @@ configure(javaProjects) {
         toolVersion = '7.1'
     }
     task checkstyle(group: 'Verification',
-                    description: 'Runs the checkstyle rules.')
-    tasks.checkstyle.dependsOn 'checkstyleMain'
-    tasks.checkstyle.dependsOn 'checkstyleTest'
+                    description: 'Runs the checkstyle rules.',
+                    dependsOn: [tasks.checkstyleMain, tasks.checkstyleTest])
 
     // Enable full exception logging for test failures.
     test {
@@ -330,6 +262,12 @@ configure(javaProjects) {
     jacocoTestReport {
         reports {
             xml.enabled jacocoEnabled
+        }
+
+        afterEvaluate {
+            // Include all sources and classes directories so that the report includes other modules.
+            sourceDirectories = files(javaProjects.inject([], { a, b -> a + b.sourceSets.main.java.srcDirs }))
+            classDirectories = files(javaProjects.inject([], { a, b -> a + b.sourceSets.main.output.classesDir }))
         }
     }
 
@@ -355,34 +293,73 @@ configure(javaProjects) {
         }
     }
 
-    task relocateSourceReferencesToInternalDependencies(type: ShadowJar) {
-        destinationDir = jar.destinationDir
-        archiveName = jar.baseName + '-relocated.jar'
-        // TODO(trustin): Uncomment this for faster building once shadow 2.0 is out.
-        //                https://github.com/johnrengelman/shadow/issues/203
-        //entryCompression = ZipEntryCompression.STORED
+    // Create the shaded JAR.
+    task shadedJar(type: ShadowJar,
+                   group: 'Build',
+                   description: 'Builds the shaded JAR.',
+                   dependsOn: tasks.classes) {
 
-        from sourceSets.main.output.classesDir
+        baseName = "${tasks.jar.baseName}-shaded"
+
+        from(sourceSets.main.output) {
+            exclude 'META-INF/maven/**'
+        }
+
         configurations = [ project.configurations.compile ]
 
         relocations.each {
-            relocate it[0], it[1]
+            relocate it[1], it[2]
         }
 
-        // Only want to rewrite source references, not bundle dependencies.
         dependencies {
-            exclude(dependency({ true }))
+            if (project.name != 'core') {
+                // Only want to rewrite source references, not bundle dependencies.
+                exclude(dependency({ true }))
+            } else {
+                // Shade the relocated dependencies only.
+                exclude(dependency({ dep ->
+                    !relocations.find { dep.name.startsWith("${it[0]}:") }
+                }))
+            }
         }
     }
-    task extractRelocatedJar(type: Copy, dependsOn: relocateSourceReferencesToInternalDependencies) {
-        from zipTree(relocateSourceReferencesToInternalDependencies.archivePath)
-        into sourceSets.main.output.classesDir
+    tasks.assemble.dependsOn tasks.shadedJar
+
+    // Create the shaded test JAR which is used in the 'shaded-test' project.
+    task shadedTestJar(type: ShadowJar,
+                       group: 'Build',
+                       description: 'Builds the shaded test JAR.',
+                       dependsOn: tasks.testClasses) {
+
+        baseName = "test-${tasks.jar.baseName}-shaded"
+
+        // TODO(trustin): Uncomment this for faster building once shadow 2.0 is out.
+        //                We don't need to compress because we always extract it again.
+        //                https://github.com/johnrengelman/shadow/issues/203
+        //entryCompression = ZipEntryCompression.STORED
+
+        from(sourceSets.test.output) {
+            exclude 'META-INF/maven/**'
+            // Prevent the shadow plugin from exploding the JARs in the resources directory.
+            // e.g. WEB-INF/lib/hello.jar in armeria-tomcat and armeria-jetty
+            exclude '**/*.jar'
+        }
+
+        configurations = [ project.configurations.testCompile ]
+
+        relocations.each {
+            relocate it[1], it[2]
+        }
+
+        dependencies {
+            // We have relocated everything under com.google.common, so we have to relocate guava-testlib, too.
+            exclude(dependency({ !it.name.startsWith('com.google.guava:guava-testlib:') }))
+        }
     }
-    jar.dependsOn extractRelocatedJar
 
     // Add common JVM options such as TLS ALPN agent, max memory and leak detection.
     tasks.withType(JavaForkOptions) {
-        dependsOn 'copyJavaAgents'
+        dependsOn tasks.copyJavaAgents
 
         // Use larger heap when test coverage is enabled.
         maxHeapSize = jacocoEnabled ? '384m' : '128m'
@@ -403,7 +380,8 @@ configure(javaProjects) {
     }
 
     // Compile the Thrift service definitions.
-    task compileThrift {
+    task compileThrift(group: 'Build',
+                       description: 'Compiles the .thrift files') {
         def thriftPath = "${rootProject.projectDir}/gradle/thrift/thrift.${osdetector.classifier}"
 
         [ 'main', 'test' ].each { scope ->
@@ -452,9 +430,22 @@ configure(javaProjects) {
                     props["${artifactId}.${k}"] = v
                 }
 
-                project.mkdir(propsFile.parent)
-                logger.info("Writing ${propsFile} ..")
-                propsFile.withOutputStream { props.store(it, null) }
+                def upToDate = false
+                if (propsFile.exists()) {
+                    def oldProps = new Properties()
+                    propsFile.withInputStream { oldProps.load(it) }
+                    if (oldProps == props) {
+                        upToDate = true
+                    }
+                }
+
+                if (!upToDate) {
+                    project.mkdir(propsFile.parent)
+                    logger.info("Writing ${propsFile} ..")
+                    propsFile.withOutputStream { props.store(it, null) }
+                } else {
+                    logger.info("${propsFile} is up-to-date.")
+                }
             }
         }
         // Ensure version.properties is available during the build.
@@ -476,18 +467,22 @@ configure(javaProjects) {
             }
         }
 
-        task javadocJar(type: Jar, dependsOn: javadoc) {
+        task javadocJar(type: Jar, dependsOn: tasks.javadoc) {
             classifier = 'javadoc'
             from javadoc.destinationDir
         }
 
         // Generate source/javadoc JARs only when publishing.
         tasks.sourceJar.onlyIf {
-            isPublishing() || requestedTaskNames.find { it =~ /(?:^|:)sourceJar$/ }
+            project.ext.isSigning() ||
+            project.ext.isPublishing() ||
+            requestedTaskNames.find { it =~ /(?:^|:)sourceJar$/ }
         }
         [tasks.javadoc, tasks.javadocJar].each {
             it.onlyIf {
-                isPublishing() || requestedTaskNames.find { it =~ /(?:^|:)javadoc(?:Jar)?$/ }
+                project.ext.isSigning() ||
+                project.ext.isPublishing() ||
+                requestedTaskNames.find { it =~ /(?:^|:)javadoc(?:Jar)?$/ }
             }
         }
 
@@ -496,17 +491,18 @@ configure(javaProjects) {
             archives jar
             archives sourceJar
             archives javadocJar
+            archives shadedJar
         }
 
         signing {
-            required { signatory != null && project.ext.isReleaseVersion }
+            required { project.ext.isSigning() }
             sign configurations.archives
         }
 
         publishing {
             repositories {
                 maven {
-                    if (project.ext.isReleaseVersion) {
+                    if (project.ext.isReleaseVersion()) {
                         url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
                     } else {
                         url 'https://oss.sonatype.org/content/repositories/snapshots/'
@@ -520,19 +516,23 @@ configure(javaProjects) {
             }
 
             publications {
-                jar(MavenPublication) {
-                    artifactId "${project.archivesBaseName}"
+                def configureJarPublication = { boolean isShaded ->
+                    def currentArtifactId = project.archivesBaseName
+                    if (isShaded) {
+                        currentArtifactId += '-shaded'
+                    }
 
+                    artifactId currentArtifactId
+
+                    // Generate the POM.
                     pom.withXml {
-                        NodeList children = asNode().children()
-                        Node dependencies = children.find { it.name().localPart == 'dependencies' } as Node
-
-                        // Insert the elements required by OSSRH.
-                        children[children.indexOf(dependencies) - 1] + {
+                        asNode().children().last() + {
                             resolveStrategy = Closure.DELEGATE_FIRST
-                            name "${project.archivesBaseName}"
+
+                            // Write the elements required by OSSRH.
+                            name currentArtifactId
                             description "Asynchronous RPC/API client/server library built on top of Java 8, " +
-                                        "Netty 4.1, HTTP/2, and Thrift (${project.archivesBaseName})"
+                                    "Netty 4.1, HTTP/2, and Thrift (${currentArtifactId})"
                             url 'http://line.github.io/armeria/'
                             licenses {
                                 license {
@@ -558,72 +558,115 @@ configure(javaProjects) {
                                 connection 'scm:git:https://github.com/line/armeria.git'
                                 developerConnection 'scm:git:ssh://git@github.com/line/armeria.git'
                             }
-                        }
 
-                        // Remove:
-                        // - the compileOnly dependencies
-                        // - the dependencies provided by the platform
-                        // - the dependencies in the 'javaAgent' configuration
-                        // - the shaded dependencies
-                        dependencies.children().removeAll {
-                            it.artifactId.text() in [
-                                    'alpn-api',
-                                    'completable-futures',
-                                    'fastutil',
-                                    'jetty-alpn-agent',
-                                    'jsr305',
-                                    'reflections',
-                            ]
-                        }
+                            // Write the compile- and runtime-scope dependencies.
+                            dependencies {
+                                def writeDeps = { cfg, depScope ->
+                                    cfg.dependencies.each { dep ->
+                                        // Skip:
+                                        // - the compileOnly dependencies
+                                        // - the dependencies provided by the platform
+                                        // - the dependencies in the 'javaAgent' configuration
+                                        if ("${dep.group}:${dep.name}".toString() in [
+                                                'org.eclipse.jetty.alpn:alpn-api',
+                                                'org.mortbay.jetty.alpn:jetty-alpn-agent',
+                                                'com.google.code.findbugs:jsr305'
+                                        ]) {
+                                            logger.info "Excluding ${dep.group}:${dep.name} (compileOnly)"
+                                            return
+                                        }
 
-                        // Work around the bug where the maven-publish plugin sets the scope of all
-                        // dependencies to 'runtime'.
-                        // https://discuss.gradle.org/t/maven-publish-plugin-generated-pom-making-dependency-scope-runtime/7494
-                        def collectDeps = { String cfgName ->
-                            configurations[cfgName].dependencies.collectEntries {
-                                def name;
-                                if (it instanceof ProjectDependency) {
-                                    name = it.dependencyProject.archivesBaseName
-                                } else {
-                                    name = it.name
+                                        // Skip the shaded dependencies.
+                                        if (isShaded &&
+                                            "${dep.group}:${dep.name}".toString() in relocations.collect { it[0] }) {
+                                            logger.info "Excluding ${dep.group}:${dep.name} (shaded)"
+                                            return
+                                        }
+
+                                        dependency {
+                                            if (dep instanceof ProjectDependency) {
+                                                groupId dep.group
+                                                artifactId dep.dependencyProject.archivesBaseName + (isShaded ? '-shaded' : '')
+                                                version dep.version ? dep.version : dep.dependencyProject.version
+                                            } else {
+                                                groupId dep.group
+                                                artifactId dep.name
+
+                                                // Write version if exists.
+                                                if (dep.version) {
+                                                    version dep.version
+                                                }
+
+                                                // Write classifier if exists.
+                                                if (dep.artifacts.find() instanceof DependencyArtifact &&
+                                                    dep.artifacts.find().classifier) {
+                                                    classifier dep.artifacts.find().classifier
+                                                }
+                                            }
+
+                                            if (depScope && depScope != 'compile') {
+                                                scope depScope
+                                            }
+
+                                            if (dep.hasProperty('optional') && dep.optional) {
+                                                optional true
+                                            }
+
+                                            // Exclusions
+                                            if (!dep.excludeRules.empty) {
+                                                exclusions {
+                                                    dep.excludeRules.each { rule ->
+                                                        exclusion {
+                                                            groupId rule.group
+                                                            artifactId rule.module
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
 
-                                ["${it.group}:${name}", it]
-                            }
-                        }
-
-                        def compileDeps = collectDeps('compile') + collectDeps('compileOnly')
-                        def allDeps = compileDeps + collectDeps('runtime')
-
-                        dependencies.children().each {
-                            if (compileDeps.containsKey("${it.groupId.text()}:${it.artifactId.text()}")) {
-                                it.scope*.value = 'compile'
-                            }
-
-                            // Add <optional>true</optional> to optional dependencies.
-                            def dep = allDeps[it.artifactId.text()]
-                            if (dep.hasProperty('optional') && dep.optional) {
-                                if (it.optional) {
-                                    it.optional.value = true
-                                } else {
-                                    it.appendNode('optional', 'true')
-                                }
+                                writeDeps(configurations.compile, 'compile')
+                                writeDeps(configurations.runtime, 'runtime')
                             }
                         }
                     }
 
-                    from components.java
+                    // Find the main JAR and the task that generates it.
+                    File mainJarFile
+                    Task mainJarTask
+                    if (!isShaded) {
+                        mainJarFile = tasks.jar.archivePath
+                        mainJarTask = tasks.jar
+                    } else {
+                        if (tasks.findByName('trimShadedJar')) {
+                            assert project.name == 'core'
+                            mainJarFile = tasks.trimShadedJar.outJarFiles.find() as File
+                            mainJarTask = tasks.trimShadedJar
+                        } else {
+                            assert project.name != 'core'
+                            mainJarFile = tasks.shadedJar.archivePath
+                            mainJarTask = tasks.shadedJar
+                        }
+                    }
 
-                    artifact(sourceJar) {
+                    // Add the main JAR.
+                    artifact(mainJarFile).builtBy(mainJarTask)
+
+                    // Add the Javadoc JAR.
+                    artifact(tasks.sourceJar) {
                         classifier = 'sources'
                     }
-                    artifact(javadocJar) {
+
+                    // Add the sources JAR.
+                    artifact(tasks.javadocJar) {
                         classifier = 'javadoc'
                     }
 
-                    // Sign the pom.xml and artifacts.
-                    if (signing.required) {
-                        // Sign the pom.xml.
+                    // Add the .asc signatures.
+                    if (project.ext.isSigning()) {
+                        // Add the signature to pom.xml.
                         pom.withXml {
                             writeTo(project.ext.pomFile)
                             def pomAscFile = signing.sign(project.ext.pomFile).signatureFiles[0]
@@ -634,20 +677,27 @@ configure(javaProjects) {
                             project.ext.pomFile.delete()
                         }
 
-                        // Sign the artifacts.
-                        project.tasks.signArchives.signatureFiles.each {
-                            artifact(it) {
-                                def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
-                                if (matcher.find()) {
-                                    classifier = matcher.group(1)
-                                } else {
-                                    classifier = null
-                                }
-                                extension = 'jar.asc'
-                            }
+                        // Add the signature to the main JAR.
+                        artifact(new File("${mainJarFile}.asc")) {
+                            extension = 'jar.asc'
+                        }
+
+                        // Add the signature to the sources JAR.
+                        artifact(new File("${tasks.sourceJar.archivePath}.asc")) {
+                            classifier = 'sources'
+                            extension = 'jar.asc'
+                        }
+
+                        // Add the signature to the javadoc JAR.
+                        artifact(new File("${tasks.javadocJar.archivePath}.asc")) {
+                            classifier = 'javadoc'
+                            extension = 'jar.asc'
                         }
                     }
                 }
+
+                jar(MavenPublication, configureJarPublication.curry(false))
+                shadedJar(MavenPublication, configureJarPublication.curry(true))
             }
         }
 
@@ -659,12 +709,13 @@ configure(javaProjects) {
                 dependsOn(project.tasks.signArchives)
             }
             tasks.signArchives {
-                onlyIf { isPublishing() }
+                onlyIf { project.ext.isSigning() }
             }
         }
-        task install(dependsOn: publishToMavenLocal,
-                     group: 'Publishing',
-                     description: 'An alias of publishToMavenLocal')
+
+        task install(group: 'Publishing',
+                     description: 'An alias of publishToMavenLocal',
+                     dependsOn: tasks.publishToMavenLocal)
     }
 
     // Print only interesting test results and progress, except when running from IntelliJ IDEA which has
@@ -855,7 +906,6 @@ private def getRepoStatus() {
     // The default values taken from Netty.
     def result = [
             version : project.version,
-            buildDate : new Date().format('yyyy-MM-dd HH:mm:ss Z'), // same with git log date format
             longCommitHash : '0000000000000000000000000000000000000000',
             shortCommitHash : '0000000',
             commitDate : '1970-01-01 00:00:00 +0000',

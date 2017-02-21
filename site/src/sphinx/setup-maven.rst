@@ -17,8 +17,6 @@ Armeria is distributed via `Maven Central Repository`_. Add the following depend
 
         <!-- Dependency versions -->
         <armeria.version>\ |release|\ </armeria.version>
-        <logback.version>\ |logback.version|\ </logback.version>
-        <slf4j.version>\ |slf4j.version|\ </slf4j.version>
       </properties>
 
       <dependencies>
@@ -50,6 +48,11 @@ Armeria is distributed via `Maven Central Repository`_. Add the following depend
         </dependency>
         <dependency>
           <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-thrift</artifactId>
+          <version>${armeria.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
           <artifactId>armeria-tomcat</artifactId>
           <version>${armeria.version}</version>
         </dependency>
@@ -68,13 +71,13 @@ Armeria is distributed via `Maven Central Repository`_. Add the following depend
         <dependency>
           <groupId>ch.qos.logback</groupId>
           <artifactId>logback-classic</artifactId>
-          <version>${logback.version}</version>
+          <version>\ |ch.qos.logback:logback-classic:version|\ </version>
           <scope>runtime</scope>
         </dependency>
         <dependency>
           <groupId>org.slf4j</groupId>
           <artifactId>log4j-over-slf4j</artifactId>
-          <version>${slf4j.version}</version>
+          <version>\ |org.slf4j:log4j-over-slf4j:version|\ </version>
           <scope>runtime</scope>
         </dependency>
         ...
@@ -82,4 +85,4 @@ Armeria is distributed via `Maven Central Repository`_. Add the following depend
       ...
     </project>
 
-You may not need all Armeria modules depending on your use case. Please remove unused ones.
+.. include:: setup-common.rst

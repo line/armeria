@@ -1,6 +1,6 @@
-dependencies {
+managedDependencies {
     // Jetty
-    compile('org.eclipse.jetty:jetty-server')
+    compile 'org.eclipse.jetty:jetty-server'
     ['jetty-webapp', 'jetty-annotations', 'apache-jsp', 'apache-jstl'].each {
         testCompile "org.eclipse.jetty:$it"
     }

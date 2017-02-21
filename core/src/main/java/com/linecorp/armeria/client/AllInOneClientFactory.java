@@ -30,8 +30,6 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ClassToInstanceMap;
-import com.google.common.collect.ImmutableClassToInstanceMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
@@ -114,7 +112,7 @@ public class AllInOneClientFactory extends NonDecoratingClientFactory {
 
                 // Find the ClientFactory instances who meet the type requirements specified in
                 // ClientFactoryProvider.dependencies().
-                final ClassToInstanceMap<ClientFactory> requiredClientFactories =
+                final Map<Class<?>, ClientFactory> requiredClientFactories =
                         findRequiredClientFactories(p, availableClientFactories);
 
                 if (requiredClientFactories == null) {
@@ -152,7 +150,7 @@ public class AllInOneClientFactory extends NonDecoratingClientFactory {
      * @return {@code null} if dependencies could not be fully met
      */
     @Nullable
-    private static ClassToInstanceMap<ClientFactory> findRequiredClientFactories(
+    private static Map<Class<?>, ClientFactory> findRequiredClientFactories(
             ClientFactoryProvider provider, Iterable<ClientFactory> availableClientFactories) {
 
         @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -160,12 +158,10 @@ public class AllInOneClientFactory extends NonDecoratingClientFactory {
                 (Set<Class<ClientFactory>>) (Set) provider.dependencies();
 
         if (dependencyTypes.isEmpty()) {
-            return ImmutableClassToInstanceMap.of();
+            return ImmutableMap.of();
         }
 
-        final ImmutableClassToInstanceMap.Builder<ClientFactory> builder =
-                ImmutableClassToInstanceMap.builder();
-
+        final ImmutableMap.Builder<Class<?>, ClientFactory> builder = ImmutableMap.builder();
         for (Class<ClientFactory> dependencyType : dependencyTypes) {
             boolean found = false;
             for (ClientFactory f : availableClientFactories) {

@@ -1,8 +1,18 @@
-dependencies {
+managedDependencies {
     // Thrift
     compile 'org.apache.thrift:libthrift'
 
     // Jetty, for testing TServlet interoperability.
     testCompile 'org.eclipse.jetty:jetty-webapp'
     testCompile 'org.eclipse.jetty.http2:http2-server'
+}
+
+// Keep the original Guava references in ThriftListenableFuture,
+// which is the only place we expose Guava classes in our public API.
+tasks.shadedJar.exclude 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*'
+tasks.shadedJar.doLast {
+    ant.jar(update: true, destfile: tasks.shadedJar.archivePath) {
+        fileset(dir: "${sourceSets.main.output.classesDir}",
+                includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')
+    }
 }
