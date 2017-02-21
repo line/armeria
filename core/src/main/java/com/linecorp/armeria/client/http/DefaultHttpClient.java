@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.http;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
@@ -82,7 +84,8 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         return execute(eventLoop, req);
     }
 
-    private static String concatPaths(String path1, String path2) {
+    @VisibleForTesting
+    static String concatPaths(String path1, String path2) {
         path2 = path2 == null ? "" : path2;
 
         if (path1 == null || path1.isEmpty() || "/".equals(path1)) {

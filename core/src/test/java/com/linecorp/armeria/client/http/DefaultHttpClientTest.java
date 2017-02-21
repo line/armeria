@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.http;
 
+import static com.linecorp.armeria.client.http.DefaultHttpClient.concatPaths;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -43,7 +44,7 @@ public class DefaultHttpClientTest {
     @Test
     public void testConcatenateRequestPath() throws Exception {
         String clientUriPath = "http://127.0.0.1/hello";
-        String requestPath = "world///test?q1=//";
+        String requestPath = "world/test?q1=foo";
 
         Client<HttpRequest, HttpResponse> mockClientDelegate = mock(Client.class);
         ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(new HttpClientFactory(),
@@ -62,6 +63,22 @@ public class DefaultHttpClientTest {
                                            httpRequestArgumentCaptor.capture());
 
         String concatPath = httpRequestArgumentCaptor.getValue().path();
-        assertThat(concatPath).isEqualTo("/hello/world/test?q1=//");
+        assertThat(concatPath).isEqualTo("/hello/world/test?q1=foo");
+    }
+
+    @Test
+    public void testConcatPaths() throws Exception {
+        assertThat(concatPaths(null, "a")).isEqualTo("/a");
+        assertThat(concatPaths(null, "/a")).isEqualTo("/a");
+
+        assertThat(concatPaths("", "a")).isEqualTo("/a");
+        assertThat(concatPaths("", "/a")).isEqualTo("/a");
+
+        assertThat(concatPaths("/", "a")).isEqualTo("/a");
+        assertThat(concatPaths("/", "/a")).isEqualTo("/a");
+
+        assertThat(concatPaths("/a", "b")).isEqualTo("/a/b");
+        assertThat(concatPaths("/a", "/b")).isEqualTo("/a/b");
+        assertThat(concatPaths("/a/", "/b")).isEqualTo("/a/b");
     }
 }
