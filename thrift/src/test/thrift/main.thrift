@@ -79,12 +79,19 @@ struct FooStruct {
     14: list<string> listVal,
 }
 
+typedef FooStruct           TypedefedStruct
+typedef map<string, string> TypedefedMap
+typedef list<string>        TypedefedList
+typedef list<string>        TypedefedSet
+
 service FooService {
     void bar1() throws (1: FooServiceException e),
     string bar2() throws (1: FooServiceException e),
     FooStruct bar3(1: i32 intVal, 2: FooStruct foo) throws (1: FooServiceException e),
     list<FooStruct> bar4(1: list<FooStruct> foos) throws (1: FooServiceException e),
-    map<string, FooStruct> bar5(1: map<string, FooStruct> foos) throws (1: FooServiceException e)
+    map<string, FooStruct> bar5(1: map<string, FooStruct> foos) throws (1: FooServiceException e),
+    void bar6(1: TypedefedStruct foo1, 2: TypedefedMap foo2, 3: TypedefedList foo3, 4: TypedefedSet foo4)
+        throws (1: FooServiceException e),
 }
 
 // Tests Clients.newDerivedClient()

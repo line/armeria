@@ -179,7 +179,7 @@ public class ThriftServiceSpecificationGeneratorTest {
                                  ImmutableSet.of(ThriftSerializationFormats.BINARY)));
 
         final Map<String, FunctionInfo> functions = service.functions();
-        assertThat(functions).hasSize(5);
+        assertThat(functions).hasSize(6);
 
         final FunctionInfo bar1 = functions.get("bar1");
         assertThat(bar1.parameters()).isEmpty();
@@ -216,6 +216,16 @@ public class ThriftServiceSpecificationGeneratorTest {
         assertThat(bar5.returnTypeInfo()).isEqualTo(new MapInfo(string, foo));
         assertThat(bar5.exceptions()).hasSize(1);
         assertThat(bar5.sampleJsonRequest()).isEmpty();
+
+        final FunctionInfo bar6 = functions.get("bar6");
+        assertThat(bar6.parameters()).containsExactly(
+                new FieldInfo("foo1", FieldRequirement.DEFAULT, foo),
+                new FieldInfo("foo2", FieldRequirement.DEFAULT, new MapInfo(string, string)),
+                new FieldInfo("foo3", FieldRequirement.DEFAULT, new ListInfo(string)),
+                new FieldInfo("foo4", FieldRequirement.DEFAULT, new SetInfo(string)));
+        assertThat(bar6.returnTypeInfo()).isEqualTo(TypeInfo.VOID);
+        assertThat(bar6.exceptions()).hasSize(1);
+        assertThat(bar6.sampleJsonRequest()).isEmpty();
 
         final List<HttpHeaders> exampleHttpHeaders = service.exampleHttpHeaders();
         assertThat(exampleHttpHeaders).containsExactly(HttpHeaders.of(AsciiString.of("foobar"), "barbaz"));
