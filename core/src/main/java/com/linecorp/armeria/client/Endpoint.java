@@ -48,7 +48,7 @@ public final class Endpoint {
         }
 
         final HostAndPort parsed = HostAndPort.fromString(authority).withDefaultPort(0);
-        return new Endpoint(parsed.getHostText(), parsed.getPort(), 1000);
+        return new Endpoint(parsed.getHost(), parsed.getPort(), 1000);
     }
 
     /**

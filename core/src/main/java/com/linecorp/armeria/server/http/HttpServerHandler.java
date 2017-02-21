@@ -78,6 +78,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandler;
 
 final class HttpServerHandler extends ChannelInboundHandlerAdapter implements HttpServer {
@@ -533,6 +534,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof SslCloseCompletionEvent) {
+            return;
+        }
+
         logger.warn("{} Unexpected user event: {}", ctx.channel(), evt);
     }
 

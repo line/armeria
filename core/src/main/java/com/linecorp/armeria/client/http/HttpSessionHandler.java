@@ -45,6 +45,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
@@ -217,6 +218,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             sessionTimeoutFuture.cancel(false);
             sessionPromise.tryFailure((SessionProtocolNegotiationException) evt);
             ctx.close();
+            return;
+        }
+
+        if (evt instanceof SslCloseCompletionEvent) {
             return;
         }
 
