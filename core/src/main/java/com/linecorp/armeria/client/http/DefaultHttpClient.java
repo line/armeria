@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.http;
 
-import java.util.regex.Pattern;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
@@ -36,8 +34,6 @@ import io.netty.channel.EventLoop;
 
 final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements HttpClient {
 
-    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
-
     DefaultHttpClient(ClientBuilderParams params,
                       Client<HttpRequest, HttpResponse> delegate,
                       SessionProtocol sessionProtocol, Endpoint endpoint) {
@@ -50,7 +46,7 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     private HttpResponse execute(EventLoop eventLoop, HttpRequest req) {
-        final String path = concatPath(uri().getPath(), req.path());
+        final String path = concatPaths(uri().getPath(), req.path());
         req.path(path);
 
         return execute(eventLoop, req.method().name(), req.path(), "", req, cause -> {
@@ -86,26 +82,51 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         return execute(eventLoop, req);
     }
 
-    private static String concatPath(String path1, String path2) {
-        path1 = (path1 == null) ? "" : path1;
-        path2 = (path2 == null) ? "" : path2;
+    private static String concatPaths(String path1, String path2) {
+        path2 = path2 == null ? "" : path2;
 
-        final String concatPath;
-        if (!path1.endsWith("/") && !path2.startsWith("/")) {
-            concatPath = path1 + "/" + path2;
-        } else {
-            concatPath = path1 + path2;
+        if (path1 == null || path1.isEmpty() || "/".equals(path1)) {
+            if (path2.isEmpty()) {
+                return "/";
+            }
+
+            if (path2.charAt(0) == '/') {
+                return path2; // Most requests will land here.
+            }
+
+            return new StringBuilder(path2.length() + 1)
+                    .append('/').append(path2).toString();
         }
 
-        final int queryIndex = concatPath.indexOf('?');
-        final String newPath;
-        if (queryIndex < 0) {
-            newPath = CONSECUTIVE_SLASHES_PATTERN.matcher(concatPath).replaceAll("/");
-        } else {
-            newPath = CONSECUTIVE_SLASHES_PATTERN.matcher(concatPath.subSequence(0, queryIndex))
-                                                 .replaceAll("/") + concatPath.substring(queryIndex);
+        // At this point, we are sure path1 is neither empty nor null.
+        if (path2.isEmpty()) {
+            // Only path1 is non-empty. No need to concatenate.
+            return path1;
         }
 
-        return newPath;
+        if (path1.charAt(path1.length() - 1) == '/') {
+            if (path2.charAt(0) == '/') {
+                // path1 ends with '/' and path2 starts with '/'.
+                // Avoid double-slash by stripping the first slash of path2.
+                return new StringBuilder(path1.length() + path2.length() - 1)
+                        .append(path1).append(path2, 1, path2.length()).toString();
+            }
+
+            // path1 ends with '/' and path2 does not start with '/'.
+            // Simple concatenation would suffice.
+            return new StringBuilder(path1.length() + path2.length())
+                    .append(path1).append(path2).toString();
+        }
+
+        if (path2.charAt(0) == '/') {
+            // path1 does not end with '/' and path2 starts with '/'.
+            // Simple concatenation would suffice.
+            return path1 + path2;
+        }
+
+        // path1 does not end with '/' and path2 does not start with '/'.
+        // Need to insert '/' between path1 and path2.
+        return new StringBuilder(path1.length() + path2.length() + 1)
+                .append(path1).append('/').append(path2).toString();
     }
 }
