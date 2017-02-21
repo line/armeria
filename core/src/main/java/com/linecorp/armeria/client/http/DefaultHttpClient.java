@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.http;
 
+import java.util.regex.Pattern;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
@@ -34,6 +36,8 @@ import io.netty.channel.EventLoop;
 
 final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements HttpClient {
 
+    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
+
     DefaultHttpClient(ClientBuilderParams params,
                       Client<HttpRequest, HttpResponse> delegate,
                       SessionProtocol sessionProtocol, Endpoint endpoint) {
@@ -46,6 +50,9 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     private HttpResponse execute(EventLoop eventLoop, HttpRequest req) {
+        final String path = concatPath(uri().getPath(), req.path());
+        req.path(path);
+
         return execute(eventLoop, req.method().name(), req.path(), "", req, cause -> {
             final DefaultHttpResponse res = new DefaultHttpResponse();
             res.close(cause);
@@ -77,5 +84,28 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
 
         req.close();
         return execute(eventLoop, req);
+    }
+
+    private static String concatPath(String path1, String path2) {
+        path1 = (path1 == null) ? "" : path1;
+        path2 = (path2 == null) ? "" : path2;
+
+        final String concatPath;
+        if (!path1.endsWith("/") && !path2.startsWith("/")) {
+            concatPath = path1 + "/" + path2;
+        } else {
+            concatPath = path1 + path2;
+        }
+
+        final int queryIndex = concatPath.indexOf('?');
+        final String newPath;
+        if (queryIndex < 0) {
+            newPath = CONSECUTIVE_SLASHES_PATTERN.matcher(concatPath).replaceAll("/");
+        } else {
+            newPath = CONSECUTIVE_SLASHES_PATTERN.matcher(concatPath.subSequence(0, queryIndex))
+                                                 .replaceAll("/") + concatPath.substring(queryIndex);
+        }
+
+        return newPath;
     }
 }
