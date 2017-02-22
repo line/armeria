@@ -86,7 +86,7 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
 
     @Override
     public ServiceSpecification generate(Set<ServiceConfig> serviceConfigs,
-                                         Map<Class<?>, List<HttpHeaders>> exampleHeaders) {
+                                         Map<String, List<HttpHeaders>> exampleHeaders) {
 
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
@@ -105,8 +105,8 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
                                     service.defaultSerializationFormat(),
                                     service.allowedSerializationFormats())));
 
-                    exampleHeaders.forEach((type, headersList) -> {
-                        if (serviceClass.isAssignableFrom(type)) {
+                    exampleHeaders.forEach((name, headersList) -> {
+                        if (serviceClass.getName().equals(name)) {
                             builder.exampleHttpHeaders(headersList);
                         }
                     });

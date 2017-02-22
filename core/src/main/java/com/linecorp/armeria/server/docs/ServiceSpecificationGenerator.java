@@ -40,8 +40,8 @@ public interface ServiceSpecificationGenerator {
      * @param serviceConfigs the {@link ServiceConfig}s of the {@link Service}s that are instances of the
      *                       {@link #supportedServiceTypes()}
      * @param exampleHeaders the {@link Map} of the example {@link HttpHeaders} whose key is the
-     *                       type of the relevant services
+     *                       fully specified name of the relevant services
      */
     ServiceSpecification generate(Set<ServiceConfig> serviceConfigs,
-                                  Map<Class<?>, List<HttpHeaders>> exampleHeaders);
+                                  Map<String, List<HttpHeaders>> exampleHeaders);
 }
