@@ -244,6 +244,7 @@ configure(javaProjects) {
 
     // Enable full exception logging for test failures.
     test {
+        dependsOn tasks.checkstyle
         testLogging {
             exceptionFormat = 'full'
         }
