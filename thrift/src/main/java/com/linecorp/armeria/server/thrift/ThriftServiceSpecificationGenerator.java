@@ -72,7 +72,9 @@ import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.ServiceSpecificationGenerator;
 import com.linecorp.armeria.server.docs.SetInfo;
 import com.linecorp.armeria.server.docs.StructInfo;
+import com.linecorp.armeria.server.docs.Type;
 import com.linecorp.armeria.server.docs.TypeInfo;
+import com.linecorp.armeria.server.docs.UnresolvedClassInfo;
 
 /**
  * {@link ServiceSpecificationGenerator} implementation that supports {@link THttpService}s.
@@ -313,42 +315,55 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
             return newMapInfo((MapMetaData) fieldValueMetaData, docStrings);
         }
 
-        final TypeInfo typeInfo;
         if (fieldValueMetaData.isBinary()) {
-            typeInfo = TypeInfo.BINARY;
-        } else {
-            switch (fieldValueMetaData.type) {
-                case TType.VOID:
-                    typeInfo = TypeInfo.VOID;
-                    break;
-                case TType.BOOL:
-                    typeInfo = TypeInfo.BOOL;
-                    break;
-                case TType.BYTE:
-                    typeInfo = TypeInfo.I8;
-                    break;
-                case TType.DOUBLE:
-                    typeInfo = TypeInfo.DOUBLE;
-                    break;
-                case TType.I16:
-                    typeInfo = TypeInfo.I16;
-                    break;
-                case TType.I32:
-                    typeInfo = TypeInfo.I32;
-                    break;
-                case TType.I64:
-                    typeInfo = TypeInfo.I64;
-                    break;
-                case TType.STRING:
-                    typeInfo = TypeInfo.STRING;
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "unexpected field value type: " + fieldValueMetaData.type);
-            }
+            return TypeInfo.BINARY;
         }
 
-        return typeInfo;
+        switch (fieldValueMetaData.type) {
+            case TType.VOID:
+                return TypeInfo.VOID;
+            case TType.BOOL:
+                return TypeInfo.BOOL;
+            case TType.BYTE:
+                return TypeInfo.I8;
+            case TType.DOUBLE:
+                return TypeInfo.DOUBLE;
+            case TType.I16:
+                return TypeInfo.I16;
+            case TType.I32:
+                return TypeInfo.I32;
+            case TType.I64:
+                return TypeInfo.I64;
+            case TType.STRING:
+                return TypeInfo.STRING;
+        }
+
+        assert fieldValueMetaData.isTypedef();
+
+        final String typeName = fieldValueMetaData.getTypedefName();
+        final Type type;
+        switch (fieldValueMetaData.type) {
+            case TType.ENUM:
+                type = Type.ENUM;
+                break;
+            case TType.LIST:
+                type = Type.LIST;
+                break;
+            case TType.MAP:
+                type = Type.MAP;
+                break;
+            case TType.SET:
+                type = Type.SET;
+                break;
+            case TType.STRUCT:
+                type = Type.STRUCT;
+                break;
+            default:
+                throw new IllegalArgumentException(
+                        "unexpected typedef type: " + fieldValueMetaData.type);
+        }
+
+        return new UnresolvedClassInfo(type, typeName, docStrings.get(typeName));
     }
 
     @VisibleForTesting

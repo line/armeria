@@ -67,7 +67,9 @@ import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.ServiceSpecificationGenerator;
 import com.linecorp.armeria.server.docs.SetInfo;
 import com.linecorp.armeria.server.docs.StructInfo;
+import com.linecorp.armeria.server.docs.Type;
 import com.linecorp.armeria.server.docs.TypeInfo;
+import com.linecorp.armeria.server.docs.UnresolvedClassInfo;
 import com.linecorp.armeria.service.test.thrift.main.FooEnum;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.FooService.bar3_args;
@@ -219,12 +221,25 @@ public class ThriftServiceSpecificationGeneratorTest {
 
         final FunctionInfo bar6 = functions.get("bar6");
         assertThat(bar6.parameters()).containsExactly(
-                new FieldInfo("foo1", FieldRequirement.DEFAULT, foo),
-                new FieldInfo("foo2", FieldRequirement.DEFAULT, new MapInfo(string, string)),
-                new FieldInfo("foo3", FieldRequirement.DEFAULT, new ListInfo(string)),
-                new FieldInfo("foo4", FieldRequirement.DEFAULT, new SetInfo(string)));
+                new FieldInfo("foo1", FieldRequirement.DEFAULT, TypeInfo.STRING),
+                new FieldInfo("foo2", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.STRUCT, "TypedefedStruct")),
+                new FieldInfo("foo3", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.ENUM, "TypedefedEnum")),
+                new FieldInfo("foo4", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.MAP, "TypedefedMap")),
+                new FieldInfo("foo5", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.LIST, "TypedefedList")),
+                new FieldInfo("foo6", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.SET, "TypedefedSet")),
+                new FieldInfo("foo7", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.LIST, "NestedTypedefedStructs")),
+                new FieldInfo("foo8", FieldRequirement.DEFAULT,
+                              new ListInfo(new ListInfo(
+                                      new UnresolvedClassInfo(Type.STRUCT, "TypedefedStruct")))));
+
         assertThat(bar6.returnTypeInfo()).isEqualTo(TypeInfo.VOID);
-        assertThat(bar6.exceptions()).hasSize(1);
+        assertThat(bar6.exceptions()).isEmpty();
         assertThat(bar6.sampleJsonRequest()).isEmpty();
 
         final List<HttpHeaders> exampleHttpHeaders = service.exampleHttpHeaders();
@@ -258,6 +273,8 @@ public class ThriftServiceSpecificationGeneratorTest {
         fields.add(new FieldInfo("mapVal", FieldRequirement.DEFAULT, new MapInfo(TypeInfo.STRING, fooEnum)));
         fields.add(new FieldInfo("setVal", FieldRequirement.DEFAULT, new SetInfo(union)));
         fields.add(new FieldInfo("listVal", FieldRequirement.DEFAULT, new ListInfo(TypeInfo.STRING)));
+        fields.add(new FieldInfo("selfRef", FieldRequirement.OPTIONAL,
+                                 new UnresolvedClassInfo(Type.STRUCT, FooStruct.class.getSimpleName())));
 
         final StructInfo fooStruct = newStructInfo(
                 new StructMetaData(TType.STRUCT, FooStruct.class), emptyMap());

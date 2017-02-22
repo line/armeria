@@ -77,12 +77,16 @@ struct FooStruct {
     12: map<string, FooEnum> mapVal,
     13: set<FooUnion> setVal,
     14: list<string> listVal,
+    15: optional FooStruct selfRef
 }
 
+typedef string              TypedefedString
 typedef FooStruct           TypedefedStruct
+typedef FooEnum             TypedefedEnum
 typedef map<string, string> TypedefedMap
 typedef list<string>        TypedefedList
-typedef list<string>        TypedefedSet
+typedef set<string>         TypedefedSet
+typedef list<list<TypedefedStruct>> NestedTypedefedStructs
 
 service FooService {
     void bar1() throws (1: FooServiceException e),
@@ -90,8 +94,11 @@ service FooService {
     FooStruct bar3(1: i32 intVal, 2: FooStruct foo) throws (1: FooServiceException e),
     list<FooStruct> bar4(1: list<FooStruct> foos) throws (1: FooServiceException e),
     map<string, FooStruct> bar5(1: map<string, FooStruct> foos) throws (1: FooServiceException e),
-    void bar6(1: TypedefedStruct foo1, 2: TypedefedMap foo2, 3: TypedefedList foo3, 4: TypedefedSet foo4)
-        throws (1: FooServiceException e),
+
+    // To make sure typedefs are handled correctly.
+    void bar6(1: TypedefedString foo1, 2: TypedefedStruct foo2, 3: TypedefedEnum foo3,
+              4: TypedefedMap foo4, 5: TypedefedList foo5, 6: TypedefedSet foo6,
+              7: NestedTypedefedStructs foo7, 8: list<list<TypedefedStruct>> foo8)
 }
 
 // Tests Clients.newDerivedClient()
