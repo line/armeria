@@ -67,9 +67,9 @@ public class ThriftDocServiceTest extends AbstractServerTest {
     private static final SleepService.AsyncIface SLEEP_SERVICE_HANDLER =
             (duration, resultHandler) -> resultHandler.onComplete(duration);
 
-    private static final ListMultimap<Class<?>, HttpHeaders> EXAMPLE_HTTP_HEADERS = ImmutableListMultimap.of(
-            HelloService.class, HttpHeaders.of(AsciiString.of("foobar"), "barbaz"),
-            FooService.class, HttpHeaders.of(AsciiString.of("barbaz"), "barbar"));
+    private static final ListMultimap<String, HttpHeaders> EXAMPLE_HTTP_HEADERS = ImmutableListMultimap.of(
+            HelloService.class.getName(), HttpHeaders.of(AsciiString.of("foobar"), "barbaz"),
+            FooService.class.getName(), HttpHeaders.of(AsciiString.of("barbaz"), "barbar"));
 
     @Override
     protected void configureServer(ServerBuilder sb) {
@@ -102,28 +102,29 @@ public class ThriftDocServiceTest extends AbstractServerTest {
         final List<Entry> entries = ImmutableList.of(
                 new EntryBuilder(HelloService.class)
                         .endpoint(new EndpointInfo("*", "/", "hello", BINARY, allThriftFormats))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(HelloService.class))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(HelloService.class.getName()))
                         .build(),
                 new EntryBuilder(SleepService.class)
                         .endpoint(new EndpointInfo("*", "/", "sleep", BINARY, allThriftFormats))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(SleepService.class))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(SleepService.class.getName()))
                         .build(),
                 new EntryBuilder(FooService.class)
                         .endpoint(new EndpointInfo("*", "/foo", "", COMPACT, ImmutableSet.of(COMPACT)))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(FooService.class))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(FooService.class.getName()))
                         .build(),
                 new EntryBuilder(Cassandra.class)
                         .endpoint(new EndpointInfo("*", "/cassandra", "", BINARY, ImmutableSet.of(BINARY)))
                         .endpoint(new EndpointInfo("*", "/cassandra/debug", "", TEXT, ImmutableSet.of(TEXT)))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(Cassandra.class))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(Cassandra.class.getName()))
                         .build(),
                 new EntryBuilder(Hbase.class)
                         .endpoint(new EndpointInfo("*", "/hbase", "", BINARY, allThriftFormats))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(Hbase.class))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(Hbase.class.getName()))
                         .build(),
                 new EntryBuilder(OnewayHelloService.class)
                         .endpoint(new EndpointInfo("*", "/oneway", "", BINARY, allThriftFormats))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(OnewayHelloService.class))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(
+                                OnewayHelloService.class.getName()))
                         .build());
 
         final ObjectMapper mapper = new ObjectMapper();
