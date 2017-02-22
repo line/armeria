@@ -464,9 +464,7 @@ public final class TomcatService implements HttpService {
 
         // Set the content.
         final HttpData content = req.content();
-        if (!content.isEmpty()) {
-            coyoteReq.setInputBuffer(new InputBufferImpl(content));
-        }
+        coyoteReq.setInputBuffer(new InputBufferImpl(content));
 
         return coyoteReq;
     }
@@ -574,7 +572,7 @@ public final class TomcatService implements HttpService {
 
         @Override
         public int doRead(ByteChunk chunk) {
-            if (read) {
+            if (read || content.isEmpty()) {
                 // Read only once.
                 return -1;
             }
