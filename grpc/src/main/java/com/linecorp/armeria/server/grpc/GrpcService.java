@@ -23,6 +23,8 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Stopwatch;
+
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -35,13 +37,16 @@ import com.linecorp.armeria.server.http.AbstractHttpService;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.InternalMetadata;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.Status;
 import io.grpc.internal.GrpcUtil;
+import io.grpc.internal.NoopStatsContextFactory;
 import io.grpc.internal.ServerStream;
 import io.grpc.internal.ServerStreamListener;
+import io.grpc.internal.StatsTraceContext;
 import io.grpc.internal.TransportFrameUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.util.AsciiString;
@@ -83,7 +88,12 @@ public final class GrpcService extends AbstractHttpService {
             return;
         }
 
-        ArmeriaGrpcServerStream stream = new ArmeriaGrpcServerStream(res, maxMessageSize);
+        Metadata metadata = InternalMetadata.newMetadata(convertHeadersToArray(req.headers()));
+
+        StatsTraceContext statsCtx = StatsTraceContext.newServerContext(
+                methodName, NoopStatsContextFactory.INSTANCE, metadata, Stopwatch::createUnstarted);
+
+        ArmeriaGrpcServerStream stream = new ArmeriaGrpcServerStream(res, maxMessageSize, statsCtx);
 
         ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
         if (method == null) {
@@ -91,8 +101,6 @@ public final class GrpcService extends AbstractHttpService {
                          EMPTY_METADATA);
             return;
         }
-
-        Metadata metadata = new Metadata(convertHeadersToArray(req.headers()));
 
         ServerStreamListener listener = startCall(stream, methodName, method, metadata);
         stream.transportState().setListener(listener);

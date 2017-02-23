@@ -39,6 +39,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.reactivestreams.Subscription;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
@@ -48,11 +49,14 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 
+import io.grpc.InternalMetadata;
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.internal.GrpcUtil;
+import io.grpc.internal.NoopStatsContextFactory;
 import io.grpc.internal.ReadableBuffers;
 import io.grpc.internal.ServerStreamListener;
+import io.grpc.internal.StatsTraceContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -81,7 +85,13 @@ public class ArmeriaGrpcServerStreamTest {
 
     @Before
     public void setUp() {
-        stream = new ArmeriaGrpcServerStream(responseWriter, MAX_MESSAGE_SIZE);
+        StatsTraceContext statsCtx = StatsTraceContext.newServerContext(
+                "testMethod",
+                NoopStatsContextFactory.INSTANCE,
+                InternalMetadata.newMetadata(),
+                Stopwatch::createUnstarted);
+
+        stream = new ArmeriaGrpcServerStream(responseWriter, MAX_MESSAGE_SIZE, statsCtx);
         stream.transportState().setListener(serverListener);
         stream.transportState().onStreamAllocated();
         stream.messageReader().onSubscribe(subscription);

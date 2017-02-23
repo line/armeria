@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc.interop;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -36,6 +37,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
@@ -44,19 +46,27 @@ import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.ManagedChannel;
 import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import io.grpc.testing.TestUtils;
 import io.grpc.testing.integration.AbstractInteropTest;
+import io.grpc.testing.integration.Messages.EchoStatus;
 import io.grpc.testing.integration.Messages.Payload;
 import io.grpc.testing.integration.Messages.PayloadType;
 import io.grpc.testing.integration.Messages.ResponseParameters;
+import io.grpc.testing.integration.Messages.SimpleRequest;
 import io.grpc.testing.integration.Messages.StreamingOutputCallRequest;
 import io.grpc.testing.integration.Messages.StreamingOutputCallResponse;
 import io.grpc.testing.integration.TestServiceGrpc;
 import io.grpc.testing.integration.TestServiceGrpc.TestServiceStub;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -65,8 +75,13 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  * Interop test based on grpc-interop-testing. Should provide reasonable confidence in armeria's
  * handling of the grpc protocol.
  */
-@Ignore // TODO(trustin): Re-enable after upgrading to GRPC 1.1.2.
 public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
+
+    private static final ApplicationProtocolConfig ALPN = new ApplicationProtocolConfig(
+            Protocol.ALPN,
+            SelectorFailureBehavior.NO_ADVERTISE,
+            SelectedListenerFailureBehavior.ACCEPT,
+            ImmutableList.of("h2"));
 
     /** Starts the server with HTTPS. */
     @BeforeClass
@@ -80,12 +95,13 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                     .port(0, HttpSessionProtocols.HTTPS)
                     .defaultMaxRequestLength(16 * 1024 * 1024)
                     .sslContext(
-                            GrpcSslContexts.forServer(ssc.certificate(), ssc.privateKey())
-                                           .clientAuth(ClientAuth.REQUIRE)
-                                           .trustManager(TestUtils.loadCert("ca.pem"))
-                                           .ciphers(TestUtils.preferredTestCiphers(),
+                            SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                                             .applicationProtocolConfig(ALPN)
+                                             .clientAuth(ClientAuth.REQUIRE)
+                                             .trustManager(TestUtils.loadCert("ca.pem"))
+                                             .ciphers(TestUtils.preferredTestCiphers(),
                                                     SupportedCipherSuiteFilter.INSTANCE)
-                                           .build());
+                                             .build());
             startStaticServer(new ArmeriaGrpcServerBuilder(sb, new GrpcServiceBuilder()));
         } catch (IOException | CertificateException ex) {
             throw new RuntimeException(ex);
@@ -119,6 +135,11 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    @Override
+    protected boolean metricsExpected() {
+        return false;
     }
 
     // Several tests copied due to Mockito version mismatch (timeout() was moved).
@@ -184,6 +205,47 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         }
         requestObserver.onCompleted();
         verify(responseObserver, timeout(operationTimeoutMillis())).onCompleted();
+        verifyNoMoreInteractions(responseObserver);
+    }
+
+    @Test(timeout = 10000)
+    public void statusCodeAndMessage() throws Exception {
+        int errorCode = 2;
+        String errorMessage = "test status message";
+        EchoStatus responseStatus = EchoStatus.newBuilder()
+                                              .setCode(errorCode)
+                                              .setMessage(errorMessage)
+                                              .build();
+        SimpleRequest simpleRequest = SimpleRequest.newBuilder()
+                                                   .setResponseStatus(responseStatus)
+                                                   .build();
+        StreamingOutputCallRequest streamingRequest =
+                StreamingOutputCallRequest.newBuilder()
+                                          .setResponseStatus(responseStatus)
+                                          .build();
+
+        // Test UnaryCall
+        try {
+            blockingStub.unaryCall(simpleRequest);
+            fail();
+        } catch (StatusRuntimeException e) {
+            assertEquals(Status.UNKNOWN.getCode(), e.getStatus().getCode());
+            assertEquals(errorMessage, e.getStatus().getDescription());
+        }
+
+        // Test FullDuplexCall
+        @SuppressWarnings("unchecked")
+        StreamObserver<StreamingOutputCallResponse> responseObserver =
+                mock(StreamObserver.class);
+        StreamObserver<StreamingOutputCallRequest> requestObserver
+                = asyncStub.fullDuplexCall(responseObserver);
+        requestObserver.onNext(streamingRequest);
+        requestObserver.onCompleted();
+
+        ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
+        verify(responseObserver, timeout(operationTimeoutMillis())).onError(captor.capture());
+        assertEquals(Status.UNKNOWN.getCode(), Status.fromThrowable(captor.getValue()).getCode());
+        assertEquals(errorMessage, Status.fromThrowable(captor.getValue()).getDescription());
         verifyNoMoreInteractions(responseObserver);
     }
 

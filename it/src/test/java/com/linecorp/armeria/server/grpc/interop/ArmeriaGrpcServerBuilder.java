@@ -14,28 +14,26 @@
  * under the License.
  */
 
-
-
 package com.linecorp.armeria.server.grpc.interop;
 
 import java.io.File;
-import java.util.concurrent.Executor;
+import java.lang.reflect.Field;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
+import com.google.instrumentation.stats.StatsContextFactory;
+
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
-import io.grpc.BindableService;
-import io.grpc.CompressorRegistry;
-import io.grpc.DecompressorRegistry;
-import io.grpc.HandlerRegistry;
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
 import io.grpc.ServerServiceDefinition;
+import io.grpc.internal.AbstractServerImplBuilder;
+import io.grpc.internal.InternalServer;
+import io.grpc.internal.NoopStatsContextFactory;
 
-public class ArmeriaGrpcServerBuilder extends ServerBuilder<ArmeriaGrpcServerBuilder> {
+public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaGrpcServerBuilder> {
 
     private final com.linecorp.armeria.server.ServerBuilder armeriaServerBuilder;
     private final GrpcServiceBuilder grpcServiceBuilder;
@@ -44,34 +42,6 @@ public class ArmeriaGrpcServerBuilder extends ServerBuilder<ArmeriaGrpcServerBui
                                     GrpcServiceBuilder grpcServiceBuilder) {
         this.armeriaServerBuilder = armeriaServerBuilder;
         this.grpcServiceBuilder = grpcServiceBuilder;
-    }
-
-    @Override
-    public ArmeriaGrpcServerBuilder directExecutor() {
-        return this;
-    }
-
-    @Override
-    public ArmeriaGrpcServerBuilder executor(@Nullable Executor executor) {
-        return this;
-    }
-
-    @Override
-    public ArmeriaGrpcServerBuilder addService(ServerServiceDefinition serverServiceDefinition) {
-        grpcServiceBuilder.addService(serverServiceDefinition);
-        return this;
-    }
-
-    @Override
-    public ArmeriaGrpcServerBuilder addService(BindableService bindableService) {
-        grpcServiceBuilder.addService(bindableService);
-        return this;
-    }
-
-    @Override
-    public ArmeriaGrpcServerBuilder fallbackHandlerRegistry(@Nullable HandlerRegistry handlerRegistry) {
-        // Not supported
-        return this;
     }
 
     @Override
@@ -85,20 +55,28 @@ public class ArmeriaGrpcServerBuilder extends ServerBuilder<ArmeriaGrpcServerBui
     }
 
     @Override
-    public ArmeriaGrpcServerBuilder decompressorRegistry(@Nullable DecompressorRegistry decompressorRegistry) {
-        grpcServiceBuilder.decompressorRegistry(decompressorRegistry);
-        return this;
+    protected ArmeriaGrpcServerBuilder statsContextFactory(StatsContextFactory statsFactory) {
+        return super.statsContextFactory(NoopStatsContextFactory.INSTANCE);
     }
 
     @Override
-    public ArmeriaGrpcServerBuilder compressorRegistry(@Nullable CompressorRegistry compressorRegistry) {
-        grpcServiceBuilder.compressorRegistry(compressorRegistry);
-        return this;
-    }
+    protected InternalServer buildTransportServer() {
+        Object registryBuilder = getFieldByReflection("registryBuilder", this, AbstractServerImplBuilder.class);
+        Map<String, ServerServiceDefinition> services = getFieldByReflection("services", registryBuilder, null);
+        services.values().forEach(grpcServiceBuilder::addService);
 
-    @Override
-    public Server build() {
         armeriaServerBuilder.serviceUnder("/", grpcServiceBuilder.build());
         return new ArmeriaGrpcServer(armeriaServerBuilder.build());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T getFieldByReflection(String name, Object instance, @Nullable Class<?> clazz) {
+        try {
+            Field field = (clazz != null ? clazz : instance.getClass()).getDeclaredField(name);
+            field.setAccessible(true);
+            return (T) field.get(instance);
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
 }

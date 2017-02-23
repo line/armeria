@@ -30,7 +30,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION 1.0.3
+    version: &GRPC_VERSION 1.1.2
     exclusions:
     - com.google.code.findbugs:jsr305
   grpc-interop-testing:
