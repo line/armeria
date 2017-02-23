@@ -5,3 +5,12 @@ managedDependencies {
     }
     testCompile 'io.grpc:grpc-interop-testing'
 }
+[tasks.shadedJar, tasks.shadedTestJar].each {
+    it.relocate 'io.grpc.internal', "${shadedPackage}.grpc.internal"
+}
+// We only shade the internal package within the grpc-core jar so only include
+// it in our artifact.
+tasks.shadedJar.exclude {
+    it.name.startsWith('io/grpc') && !it.name.startsWith('io/grpc/internal')
+}
+tasks.shadedJar.exclude 'META-INF/services/io.grpc.NameResolverProvider'
