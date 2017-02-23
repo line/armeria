@@ -243,11 +243,11 @@ configure(javaProjects) {
                     dependsOn: [tasks.checkstyleMain, tasks.checkstyleTest])
 
     // Enable full exception logging for test failures.
+    tasks.withType(Test) {
+        it.testLogging.exceptionFormat = 'full'
+    }
     test {
         dependsOn tasks.checkstyle
-        testLogging {
-            exceptionFormat = 'full'
-        }
     }
 
     // Enable JaCoCo test coverage when '-Pcoverage' option is specified.
@@ -315,7 +315,9 @@ configure(javaProjects) {
         dependencies {
             if (project.name != 'core') {
                 // Only want to rewrite source references, not bundle dependencies.
-                exclude(dependency({ true }))
+                // TODO(anuraag): We include grpc-core for the grpc project to shade its internal package for now.
+                // Remove this after the dependency on grpc internal package is removed.
+                exclude(dependency({ (project.name != 'grpc' || !it.name.startsWith('io.grpc:grpc-core:')) }))
             } else {
                 // Shade the relocated dependencies only.
                 exclude(dependency({ dep ->
