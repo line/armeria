@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,33 +26,34 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 /**
- * Metadata about a struct type.
+ * Metadata about a struct type, an enum type or an exception whose exact type name or
+ * its {@link FieldInfo}s are not resolved.
  */
-public final class StructInfo implements ClassInfo {
+public final class UnresolvedClassInfo implements ClassInfo {
 
+    private final Type type;
     private final String name;
-    private final List<FieldInfo> fields;
     private final String docString;
 
     /**
      * Creates a new instance.
      */
-    public StructInfo(String name, Iterable<FieldInfo> fields) {
-        this(name, fields, null);
+    public UnresolvedClassInfo(Type type, String name) {
+        this(type, name, null);
     }
 
     /**
      * Creates a new instance.
      */
-    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString) {
+    public UnresolvedClassInfo(Type type, String name, @Nullable String docString) {
+        this.type = requireNonNull(type, "type");
         this.name = requireNonNull(name, "name");
-        this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
         this.docString = docString;
     }
 
     @Override
     public Type type() {
-        return Type.STRUCT;
+        return type;
     }
 
     @Override
@@ -62,13 +62,18 @@ public final class StructInfo implements ClassInfo {
     }
 
     @Override
+    public String signature() {
+        return '?' + name;
+    }
+
+    @Override
     public List<FieldInfo> fields() {
-        return fields;
+        return ImmutableList.of();
     }
 
     @Override
     public List<Object> constants() {
-        return Collections.emptyList();
+        return ImmutableList.of();
     }
 
     @Override
@@ -86,13 +91,13 @@ public final class StructInfo implements ClassInfo {
             return false;
         }
 
-        final StructInfo that = (StructInfo) o;
-        return name.equals(that.name) && fields.equals(that.fields);
+        final UnresolvedClassInfo that = (UnresolvedClassInfo) o;
+        return type == that.type && name.equals(that.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type(), name, fields);
+        return Objects.hash(type(), name);
     }
 
     @Override

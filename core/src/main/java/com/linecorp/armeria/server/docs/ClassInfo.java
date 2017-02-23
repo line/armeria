@@ -36,7 +36,12 @@ public interface ClassInfo extends TypeInfo {
      */
     @JsonProperty
     default String simpleName() {
-        return name().substring(name().lastIndexOf('.') + 1);
+        final int dotIdx = name().lastIndexOf('.');
+        if (dotIdx < 0) {
+            return name();
+        } else {
+            return name().substring(dotIdx + 1);
+        }
     }
 
     /**
@@ -44,7 +49,12 @@ public interface ClassInfo extends TypeInfo {
      */
     @JsonProperty
     default String packageName() {
-        return name().substring(0, name().lastIndexOf('.'));
+        final int dotIdx = name().lastIndexOf('.');
+        if (dotIdx < 0) {
+            return "";
+        } else {
+            return name().substring(0, dotIdx);
+        }
     }
 
     @Override
