@@ -31,6 +31,8 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
@@ -70,6 +72,8 @@ import com.google.common.collect.Multimaps;
  *
  * @author Gregory Kick
  */
+@JsonSerialize(using = MediaTypeJsonSerializer.class)
+@JsonDeserialize(using = MediaTypeJsonDeserializer.class)
 public final class MediaType {
     private static final String CHARSET_ATTRIBUTE = "charset";
     private static final ImmutableListMultimap<String, String> UTF_8_CONSTANT_PARAMETERS =

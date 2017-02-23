@@ -16,20 +16,25 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 
 /**
  * Metadata about a struct type.
  */
-public final class StructInfo implements ClassInfo {
+public final class StructInfo implements NamedTypeInfo {
 
     private final String name;
     private final List<FieldInfo> fields;
@@ -48,12 +53,7 @@ public final class StructInfo implements ClassInfo {
     public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
-        this.docString = docString;
-    }
-
-    @Override
-    public Type type() {
-        return Type.STRUCT;
+        this.docString = Strings.emptyToNull(docString);
     }
 
     @Override
@@ -61,19 +61,24 @@ public final class StructInfo implements ClassInfo {
         return name;
     }
 
-    @Override
+    /**
+     * Returns the metadata about the fields of the type.
+     */
+    @JsonProperty
     public List<FieldInfo> fields() {
         return fields;
     }
 
     @Override
-    public List<Object> constants() {
-        return Collections.emptyList();
+    public String docString() {
+        return docString;
     }
 
     @Override
-    public String docString() {
-        return docString;
+    public Set<Class<?>> findNamedTypes() {
+        final Set<Class<?>> collectedNamedTypes = new HashSet<>();
+        fields().forEach(f -> ServiceInfo.findNamedTypes(collectedNamedTypes, f.typeSignature()));
+        return ImmutableSortedSet.copyOf(comparing(Class::getName), collectedNamedTypes);
     }
 
     @Override
@@ -92,7 +97,7 @@ public final class StructInfo implements ClassInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(type(), name, fields);
+        return Objects.hash(name, fields);
     }
 
     @Override

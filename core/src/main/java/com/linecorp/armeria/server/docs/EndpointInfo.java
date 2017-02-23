@@ -23,10 +23,16 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.Service;
 
@@ -37,25 +43,25 @@ public final class EndpointInfo {
 
     private final String hostnamePattern;
     private final String path;
+    @Nullable
     private final String fragment;
-    private final String defaultMimeType;
-    private final Set<String> availableMimeTypes;
+    private final MediaType defaultMimeType;
+    private final Set<MediaType> availableMimeTypes;
 
     /**
      * Creates a new instance.
      */
-    public EndpointInfo(String hostnamePattern, String path, String fragment,
+    public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
                         SerializationFormat defaultFormat, Iterable<SerializationFormat> availableFormats) {
 
         this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
         this.path = requireNonNull(path, "path");
-        this.fragment = requireNonNull(fragment, "fragment");
-        defaultMimeType = requireNonNull(defaultFormat, "defaultFormat").mediaType().toString();
+        this.fragment = Strings.emptyToNull(fragment);
+        defaultMimeType = requireNonNull(defaultFormat, "defaultFormat").mediaType();
 
         availableMimeTypes = Streams.stream(availableFormats)
                                     .map(SerializationFormat::mediaType)
-                                    .map(Object::toString)
-                                    .collect(toImmutableSortedSet(Comparator.naturalOrder()));
+                                    .collect(toImmutableSortedSet(Comparator.comparing(MediaType::toString)));
     }
 
     /**
@@ -78,6 +84,8 @@ public final class EndpointInfo {
      * Returns the URI fragment of this endpoint.
      */
     @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
     public String fragment() {
         return fragment;
     }
@@ -86,7 +94,7 @@ public final class EndpointInfo {
      * Returns the default MIME type of this endpoint.
      */
     @JsonProperty
-    public String defaultMimeType() {
+    public MediaType defaultMimeType() {
         return defaultMimeType;
     }
 
@@ -94,7 +102,7 @@ public final class EndpointInfo {
      * Returns the set of available MIME types of this endpoint.
      */
     @JsonProperty
-    public Set<String> availableMimeTypes() {
+    public Set<MediaType> availableMimeTypes() {
         return availableMimeTypes;
     }
 
@@ -116,7 +124,7 @@ public final class EndpointInfo {
         final EndpointInfo that = (EndpointInfo) obj;
         return hostnamePattern.equals(that.hostnamePattern) &&
                path.equals(that.path) &&
-               fragment.equals(that.fragment) &&
+               Objects.equals(fragment, that.fragment) &&
                defaultMimeType.equals(that.defaultMimeType) &&
                availableMimeTypes.equals(that.availableMimeTypes);
     }
