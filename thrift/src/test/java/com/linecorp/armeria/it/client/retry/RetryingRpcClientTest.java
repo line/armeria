@@ -57,7 +57,7 @@ public class RetryingRpcClientTest {
             HelloService.Iface client = new ClientBuilder(
                     "tbinary+http://127.0.0.1:" + server.port() + "/thrift")
                     .decorator(RpcRequest.class, RpcResponse.class,
-                               RetryingRpcClient.newDecorator())
+                               RetryingRpcClient.newDecorator(ALWAYS_HANDLES_EXCEPTION))
                     .build(HelloService.Iface.class);
             when(serviceHandler.hello(anyString()))
                     .thenReturn("world");
