@@ -17,6 +17,10 @@ package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.client.retry.FixedBackoff.NO_DELAY;
 
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
+
 /**
  * Control back off between attempts in a single retry operation.
  */
@@ -40,13 +44,13 @@ public interface Backoff {
      * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
      */
     static Backoff exponential(long minIntervalMillis, long maxIntervalMillis) {
-        return exponential(minIntervalMillis, maxIntervalMillis, 2.0f);
+        return exponential(minIntervalMillis, maxIntervalMillis, 2.0);
     }
 
     /**
      * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
      */
-    static Backoff exponential(long minIntervalMillis, long maxIntervalMillis, float multiplier) {
+    static Backoff exponential(long minIntervalMillis, long maxIntervalMillis, double multiplier) {
         return new ExponentialBackoff(minIntervalMillis, maxIntervalMillis, multiplier);
     }
 
@@ -62,7 +66,15 @@ public interface Backoff {
      * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
      */
     default Backoff withJitter(long minJitterMillis, long maxJitterMillis) {
-        return new JitterAddingBackoff(this, minJitterMillis, maxJitterMillis);
+        return withJitter(minJitterMillis, maxJitterMillis, ThreadLocalRandom::current);
+    }
+
+    /**
+     * Returns a {@link Backoff} that provides an interval that increases using
+     * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
+     */
+    default Backoff withJitter(long minJitterMillis, long maxJitterMillis, Supplier<Random> randomSupplier) {
+        return new JitterAddingBackoff(this, minJitterMillis, maxJitterMillis, randomSupplier);
     }
 
     /**

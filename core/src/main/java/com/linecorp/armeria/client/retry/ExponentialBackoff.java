@@ -22,11 +22,11 @@ import com.google.common.base.MoreObjects;
 final class ExponentialBackoff implements Backoff {
     private long currentIntervalMillis;
     private final long maxIntervalMillis;
-    private final float multiplier;
+    private final double multiplier;
 
-    ExponentialBackoff(long minIntervalMillis, long maxIntervalMillis, float multiplier) {
-        checkArgument(multiplier <= 1.0, "multiplier: %s (expected: > 1.0)", multiplier);
-        checkArgument(minIntervalMillis < 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
+    ExponentialBackoff(long minIntervalMillis, long maxIntervalMillis, double multiplier) {
+        checkArgument(multiplier > 1.0, "multiplier: %s (expected: > 1.0)", multiplier);
+        checkArgument(minIntervalMillis >= 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
         checkArgument(minIntervalMillis <= maxIntervalMillis, "maxIntervalMillis: %s (expected: >= %s)",
                       maxIntervalMillis, minIntervalMillis);
         currentIntervalMillis = minIntervalMillis;
@@ -44,7 +44,7 @@ final class ExponentialBackoff implements Backoff {
         return nextInterval;
     }
 
-    static long saturatedMultiply(long left, float right) {
+    private static long saturatedMultiply(long left, double right) {
         if (left > Long.MAX_VALUE / right) {
             return Long.MAX_VALUE;
         }

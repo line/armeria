@@ -17,16 +17,18 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.math.LongMath.saturatedAdd;
 
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
+import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 
 final class JitterAddingBackoff extends BackoffWrapper {
     private final RandomBackoff jitter;
 
-    JitterAddingBackoff(Backoff delegate, long minIntervalMillis, long maxIntervalMillis) {
+    JitterAddingBackoff(Backoff delegate, long minIntervalMillis, long maxIntervalMillis,
+                        Supplier<Random> randomSupplier) {
         super(delegate);
-        jitter = new RandomBackoff(minIntervalMillis, maxIntervalMillis, ThreadLocalRandom::current);
+        jitter = new RandomBackoff(minIntervalMillis, maxIntervalMillis, randomSupplier);
 
     }
 

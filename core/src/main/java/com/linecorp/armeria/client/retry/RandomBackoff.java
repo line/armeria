@@ -29,8 +29,7 @@ final class RandomBackoff implements Backoff {
     private final long minIntervalMillis;
     private final long maxIntervalMillis;
 
-    RandomBackoff(long minIntervalMillis, long maxIntervalMillis,
-                  Supplier<Random> randomSupplier) {
+    RandomBackoff(long minIntervalMillis, long maxIntervalMillis, Supplier<Random> randomSupplier) {
         checkArgument(minIntervalMillis > 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
         checkArgument(minIntervalMillis <= maxIntervalMillis, "maxIntervalMillis: %s (expected: >= %s)",
                       maxIntervalMillis, minIntervalMillis);

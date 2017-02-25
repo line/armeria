@@ -25,7 +25,7 @@ final class FixedBackoff implements Backoff {
     private final long intervalMillis;
 
     FixedBackoff(long intervalMillis) {
-        checkArgument(intervalMillis < 0, "intervalMillis: %s (expected: >= 0)", intervalMillis);
+        checkArgument(intervalMillis >= 0, "intervalMillis: %s (expected: >= 0)", intervalMillis);
         this.intervalMillis = intervalMillis;
     }
 
