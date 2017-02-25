@@ -37,7 +37,7 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff} that provides an interval (that increases exponentially) between two attempts.
+     * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
      */
     static Backoff exponential(long minIntervalMillis, long maxIntervalMillis) {
         return exponential(minIntervalMillis, maxIntervalMillis, 2.0f);
