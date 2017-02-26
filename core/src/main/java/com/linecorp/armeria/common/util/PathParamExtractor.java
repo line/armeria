@@ -41,7 +41,7 @@ public class PathParamExtractor {
 
     /**
      * Constructs an path parameter extractor with pattern.
-     * @param pattern String that contains path params, like /users/{name}
+     * @param pattern String that contains path params. ex) /users/{name}
      * @throws IllegalArgumentException if the pattern is invalid.
      */
     public PathParamExtractor(String pattern) {
@@ -56,7 +56,11 @@ public class PathParamExtractor {
 
         pathParamSize = pathParams.size();
 
-        final String expression = matcher.replaceAll("([^/?]+)") + "(\\?.*)*";
+        if (pathParamSize == 0) {
+            throw new IllegalArgumentException("invalid pattern - " + pattern);
+        }
+
+        final String expression = matcher.replaceAll("([^/?]+)") + "(\\?.*)?";
         try {
             extractPattern = Pattern.compile(expression);
         } catch (PatternSyntaxException e) {
@@ -65,9 +69,9 @@ public class PathParamExtractor {
     }
 
     /**
-     * extract path parameters from {@link HttpRequest}.
-     * @param req {@link HttpRequest} for finding matched path parameters.
-     * @return {@link Map} that contains path parameter values or empty map if request does not match.
+     * Extracts path params from {@link HttpRequest}.
+     * @param req {@link HttpRequest} for finding matched path params.
+     * @return {@link Map} that contains path param values or empty map if request does not match.
      */
     public Map<String, String> extract(HttpRequest req) {
         final String path = req.path();
@@ -79,10 +83,6 @@ public class PathParamExtractor {
         }
 
         final Map<String, String> values = new HashMap<>();
-
-        if (matcher.groupCount() < pathParamSize) {
-            return EMPTY_MAP;
-        }
 
         for (int i = 0; i < pathParamSize; i++) {
             values.put(pathParams.get(i), matcher.group(i + 1));

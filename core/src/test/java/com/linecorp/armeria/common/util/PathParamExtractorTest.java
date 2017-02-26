@@ -63,4 +63,9 @@ public class PathParamExtractorTest {
     public void testInvalidPattern() throws Exception {
         new PathParamExtractor("/service/{value}/test/{value2");
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testEmptyPattern() throws Exception {
+        new PathParamExtractor("/service/value/test/value2");
+    }
 }
