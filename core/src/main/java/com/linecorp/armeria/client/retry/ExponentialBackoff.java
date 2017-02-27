@@ -45,10 +45,8 @@ final class ExponentialBackoff implements Backoff {
     }
 
     private static long saturatedMultiply(long left, double right) {
-        if (left > Long.MAX_VALUE / right) {
-            return Long.MAX_VALUE;
-        }
-        return (long) (left * right);
+        double result = left * right;
+        return result >= Long.MAX_VALUE ? Long.MAX_VALUE : (long) result;
     }
 
     @Override

@@ -32,7 +32,7 @@ public class ExponentialBackoffTest {
 
     @Test
     public void testOverflow() {
-        Backoff backoff = new ExponentialBackoff(Long.MAX_VALUE / 3, Long.MAX_VALUE, 2);
+        Backoff backoff = new ExponentialBackoff(Long.MAX_VALUE / 3, Long.MAX_VALUE, 2.0);
         assertThat(backoff.nextIntervalMillis(0)).isEqualTo(Long.MAX_VALUE / 3);
         assertThat(backoff.nextIntervalMillis(1)).isEqualTo((long) (Long.MAX_VALUE / 3 * 2.0));
         assertThat(backoff.nextIntervalMillis(2)).isEqualTo(Long.MAX_VALUE);
