@@ -46,8 +46,6 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
                                 .map(p -> Scheme.of(SerializationFormat.NONE, p))
                                 .collect(toImmutableSet());
 
-    private final HttpClientDelegate delegate;
-
     /**
      * Creates a new instance with the default {@link SessionOptions}.
      */
@@ -78,7 +76,6 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
      */
     public HttpClientFactory(SessionOptions options, boolean useDaemonThreads) {
         super(options, useDaemonThreads);
-        delegate = new HttpClientDelegate(this);
     }
 
     @Override
@@ -133,11 +130,5 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
                     " (expected: " + HttpClient.class.getSimpleName() + " or " +
                     Client.class.getSimpleName() + ')');
         }
-    }
-
-    @Override
-    public void close() {
-        delegate.close();
-        super.close();
     }
 }

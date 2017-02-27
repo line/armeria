@@ -408,10 +408,27 @@ public final class JettyService implements HttpService {
     }
 
     private static final class ArmeriaEndPoint extends AbstractEndPoint {
+
+        private final InetSocketAddress localAddress;
+        private final InetSocketAddress remoteAddress;
+
         ArmeriaEndPoint(String hostname, Scheduler scheduler, SocketAddress local, SocketAddress remote) {
-            super(scheduler, addHostname((InetSocketAddress) local, hostname), (InetSocketAddress) remote);
+            super(scheduler);
+
+            localAddress = addHostname((InetSocketAddress) local, hostname);
+            remoteAddress = (InetSocketAddress) remote;
 
             setIdleTimeout(getIdleTimeout());
+        }
+
+        @Override
+        public InetSocketAddress getLocalAddress() {
+            return localAddress;
+        }
+
+        @Override
+        public InetSocketAddress getRemoteAddress() {
+            return remoteAddress;
         }
 
         /**
@@ -427,25 +444,11 @@ public final class JettyService implements HttpService {
             }
         }
 
-
         @Override
         protected void onIncompleteFlush() {}
 
         @Override
         protected void needsFillInterest() {}
-
-        @Override
-        public void shutdownOutput() {}
-
-        @Override
-        public boolean isOutputShutdown() {
-            return false;
-        }
-
-        @Override
-        public boolean isInputShutdown() {
-            return false;
-        }
 
         @Override
         public int fill(ByteBuffer buffer) {
@@ -463,9 +466,13 @@ public final class JettyService implements HttpService {
         }
 
         @Override
-        public boolean isOpen() {
-            return true;
-        }
+        protected void doShutdownInput() {}
+
+        @Override
+        protected void doShutdownOutput() {}
+
+        @Override
+        protected void doClose() {}
     }
 
     private final class Configurator extends ServerListenerAdapter {

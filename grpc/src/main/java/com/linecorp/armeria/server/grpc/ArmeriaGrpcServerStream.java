@@ -33,7 +33,7 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.internal.AbstractServerStream;
 import io.grpc.internal.GrpcUtil;
-import io.grpc.internal.ServerStreamListener;
+import io.grpc.internal.StatsTraceContext;
 import io.grpc.internal.TransportFrameUtil;
 import io.grpc.internal.WritableBuffer;
 import io.netty.util.AsciiString;
@@ -50,12 +50,13 @@ final class ArmeriaGrpcServerStream extends AbstractServerStream {
     private final TransportState transportState;
     private final long maxMessageSize;
 
-    ArmeriaGrpcServerStream(HttpResponseWriter responseWriter, long maxMessageSize) {
-        super(new ArmeriaWritableBufferAllocator());
+    ArmeriaGrpcServerStream(
+            HttpResponseWriter responseWriter, long maxMessageSize, StatsTraceContext statsCtx) {
+        super(new ArmeriaWritableBufferAllocator(), statsCtx);
         this.responseWriter = responseWriter;
         this.maxMessageSize = maxMessageSize;
         sink = new Sink();
-        transportState = new TransportState();
+        transportState = new TransportState(statsCtx);
         messageReader = new ArmeriaMessageReader(transportState);
     }
 
@@ -71,11 +72,6 @@ final class ArmeriaGrpcServerStream extends AbstractServerStream {
     @Override
     protected AbstractServerStream.Sink abstractServerStreamSink() {
         return sink;
-    }
-
-    @Override
-    public void setListener(ServerStreamListener serverStreamListener) {
-        transportState.setListener(serverStreamListener);
     }
 
     private class Sink implements AbstractServerStream.Sink {
@@ -146,8 +142,8 @@ final class ArmeriaGrpcServerStream extends AbstractServerStream {
 
     class TransportState extends AbstractServerStream.TransportState {
 
-        TransportState() {
-            super((int) maxMessageSize);
+        TransportState(StatsTraceContext statsCtx) {
+            super((int) maxMessageSize, statsCtx);
         }
 
         @Override

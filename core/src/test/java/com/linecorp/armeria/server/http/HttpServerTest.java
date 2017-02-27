@@ -63,7 +63,6 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
-import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -74,6 +73,7 @@ import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
@@ -454,7 +454,7 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_noAcceptEncoding() throws Exception {
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.GET, "/strings");
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/strings");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -467,9 +467,8 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingGzip() throws Exception {
-        final DefaultHttpRequest req = new DefaultHttpRequest(
-                HttpHeaders.of(HttpMethod.GET, "/strings")
-                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/strings")
+                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -489,9 +488,8 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingGzip_imageContentType() throws Exception {
-        final DefaultHttpRequest req = new DefaultHttpRequest(
-                HttpHeaders.of(HttpMethod.GET, "/images")
-                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/images")
+                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -504,9 +502,8 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingGzip_smallFixedContent() throws Exception {
-        final DefaultHttpRequest req = new DefaultHttpRequest(
-                HttpHeaders.of(HttpMethod.GET, "/small")
-                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/small")
+                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -519,9 +516,8 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingGzip_largeFixedContent() throws Exception {
-        final DefaultHttpRequest req = new DefaultHttpRequest(
-                HttpHeaders.of(HttpMethod.GET, "/large")
-                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/large")
+                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -539,9 +535,8 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingDeflate() throws Exception {
-        final DefaultHttpRequest req = new DefaultHttpRequest(
-                HttpHeaders.of(HttpMethod.GET, "/strings")
-                           .set(HttpHeaderNames.ACCEPT_ENCODING, "deflate"));
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/strings")
+                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "deflate");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -560,9 +555,8 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingUnknown() throws Exception {
-        final DefaultHttpRequest req = new DefaultHttpRequest(
-                HttpHeaders.of(HttpMethod.GET, "/strings")
-                           .set(HttpHeaderNames.ACCEPT_ENCODING, "piedpiper"));
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/strings")
+                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "piedpiper");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -695,16 +689,17 @@ public class HttpServerTest extends AbstractServerTest {
                 "none+" + protocol.uriText() + "://127.0.0.1:" + (protocol.isTls() ? httpsPort() : httpPort()));
 
         builder.factory(clientFactory);
-        builder.decorator(HttpRequest.class, HttpResponse.class,
-                          s -> new DecoratingClient<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
-            @Override
-            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-                ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
-                ctx.setResponseTimeoutMillis(clientResponseTimeoutMillis);
-                ctx.setMaxResponseLength(clientMaxResponseLength);
-                return delegate().execute(ctx, req);
-            }
-        });
+        builder.decorator(
+                HttpRequest.class, HttpResponse.class,
+                s -> new DecoratingClient<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
+                    @Override
+                    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+                        ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
+                        ctx.setResponseTimeoutMillis(clientResponseTimeoutMillis);
+                        ctx.setMaxResponseLength(clientMaxResponseLength);
+                        return delegate().execute(ctx, req);
+                    }
+                });
 
         return client = builder.build(HttpClient.class);
     }

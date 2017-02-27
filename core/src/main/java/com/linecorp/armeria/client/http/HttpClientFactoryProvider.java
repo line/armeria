@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.http;
 
-import com.google.common.collect.ClassToInstanceMap;
+import java.util.Map;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryProvider;
@@ -27,8 +27,7 @@ import com.linecorp.armeria.client.SessionOptions;
  */
 public final class HttpClientFactoryProvider implements ClientFactoryProvider {
     @Override
-    public ClientFactory newFactory(SessionOptions options,
-                                    ClassToInstanceMap<ClientFactory> dependencies) {
+    public ClientFactory newFactory(SessionOptions options, Map<Class<?>, ClientFactory> dependencies) {
         return new HttpClientFactory(options);
     }
 }

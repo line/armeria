@@ -49,11 +49,11 @@ import org.apache.thrift.meta_data.SetMetaData;
 import org.apache.thrift.meta_data.StructMetaData;
 import org.apache.thrift.protocol.TType;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -72,14 +72,14 @@ import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.ServiceSpecificationGenerator;
 import com.linecorp.armeria.server.docs.SetInfo;
 import com.linecorp.armeria.server.docs.StructInfo;
+import com.linecorp.armeria.server.docs.Type;
 import com.linecorp.armeria.server.docs.TypeInfo;
+import com.linecorp.armeria.server.docs.UnresolvedClassInfo;
 
 /**
  * {@link ServiceSpecificationGenerator} implementation that supports {@link THttpService}s.
  */
 public class ThriftServiceSpecificationGenerator implements ServiceSpecificationGenerator {
-
-    private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
@@ -87,43 +87,53 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
     }
 
     @Override
-    public ServiceSpecification generate(Iterable<ServiceConfig> serviceConfigs) {
-        final Map<Class<?>, Iterable<EndpointInfo>> map = new LinkedHashMap<>();
+    public ServiceSpecification generate(Set<ServiceConfig> serviceConfigs,
+                                         Map<String, List<HttpHeaders>> exampleHeaders) {
+
+        final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
         for (ServiceConfig c : serviceConfigs) {
             final THttpService service = c.service().as(THttpService.class).get();
             service.entries().forEach((serviceName, entry) -> {
                 for (Class<?> iface : entry.interfaces()) {
                     final Class<?> serviceClass = iface.getEnclosingClass();
-                    final List<EndpointInfo> endpoints =
-                            (List<EndpointInfo>) map.computeIfAbsent(serviceClass, cls -> new ArrayList<>());
+                    final EntryBuilder builder =
+                            map.computeIfAbsent(serviceClass, cls -> new EntryBuilder(serviceClass));
 
                     c.pathMapping().exactPath().ifPresent(
-                            p -> endpoints.add(new EndpointInfo(
+                            p -> builder.endpoint(new EndpointInfo(
                                     c.virtualHost().hostnamePattern(),
                                     p, serviceName,
                                     service.defaultSerializationFormat(),
                                     service.allowedSerializationFormats())));
+
+                    exampleHeaders.forEach((name, headersList) -> {
+                        if (serviceClass.getName().equals(name)) {
+                            builder.exampleHttpHeaders(headersList);
+                        }
+                    });
                 }
             });
         }
 
-        return generate(map);
+        return generate(map.values().stream()
+                           .map(EntryBuilder::build)
+                           .collect(Collectors.toList()));
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(Map<Class<?>, Iterable<EndpointInfo>> map) {
-        final List<ServiceInfo> services = new ArrayList<>(map.size());
+    static ServiceSpecification generate(List<Entry> entries) {
+        final List<ServiceInfo> services = new ArrayList<>(entries.size());
         final Set<ClassInfo> classes = new HashSet<>();
-        map.forEach((serviceClass, endpoints) -> {
+        entries.forEach(entry -> {
             try {
-                // FIXME(trustin): Bring sampleRequests and sampleHttpHeaders back.
+                // FIXME(trustin): Bring sampleRequests back.
                 final ServiceInfo service = newServiceInfo(
-                        serviceClass, endpoints, Collections.emptyMap(), Collections.emptyMap());
+                        entry.serviceType, entry.endpointInfos, Collections.emptyMap(), entry.exampleHeaders);
                 services.add(service);
                 classes.addAll(service.classes().values());
             } catch (ClassNotFoundException e) {
-                throw new RuntimeException("unable to initialize Specification", e);
+                throw new RuntimeException("failed to generate a ServiceSpecification", e);
             }
         });
 
@@ -134,7 +144,7 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
     static ServiceInfo newServiceInfo(
             Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
             Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
-            Map<String, String> sampleHttpHeaders) throws ClassNotFoundException {
+            List<HttpHeaders> exampleHeaders) throws ClassNotFoundException {
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -158,16 +168,7 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
             });
         }
 
-        String httpHeaders = "";
-        if (sampleHttpHeaders != null) {
-            try {
-                httpHeaders = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(sampleHttpHeaders);
-            } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException("Failed to serialize the given httpHeaders", e);
-            }
-        }
-
-        return new ServiceInfo(name, functions, classes, endpoints, docStrings.get(name), httpHeaders);
+        return new ServiceInfo(name, functions, classes, endpoints, docStrings.get(name), exampleHeaders);
     }
 
     private static void addClassIfPossible(Set<ClassInfo> classes, TypeInfo typeInfo) {
@@ -314,42 +315,55 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
             return newMapInfo((MapMetaData) fieldValueMetaData, docStrings);
         }
 
-        final TypeInfo typeInfo;
         if (fieldValueMetaData.isBinary()) {
-            typeInfo = TypeInfo.BINARY;
-        } else {
-            switch (fieldValueMetaData.type) {
-                case TType.VOID:
-                    typeInfo = TypeInfo.VOID;
-                    break;
-                case TType.BOOL:
-                    typeInfo = TypeInfo.BOOL;
-                    break;
-                case TType.BYTE:
-                    typeInfo = TypeInfo.I8;
-                    break;
-                case TType.DOUBLE:
-                    typeInfo = TypeInfo.DOUBLE;
-                    break;
-                case TType.I16:
-                    typeInfo = TypeInfo.I16;
-                    break;
-                case TType.I32:
-                    typeInfo = TypeInfo.I32;
-                    break;
-                case TType.I64:
-                    typeInfo = TypeInfo.I64;
-                    break;
-                case TType.STRING:
-                    typeInfo = TypeInfo.STRING;
-                    break;
-                default:
-                    throw new IllegalArgumentException(
-                            "unexpected field value type: " + fieldValueMetaData.type);
-            }
+            return TypeInfo.BINARY;
         }
 
-        return typeInfo;
+        switch (fieldValueMetaData.type) {
+            case TType.VOID:
+                return TypeInfo.VOID;
+            case TType.BOOL:
+                return TypeInfo.BOOL;
+            case TType.BYTE:
+                return TypeInfo.I8;
+            case TType.DOUBLE:
+                return TypeInfo.DOUBLE;
+            case TType.I16:
+                return TypeInfo.I16;
+            case TType.I32:
+                return TypeInfo.I32;
+            case TType.I64:
+                return TypeInfo.I64;
+            case TType.STRING:
+                return TypeInfo.STRING;
+        }
+
+        assert fieldValueMetaData.isTypedef();
+
+        final String typeName = fieldValueMetaData.getTypedefName();
+        final Type type;
+        switch (fieldValueMetaData.type) {
+            case TType.ENUM:
+                type = Type.ENUM;
+                break;
+            case TType.LIST:
+                type = Type.LIST;
+                break;
+            case TType.MAP:
+                type = Type.MAP;
+                break;
+            case TType.SET:
+                type = Type.SET;
+                break;
+            case TType.STRUCT:
+                type = Type.STRUCT;
+                break;
+            default:
+                throw new IllegalArgumentException(
+                        "unexpected typedef type: " + fieldValueMetaData.type);
+        }
+
+        return new UnresolvedClassInfo(type, typeName, docStrings.get(typeName));
     }
 
     @VisibleForTesting
@@ -461,6 +475,51 @@ public class ThriftServiceSpecificationGenerator implements ServiceSpecification
                 return FieldRequirement.DEFAULT;
             default:
                 throw new IllegalArgumentException("unknown requirement type: " + value);
+        }
+    }
+
+    @VisibleForTesting
+    static final class Entry {
+        final Class<?> serviceType;
+        final List<EndpointInfo> endpointInfos;
+        final List<HttpHeaders> exampleHeaders;
+
+        Entry(Class<?> serviceType, List<EndpointInfo> endpointInfos, List<HttpHeaders> exampleHeaders) {
+            this.serviceType = serviceType;
+            this.endpointInfos = ImmutableList.copyOf(endpointInfos);
+            this.exampleHeaders = ImmutableList.copyOf(exampleHeaders);
+        }
+    }
+
+    @VisibleForTesting
+    static final class EntryBuilder {
+        private final Class<?> serviceType;
+        private final List<EndpointInfo> endpointInfos = new ArrayList<>();
+        private final List<HttpHeaders> exampleHeaders = new ArrayList<>();
+
+        EntryBuilder(Class<?> serviceType) {
+            this.serviceType = requireNonNull(serviceType, "serviceType");
+        }
+
+        EntryBuilder endpoint(EndpointInfo endpointInfo) {
+            endpointInfos.add(requireNonNull(endpointInfo, "endpointInfo"));
+            return this;
+        }
+
+        EntryBuilder exampleHttpHeaders(HttpHeaders exampleHeaders) {
+            requireNonNull(exampleHeaders, "exampleHeaders");
+            this.exampleHeaders.add(HttpHeaders.copyOf(exampleHeaders).asImmutable());
+            return this;
+        }
+
+        EntryBuilder exampleHttpHeaders(Iterable<HttpHeaders> exampleHeaders) {
+            requireNonNull(exampleHeaders, "exampleHeaders");
+            exampleHeaders.forEach(this::exampleHttpHeaders);
+            return this;
+        }
+
+        Entry build() {
+            return new Entry(serviceType, endpointInfos, exampleHeaders);
         }
     }
 }

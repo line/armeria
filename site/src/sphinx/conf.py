@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import sys, os, re
+import sys, os, re, yaml
 from datetime import date
 
 def load_properties(filepath, sep='=', comment_char='#'):
@@ -7,7 +7,7 @@ def load_properties(filepath, sep='=', comment_char='#'):
     Read the file passed as parameter as a properties file.
     """
     props = {}
-    with open(filepath, "rt") as f:
+    with open(filepath, 'rt') as f:
         for line in f:
             l = line.strip()
             if l and not l.startswith(comment_char):
@@ -17,9 +17,14 @@ def load_properties(filepath, sep='=', comment_char='#'):
                 props[key] = value
     return props
 
+def load_yaml(filepath):
+    with open(filepath, 'r') as f:
+        return yaml.load(f)
 
-# Load the properties file.
-properties = load_properties(os.path.dirname(os.path.abspath(__file__)) + '/../../../gradle.properties')
+# Load the gradle.properties and dependencies.yml.
+rootDir = os.path.dirname(os.path.abspath(__file__)) + '/../../..'
+properties = load_properties(rootDir + '/gradle.properties')
+dependencies = load_yaml(rootDir + '/dependencies.yml')
 
 # Set the basic project information.
 project = 'Armeria'
@@ -29,7 +34,7 @@ copyright = properties['inceptionYear'] + '-' + str(date.today().year) + ', LINE
 # Set the project version and release.
 # Use the last known stable release if the current version ends with '-SNAPSHOT'.
 if re.match(r'^.*-SNAPSHOT$', properties['version']):
-    release = '0.35.2'
+    release = '0.38.0'
 else:
     release = properties['version']
 version = re.match(r'^[0-9]+\.[0-9]+', release).group(0)
@@ -42,6 +47,11 @@ for k in properties.keys():
     if k in [ 'release', 'version' ]:
         continue
     rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
+for groupId in dependencies.keys():
+    for artifactId in dependencies[groupId]:
+        k = groupId + ':' + artifactId + ':version'
+        v = dependencies[groupId][artifactId]['version']
+        rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
 rst_epilog += '\n'
 
 needs_sphinx = '1.0'

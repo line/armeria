@@ -23,7 +23,6 @@ import java.util.Set;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.net.MediaType;
 
 /**
  * Registers the {@link SerializationFormat}s dynamically via Java SPI (Service Provider Interface).

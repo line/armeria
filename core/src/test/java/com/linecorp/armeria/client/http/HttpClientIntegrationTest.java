@@ -39,12 +39,12 @@ import org.junit.Test;
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.common.net.MediaType;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
@@ -135,6 +135,13 @@ public class HttpClientIntegrationTest {
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     String ua = req.headers().get(HttpHeaderNames.USER_AGENT, "undefined");
                     res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, ua);
+                }
+            });
+
+            sb.serviceAt("/hello/world", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "success");
                 }
             });
 
@@ -299,5 +306,25 @@ public class HttpClientIntegrationTest {
         } finally {
             Closeables.close(s, true);
         }
+    }
+
+    @Test
+    public void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
+        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort + "/hello",
+                                              HttpClient.class);
+
+        AggregatedHttpMessage response = client.get("/world").aggregate().get();
+
+        assertEquals("success", response.content().toStringUtf8());
+    }
+
+    @Test
+    public void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
+        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort + "/",
+                                              HttpClient.class);
+
+        AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.content().toStringUtf8());
     }
 }

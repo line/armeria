@@ -17,10 +17,14 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofCatchAll;
 import static com.linecorp.armeria.server.composition.CompositeServiceEntry.ofExact;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -28,9 +32,13 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Streams;
-import com.google.common.net.MediaType;
 
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Server;
@@ -59,15 +67,37 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    private final ListMultimap<String, HttpHeaders> exampleHeaders;
     private Server server;
 
     /**
      * Creates a new instance.
      */
     public DocService() {
+        this(ImmutableMap.of());
+    }
+
+    /**
+     * Creates a new instance with example HTTP headers.
+     *
+     * @param exampleHeaders a {@link Map} of example {@link HttpHeaders} whose key is the full name of
+     *                       a service. Use the empty string to add the example HTTP headers
+     *                       to all services.
+     */
+    public DocService(Map<String, ? extends Iterable<HttpHeaders>> exampleHeaders) {
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofCatchAll(HttpFileService.forClassPath(DocService.class.getClassLoader(),
                                                       "com/linecorp/armeria/server/docs")));
+
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        final ImmutableListMultimap.Builder<String, HttpHeaders> builder = ImmutableListMultimap.builder();
+        for (Entry<String, ? extends Iterable<HttpHeaders>> e : exampleHeaders.entrySet()) {
+            final String k = e.getKey();
+            for (HttpHeaders v : e.getValue()) {
+                builder.put(k, HttpHeaders.copyOf(v).asImmutable());
+            }
+        }
+        this.exampleHeaders = builder.build();
     }
 
     @Override
@@ -100,7 +130,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                         ServiceSpecificationGenerator.class, DocService.class.getClassLoader());
                 final ServiceSpecification spec = ServiceSpecification.merge(
                         Streams.stream(loader)
-                               .map(gen -> gen.generate(findSupportedServices(gen, services)))
+                               .map(gen -> generate(gen, services))
                                .collect(Collectors.toList()));
 
                 vfs().setSpecification(mapper.writerWithDefaultPrettyPrinter()
@@ -109,12 +139,20 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         });
     }
 
-    private static List<ServiceConfig> findSupportedServices(
+    private ServiceSpecification generate(ServiceSpecificationGenerator gen, List<ServiceConfig> services) {
+        final Set<ServiceConfig> supportedServices = findSupportedServices(gen, services);
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        final Map<String, List<HttpHeaders>> exampleHeaders =
+                (Map<String, List<HttpHeaders>>) (Map) this.exampleHeaders.asMap();
+        return gen.generate(supportedServices, exampleHeaders);
+    }
+
+    private static Set<ServiceConfig> findSupportedServices(
             ServiceSpecificationGenerator generator, List<ServiceConfig> services) {
         final Set<Class<? extends Service<?, ?>>> supportedServiceTypes = generator.supportedServiceTypes();
         return services.stream()
                        .filter(serviceCfg -> isSupported(serviceCfg, supportedServiceTypes))
-                       .collect(toImmutableList());
+                       .collect(toImmutableSet());
     }
 
     private static boolean isSupported(

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.grpc;
 
-import static com.google.common.net.MediaType.create;
+import static com.linecorp.armeria.common.MediaType.create;
 
 import java.util.Set;
 

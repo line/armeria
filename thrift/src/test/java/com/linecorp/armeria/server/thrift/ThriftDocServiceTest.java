@@ -21,10 +21,9 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -35,22 +34,30 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
 
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.thrift.ThriftServiceSpecificationGenerator.Entry;
+import com.linecorp.armeria.server.thrift.ThriftServiceSpecificationGenerator.EntryBuilder;
 import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
 import com.linecorp.armeria.service.test.thrift.hbase.Hbase;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.test.AbstractServerTest;
+
+import io.netty.util.AsciiString;
 
 public class ThriftDocServiceTest extends AbstractServerTest {
 
@@ -60,10 +67,9 @@ public class ThriftDocServiceTest extends AbstractServerTest {
     private static final SleepService.AsyncIface SLEEP_SERVICE_HANDLER =
             (duration, resultHandler) -> resultHandler.onComplete(duration);
 
-    private static final hello_args SAMPLE_HELLO = new hello_args().setName("sample user");
-    private static final Map<Class<?>, Map<String, String>> SAMPLE_HTTP_HEADERS = ImmutableMap.of(
-            HelloService.class, ImmutableMap.of("foobar", "barbaz"),
-            FooService.class, ImmutableMap.of("barbaz", "barbar"));
+    private static final ListMultimap<String, HttpHeaders> EXAMPLE_HTTP_HEADERS = ImmutableListMultimap.of(
+            HelloService.class.getName(), HttpHeaders.of(AsciiString.of("foobar"), "barbaz"),
+            FooService.class.getName(), HttpHeaders.of(AsciiString.of("barbaz"), "barbar"));
 
     @Override
     protected void configureServer(ServerBuilder sb) {
@@ -86,35 +92,46 @@ public class ThriftDocServiceTest extends AbstractServerTest {
         sb.serviceAt("/hbase", hbaseService);
         sb.serviceAt("/oneway", onewayHelloService);
 
-        sb.serviceUnder("/docs/", new DocService().decorate(LoggingService::new));
-        // FIXME(trustin): Bring this back
-        //new DocService(ImmutableList.of(SAMPLE_HELLO), SAMPLE_HTTP_HEADERS)
-        //        .decorate(LoggingService::new));
+        sb.serviceUnder("/docs/", new DocService(EXAMPLE_HTTP_HEADERS.asMap()).decorate(LoggingService::new));
+        // FIXME(trustin): Bring the example requests back.
     }
 
     @Test
     public void testOk() throws Exception {
-        final Map<Class<?>, Iterable<EndpointInfo>> serviceMap = new HashMap<>();
-        serviceMap.put(HelloService.class, Collections.singletonList(
-                new EndpointInfo("*", "/", "hello", BINARY, ThriftSerializationFormats.values())));
-        serviceMap.put(SleepService.class, Collections.singletonList(
-                new EndpointInfo("*", "/", "sleep", BINARY, ThriftSerializationFormats.values())));
-        serviceMap.put(FooService.class, Collections.singletonList(
-                new EndpointInfo("*", "/foo", "", COMPACT, ImmutableSet.of(COMPACT))));
-        serviceMap.put(Cassandra.class, Arrays.asList(
-                new EndpointInfo("*", "/cassandra", "", BINARY, ImmutableSet.of(BINARY)),
-                new EndpointInfo("*", "/cassandra/debug", "", TEXT, ImmutableSet.of(TEXT))));
-        serviceMap.put(Hbase.class, Collections.singletonList(
-                new EndpointInfo("*", "/hbase", "", BINARY, ThriftSerializationFormats.values())));
-        serviceMap.put(OnewayHelloService.class, Collections.singletonList(
-                new EndpointInfo("*", "/oneway", "", BINARY, ThriftSerializationFormats.values())));
+        final Set<SerializationFormat> allThriftFormats = ThriftSerializationFormats.values();
+        final List<Entry> entries = ImmutableList.of(
+                new EntryBuilder(HelloService.class)
+                        .endpoint(new EndpointInfo("*", "/", "hello", BINARY, allThriftFormats))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(HelloService.class.getName()))
+                        .build(),
+                new EntryBuilder(SleepService.class)
+                        .endpoint(new EndpointInfo("*", "/", "sleep", BINARY, allThriftFormats))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(SleepService.class.getName()))
+                        .build(),
+                new EntryBuilder(FooService.class)
+                        .endpoint(new EndpointInfo("*", "/foo", "", COMPACT, ImmutableSet.of(COMPACT)))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(FooService.class.getName()))
+                        .build(),
+                new EntryBuilder(Cassandra.class)
+                        .endpoint(new EndpointInfo("*", "/cassandra", "", BINARY, ImmutableSet.of(BINARY)))
+                        .endpoint(new EndpointInfo("*", "/cassandra/debug", "", TEXT, ImmutableSet.of(TEXT)))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(Cassandra.class.getName()))
+                        .build(),
+                new EntryBuilder(Hbase.class)
+                        .endpoint(new EndpointInfo("*", "/hbase", "", BINARY, allThriftFormats))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(Hbase.class.getName()))
+                        .build(),
+                new EntryBuilder(OnewayHelloService.class)
+                        .endpoint(new EndpointInfo("*", "/oneway", "", BINARY, allThriftFormats))
+                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(
+                                OnewayHelloService.class.getName()))
+                        .build());
 
         final ObjectMapper mapper = new ObjectMapper();
         final String expectedJson = mapper.writeValueAsString(
-                ThriftServiceSpecificationGenerator.generate(serviceMap));
+                ThriftServiceSpecificationGenerator.generate(entries));
         // FIXME(trustin): Bring this back.
-        //ImmutableMap.of(hello_args.class, SAMPLE_HELLO),
-        //SAMPLE_HTTP_HEADERS));
+        //ImmutableMap.of(hello_args.class, SAMPLE_HELLO)
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpGet req = new HttpGet(specificationUri());

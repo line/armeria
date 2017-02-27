@@ -63,15 +63,16 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
@@ -351,6 +352,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         private final Http2ResponseDecoder responseDecoder;
         private UpgradeEvent upgradeEvt;
+        private boolean needsToClose;
 
         UpgradeRequestHandler(Http2ResponseDecoder responseDecoder) {
             this.responseDecoder = responseDecoder;
@@ -397,7 +399,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
                     notified = true;
                     assert upgradeEvt == UpgradeEvent.UPGRADE_SUCCESSFUL;
-                    onUpgradeResponse(ctx, true, false);
+                    onUpgradeResponse(ctx, true);
                 }
 
                 @Override
@@ -435,21 +437,31 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof FullHttpResponse) {
+            boolean handled = false;
+            if (msg instanceof HttpResponse) {
                 // The server rejected the upgrade request and sent its response in HTTP/1.
-                ReferenceCountUtil.release(msg);
                 assert upgradeEvt == UPGRADE_REJECTED;
-
-                final String connection = ((FullHttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION);
-                onUpgradeResponse(ctx, false,
-                                  connection != null && Ascii.equalsIgnoreCase("close", connection));
-                return;
+                final String connection = ((HttpResponse) msg).headers().get(HttpHeaderNames.CONNECTION);
+                needsToClose = connection != null && Ascii.equalsIgnoreCase("close", connection);
+                handled = true;
             }
 
-            ctx.fireChannelRead(msg);
+            if (msg instanceof HttpContent) {
+                if (msg instanceof LastHttpContent) {
+                    // Received the rejecting response completely.
+                    onUpgradeResponse(ctx, false);
+                }
+                handled = true;
+            }
+
+            if (!handled) {
+                ctx.fireChannelRead(msg);
+            } else {
+                ReferenceCountUtil.release(msg);
+            }
         }
 
-        private void onUpgradeResponse(ChannelHandlerContext ctx, boolean success, boolean close) {
+        private void onUpgradeResponse(ChannelHandlerContext ctx, boolean success) {
             final UpgradeEvent upgradeEvt = this.upgradeEvt;
             assert upgradeEvt != null : "received an upgrade response before an UpgradeEvent";
 
@@ -458,7 +470,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             // Done with this handler, remove it from the pipeline.
             p.remove(this);
 
-            if (close) {
+            if (needsToClose) {
                 // Server wants us to close the connection, which means we cannot use this connection
                 // to send the request that contains the actual invocation.
                 SessionProtocolNegotiationCache.setUnsupported(ctx.channel().remoteAddress(), H2C);

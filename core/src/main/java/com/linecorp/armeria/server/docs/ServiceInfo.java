@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSortedMap.toImmutableSortedMap;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -30,6 +32,7 @@ import javax.annotation.Nullable;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -42,7 +45,7 @@ public final class ServiceInfo {
     private final Map<String, ClassInfo> classes;
     private final Map<String, EndpointInfo> endpoints;
     private final String docString;
-    private final String sampleHttpHeaders;
+    private final List<HttpHeaders> exampleHttpHeaders;
 
     /**
      * Creates a new instance.
@@ -52,7 +55,7 @@ public final class ServiceInfo {
                        Iterable<ClassInfo> classes,
                        Iterable<EndpointInfo> endpoints,
                        @Nullable String docString,
-                       @Nullable String sampleHttpHeaders) {
+                       Iterable<HttpHeaders> exampleHttpHeaders) {
 
         this.name = requireNonNull(name, "name");
 
@@ -71,7 +74,10 @@ public final class ServiceInfo {
                                                               e -> e.hostnamePattern() + ':' + e.path(),
                                                               Function.identity()));
         this.docString = docString;
-        this.sampleHttpHeaders = sampleHttpHeaders;
+        this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
+                                         .map(HttpHeaders::copyOf)
+                                         .map(HttpHeaders::asImmutable)
+                                         .collect(toImmutableList());
     }
 
     /**
@@ -123,11 +129,11 @@ public final class ServiceInfo {
     }
 
     /**
-     * Returns the sample HTTP headers of the service, serialized in JSON format.
+     * Returns the example HTTP headers of the service.
      */
     @JsonProperty
-    public String sampleHttpHeaders() {
-        return sampleHttpHeaders;
+    public List<HttpHeaders> exampleHttpHeaders() {
+        return exampleHttpHeaders;
     }
 
     @Override
@@ -160,7 +166,7 @@ public final class ServiceInfo {
                ", classes=" + classes() +
                ", endpoints=" + endpoints() +
                ", docString=" + docString() +
-               ", sampleHttpHeaders=" + sampleHttpHeaders() +
+               ", exampleHttpHeaders=" + exampleHttpHeaders() +
                '}';
     }
 }

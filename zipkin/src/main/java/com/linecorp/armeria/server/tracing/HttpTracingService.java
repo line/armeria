@@ -65,18 +65,18 @@ public class HttpTracingService extends AbstractTracingService<HttpRequest, Http
         final String sampled = headers.get(SAMPLED);
         if (sampled == null) {
             // trace data is not specified
-            return TraceData.builder().build();
+            return TraceData.EMPTY;
         }
         if ("0".equals(sampled) || "false".equalsIgnoreCase(sampled)) {
             // this request is not sampled
-            return TraceData.builder().sample(false).build();
+            return TraceData.NOT_SAMPLED;
         }
 
         final String traceId = headers.get(TRACE_ID);
         final String spanId = headers.get(SPAN_ID);
         if (traceId == null || spanId == null) {
             // broken trace header
-            return TraceData.builder().build();
+            return TraceData.EMPTY;
         }
 
         // parentSpanId can be null
@@ -91,6 +91,6 @@ public class HttpTracingService extends AbstractTracingService<HttpRequest, Http
                       .sampled(true)
                       .build();
 
-        return TraceData.builder().sample(true).spanId(span).build();
+        return TraceData.create(span);
     }
 }

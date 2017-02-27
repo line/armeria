@@ -1,9 +1,8 @@
 rootProject.name = 'armeria'
 
-// Java projects
+// Published Java projects
 include 'core'
 include 'grpc'
-include 'it'
 include 'jetty'
 include 'kafka'
 include 'logback'
@@ -12,6 +11,10 @@ include 'thrift'
 include 'tomcat'
 include 'zipkin'
 include 'zookeeper'
+
+// Unpublished Java projects
+include 'it'
+include 'shaded-test'
 
 // Site generation project
 include 'site'

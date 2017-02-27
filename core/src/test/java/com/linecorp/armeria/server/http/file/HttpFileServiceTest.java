@@ -51,7 +51,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 
-import io.netty.handler.codec.http.HttpHeaderDateFormat;
+import io.netty.handler.codec.DateFormatter;
 
 public class HttpFileServiceTest {
 
@@ -292,7 +292,7 @@ public class HttpFileServiceTest {
         final String lastModified;
         assertThat(res.containsHeader(HttpHeaders.LAST_MODIFIED), is(true));
         lastModified = res.getFirstHeader(HttpHeaders.LAST_MODIFIED).getValue();
-        HttpHeaderDateFormat.get().parse(lastModified);
+        DateFormatter.parseHttpDate(lastModified);
 
         // Ensure the content and its type are correct.
         assertThat(EntityUtils.toString(res.getEntity()), is(expectedContent));
@@ -331,7 +331,7 @@ public class HttpFileServiceTest {
     }
 
     private static String currentHttpDate() {
-        return HttpHeaderDateFormat.get().format(new Date());
+        return DateFormatter.format(new Date());
     }
 
     private static String newUri(String path) {
