@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 
@@ -65,13 +64,10 @@ public class ZooKeeperUpdatingListener implements ServerListener {
     @Override
     public void serverStarting(Server server) throws Exception {
         if (endpoint == null) {
-            if (!server.activePort().isPresent()) {
-                throw new ZooKeeperException("Server registration error, failed to get default server port.");
-            } else {
-                endpoint = Endpoint.of(server.defaultHostname(),
-                                       server.activePort().get()
-                                             .localAddress().getPort());
-            }
+            assert server.activePort().isPresent();
+            endpoint = Endpoint.of(server.defaultHostname(),
+                                   server.activePort().get()
+                                         .localAddress().getPort());
         }
         connector = new ZooKeeperRegistration(zkConnectionStr, zNodePath, sessionTimeout, endpoint);
     }

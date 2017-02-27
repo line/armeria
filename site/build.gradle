@@ -66,6 +66,13 @@ task javadoc(type: Javadoc,
         addBooleanOption('Xdoclint:all').value = true
         addBooleanOption('Xdoclint:-missing').value = true
 
+        //add support for java8u121 "New --allow-script-in-comments option for javadoc"
+        //ref: http://www.oracle.com/technetwork/java/javase/8u121-relnotes-3315208.html
+        if (javax.tools.ToolProvider.getSystemDocumentationTool()
+                .isSupportedOption("--allow-script-in-comments")) {
+            addBooleanOption('-allow-script-in-comments').value = true
+        }
+
         // Exclude the machine-generate or internal-only classes
         exclude '**/Tomcat*ProtocolHandler.java'
         exclude '**/internal/**'
