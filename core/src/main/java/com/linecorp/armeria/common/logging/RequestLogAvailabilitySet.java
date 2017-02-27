@@ -26,8 +26,8 @@ import java.util.Set;
 import com.google.common.collect.Iterators;
 import com.google.common.math.IntMath;
 
-import com.linecorp.armeria.internal.fastutil.ints.Int2ObjectMap;
-import com.linecorp.armeria.internal.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 /**
  * A special {@link Set} implementation that pre-populates all possible combinations of

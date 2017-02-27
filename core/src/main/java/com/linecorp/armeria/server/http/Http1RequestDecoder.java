@@ -22,9 +22,8 @@ import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.net.MediaType;
-
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;

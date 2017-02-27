@@ -186,7 +186,13 @@ $(function () {
       debugHttpHeadersSticky.prop('checked', true);
       debugHttpHeadersText.val(oldDebugHttpHeadersText.val());
     } else {
-      debugHttpHeadersText.val(serviceInfo.sampleHttpHeaders);
+      var exampleHttpHeaders = serviceInfo.exampleHttpHeaders;
+      if (exampleHttpHeaders.length > 0) {
+        // TODO(trustin): Allow choosing from the example list.
+        debugHttpHeadersText.val(JSON.stringify(serviceInfo.exampleHttpHeaders[0], null, 2));
+      } else {
+        debugHttpHeadersText.val('');
+      }
     }
     var debugResponse = functionContainer.find('.debug-response code');
 
@@ -245,7 +251,17 @@ $(function () {
         type: 'POST',
         url: serviceInfo.debugPath,
         data: request,
-        headers: httpHeaders,
+        beforeSend: function (xhr) {
+          Object.keys(httpHeaders).forEach(function (name) {
+            var values = httpHeaders[name];
+            if (!Array.isArray(values)) {
+              // Values is a single item, so set it directly.
+              xhr.setRequestHeader(name, values);
+            } else {
+              xhr.setRequestHeader(name, values.join());
+            }
+          });
+        },
         contentType: TTEXT_MIME_TYPE,
         success: function (response) {
           var result = response.length > 0 ? response : "Request sent to one-way function";

@@ -26,9 +26,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.net.MediaType;
-
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;

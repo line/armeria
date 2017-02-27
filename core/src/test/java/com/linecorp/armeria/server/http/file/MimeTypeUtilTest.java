@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.google.common.net.MediaType;
+import com.linecorp.armeria.common.MediaType;
 
 public class MimeTypeUtilTest {
 

@@ -1,7 +1,9 @@
 dependencies {
-    // Kafka
-    compile 'org.apache.kafka:kafka-clients'
-
     // FIXME(trustin): Remove the hard dependency on :thrift
     compile project(':thrift')
+}
+
+managedDependencies {
+    // Kafka
+    compile 'org.apache.kafka:kafka-clients'
 }

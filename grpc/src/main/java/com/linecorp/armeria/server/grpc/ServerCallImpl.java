@@ -47,17 +47,18 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static io.grpc.internal.GrpcUtil.ACCEPT_ENCODING_SPLITER;
+
 import static io.grpc.internal.GrpcUtil.MESSAGE_ACCEPT_ENCODING_KEY;
 import static io.grpc.internal.GrpcUtil.MESSAGE_ENCODING_KEY;
-import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 
 import io.grpc.Attributes;
@@ -74,8 +75,12 @@ import io.grpc.Status;
 import io.grpc.internal.ServerStream;
 import io.grpc.internal.ServerStreamListener;
 
-// Copied as is from grpc. Too bad it's not public :(
+// Mostly copied from grpc, with Context removed since armeria should use ServiceRequestContext
 final class ServerCallImpl<ReqT, RespT> extends ServerCall<ReqT, RespT> {
+
+    // This field has been copied from GrpcUtil to avoid the conflict with armeria-grpc-shaded.
+    private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
+
     private final ServerStream stream;
     private final MethodDescriptor<ReqT, RespT> method;
     private final String messageAcceptEncoding;
@@ -119,13 +124,13 @@ final class ServerCallImpl<ReqT, RespT> extends ServerCall<ReqT, RespT> {
         checkState(!sendHeadersCalled, "sendHeaders has already been called");
         checkState(!closeCalled, "call is closed");
 
-        headers.removeAll(MESSAGE_ENCODING_KEY);
+        headers.discardAll(MESSAGE_ENCODING_KEY);
         if (compressor == null) {
             compressor = Codec.Identity.NONE;
         } else {
             if (messageAcceptEncoding != null) {
                 List<String> acceptedEncodingsList =
-                        ACCEPT_ENCODING_SPLITER.splitToList(messageAcceptEncoding);
+                        ACCEPT_ENCODING_SPLITTER.splitToList(messageAcceptEncoding);
                 if (!acceptedEncodingsList.contains(compressor.getMessageEncoding())) {
                     // resort to using no compression.
                     compressor = Codec.Identity.NONE;
@@ -140,7 +145,7 @@ final class ServerCallImpl<ReqT, RespT> extends ServerCall<ReqT, RespT> {
 
         stream.setCompressor(compressor);
 
-        headers.removeAll(MESSAGE_ACCEPT_ENCODING_KEY);
+        headers.discardAll(MESSAGE_ACCEPT_ENCODING_KEY);
         String advertisedEncodings = decompressorRegistry.getRawAdvertisedMessageEncodings();
         if (!advertisedEncodings.isEmpty()) {
             headers.put(MESSAGE_ACCEPT_ENCODING_KEY, advertisedEncodings);
@@ -205,8 +210,8 @@ final class ServerCallImpl<ReqT, RespT> extends ServerCall<ReqT, RespT> {
     }
 
     @Override
-    public Attributes attributes() {
-        return stream.attributes();
+    public Attributes getAttributes() {
+        return stream.getAttributes();
     }
 
     @Override
@@ -226,8 +231,8 @@ final class ServerCallImpl<ReqT, RespT> extends ServerCall<ReqT, RespT> {
 
         public ServerStreamListenerImpl(
                 ServerCallImpl<ReqT, ?> call, ServerCall.Listener<ReqT> listener) {
-            this.call = requireNonNull(call, "call");
-            this.listener = requireNonNull(listener, "listener must not be null");
+            this.call = checkNotNull(call, "call");
+            this.listener = checkNotNull(listener, "listener must not be null");
         }
 
         @Override
@@ -253,12 +258,13 @@ final class ServerCallImpl<ReqT, RespT> extends ServerCall<ReqT, RespT> {
                 try {
                     message.close();
                 } catch (IOException e) {
+                    throw new RuntimeException(e);
+                } finally {
                     if (t != null) {
                         // TODO(carl-mastrangelo): Maybe log e here.
-                        Throwables.propagateIfPossible(t);
+                        Throwables.throwIfUnchecked(t);
                         throw new RuntimeException(t);
                     }
-                    throw new RuntimeException(e);
                 }
             }
         }
@@ -291,4 +297,3 @@ final class ServerCallImpl<ReqT, RespT> extends ServerCall<ReqT, RespT> {
         }
     }
 }
-

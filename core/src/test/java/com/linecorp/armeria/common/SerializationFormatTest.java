@@ -1,8 +1,9 @@
 package com.linecorp.armeria.common;
 
-import static com.google.common.net.MediaType.parse;
+import static com.linecorp.armeria.common.MediaType.parse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assume.assumeTrue;
 
 import org.junit.Test;
 
@@ -25,6 +26,7 @@ public class SerializationFormatTest {
     @Test
     @SuppressWarnings("deprecation")
     public void nullThriftSerializationFormats() {
+        assumeNoThriftInClasspath();
         assertThat(SerializationFormat.THRIFT_BINARY).isNull();
         assertThat(SerializationFormat.THRIFT_COMPACT).isNull();
         assertThat(SerializationFormat.THRIFT_JSON).isNull();
@@ -34,6 +36,19 @@ public class SerializationFormatTest {
     @Test
     @SuppressWarnings("deprecation")
     public void failingOfThrift() {
+        assumeNoThriftInClasspath();
         assertThatThrownBy(SerializationFormat::ofThrift).isInstanceOf(IllegalStateException.class);
+    }
+
+    private static void assumeNoThriftInClasspath() {
+        boolean meetsAssumption = false;
+        try {
+            Class.forName("com.linecorp.armeria.common.thrift.ThriftSerializationFormatProvider");
+        } catch (ClassNotFoundException expected) {
+            // armeria-thrift not in the classpath
+            meetsAssumption = true;
+        }
+
+        assumeTrue("armeria-thrift in the classpath", meetsAssumption);
     }
 }

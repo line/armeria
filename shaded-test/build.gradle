@@ -1,0 +1,107 @@
+// Evaluate other projects first so that their dependencies are fully populated.
+rootProject.ext.publishedJavaProjects.each {
+    evaluationDependsOn it.path
+}
+
+ext {
+    getTestConfigurations = { testProject -> testProject.configurations.findAll { cfg ->
+        cfg.name in ['compile', 'runtime', 'testCompile', 'testRuntime']
+    }}
+    testConfigurations = getTestConfigurations(project)
+}
+// Clear the common dependencies set by the root project to make sure we do not pull the unshaded projects.
+ext.testConfigurations.each { it.dependencies.clear() }
+ext.testConfigurations.each { assert it.dependencies.empty } // Make sure we did not clear the copy.
+
+// Clear the common source sets set by the root project to make sure we do not compile anything additionally.
+sourceSets.findAll().each { set ->
+    set.java.srcDirs = []
+    set.resources.srcDirs = []
+}
+sourceSets.findAll().each { set ->
+    // Make sure we did not clear the copy.
+    assert set.java.srcDirs.empty
+    assert set.resources.srcDirs.empty
+}
+
+dependencies {
+    def addShaded = { Project testProject ->
+        if (testProject.tasks.findByName('trimShadedJar')) {
+            assert testProject.name == 'core'
+            testRuntime files(testProject.tasks.trimShadedJar.outJarFiles)
+        } else {
+            assert testProject.name != 'core'
+            testRuntime files(testProject.tasks.shadedJar.archivePath)
+        }
+
+        // Collect all dependencies of the project.
+        def allDeps = project.ext.getTestConfigurations(testProject).inject([]) { a, b -> a + b.dependencies }
+        allDeps.each { dep ->
+            // Do not pull the the shaded dependencies in.
+            if ("${dep.group}:${dep.name}".toString() in relocations.collect { it[0] }) {
+                return
+            }
+            if (dep instanceof ProjectDependency) {
+                owner.call(dep.dependencyProject) // Recurse.
+            } else {
+                testRuntime dep
+            }
+        }
+    }
+
+    // Pull all shaded JARs and their dependencies in.
+    rootProject.ext.publishedJavaProjects.each { addShaded it }
+}
+
+task allShadedJars {
+    rootProject.ext.publishedJavaProjects.each { testProject ->
+        dependsOn testProject.tasks.assemble
+    }
+}
+
+task shadedTest(group: 'Verification',
+                description: 'Runs the unit tests with the shaded JARs.')
+tasks.test.dependsOn tasks.shadedTest
+
+rootProject.ext.publishedJavaProjects.each { testProject ->
+    def shadedTestJarExtractTask = tasks.create("shaded${testProject.name.capitalize()}TestJarExtract", Copy) {
+        def shadedTestJarTask = testProject.tasks.shadedTestJar
+        dependsOn shadedTestJarTask
+
+        from zipTree(shadedTestJarTask.archivePath)
+        from(testProject.sourceSets.test.output.classesDir) {
+            // Add the JAR resources excluded in the 'shadedTestJar' task.
+            include '**/*.jar'
+        }
+
+        into file("${sourceSets.test.output.classesDir.parent}/test-${testProject.name}")
+    }
+
+    def shadedTestTask = tasks.create("shaded${testProject.name.capitalize()}Test", Test) {
+        dependsOn tasks.allShadedJars
+        dependsOn tasks.copyJavaAgents
+        dependsOn shadedTestJarExtractTask
+
+        // The tests against the shaded artifacts should run after testing against the unshaded ones.
+        rootProject.ext.publishedJavaProjects.each {
+            shouldRunAfter it.tasks.test
+        }
+
+        testClassesDir = shadedTestJarExtractTask.destinationDir
+        classpath = files(testClassesDir) + classpath
+
+        exclude('**/internal/shaded/**')
+
+        jacoco {
+            enabled = false
+        }
+    }
+
+    tasks.shadedTest.dependsOn shadedTestTask
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled false
+    }
+}

@@ -87,8 +87,7 @@ public final class StructInfo implements ClassInfo {
         }
 
         final StructInfo that = (StructInfo) o;
-        return Objects.equals(name, that.name) &&
-               Objects.equals(fields, that.fields);
+        return name.equals(that.name) && fields.equals(that.fields);
     }
 
     @Override

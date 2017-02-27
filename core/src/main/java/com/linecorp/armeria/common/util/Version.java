@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import com.google.common.io.Closeables;
+
 /**
  * Retrieves the version information of available Armeria artifacts.
  *
@@ -60,7 +62,6 @@ public final class Version {
     private static final String PROP_RESOURCE_PATH = "META-INF/com.linecorp.armeria.versions.properties";
 
     private static final String PROP_VERSION = ".version";
-    private static final String PROP_BUILD_DATE = ".buildDate";
     private static final String PROP_COMMIT_DATE = ".commitDate";
     private static final String PROP_SHORT_COMMIT_HASH = ".shortCommitHash";
     private static final String PROP_LONG_COMMIT_HASH = ".longCommitHash";
@@ -96,11 +97,7 @@ public final class Version {
                 try {
                     props.load(in);
                 } finally {
-                    try {
-                        in.close();
-                    } catch (Exception ignore) {
-                        ignore.printStackTrace();
-                    }
+                    Closeables.closeQuietly(in);
                 }
             }
         } catch (Exception ignore) {
@@ -108,7 +105,7 @@ public final class Version {
         }
 
         // Collect all artifactIds.
-        Set<String> artifactIds = new HashSet<String>();
+        Set<String> artifactIds = new HashSet<>();
         for (Object o: props.keySet()) {
             String k = (String) o;
 
@@ -121,11 +118,10 @@ public final class Version {
 
             // Skip the entries without required information.
             if (!props.containsKey(artifactId + PROP_VERSION) ||
-                    !props.containsKey(artifactId + PROP_BUILD_DATE) ||
-                    !props.containsKey(artifactId + PROP_COMMIT_DATE) ||
-                    !props.containsKey(artifactId + PROP_SHORT_COMMIT_HASH) ||
-                    !props.containsKey(artifactId + PROP_LONG_COMMIT_HASH) ||
-                    !props.containsKey(artifactId + PROP_REPO_STATUS)) {
+                !props.containsKey(artifactId + PROP_COMMIT_DATE) ||
+                !props.containsKey(artifactId + PROP_SHORT_COMMIT_HASH) ||
+                !props.containsKey(artifactId + PROP_LONG_COMMIT_HASH) ||
+                !props.containsKey(artifactId + PROP_REPO_STATUS)) {
                 continue;
             }
 
@@ -139,7 +135,6 @@ public final class Version {
                     new Version(
                             artifactId,
                             props.getProperty(artifactId + PROP_VERSION),
-                            parseIso8601(props.getProperty(artifactId + PROP_BUILD_DATE)),
                             parseIso8601(props.getProperty(artifactId + PROP_COMMIT_DATE)),
                             props.getProperty(artifactId + PROP_SHORT_COMMIT_HASH),
                             props.getProperty(artifactId + PROP_LONG_COMMIT_HASH),
@@ -153,12 +148,8 @@ public final class Version {
         if (System.getSecurityManager() == null) {
             return Thread.currentThread().getContextClassLoader();
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                @Override
-                public ClassLoader run() {
-                    return Thread.currentThread().getContextClassLoader();
-                }
-            });
+            return AccessController.doPrivileged(
+                    (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader());
         }
     }
 
@@ -172,19 +163,16 @@ public final class Version {
 
     private final String artifactId;
     private final String artifactVersion;
-    private final long buildTimeMillis;
     private final long commitTimeMillis;
     private final String shortCommitHash;
     private final String longCommitHash;
     private final String repositoryStatus;
 
     private Version(
-            String artifactId, String artifactVersion,
-            long buildTimeMillis, long commitTimeMillis,
+            String artifactId, String artifactVersion, long commitTimeMillis,
             String shortCommitHash, String longCommitHash, String repositoryStatus) {
         this.artifactId = artifactId;
         this.artifactVersion = artifactVersion;
-        this.buildTimeMillis = buildTimeMillis;
         this.commitTimeMillis = commitTimeMillis;
         this.shortCommitHash = shortCommitHash;
         this.longCommitHash = longCommitHash;
@@ -197,10 +185,6 @@ public final class Version {
 
     public String artifactVersion() {
         return artifactVersion;
-    }
-
-    public long buildTimeMillis() {
-        return buildTimeMillis;
     }
 
     public long commitTimeMillis() {

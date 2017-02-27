@@ -49,6 +49,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -66,7 +67,9 @@ import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.ServiceSpecificationGenerator;
 import com.linecorp.armeria.server.docs.SetInfo;
 import com.linecorp.armeria.server.docs.StructInfo;
+import com.linecorp.armeria.server.docs.Type;
 import com.linecorp.armeria.server.docs.TypeInfo;
+import com.linecorp.armeria.server.docs.UnresolvedClassInfo;
 import com.linecorp.armeria.service.test.thrift.main.FooEnum;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.FooService.bar3_args;
@@ -74,6 +77,9 @@ import com.linecorp.armeria.service.test.thrift.main.FooServiceException;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 import com.linecorp.armeria.service.test.thrift.main.FooUnion;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
+import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
+
+import io.netty.util.AsciiString;
 
 public class ThriftServiceSpecificationGeneratorTest {
 
@@ -81,29 +87,39 @@ public class ThriftServiceSpecificationGeneratorTest {
 
     @Test
     public void servicesTest() throws Exception {
-        final ServiceSpecification specification = generator.generate(ImmutableList.of(
-                new ServiceConfig(
-                        new VirtualHostBuilder().build(),
-                        PathMapping.ofExact("/hello"),
-                        THttpService.of(mock(HelloService.AsyncIface.class))),
-                new ServiceConfig(
-                        new VirtualHostBuilder().build(),
-                        PathMapping.ofExact("/foo"),
-                        THttpService.ofFormats(mock(FooService.AsyncIface.class),
-                                               ThriftSerializationFormats.COMPACT))));
+        final ServiceConfig helloService = new ServiceConfig(
+                new VirtualHostBuilder().build(),
+                PathMapping.ofExact("/hello"),
+                THttpService.of(mock(AsyncIface.class)));
+
+        final HttpHeaders helloExampleHeaders = HttpHeaders.of(AsciiString.of("hello"), "world");
+
+        final ServiceConfig fooService = new ServiceConfig(
+                new VirtualHostBuilder().build(),
+                PathMapping.ofExact("/foo"),
+                THttpService.ofFormats(mock(FooService.AsyncIface.class), ThriftSerializationFormats.COMPACT));
+
+        final HttpHeaders fooExampleHeaders = HttpHeaders.of(AsciiString.of("foo"), "bar");
+
+        final ServiceSpecification specification = generator.generate(
+                ImmutableSet.of(helloService, fooService),
+                ImmutableMap.of(HelloService.class.getName(), ImmutableList.of(helloExampleHeaders),
+                                FooService.class.getName(),   ImmutableList.of(fooExampleHeaders)));
 
         final Map<String, ServiceInfo> services = specification.services();
-        assertThat(services).containsOnlyKeys(HelloService.class.getName(),
-                                              FooService.class.getName());
+        assertThat(services).containsOnlyKeys(HelloService.class.getName(), FooService.class.getName());
 
-        assertThat(services.get(HelloService.class.getName()).endpoints())
+        final ServiceInfo helloServiceInfo = services.get(HelloService.class.getName());
+        assertThat(helloServiceInfo.endpoints())
                 .containsExactly(new EndpointInfo("*", "/hello", "", ThriftSerializationFormats.BINARY,
                                                   ThriftSerializationFormats.values()));
+        assertThat(helloServiceInfo.exampleHttpHeaders()).containsExactly(helloExampleHeaders);
 
-        assertThat(services.containsKey(FooService.class.getName())).isTrue();
-        assertThat(services.get(FooService.class.getName()).endpoints())
+        final ServiceInfo fooServiceInfo = services.get(FooService.class.getName());
+        assertThat(fooServiceInfo.endpoints())
                 .containsExactly(new EndpointInfo("*", "/foo", "", ThriftSerializationFormats.COMPACT,
                                                   ImmutableSet.of(ThriftSerializationFormats.COMPACT)));
+        assertThat(fooServiceInfo.exampleHttpHeaders()).containsExactly(fooExampleHeaders);
     }
 
     @Test
@@ -148,13 +164,13 @@ public class ThriftServiceSpecificationGeneratorTest {
     public void testNewServiceInfo() throws Exception {
         final ServiceInfo service =
                 newServiceInfo(FooService.class,
-                               Arrays.asList(
+                               ImmutableList.of(
                                        new EndpointInfo("*", "/foo", "a", ThriftSerializationFormats.BINARY,
                                                         ImmutableSet.of(ThriftSerializationFormats.BINARY)),
                                        new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
                                                         ImmutableSet.of(ThriftSerializationFormats.TEXT))),
                                ImmutableMap.of(bar3_args.class, new bar3_args().setIntVal(10)),
-                               ImmutableMap.of("foobar", "barbaz"));
+                               ImmutableList.of(HttpHeaders.of(AsciiString.of("foobar"), "barbaz")));
 
         assertThat(service.endpoints()).hasSize(2);
         // Should be sorted alphabetically
@@ -165,7 +181,7 @@ public class ThriftServiceSpecificationGeneratorTest {
                                  ImmutableSet.of(ThriftSerializationFormats.BINARY)));
 
         final Map<String, FunctionInfo> functions = service.functions();
-        assertThat(functions).hasSize(5);
+        assertThat(functions).hasSize(6);
 
         final FunctionInfo bar1 = functions.get("bar1");
         assertThat(bar1.parameters()).isEmpty();
@@ -203,9 +219,31 @@ public class ThriftServiceSpecificationGeneratorTest {
         assertThat(bar5.exceptions()).hasSize(1);
         assertThat(bar5.sampleJsonRequest()).isEmpty();
 
-        final String sampleHttpHeaders = service.sampleHttpHeaders();
-        assertThat(sampleHttpHeaders).isNotNull();
-        assertThatJson(sampleHttpHeaders).isEqualTo("{ \"foobar\": \"barbaz\" }");
+        final FunctionInfo bar6 = functions.get("bar6");
+        assertThat(bar6.parameters()).containsExactly(
+                new FieldInfo("foo1", FieldRequirement.DEFAULT, TypeInfo.STRING),
+                new FieldInfo("foo2", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.STRUCT, "TypedefedStruct")),
+                new FieldInfo("foo3", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.ENUM, "TypedefedEnum")),
+                new FieldInfo("foo4", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.MAP, "TypedefedMap")),
+                new FieldInfo("foo5", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.LIST, "TypedefedList")),
+                new FieldInfo("foo6", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.SET, "TypedefedSet")),
+                new FieldInfo("foo7", FieldRequirement.DEFAULT,
+                              new UnresolvedClassInfo(Type.LIST, "NestedTypedefedStructs")),
+                new FieldInfo("foo8", FieldRequirement.DEFAULT,
+                              new ListInfo(new ListInfo(
+                                      new UnresolvedClassInfo(Type.STRUCT, "TypedefedStruct")))));
+
+        assertThat(bar6.returnTypeInfo()).isEqualTo(TypeInfo.VOID);
+        assertThat(bar6.exceptions()).isEmpty();
+        assertThat(bar6.sampleJsonRequest()).isEmpty();
+
+        final List<HttpHeaders> exampleHttpHeaders = service.exampleHttpHeaders();
+        assertThat(exampleHttpHeaders).containsExactly(HttpHeaders.of(AsciiString.of("foobar"), "barbaz"));
     }
 
     @Test
@@ -235,6 +273,8 @@ public class ThriftServiceSpecificationGeneratorTest {
         fields.add(new FieldInfo("mapVal", FieldRequirement.DEFAULT, new MapInfo(TypeInfo.STRING, fooEnum)));
         fields.add(new FieldInfo("setVal", FieldRequirement.DEFAULT, new SetInfo(union)));
         fields.add(new FieldInfo("listVal", FieldRequirement.DEFAULT, new ListInfo(TypeInfo.STRING)));
+        fields.add(new FieldInfo("selfRef", FieldRequirement.OPTIONAL,
+                                 new UnresolvedClassInfo(Type.STRUCT, FooStruct.class.getSimpleName())));
 
         final StructInfo fooStruct = newStructInfo(
                 new StructMetaData(TType.STRUCT, FooStruct.class), emptyMap());

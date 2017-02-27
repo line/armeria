@@ -1,7 +1,6 @@
-dependencies {
-    compile 'com.google.guava:guava'
+managedDependencies {
     compile 'com.squareup.retrofit2:retrofit'
 
-    testCompile 'com.squareup.retrofit2:adapter-guava'
+    testCompile 'com.squareup.retrofit2:adapter-java8'
     testCompile 'com.squareup.retrofit2:converter-jackson'
 }

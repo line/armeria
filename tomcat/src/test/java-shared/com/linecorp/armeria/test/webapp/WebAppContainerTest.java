@@ -29,6 +29,7 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
@@ -159,6 +160,47 @@ public abstract class WebAppContainerTest extends AbstractServerTest {
                         "<html><body>" +
                         "<p>foo is 3</p>" +
                         "<p>bar is 4</p>" +
+                        "</body></html>"));
+            }
+        }
+    }
+
+    @Test
+    public void testEchoPost() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            final HttpPost post = new HttpPost(uri("/jsp/echo_post.jsp"));
+            post.setEntity(new StringEntity("test"));
+
+            try (CloseableHttpResponse res = hc.execute(post)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("text/html"));
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+                assertThat(actualContent, is(
+                        "<html><body>" +
+                        "<p>Check request body</p>" +
+                        "<p>test</p>" +
+                        "</body></html>"));
+            }
+        }
+    }
+
+    @Test
+    public void testEchoPostEmptyBody() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            final HttpPost post = new HttpPost(uri("/jsp/echo_post.jsp"));
+
+            try (CloseableHttpResponse res = hc.execute(post)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
+                           startsWith("text/html"));
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+                assertThat(actualContent, is(
+                        "<html><body>" +
+                        "<p>Check request body</p>" +
+                        "<p></p>" +
                         "</body></html>"));
             }
         }

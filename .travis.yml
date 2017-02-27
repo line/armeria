@@ -22,7 +22,7 @@ env:
   global:
     - JAVA_HOME=$HOME/.jdk/default
     - PATH=$JAVA_HOME/bin:$PATH
-    - GRADLE_OPTS=-Xmx384m
+    - GRADLE_OPTS=-Xmx512m
 
 before_install:
   - .travis/install-jdk.sh
@@ -32,10 +32,11 @@ install:
   - true
 
 script:
-  - ./gradlew --no-daemon --stacktrace -Pcoverage build
+  - ./gradlew --no-daemon --stacktrace -Pcoverage checkstyle test build
 
 before_cache:
   - find $HOME/.gradle/caches -name '*.lock' -delete
+  - rm -fr $HOME/.gradle/caches/[0-9]*
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

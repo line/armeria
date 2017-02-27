@@ -12,7 +12,7 @@ You can put your Endpoints information into a zNode in `Apache ZooKeeper`_ clust
 
 | as node children:
 |        /myProductionEndpoints
-|                  /192.168.1.10_8080 --> 192.168.1.10:8080:100
+|                  /192.168.1.10_8080 --> 192.168.1.10:8080
 |                  /192.168.1.11_8080 --> 192.168.1.11:8080:100
 
 In the examples above, 192.168.1.10 and other IP strings are your servers' IP addresses, 8080 is the service port number, 100 is the server's weight. You can omit the server's weight as it is optional.
@@ -49,7 +49,8 @@ Register your server:
 
 .. code-block:: java
 
-   //This construction will use server's default host name, port and weight to register, use the other constructor to specify the desired.
+   // This constructor will use server's default host name,
+   // port and weight to register, use the other constructor to specify the desired.
    ServerListener listener = new ZooKeeperUpdatingListener(zkConnectionStr, zNode, sessionTimeout);
    server.addListener(listener);
    server.start();

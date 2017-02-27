@@ -46,10 +46,14 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
         tomcatWithWebApp.setPort(0);
         tomcatWithWebApp.setBaseDir("build" + File.separatorChar +
                                     "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-1");
+
+        final File docBaseA = new File("build" + File.separatorChar + "classes" + File.separatorChar +
+                                       "test" + File.separatorChar + "tomcat_service");
+        final File docBaseB = new File("build" + File.separatorChar + "classes" + File.separatorChar +
+                                       "test-tomcat" + File.separatorChar + "tomcat_service");
+
         tomcatWithWebApp.addWebapp(
-                "",
-                new File("build" + File.separatorChar + "classes" + File.separatorChar +
-                         "test" + File.separatorChar + "tomcat_service").getAbsolutePath());
+                "", (docBaseB.exists() ? docBaseB : docBaseA).getAbsolutePath());
         tomcatWithWebApp.getService().getContainer().setName("tomcatWithWebApp");
 
         tomcatWithoutWebApp = new Tomcat();

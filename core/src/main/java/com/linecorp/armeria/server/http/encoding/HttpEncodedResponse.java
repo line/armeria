@@ -27,8 +27,7 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 
-import com.google.common.net.MediaType;
-
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.FilteredHttpResponse;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;

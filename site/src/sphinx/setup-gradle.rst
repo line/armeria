@@ -18,14 +18,21 @@ You might want to use the following  ``build.gradle`` as a starting point if you
     }
 
     dependencies {
-        ['armeria', 'armeria-jetty', 'armeria-kafka', 'armeria-logback', 'armeria-retrofit2',
-         'armeria-tomcat', 'armeria-zipkin', 'armeria-zookeeper'].each {
-            compile group: 'com.linecorp.armeria', name: it, version: '\ |release|\ '
+        ['armeria',
+         'armeria-jetty',
+         'armeria-kafka',
+         'armeria-logback',
+         'armeria-retrofit2',
+         'armeria-thrift',
+         'armeria-tomcat',
+         'armeria-zipkin',
+         'armeria-zookeeper'].each {
+            compile "com.linecorp.armeria:${it}:\ |release|\ "
         }
 
         // Logging
-        runtime group: 'ch.qos.logback', name: 'logback-classic', version: '\ |logback.version|\ '
-        runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: '\ |slf4j.version|\ '
+        runtime 'ch.qos.logback:logback-classic:\ |ch.qos.logback:logback-classic:version|\ '
+        runtime 'org.slf4j:log4j-over-slf4j:\ |org.slf4j:log4j-over-slf4j:version|\ '
     }
 
     // Require Java 8 to build the project.
@@ -34,4 +41,4 @@ You might want to use the following  ``build.gradle`` as a starting point if you
         targetCompatibility '1.8'
     }
 
-You may not need all Armeria modules depending on your use case. Please remove unused ones.
+.. include:: setup-common.rst

@@ -20,8 +20,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ClassToInstanceMap;
-
 /**
  * Creates a new {@link ClientFactory} dynamically via Java SPI (Service Provider Interface).
  */
@@ -30,12 +28,12 @@ public interface ClientFactoryProvider {
     /**
      * Creates a new {@link ClientFactory}.
      */
-    ClientFactory newFactory(SessionOptions options, ClassToInstanceMap<ClientFactory> dependencies);
+    ClientFactory newFactory(SessionOptions options, Map<Class<?>, ClientFactory> dependencies);
 
     /**
      * Returns the type of the {@link ClientFactory} required for this provider to create a new
      * {@link ClientFactory}. The {@link Map} which is given when
-     * {@link #newFactory(SessionOptions, ClassToInstanceMap)} is invoked will contain the entries
+     * {@link #newFactory(SessionOptions, Map)} is invoked will contain the entries
      * for the classes returned by this method and their respective instances.
      */
     default Set<Class<? extends ClientFactory>> dependencies() {

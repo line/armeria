@@ -30,8 +30,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -40,7 +38,6 @@ import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
-import org.apache.catalina.util.ServerInfo;
 import org.apache.catalina.util.URLEncoder;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.InputBuffer;
@@ -89,30 +86,9 @@ public final class TomcatService implements HttpService {
     private static final Set<LifecycleState> TOMCAT_START_STATES = Sets.immutableEnumSet(
             LifecycleState.STARTED, LifecycleState.STARTING, LifecycleState.STARTING_PREP);
 
-    private static final int TOMCAT_MAJOR_VERSION;
     private static final URLEncoder TOMCAT_URL_ENCODER;
 
     static {
-        // Detect Tomcat version.
-        final Pattern pattern = Pattern.compile("^([1-9][0-9]*)\\.");
-        final String version = ServerInfo.getServerNumber();
-        final Matcher matcher = pattern.matcher(version);
-        int tomcatMajorVersion = -1;
-        if (matcher.find()) {
-            try {
-                tomcatMajorVersion = Integer.parseInt(matcher.group(1));
-            } catch (NumberFormatException ignored) {
-                // Probably greater than Integer.MAX_VALUE
-            }
-        }
-
-        TOMCAT_MAJOR_VERSION = tomcatMajorVersion;
-        if (TOMCAT_MAJOR_VERSION > 0) {
-            logger.info("Tomcat version: {} (major: {})", version, TOMCAT_MAJOR_VERSION);
-        } else {
-            logger.info("Tomcat version: {} (major: unknown)", version);
-        }
-
         // Initialize the default URLEncoder.
         // NB: We could have used URLEncoder.DEFAULT, but it's not available in pre-8.5.
         TOMCAT_URL_ENCODER = new URLEncoder();
@@ -488,9 +464,7 @@ public final class TomcatService implements HttpService {
 
         // Set the content.
         final HttpData content = req.content();
-        if (!content.isEmpty()) {
-            coyoteReq.setInputBuffer(new InputBufferImpl(content));
-        }
+        coyoteReq.setInputBuffer(new InputBufferImpl(content));
 
         return coyoteReq;
     }
@@ -598,7 +572,7 @@ public final class TomcatService implements HttpService {
 
         @Override
         public int doRead(ByteChunk chunk) {
-            if (read) {
+            if (read || content.isEmpty()) {
                 // Read only once.
                 return -1;
             }
