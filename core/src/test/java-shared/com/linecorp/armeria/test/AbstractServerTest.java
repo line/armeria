@@ -19,6 +19,7 @@ import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -119,6 +120,12 @@ public abstract class AbstractServerTest {
         }
 
         return "https://127.0.0.1:" + httpsPort + path;
+    }
+
+    protected static InetSocketAddress ipv4SocketAddress() {
+        return new InetSocketAddress(
+                "127.0.0.1",
+                server().activePort().get().localAddress().getPort());
     }
 
     private static void validatePath(String path) {
