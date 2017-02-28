@@ -23,7 +23,7 @@ import com.linecorp.armeria.server.ServerPort;
 
 import io.netty.util.internal.PlatformDependent;
 
-public abstract class AbstractServiceServer {
+public abstract class AbstractServiceServer implements AutoCloseable {
     private Server server;
 
     protected abstract void configureServer(ServerBuilder sb) throws Exception;
@@ -48,7 +48,8 @@ public abstract class AbstractServiceServer {
         return port.localAddress().getPort();
     }
 
-    public void stop() {
+    @Override
+    public void close() {
         server.stop();
     }
 }
