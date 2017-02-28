@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common.http;
 
-import static io.netty.util.AsciiString.isUpperCase;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -31,22 +31,8 @@ import io.netty.util.AsciiString;
 public final class DefaultHttpHeaders
         extends DefaultHeaders<AsciiString, String, HttpHeaders> implements HttpHeaders {
 
-    private static final NameValidator<AsciiString> HTTP2_NAME_VALIDATOR = name -> {
-        if (name == null) {
-            throw new NullPointerException("header name");
-        }
-
-        final int index;
-        try {
-            index = name.forEachByte(value -> !isUpperCase(value));
-        } catch (Exception e) {
-            throw new IllegalArgumentException("invalid header name: " + name, e);
-        }
-
-        if (index != -1) {
-            throw new IllegalArgumentException("invalid header name: " + name);
-        }
-    };
+    private static final NameValidator<AsciiString> HTTP2_NAME_VALIDATOR =
+            name -> checkArgument(name != null && !name.isEmpty(), "empty headers are not allowed: %s", name);
 
     private final boolean endOfStream;
 
@@ -211,5 +197,12 @@ public final class DefaultHttpHeaders
             separator = ", ";
         }
         return buf.append(']').toString();
+    }
+
+    @Override
+    protected HeaderEntry<AsciiString, String> newHeaderEntry(int h, AsciiString name, String value,
+                                                              HeaderEntry<AsciiString, String> next) {
+
+        return super.newHeaderEntry(h, name.toLowerCase(), value, next);
     }
 }
