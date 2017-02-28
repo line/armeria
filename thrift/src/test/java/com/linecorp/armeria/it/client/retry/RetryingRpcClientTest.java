@@ -95,7 +95,7 @@ public class RetryingRpcClientTest {
             when(serviceHandler.hello(anyString()))
                     .thenThrow(new IllegalArgumentException());
             assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(Exception.class);
-            verify(serviceHandler, times(2)).hello("hello");
+            verify(serviceHandler, times(1)).hello("hello");
         }
     }
 

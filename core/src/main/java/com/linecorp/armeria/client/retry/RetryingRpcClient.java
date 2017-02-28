@@ -67,7 +67,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         DefaultRpcResponse responseFuture = new DefaultRpcResponse();
         Backoff backoff = newBackoff();
-        retry(0, backoff, ctx, req, () -> {
+        retry(1, backoff, ctx, req, () -> {
             try {
                 return delegate().execute(ctx, req);
             } catch (Exception e) {
@@ -77,7 +77,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
         return responseFuture;
     }
 
-    private void retry(int numAttemptsSoFar, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
+    private void retry(int currentAttemptNo, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
                        Supplier<RpcResponse> action, DefaultRpcResponse responseFuture) {
         RpcResponse response = action.get();
         response.handle(voidFunction((result, thrown) -> {
@@ -95,17 +95,17 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
                 return;
             }
 
-            long nextInterval = backoff.nextIntervalMillis(numAttemptsSoFar);
+            long nextInterval = backoff.nextIntervalMillis(currentAttemptNo);
             if (nextInterval < 0) {
                 responseFuture.completeExceptionally(exception);
             } else {
                 EventLoop eventLoop = ctx.contextAwareEventLoop();
                 if (nextInterval <= 0) {
-                    eventLoop.submit(() -> retry(numAttemptsSoFar + 1, backoff, ctx, req, action,
+                    eventLoop.submit(() -> retry(currentAttemptNo + 1, backoff, ctx, req, action,
                                                  responseFuture));
                 } else {
                     eventLoop.schedule(
-                            () -> retry(numAttemptsSoFar + 1, backoff, ctx, req, action, responseFuture),
+                            () -> retry(currentAttemptNo + 1, backoff, ctx, req, action, responseFuture),
                             nextInterval, TimeUnit.MILLISECONDS);
                 }
             }
