@@ -185,7 +185,7 @@ public class ServerTest extends AbstractServerTest {
     public void testIdleTimeoutByNoContentSent() throws Exception {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
-            socket.connect(server().activePort().get().localAddress());
+            socket.connect(ipv4SocketAddress());
             long connectedNanos = System.nanoTime();
             //read until EOF
             while (socket.getInputStream().read() != -1) {
@@ -201,7 +201,7 @@ public class ServerTest extends AbstractServerTest {
     public void testIdleTimeoutByContentSent() throws Exception {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
-            socket.connect(server().activePort().get().localAddress());
+            socket.connect(ipv4SocketAddress());
             PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
             outWriter.print("POST / HTTP/1.1\r\n");
             outWriter.print("Connection: Keep-Alive\r\n");
@@ -228,7 +228,7 @@ public class ServerTest extends AbstractServerTest {
     public void testBuggyService() throws Exception {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
-            socket.connect(server().activePort().get().localAddress());
+            socket.connect(ipv4SocketAddress());
             PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
 
             // Send a request to a buggy service whose invoke() raises an exception.
@@ -272,7 +272,7 @@ public class ServerTest extends AbstractServerTest {
 
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
-            socket.connect(server().activePort().get().localAddress());
+            socket.connect(ipv4SocketAddress());
             PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
 
             outWriter.print(reqLine);

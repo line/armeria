@@ -70,8 +70,8 @@ public class HttpHealthCheckedEndpointGroupTest {
                 .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.port(), "127.0.0.1:" + serverTwo.port()));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of());
-        serverOne.stop();
-        serverTwo.stop();
+        serverOne.close();
+        serverTwo.close();
     }
 
     @Test
@@ -96,7 +96,7 @@ public class HttpHealthCheckedEndpointGroupTest {
                 .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.port()));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of("127.0.0.1:2345"));
-        serverOne.stop();
+        serverOne.close();
     }
 
     @Test
@@ -122,6 +122,6 @@ public class HttpHealthCheckedEndpointGroupTest {
                 .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.port()));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of());
-        serverOne.stop();
+        serverOne.close();
     }
 }
