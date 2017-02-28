@@ -48,7 +48,7 @@ final class RequestContextAwareEventLoop extends RequestContextAwareExecutorServ
 
     @Override
     public EventLoop next() {
-        return delegate().next();
+        return this;
     }
 
     @Override
