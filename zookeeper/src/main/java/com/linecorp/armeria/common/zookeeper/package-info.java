@@ -13,8 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 /**
- * ZooKeeper-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
+ * Common classes will be used by Server and Client implementations.
  */
-package com.linecorp.armeria.client.endpoint.zookeeper;
+package com.linecorp.armeria.common.zookeeper;
