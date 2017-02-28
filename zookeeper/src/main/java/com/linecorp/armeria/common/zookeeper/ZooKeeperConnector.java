@@ -99,7 +99,7 @@ public final class ZooKeeperConnector {
     }
 
     /**
-     * Utility method to create a node .
+     * Utility method to create a node.
      * @param nodePath node name
      * @param value    node value
      */
@@ -307,4 +307,3 @@ public final class ZooKeeperConnector {
         return zooKeeper;
     }
 }
-

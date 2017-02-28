@@ -47,7 +47,7 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value or a node's value depending on value store type {@link Mode}
+     * node value or a node's value depending on value store type {@link Mode}.
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}
@@ -61,7 +61,7 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
-     * node value or a node's value depending on value store type {@link Mode}
+     * node value or a node's value depending on value store type {@link Mode}.
      * @param zkConnectionStr a connection string containing a comma separated list of {@code host:port} pairs,
      *                        each corresponding to a ZooKeeper server
      * @param zNodePath       a zNode path e.g. {@code "/groups/productionGroups"}

@@ -21,13 +21,13 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerListener;
+import com.linecorp.armeria.server.ServerListenerAdapter;
 
 /**
  * A ZooKeeper Server Listener.When you add this listener, server will be automatically registered
  * into the ZooKeeper.
  */
-public class ZooKeeperUpdatingListener implements ServerListener {
+public class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     private final String zkConnectionStr;
     private final String zNodePath;
     private final int sessionTimeout;
@@ -73,18 +73,10 @@ public class ZooKeeperUpdatingListener implements ServerListener {
     }
 
     @Override
-    public void serverStarted(Server server) throws Exception {
-    }
-
-    @Override
     public void serverStopping(Server server) throws Exception {
         if (connector != null) {
             connector.close(true);
         }
-    }
-
-    @Override
-    public void serverStopped(Server server) throws Exception {
     }
 
     @VisibleForTesting
