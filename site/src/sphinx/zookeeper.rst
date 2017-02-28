@@ -8,7 +8,7 @@ Automatic service discovery with ZooKeeper
 You can put your Endpoints information into a zNode in `Apache ZooKeeper`_ cluster, as a node value or as the child values of a node, like the following:
 
 | as node value:
-|         /myProductionEndpoints --> 192.168.1.10:8080:100,192.168.1.11:8080:100
+|         /myProductionEndpoints --> 192.168.1.10:8080,192.168.1.11:8080:100
 
 | as node children:
 |        /myProductionEndpoints
