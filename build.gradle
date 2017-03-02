@@ -283,6 +283,7 @@ configure(javaProjects) {
         options.encoding = 'UTF-8'
         options.warnings = false
         options.debug = true
+        options.incremental = true
     }
 
     // Prepare the JVM agent that enables TLS ALPN extension.
