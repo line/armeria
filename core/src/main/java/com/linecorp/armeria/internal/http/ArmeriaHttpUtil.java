@@ -72,7 +72,7 @@ import io.netty.util.HashingStrategy;
 public final class ArmeriaHttpUtil {
 
     /**
-     * The default case-sensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
+     * The default case-insensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
      */
     public static final HashingStrategy<AsciiString> HTTP2_HEADER_NAME_HASHER =
             new HashingStrategy<AsciiString>() {
@@ -83,7 +83,7 @@ public final class ArmeriaHttpUtil {
 
                 @Override
                 public boolean equals(AsciiString a, AsciiString b) {
-                    return a.equals(b);
+                    return a.contentEqualsIgnoreCase(b);
                 }
             };
 
