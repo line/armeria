@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperException;
 
 import junitextensions.OptionAssert;
+import zookeeperjunit.CloseableZooKeeper;
 import zookeeperjunit.ZooKeeperAssert;
 
 @RunWith(Parameterized.class)
@@ -68,7 +69,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     }
 
     @Before
-    public void connectZk() {
+    public void connectZk() throws Throwable {
         //crate endpoint group and initialize node value
         switch (mode) {
             case IN_NODE_VALUE:
@@ -89,11 +90,13 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     }
 
     @After
-    public void disconnectZk() {
+    public void disconnectZk() throws Throwable {
         try {
             endpointGroup.close();
             //clear node data
-            instance().connect().forEach(zooKeeper -> zooKeeper.deleteRecursively(zNode));
+            try (CloseableZooKeeper zooKeeper = connection()) {
+                zooKeeper.deleteRecursively(zNode);
+            }
         } catch (Exception e) {
             fail();
         }
@@ -105,7 +108,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     }
 
     @Test
-    public void testUpdateEndpointGroup() {
+    public void testUpdateEndpointGroup() throws Throwable {
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001, 2),
                                                  Endpoint.of("127.0.0.1", 8002, 3));
         switch (mode) {
@@ -120,6 +123,10 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
                 builder.addAll(sampleEndpoints).addAll(expected);
                 expected = builder.build();
                 break;
+        }
+        try (CloseableZooKeeper zk = connection()) {
+            zk.sync(zNode, (rc, path, ctx) -> {
+            }, null);
         }
         assertThat(endpointGroup.endpoints()).hasSameElementsAs(expected);
     }
@@ -144,47 +151,45 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
         testGetEndpointGroup();
     }
 
-    private void setNodeValue(byte[] nodeValue) {
-        instance().connect().map(closeableZooKeeper -> {
+    private void setNodeValue(byte[] nodeValue) throws Throwable {
+        try (CloseableZooKeeper closeableZooKeeper = connection()) {
             if (closeableZooKeeper.exists(zNode).get()) {
-                return closeableZooKeeper.setData(zNode, nodeValue,
-                                                  closeableZooKeeper.exists(zNode,
-                                                                            false).getVersion());
+                closeableZooKeeper.setData(zNode, nodeValue,
+                                           closeableZooKeeper.exists(zNode, false).getVersion());
+                return;
             }
-            return closeableZooKeeper.create(zNode, nodeValue, ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                                             CreateMode.PERSISTENT);
-        });
+            closeableZooKeeper.create(zNode, nodeValue, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                                      CreateMode.PERSISTENT);
+        }
         assertExists(zNode);
     }
 
-    private void setNodeChild(Set<Endpoint> children) {
-        instance().connect().forEach(
-                closeableZooKeeper -> {
-                    //if the parent node dose not exist, create it
-                    try {
-                        if (!closeableZooKeeper.exists(zNode).get()) {
-                            closeableZooKeeper
-                                    .create(zNode, null, Ids.OPEN_ACL_UNSAFE,
-                                            CreateMode.PERSISTENT);
-                        }
-                    } catch (Throwable throwable) {
-                        fail();
-                    }
-                    //register all child node
-                    children.forEach(endpoint -> {
-                        try {
-                            closeableZooKeeper
-                                    .create(zNode + '/' + endpoint.host() + '_' + endpoint.port(),
-                                            NodeValueCodec.DEFAULT.encode(endpoint),
-                                            Ids.OPEN_ACL_UNSAFE,
-                                            CreateMode.EPHEMERAL);
-                        } catch (Exception e) {
-                            fail();
-                            logger.error("failed to create node children", e.getMessage());
-                        }
-                    });
+    private void setNodeChild(Set<Endpoint> children) throws Throwable {
+        try (CloseableZooKeeper closeableZooKeeper = connection()) {
+            //if the parent node dose not exist, create it
+            try {
+                if (!closeableZooKeeper.exists(zNode).get()) {
+                    closeableZooKeeper
+                            .create(zNode, null, Ids.OPEN_ACL_UNSAFE,
+                                    CreateMode.PERSISTENT);
                 }
-        );
+            } catch (Throwable throwable) {
+                fail();
+            }
+            //register all child node
+            children.forEach(endpoint -> {
+                try {
+                    closeableZooKeeper
+                            .create(zNode + '/' + endpoint.host() + '_' + endpoint.port(),
+                                    NodeValueCodec.DEFAULT.encode(endpoint),
+                                    Ids.OPEN_ACL_UNSAFE,
+                                    CreateMode.PERSISTENT);
+                } catch (Exception e) {
+                    logger.error("failed to create node children", e.getMessage());
+                    fail();
+                }
+            });
+        }
         children.forEach(endpoint -> assertExists(zNode + '/' + endpoint.host() + '_' + endpoint.port()));
     }
 }
