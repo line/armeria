@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
-import static org.junit.Assert.fail;
-
 import java.time.Duration;
 import java.util.Set;
 
@@ -41,7 +39,7 @@ public class TestBase {
     protected static final Set<Endpoint> sampleEndpoints = ImmutableSet.of(Endpoint.of("127.0.0.1", 1234, 2),
                                                                            Endpoint.of("127.0.0.1", 2345, 4),
                                                                            Endpoint.of("127.0.0.1", 3456, 2));
-    private static final Duration duration = Duration.ofSeconds(5);
+    private static final Duration duration = Duration.ofSeconds(10);
     @ClassRule
     public static final TemporaryFolder ROOT_FOLDER = new TemporaryFolder();
     private static ZKInstance zkInstance;
@@ -52,7 +50,7 @@ public class TestBase {
             zkInstance = ZKFactory.apply().withRootDir(ROOT_FOLDER.newFolder("zookeeper")).create();
             zkInstance.start().result(duration);
         } catch (Throwable throwable) {
-            fail();
+            throw new IllegalStateException(throwable);
         }
     }
 
