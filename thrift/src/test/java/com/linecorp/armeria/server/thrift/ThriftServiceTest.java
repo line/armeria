@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
@@ -40,7 +41,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 
 import org.apache.thrift.TApplicationException;
-import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
@@ -580,7 +580,10 @@ public class ThriftServiceTest {
 
         final HttpData req2 = HttpData.of(out.getArray(), 0, out.length());
 
-        THttpService service = THttpService.of(new UberNameService(), defaultSerializationFormat);
+        final THttpService service = THttpService.of(
+                (UberNameService) (names, callback) -> callback.onComplete(
+                        names.stream().sorted().collect(toImmutableList())),
+                defaultSerializationFormat);
 
         invoke0(service, req1, promise);
         invoke0(service, req2, promise2);
@@ -595,17 +598,16 @@ public class ThriftServiceTest {
         assertThat(client2.recv_sort(), is(Arrays.asList(NAME_A, NAME_B, NAME_C)));
     }
 
-    private static final class UberNameService implements NameService.Iface, NameSortService.AsyncIface {
+    // NB: By making this interface functional, we can use lambda expression to implement
+    //     NameSortService.AsyncIface.sort(). By using lambda expression, we can omit the parameter type
+    //     declarations (i.e. no AsyncMethodCallback<List<Name>>). By omitting the parameter type declaration,
+    //     We can compile it with both Thrift 0.9 (which uses raw type for AsyncMethodCallback) and
+    //     0.10 (which uses a concrete type parameter for AsyncMethodCallback.)
+    @FunctionalInterface
+    private interface UberNameService extends NameService.Iface, NameSortService.AsyncIface {
         @Override
-        public Name removeMiddle(Name name) {
+        default Name removeMiddle(Name name) {
             return new Name(name.first, null, name.last);
-        }
-
-        @Override
-        public void sort(List<Name> names, AsyncMethodCallback resultHandler) {
-            ArrayList<Name> sorted = new ArrayList<>(names);
-            Collections.sort(sorted);
-            resultHandler.onComplete(sorted);
         }
     }
 

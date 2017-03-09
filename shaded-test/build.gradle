@@ -8,6 +8,9 @@ ext {
         cfg.name in ['compile', 'runtime', 'testCompile', 'testRuntime']
     }}
     testConfigurations = getTestConfigurations(project)
+
+    // Exclude the projects with conflicting dependency versions.
+    testedProjects = rootProject.ext.publishedJavaProjects - rootProject.ext.backwardCompatProjects
 }
 // Clear the common dependencies set by the root project to make sure we do not pull the unshaded projects.
 ext.testConfigurations.each { it.dependencies.clear() }
@@ -50,11 +53,11 @@ dependencies {
     }
 
     // Pull all shaded JARs and their dependencies in.
-    rootProject.ext.publishedJavaProjects.each { addShaded it }
+    project.ext.testedProjects.each { addShaded it }
 }
 
 task allShadedJars {
-    rootProject.ext.publishedJavaProjects.each { testProject ->
+    project.ext.testedProjects.each { testProject ->
         dependsOn testProject.tasks.assemble
     }
 }
@@ -63,7 +66,7 @@ task shadedTest(group: 'Verification',
                 description: 'Runs the unit tests with the shaded JARs.')
 tasks.test.dependsOn tasks.shadedTest
 
-rootProject.ext.publishedJavaProjects.each { testProject ->
+project.ext.testedProjects.each { testProject ->
     def shadedTestJarExtractTask = tasks.create("shaded${testProject.name.capitalize()}TestJarExtract", Copy) {
         def shadedTestJarTask = testProject.tasks.shadedTestJar
         dependsOn shadedTestJarTask
