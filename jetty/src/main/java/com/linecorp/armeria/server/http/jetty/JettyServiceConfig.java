@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.RequestLog;
@@ -32,6 +33,8 @@ import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.util.component.Container.Listener;
 import org.eclipse.jetty.util.component.LifeCycle;
 
+import com.google.common.base.MoreObjects;
+
 final class JettyServiceConfig {
 
     private final String hostname;
@@ -40,7 +43,7 @@ final class JettyServiceConfig {
     private final Long stopTimeoutMillis;
     private final Handler handler;
     private final RequestLog requestLog;
-    private final SessionIdManager sessionIdManager;
+    private final Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
     private final Map<String, Object> attrs;
     private final List<Bean> beans;
     private final List<HandlerWrapper> handlerWrappers;
@@ -50,7 +53,8 @@ final class JettyServiceConfig {
 
     JettyServiceConfig(String hostname,
                        Boolean dumpAfterStart, Boolean dumpBeforeStop, Long stopTimeoutMillis,
-                       Handler handler, RequestLog requestLog, SessionIdManager sessionIdManager,
+                       Handler handler, RequestLog requestLog,
+                       Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory,
                        Map<String, Object> attrs, List<Bean> beans, List<HandlerWrapper> handlerWrappers,
                        List<Listener> eventListeners, List<LifeCycle.Listener> lifeCycleListeners,
                        List<Consumer<? super Server>> configurators) {
@@ -61,7 +65,7 @@ final class JettyServiceConfig {
         this.stopTimeoutMillis = stopTimeoutMillis;
         this.handler = handler;
         this.requestLog = requestLog;
-        this.sessionIdManager = sessionIdManager;
+        this.sessionIdManagerFactory = sessionIdManagerFactory;
         this.attrs = Collections.unmodifiableMap(attrs);
         this.beans = Collections.unmodifiableList(beans);
         this.handlerWrappers = Collections.unmodifiableList(handlerWrappers);
@@ -94,8 +98,8 @@ final class JettyServiceConfig {
         return Optional.ofNullable(requestLog);
     }
 
-    Optional<SessionIdManager> sessionIdManager() {
-        return Optional.ofNullable(sessionIdManager);
+    Optional<Function<? super Server, ? extends SessionIdManager>> sessionIdManagerFactory() {
+        return Optional.ofNullable(sessionIdManagerFactory);
     }
 
     Map<String, Object> attrs() {
@@ -126,47 +130,33 @@ final class JettyServiceConfig {
     public String toString() {
         return toString(
                 this, hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
-                sessionIdManager, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
+                sessionIdManagerFactory, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
                 configurators);
     }
 
     static String toString(
             Object holder, String hostname, Boolean dumpAfterStart, Boolean dumpBeforeStop, Long stopTimeout,
-            Handler handler, RequestLog requestLog, SessionIdManager sessionIdManager,
+            Handler handler, RequestLog requestLog,
+            Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory,
             Map<String, Object> attrs, List<Bean> beans, List<HandlerWrapper> handlerWrappers,
             List<Listener> eventListeners, List<LifeCycle.Listener> lifeCycleListeners,
             List<Consumer<? super Server>> configurators) {
 
-        final StringBuilder buf = new StringBuilder(256);
-        buf.append(holder.getClass().getSimpleName());
-        buf.append("(hostname: ");
-        buf.append(hostname);
-        buf.append(", dumpAfterStart: ");
-        buf.append(dumpAfterStart);
-        buf.append(", dumpBeforeStop: ");
-        buf.append(dumpBeforeStop);
-        buf.append(", stopTimeoutMillis: ");
-        buf.append(stopTimeout);
-        buf.append(", handler: ");
-        buf.append(handler);
-        buf.append(", requestLog: ");
-        buf.append(requestLog);
-        buf.append(", sessionIdManager: ");
-        buf.append(sessionIdManager);
-        buf.append(", attrs: ");
-        buf.append(attrs);
-        buf.append(", beans: ");
-        buf.append(beans);
-        buf.append(", handlerWrappers: ");
-        buf.append(handlerWrappers);
-        buf.append(", eventListeners: ");
-        buf.append(eventListeners);
-        buf.append(", lifeCycleListeners: ");
-        buf.append(lifeCycleListeners);
-        buf.append(", configurators: ");
-        buf.append(configurators);
-        buf.append(')');
-        return buf.toString();
+        return MoreObjects.toStringHelper(holder)
+                          .add("hostname", hostname)
+                          .add("dumpAfterStart", dumpAfterStart)
+                          .add("dumpBeforeStop", dumpBeforeStop)
+                          .add("stopTimeoutMillis", stopTimeout)
+                          .add("handler", handler)
+                          .add("requestLog", requestLog)
+                          .add("sessionIdManagerFactory", sessionIdManagerFactory)
+                          .add("attrs", attrs)
+                          .add("beans", beans)
+                          .add("handlerWrappers", handlerWrappers)
+                          .add("eventListeners", eventListeners)
+                          .add("lifeCycleListeners", lifeCycleListeners)
+                          .add("configurators", configurators)
+                          .toString();
     }
 
     static final class Bean {
