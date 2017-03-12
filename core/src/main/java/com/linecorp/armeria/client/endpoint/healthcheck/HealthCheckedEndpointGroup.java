@@ -33,12 +33,13 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 
 /**
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
  */
-public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
+public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     protected static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3);
 
     private final ClientFactory clientFactory;
@@ -46,7 +47,6 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     private final Duration healthCheckRetryInterval;
 
     volatile List<ServerConnection> allServers = ImmutableList.of();
-    volatile List<Endpoint> healthyEndpoints = ImmutableList.of();
 
     /**
      * Creates a new instance.
@@ -61,7 +61,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     }
 
     /**
-     * Update healty servers and start to schedule healthcheck.
+     * Update healthy servers and start to schedule healthcheck.
      * A subclass being initialized with this constructor must call {@link #init()} before start being used.
      */
     protected void init() {
@@ -97,7 +97,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
                     newHealthyEndpoints.add(checkedServers.get(i).endpoint());
                 }
             }
-            healthyEndpoints = newHealthyEndpoints.build();
+            setEndpoints(newHealthyEndpoints.build());
         }));
     }
 
@@ -135,11 +135,6 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
     }
 
     @Override
-    public List<Endpoint> endpoints() {
-        return healthyEndpoints;
-    }
-
-    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
         buf.append("HealthCheckedEndpointGroup(all:[");
@@ -148,7 +143,7 @@ public abstract class HealthCheckedEndpointGroup implements EndpointGroup {
         }
         buf.setCharAt(buf.length() - 1, ']');
         buf.append(", healthy:[");
-        for (Endpoint endpoint : healthyEndpoints) {
+        for (Endpoint endpoint : endpoints()) {
             buf.append(endpoint).append(',');
         }
         buf.setCharAt(buf.length() - 1, ']');

@@ -111,6 +111,8 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     public void testUpdateEndpointGroup() throws Throwable {
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001, 2),
                                                  Endpoint.of("127.0.0.1", 8002, 3));
+        CountDownLatch latch = new CountDownLatch(1);
+        endpointGroup.addListener(l -> latch.countDown());
         switch (mode) {
             case IN_NODE_VALUE:
                 setNodeValue(NodeValueCodec.DEFAULT.encodeAll(expected));
@@ -128,6 +130,7 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
             zk.sync(zNode, (rc, path, ctx) -> {
             }, null);
         }
+        latch.await();
         assertThat(endpointGroup.endpoints()).hasSameElementsAs(expected);
     }
 

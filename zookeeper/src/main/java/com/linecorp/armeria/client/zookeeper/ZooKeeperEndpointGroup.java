@@ -15,13 +15,13 @@
  */
 package com.linecorp.armeria.client.zookeeper;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
-import java.util.stream.Collectors;
 
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
@@ -29,6 +29,7 @@ import org.apache.zookeeper.ZooKeeper;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperConnector;
@@ -40,10 +41,9 @@ import com.linecorp.armeria.common.zookeeper.ZooKeeperListener;
  * {@link Endpoint}s from a ZooKeeper depending on {@link Mode} and updates it when the children of the
  * zNode changes.
  */
-public class ZooKeeperEndpointGroup implements EndpointGroup {
+public class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     private final NodeValueCodec nodeValueCodec;
     private final ZooKeeperConnector zooKeeperConnector;
-    private List<Endpoint> prevData;
 
     /**
      * Create a ZooKeeper-based {@link EndpointGroup}, endpoints will be retrieved from a node's all children's
@@ -79,11 +79,6 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
     }
 
     @Override
-    public List<Endpoint> endpoints() {
-        return prevData;
-    }
-
-    @Override
     public void close() {
         zooKeeperConnector.close(true);
     }
@@ -106,10 +101,13 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
                 return new ZooKeeperListener() {
                     @Override
                     public void nodeChildChange(Map<String, String> newChildrenValue) {
-                        List<Endpoint> newData = newChildrenValue.values().stream().map(
-                                nodeValueCodec::decode).filter(Objects::nonNull).collect(Collectors.toList());
+                        List<Endpoint> newData = newChildrenValue.values().stream()
+                                                                 .map(nodeValueCodec::decode)
+                                                                 .filter(Objects::nonNull)
+                                                                 .collect(toImmutableList());
+                        final List<Endpoint> prevData = endpoints();
                         if (prevData == null || !prevData.equals(newData)) {
-                            prevData = newData;
+                            setEndpoints(newData);
                         }
                     }
 
@@ -130,10 +128,12 @@ public class ZooKeeperEndpointGroup implements EndpointGroup {
 
                     @Override
                     public void nodeValueChange(String newValue) {
-                        List<Endpoint> newData = nodeValueCodec.decodeAll(newValue).stream().filter(
-                                Objects::nonNull).collect(Collectors.toList());
+                        final List<Endpoint> prevData = endpoints();
+                        List<Endpoint> newData = nodeValueCodec.decodeAll(newValue).stream()
+                                                               .filter(Objects::nonNull)
+                                                               .collect(toImmutableList());
                         if (prevData == null || !prevData.equals(newData)) {
-                            prevData = newData;
+                            setEndpoints(newData);
                         }
                     }
 
