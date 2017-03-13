@@ -143,7 +143,7 @@ public class ThriftThreadLocalHttpHeaderTest extends AbstractServerTest {
                 .hasMessageContaining(expectedMessage);
     }
 
-    private static final class Callback implements AsyncMethodCallback<Object> {
+    private static final class Callback implements AsyncMethodCallback<String> {
 
         private final BlockingQueue<Object> result;
 
@@ -152,7 +152,7 @@ public class ThriftThreadLocalHttpHeaderTest extends AbstractServerTest {
         }
 
         @Override
-        public void onComplete(Object response) {
+        public void onComplete(String response) {
             result.add(response);
         }
 

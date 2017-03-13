@@ -64,7 +64,7 @@ union FooUnion {
 
 struct FooStruct {
     1: bool boolVal,
-    2: byte byteVal,
+    2: i8 byteVal,
     3: i16 i16Val,
     4: i32 i32Val,
     5: i64 i64Val,

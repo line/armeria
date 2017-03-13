@@ -80,7 +80,7 @@ org.apache.kafka:
 
 org.apache.thrift:
   libthrift:
-    version: 0.9.3
+    version: 0.10.0
     exclusions:
     - org.apache.httpcomponents:httpcore
     - org.apache.httpcomponents:httpclient

@@ -27,7 +27,6 @@ import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
-import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.collect.ImmutableMap;
@@ -123,7 +122,7 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
             Object impl, ThriftFunction func, List<Object> args, DefaultRpcResponse reply) {
 
         try {
-            final TBase<TBase<?, ?>, TFieldIdEnum> tArgs = func.newArgs(args);
+            final TBase<?, ?> tArgs = func.newArgs(args);
             if (func.isAsync()) {
                 invokeAsynchronously(impl, func, tArgs, reply);
             } else {
@@ -135,10 +134,9 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
     }
 
     private static void invokeAsynchronously(
-            Object impl, ThriftFunction func,
-            TBase<TBase<?, ?>, TFieldIdEnum> args, DefaultRpcResponse reply) throws TException {
+            Object impl, ThriftFunction func, TBase<?, ?> args, DefaultRpcResponse reply) throws TException {
 
-        final AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object> f = func.asyncFunc();
+        final AsyncProcessFunction<Object, TBase<?, ?>, Object> f = func.asyncFunc();
         f.start(impl, args, new AsyncMethodCallback<Object>() {
             @Override
             public void onComplete(Object response) {
@@ -157,10 +155,10 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
     }
 
     private static void invokeSynchronously(
-            ServiceRequestContext ctx,
-            Object impl, ThriftFunction func, TBase<TBase<?, ?>, TFieldIdEnum> args, DefaultRpcResponse reply) {
+            ServiceRequestContext ctx, Object impl,
+            ThriftFunction func, TBase<?, ?> args, DefaultRpcResponse reply) {
 
-        final ProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>> f = func.syncFunc();
+        final ProcessFunction<Object, TBase<?, ?>> f = func.syncFunc();
         ctx.blockingTaskExecutor().execute(() -> {
             if (reply.isDone()) {
                 // Closed already most likely due to timeout.
@@ -168,8 +166,7 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
             }
 
             try {
-                @SuppressWarnings("unchecked")
-                TBase<TBase<?, ?>, TFieldIdEnum> result = f.getResult(impl, args);
+                final TBase<?, ?> result = f.getResult(impl, args);
                 if (func.isOneWay()) {
                     reply.complete(null);
                 } else {

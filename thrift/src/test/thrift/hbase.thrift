@@ -82,7 +82,7 @@ struct TRegionInfo {
   2:Text endKey,
   3:i64 id,
   4:Text name,
-  5:byte version,
+  5:i8 version,
   6:Text serverName,
   7:i32 port
 }
