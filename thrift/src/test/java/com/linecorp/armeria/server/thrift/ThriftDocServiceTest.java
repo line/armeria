@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -33,7 +32,11 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -44,15 +47,15 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.server.thrift.ThriftServiceSpecificationGenerator.Entry;
-import com.linecorp.armeria.server.thrift.ThriftServiceSpecificationGenerator.EntryBuilder;
+import com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.Entry;
+import com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.service.test.thrift.cassandra.Cassandra;
 import com.linecorp.armeria.service.test.thrift.hbase.Hbase;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
+import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.test.AbstractServerTest;
@@ -67,9 +70,17 @@ public class ThriftDocServiceTest extends AbstractServerTest {
     private static final SleepService.AsyncIface SLEEP_SERVICE_HANDLER =
             (duration, resultHandler) -> resultHandler.onComplete(duration);
 
-    private static final ListMultimap<String, HttpHeaders> EXAMPLE_HTTP_HEADERS = ImmutableListMultimap.of(
-            HelloService.class.getName(), HttpHeaders.of(AsciiString.of("foobar"), "barbaz"),
-            FooService.class.getName(), HttpHeaders.of(AsciiString.of("barbaz"), "barbar"));
+    private static final hello_args EXAMPLE_HELLO = new hello_args("sample user");
+    private static final HttpHeaders EXAMPLE_HEADERS_ALL = HttpHeaders.of(AsciiString.of("a"), "b");
+    private static final HttpHeaders EXAMPLE_HEADERS_HELLO = HttpHeaders.of(AsciiString.of("c"), "d");
+    private static final HttpHeaders EXAMPLE_HEADERS_FOO = HttpHeaders.of(AsciiString.of("e"), "f");
+    private static final HttpHeaders EXAMPLE_HEADERS_FOO_BAR1 = HttpHeaders.of(AsciiString.of("g"), "h");
+
+    private static final ListMultimap<String, HttpHeaders> EXAMPLE_HEADERS = ImmutableListMultimap.of(
+            HelloService.class.getName(), EXAMPLE_HEADERS_HELLO,
+            FooService.class.getName(), EXAMPLE_HEADERS_FOO);
+
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     protected void configureServer(ServerBuilder sb) {
@@ -92,8 +103,15 @@ public class ThriftDocServiceTest extends AbstractServerTest {
         sb.serviceAt("/hbase", hbaseService);
         sb.serviceAt("/oneway", onewayHelloService);
 
-        sb.serviceUnder("/docs/", new DocService(EXAMPLE_HTTP_HEADERS.asMap()).decorate(LoggingService::new));
-        // FIXME(trustin): Bring the example requests back.
+        sb.serviceUnder(
+                "/docs/",
+                new DocServiceBuilder()
+                        .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
+                        .exampleHttpHeaders(HelloService.class, EXAMPLE_HEADERS_HELLO)
+                        .exampleHttpHeaders(FooService.class, EXAMPLE_HEADERS_FOO)
+                        .exampleHttpHeaders(FooService.class, "bar1", EXAMPLE_HEADERS_FOO_BAR1)
+                        .exampleRequest(EXAMPLE_HELLO)
+                        .build());
     }
 
     @Test
@@ -102,49 +120,90 @@ public class ThriftDocServiceTest extends AbstractServerTest {
         final List<Entry> entries = ImmutableList.of(
                 new EntryBuilder(HelloService.class)
                         .endpoint(new EndpointInfo("*", "/", "hello", BINARY, allThriftFormats))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(HelloService.class.getName()))
                         .build(),
                 new EntryBuilder(SleepService.class)
                         .endpoint(new EndpointInfo("*", "/", "sleep", BINARY, allThriftFormats))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(SleepService.class.getName()))
                         .build(),
                 new EntryBuilder(FooService.class)
                         .endpoint(new EndpointInfo("*", "/foo", "", COMPACT, ImmutableSet.of(COMPACT)))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(FooService.class.getName()))
                         .build(),
                 new EntryBuilder(Cassandra.class)
                         .endpoint(new EndpointInfo("*", "/cassandra", "", BINARY, ImmutableSet.of(BINARY)))
                         .endpoint(new EndpointInfo("*", "/cassandra/debug", "", TEXT, ImmutableSet.of(TEXT)))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(Cassandra.class.getName()))
                         .build(),
                 new EntryBuilder(Hbase.class)
                         .endpoint(new EndpointInfo("*", "/hbase", "", BINARY, allThriftFormats))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(Hbase.class.getName()))
                         .build(),
                 new EntryBuilder(OnewayHelloService.class)
                         .endpoint(new EndpointInfo("*", "/oneway", "", BINARY, allThriftFormats))
-                        .exampleHttpHeaders(EXAMPLE_HTTP_HEADERS.get(
-                                OnewayHelloService.class.getName()))
                         .build());
 
-        final ObjectMapper mapper = new ObjectMapper();
-        final String expectedJson = mapper.writeValueAsString(
-                ThriftServiceSpecificationGenerator.generate(entries));
-        // FIXME(trustin): Bring this back.
-        //ImmutableMap.of(hello_args.class, SAMPLE_HELLO)
+        final JsonNode expectedJson = mapper.valueToTree(ThriftDocServicePlugin.generate(entries));
+
+        // The specification generated by ThriftDocServicePlugin does not include the examples specified
+        // when building a DocService, so we add them manually here.
+        addExamples(expectedJson);
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpGet req = new HttpGet(specificationUri());
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
-                String responseJson = EntityUtils.toString(res.getEntity());
+                final JsonNode actualJson = mapper.readTree(EntityUtils.toString(res.getEntity()));
 
-                // Convert to Map for order-insensitive comparison.
-                Map<?, ?> actual = mapper.readValue(responseJson, Map.class);
-                Map<?, ?> expected = mapper.readValue(expectedJson, Map.class);
-                assertThat(actual).isEqualTo(expected);
+                // The specification generated by ThriftDocServicePlugin does not include the docstrings
+                // because it's injected by the DocService, so we remove them here for easier comparison.
+                removeDocStrings(actualJson);
+
+                // Convert to the prettified strings for human-readable comparison.
+                final ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
+                final String actualJsonString = writer.writeValueAsString(actualJson);
+                final String expectedJsonString = writer.writeValueAsString(expectedJson);
+                assertThat(actualJsonString).isEqualTo(expectedJsonString);
             }
+        }
+    }
+
+    private static void addExamples(JsonNode json) {
+        // Add the global example.
+        ((ArrayNode) json.get("exampleHttpHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
+
+        json.get("services").forEach(service -> {
+            // Add the service-wide examples.
+            final String serviceName = service.get("name").textValue();
+            final ArrayNode serviceExampleHttpHeaders = (ArrayNode) service.get("exampleHttpHeaders");
+            if (HelloService.class.getName().equals(serviceName)) {
+                serviceExampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_HELLO));
+            }
+            if (FooService.class.getName().equals(serviceName)) {
+                serviceExampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_FOO));
+            }
+
+            // Add the method-specific examples.
+            service.get("methods").forEach(method -> {
+                final String methodName = method.get("name").textValue();
+                final ArrayNode exampleHttpHeaders = (ArrayNode) method.get("exampleHttpHeaders");
+                if (FooService.class.getName().equals(serviceName) &&
+                    "bar1".equals(methodName)) {
+                    exampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_FOO_BAR1));
+                }
+
+                final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
+                if (HelloService.class.getName().equals(serviceName) &&
+                    "hello".equals(methodName)) {
+                    exampleRequests.add("{\n  \"name\" : \"sample user\"\n}");
+                }
+            });
+        });
+    }
+
+    private static void removeDocStrings(JsonNode json) {
+        if (json.isObject()) {
+            ((ObjectNode) json).remove("docString");
+        }
+
+        if (json.isObject() || json.isArray()) {
+            json.forEach(ThriftDocServiceTest::removeDocStrings);
         }
     }
 

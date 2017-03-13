@@ -42,6 +42,8 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.server.docs.DocService;
+
 /**
  * {@link ThriftDocString} is a DocString extractor for Thrift IDL JSON.
  *
@@ -62,7 +64,7 @@ final class ThriftDocString {
 
     private static final String FQCN_DELIM = ".";
 
-    private static final String DELIM = "#";
+    private static final String DELIM = "/";
 
     private static final Map<ClassLoader, Map<String, String>> cached = new ConcurrentHashMap<>();
 
