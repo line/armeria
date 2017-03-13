@@ -48,6 +48,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
@@ -84,12 +85,14 @@ final class THttp2Client extends TTransport {
     private final String host;
     private final int port;
     private final String path;
+    private final HttpHeaders defaultHeaders;
 
     private TMemoryInputTransport in;
     private final TMemoryBuffer out = new TMemoryBuffer(128);
 
-    THttp2Client(String uriStr) throws TTransportException {
+    THttp2Client(String uriStr, HttpHeaders defaultHeaders) throws TTransportException {
         uri = URI.create(uriStr);
+        this.defaultHeaders = defaultHeaders;
 
         int port;
         switch (uri.getScheme()) {
@@ -215,6 +218,7 @@ final class THttp2Client extends TTransport {
                     Unpooled.wrappedBuffer(out.getArray(), 0, out.length()));
             request.headers().add(HttpHeaderNames.HOST, host);
             request.headers().set(ExtensionHeaderNames.SCHEME.text(), uri.getScheme());
+            request.headers().add(defaultHeaders);
             ch.writeAndFlush(request).sync();
 
             // Wait until the Thrift response is received.

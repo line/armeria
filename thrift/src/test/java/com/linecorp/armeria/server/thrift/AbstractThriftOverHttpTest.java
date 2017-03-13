@@ -39,6 +39,7 @@ import org.junit.Test;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
@@ -194,6 +195,66 @@ public abstract class AbstractThriftOverHttpTest {
         }
     }
 
+    @Test
+    public void testAcceptHeaderWithCommaSeparatedMediaTypes() throws Exception {
+        try (TTransport transport = newTransport("http", "/hello",
+                                                 HttpHeaders.of(HttpHeaderNames.ACCEPT, "text/plain, */*"))) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
+    @Test
+    public void testAcceptHeaderWithQValues() throws Exception {
+        // Server should choose TBINARY because it has higher q-value (0.5) than that of TTEXT (0.2)
+        try (TTransport transport = newTransport(
+                "http", "/hello",
+                HttpHeaders.of(HttpHeaderNames.ACCEPT,
+                               "application/x-thrift; protocol=TTEXT; q=0.2, " +
+                               "application/x-thrift; protocol=TBINARY; q=0.5"))) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
+    @Test
+    public void testAcceptHeaderWithDefaultQValues() throws Exception {
+        // Server should choose TBINARY because it has higher q-value (default 1.0) than that of TTEXT (0.2)
+        try (TTransport transport = newTransport(
+                "http", "/hello",
+                HttpHeaders.of(HttpHeaderNames.ACCEPT,
+                               "application/x-thrift; protocol=TTEXT; q=0.2, " +
+                               "application/x-thrift; protocol=TBINARY"))) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
+    @Test
+    public void testAcceptHeaderWithUnsupportedMediaTypes() throws Exception {
+        // Server should choose TBINARY because it does not support the media type
+        // with the highest preference (text/plain).
+        try (TTransport transport = newTransport(
+                "http", "/hello",
+                HttpHeaders.of(HttpHeaderNames.ACCEPT,
+                               "application/x-thrift; protocol=TBINARY; q=0.2, text/plain"))) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
     @Test(timeout = 10000)
     public void testMessageLogsForCall() throws Exception {
         try (TTransport transport = newTransport("http", "/hello")) {
@@ -277,10 +338,15 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     protected final TTransport newTransport(String scheme, String path) throws TTransportException {
-        return newTransport(newUri(scheme, path));
+        return newTransport(scheme, path, HttpHeaders.EMPTY_HEADERS);
     }
 
-    protected abstract TTransport newTransport(String uri) throws TTransportException;
+    protected final TTransport newTransport(String scheme, String path,
+                                            HttpHeaders headers) throws TTransportException {
+        return newTransport(newUri(scheme, path), headers);
+    }
+
+    protected abstract TTransport newTransport(String uri, HttpHeaders headers) throws TTransportException;
 
     protected static String newUri(String scheme, String path) {
         switch (scheme) {

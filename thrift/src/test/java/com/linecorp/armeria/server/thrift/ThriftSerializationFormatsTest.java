@@ -44,7 +44,7 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
         assertThat(find(parse("application/x-thrift; protocol=tbinary"))).containsSame(BINARY);
         assertThat(find(parse("application/x-thrift;protocol=TCompact"))).containsSame(COMPACT);
         assertThat(find(parse("application/x-thrift ; protocol=\"TjSoN\""))).containsSame(JSON);
-        assertThat(find(parse("application/x-thrift ; version=3;protocol=ttext"))).containsSame(TEXT);
+        assertThat(find(parse("application/x-thrift ; version=3;protocol=ttext"))).isEmpty();
     }
 
     @Test

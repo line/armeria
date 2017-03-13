@@ -22,7 +22,7 @@ import java.util.Set;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Registers the {@link SerializationFormat}s dynamically via Java SPI (Service Provider Interface).
@@ -40,7 +40,7 @@ public abstract class SerializationFormatProvider {
     protected static final class Entry implements Comparable<Entry> {
         final String uriText;
         final MediaType primaryMediaType;
-        final Set<MediaType> allMediaTypes;
+        final MediaTypeSet mediaTypes;
 
         /**
          * Creates a new instance.
@@ -48,9 +48,10 @@ public abstract class SerializationFormatProvider {
         public Entry(String uriText, MediaType primaryMediaType, MediaType... alternativeMediaTypes) {
             this.uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
             this.primaryMediaType = requireNonNull(primaryMediaType, "primaryMediaType");
-            allMediaTypes = ImmutableSet.<MediaType>builder()
+            mediaTypes = new MediaTypeSet(ImmutableList.<MediaType>builder()
                     .add(primaryMediaType)
-                    .add(requireNonNull(alternativeMediaTypes, "alternativeMediaTypes")).build();
+                    .add(requireNonNull(alternativeMediaTypes, "alternativeMediaTypes"))
+                    .build());
         }
 
         @Override
@@ -75,7 +76,7 @@ public abstract class SerializationFormatProvider {
         public String toString() {
             return MoreObjects.toStringHelper(this)
                               .add("uriText", uriText)
-                              .add("mediaTypes", allMediaTypes).toString();
+                              .add("mediaTypes", mediaTypes).toString();
         }
 
         @Override
