@@ -14,12 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.encoding;
-
 /**
- * A type of HTTP encoding, which is usually included in accept-encoding and content-encoding headers.
+ * HTTP content decoding client.
  */
-enum HttpEncodingType {
-    GZIP,
-    DEFLATE;
-}
+package com.linecorp.armeria.client.http.encoding;

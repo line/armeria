@@ -14,12 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.encoding;
+package com.linecorp.armeria.client.http.encoding;
+
+import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
- * A type of HTTP encoding, which is usually included in accept-encoding and content-encoding headers.
+ * A {@link StreamDecoderFactory} which supports the 'gzip' encoding.
  */
-enum HttpEncodingType {
-    GZIP,
-    DEFLATE;
+public class GzipStreamDecoderFactory implements StreamDecoderFactory {
+
+    @Override
+    public String encodingHeaderValue() {
+        return "gzip";
+    }
+
+    @Override
+    public StreamDecoder newDecoder() {
+        return new ZlibStreamDecoder(ZlibWrapper.GZIP);
+    }
 }

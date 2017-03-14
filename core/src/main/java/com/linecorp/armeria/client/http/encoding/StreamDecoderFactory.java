@@ -14,12 +14,22 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.encoding;
+package com.linecorp.armeria.client.http.encoding;
 
 /**
- * A type of HTTP encoding, which is usually included in accept-encoding and content-encoding headers.
+ * An interface that constructs a new {@link StreamDecoder} for a given Content-Encoding header value.
+ * A new decoder is valid for the lifetime of an {@link com.linecorp.armeria.common.http.HttpResponse}.
  */
-enum HttpEncodingType {
-    GZIP,
-    DEFLATE;
+public interface StreamDecoderFactory {
+
+    /**
+     * Returns the value of the Content-Encoding header which this factory applies to.
+     */
+    String encodingHeaderValue();
+
+    /**
+     * Construct a new {@link StreamDecoder} to use to decode an
+     * {@link com.linecorp.armeria.common.http.HttpResponse}.
+     */
+    StreamDecoder newDecoder();
 }

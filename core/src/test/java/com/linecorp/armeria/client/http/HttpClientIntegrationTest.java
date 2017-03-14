@@ -40,10 +40,13 @@ import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.http.encoding.DeflateStreamDecoderFactory;
+import com.linecorp.armeria.client.http.encoding.HttpDecodingClient;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
@@ -51,6 +54,7 @@ import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -58,6 +62,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
+import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
 
 public class HttpClientIntegrationTest {
 
@@ -144,6 +149,17 @@ public class HttpClientIntegrationTest {
                     res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "success");
                 }
             });
+
+            sb.serviceAt("/encoding", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                        throws Exception {
+                    res.write(HttpHeaders.of(HttpStatus.OK));
+                    res.write(HttpData.ofUtf8("some content to compress "));
+                    res.write(HttpData.ofUtf8("more content to compress"));
+                    res.close();
+                }
+            }.decorate(HttpEncodingService.class));
 
         } catch (Exception e) {
             throw new Error(e);
@@ -275,6 +291,35 @@ public class HttpClientIntegrationTest {
                       .aggregate().get();
 
         assertEquals(OVERIDDEN_USER_AGENT_NAME, response.content().toStringUtf8());
+    }
+
+    @Test
+    public void httpDecoding() throws Exception {
+        HttpClient client = new ClientBuilder(
+                "none+http://127.0.0.1:" + httpPort)
+                .factory(clientFactory)
+                .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator())
+                .build(HttpClient.class);
+        AggregatedHttpMessage response =
+                client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
+        assertThat(response.content().toStringUtf8()).isEqualTo(
+                "some content to compress more content to compress");
+    }
+
+    @Test
+    public void httpDecoding_deflate() throws Exception {
+        HttpClient client = new ClientBuilder(
+                "none+http://127.0.0.1:" + httpPort)
+                .factory(clientFactory)
+                .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator(
+                        new DeflateStreamDecoderFactory()))
+                .build(HttpClient.class);
+        AggregatedHttpMessage response =
+                client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
+        assertThat(response.content().toStringUtf8()).isEqualTo(
+                "some content to compress more content to compress");
     }
 
     private static void testSocketOutput(String path,

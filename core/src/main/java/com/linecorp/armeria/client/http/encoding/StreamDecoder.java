@@ -14,12 +14,23 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.encoding;
+package com.linecorp.armeria.client.http.encoding;
+
+import com.linecorp.armeria.common.http.HttpData;
 
 /**
- * A type of HTTP encoding, which is usually included in accept-encoding and content-encoding headers.
+ * An interface for objects that apply HTTP content decoding to incoming {@link HttpData}.
+ * Implement this interface to use content decoding schemes not built-in to the JDK.
  */
-enum HttpEncodingType {
-    GZIP,
-    DEFLATE;
+public interface StreamDecoder {
+
+    /**
+     * Decodes an {@link HttpData} and returns the decoded {@link HttpData}.
+     */
+    HttpData decode(HttpData obj);
+
+    /**
+     * Close the decoder and returns any decoded data that may be left over.
+     */
+    HttpData finish();
 }
