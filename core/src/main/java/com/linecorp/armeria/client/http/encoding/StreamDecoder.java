@@ -30,7 +30,7 @@ public interface StreamDecoder {
     HttpData decode(HttpData obj);
 
     /**
-     * Close the decoder and returns any decoded data that may be left over.
+     * Closes the decoder and returns any decoded data that may be left over.
      */
     HttpData finish();
 }

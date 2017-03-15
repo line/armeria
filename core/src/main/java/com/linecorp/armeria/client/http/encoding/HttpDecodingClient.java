@@ -35,32 +35,32 @@ import com.linecorp.armeria.common.http.HttpResponse;
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
  * content of a {@link HttpResponse}.
  */
-public final class HttpDecodingClient
-        extends DecoratingClient<HttpRequest, HttpResponse, HttpRequest, HttpResponse> {
+public final class HttpDecodingClient<I extends HttpRequest, O extends HttpResponse>
+        extends DecoratingClient<I, O, I, HttpResponse> {
 
     /**
      * Creates a new {@link HttpDecodingClient} decorator with the default encodings of 'gzip' and 'deflate'.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, HttpDecodingClient> newDecorator() {
-        return client -> new HttpDecodingClient(client, ImmutableList.of(
-                new GzipStreamDecoderFactory(),
-                new DeflateStreamDecoderFactory()));
+    public static <I extends HttpRequest, O extends HttpResponse> Function<Client<I, O>, HttpDecodingClient>
+    newDecorator() {
+        return newDecorator(
+                ImmutableList.of(new GzipStreamDecoderFactory(), new DeflateStreamDecoderFactory()));
     }
 
     /**
      * Creates a new {@link HttpDecodingClient} decorator with the specified {@link StreamDecoderFactory}s.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, HttpDecodingClient> newDecorator(
-            StreamDecoderFactory... decoderFactories) {
-        return client -> new HttpDecodingClient(client, ImmutableList.copyOf(decoderFactories));
+    public static <I extends HttpRequest, O extends HttpResponse> Function<Client<I, O>, HttpDecodingClient>
+    newDecorator(StreamDecoderFactory... decoderFactories) {
+        return newDecorator(ImmutableList.copyOf(decoderFactories));
     }
 
     /**
      * Creates a new {@link HttpDecodingClient} decorator with the specified {@link StreamDecoderFactory}s.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, HttpDecodingClient> newDecorator(
-            Iterable<? extends StreamDecoderFactory> decoderFactories) {
-        return client -> new HttpDecodingClient(client, decoderFactories);
+    public static <I extends HttpRequest, O extends HttpResponse> Function<Client<I, O>, HttpDecodingClient>
+    newDecorator(Iterable<? extends StreamDecoderFactory> decoderFactories) {
+        return client -> new HttpDecodingClient<>(client, decoderFactories);
     }
 
     private final Map<String, StreamDecoderFactory> decoderFactories;
@@ -69,9 +69,8 @@ public final class HttpDecodingClient
     /**
      * Creates a new instance that decorates the specified {@link Client} with the provided decoders.
      */
-    private HttpDecodingClient(
-            Client<? super HttpRequest, ? extends HttpResponse> delegate,
-            Iterable<? extends StreamDecoderFactory> decoderFactories) {
+    private HttpDecodingClient(Client<I, O> delegate,
+                               Iterable<? extends StreamDecoderFactory> decoderFactories) {
         super(delegate);
         this.decoderFactories = Streams.stream(decoderFactories)
                                        .collect(toImmutableMap(StreamDecoderFactory::encodingHeaderValue,
@@ -80,7 +79,7 @@ public final class HttpDecodingClient
     }
 
     @Override
-    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+    public HttpResponse execute(ClientRequestContext ctx, I req) throws Exception {
         if (req.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
             // Client specified encoding, so we don't do anything automatically.
             return delegate().execute(ctx, req);

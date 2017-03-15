@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatusClass;
 
 /**
- * @ {@link FilteredHttpResponse} that applies HTTP decoding to {@link HttpObject}s as they are published.
+ * A {@link FilteredHttpResponse} that applies HTTP decoding to {@link HttpObject}s as they are published.
  */
 class HttpDecodedResponse extends FilteredHttpResponse {
 
