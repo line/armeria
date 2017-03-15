@@ -15,13 +15,15 @@
  */
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 
+import java.security.GeneralSecurityException;
+
 import javax.net.ssl.SSLContext;
 
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -38,28 +40,33 @@ import org.apache.thrift.transport.TTransportException;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 
+import io.netty.util.AsciiString;
+
 public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
-
-    private final HttpClient httpClient;
-
-    public ThriftOverHttp1Test() {
-        try {
-            SSLContext sslCtx =
-                    SSLContextBuilder.create().loadTrustMaterial(
-                            (TrustStrategy) (chain, authType) -> true).build();
-
-            httpClient = HttpClientBuilder.create().setSSLContext(sslCtx).build();
-        } catch (Exception e) {
-            throw new Error(e);
-        }
-    }
-
     @Override
-    protected TTransport newTransport(String uri) throws TTransportException {
-        return new THttpClient(uri, httpClient);
+    protected TTransport newTransport(String uri, HttpHeaders headers) throws TTransportException {
+        final SSLContext sslContext;
+        try {
+            sslContext = SSLContextBuilder.create()
+                                          .loadTrustMaterial((TrustStrategy) (chain, authType) -> true)
+                                          .build();
+        } catch (GeneralSecurityException e) {
+            throw new TTransportException("failed to initialize an SSL context", e);
+        }
+
+        final THttpClient client = new THttpClient(
+                uri, HttpClientBuilder.create()
+                                      .setSSLContext(sslContext)
+                                      .build());
+        client.setCustomHeaders(
+                headers.names().stream()
+                       .collect(toImmutableMap(AsciiString::toString,
+                                               name -> String.join(", ", headers.getAll(name)))));
+        return client;
     }
 
     @Test

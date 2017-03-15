@@ -83,6 +83,14 @@ task javadoc(type: Javadoc,
               'https://developers.google.com/protocol-buffers/docs/reference/java/',
               'https://people.apache.org/~thejas/thrift-0.9/javadoc/',
               'http://logback.qos.ch/apidocs/'
+
+        // Add --allow-script-in-comments if available (since 1.8.0_121)
+        try {
+            if (Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl')
+                     .newInstance().optionLength('--allow-script-in-comments') > 0) {
+                addBooleanOption('-allow-script-in-comments').value = true
+            }
+        } catch (ignored) {}
     }
 }
 
@@ -91,7 +99,11 @@ task xref(group: 'Documentation',
 
     def outputDir = "${project.buildDir}/site/xref"
     def sourceDirs = publishedJavaProjects.inject([]) { srcDirs, project ->
-        project.sourceSets.main.java.srcDirs.each { srcDirs << it.path }
+        project.sourceSets.main.java.srcDirs.each {
+            if (it.exists()) {
+                srcDirs << it.path
+            }
+        }
         return srcDirs
     }
 

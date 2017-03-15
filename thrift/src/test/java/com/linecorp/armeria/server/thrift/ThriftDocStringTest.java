@@ -35,7 +35,7 @@ public class ThriftDocStringTest {
                 getClass().getClassLoader(),
                 "META-INF/armeria/thrift/ThriftTest.json");
         assertThat(docStrings.get("thrift.test.Numberz"), is("Docstring!"));
-        assertThat(docStrings.get("thrift.test.ThriftTest#testVoid"),
+        assertThat(docStrings.get("thrift.test.ThriftTest/testVoid"),
                    is("Prints \"testVoid()\" and returns nothing."));
     }
 

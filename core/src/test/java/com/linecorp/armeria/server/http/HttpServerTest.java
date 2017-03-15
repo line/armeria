@@ -32,6 +32,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
@@ -100,6 +101,7 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.AsciiString;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 @RunWith(Parameterized.class)
@@ -321,6 +323,18 @@ public class HttpServerTest extends AbstractServerTest {
                     assertNull(ctx.sslSession());
                 }
                 res.respond(HttpStatus.OK);
+            }
+        }.decorate(HttpEncodingService.class));
+
+        sb.serviceAt("/headers", new AbstractHttpService() {
+            @Override
+            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                                     .add(AsciiString.of("x-custom-header1"), "custom1")
+                                     .add(AsciiString.of("X-Custom-Header2"), "custom2"));
+
+                res.write(HttpData.ofUtf8("headers"));
+                res.close();
             }
         }.decorate(HttpEncodingService.class));
 
@@ -657,6 +671,27 @@ public class HttpServerTest extends AbstractServerTest {
         res.closeFuture().get();
         assertThat(status.get(), is(HttpStatus.OK));
         assertThat(consumer.numReceivedBytes(), is(STREAMING_CONTENT_LENGTH));
+    }
+
+    @Test(timeout = 10000)
+    public void testHeaders() throws Exception {
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/headers");
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+
+        assertThat(res.status(), is(HttpStatus.OK));
+
+        // Verify all header names are in lowercase
+        for (AsciiString headerName : res.headers().names()) {
+            headerName.chars().filter(Character::isAlphabetic).forEach(c -> {
+                assertTrue(Character.isLowerCase(c));
+            });
+        }
+
+        assertThat(res.headers().get(AsciiString.of("x-custom-header1")), is("custom1"));
+        assertThat(res.headers().get(AsciiString.of("x-custom-header2")), is("custom2"));
+        assertThat(res.content().toStringUtf8(), is("headers"));
     }
 
     private static void stream(StreamWriter<HttpObject> writer, long size, int chunkSize) {

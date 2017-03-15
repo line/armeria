@@ -47,24 +47,46 @@
   <div class="row">
     <div id="navbar" class="col-sm-3 sidebar">
       <script id="nav-template" type="text/x-handlebars-template">
-        <h1>Services</h1>
-        {{#each specification.services}}
-        <h2><code title="{{name}}">{{simpleName}}</code></h2>
-        <ul class="nav nav-sidebar">
-          {{#each functions}}
-          <li id="nav-{{../name}}.{{name}}">
-            <a href="#!function/{{../name}}/{{name}}"><code>{{name}}()</code></a>
-          </li>
+        {{#if specification.services.length}}
+          <h1>Services</h1>
+          {{#each specification.services}}
+          <h2 id="nav-service-{{name}}"><code title="{{name}}">{{simpleName}}</code></h2>
+          <ul class="nav nav-sidebar">
+            {{#each methods}}
+            <li id="nav-method-{{../name}}/{{name}}">
+              <a href="#!method/{{../name}}/{{name}}"><code>{{name}}()</code></a>
+            </li>
+            {{/each}}
+          </ul>
           {{/each}}
-        </ul>
-        {{/each}}
+        {{/if}}
 
-        <h1>Classes</h1>
-        <ul class="nav nav-sidebar">
-          {{#each specification.classes}}
-          <li id="nav-{{name}}"><a href="#!class/{{name}}"><code title="{{name}}">{{simpleName}}</code></a></li>
-          {{/each}}
-        </ul>
+        {{#if specification.enums.length}}
+          <h1>Enums</h1>
+          <ul class="nav nav-sidebar">
+            {{#each specification.enums}}
+            <li id="nav-namedType-{{name}}"><a href="#!namedType/{{name}}"><code title="{{name}}">{{simpleName}}</code></a></li>
+            {{/each}}
+          </ul>
+        {{/if}}
+
+        {{#if specification.structs.length}}
+          <h1>Structs</h1>
+          <ul class="nav nav-sidebar">
+            {{#each specification.structs}}
+            <li id="nav-namedType-{{name}}"><a href="#!namedType/{{name}}"><code title="{{name}}">{{simpleName}}</code></a></li>
+            {{/each}}
+          </ul>
+        {{/if}}
+
+        {{#if specification.exceptions.length}}
+          <h1>Exceptions</h1>
+          <ul class="nav nav-sidebar">
+            {{#each specification.exceptions}}
+            <li id="nav-namedType-{{name}}"><a href="#!namedType/{{name}}"><code title="{{name}}">{{simpleName}}</code></a></li>
+            {{/each}}
+          </ul>
+        {{/if}}
       </script>
     </div>
     <div class="col-sm-9 col-sm-offset-3 main">
@@ -76,11 +98,11 @@
         <p>Please start to navigate via the sidebar on the left or the menu button on the top right.</p>
       </div>
 
-      <div id="function" class="content">
-        <script id="function-template" type="text/x-handlebars-template">
-          <h1 class="page-header"><code title="{{serviceName}}.{{function.name}}()">{{serviceSimpleName}}.{{function.name}}()</code></h1>
+      <div id="method" class="content">
+        <script id="method-template" type="text/x-handlebars-template">
+          <h1 class="page-header"><code title="{{service.name}}.{{method.name}}()">{{service.simpleName}}.{{method.name}}()</code></h1>
 
-          <div class="description">{{{function.docString}}}</div>
+          <div class="description">{{{method.docString}}}</div>
 
           <h2 class="sub-header">Parameters</h2>
           <div class="table-responsive">
@@ -94,16 +116,16 @@
               </tr>
               </thead>
               <tbody>
-              {{#each function.parameters}}
+              {{#each method.parameters}}
               <tr>
                 <td><code>{{name}}</code></td>
                 <td>{{requirement}}</td>
-                <td><code>{{{typeInfo.signatureHtml}}}</code></td>
+                <td><code>{{{typeSignatureHtml}}}</code></td>
                 <td class="description">{{{docString}}}</td>
               </tr>
               {{else}}
               <tr>
-                <td colspan="3">There are no parameters.</td>
+                <td colspan="4">There are no parameters.</td>
               </tr>
               {{/each}}
               </tbody>
@@ -114,25 +136,25 @@
           <div class="table-responsive">
             <table class="table table-striped table-condensed">
               <tr>
-                <td><code>{{{function.returnTypeInfo.signatureHtml}}}</code></td>
+                <td><code>{{{method.returnTypeSignatureHtml}}}</code></td>
               </tr>
             </table>
           </div>
 
-          {{#if function.exceptions.length}}
+          {{#if method.exceptionTypeSignaturesHtml.length}}
           <h2 class="sub-header">Exceptions</h2>
           <div class="table-responsive">
             <table class="table table-striped table-condensed">
-              {{#each function.exceptions}}
+              {{#each method.exceptionTypeSignaturesHtml}}
               <tr>
-                <td><code>{{{signatureHtml}}}</code></td>
+                <td><code>{{{this}}}</code></td>
               </tr>
               {{/each}}
             </table>
           </div>
           {{/if}}
 
-          {{#if serviceEndpoints.length}}
+          {{#if service.endpoints.length}}
           <h2 class="sub-header">Endpoints</h2>
           <div class="table-responsive">
             <table class="table table-striped table-condensed">
@@ -144,7 +166,7 @@
               </tr>
               </thead>
               <tbody>
-              {{#each serviceEndpoints}}
+              {{#each service.endpoints}}
               <tr>
                 <td><code>{{{hostnamePattern}}}</code></td>
                 <td><code>{{{path}}}{{#if fragment}}#{{fragment}}{{/if}}</code></td>
@@ -162,7 +184,7 @@
           </div>
           {{/if}}
 
-          {{#if serviceDebugPath}}
+          {{#if service.debugPath}}
           <h2 class="sub-header">Debug</h2>
           <div class="row">
             <div class="col-sm-6">
@@ -187,7 +209,7 @@
                 </div>
               </div>
               <div>
-                <button class="debug-submit btn btn-primary">Submit to: <code>{{{serviceDebugPath}}}</code></button>
+                <button class="debug-submit btn btn-primary">Submit to: <code>{{{service.debugPath}}}</code></button>
               </div>
             </div>
             <div class="col-sm-6">
@@ -199,16 +221,16 @@
         </script>
       </div>
 
-      <div id="class" class="content">
-        <script id="class-template" type="text/x-handlebars-template">
+      <div id="namedType" class="content">
+        <script id="namedType-template" type="text/x-handlebars-template">
           <h1 class="page-header" title="{{name}}">
-            <code title="{{class.name}}">{{class.simpleName}}</code><br>
-            <code class="package-name">{{class.packageName}}</code>
+            <code title="{{info.name}}">{{info.simpleName}}</code><br>
+            <code class="package-name">{{info.packageName}}</code>
           </h1>
 
-          <div class="description">{{{class.docString}}}</div>
+          <div class="description">{{{info.docString}}}</div>
 
-          {{#if class.fields.length}}
+          {{#if info.fields.length}}
           <h2 class="sub-header">Fields</h2>
           <div class="table-responsive">
             <table class="table table-striped table-condensed">
@@ -221,11 +243,11 @@
               </tr>
               </thead>
               <tbody>
-              {{#each class.fields}}
+              {{#each info.fields}}
               <tr>
                 <td><code>{{name}}</code></td>
                 <td>{{requirement}}</td>
-                <td><code>{{{typeInfo.signatureHtml}}}</code></td>
+                <td><code>{{{typeSignatureHtml}}}</code></td>
                 <td class="description">{{{docString}}}</td>
               </tr>
               {{/each}}
@@ -234,14 +256,21 @@
           </div>
           {{/if}}
 
-          {{#if class.constants.length}}
-          <h2 class="sub-header">Constants</h2>
+          {{#if info.values.length}}
+          <h2 class="sub-header">Values</h2>
 
           <div class="table-responsive">
             <table class="table table-striped table-condensed">
-              {{#each class.constants}}
+              <thead>
               <tr>
-                <td><code>{{this}}</code></td>
+                <th>Name</th>
+                <th>Description</th>
+              </tr>
+              </thead>
+              {{#each info.values}}
+              <tr>
+                <td><code>{{name}}</code></td>
+                <td><code>{{docString}}</code></td>
               </tr>
               {{/each}}
             </table>

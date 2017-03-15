@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
@@ -194,14 +195,14 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             return;
         }
 
-        TBase<? extends TBase<?, ?>, TFieldIdEnum> result = func.newResult();
+        TBase<?, ?> result = func.newResult();
         result.read(inputProtocol);
         inputProtocol.readMessageEnd();
 
         final ThriftReply rawResponseContent = new ThriftReply(header, result);
 
         for (TFieldIdEnum fieldIdEnum : func.exceptionFields()) {
-            if (result.isSet(fieldIdEnum)) {
+            if (ThriftFieldAccess.isSet(result, fieldIdEnum)) {
                 final TException cause = (TException) ThriftFieldAccess.get(result, fieldIdEnum);
                 handleException(ctx, reply, rawResponseContent, cause);
                 return;
@@ -214,7 +215,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             return;
         }
 
-        if (result.isSet(successField)) {
+        if (ThriftFieldAccess.isSet(result, successField)) {
             final Object returnValue = ThriftFieldAccess.get(result, successField);
             handleSuccess(ctx, reply, returnValue, rawResponseContent);
             return;
@@ -229,17 +230,17 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
     private static TApplicationException readApplicationException(ThriftFunction func,
                                                                   TProtocol inputProtocol,
                                                                   TMessage msg) throws TException {
-        final TApplicationException appEx;
         if (msg.type == TMessageType.EXCEPTION) {
-            appEx = TApplicationException.read(inputProtocol);
+            final TApplicationException appEx = TApplicationExceptions.read(inputProtocol);
             inputProtocol.readMessageEnd();
-        } else if (!func.name().equals(msg.name)) {
-            appEx = new TApplicationException(
-                    TApplicationException.WRONG_METHOD_NAME, msg.name);
-        } else {
-            appEx = null;
+            return appEx;
         }
-        return appEx;
+
+        if (!func.name().equals(msg.name)) {
+            return new TApplicationException(TApplicationException.WRONG_METHOD_NAME, msg.name);
+        }
+
+        return null;
     }
 
     private static void handleSuccess(ClientRequestContext ctx, DefaultRpcResponse reply,

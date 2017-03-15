@@ -1,0 +1,44 @@
+dependencies {
+    // Thrift 0.9
+    compile('org.apache.thrift:libthrift:0.9.3') {
+        exclude group: 'org.apache.httpcomponents', module: 'httpcore'
+        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+    }
+}
+
+managedDependencies {
+    // Jetty, for testing TServlet interoperability.
+    testCompile 'org.eclipse.jetty:jetty-webapp'
+    testCompile 'org.eclipse.jetty.http2:http2-server'
+}
+
+// Use the sources from 'armeria-thrift'.
+tasks.compileJava.source "${rootProject.projectDir}/thrift/src/main/java"
+tasks.processResources.from "${rootProject.projectDir}/thrift/src/main/resources"
+tasks.compileTestJava.source "${rootProject.projectDir}/thrift/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/thrift/src/test/resources"
+
+// Use the old compiler.
+project.ext.thriftPath = "${rootProject.projectDir}/gradle/thrift-0.9/thrift.${osdetector.classifier}"
+
+// Keep the original Guava references in ThriftListenableFuture,
+// which is the only place we expose Guava classes in our public API.
+// NB: Keep this same with 'armeria-thrift'.
+tasks.shadedJar.exclude 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*'
+tasks.shadedJar.doLast {
+    ant.jar(update: true, destfile: tasks.shadedJar.archivePath) {
+        fileset(dir: "${sourceSets.main.output.classesDir}",
+                includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')
+    }
+}
+
+// Disable checkstyle because it's checked by 'armeria-thrift'
+tasks.checkstyleMain.onlyIf { false }
+tasks.checkstyleTest.onlyIf { false }
+
+// Disable test coverage because it conflicts with 'armeria-thrift'
+test {
+    jacoco {
+        enabled = false
+    }
+}

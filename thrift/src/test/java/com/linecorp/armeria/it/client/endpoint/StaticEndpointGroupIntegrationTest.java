@@ -218,9 +218,8 @@ public class StaticEndpointGroupIntegrationTest {
         assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
         assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
 
-
-        serverOne.stop();
-        serverTwo.stop();
-        serverThree.stop();
+        serverOne.close();
+        serverTwo.close();
+        serverThree.close();
     }
 }

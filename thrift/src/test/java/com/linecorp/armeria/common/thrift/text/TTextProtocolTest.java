@@ -42,6 +42,7 @@ import com.google.common.io.Resources;
 
 import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_args;
 import com.linecorp.armeria.common.thrift.text.RpcDebugService.doDebug_result;
+import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
 
 /**
  * Tests the TTextProtocol.
@@ -350,7 +351,7 @@ public class TTextProtocolTest {
         TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
         TMessage header = prot.readMessageBegin();
-        TApplicationException result = TApplicationException.read(prot);
+        TApplicationException result = TApplicationExceptions.read(prot);
         prot.readMessageEnd();
 
         assertEquals("doDebug", header.name);

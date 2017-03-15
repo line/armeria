@@ -27,15 +27,32 @@ import org.apache.thrift.TFieldIdEnum;
 public final class ThriftFieldAccess {
 
     /**
-     * Gets a field value from the specified struct.
+     * Gets the value of the specified struct field.
      */
-    public static Object get(TBase<? extends TBase<?, ?>, TFieldIdEnum> struct, TFieldIdEnum field) {
-        Object value = struct.getFieldValue(field);
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static Object get(TBase<?, ?> struct, TFieldIdEnum field) {
+        final Object value = ((TBase) struct).getFieldValue(field);
         if (value instanceof byte[]) {
             return ByteBuffer.wrap((byte[]) value);
         } else {
             return value;
         }
+    }
+
+    /**
+     * Sets the value of the specified struct field.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static void set(TBase<?, ?> struct, TFieldIdEnum field, Object value) {
+        ((TBase) struct).setFieldValue(field, value);
+    }
+
+    /**
+     * Tells whether the specified struct field is set or not.
+     */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static boolean isSet(TBase<?, ?> struct, TFieldIdEnum field) {
+        return ((TBase) struct).isSet(field);
     }
 
     private ThriftFieldAccess() {}

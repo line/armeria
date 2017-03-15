@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.apache.thrift.AsyncProcessFunction;
-import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
@@ -455,23 +453,14 @@ public class THttpService extends AbstractHttpService {
             serializationFormat = defaultSerializationFormat;
         }
 
-        final String accept = headers.get(HttpHeaderNames.ACCEPT);
-        if (accept != null) {
-            // If accept header is present, make sure it is sane. Currently, we do not support accept
-            // headers with a different format than the content type header.
-            SerializationFormat outputSerializationFormat;
-            try {
-                outputSerializationFormat =
-                        SerializationFormat.find(MediaType.parse(accept)).orElse(serializationFormat);
-            } catch (IllegalArgumentException e) {
-                logger.debug("Failed to parse the 'accept' header: {}", accept, e);
-                outputSerializationFormat = null;
-            }
-            if (outputSerializationFormat != serializationFormat) {
-                res.respond(HttpStatus.NOT_ACCEPTABLE,
-                            MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
-                return null;
-            }
+        // If accept header is present, make sure it is sane. Currently, we do not support accept
+        // headers with a different format than the content type header.
+        final List<String> acceptHeaders = headers.getAll(HttpHeaderNames.ACCEPT);
+        if (!acceptHeaders.isEmpty() &&
+            !serializationFormat.mediaTypes().matchHeaders(acceptHeaders).isPresent()) {
+            res.respond(HttpStatus.NOT_ACCEPTABLE,
+                        MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
+            return null;
         }
 
         return serializationFormat;
@@ -493,7 +482,7 @@ public class THttpService extends AbstractHttpService {
 
         try {
             final TMessage header;
-            final TBase<TBase<?, ?>, TFieldIdEnum> args;
+            final TBase<?, ?> args;
 
             try {
                 header = inProto.readMessageBegin();
@@ -542,20 +531,9 @@ public class THttpService extends AbstractHttpService {
 
             // Decode the invocation parameters.
             try {
-                if (f.isAsync()) {
-                    AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object> asyncFunc =
-                            f.asyncFunc();
-
-                    args = asyncFunc.getEmptyArgsInstance();
-                    args.read(inProto);
-                    inProto.readMessageEnd();
-                } else {
-                    ProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>> syncFunc = f.syncFunc();
-
-                    args = syncFunc.getEmptyArgsInstance();
-                    args.read(inProto);
-                    inProto.readMessageEnd();
-                }
+                args = f.newArgs();
+                args.read(inProto);
+                inProto.readMessageEnd();
 
                 decodedReq = toRpcRequest(f.serviceType(), header.name, args);
                 ctx.logBuilder().requestContent(decodedReq, new ThriftCall(header, args));
@@ -627,13 +605,10 @@ public class THttpService extends AbstractHttpService {
     private static RpcRequest toRpcRequest(Class<?> serviceType, String method, TBase<?, ?> thriftArgs) {
         requireNonNull(thriftArgs, "thriftArgs");
 
-        @SuppressWarnings("unchecked")
-        final TBase<TBase<?, ?>, TFieldIdEnum> castThriftArgs = (TBase<TBase<?, ?>, TFieldIdEnum>) thriftArgs;
-
         // NB: The map returned by FieldMetaData.getStructMetaDataMap() is an EnumMap,
         //     so the parameter ordering is preserved correctly during iteration.
         final Set<? extends TFieldIdEnum> fields =
-                FieldMetaData.getStructMetaDataMap(castThriftArgs.getClass()).keySet();
+                FieldMetaData.getStructMetaDataMap(thriftArgs.getClass()).keySet();
 
         // Handle the case where the number of arguments is 0 or 1.
         final int numFields = fields.size();
@@ -642,13 +617,13 @@ public class THttpService extends AbstractHttpService {
                 return RpcRequest.of(serviceType, method);
             case 1:
                 return RpcRequest.of(serviceType, method,
-                                     ThriftFieldAccess.get(castThriftArgs, fields.iterator().next()));
+                                     ThriftFieldAccess.get(thriftArgs, fields.iterator().next()));
         }
 
         // Handle the case where the number of arguments is greater than 1.
         final List<Object> list = new ArrayList<>(numFields);
         for (TFieldIdEnum field : fields) {
-            list.add(ThriftFieldAccess.get(castThriftArgs, field));
+            list.add(ThriftFieldAccess.get(thriftArgs, field));
         }
 
         return RpcRequest.of(serviceType, method, list);
@@ -658,7 +633,7 @@ public class THttpService extends AbstractHttpService {
             ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Object returnValue) {
 
-        TBase<TBase<?, ?>, TFieldIdEnum> wrappedResult = func.newResult();
+        final TBase<?, ?> wrappedResult = func.newResult();
         func.setSuccess(wrappedResult, returnValue);
         respond(serializationFormat,
                 encodeSuccess(ctx, rpcRes, serializationFormat, func.name(), seqId, wrappedResult),
@@ -676,7 +651,7 @@ public class THttpService extends AbstractHttpService {
             ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
 
-        final TBase<TBase<?, ?>, TFieldIdEnum> result = func.newResult();
+        final TBase<?, ?> result = func.newResult();
         final HttpData content;
         if (func.setException(result, cause)) {
             content = encodeSuccess(ctx, rpcRes, serializationFormat, func.name(), seqId, result);
@@ -707,7 +682,7 @@ public class THttpService extends AbstractHttpService {
                                           RpcResponse reply,
                                           SerializationFormat serializationFormat,
                                           String methodName, int seqId,
-                                          TBase<TBase<?, ?>, TFieldIdEnum> result) {
+                                          TBase<?, ?> result) {
 
         final TMemoryBuffer buf = new TMemoryBuffer(128);
         final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(buf);

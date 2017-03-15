@@ -30,6 +30,9 @@ ext {
     // The list of Java projects whose artifacts are published to the Maven repository
     publishedJavaProjects = javaProjects.findAll { it.name != 'it' && it.name != 'shaded-test' }
 
+    // The list of backward-compatibility Java projects which have the namespace conflicts with other projects.
+    backwardCompatProjects = publishedJavaProjects.findAll { it.name in [ 'thrift0.9' ] }
+
     // The list of Gradle task names specified in the startup parameters.
     requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
 
@@ -95,6 +98,7 @@ configure(javaProjects) {
         isPublishing = { gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null }
         isSigning = { signing.signatory != null && (project.ext.isReleaseVersion() || project.hasProperty('sign')) }
 
+        thriftPath = "${rootProject.projectDir}/gradle/thrift/thrift.${osdetector.classifier}"
         onIdeImport = { Closure action ->
             if (!requestedTaskNames.empty) {
                 return
@@ -268,7 +272,9 @@ configure(javaProjects) {
         afterEvaluate {
             // Include all sources and classes directories so that the report includes other modules.
             sourceDirectories = files(javaProjects.inject([], { a, b -> a + b.sourceSets.main.java.srcDirs }))
-            classDirectories = files(javaProjects.inject([], { a, b -> a + b.sourceSets.main.output.classesDir }))
+            classDirectories = files(javaProjects.inject([], { a, b ->
+                b in backwardCompatProjects ? a : a + b.sourceSets.main.output.classesDir
+            }))
         }
     }
 
@@ -283,6 +289,7 @@ configure(javaProjects) {
         options.encoding = 'UTF-8'
         options.warnings = false
         options.debug = true
+        options.incremental = true
     }
 
     // Prepare the JVM agent that enables TLS ALPN extension.
@@ -385,8 +392,6 @@ configure(javaProjects) {
     // Compile the Thrift service definitions.
     task compileThrift(group: 'Build',
                        description: 'Compiles the .thrift files') {
-        def thriftPath = "${rootProject.projectDir}/gradle/thrift/thrift.${osdetector.classifier}"
-
         [ 'main', 'test' ].each { scope ->
             def inputDir = "${project.projectDir}/src/${scope}/thrift"
             def outputDir = "${project.projectDir}/src/${scope}/gen-java"
@@ -403,7 +408,7 @@ configure(javaProjects) {
                     }.each { sourceFile ->
                         project.mkdir(outputDir)
                         project.exec {
-                            commandLine thriftPath,
+                            commandLine project.ext.thriftPath,
                                     '-gen', 'java',
                                     '-out', outputDir,
                                     '-I', "${sourceFile.parentFile.absolutePath}",
