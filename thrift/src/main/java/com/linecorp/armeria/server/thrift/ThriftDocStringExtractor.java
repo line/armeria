@@ -54,7 +54,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
     }
 
     @Override
-    protected boolean processFile(String filename) {
+    protected boolean acceptFile(String filename) {
         return filename.endsWith(".json");
     }
 

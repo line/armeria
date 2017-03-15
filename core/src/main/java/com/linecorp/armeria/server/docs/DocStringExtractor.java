@@ -72,7 +72,7 @@ public abstract class DocStringExtractor {
             return Collections.emptyMap();
         }
         Map<String, byte[]> files = new Reflections(configuration)
-                .getResources(this::processFile).stream()
+                .getResources(this::acceptFile).stream()
                 .map(f -> {
                     try {
                         URL url = classLoader.getResource(f);
@@ -93,7 +93,7 @@ public abstract class DocStringExtractor {
      * This will usually look at the file extension, but the default implementation can be used to check all
      * files at a particular path.
      */
-    protected boolean processFile(String filename) {
+    protected boolean acceptFile(String filename) {
         return true;
     }
 

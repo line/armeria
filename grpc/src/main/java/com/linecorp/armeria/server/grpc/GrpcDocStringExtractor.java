@@ -48,21 +48,21 @@ import com.linecorp.armeria.server.docs.DocStringExtractor;
  * {@code com.linecorp.armeria.grpc.descriptorDir} system property.
  *
  * <p>For example, to generate a descriptor set in gradle:
- * <pre>
- *     {@code
- *     protobuf {
- *         generateProtoTasks {
- *             all().each { task ->
- *                 task.generateDescriptorSet = true
- *                 task.descriptorSetOptions.includeSourceInfo = true
- *                 task.descriptorSetOptions.includeImports = true
- *                 task.descriptorSetOptions.path =
- *                         "${buildDir}/resources/main/META-INF/armeria/grpc/service-name.dsc"
- *             }
+ * <pre>{@code
+ *
+ * protobuf {
+ *     generateProtoTasks {
+ *         all().each { task ->
+ *             task.generateDescriptorSet = true
+ *             task.descriptorSetOptions.includeSourceInfo = true
+ *             task.descriptorSetOptions.includeImports = true
+ *             task.descriptorSetOptions.path =
+ *                     "${buildDir}/resources/main/META-INF/armeria/grpc/service-name.dsc"
  *         }
  *     }
- *     }
- * </pre>
+ * }
+ *
+ * }</pre>
  */
 final class GrpcDocStringExtractor extends DocStringExtractor {
 
@@ -73,7 +73,7 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
     }
 
     @Override
-    protected boolean processFile(String filename) {
+    protected boolean acceptFile(String filename) {
         return filename.endsWith(".dsc");
     }
 
