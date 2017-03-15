@@ -21,9 +21,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.MediaType.create;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -35,7 +32,6 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 
@@ -46,12 +42,6 @@ public final class SerializationFormat implements Comparable<SerializationFormat
 
     private static final BiMap<String, SerializationFormat> uriTextToFormats;
     private static final Set<SerializationFormat> values;
-
-    /**
-     * A {@link Multimap} of the {@link MediaType}s whose parameters removed and {@link SerializationFormat}s.
-     * We maintain this multi-map to ensure that no duplicate media types are registered.
-     */
-    private static final Multimap<MediaType, SerializationFormat> simplifiedMediaTypeToFormats;
 
     /**
      * No serialization format. Used when no serialization/deserialization is desired.
@@ -113,7 +103,6 @@ public final class SerializationFormat implements Comparable<SerializationFormat
 
         uriTextToFormats = ImmutableBiMap.copyOf(mutableUriTextToFormats);
         values = uriTextToFormats.values();
-        simplifiedMediaTypeToFormats = ImmutableMultimap.copyOf(mutableSimplifiedMediaTypeToFormats);
 
         // Backward compatibility stuff
         SerializationFormat tbinary = null;
@@ -147,13 +136,13 @@ public final class SerializationFormat implements Comparable<SerializationFormat
                    "serialization format registered already: ", entry.uriText);
 
         final SerializationFormat value = new SerializationFormat(
-                entry.uriText, entry.primaryMediaType, entry.allMediaTypes);
-        for (MediaType type : entry.allMediaTypes) {
+                entry.uriText, entry.primaryMediaType, entry.mediaTypes);
+        for (MediaType type : entry.mediaTypes) {
             checkMediaType(simplifiedMediaTypeToFormats, type);
         }
 
         uriTextToFormats.put(entry.uriText, value);
-        for (MediaType type : entry.allMediaTypes) {
+        for (MediaType type : entry.mediaTypes) {
             simplifiedMediaTypeToFormats.put(type.withoutParameters(), value);
         }
 
@@ -216,12 +205,16 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     }
 
     /**
-     * Finds the {@link SerializationFormat} which is accepted by the specified {@link MediaType}.
+     * Finds the {@link SerializationFormat} which is accepted by any of the specified media ranges.
      */
-    public static Optional<SerializationFormat> find(MediaType mediaType) {
-        requireNonNull(mediaType, "mediaType");
-        for (SerializationFormat f : simplifiedMediaTypeToFormats.get(mediaType.withoutParameters())) {
-            if (f.isAccepted(mediaType)) {
+    public static Optional<SerializationFormat> find(MediaType... ranges) {
+        requireNonNull(ranges, "ranges");
+        if (ranges.length == 0) {
+            return Optional.empty();
+        }
+
+        for (SerializationFormat f : values()) {
+            if (f.isAccepted(ranges)) {
                 return Optional.of(f);
             }
         }
@@ -230,7 +223,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     }
 
     /**
-     * @deprecated Use {@link #find(MediaType)}.
+     * @deprecated Use {@link #find(MediaType...)}.
      */
     @Deprecated
     public static Optional<SerializationFormat> fromMediaType(@Nullable String mediaType) {
@@ -248,12 +241,12 @@ public final class SerializationFormat implements Comparable<SerializationFormat
 
     private final String uriText;
     private final MediaType primaryMediaType;
-    private final Set<MediaType> allMediaTypes;
+    private final MediaTypeSet mediaTypes;
 
-    private SerializationFormat(String uriText, MediaType primaryMediaType, Set<MediaType> allMediaTypes) {
+    private SerializationFormat(String uriText, MediaType primaryMediaType, MediaTypeSet mediaTypes) {
         this.uriText = uriText;
         this.primaryMediaType = primaryMediaType;
-        this.allMediaTypes = ImmutableSet.copyOf(allMediaTypes);
+        this.mediaTypes = mediaTypes;
     }
 
     /**
@@ -273,78 +266,17 @@ public final class SerializationFormat implements Comparable<SerializationFormat
     /**
      * Returns the media types accepted by this format.
      */
-    public Set<MediaType> mediaTypes() {
-        return allMediaTypes;
+    public MediaTypeSet mediaTypes() {
+        return mediaTypes;
     }
 
     /**
-     * Returns whether the specified {@link MediaType} is accepted by any of the {@link #mediaTypes()}
+     * Returns whether any of the specified media ranges is accepted by any of the {@link #mediaTypes()}
      * defined by this format.
      */
-    public boolean isAccepted(MediaType mediaType) {
-        requireNonNull(mediaType, "mediaType");
-
-        // Similar to what MediaType.is(MediaType) does except that
-        // this one compares the parameters case-insensitively.
-        for (MediaType type : allMediaTypes) {
-            if (!type.type().equals(mediaType.type()) ||
-                !type.subtype().equals(mediaType.subtype())) {
-                continue;
-            }
-
-            final Map<String, List<String>> requiredParameters = type.parameters();
-            final Map<String, List<String>> actualParameters = mediaType.parameters();
-            if (containsAllParameters(requiredParameters, actualParameters)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static boolean containsAllParameters(Map<String, List<String>> requiredParameters,
-                                                 Map<String, List<String>> actualParameters) {
-
-        if (requiredParameters.isEmpty()) {
-            return true;
-        }
-
-        for (Entry<String, List<String>> requiredEntry : requiredParameters.entrySet()) {
-            final List<String> requiredValues = requiredEntry.getValue();
-            final List<String> actualValues = actualParameters.get(requiredEntry.getKey());
-
-            assert !requiredValues.isEmpty();
-            if (actualValues == null || actualValues.isEmpty()) {
-                // Does not contain any required values.
-                return false;
-            }
-
-            if (!containsAllRequiredValues(requiredValues, actualValues)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static boolean containsAllRequiredValues(List<String> requiredValues, List<String> actualValues) {
-        final int numRequiredValues = requiredValues.size();
-        for (int i = 0; i < numRequiredValues; i++) {
-            if (!containsRequiredValue(requiredValues.get(i), actualValues)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean containsRequiredValue(String requiredValue, List<String> actualValues) {
-        final int numActualValues = actualValues.size();
-        for (int i = 0; i < numActualValues; i++) {
-            if (Ascii.equalsIgnoreCase(requiredValue, actualValues.get(i))) {
-                return true;
-            }
-        }
-        return false;
+    public boolean isAccepted(MediaType... ranges) {
+        requireNonNull(ranges, "ranges");
+        return mediaTypes.match(ranges).isPresent();
     }
 
     @Override

@@ -453,23 +453,14 @@ public class THttpService extends AbstractHttpService {
             serializationFormat = defaultSerializationFormat;
         }
 
-        final String accept = headers.get(HttpHeaderNames.ACCEPT);
-        if (accept != null) {
-            // If accept header is present, make sure it is sane. Currently, we do not support accept
-            // headers with a different format than the content type header.
-            SerializationFormat outputSerializationFormat;
-            try {
-                outputSerializationFormat =
-                        SerializationFormat.find(MediaType.parse(accept)).orElse(serializationFormat);
-            } catch (IllegalArgumentException e) {
-                logger.debug("Failed to parse the 'accept' header: {}", accept, e);
-                outputSerializationFormat = null;
-            }
-            if (outputSerializationFormat != serializationFormat) {
-                res.respond(HttpStatus.NOT_ACCEPTABLE,
-                            MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
-                return null;
-            }
+        // If accept header is present, make sure it is sane. Currently, we do not support accept
+        // headers with a different format than the content type header.
+        final List<String> acceptHeaders = headers.getAll(HttpHeaderNames.ACCEPT);
+        if (!acceptHeaders.isEmpty() &&
+            !serializationFormat.mediaTypes().matchHeaders(acceptHeaders).isPresent()) {
+            res.respond(HttpStatus.NOT_ACCEPTABLE,
+                        MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
+            return null;
         }
 
         return serializationFormat;
