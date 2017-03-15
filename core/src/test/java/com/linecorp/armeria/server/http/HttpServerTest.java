@@ -40,8 +40,10 @@ import java.io.EOFException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -87,6 +89,8 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -128,6 +132,7 @@ public class HttpServerTest extends AbstractServerTest {
         return ImmutableList.of(H1C, H1, H2C, H2);
     }
 
+    private static final BlockingQueue<RequestLog> requestLogs = new LinkedBlockingQueue<>();
     private static volatile long serverRequestTimeoutMillis;
     private static volatile long serverMaxRequestLength;
     private static volatile long clientWriteTimeoutMillis;
@@ -344,6 +349,7 @@ public class HttpServerTest extends AbstractServerTest {
                     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                         ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
                         ctx.setMaxRequestLength(serverMaxRequestLength);
+                        ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
                         return delegate().serve(ctx, req);
                     }
                 };
@@ -359,6 +365,8 @@ public class HttpServerTest extends AbstractServerTest {
 
     @Before
     public void reset() {
+        requestLogs.clear();
+
         serverRequestTimeoutMillis = 10000L;
         clientWriteTimeoutMillis = 3000L;
         clientResponseTimeoutMillis = 10000L;
@@ -396,6 +404,7 @@ public class HttpServerTest extends AbstractServerTest {
         assertThat(res.headers().status(), is(HttpStatus.SERVICE_UNAVAILABLE));
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
         assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
+        assertThat(requestLogs.take().statusCode(), is(503));
     }
 
     @Test(timeout = 10000)
@@ -411,6 +420,7 @@ public class HttpServerTest extends AbstractServerTest {
         assertThat(res.headers().status(), is(HttpStatus.SERVICE_UNAVAILABLE));
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
         assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
+        assertThat(requestLogs.take().statusCode(), is(503));
     }
 
     @Test(timeout = 10000)
