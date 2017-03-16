@@ -27,9 +27,10 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.PathParamExtractor;
 
 /**
- * {@link HttpMethod}, {@link DynamicPath} and their corresponding {@link DynamicHttpFunction} instance.
+ * {@link HttpMethod}, {@link PathParamExtractor} and their corresponding {@link DynamicHttpFunction} instance.
  */
 final class DynamicHttpFunctionEntry {
 
@@ -39,22 +40,23 @@ final class DynamicHttpFunctionEntry {
     private final Set<HttpMethod> methods;
 
     /**
-     * Path with placeholders, e.g., "/const1/{var1}/{var2}/const2"
+     * Path param extractor with placeholders, e.g., "/const1/{var1}/{var2}/const2"
      */
-    private final DynamicPath path;
+    private final PathParamExtractor pathParamExtractor;
 
     /**
      * {@link DynamicHttpFunction} instance that will be invoked with given {@link HttpMethod} and
-     * {@link DynamicPath}.
+     * {@link PathParamExtractor}.
      */
     private final DynamicHttpFunction function;
 
     /**
      * Creates a new instance.
      */
-    DynamicHttpFunctionEntry(Set<HttpMethod> methods, DynamicPath path, DynamicHttpFunction function) {
+    DynamicHttpFunctionEntry(Set<HttpMethod> methods, PathParamExtractor pathParamExtractor,
+                             DynamicHttpFunction function) {
         this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
-        this.path = requireNonNull(path, "path");
+        this.pathParamExtractor = requireNonNull(pathParamExtractor, "pathParamExtractor");
         this.function = requireNonNull(function, "function");
     }
 
@@ -63,11 +65,11 @@ final class DynamicHttpFunctionEntry {
      */
     boolean overlaps(DynamicHttpFunctionEntry entry) {
         return !Sets.intersection(methods, entry.methods).isEmpty() &&
-               path.skeleton().equals(entry.path.skeleton());
+               pathParamExtractor.skeleton().equals(entry.pathParamExtractor.skeleton());
     }
 
     /**
-     * Returns bound values and mapped function when given HTTP Method and path matches.
+     * Returns bound values and mapped function when given HTTP Method and pathParamExtractor matches.
      *
      * @see MappedDynamicFunction
      */
@@ -77,8 +79,8 @@ final class DynamicHttpFunctionEntry {
             return null;
         }
 
-        Map<String, String> args = path.bind(mappedPath);
-        if (args == null) {
+        Map<String, String> args = pathParamExtractor.extract(mappedPath);
+        if (args.isEmpty()) {
             return null;
         }
 
@@ -89,7 +91,7 @@ final class DynamicHttpFunctionEntry {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("methods", methods)
-                          .add("path", path)
+                          .add("pathParamExtractor", pathParamExtractor)
                           .add("function", function).toString();
     }
 }

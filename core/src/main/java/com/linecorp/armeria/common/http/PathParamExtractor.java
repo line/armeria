@@ -14,10 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.dynamic;
+package com.linecorp.armeria.common.http;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -26,38 +28,41 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 
 /**
- * A bindable path. It holds three things:
+ * A path param extractor. It holds three things:
  * <ul>
- *   <li> A regex-compiled form of the path. It is used for matching and binding.
+ *   <li> A regex-compiled form of the path. It is used for matching and extracting.
  *   <li> A skeleton of the path. It is used for duplication detecting.
  *   <li> A set of variables declared in the path.
  * </ul>
  *
- * @see DynamicHttpService
- * @see Path
  */
-final class DynamicPath {
+public final class PathParamExtractor {
 
-    private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/]+)+");
+    private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
 
     /**
-     * Create a {@link DynamicPath} instance from given {@code path}.
+     * Create a {@link PathParamExtractor} instance from given {@code path}.
+     * @param path the {@link String} that contains path params.
+     *             e.g. {@code /users/{name}} or {@code /users/:name}
+     *
+     * @throws IllegalArgumentException if the {@code path} is invalid.
      */
-    static DynamicPath of(String path) {
-        if (!VALID_PATTERN.matcher(path).matches()) {
+    public static PathParamExtractor of(String path) {
+        requireNonNull(path, "path");
+
+        final String matchPath = path.charAt(0) == '/' ? path : "/" + path;
+        if (!VALID_PATTERN.matcher(matchPath).matches()) {
             throw new IllegalArgumentException(
-                    String.format("%s: Invalid DynamicPath (valid: %s)", path, VALID_PATTERN));
+                    String.format("%s: Invalid PathParamExtractor (valid: %s)", path, VALID_PATTERN));
         }
-        return new DynamicPath(path);
+        return new PathParamExtractor(path);
     }
 
     /**
-     * Regex form of given path, which will be used for matching or binding.
+     * Regex form of given path, which will be used for matching or extracting.
      *
      * <p>e.g. "/{x}/{y}/{x}" -> "/(?&lt;x&gt;[^/]+)/(?&lt;y&gt;[^/]+)/(\\k&lt;x&gt;)"
      */
@@ -72,11 +77,11 @@ final class DynamicPath {
     private final String skeleton;
 
     /**
-     * Set of the variables declared in this dynamic path.
+     * Set of the variables declared in this path param extractor.
      */
     private final ImmutableSet<String> variables;
 
-    DynamicPath(String path) {
+    private PathParamExtractor(String path) {
         StringJoiner patternJoiner = new StringJoiner("/");
         StringJoiner skeletonJoiner = new StringJoiner("/");
         Set<String> placeholders = new HashSet<>();
@@ -101,7 +106,7 @@ final class DynamicPath {
             }
         }
 
-        pattern = Pattern.compile(patternJoiner.toString());
+        pattern = Pattern.compile(patternJoiner.toString() + "(\\?.*)*");
         skeleton = skeletonJoiner.toString();
         variables = ImmutableSet.copyOf(placeholders);
 
@@ -132,25 +137,25 @@ final class DynamicPath {
     /**
      * Returns the skeleton.
      */
-    String skeleton() {
+    public String skeleton() {
         return skeleton;
     }
 
     /**
      * Returns the variables.
      */
-    Set<String> variables() {
+    public Set<String> variables() {
         return variables;
     }
 
     /**
-     * Returns Binding results with given path. If given path does not match, returns null.
+     * Returns extracting results with given {@code path}.
+     * If the {@code path} does not match, returns an empty {@link Map}.
      */
-    @Nullable
-    Map<String, String> bind(String path) {
+    public Map<String, String> extract(String path) {
         Matcher matcher = pattern.matcher(path);
         if (!matcher.matches()) {
-            return null;
+            return Collections.emptyMap();
         }
 
         return variables.stream()

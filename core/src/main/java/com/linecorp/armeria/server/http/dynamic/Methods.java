@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.PathParamExtractor;
 
 /**
  * Provides various utility functions for {@link Method} object, related to {@link DynamicHttpService}.
@@ -93,12 +94,12 @@ final class Methods {
     }
 
     /**
-     * Returns the {@link DynamicPath} instance mapped to {@code method}.
+     * Returns the {@link PathParamExtractor} instance mapped to {@code method}.
      */
-    private static DynamicPath dynamicPath(Method method) {
+    private static PathParamExtractor pathParamExtractor(Method method) {
         Path mapping = method.getAnnotation(Path.class);
         String mappedTo = mapping.value();
-        return DynamicPath.of(mappedTo);
+        return PathParamExtractor.of(mappedTo);
     }
 
     /**
@@ -170,11 +171,11 @@ final class Methods {
         if (methods.isEmpty()) {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
-        DynamicPath dynamicPath = dynamicPath(method);
+        PathParamExtractor pathParamExtractor = pathParamExtractor(method);
         DynamicHttpFunctionImpl function = new DynamicHttpFunctionImpl(object, method);
 
         Set<String> parameterNames = function.parameterNames();
-        Set<String> pathVariableNames = dynamicPath.variables();
+        Set<String> pathVariableNames = pathParamExtractor.variables();
         if (!pathVariableNames.containsAll(parameterNames)) {
             Set<String> missing = Sets.difference(parameterNames, pathVariableNames);
             throw new IllegalArgumentException("Missing @PathParam exists: " + missing);
@@ -182,7 +183,7 @@ final class Methods {
 
         ResponseConverter converter = converter(method);
         if (converter != null) {
-            return new DynamicHttpFunctionEntry(methods, dynamicPath,
+            return new DynamicHttpFunctionEntry(methods, pathParamExtractor,
                                                 DynamicHttpFunctions.of(function, converter));
         } else {
             Map<Class<?>, ResponseConverter> converterMap = new HashMap<>();
@@ -190,7 +191,7 @@ final class Methods {
             converterMap.putAll(converters);
             // Converters given by @Converter annotation
             converterMap.putAll(converters(method.getDeclaringClass()));
-            return new DynamicHttpFunctionEntry(methods, dynamicPath,
+            return new DynamicHttpFunctionEntry(methods, pathParamExtractor,
                                                 DynamicHttpFunctions.of(function, converterMap));
         }
     }
