@@ -18,10 +18,14 @@ package com.linecorp.armeria.client.http;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -38,7 +42,6 @@ import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.util.CompletionActions;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -49,6 +52,8 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
+
+    private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
 
     private static final KeyedChannelPoolHandlerAdapter<PoolKey> NOOP_POOL_HANDLER =
             new KeyedChannelPoolHandlerAdapter<>();
@@ -195,25 +200,48 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     void invoke0(Channel channel, ClientRequestContext ctx,
                  HttpRequest req, DecodedHttpResponse res, PoolKey poolKey) {
-
-        final HttpSession session = HttpSession.get(channel);
-        res.init(session.inboundTrafficController());
-        final SessionProtocol sessionProtocol = session.protocol();
-        if (sessionProtocol == null) {
-            res.close(ClosedSessionException.get());
-            return;
-        }
-
-        if (session.invoke(ctx, req, res)) {
-            // Return the channel to the pool.
-            final KeyedChannelPool<PoolKey> pool = KeyedChannelPool.findPool(channel);
-            if (sessionProtocol.isMultiplex()) {
-                pool.release(poolKey, channel);
-            } else {
-                req.closeFuture()
-                   .handle((ret, cause) -> pool.release(poolKey, channel))
-                   .exceptionally(CompletionActions::log);
+        final KeyedChannelPool<PoolKey> pool = KeyedChannelPool.findPool(channel);
+        boolean needsRelease = true;
+        try {
+            final HttpSession session = HttpSession.get(channel);
+            res.init(session.inboundTrafficController());
+            final SessionProtocol sessionProtocol = session.protocol();
+            if (sessionProtocol == null) {
+                needsRelease = false;
+                try {
+                    res.close(ClosedSessionException.get());
+                } finally {
+                    channel.close();
+                }
+                return;
             }
+
+            if (session.invoke(ctx, req, res)) {
+                needsRelease = false;
+
+                // Return the channel to the pool.
+                if (sessionProtocol.isMultiplex()) {
+                    release(pool, poolKey, channel);
+                } else {
+                    // If pipelining is enabled, return as soon as the request is fully sent.
+                    // If pipelining is disabled, return after the response is fully received.
+                    final CompletableFuture<Void> closeFuture =
+                            factory.options().useHttp1Pipelining() ? req.closeFuture() : res.closeFuture();
+                    closeFuture.whenComplete((ret, cause) -> release(pool, poolKey, channel));
+                }
+            }
+        } finally {
+            if (needsRelease) {
+                release(pool, poolKey, channel);
+            }
+        }
+    }
+
+    private static void release(KeyedChannelPool<PoolKey> pool, PoolKey poolKey, Channel channel) {
+        try {
+            pool.release(poolKey, channel);
+        } catch (Throwable t) {
+            logger.warn("Failed to return a Channel to the pool: {}", channel, t);
         }
     }
 
