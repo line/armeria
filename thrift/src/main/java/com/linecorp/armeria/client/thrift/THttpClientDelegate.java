@@ -142,7 +142,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
                 }
 
                 try {
-                    handle(ctx, reply, func, res.content());
+                    handle(ctx, seqId, reply, func, res.content());
                 } catch (Throwable t) {
                     handlePreDecodeException(ctx, reply, func, t);
                 }
@@ -172,7 +172,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         return metadataMap.computeIfAbsent(serviceType, ThriftServiceMetadata::new);
     }
 
-    private void handle(ClientRequestContext ctx, DefaultRpcResponse reply,
+    private void handle(ClientRequestContext ctx, int seqId, DefaultRpcResponse reply,
                         ThriftFunction func, HttpData content) throws TException {
 
         if (func.isOneWay()) {
@@ -189,7 +189,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         final TProtocol inputProtocol = protocolFactory.getProtocol(inputTransport);
 
         final TMessage header = inputProtocol.readMessageBegin();
-        final TApplicationException appEx = readApplicationException(func, inputProtocol, header);
+        final TApplicationException appEx = readApplicationException(seqId, func, inputProtocol, header);
         if (appEx != null) {
             handleException(ctx, reply, new ThriftReply(header, appEx), appEx);
             return;
@@ -227,17 +227,21 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
                                           result.getClass().getName() + '.' + successField.getFieldName()));
     }
 
-    private static TApplicationException readApplicationException(ThriftFunction func,
+    private static TApplicationException readApplicationException(int seqId, ThriftFunction func,
                                                                   TProtocol inputProtocol,
                                                                   TMessage msg) throws TException {
-        if (msg.type == TMessageType.EXCEPTION) {
-            final TApplicationException appEx = TApplicationExceptions.read(inputProtocol);
-            inputProtocol.readMessageEnd();
-            return appEx;
+        if (msg.seqid != seqId) {
+            throw new TApplicationException(TApplicationException.BAD_SEQUENCE_ID);
         }
 
         if (!func.name().equals(msg.name)) {
             return new TApplicationException(TApplicationException.WRONG_METHOD_NAME, msg.name);
+        }
+
+        if (msg.type == TMessageType.EXCEPTION) {
+            final TApplicationException appEx = TApplicationExceptions.read(inputProtocol);
+            inputProtocol.readMessageEnd();
+            return appEx;
         }
 
         return null;
