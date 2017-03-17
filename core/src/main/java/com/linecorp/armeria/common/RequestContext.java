@@ -307,8 +307,8 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Returns a {@link GenericFutureListener} that makes sure the current {@link RequestContext} is set and
-     * then invokes the input {@code listener}.
-     *
+     * then invokes the input {@code listener}. Unlike other versions of {@code makeContextAware}, this one will
+     * invoke the listener with the future's result even if the context has already been timed out.
      * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated

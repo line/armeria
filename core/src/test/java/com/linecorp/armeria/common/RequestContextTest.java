@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -27,6 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -151,6 +154,19 @@ public class RequestContextTest {
     }
 
     @Test
+    public void makeContextAwareCallable_timedOut() throws Exception {
+        NonWrappingRequestContext context = createContext();
+        AtomicBoolean called = new AtomicBoolean();
+        Callable<?> callable = context.makeContextAware(() -> {
+            called.set(true);
+            return "success";
+        });
+        context.setTimedOut();
+        assertThatThrownBy(callable::call).isInstanceOf(CancellationException.class);
+        assertFalse(called.get());
+    }
+
+    @Test
     public void makeContextAwareRunnable() {
         RequestContext context = createContext();
         context.makeContextAware(() -> {
@@ -161,6 +177,18 @@ public class RequestContextTest {
     }
 
     @Test
+    public void makeContextAwareRunnable_timedOut() {
+        NonWrappingRequestContext context = createContext();
+        AtomicBoolean called = new AtomicBoolean();
+        Runnable runnable = context.makeContextAware(() -> {
+            called.set(true);
+        });
+        context.setTimedOut();
+        assertThatThrownBy(runnable::run).isInstanceOf(CancellationException.class);
+        assertFalse(called.get());
+    }
+
+    @Test
     @SuppressWarnings("deprecation")
     public void makeContextAwareFutureListener() {
         RequestContext context = createContext();
@@ -168,7 +196,19 @@ public class RequestContextTest {
         promise.addListener(context.makeContextAware((FutureListener<String>) f -> {
             assertEquals(context, RequestContext.current());
             assertTrue(entered.get());
+            assertThat(f.getNow()).isEqualTo("success");
         }));
+        promise.setSuccess("success");
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void makeContextAwareFutureListener_timedOut() {
+        NonWrappingRequestContext context = createContext();
+        Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
+        promise.addListener(context.makeContextAware((FutureListener<String>) f ->
+                assertThatThrownBy(f::getNow).isInstanceOf(CancellationException.class)));
+        context.setTimedOut();
         promise.setSuccess("success");
     }
 
@@ -180,7 +220,19 @@ public class RequestContextTest {
         promise.addListener(context.makeContextAware((ChannelFutureListener) f -> {
             assertEquals(context, RequestContext.current());
             assertTrue(entered.get());
+            assertThat(f.getNow()).isNull();
         }));
+        promise.setSuccess(null);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void makeContextAwareChannelFutureListener_timedOut() {
+        NonWrappingRequestContext context = createContext();
+        ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        promise.addListener(context.makeContextAware((ChannelFutureListener) f ->
+                assertThatThrownBy(f::getNow).isInstanceOf(CancellationException.class)));
+        context.setTimedOut();
         promise.setSuccess(null);
     }
 
@@ -198,6 +250,21 @@ public class RequestContextTest {
         originalFuture.complete("success");
         assertFalse(entered.get());
         resultFuture.get(); // this will propagate assertions.
+    }
+
+    @Test
+    public void makeContextAwareCompletableFutureInSameThread_timedOut() throws Exception {
+        NonWrappingRequestContext context = createContext();
+        CompletableFuture<String> originalFuture = new CompletableFuture<>();
+        CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+        AtomicBoolean called = new AtomicBoolean();
+        CompletableFuture<String> resultFuture = contextAwareFuture.whenComplete((result, cause) -> {
+            called.set(true);
+        });
+        context.setTimedOut();
+        originalFuture.complete("success");
+        assertFalse(called.get());
+        assertThatThrownBy(resultFuture::get).isInstanceOf(CancellationException.class);
     }
 
     @Test
@@ -337,12 +404,12 @@ public class RequestContextTest {
         }
     }
 
-    private RequestContext createContext() {
+    private NonWrappingRequestContext createContext() {
         return createContext(true);
     }
 
-    private RequestContext createContext(boolean addContextAwareHandler) {
-        final RequestContext ctx = new DummyRequestContext();
+    private NonWrappingRequestContext createContext(boolean addContextAwareHandler) {
+        final NonWrappingRequestContext ctx = new DummyRequestContext();
         if (addContextAwareHandler) {
             ctx.onEnter(() -> entered.set(true));
             ctx.onExit(() -> entered.set(false));
