@@ -110,22 +110,22 @@ public final class ServiceInfo {
     }
 
     /**
-     * Returns all enum, struct and exception types referred by this service.
+     * Returns all enum, struct and exception {@link TypeSignature}s referred to by this service.
      */
-    public Set<Class<?>> findNamedTypes() {
-        final Set<Class<?>> collectedNamedTypes = new HashSet<>();
+    public Set<TypeSignature> findNamedTypes() {
+        final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
         methods().forEach(m -> {
             findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
             m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
             m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
         });
 
-        return ImmutableSortedSet.copyOf(comparing(Class::getName), collectedNamedTypes);
+        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
     }
 
-    static void findNamedTypes(Set<Class<?>> collectedNamedTypes, TypeSignature typeSignature) {
+    static void findNamedTypes(Set<TypeSignature> collectedNamedTypes, TypeSignature typeSignature) {
         if (typeSignature.isNamed()) {
-            collectedNamedTypes.add(typeSignature.namedType().get());
+            collectedNamedTypes.add(typeSignature);
         }
 
         if (typeSignature.isContainer()) {

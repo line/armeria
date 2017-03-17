@@ -46,7 +46,7 @@ public interface NamedTypeInfo {
     /**
      * Returns all enum, struct and exception types referred by this type.
      */
-    default Set<Class<?>> findNamedTypes() {
+    default Set<TypeSignature> findNamedTypes() {
         return ImmutableSet.of();
     }
 }

@@ -87,6 +87,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     private static final TypeSignature STRING = TypeSignature.ofBase("string");
     private static final TypeSignature BINARY = TypeSignature.ofBase("binary");
 
+    private ThriftDocStringExtractor docstringExtractor = new ThriftDocStringExtractor();
+
     // Methods related with generating a service specification.
 
     @Override
@@ -233,7 +235,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures);
     }
 
-    private static NamedTypeInfo newNamedTypeInfo(Class<?> type) {
+    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
+        Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor().get();
         if (type.isEnum()) {
             return newEnumInfo(type);
         }
@@ -425,7 +428,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         return serviceConfigs.stream()
                              .flatMap(c -> c.service().as(THttpService.class).get().entries().values().stream())
                              .flatMap(entry -> entry.interfaces().stream().map(Class::getClassLoader))
-                             .flatMap(loader -> ThriftDocString.getAllDocStrings(loader).entrySet().stream())
+                             .flatMap(loader -> docstringExtractor.getAllDocStrings(loader)
+                                                                  .entrySet().stream())
                              .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
     }
 

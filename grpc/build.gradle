@@ -1,10 +1,21 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.0'
+    }
+}
+
+apply plugin: 'com.google.protobuf'
+
 managedDependencies {
     // gRPC
     [ 'grpc-core', 'grpc-stub', 'grpc-protobuf' ].each {
         compile "io.grpc:$it"
     }
-    testCompile 'io.grpc:grpc-interop-testing'
 }
+
 [tasks.shadedJar, tasks.shadedTestJar].each {
     it.relocate 'io.grpc.internal', "${shadedPackage}.grpc.internal"
 }
@@ -14,3 +25,42 @@ tasks.shadedJar.exclude {
     it.name.startsWith('io/grpc') && !it.name.startsWith('io/grpc/internal')
 }
 tasks.shadedJar.exclude 'META-INF/services/io.grpc.NameResolverProvider'
+
+protobuf {
+    generatedFilesBaseDir = "$projectDir/gen-src"
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.2.0'
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.1.2"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {
+                option 'enable_deprecated=false'
+            }
+        }
+        all().each { task ->
+            task.generateDescriptorSet = true
+            task.descriptorSetOptions.includeSourceInfo = true
+            task.descriptorSetOptions.includeImports = true
+            task.descriptorSetOptions.path =
+                    "${buildDir}/resources/main/META-INF/armeria/grpc/armeria-test.dsc"
+        }
+    }
+}
+
+clean {
+    delete protobuf.generatedFilesBaseDir
+}
+
+idea {
+    module {
+        sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java");
+        sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/grpc");
+        sourceDirs += file("${protobuf.generatedFilesBaseDir}/test/java");
+        sourceDirs += file("${protobuf.generatedFilesBaseDir}/test/grpc");
+    }
+}

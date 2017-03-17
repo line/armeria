@@ -3,6 +3,7 @@
 /*/build
 **/src/main/gen-java
 **/src/test/gen-java
+**/gen-src
 
 # Package Files #
 *.jar

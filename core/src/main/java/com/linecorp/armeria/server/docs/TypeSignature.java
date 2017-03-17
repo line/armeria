@@ -177,6 +177,14 @@ public final class TypeSignature {
         return ofNamed(namedType, "namedType");
     }
 
+    /**
+     * Creates a new named type signature for the provided name and arbitrary descriptor.
+     */
+    public static TypeSignature ofNamed(String name, Object namedTypeDescriptor) {
+        return new TypeSignature(requireNonNull(name, "name"),
+                                 requireNonNull(namedTypeDescriptor, "namedTypeDescriptor"));
+    }
+
     private static TypeSignature ofNamed(Class<?> namedType, String parameterName) {
         requireNonNull(namedType, parameterName);
 
@@ -197,7 +205,7 @@ public final class TypeSignature {
     }
 
     private final String name;
-    private final Class<?> namedType;
+    private final Object namedTypeDescriptor;
     private final List<TypeSignature> typeParameters;
 
     /**
@@ -206,15 +214,21 @@ public final class TypeSignature {
     private TypeSignature(String name, List<TypeSignature> typeParameters) {
         this.name = name;
         this.typeParameters = typeParameters;
-        namedType = null;
+        namedTypeDescriptor = null;
     }
 
     /**
      * Creates a new type signature for a named type.
      */
-    private TypeSignature(Class<?> namedType) {
-        name = namedType.getName();
-        this.namedType = namedType;
+    private TypeSignature(Class<?> namedTypeDescriptor) {
+        name = namedTypeDescriptor.getName();
+        this.namedTypeDescriptor = namedTypeDescriptor;
+        typeParameters = ImmutableList.of();
+    }
+
+    private TypeSignature(String name, Object namedTypeDescriptor) {
+        this.name = name;
+        this.namedTypeDescriptor = namedTypeDescriptor;
         typeParameters = ImmutableList.of();
     }
 
@@ -226,10 +240,12 @@ public final class TypeSignature {
     }
 
     /**
-     * Returns the actual {@link Class} of the type if and only if this type signature represents a named type.
+     * Returns the descriptor of the type if and only if this type signature represents a named type.
+     * For reflection-based {@link DocServicePlugin}s, this will probably be a {@link Class}, but
+     * other plugins may use an actual instance with descriptor information.
      */
-    public Optional<Class<?>> namedType() {
-        return Optional.ofNullable(namedType);
+    public Optional<Object> namedTypeDescriptor() {
+        return Optional.ofNullable(namedTypeDescriptor);
     }
 
     /**
@@ -269,7 +285,7 @@ public final class TypeSignature {
      * Returns if this type signature represents a named type.
      */
     public boolean isNamed() {
-        return namedType != null;
+        return namedTypeDescriptor != null;
     }
 
     /**
@@ -293,16 +309,12 @@ public final class TypeSignature {
             return false;
         }
 
-        if (namedType != null ? !namedType.equals(that.namedType) : that.namedType != null) {
-            return false;
-        }
-
-        return typeParameters.equals(that.typeParameters);
+        return Objects.equals(namedTypeDescriptor, that.namedTypeDescriptor);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, namedType, typeParameters);
+        return Objects.hash(name, namedTypeDescriptor, typeParameters);
     }
 
     @Override

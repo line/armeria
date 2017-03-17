@@ -17,25 +17,34 @@
 package com.linecorp.armeria.server.grpc;
 
 import java.util.HashMap;
+import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 
-// Copied as is from grpc.
+// Copied from grpc and exposes contents for doc generation.
 final class InternalHandlerRegistry {
+    private final List<ServerServiceDefinition> services;
     private final ImmutableMap<String, ServerMethodDefinition<?, ?>> methods;
 
-    private InternalHandlerRegistry(ImmutableMap<String, ServerMethodDefinition<?, ?>> methods) {
+    private InternalHandlerRegistry(List<ServerServiceDefinition> services,
+                                    ImmutableMap<String, ServerMethodDefinition<?, ?>> methods) {
+        this.services = services;
         this.methods = methods;
     }
 
     @Nullable
     ServerMethodDefinition<?, ?> lookupMethod(String methodName) {
         return methods.get(methodName);
+    }
+
+    List<ServerServiceDefinition> services() {
+        return services;
     }
 
     static class Builder {
@@ -56,7 +65,7 @@ final class InternalHandlerRegistry {
                     mapBuilder.put(method.getMethodDescriptor().getFullMethodName(), method);
                 }
             }
-            return new InternalHandlerRegistry(mapBuilder.build());
+            return new InternalHandlerRegistry(ImmutableList.copyOf(services.values()), mapBuilder.build());
         }
     }
 }

@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -41,6 +42,7 @@ import io.grpc.InternalMetadata;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.internal.GrpcUtil;
 import io.grpc.internal.NoopStatsContextFactory;
@@ -154,5 +156,9 @@ public final class GrpcService extends AbstractHttpService {
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         maxMessageSize = cfg.server().config().defaultMaxRequestLength();
+    }
+
+    List<ServerServiceDefinition> services() {
+        return registry.services();
     }
 }
