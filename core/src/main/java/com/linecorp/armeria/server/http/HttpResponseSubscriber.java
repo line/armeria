@@ -299,6 +299,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private void failAndRespond(Throwable cause, HttpStatus status, Http2Error error) {
         final State state = this.state;
+        logBuilder().statusCode(status.code());
         fail(cause);
 
         final int id = req.id();
