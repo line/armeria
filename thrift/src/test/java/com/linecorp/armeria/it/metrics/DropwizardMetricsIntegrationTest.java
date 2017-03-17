@@ -19,14 +19,20 @@ package com.linecorp.armeria.it.metrics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
+import java.util.concurrent.CountDownLatch;
+
 import org.junit.Test;
 
 import com.codahale.metrics.MetricRegistry;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.logging.DropwizardMetricCollectingClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -50,13 +56,17 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
 
     @Test(timeout = 10000L)
     public void normal() throws Exception {
-        makeRequest("world");
-        makeRequest("world");
-        makeRequest("space");
-        makeRequest("world");
-        makeRequest("space");
-        makeRequest("space");
-        makeRequest("world");
+        final CountDownLatch latch = new CountDownLatch(7);
+        makeRequest("world", latch);
+        makeRequest("world", latch);
+        makeRequest("space", latch);
+        makeRequest("world", latch);
+        makeRequest("space", latch);
+        makeRequest("space", latch);
+        makeRequest("world", latch);
+
+        // Wait until all RequestLogs are collected.
+        latch.await();
 
         assertEquals(3, metricRegistry.getMeters()
                                       .get(clientMetricName("hello", "failures"))
@@ -100,16 +110,35 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
         return MetricRegistry.name("clients", "HelloService", method, property);
     }
 
-    private void makeRequest(String name) {
+    private void makeRequest(String name, CountDownLatch latch) {
         Iface client = new ClientBuilder("tbinary+" + uri("/helloservice"))
                 .decorator(RpcRequest.class, RpcResponse.class,
                            DropwizardMetricCollectingClient.newDecorator(
                                    metricRegistry, MetricRegistry.name("clients", "HelloService")))
+                .decorator(RpcRequest.class, RpcResponse.class,
+                           delegate -> new CountDownClient(delegate, latch))
                 .build(Iface.class);
         try {
             client.hello(name);
         } catch (Throwable t) {
             // Ignore, we will count these up
+        }
+    }
+
+    private static class CountDownClient
+            extends DecoratingClient<RpcRequest, RpcResponse, RpcRequest, RpcResponse> {
+
+        private final CountDownLatch latch;
+
+        CountDownClient(Client<? super RpcRequest, ? extends RpcResponse> delegate, CountDownLatch latch) {
+            super(delegate);
+            this.latch = latch;
+        }
+
+        @Override
+        public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
+            ctx.log().addListener(unused -> latch.countDown(), RequestLogAvailability.COMPLETE);
+            return delegate().execute(ctx, req);
         }
     }
 }
