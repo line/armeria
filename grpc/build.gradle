@@ -16,6 +16,17 @@ managedDependencies {
     }
 }
 
+def generatedFilesDir = "$projectDir/gen-src"
+
+sourceSets {
+    main {
+        output.dir("${generatedFilesDir}/main/resources", builtBy: 'generateProto')
+    }
+    test {
+        output.dir("${generatedFilesDir}/test/resources", builtBy: 'generateTestProto')
+    }
+}
+
 [tasks.shadedJar, tasks.shadedTestJar].each {
     it.relocate 'io.grpc.internal', "${shadedPackage}.grpc.internal"
 }
@@ -27,7 +38,7 @@ tasks.shadedJar.exclude {
 tasks.shadedJar.exclude 'META-INF/services/io.grpc.NameResolverProvider'
 
 protobuf {
-    generatedFilesBaseDir = "$projectDir/gen-src"
+    generatedFilesBaseDir = generatedFilesDir
     protoc {
         artifact = 'com.google.protobuf:protoc:3.2.0'
     }
@@ -47,7 +58,8 @@ protobuf {
             task.descriptorSetOptions.includeSourceInfo = true
             task.descriptorSetOptions.includeImports = true
             task.descriptorSetOptions.path =
-                    "${buildDir}/resources/main/META-INF/armeria/grpc/armeria-test.dsc"
+                    "${generatedFilesDir}/${task.sourceSet.name}/resources/" +
+                            "META-INF/armeria/grpc/armeria-${task.sourceSet.name}.dsc"
         }
     }
 }
