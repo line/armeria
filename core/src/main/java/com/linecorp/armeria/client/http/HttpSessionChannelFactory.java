@@ -48,7 +48,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
     private final Map<SessionProtocol, Bootstrap> bootstrapMap;
     private final SessionOptions options;
 
-    HttpSessionChannelFactory(Bootstrap bootstrap,SessionOptions options) {
+    HttpSessionChannelFactory(Bootstrap bootstrap, SessionOptions options) {
         baseBootstrap = requireNonNull(bootstrap);
         eventLoop = (EventLoop) bootstrap.config().group();
 

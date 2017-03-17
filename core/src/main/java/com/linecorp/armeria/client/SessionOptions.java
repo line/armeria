@@ -21,6 +21,7 @@ import static com.linecorp.armeria.client.SessionOption.EVENT_LOOP_GROUP;
 import static com.linecorp.armeria.client.SessionOption.IDLE_TIMEOUT;
 import static com.linecorp.armeria.client.SessionOption.POOL_HANDLER_DECORATOR;
 import static com.linecorp.armeria.client.SessionOption.TRUST_MANAGER_FACTORY;
+import static com.linecorp.armeria.client.SessionOption.USE_HTTP1_PIPELINING;
 import static com.linecorp.armeria.client.SessionOption.USE_HTTP2_PREFACE;
 import static java.util.Objects.requireNonNull;
 
@@ -53,6 +54,8 @@ public final class SessionOptions extends AbstractOptions {
     private static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(10);
     private static final Boolean DEFAULT_USE_HTTP2_PREFACE =
             "true".equals(System.getProperty("com.linecorp.armeria.defaultUseHttp2Preface", "false"));
+    private static final Boolean DEFAULT_USE_HTTP1_PIPELINING =
+            "true".equals(System.getProperty("com.linecorp.armeria.defaultUseHttp1Pipelining", "true"));
 
     static {
         logger.info("defaultUseHttp2Preface: {}", DEFAULT_USE_HTTP2_PREFACE);
@@ -267,5 +270,12 @@ public final class SessionOptions extends AbstractOptions {
      */
     public boolean useHttp2Preface() {
         return getOrElse(USE_HTTP2_PREFACE, DEFAULT_USE_HTTP2_PREFACE);
+    }
+
+    /**
+     * Returns whether {@link SessionOption#USE_HTTP1_PIPELINING} is enabled or not.
+     */
+    public boolean useHttp1Pipelining() {
+        return getOrElse(USE_HTTP1_PIPELINING, DEFAULT_USE_HTTP1_PIPELINING);
     }
 }

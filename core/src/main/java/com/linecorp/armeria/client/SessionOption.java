@@ -89,6 +89,12 @@ public final class SessionOption<T> extends AbstractOption<T> {
     public static final SessionOption<Boolean> USE_HTTP2_PREFACE = valueOf("USE_HTTP2_PREFACE");
 
     /**
+     * Whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for HTTP/1
+     * connections. This does not affect HTTP/2 connections. This option is enabled by default.
+     */
+    public static final SessionOption<Boolean> USE_HTTP1_PIPELINING = valueOf("USE_HTTP1_PIPELINING");
+
+    /**
      * Returns the {@link SessionOption} of the specified name.
      */
     @SuppressWarnings("unchecked")

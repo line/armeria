@@ -450,6 +450,9 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                                                : CANCELLED_CLOSE;
 
                 publisher.pushObject(closeEvent);
+            } else {
+                // Ensure the closeFuture is notified if not notified yet.
+                publisher.notifySubscriber();
             }
         }
 

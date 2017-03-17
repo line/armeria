@@ -150,16 +150,6 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
 
         final Bootstrap baseBootstrap = new Bootstrap();
 
-        baseBootstrap.channel(channelType());
-        baseBootstrap.resolver(
-                options.addressResolverGroup()
-                       .orElseGet(() -> new DnsAddressResolverGroup(datagramChannelType(),
-                                                                    DnsServerAddresses.defaultAddresses())));
-
-        baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
-                             ConvertUtils.safeLongToInt(options.connectTimeoutMillis()));
-        baseBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-
         final Optional<EventLoopGroup> eventLoopOption = options.eventLoopGroup();
         if (eventLoopOption.isPresent()) {
             eventLoopGroup = eventLoopOption.get();
@@ -169,16 +159,43 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
             closeEventLoopGroup = true;
         }
 
+        baseBootstrap.channel(channelType(eventLoopGroup));
+        baseBootstrap.resolver(
+                options.addressResolverGroup()
+                       .orElseGet(() -> new DnsAddressResolverGroup(datagramChannelType(eventLoopGroup),
+                                                                    DnsServerAddresses.defaultAddresses())));
+
+        baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
+                             ConvertUtils.safeLongToInt(options.connectTimeoutMillis()));
+        baseBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
+
         this.baseBootstrap = baseBootstrap;
         this.options = options;
     }
 
-    private static Class<? extends SocketChannel> channelType() {
-        return NativeLibraries.isEpollAvailable() ? EpollSocketChannel.class : NioSocketChannel.class;
+    private static Class<? extends SocketChannel> channelType(EventLoopGroup eventLoopGroup) {
+        if (eventLoopGroup instanceof NioEventLoopGroup) {
+            return NioSocketChannel.class;
+        }
+        if (eventLoopGroup instanceof EpollEventLoopGroup) {
+            return EpollSocketChannel.class;
+        }
+        throw unsupportedEventLoopType(eventLoopGroup);
     }
 
-    private static Class<? extends DatagramChannel> datagramChannelType() {
-        return NativeLibraries.isEpollAvailable() ? EpollDatagramChannel.class : NioDatagramChannel.class;
+    private static Class<? extends DatagramChannel> datagramChannelType(EventLoopGroup eventLoopGroup) {
+        if (eventLoopGroup instanceof NioEventLoopGroup) {
+            return NioDatagramChannel.class;
+        }
+        if (eventLoopGroup instanceof EpollEventLoopGroup) {
+            return EpollDatagramChannel.class;
+        }
+        throw unsupportedEventLoopType(eventLoopGroup);
+    }
+
+    private static IllegalStateException unsupportedEventLoopType(EventLoopGroup eventLoopGroup) {
+        return new IllegalStateException("unsupported event loop type: " +
+                                         eventLoopGroup.getClass().getName());
     }
 
     @SuppressWarnings("checkstyle:operatorwrap")
