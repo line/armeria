@@ -58,12 +58,7 @@ final class ManagedConnectorFactory implements Function<String, Connector> {
 
         // Create the connector with our protocol handler. Tomcat will call ProtocolHandler.setAdapter()
         // on its startup with the Coyote Adapter which gives an access to Tomcat's HTTP service pipeline.
-        final Class<?> protocolType;
-        if (TomcatVersion.major() < 8 || TomcatVersion.major() == 8 && TomcatVersion.minor() < 5) {
-            protocolType = Tomcat80ProtocolHandler.class;
-        } else {
-            protocolType = Tomcat85ProtocolHandler.class;
-        }
+        final Class<?> protocolType = TomcatService.TOMCAT_HANDLER.protocolHandlerClass();
 
         final Connector connector = new Connector(protocolType.getName());
         // We do not really open a port - just trying to stop the Connector from complaining.

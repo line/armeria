@@ -10,6 +10,7 @@ include 'retrofit2'
 include 'thrift'
 include 'thrift0.9'
 include 'tomcat'
+include 'tomcat8.0'
 include 'zipkin'
 include 'zookeeper'
 
