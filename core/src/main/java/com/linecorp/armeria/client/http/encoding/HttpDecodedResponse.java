@@ -81,6 +81,9 @@ class HttpDecodedResponse extends FilteredHttpResponse {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+        if (responseDecoder == null) {
+            return;
+        }
         HttpData lastData = responseDecoder.finish();
         if (!lastData.isEmpty()) {
             subscriber.onNext(lastData);
@@ -89,6 +92,9 @@ class HttpDecodedResponse extends FilteredHttpResponse {
 
     @Override
     protected void beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        if (responseDecoder == null) {
+            return;
+        }
         responseDecoder.finish();
     }
 }
