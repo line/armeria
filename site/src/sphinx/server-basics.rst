@@ -84,13 +84,13 @@ You can configure an Armeria server using the fluent builder pattern, as shown b
     Server server = sb.build();
     server.start().join();
 
-In the example above, we created a new ``ServerBuilder`` and added a new ``ThriftService`` to it.
-The ``ThriftService`` is bound at the path ``/hello`` and will use the TBinary format.
+In the example above, we created a new ``ServerBuilder`` and added a new ``THttpService`` to it.
+The ``THttpService`` is bound at the path ``/hello`` and will use the TBinary format.
 
-We also decorated the ``ThriftService`` using ``LoggingService``, which logs all Thrift calls and replies.
+We also decorated the ``THttpService`` using ``LoggingService``, which logs all Thrift calls and replies.
 You might be interested in decorating a service using other decorators, to gather metrics for example.
 
-Note that you can add more than one ``ThriftService`` (or any ``Service`` implementation) to a ``Server``.
+Note that you can add more than one ``THttpService`` (or any ``Service`` implementation) to a ``Server``.
 
 Adding a documentation service
 ------------------------------
@@ -98,7 +98,7 @@ As usual, we could browse a Thrift IDL in a text editor to see the list of the a
 services. However, most of us will admit that it will be much nicer if we could browse such information
 like we do for RESTful services via `Swagger`_.
 
-Armeria provides a service called ``DocService``, which discovers all ``ThriftService`` in your Armeria server
+Armeria provides a service called ``DocService``, which discovers all ``THttpService`` in your Armeria server
 and lets you browse the available service operations and structs:
 
 .. code-block:: java
