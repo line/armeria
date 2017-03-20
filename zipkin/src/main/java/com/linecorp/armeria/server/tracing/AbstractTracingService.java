@@ -68,8 +68,8 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
         final ServerSpan serverSpan = serverInterceptor.openSpan(requestAdapter);
         try {
             if (serverSpan != null) {
-                ctx.onEnter(() -> serverInterceptor.setSpan(serverSpan));
-                ctx.onExit(serverInterceptor::clearSpan);
+                ctx.onEnter(unused -> serverInterceptor.setSpan(serverSpan));
+                ctx.onExit(unused -> serverInterceptor.clearSpan());
                 if (serverSpan.getSample()) {
                     ctx.log().addListener(log -> closeSpan(ctx, serverSpan, log),
                                           RequestLogAvailability.COMPLETE);
