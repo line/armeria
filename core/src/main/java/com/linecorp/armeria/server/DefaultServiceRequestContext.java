@@ -239,10 +239,16 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         buf.append('[')
            .append(sessionProtocol().uriText())
            .append("://")
-           .append(virtualHost().defaultHostname())
-           .append(':')
-           .append(((InetSocketAddress) remoteAddress()).getPort())
-           .append(path())
+           .append(virtualHost().defaultHostname());
+
+        final InetSocketAddress raddr = remoteAddress();
+        if (raddr != null) {
+            buf.append(':').append(raddr.getPort());
+        } else {
+            buf.append(":-1"); // Port unknown.
+        }
+
+        buf.append(path())
            .append('#')
            .append(method())
            .append(']');
