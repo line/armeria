@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
-import java.util.Set;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -51,7 +50,8 @@ public final class ThriftService extends THttpService {
                                    SerializationFormat defaultSerializationFormat) {
 
         return new ThriftService(ThriftCallService.of(implementation),
-                                 defaultSerializationFormat, ThriftSerializationFormats.values());
+                                 newAllowedSerializationFormats(defaultSerializationFormat,
+                                                                ThriftSerializationFormats.values()));
     }
 
     /**
@@ -79,18 +79,13 @@ public final class ThriftService extends THttpService {
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
-        requireNonNull(otherAllowedSerializationFormats, "otherAllowedSerializationFormats");
-
-        final Set<SerializationFormat> allowedSerializationFormatsSet =
-                newAllowedSerializationFormats(defaultSerializationFormat, otherAllowedSerializationFormats);
-
         return new ThriftService(ThriftCallService.of(implementation),
-                                 defaultSerializationFormat, allowedSerializationFormatsSet);
+                                 newAllowedSerializationFormats(defaultSerializationFormat,
+                                                                otherAllowedSerializationFormats));
     }
 
     private ThriftService(Service<RpcRequest, RpcResponse> delegate,
-                          SerializationFormat defaultSerializationFormat,
-                          Set<SerializationFormat> allowedSerializationFormats) {
-        super(delegate, defaultSerializationFormat, allowedSerializationFormats);
+                          SerializationFormat[] allowedSerializationFormatArray) {
+        super(delegate, allowedSerializationFormatArray);
     }
 }

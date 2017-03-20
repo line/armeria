@@ -8,6 +8,13 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
+
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -35,7 +42,8 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
     @Override
     protected void configureServer(ServerBuilder sb) {
         sb.serviceAt("/hello", THttpService.of(HELLO_SERVICE))
-          .serviceAt("/hellobinaryonly", THttpService.ofFormats(HELLO_SERVICE, BINARY));
+          .serviceAt("/hellobinaryonly", THttpService.ofFormats(HELLO_SERVICE, BINARY))
+          .serviceAt("/hellotextonly", THttpService.ofFormats(HELLO_SERVICE, TEXT));
     }
 
     @Test
@@ -101,5 +109,24 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
         thrown.expect(InvalidResponseException.class);
         thrown.expectMessage("406 Not Acceptable");
         client.hello("Trustin");
+    }
+
+    @Test
+    public void defaultSerializationFormat() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Send a TTEXT request with content type 'application/x-thrift' without 'protocol' parameter.
+            HttpPost req = new HttpPost(uri("/hellotextonly"));
+            req.setHeader("Content-type", "application/x-thrift");
+            req.setEntity(new StringEntity(
+                    '{' +
+                    "  \"method\": \"hello\"," +
+                    "  \"type\":\"CALL\"," +
+                    "  \"args\": { \"name\": \"trustin\"}" +
+                    '}', StandardCharsets.UTF_8));
+
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+            }
+        }
     }
 }
