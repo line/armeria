@@ -69,8 +69,6 @@ import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.SessionOption;
 import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.http.HttpClient;
@@ -94,10 +92,10 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.InboundTrafficController;
-import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
 import com.linecorp.armeria.test.AbstractServerTest;
 
@@ -344,7 +342,7 @@ public class HttpServerTest extends AbstractServerTest {
         }.decorate(HttpEncodingService.class));
 
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
-                s -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
+                s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
                     @Override
                     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                         ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
@@ -694,9 +692,8 @@ public class HttpServerTest extends AbstractServerTest {
 
         // Verify all header names are in lowercase
         for (AsciiString headerName : res.headers().names()) {
-            headerName.chars().filter(Character::isAlphabetic).forEach(c -> {
-                assertTrue(Character.isLowerCase(c));
-            });
+            headerName.chars().filter(Character::isAlphabetic)
+                      .forEach(c -> assertTrue(Character.isLowerCase(c)));
         }
 
         assertThat(res.headers().get(AsciiString.of("x-custom-header1")), is("custom1"));
@@ -736,14 +733,11 @@ public class HttpServerTest extends AbstractServerTest {
         builder.factory(clientFactory);
         builder.decorator(
                 HttpRequest.class, HttpResponse.class,
-                s -> new DecoratingClient<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
-                    @Override
-                    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-                        ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
-                        ctx.setResponseTimeoutMillis(clientResponseTimeoutMillis);
-                        ctx.setMaxResponseLength(clientMaxResponseLength);
-                        return delegate().execute(ctx, req);
-                    }
+                (delegate, ctx, req) -> {
+                    ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
+                    ctx.setResponseTimeoutMillis(clientResponseTimeoutMillis);
+                    ctx.setMaxResponseLength(clientMaxResponseLength);
+                    return delegate.execute(ctx, req);
                 });
 
         return client = builder.build(HttpClient.class);

@@ -64,15 +64,10 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -276,7 +271,11 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
         return new ClientBuilder(uri)
                 .decorator(RpcRequest.class, RpcResponse.class,
-                           c -> new SessionProtocolCapturer<>(c, sessionProtocol))
+                           (delegate, ctx, req) -> {
+                               ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
+                                                     RequestLogAvailability.REQUEST_START);
+                               return delegate.execute(ctx, req);
+                           })
                 .build(HelloService.Iface.class);
     }
 
@@ -294,26 +293,6 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
     private static int http2Port() {
         return ((NetworkConnector) http2server.getConnectors()[0]).getLocalPort();
-    }
-
-    private static class SessionProtocolCapturer<I extends Request, O extends Response>
-            extends DecoratingClient<I, O, I, O> {
-
-        private final AtomicReference<SessionProtocol> sessionProtocol;
-
-        @SuppressWarnings("unchecked")
-        SessionProtocolCapturer(Client<? super I, ? extends O> delegate,
-                                AtomicReference<SessionProtocol> sessionProtocol) {
-            super(delegate);
-            this.sessionProtocol = sessionProtocol;
-        }
-
-        @Override
-        public O execute(ClientRequestContext ctx, I req) throws Exception {
-            ctx.log().addListener(log -> sessionProtocol.set(log.sessionProtocol()),
-                                  RequestLogAvailability.REQUEST_START);
-            return delegate().execute(ctx, req);
-        }
     }
 
     private static class ConnectionCloseFilter implements Filter {

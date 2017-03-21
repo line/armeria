@@ -108,7 +108,7 @@ public class ServerTest extends AbstractServerTest {
 
         // Disable request timeout for '/timeout-not' only.
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
-                s -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
+                s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
                     @Override
                     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                         ctx.setRequestTimeoutMillis(

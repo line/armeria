@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 
 /**
  * An abstract {@link DecoratingService} that traces incoming {@link Request}s.
@@ -47,7 +48,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @param <O> the {@link Response} type
  */
 public abstract class AbstractTracingService<I extends Request, O extends Response>
-        extends DecoratingService<I, O, I, O> {
+        extends SimpleDecoratingService<I, O> {
 
     private final ServerTracingInterceptor serverInterceptor;
 

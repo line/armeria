@@ -25,7 +25,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -55,7 +55,7 @@ import com.linecorp.armeria.internal.logging.DropwizardMetricCollector;
  * @param <O> the response type
  */
 public final class DropwizardMetricCollectingClient<I extends Request, O extends Response>
-        extends DecoratingClient<I, O, I, O> {
+        extends SimpleDecoratingClient<I, O> {
 
     /**
      * Returns a {@link Client} decorator that tracks request stats using the Dropwizard metrics library.

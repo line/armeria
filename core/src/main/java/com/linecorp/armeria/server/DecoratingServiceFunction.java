@@ -20,7 +20,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * A functional interface that enables building a {@link DecoratingService} with
+ * A functional interface that enables building a {@link SimpleDecoratingService} with
  * {@link Service#decorate(DecoratingServiceFunction)}.
  *
  * @param <I> the {@link Request} type
