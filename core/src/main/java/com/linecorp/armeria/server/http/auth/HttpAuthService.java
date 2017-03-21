@@ -34,12 +34,12 @@ import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 
 /**
  * A {@link DecoratingService} that provides HTTP authorization functionality.
  */
-public abstract class HttpAuthService
-        extends DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse> {
+public abstract class HttpAuthService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpAuthService.class);
 

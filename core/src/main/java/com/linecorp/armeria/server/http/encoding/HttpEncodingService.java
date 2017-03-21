@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.http.HttpService;
 
 /**
@@ -35,7 +36,7 @@ import com.linecorp.armeria.server.http.HttpService;
  * type to encode, and the response either has no fixed content length or the length is larger than 1KB.
  */
 public class HttpEncodingService
-        extends DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse> {
+        extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
     private static final Predicate<MediaType> DEFAULT_ENCODABLE_CONTENT_TYPE_PREDICATE =
             contentType -> Stream.of(MediaType.ANY_TEXT_TYPE,

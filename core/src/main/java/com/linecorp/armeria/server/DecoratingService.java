@@ -19,14 +19,14 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
-import java.util.function.Function;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * A {@link Service} that decorates another {@link Service}. Do not use this class unless you want to define
- * a new dedicated {@link Service} type by extending this class; prefer {@link Service#decorate(Function)}.
+ * A {@link Service} that decorates another {@link Service}. Use {@link SimpleDecoratingService} or
+ * {@link Service#decorate(DecoratingServiceFunction)} if your {@link Service} has the same {@link Request}
+ * and {@link Response} type with the {@link Service} being decorated.
  *
  * @param <T_I> the {@link Request} type of the {@link Service} being decorated
  * @param <T_O> the {@link Response} type of the {@link Service} being decorated

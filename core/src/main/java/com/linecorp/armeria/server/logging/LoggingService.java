@@ -25,9 +25,9 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 
 /**
  * Decorates a {@link Service} to log {@link Request}s and {@link Response}s.
@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public class LoggingService<I extends Request, O extends Response> extends DecoratingService<I, O, I, O> {
+public class LoggingService<I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
 
     private static final String REQUEST_FORMAT = "Request: {}";
     private static final String RESPONSE_FORMAT = "Response: {}";

@@ -25,10 +25,7 @@ import org.junit.Test;
 
 import com.codahale.metrics.MetricRegistry;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.logging.DropwizardMetricCollectingClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -122,26 +119,17 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
                 .decorator(RpcRequest.class, RpcResponse.class,
                            DropwizardMetricCollectingClient.newDecorator(
                                    metricRegistry, MetricRegistry.name("clients", "HelloService")))
-                .decorator(RpcRequest.class, RpcResponse.class, CountDownClient::new)
+                .decorator(RpcRequest.class, RpcResponse.class,
+                           (delegate, ctx, req) -> {
+                               ctx.log().addListener(unused -> latch.countDown(),
+                                                     RequestLogAvailability.COMPLETE);
+                               return delegate.execute(ctx, req);
+                           })
                 .build(Iface.class);
         try {
             client.hello(name);
         } catch (Throwable t) {
             // Ignore, we will count these up
-        }
-    }
-
-    private final class CountDownClient
-            extends DecoratingClient<RpcRequest, RpcResponse, RpcRequest, RpcResponse> {
-
-        CountDownClient(Client<? super RpcRequest, ? extends RpcResponse> delegate) {
-            super(delegate);
-        }
-
-        @Override
-        public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
-            ctx.log().addListener(unused -> latch.countDown(), RequestLogAvailability.COMPLETE);
-            return delegate().execute(ctx, req);
         }
     }
 }
