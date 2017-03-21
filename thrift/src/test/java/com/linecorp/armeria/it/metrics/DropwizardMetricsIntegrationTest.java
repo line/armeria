@@ -43,6 +43,8 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
 
     private final MetricRegistry metricRegistry = new MetricRegistry();
 
+    private CountDownLatch latch;
+
     @Override
     protected void configureServer(ServerBuilder sb) throws Exception {
         sb.serviceAt("/helloservice", THttpService.of((Iface) name -> {
@@ -50,20 +52,25 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
                 return "success";
             }
             throw new IllegalArgumentException("bad argument");
+        }).decorate((delegate, ctx, req) -> {
+            ctx.log().addListener(log -> latch.countDown(),
+                                  RequestLogAvailability.COMPLETE);
+            return delegate.serve(ctx, req);
         }).decorate(DropwizardMetricCollectingService.newDecorator(
                 metricRegistry, MetricRegistry.name("services"))));
     }
 
     @Test(timeout = 10000L)
     public void normal() throws Exception {
-        final CountDownLatch latch = new CountDownLatch(7);
-        makeRequest("world", latch);
-        makeRequest("world", latch);
-        makeRequest("space", latch);
-        makeRequest("world", latch);
-        makeRequest("space", latch);
-        makeRequest("space", latch);
-        makeRequest("world", latch);
+        latch = new CountDownLatch(14);
+
+        makeRequest("world");
+        makeRequest("world");
+        makeRequest("space");
+        makeRequest("world");
+        makeRequest("space");
+        makeRequest("space");
+        makeRequest("world");
 
         // Wait until all RequestLogs are collected.
         latch.await();
@@ -110,13 +117,12 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
         return MetricRegistry.name("clients", "HelloService", method, property);
     }
 
-    private void makeRequest(String name, CountDownLatch latch) {
+    private void makeRequest(String name) {
         Iface client = new ClientBuilder("tbinary+" + uri("/helloservice"))
                 .decorator(RpcRequest.class, RpcResponse.class,
                            DropwizardMetricCollectingClient.newDecorator(
                                    metricRegistry, MetricRegistry.name("clients", "HelloService")))
-                .decorator(RpcRequest.class, RpcResponse.class,
-                           delegate -> new CountDownClient(delegate, latch))
+                .decorator(RpcRequest.class, RpcResponse.class, CountDownClient::new)
                 .build(Iface.class);
         try {
             client.hello(name);
@@ -125,14 +131,11 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
         }
     }
 
-    private static class CountDownClient
+    private final class CountDownClient
             extends DecoratingClient<RpcRequest, RpcResponse, RpcRequest, RpcResponse> {
 
-        private final CountDownLatch latch;
-
-        CountDownClient(Client<? super RpcRequest, ? extends RpcResponse> delegate, CountDownLatch latch) {
+        CountDownClient(Client<? super RpcRequest, ? extends RpcResponse> delegate) {
             super(delegate);
-            this.latch = latch;
         }
 
         @Override
