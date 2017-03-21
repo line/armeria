@@ -43,6 +43,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final Object request;
     private List<Runnable> onEnterCallbacks;
     private List<Runnable> onExitCallbacks;
+    private boolean timedOut;
 
     /**
      * Creates a new instance.

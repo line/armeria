@@ -134,7 +134,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                                             responseTimeoutMillis, maxContentLength);
         req.subscribe(
                 new HttpRequestSubscriber(channel, requestEncoder,
-                                          numRequestsSent, req, wrappedRes, ctx.logBuilder(),
+                                          numRequestsSent, req, wrappedRes, ctx,
                                           writeTimeoutMillis),
                 channel.eventLoop());
 

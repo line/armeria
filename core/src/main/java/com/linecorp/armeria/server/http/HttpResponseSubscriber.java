@@ -123,6 +123,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private void onTimeout() {
         if (state != State.DONE) {
+            reqCtx.setTimedOut();
             failAndRespond(RequestTimeoutException.get(),
                            HttpStatus.SERVICE_UNAVAILABLE, Http2Error.INTERNAL_ERROR);
         }
