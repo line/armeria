@@ -271,6 +271,7 @@ $(function () {
         var args = JSON.parse(debugText.val()); // Use the JSON parser for validation.
         if (typeof args !== 'object') {
           debugResponse.text("Arguments must be a JSON object.\nYou entered: " + typeof args);
+          return false;
         }
         // Do not use the parsed JSON but just a minified one not to lose number precision.
         // See: https://github.com/line/armeria/issues/273
