@@ -106,7 +106,7 @@ public interface RequestContext extends AttributeMap {
      * }
      * }</pre>
      *
-     * <p>The callbacks added by {@link #onEnter(Runnable)} and {@link #onExit(Runnable)} will be invoked
+     * <p>The callbacks added by {@link #onEnter(Consumer)} and {@link #onExit(Consumer)} will be invoked
      * when the context is pushed to and removed from the thread-local stack respectively.
      *
      * <p>NOTE: In case of re-entrance, the callbacks will never run.
@@ -127,8 +127,8 @@ public interface RequestContext extends AttributeMap {
      * <p>NOTE: This method is only useful when it is undesirable to invoke the callbacks, such as replacing
      *          the current context with another. Prefer {@link #push(RequestContext)} otherwise.
      *
-     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Runnable)} and
-     *                     {@link #onExit(Runnable)} will be invoked when the context is pushed to and
+     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
+     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
      *                     removed from the thread-local stack respectively.
      *                     If {@code false}, no callbacks will be executed.
      *                     NOTE: In case of re-entrance, the callbacks will never run.
@@ -141,13 +141,15 @@ public interface RequestContext extends AttributeMap {
         }
 
         if (runCallbacks) {
-            ctx.invokeOnEnterCallbacks();
             if (oldCtx != null) {
+                oldCtx.invokeOnChildCallbacks(ctx);
+                ctx.invokeOnEnterCallbacks();
                 return () -> {
                     ctx.invokeOnExitCallbacks();
                     RequestContextThreadLocal.set(oldCtx);
                 };
             } else {
+                ctx.invokeOnEnterCallbacks();
                 return () -> {
                     ctx.invokeOnExitCallbacks();
                     RequestContextThreadLocal.remove();
@@ -332,29 +334,75 @@ public interface RequestContext extends AttributeMap {
      * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
      * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
      * should be restored by this callback.
+     *
+     * @param callback a {@link Consumer} whose argument is this context
      */
-    void onEnter(Runnable callback);
+    void onEnter(Consumer<? super RequestContext> callback);
+
+    /**
+     * @deprecated Use {@link #onEnter(Consumer)} instead.
+     */
+    @Deprecated
+    default void onEnter(Runnable callback) {
+        onEnter(ctx -> callback.run());
+    }
 
     /**
      * Registers {@code callback} to be run when re-exiting this {@link RequestContext}, usually when using
      * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
      * should be reset by this callback.
+     *
+     * @param callback a {@link Consumer} whose argument is this context
      */
-    void onExit(Runnable callback);
+    void onExit(Consumer<? super RequestContext> callback);
 
     /**
-     * Invokes all {@link #onEnter(Runnable)} callbacks. It is discouraged to use this method directly.
+     * @deprecated Use {@link #onExit(Consumer)} instead.
+     */
+    @Deprecated
+    default void onExit(Runnable callback) {
+        onExit(ctx -> callback.run());
+    }
+
+    /**
+     * Registers {@code callback} to be run when this context is replaced by a child context.
+     * You could use this method to inherit an attribute of this context to the child contexts or
+     * register a callback to the child contexts that may be created later:
+     * <pre>{@code
+     * ctx.onChild((curCtx, newCtx) -> {
+     *     assert ctx == curCtx && curCtx != newCtx;
+     *     // Inherit the value of the 'MY_ATTR' attribute to the child context.
+     *     newCtx.attr(MY_ATTR).set(curCtx.attr(MY_ATTR).get());
+     *     // Add a callback to the child context.
+     *     newCtx.onExit(() -> { ... });
+     * });
+     * }</pre>
+     *
+     * @param callback a {@link BiConsumer} whose first argument is this context and
+     *                 whose second argument is the new context that replaces this context
+     */
+    void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback);
+
+    /**
+     * Invokes all {@link #onEnter(Consumer)} callbacks. It is discouraged to use this method directly.
      * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
      * the callbacks are invoked automatically.
      */
     void invokeOnEnterCallbacks();
 
     /**
-     * Invokes all {@link #onExit(Runnable)} callbacks. It is discouraged to use this method directly.
+     * Invokes all {@link #onExit(Consumer)} callbacks. It is discouraged to use this method directly.
      * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
      * the callbacks are invoked automatically.
      */
     void invokeOnExitCallbacks();
+
+    /**
+     * Invokes all {@link #onChild(BiConsumer)} callbacks. It is discouraged to use this method directly.
+     * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
+     * the callbacks are invoked automatically.
+     */
+    void invokeOnChildCallbacks(RequestContext newCtx);
 
     /**
      * Resolves the specified {@code promise} with the specified {@code result} so that the {@code promise} is

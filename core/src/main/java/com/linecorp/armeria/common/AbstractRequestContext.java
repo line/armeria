@@ -191,7 +191,17 @@ public abstract class AbstractRequestContext implements RequestContext {
                         "sure you are not saving callbacks into shared state.");
             }
             return () -> { /* no-op */ };
-        }, () -> RequestContext.push(this, true));
+        }, () -> RequestContext.push(this));
+    }
+
+    @Override
+    public final void onEnter(Runnable callback) {
+        RequestContext.super.onEnter(callback);
+    }
+
+    @Override
+    public final void onExit(Runnable callback) {
+        RequestContext.super.onExit(callback);
     }
 
     @Override

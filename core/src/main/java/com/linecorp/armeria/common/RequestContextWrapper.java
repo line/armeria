@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.util.Iterator;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -113,13 +115,18 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public void onEnter(Runnable callback) {
+    public void onEnter(Consumer<? super RequestContext> callback) {
         delegate().onEnter(callback);
     }
 
     @Override
-    public void onExit(Runnable callback) {
+    public void onExit(Consumer<? super RequestContext> callback) {
         delegate().onExit(callback);
+    }
+
+    @Override
+    public void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback) {
+        delegate().onChild(callback);
     }
 
     @Override
@@ -130,6 +137,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public void invokeOnExitCallbacks() {
         delegate().invokeOnExitCallbacks();
+    }
+
+    @Override
+    public void invokeOnChildCallbacks(RequestContext newCtx) {
+        delegate().invokeOnChildCallbacks(newCtx);
     }
 
     @Override
