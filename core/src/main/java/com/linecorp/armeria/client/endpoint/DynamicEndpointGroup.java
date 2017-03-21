@@ -48,8 +48,8 @@ public class DynamicEndpointGroup implements EndpointGroup {
      * Adds the specified {@link Endpoint} to current {@link Endpoint} list.
      */
     protected final void addEndpoint(Endpoint e) {
+        endpointsLock.lock();
         try {
-            endpointsLock.lock();
             ImmutableList.Builder<Endpoint> newEndpointsBuilder = ImmutableList.builder();
             newEndpointsBuilder.addAll(endpoints);
             newEndpointsBuilder.add(e);
@@ -64,8 +64,8 @@ public class DynamicEndpointGroup implements EndpointGroup {
      * Removes the specified {@link Endpoint} from current {@link Endpoint} list.
      */
     protected final void removeEndpoint(Endpoint e) {
+        endpointsLock.lock();
         try {
-            endpointsLock.lock();
             endpoints = endpoints.stream()
                                  .filter(endpoint -> !endpoint.equals(e))
                                  .collect(toImmutableList());
@@ -79,8 +79,8 @@ public class DynamicEndpointGroup implements EndpointGroup {
      * Sets the specified {@link Endpoint}s as current {@link Endpoint} list.
      */
     protected final void setEndpoints(Iterable<Endpoint> endpoints) {
+        endpointsLock.lock();
         try {
-            endpointsLock.lock();
             this.endpoints = ImmutableList.copyOf(endpoints);
             notifyListeners();
         } finally {
