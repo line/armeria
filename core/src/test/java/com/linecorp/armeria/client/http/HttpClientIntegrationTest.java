@@ -161,6 +161,14 @@ public class HttpClientIntegrationTest {
                 }
             }.decorate(HttpEncodingService.class));
 
+            sb.serviceAt("/encoding-toosmall", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                        throws Exception {
+                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "small content");
+                }
+            }.decorate(HttpEncodingService.class));
+
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -320,6 +328,20 @@ public class HttpClientIntegrationTest {
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
         assertThat(response.content().toStringUtf8()).isEqualTo(
                 "some content to compress more content to compress");
+    }
+
+    @Test
+    public void httpDecoding_noEncodingApplied() throws Exception {
+        HttpClient client = new ClientBuilder(
+                "none+http://127.0.0.1:" + httpPort)
+                .factory(clientFactory)
+                .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator(
+                        new DeflateStreamDecoderFactory()))
+                .build(HttpClient.class);
+        AggregatedHttpMessage response =
+                client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding-toosmall")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
+        assertThat(response.content().toStringUtf8()).isEqualTo("small content");
     }
 
     private static void testSocketOutput(String path,
