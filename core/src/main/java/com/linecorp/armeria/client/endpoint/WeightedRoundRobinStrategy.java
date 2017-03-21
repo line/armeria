@@ -16,13 +16,10 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -44,12 +41,18 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
      *   <li>if endpoint weights are 3,5,7, then select result is abcabcabcbcbcbb abcabcabcbcbcbb ...</li>
      * </ul>
      */
-    static final class WeightedRoundRobinSelector implements EndpointSelector {
+    private static final class WeightedRoundRobinSelector implements EndpointSelector {
         private final EndpointGroup endpointGroup;
-        private final AtomicLong sequence = new AtomicLong();
+        private final AtomicInteger sequence = new AtomicInteger();
+        private volatile EndpointsAndWeights endpointsAndWeights;
 
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
-            this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
+            this.endpointGroup = endpointGroup;
+            endpointsAndWeights = new EndpointsAndWeights(endpointGroup.endpoints());
+            if (endpointGroup instanceof DynamicEndpointGroup) {
+                ((DynamicEndpointGroup) endpointGroup).addListener(
+                        endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
+            }
         }
 
         @Override
@@ -64,42 +67,57 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
         @Override
         public Endpoint select() {
-            long currentSequence = sequence.getAndIncrement();
+            int currentSequence = sequence.getAndIncrement();
+            return endpointsAndWeights.selectEndpoint(currentSequence);
+        }
 
-            List<Endpoint> endpoints = endpointGroup.endpoints();
-            if (endpoints.isEmpty()) {
-                throw new EndpointGroupException(endpoints + " is empty");
+        private static final class EndpointsAndWeights {
+            private final List<Endpoint> endpoints;
+            private final boolean weighted;
+            private final int maxWeight;
+            private final int totalWeight;
+
+            EndpointsAndWeights(Iterable<Endpoint> endpoints) {
+                int minWeight = Integer.MAX_VALUE;
+                int maxWeight = Integer.MIN_VALUE;
+                int totalWeight = 0;
+                for (Endpoint endpoint : endpoints) {
+                    int weight = endpoint.weight();
+                    minWeight = Math.min(minWeight, weight);
+                    maxWeight = Math.max(maxWeight, weight);
+                    totalWeight += weight;
+                }
+                this.endpoints = ImmutableList.copyOf(endpoints);
+                this.maxWeight = maxWeight;
+                this.totalWeight = totalWeight;
+                weighted = minWeight != maxWeight;
             }
-            int minWeight = Integer.MAX_VALUE;
-            int maxWeight = Integer.MIN_VALUE;
-            int totalWeight = 0;
 
-            // TODO(ide) Build endpointWeights map is too expensive. Add endpoint change notification mechanism.
-            Map<Endpoint, AtomicInteger> endpointWeights = new LinkedHashMap<>(endpoints.size());
-            for (Endpoint endpoint : endpoints) {
-                int weight = endpoint.weight();
-                endpointWeights.put(endpoint, new AtomicInteger(weight));
-                minWeight = Math.min(minWeight, weight);
-                maxWeight = Math.max(maxWeight, weight);
-                totalWeight += weight;
-            }
+            Endpoint selectEndpoint(int currentSequence) {
+                if (endpoints.isEmpty()) {
+                    throw new EndpointGroupException(endpoints + " is empty");
+                }
 
-            if (minWeight < maxWeight) {
-                int mod = (int) (currentSequence % totalWeight);
-                for (int i = 0; i < maxWeight; i++) {
-                    for (Map.Entry<Endpoint, AtomicInteger> entry : endpointWeights.entrySet()) {
-                        AtomicInteger weight = entry.getValue();
-                        if (mod == 0 && weight.get() > 0) {
-                            return entry.getKey();
-                        }
-                        if (weight.get() > 0) {
-                            weight.decrementAndGet();
-                            mod--;
+                if (weighted) {
+                    int[] weights = endpoints.stream()
+                                             .mapToInt(Endpoint::weight)
+                                             .toArray();
+
+                    int mod = currentSequence % totalWeight;
+                    for (int i = 0; i < maxWeight; i++) {
+                        for (int j = 0; j < weights.length; j++) {
+                            if (mod == 0 && weights[j] > 0) {
+                                return endpoints.get(j);
+                            }
+                            if (weights[j] > 0) {
+                                weights[j]--;
+                                mod--;
+                            }
                         }
                     }
                 }
+                return endpoints.get(Math.abs(currentSequence % endpoints.size()));
             }
-            return endpoints.get((int) Math.abs(currentSequence % endpoints.size()));
         }
     }
 }
