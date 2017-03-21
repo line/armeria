@@ -71,7 +71,7 @@ public final class DynamicHttpServiceBuilder {
                                                 DynamicHttpFunction function) {
         DynamicHttpFunction f = DynamicHttpFunctions.of(function, converters);
         DynamicHttpFunctionEntry entry = new DynamicHttpFunctionEntry(
-                Sets.immutableEnumSet(methods), PathParamExtractor.of(path), f);
+                Sets.immutableEnumSet(methods), new PathParamExtractor(path), f);
         validate(entry);
         entries.add(entry);
         return this;

@@ -69,7 +69,7 @@ final class DynamicHttpFunctionEntry {
     }
 
     /**
-     * Returns bound values and mapped function when given HTTP Method and pathParamExtractor matches.
+     * Returns bound values and mapped function when given HTTP Method and {@link PathParamExtractor} matches.
      *
      * @see MappedDynamicFunction
      */

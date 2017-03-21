@@ -28,38 +28,21 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 /**
  * A path param extractor. It holds three things:
  * <ul>
- *   <li> A regex-compiled form of the path. It is used for matching and extracting.
- *   <li> A skeleton of the path. It is used for duplication detecting.
- *   <li> A set of variables declared in the path.
+ * <li> A regex-compiled form of the path. It is used for matching and extracting.</li>
+ * <li> A skeleton of the path. It is used for duplication detecting.</li>
+ * <li> A set of variables declared in the path.</li>
  * </ul>
  *
  */
 public final class PathParamExtractor {
 
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
-
-    /**
-     * Create a {@link PathParamExtractor} instance from given {@code path}.
-     * @param path the {@link String} that contains path params.
-     *             e.g. {@code /users/{name}} or {@code /users/:name}
-     *
-     * @throws IllegalArgumentException if the {@code path} is invalid.
-     */
-    public static PathParamExtractor of(String path) {
-        requireNonNull(path, "path");
-
-        final String matchPath = path.charAt(0) == '/' ? path : "/" + path;
-        if (!VALID_PATTERN.matcher(matchPath).matches()) {
-            throw new IllegalArgumentException(
-                    String.format("%s: Invalid PathParamExtractor (valid: %s)", path, VALID_PATTERN));
-        }
-        return new PathParamExtractor(path);
-    }
 
     /**
      * Regex form of given path, which will be used for matching or extracting.
@@ -81,11 +64,26 @@ public final class PathParamExtractor {
      */
     private final ImmutableSet<String> variables;
 
-    private PathParamExtractor(String path) {
+    /**
+     * Create a {@link PathParamExtractor} instance from given {@code pathPattern}.
+     *
+     * @param pathPattern the {@link String} that contains path params.
+     *             e.g. {@code /users/{name}} or {@code /users/:name}
+     *
+     * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
+     */
+    public PathParamExtractor(String pathPattern) {
+        requireNonNull(pathPattern, "pathPattern");
+
+        final String matchPath = pathPattern.charAt(0) == '/' ? pathPattern : "/" + pathPattern;
+        if (!VALID_PATTERN.matcher(matchPath).matches()) {
+            throw new IllegalArgumentException("pathPattern: " + pathPattern);
+        }
+
         StringJoiner patternJoiner = new StringJoiner("/");
         StringJoiner skeletonJoiner = new StringJoiner("/");
         Set<String> placeholders = new HashSet<>();
-        for (String token : path.split("/")) {
+        for (String token : pathPattern.split("/")) {
             String variable = variable(token);
             if (variable != null) {
                 if (!placeholders.contains(variable)) {
@@ -106,13 +104,9 @@ public final class PathParamExtractor {
             }
         }
 
-        pattern = Pattern.compile(patternJoiner.toString() + "(\\?.*)*");
+        pattern = Pattern.compile(patternJoiner + "(\\?.*)*");
         skeleton = skeletonJoiner.toString();
         variables = ImmutableSet.copyOf(placeholders);
-
-        if (variables.isEmpty()) {
-            throw new IllegalArgumentException("No placeholder exists in given path: " + path);
-        }
     }
 
     /**
@@ -160,5 +154,30 @@ public final class PathParamExtractor {
 
         return variables.stream()
                         .collect(toImmutableMap(Function.identity(), matcher::group));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        PathParamExtractor that = (PathParamExtractor) o;
+
+        return pattern.pattern().equals(that.pattern.pattern());
+    }
+
+    @Override
+    public int hashCode() {
+        return pattern.pattern().hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("pattern", pattern).toString();
     }
 }

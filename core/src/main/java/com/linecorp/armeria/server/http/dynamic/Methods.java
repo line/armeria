@@ -99,7 +99,7 @@ final class Methods {
     private static PathParamExtractor pathParamExtractor(Method method) {
         Path mapping = method.getAnnotation(Path.class);
         String mappedTo = mapping.value();
-        return PathParamExtractor.of(mappedTo);
+        return new PathParamExtractor(mappedTo);
     }
 
     /**
