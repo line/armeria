@@ -34,9 +34,9 @@ import com.google.common.collect.ImmutableSet;
 /**
  * A path param extractor. It holds three things:
  * <ul>
- * <li> A regex-compiled form of the path. It is used for matching and extracting.</li>
- * <li> A skeleton of the path. It is used for duplication detecting.</li>
- * <li> A set of variables declared in the path.</li>
+ *   <li>A regex-compiled form of the path. It is used for matching and extracting.</li>
+ *   <li>A skeleton of the path. It is used for duplication detecting.</li>
+ *   <li>A set of variables declared in the path.</li>
  * </ul>
  *
  */
