@@ -34,13 +34,15 @@ import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
 /**
  * Default {@link ServiceRequestContext} implementation.
  */
-public class DefaultServiceRequestContext extends NonWrappingRequestContext implements ServiceRequestContext {
+public class DefaultServiceRequestContext extends NonWrappingRequestContext
+        implements InternalServiceRequestContext {
 
     private final Channel ch;
     private final ServiceConfig cfg;
@@ -203,6 +205,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public RequestLogBuilder logBuilder() {
         return log;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return ch.alloc();
     }
 
     /**

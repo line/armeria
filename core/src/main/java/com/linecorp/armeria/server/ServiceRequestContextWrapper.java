@@ -23,11 +23,13 @@ import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.RequestContextWrapper;
 
+import io.netty.buffer.ByteBufAllocator;
+
 /**
  * Wraps an existing {@link ServiceRequestContext}.
  */
 public class ServiceRequestContextWrapper
-        extends RequestContextWrapper<ServiceRequestContext> implements ServiceRequestContext {
+        extends RequestContextWrapper<ServiceRequestContext> implements InternalServiceRequestContext {
 
     /**
      * Creates a new instance.
@@ -94,5 +96,13 @@ public class ServiceRequestContextWrapper
     @Override
     public void setMaxRequestLength(long maxRequestLength) {
         delegate().setMaxRequestLength(maxRequestLength);
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        if (delegate() instanceof InternalServiceRequestContext) {
+            return ((InternalServiceRequestContext) delegate()).alloc();
+        }
+        throw new UnsupportedOperationException("ServiceRequestContext delegate does not support alloc()");
     }
 }
