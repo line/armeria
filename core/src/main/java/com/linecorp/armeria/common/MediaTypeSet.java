@@ -233,28 +233,34 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
                containsAllParameters(range.parameters(), candidate.parameters());
     }
 
-    private static boolean containsAllParameters(Map<String, List<String>> requiredParameters,
+    /**
+     * Returns {@code true} if {@code actualParameters} contains all entries of {@code expectedParameters}.
+     * Note that this method does *not* require {@code actualParameters} to contain *only* the entries of
+     * {@code expectedParameters}. i.e. {@code actualParameters} can contain an entry that's non-existent
+     * in {@code expectedParameters}.
+     */
+    private static boolean containsAllParameters(Map<String, List<String>> expectedParameters,
                                                  Map<String, List<String>> actualParameters) {
-        if (requiredParameters.isEmpty()) {
+        if (expectedParameters.isEmpty()) {
             return true;
         }
 
-        for (Entry<String, List<String>> requiredEntry : requiredParameters.entrySet()) {
-            final String requiredName = requiredEntry.getKey();
-            final List<String> requiredValues = requiredEntry.getValue();
-            if (Q.equals(requiredName)) {
+        for (Entry<String, List<String>> requiredEntry : expectedParameters.entrySet()) {
+            final String expectedName = requiredEntry.getKey();
+            final List<String> expectedValues = requiredEntry.getValue();
+            if (Q.equals(expectedName)) {
                 continue;
             }
 
-            final List<String> actualValues = actualParameters.get(requiredName);
+            final List<String> actualValues = actualParameters.get(expectedName);
 
-            assert !requiredValues.isEmpty();
+            assert !expectedValues.isEmpty();
             if (actualValues == null || actualValues.isEmpty()) {
                 // Does not contain any required values.
                 return false;
             }
 
-            if (!containsAllRequiredValues(requiredValues, actualValues)) {
+            if (!containsAllValues(expectedValues, actualValues)) {
                 return false;
             }
         }
@@ -262,20 +268,20 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
         return true;
     }
 
-    private static boolean containsAllRequiredValues(List<String> requiredValues, List<String> actualValues) {
-        final int numRequiredValues = requiredValues.size();
+    private static boolean containsAllValues(List<String> expectedValues, List<String> actualValues) {
+        final int numRequiredValues = expectedValues.size();
         for (int i = 0; i < numRequiredValues; i++) {
-            if (!containsRequiredValue(requiredValues.get(i), actualValues)) {
+            if (!containsValue(expectedValues.get(i), actualValues)) {
                 return false;
             }
         }
         return true;
     }
 
-    private static boolean containsRequiredValue(String requiredValue, List<String> actualValues) {
+    private static boolean containsValue(String expectedValue, List<String> actualValues) {
         final int numActualValues = actualValues.size();
         for (int i = 0; i < numActualValues; i++) {
-            if (Ascii.equalsIgnoreCase(requiredValue, actualValues.get(i))) {
+            if (Ascii.equalsIgnoreCase(expectedValue, actualValues.get(i))) {
                 return true;
             }
         }

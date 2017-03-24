@@ -52,7 +52,27 @@ public class ThriftSerializationFormatsTest extends AbstractServerTest {
         assertThat(find(parse("application/x-thrift; protocol=tbinary"))).containsSame(BINARY);
         assertThat(find(parse("application/x-thrift;protocol=TCompact"))).containsSame(COMPACT);
         assertThat(find(parse("application/x-thrift ; protocol=\"TjSoN\""))).containsSame(JSON);
+
+        // An unknown parameter ('version' in this case) should not be accepted.
         assertThat(find(parse("application/x-thrift ; version=3;protocol=ttext"))).isEmpty();
+
+        // 'charset=utf-8' parameter should be accepted for TJSON and TTEXT.
+        assertThat(find(parse("application/x-thrift; protocol=tjson; charset=utf-8"))).containsSame(JSON);
+        assertThat(find(parse("application/vnd.apache.thrift.json; charset=utf-8"))).containsSame(JSON);
+        assertThat(find(parse("application/x-thrift; protocol=ttext; charset=utf-8"))).containsSame(TEXT);
+        assertThat(find(parse("application/vnd.apache.thrift.text; charset=utf-8"))).containsSame(TEXT);
+
+        // .. but neither non-UTF-8 charsets:
+        assertThat(find(parse("application/x-thrift; protocol=tjson; charset=us-ascii"))).isEmpty();
+        assertThat(find(parse("application/vnd.apache.thrift.json; charset=us-ascii"))).isEmpty();
+        assertThat(find(parse("application/x-thrift; protocol=ttext; charset=us-ascii"))).isEmpty();
+        assertThat(find(parse("application/vnd.apache.thrift.text; charset=us-ascii"))).isEmpty();
+
+        // .. nor binary/compact formats:
+        assertThat(find(parse("application/x-thrift; protocol=tbinary; charset=utf-8"))).isEmpty();
+        assertThat(find(parse("application/vnd.apache.thrift.binary; charset=utf-8"))).isEmpty();
+        assertThat(find(parse("application/x-thrift; protocol=tcompact; charset=utf-8"))).isEmpty();
+        assertThat(find(parse("application/vnd.apache.thrift.compact; charset=utf-8"))).isEmpty();
     }
 
     @Test
