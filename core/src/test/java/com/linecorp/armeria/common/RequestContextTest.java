@@ -39,6 +39,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,6 +71,13 @@ import io.netty.util.concurrent.Promise;
 
 public class RequestContextTest {
 
+    private static final EventLoop eventLoop = new DefaultEventLoop();
+
+    @AfterClass
+    public static void stopEventLoop() {
+        eventLoop.shutdownGracefully();
+    }
+
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
 
@@ -83,7 +91,6 @@ public class RequestContextTest {
 
     @Test
     public void contextAwareEventExecutor() throws Exception {
-        EventLoop eventLoop = new DefaultEventLoop();
         when(channel.eventLoop()).thenReturn(eventLoop);
         RequestContext context = createContext();
         Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -195,15 +202,22 @@ public class RequestContextTest {
         promise.setSuccess("success");
     }
 
-    @Test
+    @Test(timeout = 10000)
     @SuppressWarnings("deprecation")
-    public void makeContextAwareFutureListener_timedOut() {
+    public void makeContextAwareFutureListener_timedOut() throws Exception {
+        when(channel.eventLoop()).thenReturn(eventLoop);
         NonWrappingRequestContext context = createContext();
         Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        promise.addListener(context.makeContextAware((FutureListener<String>) f ->
-                assertThatThrownBy(f::getNow).isInstanceOf(CancellationException.class)));
+        CountDownLatch latch = new CountDownLatch(1);
+        promise.addListener(context.makeContextAware((FutureListener<String>) f -> {
+            assertThatThrownBy(f::get).isInstanceOf(CancellationException.class);
+            latch.countDown();
+        }));
         context.setTimedOut();
         promise.setSuccess("success");
+
+        // The latch will not complete if the assertion in the FutureListener fails.
+        latch.await();
     }
 
     @Test
@@ -219,15 +233,22 @@ public class RequestContextTest {
         promise.setSuccess(null);
     }
 
-    @Test
+    @Test(timeout = 10000)
     @SuppressWarnings("deprecation")
-    public void makeContextAwareChannelFutureListener_timedOut() {
+    public void makeContextAwareChannelFutureListener_timedOut() throws Exception {
+        when(channel.eventLoop()).thenReturn(eventLoop);
         NonWrappingRequestContext context = createContext();
         ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-        promise.addListener(context.makeContextAware((ChannelFutureListener) f ->
-                assertThatThrownBy(f::getNow).isInstanceOf(CancellationException.class)));
+        CountDownLatch latch = new CountDownLatch(1);
+        promise.addListener(context.makeContextAware((ChannelFutureListener) f -> {
+            assertThatThrownBy(f::get).isInstanceOf(CancellationException.class);
+            latch.countDown();
+        }));
         context.setTimedOut();
         promise.setSuccess(null);
+
+        // The latch will not complete if the assertion in the ChannelFutureListener fails.
+        latch.await();
     }
 
     @Test
