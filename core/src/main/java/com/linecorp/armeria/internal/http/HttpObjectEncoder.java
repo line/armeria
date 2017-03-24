@@ -17,12 +17,12 @@
 package com.linecorp.armeria.internal.http;
 
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.http.ByteBufHttpData;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpObject;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -107,8 +107,8 @@ public abstract class HttpObjectEncoder {
     }
 
     protected static ByteBuf toByteBuf(ChannelHandlerContext ctx, HttpData data) {
-        if (data instanceof ByteBufHttpData) {
-            return ((ByteBufHttpData) data).buf();
+        if (data instanceof ByteBufHolder) {
+            return ((ByteBufHolder) data).content();
         }
         final ByteBuf buf = ctx.alloc().directBuffer(data.length(), data.length());
         buf.writeBytes(data.array(), data.offset(), data.length());

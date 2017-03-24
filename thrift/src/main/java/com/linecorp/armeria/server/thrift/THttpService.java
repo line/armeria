@@ -54,7 +54,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.ByteBufHttpData;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -67,16 +66,16 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.InternalRequestContext;
+import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
-import com.linecorp.armeria.server.InternalServiceRequestContext;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.UnpooledByteBufAllocator;
 
 /**
  * A {@link Service} that handles a Thrift call.
@@ -696,12 +695,7 @@ public class THttpService extends AbstractHttpService {
                                           SerializationFormat serializationFormat,
                                           String methodName, int seqId,
                                           TBase<?, ?> result) {
-        final ByteBufAllocator alloc;
-        if (ctx instanceof InternalServiceRequestContext) {
-            alloc = ((InternalServiceRequestContext) ctx).alloc();
-        } else {
-            alloc = UnpooledByteBufAllocator.DEFAULT;
-        }
+        final ByteBufAllocator alloc = InternalRequestContext.alloc(ctx);
         ByteBuf buf = alloc.buffer(128);
         final TTransport transport = new TByteBufTransport(buf);
         final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);

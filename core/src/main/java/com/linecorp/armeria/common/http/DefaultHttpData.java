@@ -18,10 +18,12 @@ package com.linecorp.armeria.common.http;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.internal.http.InternalHttpData;
+
 /**
  * Default {@link HttpData} implementation.
  */
-public final class DefaultHttpData implements HttpData {
+public final class DefaultHttpData implements InternalHttpData {
 
     private final byte[] data;
     private final int offset;
@@ -65,27 +67,7 @@ public final class DefaultHttpData implements HttpData {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof HttpData)) {
-            return false;
-        }
-
-        if (this == obj) {
-            return true;
-        }
-
-        final HttpData that = (HttpData) obj;
-        if (length() != that.length()) {
-            return false;
-        }
-
-        final int endOffset = offset + length;
-        for (int i = offset, j = that.offset(); i < endOffset; i++, j++) {
-            if (data[i] != data[j]) {
-                return false;
-            }
-        }
-
-        return true;
+        return equalTo(obj);
     }
 
     @Override
@@ -100,5 +82,10 @@ public final class DefaultHttpData implements HttpData {
     @Override
     public boolean isEndOfStream() {
         return endOfStream;
+    }
+
+    @Override
+    public byte getByte(int index) {
+        return data[offset + index];
     }
 }
