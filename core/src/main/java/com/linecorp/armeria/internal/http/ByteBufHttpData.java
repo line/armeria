@@ -33,6 +33,7 @@ import io.netty.buffer.DefaultByteBufHolder;
 public class ByteBufHttpData extends DefaultByteBufHolder implements InternalHttpData {
 
     private final boolean endOfStream;
+    private final int length;
 
     /**
      * Construct a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
@@ -41,6 +42,7 @@ public class ByteBufHttpData extends DefaultByteBufHolder implements InternalHtt
     public ByteBufHttpData(ByteBuf buf, boolean endOfStream) {
         super(buf);
         this.endOfStream = endOfStream;
+        length = buf.readableBytes();
     }
 
     @Override
@@ -64,7 +66,7 @@ public class ByteBufHttpData extends DefaultByteBufHolder implements InternalHtt
 
     @Override
     public int length() {
-        return content().readableBytes();
+        return length;
     }
 
     @Override
