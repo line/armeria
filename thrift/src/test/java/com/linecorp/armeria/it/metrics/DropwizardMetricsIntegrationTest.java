@@ -117,14 +117,14 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
     private void makeRequest(String name) {
         Iface client = new ClientBuilder("tbinary+" + uri("/helloservice"))
                 .decorator(RpcRequest.class, RpcResponse.class,
-                           DropwizardMetricCollectingClient.newDecorator(
-                                   metricRegistry, MetricRegistry.name("clients", "HelloService")))
-                .decorator(RpcRequest.class, RpcResponse.class,
                            (delegate, ctx, req) -> {
                                ctx.log().addListener(unused -> latch.countDown(),
                                                      RequestLogAvailability.COMPLETE);
                                return delegate.execute(ctx, req);
                            })
+                .decorator(RpcRequest.class, RpcResponse.class,
+                           DropwizardMetricCollectingClient.newDecorator(
+                                   metricRegistry, MetricRegistry.name("clients", "HelloService")))
                 .build(Iface.class);
         try {
             client.hello(name);
