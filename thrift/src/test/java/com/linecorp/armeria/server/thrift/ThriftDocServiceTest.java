@@ -191,7 +191,9 @@ public class ThriftDocServiceTest extends AbstractServerTest {
                 final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                 if (HelloService.class.getName().equals(serviceName) &&
                     "hello".equals(methodName)) {
-                    exampleRequests.add("{\n  \"name\" : \"sample user\"\n}");
+                    exampleRequests.add('{' + System.lineSeparator() +
+                                        "  \"name\" : \"sample user\"" + System.lineSeparator() +
+                                        '}');
                 }
             });
         });
