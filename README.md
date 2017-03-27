@@ -11,7 +11,7 @@ It is open-sourced and licensed under [Apache License 2.0](https://tldrlegal.com
 We use [Gradle](https://gradle.org/) to build Armeria. The following command will compile Armeria and generate JARs and web site:
 
 ```bash
-$ ./gradlew build site
+$ ./gradlew build
 ```
 
 ## How to contribute
