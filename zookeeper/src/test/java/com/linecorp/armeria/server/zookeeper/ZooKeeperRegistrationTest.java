@@ -27,6 +27,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -117,6 +118,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         }
     }
 
+    @Ignore  // FIXME: https://github.com/line/armeria/issues/477
     @Test
     public void testConnectionRecovery() throws Exception {
         ZooKeeperRegistration zkConnector = zkConnectors.get(0);
