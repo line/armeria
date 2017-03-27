@@ -118,7 +118,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         }
     }
 
-    @Ignore  // https://github.com/line/armeria/issues/477
+    @Ignore  // FIXME: https://github.com/line/armeria/issues/477
     @Test
     public void testConnectionRecovery() throws Exception {
         ZooKeeperRegistration zkConnector = zkConnectors.get(0);
