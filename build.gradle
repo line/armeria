@@ -1,4 +1,6 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.internal.DefaultZipCompressor
+import com.github.jengelman.gradle.plugins.shadow.internal.ZipCompressor
+import org.apache.tools.zip.ZipOutputStream
 import org.yaml.snakeyaml.Yaml
 
 buildscript {
@@ -965,4 +967,21 @@ private static String executeCommand(String[] command) {
     }
 
     return proc.in.text.trim()
+}
+
+// TODO(trustin): Remove this workaround once a newer version of shadow plugin is released.
+// Work around the bug where ShadowJar does not set the character set of the output JAR correctly.
+// See: https://github.com/johnrengelman/shadow/issues/283
+class ShadowJar extends com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar {
+    @Override
+    protected ZipCompressor getInternalCompressor() {
+        return new DefaultZipCompressor(false, ZipOutputStream.DEFLATED) {
+            @Override
+            ZipOutputStream createArchiveOutputStream(File destination) {
+                ZipOutputStream zout = super.createArchiveOutputStream(destination)
+                zout.setEncoding("UTF-8")
+                return zout
+            }
+        }
+    }
 }
