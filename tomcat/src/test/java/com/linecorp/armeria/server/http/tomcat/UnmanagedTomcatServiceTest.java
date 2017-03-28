@@ -54,7 +54,7 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
 
         tomcatWithWebApp.addWebapp(
                 "", (docBaseB.exists() ? docBaseB : docBaseA).getAbsolutePath());
-        tomcatWithWebApp.getService().getContainer().setName("tomcatWithWebApp");
+        TomcatUtil.engine(tomcatWithWebApp.getService()).setName("tomcatWithWebApp");
 
         tomcatWithoutWebApp = new Tomcat();
         tomcatWithoutWebApp.setPort(0);
