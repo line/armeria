@@ -19,17 +19,13 @@ package com.linecorp.armeria.client;
 import java.time.Duration;
 
 import com.linecorp.armeria.common.RequestContextWrapper;
-import com.linecorp.armeria.internal.InternalRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Wraps an existing {@link ServiceRequestContext}.
  */
 public class ClientRequestContextWrapper
-        extends RequestContextWrapper<ClientRequestContext>
-        implements ClientRequestContext, InternalRequestContext {
+        extends RequestContextWrapper<ClientRequestContext> implements ClientRequestContext {
 
     /**
      * Creates a new instance.
@@ -91,13 +87,5 @@ public class ClientRequestContextWrapper
     @Override
     public void setMaxResponseLength(long maxResponseLength) {
         delegate().setMaxResponseLength(maxResponseLength);
-    }
-
-    @Override
-    public ByteBufAllocator alloc() {
-        if (delegate() instanceof InternalRequestContext) {
-            return ((InternalRequestContext) delegate()).alloc();
-        }
-        throw new UnsupportedOperationException("ClientRequestContext delegate does not support alloc()");
     }
 }

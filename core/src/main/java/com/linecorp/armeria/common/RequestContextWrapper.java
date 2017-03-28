@@ -28,7 +28,9 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.internal.AbstractInternalRequestContext;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -38,7 +40,7 @@ import io.netty.util.AttributeKey;
  *
  * @param <T> the self type
  */
-public abstract class RequestContextWrapper<T extends RequestContext> extends AbstractRequestContext {
+public abstract class RequestContextWrapper<T extends RequestContext> extends AbstractInternalRequestContext {
 
     private final T delegate;
 
@@ -152,5 +154,10 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public <V> boolean hasAttr(AttributeKey<V> key) {
         return delegate().hasAttr(key);
+    }
+
+    @Override
+    protected final ByteBufAllocator alloc() {
+        return AbstractInternalRequestContext.alloc(delegate());
     }
 }

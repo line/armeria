@@ -37,7 +37,6 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;
@@ -66,7 +65,7 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.InternalRequestContext;
+import com.linecorp.armeria.internal.AbstractInternalRequestContext;
 import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
@@ -695,7 +694,7 @@ public class THttpService extends AbstractHttpService {
                                           SerializationFormat serializationFormat,
                                           String methodName, int seqId,
                                           TBase<?, ?> result) {
-        final ByteBufAllocator alloc = InternalRequestContext.alloc(ctx);
+        final ByteBufAllocator alloc = AbstractInternalRequestContext.alloc(ctx);
         ByteBuf buf = alloc.buffer(128);
         final TTransport transport = new TByteBufTransport(buf);
         final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
@@ -731,8 +730,10 @@ public class THttpService extends AbstractHttpService {
                     "---- END server-side trace ----");
         }
 
-        final TMemoryBuffer buf = new TMemoryBuffer(128);
-        final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(buf);
+        final ByteBufAllocator alloc = AbstractInternalRequestContext.alloc(ctx);
+        ByteBuf buf = alloc.buffer(128);
+        final TTransport transport = new TByteBufTransport(buf);
+        final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
 
         try {
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
@@ -745,7 +746,7 @@ public class THttpService extends AbstractHttpService {
             throw new Error(e); // Should never reach here.
         }
 
-        return HttpData.of(buf.getArray(), 0, buf.length());
+        return new ByteBufHttpData(buf, false);
     }
 
     private static Map<SerializationFormat, ThreadLocalTProtocol> createFormatToThreadLocalTProtocolMap() {

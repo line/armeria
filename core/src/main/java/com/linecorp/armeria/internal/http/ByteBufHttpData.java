@@ -24,23 +24,23 @@ import com.linecorp.armeria.common.http.HttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.DefaultByteBufHolder;
 
 /**
  * A {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
  * general use.
  */
-public class ByteBufHttpData extends DefaultByteBufHolder implements InternalHttpData {
+public class ByteBufHttpData extends AbstractHttpData {
 
+    private final ByteBuf buf;
     private final boolean endOfStream;
     private final int length;
 
     /**
      * Construct a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
-     * {@link ByteBufHttpData}.
+     * {@link ByteBufHttpData}, which must not be mutated anymore.
      */
     public ByteBufHttpData(ByteBuf buf, boolean endOfStream) {
-        super(buf);
+        this.buf = buf;
         this.endOfStream = endOfStream;
         length = buf.readableBytes();
     }
@@ -52,16 +52,24 @@ public class ByteBufHttpData extends DefaultByteBufHolder implements InternalHtt
 
     @Override
     public byte[] array() {
-        if (content().hasArray()) {
-            return content().array();
+        if (buf.hasArray()) {
+            return buf.array();
         } else {
-            return ByteBufUtil.getBytes(content());
+            return ByteBufUtil.getBytes(buf);
         }
+    }
+
+    public ByteBuf buf() {
+        return buf;
+    }
+
+    public void release() {
+        buf.release();
     }
 
     @Override
     public int offset() {
-        return content().hasArray() ? content().arrayOffset() : 0;
+        return buf.hasArray() ? buf.arrayOffset() : 0;
     }
 
     @Override
@@ -71,7 +79,7 @@ public class ByteBufHttpData extends DefaultByteBufHolder implements InternalHtt
 
     @Override
     public int hashCode() {
-        return content().hashCode();
+        return buf.hashCode();
     }
 
     @Override
@@ -81,17 +89,17 @@ public class ByteBufHttpData extends DefaultByteBufHolder implements InternalHtt
 
     @Override
     public String toString(Charset charset) {
-        return content().toString(charset);
+        return buf.toString(charset);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("buf", contentToString()).toString();
+                          .add("buf", buf.toString()).toString();
     }
 
     @Override
     public byte getByte(int index) {
-        return content().getByte(index);
+        return buf.getByte(index);
     }
 }

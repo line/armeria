@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.internal.AbstractInternalRequestContext;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.netty.channel.Channel;
@@ -38,7 +39,7 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link RequestContext} implementation.
  */
-public abstract class NonWrappingRequestContext extends AbstractRequestContext {
+public abstract class NonWrappingRequestContext extends AbstractInternalRequestContext {
 
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;

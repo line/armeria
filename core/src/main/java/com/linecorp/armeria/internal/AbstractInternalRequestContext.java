@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal;
 
+import com.linecorp.armeria.common.AbstractRequestContext;
 import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -26,15 +27,22 @@ import io.netty.buffer.UnpooledByteBufAllocator;
  * methods should be used with care, generally only in generic services and protocol implementations, not user
  * business logic.
  */
-public interface InternalRequestContext {
-    /**
-     * Returns the {@link ByteBufAllocator} for this {@link InternalRequestContext}.
-     */
-    ByteBufAllocator alloc();
+public abstract class AbstractInternalRequestContext extends AbstractRequestContext {
 
-    static ByteBufAllocator alloc(RequestContext ctx) {
-        if (ctx instanceof InternalRequestContext) {
-            return ((InternalRequestContext) ctx).alloc();
+    /**
+     * Returns the {@link ByteBufAllocator} for this {@link AbstractInternalRequestContext}.
+     */
+    protected ByteBufAllocator alloc() {
+        return UnpooledByteBufAllocator.DEFAULT;
+    }
+
+    /**
+     * Returns the {@link ByteBufAllocator} in the provided {@link RequestContext}, or
+     * {@link UnpooledByteBufAllocator#DEFAULT} if it does not contain one. Only for use in internal code.
+     */
+    public static ByteBufAllocator alloc(RequestContext ctx) {
+        if (ctx instanceof AbstractInternalRequestContext) {
+            return ((AbstractInternalRequestContext) ctx).alloc();
         }
         return UnpooledByteBufAllocator.DEFAULT;
     }

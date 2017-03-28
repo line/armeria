@@ -18,12 +18,12 @@ package com.linecorp.armeria.common.http;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.internal.http.InternalHttpData;
+import com.linecorp.armeria.internal.http.AbstractHttpData;
 
 /**
  * Default {@link HttpData} implementation.
  */
-public final class DefaultHttpData implements InternalHttpData {
+public final class DefaultHttpData extends AbstractHttpData {
 
     private final byte[] data;
     private final int offset;

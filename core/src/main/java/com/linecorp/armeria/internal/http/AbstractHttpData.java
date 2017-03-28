@@ -21,16 +21,16 @@ import com.linecorp.armeria.common.http.HttpData;
 /**
  * Internal APIs of {@link HttpData}. Should not be used in user code.
  */
-public interface InternalHttpData extends HttpData {
+public abstract class AbstractHttpData implements HttpData {
 
     /**
      * Gets the {@link byte} value at the given {@code index} relative to the {@link HttpData}'s
      * {@link #offset()}.
      */
-    byte getByte(int index);
+    protected abstract byte getByte(int index);
 
-    default boolean equalTo(Object obj) {
-        if (!(obj instanceof InternalHttpData)) {
+    protected boolean equalTo(Object obj) {
+        if (!(obj instanceof AbstractHttpData)) {
             return false;
         }
 
@@ -38,7 +38,7 @@ public interface InternalHttpData extends HttpData {
             return true;
         }
 
-        final InternalHttpData that = (InternalHttpData) obj;
+        final AbstractHttpData that = (AbstractHttpData) obj;
         if (length() != that.length()) {
             return false;
         }
