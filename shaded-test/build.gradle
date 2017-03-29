@@ -4,18 +4,16 @@ rootProject.ext.publishedJavaProjects.each {
 }
 
 // Clear the common dependencies set by the root project because we don't use them at all.
-configurations.each { it.dependencies.clear() }
-configurations.each { assert it.dependencies.empty } // Make sure we did not clear the copy.
+configurations.each {
+    if (it.name != 'javaAgent') {
+        it.dependencies.clear()
+    }
+}
 
 // Clear the common source sets set by the root project to make sure we do not compile anything additionally.
 sourceSets.findAll().each { set ->
     set.java.srcDirs = []
     set.resources.srcDirs = []
-}
-sourceSets.findAll().each { set ->
-    // Make sure we did not clear the copy.
-    assert set.java.srcDirs.empty
-    assert set.resources.srcDirs.empty
 }
 
 // Pull all shaded JARs and their dependencies in.
