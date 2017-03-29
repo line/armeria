@@ -22,8 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.ProtocolHandler;
-import org.apache.coyote.UpgradeProtocol;
-import org.apache.tomcat.util.net.SSLHostConfig;
 
 /**
  * A {@link ProtocolHandler} for Tomcat 8.0 and below.
@@ -82,14 +80,12 @@ public final class Tomcat80ProtocolHandler implements ProtocolHandler {
         return false;
     }
 
-    // NB: Do not remove; required for Tomcat 8.0 and older.
-    @SuppressWarnings("unused")
+    @Override
     public boolean isCometSupported() {
         return false;
     }
 
-    // NB: Do not remove; required for Tomcat 8.0 and older.
-    @SuppressWarnings("unused")
+    @Override
     public boolean isCometTimeoutSupported() {
         return false;
     }
@@ -97,21 +93,5 @@ public final class Tomcat80ProtocolHandler implements ProtocolHandler {
     @Override
     public boolean isSendfileSupported() {
         return false;
-    }
-
-    @Override
-    public void addSslHostConfig(SSLHostConfig sslHostConfig) {}
-
-    @Override
-    public SSLHostConfig[] findSslHostConfigs() {
-        return null;
-    }
-
-    @Override
-    public void addUpgradeProtocol(UpgradeProtocol upgradeProtocol) {}
-
-    @Override
-    public UpgradeProtocol[] findUpgradeProtocols() {
-        return null;
     }
 }

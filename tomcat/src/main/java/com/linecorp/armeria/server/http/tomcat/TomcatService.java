@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Queue;
@@ -38,10 +37,9 @@ import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.catalina.util.ServerInfo;
 import org.apache.catalina.util.URLEncoder;
 import org.apache.coyote.Adapter;
-import org.apache.coyote.InputBuffer;
-import org.apache.coyote.OutputBuffer;
 import org.apache.coyote.Request;
 import org.apache.coyote.Response;
 import org.apache.tomcat.util.buf.ByteChunk;
@@ -98,6 +96,26 @@ public final class TomcatService implements HttpService {
         TOMCAT_URL_ENCODER.addSafeCharacter('.');
         TOMCAT_URL_ENCODER.addSafeCharacter('*');
         TOMCAT_URL_ENCODER.addSafeCharacter('/');
+    }
+
+    static final TomcatHandler TOMCAT_HANDLER;
+
+    static {
+        final String prefix = TomcatService.class.getPackage().getName() + '.';
+        final ClassLoader classLoader = TomcatService.class.getClassLoader();
+        final Class<?> handlerClass;
+        try {
+            if (TomcatVersion.major() < 8 || TomcatVersion.major() == 8 && TomcatVersion.minor() < 5) {
+                handlerClass = Class.forName(prefix + "Tomcat80Handler", true, classLoader);
+            } else {
+                handlerClass = Class.forName(prefix + "Tomcat85Handler", true, classLoader);
+            }
+            TOMCAT_HANDLER = (TomcatHandler) handlerClass.getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(
+                    "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
+                    "; using a wrong armeria-tomcat JAR?", e);
+        }
     }
 
     private static final Set<String> activeEngines = new HashSet<>();
@@ -248,7 +266,7 @@ public final class TomcatService implements HttpService {
     }
 
     private TomcatService(String hostname,
-                  Function<String, Connector> connectorFactory, Consumer<Connector> postStopTask) {
+                          Function<String, Connector> connectorFactory, Consumer<Connector> postStopTask) {
 
         this.hostname = hostname;
         this.connectorFactory = connectorFactory;
@@ -372,7 +390,7 @@ public final class TomcatService implements HttpService {
                 coyoteRes.setRequest(coyoteReq);
 
                 final Queue<HttpData> data = new ArrayDeque<>();
-                coyoteRes.setOutputBuffer(new OutputBufferImpl(data));
+                coyoteRes.setOutputBuffer(TOMCAT_HANDLER.outputBuffer(data));
 
                 ctx.blockingTaskExecutor().execute(() -> {
                     if (!res.isOpen()) {
@@ -464,7 +482,7 @@ public final class TomcatService implements HttpService {
 
         // Set the content.
         final HttpData content = req.content();
-        coyoteReq.setInputBuffer(new InputBufferImpl(content));
+        coyoteReq.setInputBuffer(TOMCAT_HANDLER.inputBuffer(content));
 
         return coyoteReq;
     }
@@ -562,71 +580,4 @@ public final class TomcatService implements HttpService {
         }
     }
 
-    private static class InputBufferImpl implements InputBuffer {
-        private final HttpData content;
-        private boolean read;
-
-        InputBufferImpl(HttpData content) {
-            this.content = content;
-        }
-
-        @Override
-        public int doRead(ByteChunk chunk) {
-            if (read || content.isEmpty()) {
-                // Read only once.
-                return -1;
-            }
-
-            read = true;
-
-            final int readableBytes = content.length();
-            chunk.setBytes(content.array(), content.offset(), readableBytes);
-
-            return readableBytes;
-        }
-
-        // NB: Do not remove; required for Tomcat 8 or older.
-        @SuppressWarnings("unused")
-        public int doRead(ByteChunk chunk, Request request) {
-            return doRead(chunk);
-        }
-    }
-
-    private static class OutputBufferImpl implements OutputBuffer {
-        private final Queue<HttpData> data;
-        private long bytesWritten;
-
-        OutputBufferImpl(Queue<HttpData> data) {
-            this.data = data;
-        }
-
-        @Override
-        public int doWrite(ByteChunk chunk) {
-            final int start = chunk.getStart();
-            final int end = chunk.getEnd();
-            final int length = end - start;
-            if (length == 0) {
-                return 0;
-            }
-
-            // NB: We make a copy because Tomcat reuses the underlying byte array of 'chunk'.
-            final byte[] content = Arrays.copyOfRange(chunk.getBuffer(), start, end);
-
-            data.add(HttpData.of(content));
-
-            bytesWritten += length;
-            return length;
-        }
-
-        // NB: Do not remove; required for Tomcat 8 or older.
-        @SuppressWarnings("unused")
-        public int doWrite(ByteChunk chunk, Response response) {
-            return doWrite(chunk);
-        }
-
-        @Override
-        public long getBytesWritten() {
-            return bytesWritten;
-        }
-    }
 }

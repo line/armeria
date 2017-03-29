@@ -1,0 +1,32 @@
+dependencies {
+    // Tomcat
+    [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
+        compile "org.apache.tomcat.embed:$it:8.0.42"
+    }
+}
+
+managedDependencies {
+    // Replace commons-logging (Tomcat's logging API) with SLF4J.
+    runtime 'org.slf4j:jcl-over-slf4j'
+}
+
+// Use the sources from 'armeria-tomcat'.
+sourceSets {
+    main {
+        java {
+            def tomcatSourceDir = "${rootProject.projectDir}/tomcat/src/main/java"
+            def tomcat80SourceDir = "${project.projectDir}/src/main/java"
+            srcDirs tomcatSourceDir, tomcat80SourceDir
+            exclude '**/Tomcat85*'
+        }
+    }
+
+    test {
+        java {
+            srcDirs "${rootProject.projectDir}/tomcat/src/test/java",
+                    "${rootProject.projectDir}/tomcat/src/test/java-shared"
+        }
+    }
+}
+
+tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources-shared"

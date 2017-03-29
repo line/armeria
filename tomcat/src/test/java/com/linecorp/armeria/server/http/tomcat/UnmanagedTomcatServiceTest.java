@@ -20,6 +20,8 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.connector.Connector;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.test.AbstractServerTest;
 
 public class UnmanagedTomcatServiceTest extends AbstractServerTest {
+
     private static Tomcat tomcatWithWebApp;
     private static Tomcat tomcatWithoutWebApp;
 
@@ -47,19 +50,33 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
         tomcatWithWebApp.setBaseDir("build" + File.separatorChar +
                                     "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-1");
 
-        final File docBaseA = new File("build" + File.separatorChar + "classes" + File.separatorChar +
-                                       "test" + File.separatorChar + "tomcat_service");
-        final File docBaseB = new File("build" + File.separatorChar + "classes" + File.separatorChar +
-                                       "test-tomcat" + File.separatorChar + "tomcat_service");
+        final File docBase = findDocBase();
 
-        tomcatWithWebApp.addWebapp(
-                "", (docBaseB.exists() ? docBaseB : docBaseA).getAbsolutePath());
+        tomcatWithWebApp.addWebapp("", docBase.getAbsolutePath());
         TomcatUtil.engine(tomcatWithWebApp.getService()).setName("tomcatWithWebApp");
 
         tomcatWithoutWebApp = new Tomcat();
         tomcatWithoutWebApp.setPort(0);
         tomcatWithoutWebApp.setBaseDir("build" + File.separatorChar +
                                        "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-2");
+    }
+
+    private static File findDocBase() {
+        final List<String> classesDirNames = new ArrayList<>();
+        if (TomcatVersion.major() < 8 ||
+            TomcatVersion.major() == 8 && TomcatVersion.minor() < 5) {
+            classesDirNames.add("test-tomcat8.0");
+        } else {
+            classesDirNames.add("test-tomcat");
+        }
+        classesDirNames.add("test");
+
+        return classesDirNames.stream()
+                              .map(name -> new File("build" + File.separatorChar +
+                                                    "classes" + File.separatorChar +
+                                                    name + File.separatorChar + "tomcat_service"))
+                              .filter(File::exists)
+                              .findFirst().get();
     }
 
     @Override

@@ -86,7 +86,7 @@ org.apache.thrift:
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION 8.5.6 }
+  tomcat-embed-core: { version: &TOMCAT_VERSION 8.5.12 }
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
