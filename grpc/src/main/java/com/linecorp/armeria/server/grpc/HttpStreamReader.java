@@ -16,39 +16,55 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpObject;
-import com.linecorp.armeria.server.grpc.ArmeriaGrpcServerStream.TransportState;
+import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
+import com.linecorp.armeria.internal.grpc.ErrorListener;
 
 import io.grpc.Status;
-import io.grpc.internal.ReadableBuffers;
 
 /**
- * A {@link Subscriber} to read request data and pass it to a GRPC {@link TransportState}
- * for processing. GRPC code will then handle deframing, decompressing, etc.
+ * A {@link Subscriber} to read request data and pass it to a {@link ArmeriaServerCall} for processing.
  */
-class ArmeriaMessageReader implements Subscriber<HttpObject> {
+class HttpStreamReader implements Subscriber<HttpObject> {
 
-    private static final Logger logger = LoggerFactory.getLogger(ArmeriaMessageReader.class);
+    private static final Logger logger = LoggerFactory.getLogger(HttpStreamReader.class);
 
-    private final ArmeriaGrpcServerStream.TransportState transportState;
+    private final ErrorListener errorListener;
 
+    @VisibleForTesting
+    final ArmeriaMessageDeframer deframer;
+
+    @Nullable
     private Subscription subscription;
 
-    ArmeriaMessageReader(TransportState transportState) {
-        this.transportState = transportState;
+    HttpStreamReader(ArmeriaMessageDeframer deframer,
+                     ErrorListener errorListener) {
+        this.deframer = deframer;
+        this.errorListener = errorListener;
+    }
+
+    // Must be called from an IO thread.
+    public void request(int numMessages) {
+        deframer.request(numMessages);
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
-        subscription.request(1);
+        if (deframer.isStalled()) {
+            subscription.request(1);
+        }
     }
 
     @Override
@@ -56,27 +72,40 @@ class ArmeriaMessageReader implements Subscriber<HttpObject> {
         if (obj instanceof HttpHeaders) {
             // GRPC clients never send trailing headers so we should treat this as a bad request.
             logger.info("Trailing headers received from GRPC client, this should never happen: {}.", obj);
-            transportState.transportReportStatus(Status.ABORTED);
+            errorListener.onError(Status.ABORTED);
             subscription.cancel();
             return;
         }
         HttpData data = (HttpData) obj;
-        transportState.inboundDataReceived(ReadableBuffers.wrap(data.array(), data.offset(), data.length()),
-                                           false);
-        subscription.request(1);
+        try {
+            deframer.deframe(data, false);
+        } catch (Throwable cause) {
+            try {
+                errorListener.onError(Status.fromThrowable(cause));
+                return;
+            } finally {
+                deframer.close();
+            }
+        }
+        if (deframer.isStalled()) {
+            subscription.request(1);
+        }
     }
 
     @Override
     public void onError(Throwable cause) {
-        transportState.transportReportStatus(Status.fromThrowable(cause));
+        errorListener.onError(Status.fromThrowable(cause));
     }
 
     @Override
     public void onComplete() {
-        transportState.endOfStream();
+        deframer.deframe(HttpData.EMPTY_DATA, true);
+        deframer.close();
     }
 
     void cancel() {
-        subscription.cancel();
+        if (subscription != null) {
+            subscription.cancel();
+        }
     }
 }
