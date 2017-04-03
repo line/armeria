@@ -59,7 +59,25 @@ import io.netty.util.collection.IntObjectMap;
 
 public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
+    /**
+     * The maximum allowed length of an HTTP chunk when TLS is enabled.
+     * <ul>
+     *   <li>16384 - The maximum length of a cleartext TLS record.</li>
+     *   <li>6 - The maximum header length of an HTTP chunk. i.e. "4000\r\n".length()</li>
+     * </ul>
+     *
+     * <p>To be precise, we have a chance of wasting 6 bytes because we may not use chunked encoding,
+     * but it is not worth adding complexity to be that precise.
+     */
+    private static final int MAX_TLS_DATA_LENGTH = 16384 - 6;
+
+    /**
+     * A non-last empty {@link HttpContent}.
+     */
+    private static final HttpContent EMPTY_CONTENT = new DefaultHttpContent(Unpooled.EMPTY_BUFFER);
+
     private final boolean server;
+    private final boolean isTls;
 
     /**
      * The ID of the request which is at its turn to send a response.
@@ -81,8 +99,9 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
      */
     private final IntObjectMap<PendingWrites> pendingWritesMap = new IntObjectHashMap<>();
 
-    public Http1ObjectEncoder(boolean server) {
+    public Http1ObjectEncoder(boolean server, boolean isTls) {
         this.server = server;
+        this.isTls = isTls;
     }
 
     @Override
@@ -108,7 +127,9 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         final HttpStatus status = headers.status();
         if (status == null) {
             // Trailing headers
-            return write(ctx, id, converted, endStream);
+            final ChannelFuture f = write(ctx, id, converted, endStream);
+            ctx.flush();
+            return f;
         }
 
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
@@ -118,6 +139,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                 // Can't end a stream with informational status in HTTP/1.
                 f.addListener(ChannelFutureListener.CLOSE);
             }
+            ctx.flush();
             return f;
         }
 
@@ -146,6 +168,8 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                 f = write(ctx, id, LastHttpContent.EMPTY_LAST_CONTENT, true);
             }
         }
+
+        ctx.flush();
         return f;
     }
 
@@ -267,18 +291,60 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             return ctx.newFailedFuture(ClosedSessionException.get());
         }
 
+        final int length = data.length();
+        if (length == 0) {
+            final HttpContent content = endStream ? LastHttpContent.EMPTY_LAST_CONTENT : EMPTY_CONTENT;
+            final ChannelFuture future = write(ctx, id, content, endStream);
+            ctx.flush();
+            return future;
+        }
+
         try {
-            final ByteBuf buf = toByteBuf(ctx, data);
-            final HttpContent content;
-            if (endStream) {
-                content = new DefaultLastHttpContent(buf);
+            if (isTls && length > MAX_TLS_DATA_LENGTH) {
+                // TLS and data.length() > MAX_TLS_DATA_LENGTH
+                return doWriteSplitData(ctx, id, data, endStream);
             } else {
-                content = new DefaultHttpContent(buf);
+                // Cleartext connection or data.length() <= MAX_TLS_DATA_LENGTH
+                final ByteBuf buf = toByteBuf(ctx, data);
+                final HttpContent content;
+                if (endStream) {
+                    content = new DefaultLastHttpContent(buf);
+                } else {
+                    content = new DefaultHttpContent(buf);
+                }
+                ChannelFuture future = write(ctx, id, content, endStream);
+                ctx.flush();
+                return future;
             }
-            return write(ctx, id, content, endStream);
         } catch (Throwable t) {
             return ctx.newFailedFuture(t);
         }
+    }
+
+    private ChannelFuture doWriteSplitData(
+            ChannelHandlerContext ctx, int id, HttpData data, boolean endStream) {
+
+        int offset = data.offset();
+        int remaining = data.length();
+        ChannelFuture lastFuture;
+        for (;;) {
+            // Ensure an HttpContent does not exceed the maximum length of a cleartext TLS record.
+            final int chunkSize = Math.min(MAX_TLS_DATA_LENGTH, remaining);
+            lastFuture = write(ctx, id, new DefaultHttpContent(
+                    Unpooled.wrappedBuffer(data.array(), offset, chunkSize)), false);
+            remaining -= chunkSize;
+            if (remaining == 0) {
+                break;
+            }
+            offset += chunkSize;
+        }
+
+        if (endStream) {
+            lastFuture = write(ctx, id, LastHttpContent.EMPTY_LAST_CONTENT, true);
+        }
+
+        ctx.flush();
+        return lastFuture;
     }
 
     private ChannelFuture write(ChannelHandlerContext ctx, int id, HttpObject obj, boolean endStream) {
@@ -316,7 +382,6 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                 }
             }
 
-            ctx.flush();
             return future;
         } else {
             final ChannelPromise promise = ctx.newPromise();

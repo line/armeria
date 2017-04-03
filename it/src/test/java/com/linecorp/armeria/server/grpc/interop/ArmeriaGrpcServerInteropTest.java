@@ -79,6 +79,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  * Interop test based on grpc-interop-testing. Should provide reasonable confidence in armeria's
  * handling of the grpc protocol.
  */
+@Ignore // TODO(trustin): Unignore once GRPC upgrades to Netty 4.1.9
 public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     private static final ApplicationProtocolConfig ALPN = new ApplicationProtocolConfig(

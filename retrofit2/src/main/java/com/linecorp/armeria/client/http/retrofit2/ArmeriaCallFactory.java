@@ -188,5 +188,10 @@ public class ArmeriaCallFactory implements Call.Factory {
                                                        ExecutionState.RUNNING,
                                                        ExecutionState.FINISHED);
         }
+
+        @Override
+        public Call clone() {
+            return new ArmeriaCall(callFactory, request);
+        }
     }
 }

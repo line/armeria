@@ -68,15 +68,6 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamRemoved(Http2Stream stream) {}
 
     @Override
-    public void onPriorityTreeParentChanged(Http2Stream stream, Http2Stream oldParent) {}
-
-    @Override
-    public void onPriorityTreeParentChanging(Http2Stream stream, Http2Stream newParent) {}
-
-    @Override
-    public void onWeightChanged(Http2Stream stream, short oldWeight) {}
-
-    @Override
     public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {}
 
     @Override
