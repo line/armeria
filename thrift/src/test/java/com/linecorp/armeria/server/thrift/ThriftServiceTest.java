@@ -72,6 +72,7 @@ import com.linecorp.armeria.service.test.thrift.main.NameService;
 import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -628,6 +629,7 @@ public class ThriftServiceTest {
                                 CompletableFuture<HttpData> promise) throws Exception {
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         final DefaultRequestLog reqLogBuilder = new DefaultRequestLog(ctx);
 
         when(ctx.blockingTaskExecutor()).thenReturn(ImmediateEventExecutor.INSTANCE);
