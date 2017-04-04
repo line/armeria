@@ -65,7 +65,6 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.AbstractInternalRequestContext;
 import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
@@ -694,7 +693,7 @@ public class THttpService extends AbstractHttpService {
                                           SerializationFormat serializationFormat,
                                           String methodName, int seqId,
                                           TBase<?, ?> result) {
-        final ByteBufAllocator alloc = AbstractInternalRequestContext.alloc(ctx);
+        final ByteBufAllocator alloc = ctx.alloc();
         ByteBuf buf = alloc.buffer(128);
         final TTransport transport = new TByteBufTransport(buf);
         final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
@@ -730,7 +729,7 @@ public class THttpService extends AbstractHttpService {
                     "---- END server-side trace ----");
         }
 
-        final ByteBufAllocator alloc = AbstractInternalRequestContext.alloc(ctx);
+        final ByteBufAllocator alloc = ctx.alloc();
         ByteBuf buf = alloc.buffer(128);
         final TTransport transport = new TByteBufTransport(buf);
         final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);

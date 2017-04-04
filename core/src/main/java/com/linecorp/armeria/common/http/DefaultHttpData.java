@@ -18,8 +18,6 @@ package com.linecorp.armeria.common.http;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.internal.http.AbstractHttpData;
-
 /**
  * Default {@link HttpData} implementation.
  */
@@ -53,21 +51,6 @@ public final class DefaultHttpData extends AbstractHttpData {
     @Override
     public int length() {
         return length;
-    }
-
-    @Override
-    public int hashCode() {
-        final int end = offset + length;
-        int hash = 1;
-        for (int i = offset; i < end; i++) {
-            hash = hash * 31 + data[i];
-        }
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return equalTo(obj);
     }
 
     @Override

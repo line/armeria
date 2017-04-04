@@ -14,12 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.http;
-
-import com.linecorp.armeria.common.http.HttpData;
+package com.linecorp.armeria.common.http;
 
 /**
- * Internal APIs of {@link HttpData}. Should not be used in user code.
+ * Support APIs for creating well-behaved {@link HttpData} objects. {@link HttpData} generally should extend
+ * {@link AbstractHttpData} to interact with other {@link HttpData} implementations, via, e.g., {@code equals}.
  */
 public abstract class AbstractHttpData implements HttpData {
 
@@ -29,7 +28,17 @@ public abstract class AbstractHttpData implements HttpData {
      */
     protected abstract byte getByte(int index);
 
-    protected boolean equalTo(Object obj) {
+    @Override
+    public int hashCode() {
+        int hash = 1;
+        for (int i = 0; i < length(); i++) {
+            hash = hash * 31 + getByte(i);
+        }
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
         if (!(obj instanceof AbstractHttpData)) {
             return false;
         }

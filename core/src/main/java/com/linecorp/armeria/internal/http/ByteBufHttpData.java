@@ -20,6 +20,7 @@ import java.nio.charset.Charset;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.http.AbstractHttpData;
 import com.linecorp.armeria.common.http.HttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -75,16 +76,6 @@ public class ByteBufHttpData extends AbstractHttpData {
     @Override
     public int length() {
         return length;
-    }
-
-    @Override
-    public int hashCode() {
-        return buf.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return equalTo(obj);
     }
 
     @Override
