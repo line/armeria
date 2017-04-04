@@ -47,7 +47,7 @@ final class RequestLogAvailabilitySet extends AbstractSet<RequestLogAvailability
             int flags = 0;
             for (RequestLogAvailability v : values) {
                 if ((i & 1 << v.ordinal()) != 0) {
-                    flags |= v.getterFlags();
+                    flags |= v.setterFlags();
                 }
             }
 
@@ -73,7 +73,7 @@ final class RequestLogAvailabilitySet extends AbstractSet<RequestLogAvailability
 
         final List<RequestLogAvailability> values = new ArrayList<>();
         for (RequestLogAvailability v : RequestLogAvailability.values()) {
-            if ((flags & v.getterFlags()) == flags) {
+            if ((flags & v.getterFlags()) == v.getterFlags()) {
                 values.add(v);
             }
         }
