@@ -29,8 +29,11 @@ import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -42,6 +45,7 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.ManagedChannel;
@@ -75,6 +79,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  * Interop test based on grpc-interop-testing. Should provide reasonable confidence in armeria's
  * handling of the grpc protocol.
  */
+@Ignore // TODO(trustin): Unignore once GRPC upgrades to Netty 4.1.9
 public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     private static final ApplicationProtocolConfig ALPN = new ApplicationProtocolConfig(
@@ -82,6 +87,8 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
             SelectorFailureBehavior.NO_ADVERTISE,
             SelectedListenerFailureBehavior.ACCEPT,
             ImmutableList.of("h2"));
+
+    private static final AtomicReference<ServiceRequestContext> ctxCapture = new AtomicReference<>();
 
     /** Starts the server with HTTPS. */
     @BeforeClass
@@ -102,7 +109,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                                              .ciphers(TestUtils.preferredTestCiphers(),
                                                     SupportedCipherSuiteFilter.INSTANCE)
                                              .build());
-            startStaticServer(new ArmeriaGrpcServerBuilder(sb, new GrpcServiceBuilder()));
+            startStaticServer(new ArmeriaGrpcServerBuilder(sb, new GrpcServiceBuilder(), ctxCapture));
         } catch (IOException | CertificateException ex) {
             throw new RuntimeException(ex);
         }
@@ -111,6 +118,11 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     @AfterClass
     public static void stopServer() {
         stopStaticServer();
+    }
+
+    @After
+    public void clearCtxCapture() {
+        ctxCapture.set(null);
     }
 
     @Override
@@ -140,6 +152,30 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     @Override
     protected boolean metricsExpected() {
         return false;
+    }
+
+    @Test
+    @Override
+    @Ignore
+    // TODO(anuraag): Enable after adding support in ServiceRequestContext to define custom timeout handling.
+    public void deadlineExceededServerStreaming() {
+
+    }
+
+    @Test(timeout = 10000)
+    public void sendsTimeoutHeader() {
+        long configuredTimeoutMinutes = 100;
+        TestServiceGrpc.TestServiceBlockingStub stub =
+                TestServiceGrpc.newBlockingStub(channel)
+                               .withDeadlineAfter(configuredTimeoutMinutes, TimeUnit.MINUTES);
+        stub.emptyCall(EMPTY);
+        long transferredTimeoutMinutes = TimeUnit.MILLISECONDS.toMinutes(
+                ctxCapture.get().requestTimeoutMillis());
+        Assert.assertTrue(
+                "configuredTimeoutMinutes=" + configuredTimeoutMinutes +
+                ", transferredTimeoutMinutes=" + transferredTimeoutMinutes,
+                configuredTimeoutMinutes - transferredTimeoutMinutes >= 0 &&
+                configuredTimeoutMinutes - transferredTimeoutMinutes <= 1);
     }
 
     // Several tests copied due to Mockito version mismatch (timeout() was moved).
@@ -248,6 +284,22 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         assertEquals(errorMessage, Status.fromThrowable(captor.getValue()).getDescription());
         verifyNoMoreInteractions(responseObserver);
     }
+
+    // Disable Metadata tests, which armeria does not support.
+    @Ignore
+    @Override
+    @Test
+    public void exchangeMetadataUnaryCall() throws Exception {}
+
+    @Ignore
+    @Override
+    @Test
+    public void exchangeMetadataStreamingCall() throws Exception {}
+
+    @Ignore
+    @Override
+    @Test
+    public void customMetadata() throws Exception {}
 
     // FIXME: This doesn't work yet and may require some complicated changes. Armeria should continue to accept
     // requests after a channel is gracefully closed but doesn't appear to (maybe because it supports both

@@ -1,5 +1,5 @@
 ch.qos.logback:
-  logback-classic: { version: 1.2.1 }
+  logback-classic: { version: 1.2.2 }
 
 com.fasterxml.jackson.core:
   jackson-annotations: { version: &JACKSON_VERSION 2.8.7 }
@@ -7,7 +7,7 @@ com.fasterxml.jackson.core:
   jackson-databind: { version: *JACKSON_VERSION }
 
 com.google.code.findbugs:
-  jsr305: { version: 3.0.1 }
+  jsr305: { version: 3.0.2 }
 
 com.google.guava:
   guava: { version: &GUAVA_VERSION !!str 21.0 }
@@ -21,12 +21,12 @@ com.spotify:
   completable-futures: { version: 0.3.0 }
 
 com.squareup.retrofit2:
-  retrofit: { version: &RETROFIT2_VERSION 2.1.0 }
+  retrofit: { version: &RETROFIT2_VERSION 2.2.0 }
   adapter-java8: { version: *RETROFIT2_VERSION }
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 io.dropwizard.metrics:
-  metrics-core: { version: 3.1.2 }
+  metrics-core: { version: 3.2.2 }
 
 io.grpc:
   grpc-core:
@@ -42,12 +42,12 @@ io.grpc:
   grpc-stub: { version: *GRPC_VERSION }
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION 4.1.8.Final }
+  netty-codec-http2: { version: &NETTY_VERSION 4.1.9.Final }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: 1.1.33.Fork26 }
+  netty-tcnative-boringssl-static: { version: 2.0.0.Final }
 
 io.zipkin.brave:
   brave-core: { version: &BRAVE_VERSION 4.0.6 }
@@ -60,12 +60,12 @@ junit:
   junit: { version: !!str 4.12 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION 1.19.0 }
+  json-unit: { version: &JSON_UNIT_VERSION 1.21.0 }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 org.apache.hbase:
   hbase-shaded-client:
-    version: 1.2.4
+    version: 1.2.5
     exclusions:
     - org.slf4j:slf4j-log4j12
 
@@ -76,7 +76,7 @@ org.apache.httpcomponents:
     - commons-logging:commons-logging
 
 org.apache.kafka:
-  kafka-clients: { version: 0.10.1.1 }
+  kafka-clients: { version: 0.10.2.0 }
 
 org.apache.thrift:
   libthrift:
@@ -86,7 +86,7 @@ org.apache.thrift:
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION 8.5.6 }
+  tomcat-embed-core: { version: &TOMCAT_VERSION 8.5.13 }
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
@@ -100,7 +100,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: !!str 1.2 }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION 9.4.1.v20170120 }
+  apache-jsp: { version: &JETTY_VERSION 9.4.3.v20170317 }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations: { version: *JETTY_VERSION }
   jetty-server: { version: *JETTY_VERSION  }
@@ -119,7 +119,7 @@ org.javassist:
   javassist: { version: 3.21.0-GA }
 
 org.mockito:
-  mockito-core: { version: 2.7.10 }
+  mockito-core: { version: 2.7.21 }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: 2.0.6 }
@@ -129,12 +129,10 @@ org.reactivestreams:
 
 org.reflections:
   reflections:
-    version: 0.9.10
-    exclusions:
-    - com.google.code.findbugs:annotations
+    version: 0.9.11
 
 org.slf4j:
-  jcl-over-slf4j: { version: &SLF4J_VERSION 1.7.23 }
+  jcl-over-slf4j: { version: &SLF4J_VERSION 1.7.25 }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api: { version: *SLF4J_VERSION }

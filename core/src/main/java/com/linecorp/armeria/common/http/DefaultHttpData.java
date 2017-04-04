@@ -68,7 +68,7 @@ public final class DefaultHttpData extends AbstractHttpData {
     }
 
     @Override
-    public byte getByte(int index) {
+    protected byte getByte(int index) {
         return data[offset + index];
     }
 }

@@ -45,7 +45,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final String method;
     private final String path;
     private final Object request;
-    private boolean timedOut;
 
     // Callbacks
     private List<Consumer<? super RequestContext>> onEnterCallbacks;

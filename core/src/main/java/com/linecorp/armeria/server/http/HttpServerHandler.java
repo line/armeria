@@ -76,6 +76,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
@@ -175,7 +176,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         this.protocol = requireNonNull(protocol, "protocol");
         if (protocol == H1 || protocol == H1C) {
-            responseEncoder = new Http1ObjectEncoder(true);
+            responseEncoder = new Http1ObjectEncoder(true, protocol.isTls());
         }
     }
 
@@ -534,7 +535,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof SslCloseCompletionEvent) {
+        if (evt instanceof SslCloseCompletionEvent ||
+            evt instanceof ChannelInputShutdownReadComplete) {
+            // Expected events
             return;
         }
 

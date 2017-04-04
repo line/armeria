@@ -90,7 +90,7 @@ public class ByteBufHttpData extends AbstractHttpData {
     }
 
     @Override
-    public byte getByte(int index) {
+    protected byte getByte(int index) {
         return buf.getByte(index);
     }
 }

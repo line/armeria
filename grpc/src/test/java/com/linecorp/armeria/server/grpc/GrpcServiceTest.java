@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.grpc.internal.GrpcUtil;
 import io.netty.util.AsciiString;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
@@ -93,7 +92,7 @@ public class GrpcServiceTest {
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "grpc.testing.TestService.UnaryCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, GrpcUtil.CONTENT_TYPE_GRPC)),
+                                          .set(HttpHeaderNames.CONTENT_TYPE, GrpcService.CONTENT_TYPE_GRPC)),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.BAD_REQUEST)
@@ -107,11 +106,11 @@ public class GrpcServiceTest {
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, GrpcUtil.CONTENT_TYPE_GRPC)),
+                                          .set(HttpHeaderNames.CONTENT_TYPE, GrpcService.CONTENT_TYPE_GRPC)),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.OK)
-                           .set(HttpHeaderNames.CONTENT_TYPE, GrpcUtil.CONTENT_TYPE_GRPC)
+                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
                            .set(AsciiString.of("grpc-status"), "12")
                            .set(AsciiString.of("grpc-message"),
                                 "Method not found: grpc.testing.TestService/FooCall")
