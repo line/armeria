@@ -106,6 +106,9 @@ public abstract class HttpObjectEncoder {
     }
 
     protected static ByteBuf toByteBuf(ChannelHandlerContext ctx, HttpData data) {
+        if (data instanceof ByteBufHttpData) {
+            return ((ByteBufHttpData) data).buf();
+        }
         final ByteBuf buf = ctx.alloc().directBuffer(data.length(), data.length());
         buf.writeBytes(data.array(), data.offset(), data.length());
         return buf;

@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
@@ -203,6 +204,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public RequestLogBuilder logBuilder() {
         return log;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return ch.alloc();
     }
 
     /**

@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -224,6 +225,17 @@ public interface RequestContext extends AttributeMap {
      * Returns the {@link EventLoop} that is handling the current {@link Request}.
      */
     EventLoop eventLoop();
+
+    /**
+     * Returns the {@link ByteBufAllocator} for this {@link RequestContext}. Any buffers created by this
+     * {@link ByteBufAllocator} must be
+     * <a href="http://netty.io/wiki/reference-counted-objects.html">reference-counted</a>. If you don't know
+     * what this means, you should probably use {@code byte[]} or {@link java.nio.ByteBuffer} directly instead
+     * of calling this method.
+     */
+    default ByteBufAllocator alloc() {
+        throw new UnsupportedOperationException("No ByteBufAllocator available for this RequestContext.");
+    }
 
     /**
      * Returns an {@link EventLoop} that will make sure this {@link RequestContext} is set as the current

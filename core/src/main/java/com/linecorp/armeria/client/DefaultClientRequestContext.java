@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
@@ -203,5 +205,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         }
 
         return strVal;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        final Channel channel = channel();
+        return channel != null ? channel.alloc() : UnpooledByteBufAllocator.DEFAULT;
     }
 }
