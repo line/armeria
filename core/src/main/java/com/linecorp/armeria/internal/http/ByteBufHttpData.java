@@ -64,10 +64,6 @@ public class ByteBufHttpData extends AbstractHttpData {
         return buf;
     }
 
-    public void release() {
-        buf.release();
-    }
-
     @Override
     public int offset() {
         return buf.hasArray() ? buf.arrayOffset() : 0;

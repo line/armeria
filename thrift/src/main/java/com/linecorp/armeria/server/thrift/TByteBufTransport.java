@@ -23,14 +23,14 @@ import io.netty.buffer.ByteBuf;
 
 final class TByteBufTransport extends TTransport {
 
-    private ByteBuf buf;
+    private final ByteBuf buf;
 
     TByteBufTransport(ByteBuf buf) {
         this.buf = buf;
     }
 
     @Override
-    public void close() { }
+    public void close() {}
 
     @Override
     public boolean isOpen() {
@@ -38,7 +38,7 @@ final class TByteBufTransport extends TTransport {
     }
 
     @Override
-    public void open() { }
+    public void open() {}
 
     @Override
     public int read(byte[] buf, int off, int len) {

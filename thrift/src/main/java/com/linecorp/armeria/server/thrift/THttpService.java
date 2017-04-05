@@ -694,7 +694,7 @@ public class THttpService extends AbstractHttpService {
                                           String methodName, int seqId,
                                           TBase<?, ?> result) {
         final ByteBufAllocator alloc = ctx.alloc();
-        ByteBuf buf = alloc.buffer(128);
+        ByteBuf buf = alloc.ioBuffer(128);
         final TTransport transport = new TByteBufTransport(buf);
         final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
 
@@ -730,7 +730,7 @@ public class THttpService extends AbstractHttpService {
         }
 
         final ByteBufAllocator alloc = ctx.alloc();
-        ByteBuf buf = alloc.buffer(128);
+        ByteBuf buf = alloc.ioBuffer(128);
         final TTransport transport = new TByteBufTransport(buf);
         final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
 
