@@ -1,5 +1,9 @@
+ext {
+    requiredProjects = rootProject.ext.publishedJavaProjects + project(':testing')
+}
+
 // Evaluate other projects first so that their dependencies are fully populated.
-rootProject.ext.publishedJavaProjects.each {
+project.ext.requiredProjects.each {
     evaluationDependsOn it.path
 }
 
@@ -17,10 +21,10 @@ sourceSets.findAll().each { set ->
 }
 
 // Pull all shaded JARs and their dependencies in.
-rootProject.ext.publishedJavaProjects.each { addDependencies(it) }
+project.ext.requiredProjects.each { addDependencies it }
 
 task allShadedJars {
-    rootProject.ext.publishedJavaProjects.each { testProject ->
+    project.ext.requiredProjects.each { testProject ->
         dependsOn testProject.tasks.assemble
     }
 }
@@ -51,7 +55,7 @@ rootProject.ext.publishedJavaProjects.each { testProject ->
         dependsOn shadedTestJarExtractTask
 
         // The tests against the shaded artifacts should run after testing against the unshaded ones.
-        rootProject.ext.publishedJavaProjects.each {
+        project.ext.requiredProjects.each {
             shouldRunAfter it.tasks.test
         }
 
@@ -78,7 +82,15 @@ jacocoTestReport {
  * Finds the dependencies of {@code initialProject} recursively and adds the found dependencies to
  * the configuration named as {@code "shaded${initialProject.name}"}.
  */
-private void addDependencies(Project initialProject, Project recursedProject = initialProject) {
+private void addDependencies(Project initialProject,
+                             Project recursedProject = initialProject,
+                             Set<Project> visitedProjects = new HashSet<>()) {
+
+    if (visitedProjects.contains(recursedProject)) {
+        return
+    } else {
+        visitedProjects.add(recursedProject);
+    }
 
     def configName = shadedName(initialProject)
     project.configurations.maybeCreate(configName)
@@ -99,7 +111,7 @@ private void addDependencies(Project initialProject, Project recursedProject = i
             return
         }
         if (dep instanceof ProjectDependency) {
-            addDependencies(initialProject, dep.dependencyProject) // Recurse.
+            addDependencies(initialProject, dep.dependencyProject, visitedProjects) // Recurse.
         } else {
             project.dependencies.add(configName, dep)
         }

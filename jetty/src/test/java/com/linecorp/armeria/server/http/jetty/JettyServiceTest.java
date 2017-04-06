@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -42,41 +43,55 @@ import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.thread.ThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.test.webapp.WebAppContainerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.server.webapp.WebAppContainerTest;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 
 public class JettyServiceTest extends WebAppContainerTest {
 
-    private final List<Object> jettyBeans = new ArrayList<>();
+    private static final List<Object> jettyBeans = new ArrayList<>();
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        super.configureServer(sb);
-        sb.serviceUnder(
-                "/jsp/",
-                new JettyServiceBuilder()
-                        .handler(newWebAppContext())
-                        .configurator(s -> jettyBeans.addAll(s.getBeans()))
-                        .build()
-                        .decorate(LoggingService::new));
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.port(0, HttpSessionProtocols.HTTP);
+            sb.port(0, HttpSessionProtocols.HTTPS);
+            sb.sslContext(HttpSessionProtocols.HTTPS,
+                          certificate.certificateFile(),
+                          certificate.privateKeyFile());
 
-        sb.serviceUnder(
-                "/default/",
-                new JettyServiceBuilder().handler(new DefaultHandler()).build());
-    }
+            sb.serviceUnder(
+                    "/jsp/",
+                    new JettyServiceBuilder()
+                            .handler(newWebAppContext())
+                            .configurator(s -> jettyBeans.addAll(s.getBeans()))
+                            .build()
+                            .decorate(LoggingService::new));
+
+            sb.serviceUnder(
+                    "/default/",
+                    new JettyServiceBuilder().handler(new DefaultHandler()).build());
+        }
+    };
 
     static WebAppContext newWebAppContext() throws MalformedURLException {
         final WebAppContext handler = new WebAppContext();
         handler.setContextPath("/");
-        handler.setBaseResource(Resource.newClassPathResource("/tomcat_service"));
+        handler.setBaseResource(Resource.newResource(webAppRoot()));
         handler.setClassLoader(new URLClassLoader(
                 new URL[] {
-                        Resource.newClassPathResource("/tomcat_service/WEB-INF/lib/hello.jar").getURI().toURL()
+                        Resource.newResource(new File(webAppRoot(),
+                                                      "WEB-INF" + File.separatorChar +
+                                                      "lib" + File.separatorChar +
+                                                      "hello.jar")).getURI().toURL()
                 },
                 JettyService.class.getClassLoader()));
 
@@ -87,17 +102,22 @@ public class JettyServiceTest extends WebAppContainerTest {
         return handler;
     }
 
+    @Override
+    protected ServerRule server() {
+        return server;
+    }
+
     @Test
-    public void testConfigurator() throws Exception {
+    public void configurator() throws Exception {
         assertThat(jettyBeans, hasItems(instanceOf(ThreadPool.class),
                                         instanceOf(WebAppContext.class)));
     }
 
     @Test
-    public void testDefaultHandlerFavicon() throws Exception {
+    public void defaultHandlerFavicon() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(uri("/default/favicon.ico")))) {
+                    new HttpGet(server.uri("/default/favicon.ico")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
                            startsWith("image/x-icon"));

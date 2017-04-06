@@ -27,6 +27,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,9 +46,9 @@ import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
-public class GrpcDocServiceTest extends AbstractServerTest {
+public class GrpcDocServiceTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
@@ -57,16 +58,19 @@ public class GrpcDocServiceTest extends AbstractServerTest {
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
                                                   .findServiceByName("ReconnectService");
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.serviceUnder("/test", new GrpcServiceBuilder()
-                .addService(mock(TestServiceImplBase.class))
-                .build());
-        sb.serviceUnder("/reconnect", new GrpcServiceBuilder()
-                .addService(mock(ReconnectServiceImplBase.class))
-                .build());
-        sb.serviceUnder("/docs/", new DocService().decorate(LoggingService::new));
-    }
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceUnder("/test", new GrpcServiceBuilder()
+                    .addService(mock(TestServiceImplBase.class))
+                    .build());
+            sb.serviceUnder("/reconnect", new GrpcServiceBuilder()
+                    .addService(mock(ReconnectServiceImplBase.class))
+                    .build());
+            sb.serviceUnder("/docs/", new DocService().decorate(LoggingService::new));
+        }
+    };
 
     @Test
     public void testOk() throws Exception {
@@ -132,6 +136,6 @@ public class GrpcDocServiceTest extends AbstractServerTest {
     }
 
     private static String specificationUri() {
-        return uri("/docs/specification.json");
+        return server.uri("/docs/specification.json");
     }
 }

@@ -30,6 +30,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,10 +39,8 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -58,11 +57,11 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.util.AsciiString;
 
-public class ThriftDocServiceTest extends AbstractServerTest {
+public class ThriftDocServiceTest {
 
     private static final HelloService.AsyncIface HELLO_SERVICE_HANDLER =
             (name, resultHandler) -> resultHandler.onComplete("Hello " + name);
@@ -76,43 +75,42 @@ public class ThriftDocServiceTest extends AbstractServerTest {
     private static final HttpHeaders EXAMPLE_HEADERS_FOO = HttpHeaders.of(AsciiString.of("e"), "f");
     private static final HttpHeaders EXAMPLE_HEADERS_FOO_BAR1 = HttpHeaders.of(AsciiString.of("g"), "h");
 
-    private static final ListMultimap<String, HttpHeaders> EXAMPLE_HEADERS = ImmutableListMultimap.of(
-            HelloService.class.getName(), EXAMPLE_HEADERS_HELLO,
-            FooService.class.getName(), EXAMPLE_HEADERS_FOO);
-
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    @Override
-    protected void configureServer(ServerBuilder sb) {
-        final THttpService helloAndSleepService = THttpService.of(ImmutableMap.of(
-                "hello", HELLO_SERVICE_HANDLER,
-                "sleep", SLEEP_SERVICE_HANDLER));
-        final THttpService fooService = THttpService.ofFormats(mock(FooService.AsyncIface.class),
-                                                               COMPACT);
-        final THttpService cassandraService = THttpService.ofFormats(mock(Cassandra.AsyncIface.class),
-                                                                     BINARY);
-        final THttpService cassandraServiceDebug =
-                THttpService.ofFormats(mock(Cassandra.AsyncIface.class), TEXT);
-        final THttpService hbaseService = THttpService.of(mock(Hbase.AsyncIface.class));
-        final THttpService onewayHelloService = THttpService.of(mock(OnewayHelloService.AsyncIface.class));
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            final THttpService helloAndSleepService = THttpService.of(ImmutableMap.of(
+                    "hello", HELLO_SERVICE_HANDLER,
+                    "sleep", SLEEP_SERVICE_HANDLER));
+            final THttpService fooService = THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                                   COMPACT);
+            final THttpService cassandraService = THttpService.ofFormats(mock(Cassandra.AsyncIface.class),
+                                                                         BINARY);
+            final THttpService cassandraServiceDebug =
+                    THttpService.ofFormats(mock(Cassandra.AsyncIface.class), TEXT);
+            final THttpService hbaseService = THttpService.of(mock(Hbase.AsyncIface.class));
+            final THttpService onewayHelloService = THttpService.of(mock(OnewayHelloService.AsyncIface.class));
 
-        sb.serviceAt("/", helloAndSleepService);
-        sb.serviceAt("/foo", fooService);
-        sb.serviceAt("/cassandra", cassandraService);
-        sb.serviceAt("/cassandra/debug", cassandraServiceDebug);
-        sb.serviceAt("/hbase", hbaseService);
-        sb.serviceAt("/oneway", onewayHelloService);
+            sb.serviceAt("/", helloAndSleepService);
+            sb.serviceAt("/foo", fooService);
+            sb.serviceAt("/cassandra", cassandraService);
+            sb.serviceAt("/cassandra/debug", cassandraServiceDebug);
+            sb.serviceAt("/hbase", hbaseService);
+            sb.serviceAt("/oneway", onewayHelloService);
 
-        sb.serviceUnder(
-                "/docs/",
-                new DocServiceBuilder()
-                        .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
-                        .exampleHttpHeaders(HelloService.class, EXAMPLE_HEADERS_HELLO)
-                        .exampleHttpHeaders(FooService.class, EXAMPLE_HEADERS_FOO)
-                        .exampleHttpHeaders(FooService.class, "bar1", EXAMPLE_HEADERS_FOO_BAR1)
-                        .exampleRequest(EXAMPLE_HELLO)
-                        .build());
-    }
+            sb.serviceUnder(
+                    "/docs/",
+                    new DocServiceBuilder()
+                            .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
+                            .exampleHttpHeaders(HelloService.class, EXAMPLE_HEADERS_HELLO)
+                            .exampleHttpHeaders(FooService.class, EXAMPLE_HEADERS_FOO)
+                            .exampleHttpHeaders(FooService.class, "bar1", EXAMPLE_HEADERS_FOO_BAR1)
+                            .exampleRequest(EXAMPLE_HELLO)
+                            .build());
+        }
+    };
 
     @Test
     public void testOk() throws Exception {
@@ -221,6 +219,6 @@ public class ThriftDocServiceTest extends AbstractServerTest {
     }
 
     private static String specificationUri() {
-        return uri("/docs/specification.json");
+        return server.uri("/docs/specification.json");
     }
 }

@@ -18,29 +18,47 @@ package com.linecorp.armeria.server.http.jetty;
 
 import org.eclipse.jetty.server.Server;
 import org.junit.AfterClass;
+import org.junit.ClassRule;
 
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.test.webapp.WebAppContainerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.server.webapp.WebAppContainerTest;
 
 public class UnmanagedJettyServiceTest extends WebAppContainerTest {
 
     private static Server jetty;
 
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.port(0, HttpSessionProtocols.HTTP);
+            sb.port(0, HttpSessionProtocols.HTTPS);
+            sb.sslContext(HttpSessionProtocols.HTTPS,
+                          certificate.certificateFile(),
+                          certificate.privateKeyFile());
+
+            jetty = new Server(0);
+            jetty.setHandler(JettyServiceTest.newWebAppContext());
+            jetty.start();
+            sb.serviceUnder(
+                    "/jsp/",
+                    JettyService.forServer(jetty).decorate(LoggingService::new));
+        }
+    };
+
     @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        super.configureServer(sb);
-        jetty = new Server(0);
-        jetty.setHandler(JettyServiceTest.newWebAppContext());
-        jetty.start();
-        sb.serviceUnder(
-                "/jsp/",
-                JettyService.forServer(jetty).decorate(LoggingService::new));
+    protected ServerRule server() {
+        return server;
     }
 
     @AfterClass
     public static void stopJetty() throws Exception {
-        jetty.stop();
-        jetty.destroy();
+        if (jetty != null) {
+            jetty.stop();
+            jetty.destroy();
+        }
     }
 }

@@ -30,7 +30,9 @@ ext {
     javaProjects = subprojects.findAll { it.name != 'site' }
 
     // The list of Java projects whose artifacts are published to the Maven repository
-    publishedJavaProjects = javaProjects.findAll { it.name != 'it' && it.name != 'shaded-test' }
+    publishedJavaProjects = javaProjects.findAll {
+        !(it.name in ['it', 'shaded-test', 'testing'])
+    }
 
     // The list of backward-compatibility Java projects which have the namespace conflicts with other projects.
     backwardCompatProjects = publishedJavaProjects.findAll { it.name in [ 'thrift0.9', 'tomcat8.0' ] }
@@ -166,6 +168,9 @@ configure(javaProjects) {
         if (project.name != 'core') {
             compile project(':core')
         }
+
+        // Testing utilities
+        testCompile project(':testing')
     }
 
     managedDependencies {
@@ -205,36 +210,6 @@ configure(javaProjects) {
         testCompile 'org.assertj:assertj-core'
         testCompile 'org.mockito:mockito-core'
         testCompile 'org.apache.httpcomponents:httpclient'
-    }
-
-    // Copy test resources to the same directory with test classes, because some tests such as
-    // TomcatServiceTest assume so.
-    sourceSets {
-        test {
-            def testOutputDir = "${project.buildDir}/classes/test"
-            output.classesDir = testOutputDir
-            output.resourcesDir = testOutputDir
-
-            // Add shared logback configuration.
-            resources.srcDir "${rootProject.projectDir}/settings/logback"
-
-            // Add 'java-shared' directory to the source set, if exists.
-            def javaSharedDir = "${project.projectDir}/src/test/java-shared"
-            if (project.file(javaSharedDir).isDirectory()) {
-                java.srcDir javaSharedDir
-            }
-
-            // Add 'resources-shared' directory to the source set, if exists.
-            def resourcesSharedDir = "${project.projectDir}/src/test/resources-shared"
-            if (project.file(resourcesSharedDir).isDirectory()) {
-                resources.srcDir resourcesSharedDir
-            }
-
-            // Add the 'java-shared' directory of the 'core' project to the source set.
-            if (project.name != 'core') {
-                java.srcDir "${rootProject.projectDir}/core/src/test/java-shared"
-            }
-        }
     }
 
     // Enforce checkstyle rules.

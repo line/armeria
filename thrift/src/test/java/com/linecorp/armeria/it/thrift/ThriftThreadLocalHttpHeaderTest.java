@@ -16,6 +16,7 @@
 package com.linecorp.armeria.it.thrift;
 
 import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -25,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Clients;
@@ -36,12 +38,12 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 /**
  * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters.
  */
-public class ThriftThreadLocalHttpHeaderTest extends AbstractServerTest {
+public class ThriftThreadLocalHttpHeaderTest {
 
     private static final String SECRET = "QWxhZGRpbjpPcGVuU2VzYW1l";
 
@@ -61,10 +63,13 @@ public class ThriftThreadLocalHttpHeaderTest extends AbstractServerTest {
         }
     };
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.serviceAt("/hello", THttpService.of(helloService));
-    }
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceAt("/hello", THttpService.of(helloService));
+        }
+    };
 
     @Test
     public void testSimpleManipulation() throws Exception {
@@ -103,7 +108,7 @@ public class ThriftThreadLocalHttpHeaderTest extends AbstractServerTest {
     @Test
     public void testSimpleManipulationAsync() throws Exception {
         final HelloService.AsyncIface client = Clients.newClient(
-                "tbinary+" + uri("/hello"), HelloService.AsyncIface.class);
+                server.uri(BINARY, "/hello"), HelloService.AsyncIface.class);
 
         final BlockingQueue<Object> result = new ArrayBlockingQueue<>(1);
         final Callback callback = new Callback(result);
@@ -128,7 +133,7 @@ public class ThriftThreadLocalHttpHeaderTest extends AbstractServerTest {
     }
 
     private static Iface newClient() {
-        return Clients.newClient("tbinary+" + uri("/hello"), HelloService.Iface.class);
+        return Clients.newClient(server.uri(BINARY, "/hello"), HelloService.Iface.class);
     }
 
     private static void assertAuthorizationFailure(Iface client, String expectedSecret) {

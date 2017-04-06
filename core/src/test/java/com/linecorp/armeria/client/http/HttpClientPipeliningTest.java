@@ -28,6 +28,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.AllInOneClientFactory;
@@ -43,19 +44,62 @@ import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 
-public class HttpClientPipeliningTest extends AbstractServerTest {
+public class HttpClientPipeliningTest {
 
+    // Server-side configuration
+    private static final Semaphore semaphore = new Semaphore(0);
+    private static final Lock lock = new ReentrantLock();
+    private static final Condition condition = lock.newCondition();
+    private static volatile boolean connectionReturnedToPool;
+
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            // Bind a service that returns the remote address of the connection to determine
+            // if the same connection was used to handle more than one request.
+            sb.serviceAt("/", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx,
+                                     HttpRequest req, HttpResponseWriter res) throws Exception {
+                    // Consume the request completely so that the connection can be returned to the pool.
+                    req.aggregate().handle(voidFunction((unused1, unused2) -> {
+                        // Signal the main thread that the connection has been returned to the pool.
+                        // Note that this is true only when pipelining is enabled. The connection is returned
+                        // after response is fully sent if pipelining is disabled.
+                        lock.lock();
+                        try {
+                            connectionReturnedToPool = true;
+                            condition.signal();
+                        } finally {
+                            lock.unlock();
+                        }
+
+                        semaphore.acquireUninterruptibly();
+                        try {
+                            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                                        String.valueOf(ctx.remoteAddress()));
+                        } finally {
+                            semaphore.release();
+                        }
+                    }));
+                }
+            });
+        }
+    };
+
+    // Client-side configuration
     private static EventLoopGroup eventLoopGroup;
     private static ClientFactory factoryWithPipelining;
     private static ClientFactory factoryWithoutPipelining;
 
     @BeforeClass
-    public static void init() {
+    public static void initClientFactory() {
         // Ensure only a single event loop is used so that there's only one connection pool.
         // Note: Each event loop has its own connection pool.
         eventLoopGroup = new NioEventLoopGroup(1);
@@ -66,11 +110,10 @@ public class HttpClientPipeliningTest extends AbstractServerTest {
         factoryWithoutPipelining = new AllInOneClientFactory(
                 SessionOptions.of(SessionOption.EVENT_LOOP_GROUP.newValue(eventLoopGroup),
                                   SessionOption.USE_HTTP1_PIPELINING.newValue(false)));
-
     }
 
     @AfterClass
-    public static void destroy() {
+    public static void destroyClientFactory() {
         ForkJoinPool.commonPool().execute(() -> {
             factoryWithPipelining.close();
             factoryWithoutPipelining.close();
@@ -78,54 +121,16 @@ public class HttpClientPipeliningTest extends AbstractServerTest {
         });
     }
 
-    private final Semaphore semaphore = new Semaphore(0);
-    private final Lock lock = new ReentrantLock();
-    private final Condition condition = lock.newCondition();
-    private volatile boolean connectionReturnedToPool;
-
     @Before
     public void resetState() {
         semaphore.drainPermits();
         connectionReturnedToPool = false;
     }
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        // Bind a service that returns the remote address of the connection to determine
-        // if the same connection was used to handle more than one request.
-        sb.serviceAt("/", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx,
-                                 HttpRequest req, HttpResponseWriter res) throws Exception {
-                // Consume the request completely so that the connection can be returned to the pool.
-                req.aggregate().handle(voidFunction((unused1, unused2) -> {
-                    // Signal the main thread that the connection has been returned to the pool.
-                    // Note that this is true only when pipelining is enabled. The connection is returned
-                    // after response is fully sent if pipelining is disabled.
-                    lock.lock();
-                    try {
-                        connectionReturnedToPool = true;
-                        condition.signal();
-                    } finally {
-                        lock.unlock();
-                    }
-
-                    semaphore.acquireUninterruptibly();
-                    try {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
-                                    String.valueOf(ctx.remoteAddress()));
-                    } finally {
-                        semaphore.release();
-                    }
-                }));
-            }
-        });
-    }
-
     @Test
     public void withoutPipelining() throws Exception {
-        final HttpClient client = Clients.newClient(factoryWithoutPipelining,
-                                                    "none+h1c://127.0.0.1:" + httpPort(), HttpClient.class);
+        final HttpClient client = Clients.newClient(
+                factoryWithoutPipelining, "none+h1c://127.0.0.1:" + server.httpPort(), HttpClient.class);
 
         final HttpResponse res1 = client.get("/");
         final HttpResponse res2 = client.get("/");
@@ -145,8 +150,9 @@ public class HttpClientPipeliningTest extends AbstractServerTest {
 
     @Test
     public void withPipelining() throws Exception {
-        final HttpClient client = Clients.newClient(factoryWithPipelining,
-                                                    "none+h1c://127.0.0.1:" + httpPort(), HttpClient.class);
+        final HttpClient client = Clients.newClient(
+                factoryWithPipelining, "none+h1c://127.0.0.1:" + server.httpPort(), HttpClient.class);
+
         final HttpResponse res1;
         lock.lock();
         try {
