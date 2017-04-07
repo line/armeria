@@ -53,6 +53,7 @@ import java.util.zip.InflaterInputStream;
 
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -97,7 +98,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -107,7 +108,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 @RunWith(Parameterized.class)
-public class HttpServerTest extends AbstractServerTest {
+public class HttpServerTest {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServerTest.class);
 
@@ -137,223 +138,226 @@ public class HttpServerTest extends AbstractServerTest {
     private static volatile long clientResponseTimeoutMillis;
     private static volatile long clientMaxResponseLength;
 
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+
+            sb.numWorkers(1);
+            sb.port(0, HTTP);
+            sb.port(0, HTTPS);
+
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
+
+            sb.serviceUnder("/delay", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
+                    ctx.eventLoop().schedule(() -> res.respond(HttpStatus.OK),
+                                             delayMillis, TimeUnit.MILLISECONDS);
+                }
+            });
+
+            sb.serviceUnder("/informed_delay", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
+
+                    // Send 9 informational responses before sending the actual response.
+                    for (int i = 1; i <= 9; i++) {
+                        ctx.eventLoop().schedule(
+                                () -> res.respond(HttpStatus.PROCESSING),
+                                delayMillis * i / 10, TimeUnit.MILLISECONDS);
+                    }
+
+                    // Send the actual response.
+                    ctx.eventLoop().schedule(
+                            () -> res.respond(HttpStatus.OK),
+                            delayMillis, TimeUnit.MILLISECONDS);
+                }
+            });
+
+            sb.serviceUnder("/content_delay", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
+
+                    res.write(HttpHeaders.of(HttpStatus.OK));
+
+                    // Send 10 characters ('0' - '9') at fixed rate.
+                    for (int i = 0; i < 10; i++) {
+                        final int finalI = i;
+                        ctx.eventLoop().schedule(
+                                () -> {
+                                    res.write(HttpData.ofAscii(String.valueOf(finalI)));
+                                    if (finalI == 9) {
+                                        res.close();
+                                    }
+                                },
+                                delayMillis * i / 10, TimeUnit.MILLISECONDS);
+                    }
+                }
+            });
+
+            sb.serviceUnder("/path", new AbstractHttpService() {
+                @Override
+                protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.write(HttpHeaders.of(HttpStatus.OK)
+                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, ctx.mappedPath().length()));
+                    res.close();
+                }
+
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.write(HttpHeaders.of(HttpStatus.OK)
+                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, ctx.mappedPath().length()));
+                    res.write(HttpData.ofAscii(ctx.mappedPath()));
+                    res.close();
+                }
+            });
+
+            sb.serviceAt("/echo", new AbstractHttpService() {
+                @Override
+                protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.write(HttpHeaders.of(HttpStatus.OK));
+                    req.subscribe(new Subscriber<HttpObject>() {
+                        private Subscription subscription;
+
+                        @Override
+                        public void onSubscribe(Subscription subscription) {
+                            this.subscription = subscription;
+                            subscription.request(1);
+                        }
+
+                        @Override
+                        public void onNext(HttpObject http2Object) {
+                            if (http2Object instanceof HttpData) {
+                                res.write(http2Object);
+                            }
+                            subscription.request(1);
+                        }
+
+                        @Override
+                        public void onError(Throwable t) {
+                            res.close(t);
+                        }
+
+                        @Override
+                        public void onComplete() {
+                            res.close();
+                        }
+                    });
+                }
+            });
+
+            sb.serviceAt("/count", new CountingService(false));
+            sb.serviceAt("/slow_count", new CountingService(true));
+
+            sb.serviceUnder("/zeroes", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    final long length = Long.parseLong(ctx.mappedPath().substring(1));
+                    res.write(HttpHeaders.of(HttpStatus.OK)
+                                         .setLong(HttpHeaderNames.CONTENT_LENGTH, length));
+
+                    stream(res, length, STREAMING_CONTENT_CHUNK_LENGTH);
+                }
+            });
+
+            sb.serviceAt("/strings", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain"));
+
+                    res.write(HttpData.ofUtf8("Armeria "));
+                    res.write(HttpData.ofUtf8("is "));
+                    res.write(HttpData.ofUtf8("awesome!"));
+                    res.close();
+                }
+            }.decorate(HttpEncodingService.class));
+
+            sb.serviceAt("/images", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "image/png"));
+
+                    res.write(HttpData.ofUtf8("Armeria "));
+                    res.write(HttpData.ofUtf8("is "));
+                    res.write(HttpData.ofUtf8("awesome!"));
+                    res.close();
+                }
+            }.decorate(HttpEncodingService.class));
+
+            sb.serviceAt("/small", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    String response = Strings.repeat("a", 1023);
+                    res.write(HttpHeaders.of(HttpStatus.OK)
+                                         .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
+                    res.write(HttpData.ofUtf8(response));
+                    res.close();
+                }
+            }.decorate(HttpEncodingService.class));
+
+            sb.serviceAt("/large", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    String response = Strings.repeat("a", 1024);
+                    res.write(HttpHeaders.of(HttpStatus.OK)
+                                         .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
+                    res.write(HttpData.ofUtf8(response));
+                    res.close();
+                }
+            }.decorate(HttpEncodingService.class));
+
+            sb.serviceAt("/sslsession", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    if (ctx.sessionProtocol().isTls()) {
+                        assertNotNull(ctx.sslSession());
+                    } else {
+                        assertNull(ctx.sslSession());
+                    }
+                    res.respond(HttpStatus.OK);
+                }
+            }.decorate(HttpEncodingService.class));
+
+            sb.serviceAt("/headers", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                                         .add(AsciiString.of("x-custom-header1"), "custom1")
+                                         .add(AsciiString.of("X-Custom-Header2"), "custom2"));
+
+                    res.write(HttpData.ofUtf8("headers"));
+                    res.close();
+                }
+            }.decorate(HttpEncodingService.class));
+
+            final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+                    s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
+                        @Override
+                        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                            ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
+                            ctx.setMaxRequestLength(serverMaxRequestLength);
+                            ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
+                            return delegate().serve(ctx, req);
+                        }
+                    };
+            sb.decorator(decorator);
+
+            sb.defaultMaxRequestLength(MAX_CONTENT_LENGTH);
+        }
+    };
+
     private final SessionProtocol protocol;
     private HttpClient client;
 
     public HttpServerTest(SessionProtocol protocol) {
         this.protocol = protocol;
-    }
-
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-
-        sb.numWorkers(1);
-        sb.port(0, HTTP);
-        sb.port(0, HTTPS);
-
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
-
-        sb.serviceUnder("/delay", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
-                ctx.eventLoop().schedule(() -> res.respond(HttpStatus.OK),
-                                         delayMillis, TimeUnit.MILLISECONDS);
-            }
-        });
-
-        sb.serviceUnder("/informed_delay", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
-
-                // Send 9 informational responses before sending the actual response.
-                for (int i = 1; i <= 9; i++) {
-                    ctx.eventLoop().schedule(
-                            () -> res.respond(HttpStatus.PROCESSING),
-                            delayMillis * i / 10, TimeUnit.MILLISECONDS);
-                }
-
-                // Send the actual response.
-                ctx.eventLoop().schedule(
-                        () -> res.respond(HttpStatus.OK),
-                        delayMillis, TimeUnit.MILLISECONDS);
-            }
-        });
-
-        sb.serviceUnder("/content_delay", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
-
-                res.write(HttpHeaders.of(HttpStatus.OK));
-
-                // Send 10 characters ('0' - '9') at fixed rate.
-                for (int i = 0; i < 10; i++) {
-                    final int finalI = i;
-                    ctx.eventLoop().schedule(
-                            () -> {
-                                res.write(HttpData.ofAscii(String.valueOf(finalI)));
-                                if (finalI == 9) {
-                                    res.close();
-                                }
-                            },
-                            delayMillis * i / 10, TimeUnit.MILLISECONDS);
-                }
-            }
-        });
-
-        sb.serviceUnder("/path", new AbstractHttpService() {
-            @Override
-            protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.write(HttpHeaders.of(HttpStatus.OK)
-                                     .setInt(HttpHeaderNames.CONTENT_LENGTH, ctx.mappedPath().length()));
-                res.close();
-            }
-
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.write(HttpHeaders.of(HttpStatus.OK)
-                                     .setInt(HttpHeaderNames.CONTENT_LENGTH, ctx.mappedPath().length()));
-                res.write(HttpData.ofAscii(ctx.mappedPath()));
-                res.close();
-            }
-        });
-
-        sb.serviceAt("/echo", new AbstractHttpService() {
-            @Override
-            protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.write(HttpHeaders.of(HttpStatus.OK));
-                req.subscribe(new Subscriber<HttpObject>() {
-                    private Subscription subscription;
-
-                    @Override
-                    public void onSubscribe(Subscription subscription) {
-                        this.subscription = subscription;
-                        subscription.request(1);
-                    }
-
-                    @Override
-                    public void onNext(HttpObject http2Object) {
-                        if (http2Object instanceof HttpData) {
-                            res.write(http2Object);
-                        }
-                        subscription.request(1);
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {
-                        res.close(t);
-                    }
-
-                    @Override
-                    public void onComplete() {
-                        res.close();
-                    }
-                });
-            }
-        });
-
-        sb.serviceAt("/count", new CountingService(false));
-        sb.serviceAt("/slow_count", new CountingService(true));
-
-        sb.serviceUnder("/zeroes", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                final long length = Long.parseLong(ctx.mappedPath().substring(1));
-                res.write(HttpHeaders.of(HttpStatus.OK)
-                                     .setLong(HttpHeaderNames.CONTENT_LENGTH, length));
-
-                stream(res, length, STREAMING_CONTENT_CHUNK_LENGTH);
-            }
-        });
-
-        sb.serviceAt("/strings", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain"));
-
-                res.write(HttpData.ofUtf8("Armeria "));
-                res.write(HttpData.ofUtf8("is "));
-                res.write(HttpData.ofUtf8("awesome!"));
-                res.close();
-            }
-        }.decorate(HttpEncodingService.class));
-
-        sb.serviceAt("/images", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "image/png"));
-
-                res.write(HttpData.ofUtf8("Armeria "));
-                res.write(HttpData.ofUtf8("is "));
-                res.write(HttpData.ofUtf8("awesome!"));
-                res.close();
-            }
-        }.decorate(HttpEncodingService.class));
-
-        sb.serviceAt("/small", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                String response = Strings.repeat("a", 1023);
-                res.write(HttpHeaders.of(HttpStatus.OK)
-                                     .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
-                                     .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
-                res.write(HttpData.ofUtf8(response));
-                res.close();
-            }
-        }.decorate(HttpEncodingService.class));
-
-        sb.serviceAt("/large", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                String response = Strings.repeat("a", 1024);
-                res.write(HttpHeaders.of(HttpStatus.OK)
-                                     .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
-                                     .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
-                res.write(HttpData.ofUtf8(response));
-                res.close();
-            }
-        }.decorate(HttpEncodingService.class));
-
-        sb.serviceAt("/sslsession", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                if (ctx.sessionProtocol().isTls()) {
-                    assertNotNull(ctx.sslSession());
-                } else {
-                    assertNull(ctx.sslSession());
-                }
-                res.respond(HttpStatus.OK);
-            }
-        }.decorate(HttpEncodingService.class));
-
-        sb.serviceAt("/headers", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
-                                     .add(AsciiString.of("x-custom-header1"), "custom1")
-                                     .add(AsciiString.of("X-Custom-Header2"), "custom2"));
-
-                res.write(HttpData.ofUtf8("headers"));
-                res.close();
-            }
-        }.decorate(HttpEncodingService.class));
-
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
-                s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
-                    @Override
-                    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                        ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
-                        ctx.setMaxRequestLength(serverMaxRequestLength);
-                        ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
-                        return delegate().serve(ctx, req);
-                    }
-                };
-        sb.decorator(decorator);
-
-        sb.defaultMaxRequestLength(MAX_CONTENT_LENGTH);
     }
 
     @AfterClass
@@ -728,7 +732,8 @@ public class HttpServerTest extends AbstractServerTest {
         }
 
         final ClientBuilder builder = new ClientBuilder(
-                "none+" + protocol.uriText() + "://127.0.0.1:" + (protocol.isTls() ? httpsPort() : httpPort()));
+                "none+" + protocol.uriText() + "://127.0.0.1:" +
+                (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 
         builder.factory(clientFactory);
         builder.decorator(

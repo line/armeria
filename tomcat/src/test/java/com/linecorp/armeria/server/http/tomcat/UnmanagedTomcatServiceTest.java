@@ -20,10 +20,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
-import org.apache.catalina.LifecycleException;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -32,67 +29,63 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.server.webapp.WebAppContainerTest;
 
-public class UnmanagedTomcatServiceTest extends AbstractServerTest {
+public class UnmanagedTomcatServiceTest {
 
     private static Tomcat tomcatWithWebApp;
     private static Tomcat tomcatWithoutWebApp;
 
-    @BeforeClass
-    public static void createTomcat() throws Exception {
-        tomcatWithWebApp = new Tomcat();
-        tomcatWithWebApp.setPort(0);
-        tomcatWithWebApp.setBaseDir("build" + File.separatorChar +
-                                    "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-1");
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            // Prepare Tomcat instances.
+            tomcatWithWebApp = new Tomcat();
+            tomcatWithWebApp.setPort(0);
+            tomcatWithWebApp.setBaseDir("build" + File.separatorChar +
+                                        "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-1");
 
-        final File docBase = findDocBase();
+            tomcatWithWebApp.addWebapp("", WebAppContainerTest.webAppRoot().getAbsolutePath());
+            TomcatUtil.engine(tomcatWithWebApp.getService()).setName("tomcatWithWebApp");
 
-        tomcatWithWebApp.addWebapp("", docBase.getAbsolutePath());
-        TomcatUtil.engine(tomcatWithWebApp.getService()).setName("tomcatWithWebApp");
+            tomcatWithoutWebApp = new Tomcat();
+            tomcatWithoutWebApp.setPort(0);
+            tomcatWithoutWebApp.setBaseDir("build" + File.separatorChar +
+                                           "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-2");
 
-        tomcatWithoutWebApp = new Tomcat();
-        tomcatWithoutWebApp.setPort(0);
-        tomcatWithoutWebApp.setBaseDir("build" + File.separatorChar +
-                                       "tomcat-" + UnmanagedTomcatServiceTest.class.getSimpleName() + "-2");
-    }
+            // Start the Tomcats.
+            tomcatWithWebApp.start();
+            tomcatWithoutWebApp.start();
 
-    private static File findDocBase() {
-        final List<String> classesDirNames = new ArrayList<>();
-        if (TomcatVersion.major() < 8 ||
-            TomcatVersion.major() == 8 && TomcatVersion.minor() < 5) {
-            classesDirNames.add("test-tomcat8.0");
-        } else {
-            classesDirNames.add("test-tomcat");
+            // Bind them to the Server.
+            sb.serviceUnder("/empty/", TomcatService.forConnector("someHost", new Connector()))
+              .serviceUnder("/no-webapp/", TomcatService.forConnector(tomcatWithoutWebApp.getConnector()))
+              .serviceUnder("/some-webapp/", TomcatService.forConnector(tomcatWithWebApp.getConnector()));
         }
-        classesDirNames.add("test");
+    };
 
-        return classesDirNames.stream()
-                              .map(name -> new File("build" + File.separatorChar +
-                                                    "classes" + File.separatorChar +
-                                                    name + File.separatorChar + "tomcat_service"))
-                              .filter(File::exists)
-                              .findFirst().get();
-    }
-
-    @Override
-    protected void configureServer(ServerBuilder sb) throws LifecycleException {
-        tomcatWithWebApp.start();
-        tomcatWithoutWebApp.start();
-
-        sb.serviceUnder("/empty/", TomcatService.forConnector("someHost", new Connector()))
-          .serviceUnder("/no-webapp/", TomcatService.forConnector(tomcatWithoutWebApp.getConnector()))
-          .serviceUnder("/some-webapp/", TomcatService.forConnector(tomcatWithWebApp.getConnector()));
+    @AfterClass
+    public static void destroyTomcat() throws Exception {
+        if (tomcatWithWebApp != null) {
+            tomcatWithWebApp.stop();
+            tomcatWithWebApp.destroy();
+        }
+        if (tomcatWithoutWebApp != null) {
+            tomcatWithoutWebApp.stop();
+            tomcatWithoutWebApp.destroy();
+        }
     }
 
     @Test
-    public void testServiceUnavailable() throws Exception {
+    public void serviceUnavailable() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/empty/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/empty/")))) {
                 // as connector is not configured, TomcatServiceInvocationHandler will throw.
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 503 Service Unavailable"));
             }
@@ -100,9 +93,9 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
     }
 
     @Test
-    public void testUnconfiguredWebApp() throws Exception {
+    public void unconfiguredWebApp() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/no-webapp/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/no-webapp/")))) {
                 // as no webapp is configured inside tomcat, 404 will be thrown.
                 System.err.println("Entity: " + EntityUtils.toString(res.getEntity()));
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
@@ -111,19 +104,11 @@ public class UnmanagedTomcatServiceTest extends AbstractServerTest {
     }
 
     @Test
-    public void testOk() throws Exception {
+    public void ok() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/some-webapp/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/some-webapp/")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
             }
         }
-    }
-
-    @AfterClass
-    public static void destroyTomcat() throws Exception {
-        tomcatWithWebApp.stop();
-        tomcatWithWebApp.destroy();
-        tomcatWithoutWebApp.stop();
-        tomcatWithoutWebApp.destroy();
     }
 }

@@ -13,6 +13,9 @@ managedDependencies {
 }
 
 // Use the sources from 'armeria-thrift'.
+// NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
+//     below are added to two projects and having a source directory with two output directories will confuse
+//     the IDE.
 tasks.compileJava.source "${rootProject.projectDir}/thrift/src/main/java"
 tasks.processResources.from "${rootProject.projectDir}/thrift/src/main/resources"
 tasks.compileTestJava.source "${rootProject.projectDir}/thrift/src/test/java"

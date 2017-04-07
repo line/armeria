@@ -10,23 +10,12 @@ managedDependencies {
     runtime 'org.slf4j:jcl-over-slf4j'
 }
 
-// Use the sources from 'armeria-tomcat'.
-sourceSets {
-    main {
-        java {
-            def tomcatSourceDir = "${rootProject.projectDir}/tomcat/src/main/java"
-            def tomcat80SourceDir = "${project.projectDir}/src/main/java"
-            srcDirs tomcatSourceDir, tomcat80SourceDir
-            exclude '**/Tomcat85*'
-        }
-    }
-
-    test {
-        java {
-            srcDirs "${rootProject.projectDir}/tomcat/src/test/java",
-                    "${rootProject.projectDir}/tomcat/src/test/java-shared"
-        }
-    }
-}
-
-tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources-shared"
+// Use the sources from 'armeria-tomcat' as well as ours.
+// NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
+//     below are added to two projects and having a source directory with two output directories will confuse
+//     the IDE.
+tasks.compileJava.source "${rootProject.projectDir}/tomcat/src/main/java"
+tasks.compileJava.exclude '**/Tomcat85*'
+tasks.processResources.from "${rootProject.projectDir}/tomcat/src/main/resources"
+tasks.compileTestJava.source "${rootProject.projectDir}/tomcat/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources"

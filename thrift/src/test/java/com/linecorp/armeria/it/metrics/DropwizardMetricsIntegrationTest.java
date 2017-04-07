@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.it.metrics;
 
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.CountDownLatch;
 
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.codahale.metrics.MetricRegistry;
@@ -34,28 +36,31 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
-public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
+public class DropwizardMetricsIntegrationTest {
 
-    private final MetricRegistry metricRegistry = new MetricRegistry();
+    private static final MetricRegistry metricRegistry = new MetricRegistry();
 
-    private CountDownLatch latch;
+    private static CountDownLatch latch;
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.serviceAt("/helloservice", THttpService.of((Iface) name -> {
-            if ("world".equals(name)) {
-                return "success";
-            }
-            throw new IllegalArgumentException("bad argument");
-        }).decorate((delegate, ctx, req) -> {
-            ctx.log().addListener(log -> latch.countDown(),
-                                  RequestLogAvailability.COMPLETE);
-            return delegate.serve(ctx, req);
-        }).decorate(DropwizardMetricCollectingService.newDecorator(
-                metricRegistry, MetricRegistry.name("services"))));
-    }
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceAt("/helloservice", THttpService.of((Iface) name -> {
+                if ("world".equals(name)) {
+                    return "success";
+                }
+                throw new IllegalArgumentException("bad argument");
+            }).decorate((delegate, ctx, req) -> {
+                ctx.log().addListener(log -> latch.countDown(),
+                                      RequestLogAvailability.COMPLETE);
+                return delegate.serve(ctx, req);
+            }).decorate(DropwizardMetricCollectingService.newDecorator(
+                    metricRegistry, MetricRegistry.name("services"))));
+        }
+    };
 
     @Test(timeout = 10000L)
     public void normal() throws Exception {
@@ -114,8 +119,8 @@ public class DropwizardMetricsIntegrationTest extends AbstractServerTest {
         return MetricRegistry.name("clients", "HelloService", method, property);
     }
 
-    private void makeRequest(String name) {
-        Iface client = new ClientBuilder("tbinary+" + uri("/helloservice"))
+    private static void makeRequest(String name) {
+        Iface client = new ClientBuilder(server.uri(BINARY, "/helloservice"))
                 .decorator(RpcRequest.class, RpcResponse.class,
                            (delegate, ctx, req) -> {
                                ctx.log().addListener(unused -> latch.countDown(),

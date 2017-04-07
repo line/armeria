@@ -15,9 +15,11 @@
  */
 package com.linecorp.armeria.server.http;
 
+import static com.linecorp.armeria.common.SerializationFormat.NONE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -33,45 +35,48 @@ import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.cors.CorsServiceBuilder;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.util.AsciiString;
 
-public class HttpServerCorsTest extends AbstractServerTest {
+public class HttpServerCorsTest {
 
     private static final ClientFactory clientFactory = ClientFactory.DEFAULT;
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.serviceAt("/cors", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.respond(HttpStatus.OK);
-            }
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceAt("/cors", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.respond(HttpStatus.OK);
+                }
 
-            @Override
-            protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.respond(HttpStatus.OK);
-            }
+                @Override
+                protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.respond(HttpStatus.OK);
+                }
 
-            @Override
-            protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.respond(HttpStatus.OK);
-            }
+                @Override
+                protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.respond(HttpStatus.OK);
+                }
 
-            @Override
-            protected void doOptions(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.respond(HttpStatus.OK);
-            }
-        }.decorate(CorsServiceBuilder.forOrigin("http://example.com")
-                                     .allowRequestMethods(HttpMethod.POST)
-                                     .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                                     .newDecorator()));
-    }
+                @Override
+                protected void doOptions(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.respond(HttpStatus.OK);
+                }
+            }.decorate(CorsServiceBuilder.forOrigin("http://example.com")
+                                         .allowRequestMethods(HttpMethod.POST)
+                                         .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                                         .newDecorator()));
+        }
+    };
 
     @Test
     public void testCorsPreflight() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, "none+" + uri("/"), HttpClient.class);
+        HttpClient client = Clients.newClient(clientFactory, server.uri(NONE, "/"), HttpClient.class);
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.OPTIONS, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
@@ -86,7 +91,7 @@ public class HttpServerCorsTest extends AbstractServerTest {
 
     @Test
     public void testCorsAllowed() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, "none+" + uri("/"), HttpClient.class);
+        HttpClient client = Clients.newClient(clientFactory, server.uri(NONE, "/"), HttpClient.class);
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
@@ -99,7 +104,7 @@ public class HttpServerCorsTest extends AbstractServerTest {
 
     @Test
     public void testCorsForbidden() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, "none+" + uri("/"), HttpClient.class);
+        HttpClient client = Clients.newClient(clientFactory, server.uri(NONE, "/"), HttpClient.class);
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")

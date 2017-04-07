@@ -1,0 +1,5 @@
+managedDependencies {
+    compile 'junit:junit'
+    compile 'org.apache.httpcomponents:httpclient'
+    compile 'org.assertj:assertj-core'
+}

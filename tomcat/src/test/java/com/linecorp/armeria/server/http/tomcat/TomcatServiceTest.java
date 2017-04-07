@@ -30,11 +30,14 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.test.webapp.WebAppContainerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.server.webapp.WebAppContainerTest;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.concurrent.Future;
@@ -43,45 +46,58 @@ public class TomcatServiceTest extends WebAppContainerTest {
 
     private static final String SERVICE_NAME = "TomcatServiceTest";
 
-    private final List<Service> tomcatServices = new ArrayList<>();
+    private static final List<Service> tomcatServices = new ArrayList<>();
+
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.port(0, HttpSessionProtocols.HTTP);
+            sb.port(0, HttpSessionProtocols.HTTPS);
+            sb.sslContext(HttpSessionProtocols.HTTPS,
+                          certificate.certificateFile(),
+                          certificate.privateKeyFile());
+
+            sb.serviceUnder(
+                    "/jsp/",
+                    TomcatServiceBuilder.forFileSystem(webAppRoot().toPath())
+                                        .serviceName(SERVICE_NAME)
+                                        .configurator(s -> Collections.addAll(tomcatServices, s.findServices()))
+                                        .build()
+                                        .decorate(LoggingService::new));
+
+            sb.serviceUnder(
+                    "/jar/",
+                    TomcatServiceBuilder.forClassPath(Future.class)
+                                        .serviceName("TomcatServiceTest-JAR")
+                                        .build()
+                                        .decorate(LoggingService::new));
+
+            sb.serviceUnder(
+                    "/jar_altroot/",
+                    TomcatServiceBuilder.forClassPath(Future.class, "/io/netty/util/concurrent")
+                                        .serviceName("TomcatServiceTest-JAR-AltRoot")
+                                        .build()
+                                        .decorate(LoggingService::new));
+        }
+    };
 
     @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        super.configureServer(sb);
-        sb.serviceUnder(
-                "/jsp/",
-                TomcatServiceBuilder.forCurrentClassPath("tomcat_service")
-                                    .serviceName(SERVICE_NAME)
-                                    .configurator(s -> Collections.addAll(tomcatServices, s.findServices()))
-                                    .build()
-                                    .decorate(LoggingService::new));
-
-        sb.serviceUnder(
-                "/jar/",
-                TomcatServiceBuilder.forClassPath(Future.class)
-                                    .serviceName("TomcatServiceTest-JAR")
-                                    .build()
-                                    .decorate(LoggingService::new));
-
-        sb.serviceUnder(
-                "/jar_altroot/",
-                TomcatServiceBuilder.forClassPath(Future.class, "/io/netty/util/concurrent")
-                                    .serviceName("TomcatServiceTest-JAR-AltRoot")
-                                    .build()
-                                    .decorate(LoggingService::new));
+    protected ServerRule server() {
+        return server;
     }
 
     @Test
-    public void testConfigurator() throws Exception {
+    public void configurator() throws Exception {
         assertThat(tomcatServices, hasSize(1));
         assertThat(tomcatServices.get(0).getName(), is(SERVICE_NAME));
     }
 
     @Test
-    public void testJarBasedWebApp() throws Exception {
+    public void jarBasedWebApp() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(uri("/jar/io/netty/util/concurrent/Future.class")))) {
+                    new HttpGet(server.uri("/jar/io/netty/util/concurrent/Future.class")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
                            startsWith("application/java"));
@@ -90,9 +106,9 @@ public class TomcatServiceTest extends WebAppContainerTest {
     }
 
     @Test
-    public void testJarBasedWebAppWithAlternativeRoot() throws Exception {
+    public void jarBasedWebAppWithAlternativeRoot() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/jar_altroot/Future.class")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/jar_altroot/Future.class")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
                            startsWith("application/java"));
