@@ -79,6 +79,10 @@ public class HttpHealthCheckedEndpointGroupTest {
                                            "127.0.0.1:" + serverTwo.httpPort()));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
                 .isEqualTo(ImmutableSet.of());
+
+        serverTwo.stop().get();
+        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
+                .isEqualTo(1);
     }
 
     @Test
