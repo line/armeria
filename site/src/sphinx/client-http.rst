@@ -1,7 +1,9 @@
 .. _`com.linecorp.armeria.client.http`: apidocs/index.html?com/linecorp/armeria/client/http/package-summary.html
 
-Using Armeria as an HTTP client
-===============================
+.. _client-http:
+
+Calling an HTTP service
+=======================
 For more information, please refer to the API documentation of the `com.linecorp.armeria.client.http`_ package.
 
 .. code-block:: java
@@ -23,3 +25,8 @@ For more information, please refer to the API documentation of the `com.linecorp
                        .set(HttpHeaderNames.ACCEPT, "application/json"));
 
     AggregatedHttpMessage jsonResponse = httpClient.execute(getJson).aggregate().join();
+
+See also
+--------
+
+- :ref:`client-retrofit`
