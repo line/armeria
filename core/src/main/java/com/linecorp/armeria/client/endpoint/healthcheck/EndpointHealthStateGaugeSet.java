@@ -49,9 +49,9 @@ class EndpointHealthStateGaugeSet implements MetricSet {
     public Map<String, Metric> getMetrics() {
         return ImmutableMap.of(
                 METRIC_NAME_PREFIX + metricName + ".all.count",
-                (Gauge<Integer>) endpointGroup.allServers::size,
+                (Gauge<Integer>) () -> endpointGroup.allServers.size(),
                 METRIC_NAME_PREFIX + metricName + ".healthy.count",
-                (Gauge<Integer>) endpointGroup.endpoints()::size,
+                (Gauge<Integer>) () -> endpointGroup.endpoints().size(),
                 METRIC_NAME_PREFIX + metricName + ".healthy.endpoints",
                 (Gauge<Set<String>>) () -> ImmutableSet.copyOf(endpointGroup.endpoints())
                                                        .stream()
