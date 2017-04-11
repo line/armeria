@@ -84,7 +84,7 @@ public class ArmeriaAutoConfiguration {
             ArmeriaSettings armeriaSettings,
             MetricRegistry metricRegistry,
             Optional<List<HealthChecker>> healthCheckers,
-            Optional<List<ArmeriaServiceInitializer>> armeriaServiceInitializers,
+            Optional<List<ArmeriaServerConfigurator>> armeriaServiceInitializers,
             Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans)
             throws InterruptedException {
@@ -137,7 +137,7 @@ public class ArmeriaAutoConfiguration {
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getMetricsPath())) {
             ObjectMapper objectMapper = new ObjectMapper()
-                    .configure(SerializationFeature.INDENT_OUTPUT, true)
+                    .enable(SerializationFeature.INDENT_OUTPUT)
                     .registerModule(new MetricsModule(TimeUnit.SECONDS,
                                                       TimeUnit.MILLISECONDS,
                                                       true));

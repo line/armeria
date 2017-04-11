@@ -27,14 +27,14 @@ final class MetricNames {
     /**
      * Returns the name of the service metric.
      */
-    public static String serviceMetricName(String serviceName) {
+    static String serviceMetricName(String serviceName) {
         return MetricRegistry.name("server", requireNonNull(serviceName, "serviceName"));
     }
 
     /**
      * Returns the name of the client metric.
      */
-    public static String clientMetricName(String serviceName) {
+    static String clientMetricName(String serviceName) {
         return MetricRegistry.name("client", requireNonNull(serviceName, "serviceName"));
     }
 

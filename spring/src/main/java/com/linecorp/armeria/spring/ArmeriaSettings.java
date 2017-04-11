@@ -26,6 +26,18 @@ import org.springframework.validation.annotation.Validated;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 
+/**
+ * Settings for armeria servers.
+ * <pre>{@code
+ * armeria:
+ *   ports:
+ *   - port: 8080
+ *     protocol: HTTP
+ *   - ip: 127.0.0.1
+ *     port: 8081
+ *     protocol:HTTP
+ * }</pre>
+ */
 @ConfigurationProperties(prefix = "armeria")
 @Validated
 public class ArmeriaSettings {
@@ -35,33 +47,34 @@ public class ArmeriaSettings {
      */
     public static class Port {
         /**
-         * IP address.
+         * IP address to bind to. If not set, will bind to all addresses, e.g. {@code 0.0.0.0}.
          */
         private String ip;
 
         /**
-         * Network interface.
+         * Network interface to bind to. If not set, will bind to the first detected network interface.
          */
         private String iface;
 
         /**
-         * Port that {@link Server} bind to.
+         * Port that {@link Server} binds to.
          */
         private int port;
+
         /**
          * Protocol that will be used in this ip/iface and port.
          */
         private SessionProtocol protocol;
 
         /**
-         * Returns the IP address {@link Server} use.
+         * Returns the IP address {@link Server} uses.
          */
         public String getIp() {
             return ip;
         }
 
         /**
-         * Register an IP address {@link Server} use.
+         * Register an IP address {@link Server} uses.
          */
         public Port setIp(String ip) {
             this.ip = ip;
@@ -124,7 +137,7 @@ public class ArmeriaSettings {
      * The path to serve health check requests on. Should correspond to what is
      * registered in the load balancer.
      */
-    private String healthCheckPath = "/healthcheck";
+    private String healthCheckPath = "/internal/healthcheck";
 
     /**
      * The path to serve thrift service documentation on. Should not be exposed

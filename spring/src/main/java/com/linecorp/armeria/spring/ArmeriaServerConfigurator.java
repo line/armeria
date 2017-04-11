@@ -23,6 +23,6 @@ import com.linecorp.armeria.server.ServerBuilder;
  * to use convenience beans like {@link ThriftServiceRegistrationBean}.
  */
 @FunctionalInterface
-public interface ArmeriaServiceInitializer {
+public interface ArmeriaServerConfigurator {
     void configureServer(ServerBuilder serverBuilder);
 }

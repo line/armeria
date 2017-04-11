@@ -69,11 +69,12 @@ public class MonitoringConfiguration extends MetricsConfigurerAdapter {
     }
 
     private static void configureJvm(MetricRegistry registry) {
-        registerAll("gc", new GarbageCollectorMetricSet(), registry);
-        registerAll("buffers", new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()), registry);
-        registerAll("classloader", new ClassLoadingGaugeSet(), registry);
-        registerAll("memory", new MemoryUsageGaugeSet(), registry);
-        registerAll("threads", new ThreadStatesGaugeSet(), registry);
+        registerAll("jvm.gc", new GarbageCollectorMetricSet(), registry);
+        registerAll("jvm.buffers", new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()),
+                    registry);
+        registerAll("jvm.classloader", new ClassLoadingGaugeSet(), registry);
+        registerAll("jvm.memory", new MemoryUsageGaugeSet(), registry);
+        registerAll("jvm.threads", new ThreadStatesGaugeSet(), registry);
     }
 
     private static void configureGitProperties(MetricRegistry registry) {

@@ -39,9 +39,9 @@ public class ThriftServiceRegistrationBean {
     private Service<?, ?> service;
 
     /**
-     * The url path to register the service at. If not specified, defaults to /thrift.
+     * The url path to register the service at. If not specified, defaults to {@code /api/thrift}.
      */
-    private String path = "/thrift";
+    private String path = "/api/thrift";
 
     /**
      * A service name to use in monitoring. Metrics will be exported prefixed by

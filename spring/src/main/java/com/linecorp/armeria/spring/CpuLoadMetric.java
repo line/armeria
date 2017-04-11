@@ -22,6 +22,7 @@ import com.codahale.metrics.Gauge;
 
 /**
  * A {@link Gauge} for the CPU load average.
+ * Note, this is the CPU load for the entire system, not just this JVM process.
  */
 class CpuLoadMetric implements Gauge<Double> {
     private static final OperatingSystemMXBean operatingSystemMxBean =
