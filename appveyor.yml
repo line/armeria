@@ -10,7 +10,7 @@ build_script:
   - gradlew.bat --no-daemon --stacktrace checkstyle build test
 
 cache:
-  - !!str %USERPROFILE%\.gradle
+  - "%USERPROFILE%\.gradle"
 
 environment:
   matrix:
