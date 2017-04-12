@@ -38,7 +38,8 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
     public void onNext(HttpObject o) {
         if (o instanceof HttpHeaders) {
             final HttpHeaders headers = (HttpHeaders) o;
-            if (headers.status() != null && headers.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+            final HttpStatus status = headers.status();
+            if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                 if (informationals == null) {
                     informationals = new ArrayList<>(2);
                 }
