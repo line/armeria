@@ -16,26 +16,20 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.Objects.requireNonNull;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.util.AbstractListenable;
 
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
  */
-public class DynamicEndpointGroup implements EndpointGroup {
-    private final Set<Consumer<Collection<Endpoint>>> updateListeners = new CopyOnWriteArraySet<>();
+public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
     private volatile List<Endpoint> endpoints = ImmutableList.of();
     private final Lock endpointsLock = new ReentrantLock();
 
@@ -54,7 +48,7 @@ public class DynamicEndpointGroup implements EndpointGroup {
             newEndpointsBuilder.addAll(endpoints);
             newEndpointsBuilder.add(e);
             endpoints = newEndpointsBuilder.build();
-            notifyListeners();
+            notifyListeners(endpoints);
         } finally {
             endpointsLock.unlock();
         }
@@ -69,7 +63,7 @@ public class DynamicEndpointGroup implements EndpointGroup {
             endpoints = endpoints.stream()
                                  .filter(endpoint -> !endpoint.equals(e))
                                  .collect(toImmutableList());
-            notifyListeners();
+            notifyListeners(endpoints);
         } finally {
             endpointsLock.unlock();
         }
@@ -82,36 +76,9 @@ public class DynamicEndpointGroup implements EndpointGroup {
         endpointsLock.lock();
         try {
             this.endpoints = ImmutableList.copyOf(endpoints);
-            notifyListeners();
+            notifyListeners(this.endpoints);
         } finally {
             endpointsLock.unlock();
         }
-    }
-
-    /**
-     * Notify the {@link Endpoint}s changes to listeners.
-     */
-    private void notifyListeners() {
-        List<Endpoint> endpoints = Collections.unmodifiableList(this.endpoints);
-        Set<Consumer<Collection<Endpoint>>> updateListeners = this.updateListeners;
-        for (Consumer<Collection<Endpoint>> listener : updateListeners) {
-            listener.accept(endpoints);
-        }
-    }
-
-    /**
-     * Adds a {@link Consumer} that will be invoked when a {@link EndpointGroup} changes {@link Endpoint} list.
-     */
-    public final void addListener(Consumer<Collection<Endpoint>> listener) {
-        requireNonNull(listener, "listener");
-        updateListeners.add(listener);
-    }
-
-    /**
-     * Remove a listener.
-     */
-    public final void removeListener(Consumer<?> listener) {
-        requireNonNull(listener, "listener");
-        updateListeners.remove(listener);
     }
 }
