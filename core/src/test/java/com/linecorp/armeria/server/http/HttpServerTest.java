@@ -337,6 +337,17 @@ public class HttpServerTest {
                 }
             }.decorate(HttpEncodingService.class));
 
+            sb.serviceAt("/trailers", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                        throws Exception {
+                    res.write(HttpHeaders.of(HttpStatus.OK));
+                    res.write(HttpData.ofAscii("trailers incoming!"));
+                    res.write(HttpHeaders.of(AsciiString.of("foo"), "bar"));
+                    res.close();
+                }
+            });
+
             final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
                     s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
                         @Override
@@ -703,6 +714,15 @@ public class HttpServerTest {
         assertThat(res.headers().get(AsciiString.of("x-custom-header1")), is("custom1"));
         assertThat(res.headers().get(AsciiString.of("x-custom-header2")), is("custom2"));
         assertThat(res.content().toStringUtf8(), is("headers"));
+    }
+
+    @Test(timeout = 10000)
+    public void testTrailers() throws Exception {
+        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/trailers");
+        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+
+        final AggregatedHttpMessage res = f.get();
+        assertThat(res.trailingHeaders().get(AsciiString.of("foo")), is("bar"));
     }
 
     private static void stream(StreamWriter<HttpObject> writer, long size, int chunkSize) {
