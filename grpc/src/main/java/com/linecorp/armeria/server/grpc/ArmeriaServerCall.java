@@ -166,7 +166,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         // Always put compressor, even if it's identity.
         headers.add(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
 
-        String advertisedEncodings = decompressorRegistry.getRawAdvertisedMessageEncodings();
+        String advertisedEncodings = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
         if (!advertisedEncodings.isEmpty()) {
             headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodings);
         }
