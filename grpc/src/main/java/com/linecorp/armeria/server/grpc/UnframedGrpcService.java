@@ -66,14 +66,14 @@ import io.netty.buffer.ByteBuf;
  *     </li>
  * </ul>
  */
-public class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
     private final Map<String, MethodDescriptor<?, ?>> methodsByName;
 
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    public UnframedGrpcService(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+    UnframedGrpcService(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
         super(delegate);
         GrpcService grpcService =
                 delegate.as(GrpcService.class)

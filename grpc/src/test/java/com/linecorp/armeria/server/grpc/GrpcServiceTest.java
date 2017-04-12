@@ -56,7 +56,7 @@ public class GrpcServiceTest {
     @Before
     public void setUp() {
         response = new DefaultHttpResponse();
-        grpcService = new GrpcServiceBuilder()
+        grpcService = (GrpcService) new GrpcServiceBuilder()
                 .addService(mock(TestServiceImplBase.class))
                 .build();
     }

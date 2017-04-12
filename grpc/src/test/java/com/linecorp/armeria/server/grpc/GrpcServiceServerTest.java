@@ -79,8 +79,8 @@ public class GrpcServiceServerTest {
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new TestServiceImpl())
-                    .build()
-                    .decorate(UnframedGrpcService::new));
+                    .enableUnframedRequests(true)
+                    .build());
         }
     };
 
