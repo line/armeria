@@ -26,7 +26,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 final class GrpcRequestUtil {
 
     @Nullable
-    public static String determineMethod(ServiceRequestContext ctx) {
+    static String determineMethod(ServiceRequestContext ctx) {
         // Remove the leading slash of the path and get the fully qualified method name
         String path = ctx.mappedPath();
         if (path.charAt(0) != '/') {
