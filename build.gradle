@@ -206,6 +206,7 @@ configure(javaProjects) {
         testCompile 'junit:junit'
         testCompile 'net.javacrumbs.json-unit:json-unit'
         testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
+        testCompile 'org.awaitility:awaitility'
         testCompile 'org.hamcrest:hamcrest-library'
         testCompile 'org.assertj:assertj-core'
         testCompile 'org.mockito:mockito-core'

@@ -96,6 +96,9 @@ org.apache.zookeeper:
 org.assertj:
   assertj-core: { version: 3.6.2 }
 
+org.awaitility:
+  awaitility: { version: 2.0.0 }
+
 org.dmonix.junit:
   zookeeper-junit: { version: !!str 1.2 }
 
