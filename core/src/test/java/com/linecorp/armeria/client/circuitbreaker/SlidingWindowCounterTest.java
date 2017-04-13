@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -131,9 +132,7 @@ public class SlidingWindowCounterTest {
             thread.join();
         }
 
-        Thread.sleep(Duration.ofMillis(10).toMillis());
-
-        assertThat(counter.onFailure()).isPresent();
+        await().until(() -> assertThat(counter.onFailure()).isPresent());
         assertThat(counter.count()).isEqualTo(new EventCount(success.get(), failure.get()));
     }
 
