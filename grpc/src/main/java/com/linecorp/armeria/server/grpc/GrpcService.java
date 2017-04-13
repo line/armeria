@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.MediaType;
@@ -90,12 +88,12 @@ public final class GrpcService extends AbstractHttpService {
     @Override
     protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) throws Exception {
         if (!verifyContentType(req.headers())) {
-            res.respond(HttpStatus.BAD_REQUEST,
+            res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                         MediaType.PLAIN_TEXT_UTF_8,
                         "Missing or invalid Content-Type header.");
             return;
         }
-        String methodName = determineMethod(ctx);
+        String methodName = GrpcRequestUtil.determineMethod(ctx);
         if (methodName == null) {
             res.respond(HttpStatus.BAD_REQUEST,
                         MediaType.PLAIN_TEXT_UTF_8,
@@ -156,16 +154,6 @@ public final class GrpcService extends AbstractHttpService {
     private boolean verifyContentType(HttpHeaders headers) throws Http2Exception {
         String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
         return contentType != null && isGrpcContentType(contentType);
-    }
-
-    @Nullable
-    private String determineMethod(ServiceRequestContext ctx) throws Http2Exception {
-        // Remove the leading slash of the path and get the fully qualified method name
-        String path = ctx.mappedPath();
-        if (path.charAt(0) != '/') {
-            return null;
-        }
-        return path.substring(1, path.length());
     }
 
     private static boolean isGrpcContentType(String contentType) {

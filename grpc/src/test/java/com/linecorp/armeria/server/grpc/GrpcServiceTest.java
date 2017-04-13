@@ -56,7 +56,7 @@ public class GrpcServiceTest {
     @Before
     public void setUp() {
         response = new DefaultHttpResponse();
-        grpcService = new GrpcServiceBuilder()
+        grpcService = (GrpcService) new GrpcServiceBuilder()
                 .addService(mock(TestServiceImplBase.class))
                 .build();
     }
@@ -68,7 +68,7 @@ public class GrpcServiceTest {
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.BAD_REQUEST)
+                HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                            .set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8"),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
@@ -81,7 +81,7 @@ public class GrpcServiceTest {
                                           .set(HttpHeaderNames.CONTENT_TYPE, "application/json")),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.BAD_REQUEST)
+                HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                            .set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8"),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }

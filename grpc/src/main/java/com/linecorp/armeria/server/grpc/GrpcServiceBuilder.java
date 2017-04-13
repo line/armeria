@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
@@ -48,6 +50,8 @@ public final class GrpcServiceBuilder {
     private int maxInboundMessageSizeBytes = GrpcService.NO_MAX_INBOUND_MESSAGE_SIZE;
 
     private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
+
+    private boolean enableUnframedRequests;
 
     /**
      * Adds a GRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as
@@ -108,16 +112,39 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether the service handles requests not framed using the GRPC wire protocol. Such requests should
+     * only have the serialized message as the request content, and the response content will only have the
+     * serialized response message. Supporting unframed requests can be useful, for example, when migrating an
+     * existing service to GRPC.
+     *
+     * <p>Limitations:
+     * <ul>
+     *     <li>Only unary methods (single request, single response) are supported.</li>
+     *     <li>
+     *         Message compression is not supported.
+     *         {@link com.linecorp.armeria.server.http.encoding.HttpEncodingService} should be used instead for
+     *         transport level encoding.
+     *     </li>
+     * </ul>
+     */
+    public GrpcServiceBuilder enableUnframedRequests(boolean enableUnframedRequests) {
+        this.enableUnframedRequests = enableUnframedRequests;
+        return this;
+    }
+
+    /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link com.linecorp.armeria.server.ServerBuilder}. As GRPC services themselves are mounted at a path that
      * corresponds to their protobuf package, you will almost always want to bind to a prefix, e.g. by using
      * {@link com.linecorp.armeria.server.ServerBuilder#serviceUnder(String, Service)}.
      */
-    public GrpcService build() {
-        return new GrpcService(registryBuilder.build(),
-                               firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
-                               firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
-                               maxOutboundMessageSizeBytes,
-                               maxInboundMessageSizeBytes);
+    public Service<? extends HttpRequest, ? extends HttpResponse> build() {
+        GrpcService grpcService = new GrpcService(
+                registryBuilder.build(),
+                firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
+                firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
+                maxOutboundMessageSizeBytes,
+                maxInboundMessageSizeBytes);
+        return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
     }
 }
