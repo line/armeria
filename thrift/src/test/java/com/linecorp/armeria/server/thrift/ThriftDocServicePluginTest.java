@@ -22,6 +22,7 @@ import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newExcep
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newFieldInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newServiceInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newStructInfo;
+import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -243,5 +244,11 @@ public class ThriftDocServicePluginTest {
 
         final StructInfo fooStruct = newStructInfo(FooStruct.class);
         assertThat(fooStruct).isEqualTo(new StructInfo(FooStruct.class.getName(), fields));
+    }
+
+    @Test
+    public void incompleteStructMetadata() throws Exception {
+        assertThat(toTypeSignature(new FieldValueMetaData(TType.STRUCT)))
+                .isEqualTo(TypeSignature.ofUnresolved("unknown"));
     }
 }
