@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -66,10 +67,10 @@ public class HttpHealthCheckedEndpointGroupTest {
                 HEALTH_CHECK_PATH);
         metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
 
-        Thread.sleep(4000); // Wait until updating server list.
-        assertThat(endpointGroup.endpoints()).containsExactly(
-                Endpoint.of("127.0.0.1", serverOne.httpPort()),
-                Endpoint.of("127.0.0.1", serverTwo.httpPort()));
+        await().until(
+                () -> assertThat(endpointGroup.endpoints()).containsExactly(
+                        Endpoint.of("127.0.0.1", serverOne.httpPort()),
+                        Endpoint.of("127.0.0.1", serverTwo.httpPort())));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.all.count").getValue())
                 .isEqualTo(2);
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
@@ -81,8 +82,10 @@ public class HttpHealthCheckedEndpointGroupTest {
                 .isEqualTo(ImmutableSet.of());
 
         serverTwo.stop().get();
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
-                .isEqualTo(1);
+        await().until(
+                () ->assertThat(
+                        metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
+                        .isEqualTo(1));
     }
 
     @Test
@@ -93,10 +96,12 @@ public class HttpHealthCheckedEndpointGroupTest {
                         Endpoint.of("127.0.0.1", serverOne.httpPort()),
                         Endpoint.of("127.0.0.1", 2345)),
                 HEALTH_CHECK_PATH);
-        Thread.sleep(4000); // Wait until updating server list.
 
         metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
-        assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", serverOne.httpPort()));
+
+        await().until(
+                () -> assertThat(endpointGroup.endpoints())
+                        .containsOnly(Endpoint.of("127.0.0.1", serverOne.httpPort())));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.all.count").getValue())
                 .isEqualTo(2);
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
@@ -116,10 +121,12 @@ public class HttpHealthCheckedEndpointGroupTest {
                         Endpoint.of("127.0.0.1", serverOne.httpPort()),
                         Endpoint.of("127.0.0.1", serverOne.httpPort())),
                 HEALTH_CHECK_PATH);
-        Thread.sleep(4000); // Wait until updating server list.
 
         metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
-        assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", serverOne.httpPort()));
+
+        await().until(
+                () -> assertThat(endpointGroup.endpoints())
+                        .containsOnly(Endpoint.of("127.0.0.1", serverOne.httpPort())));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.all.count").getValue())
                 .isEqualTo(3);
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
