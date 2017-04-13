@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.grpc;
+package com.linecorp.armeria.server.grpc;
 
 import javax.annotation.Nullable;
 
@@ -23,7 +23,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * Utilities for introspecting a GRPC request.
  */
-public final class GrpcRequestUtil {
+final class GrpcRequestUtil {
 
     @Nullable
     public static String determineMethod(ServiceRequestContext ctx) {

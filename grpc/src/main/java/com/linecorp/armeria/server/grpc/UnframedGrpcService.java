@@ -38,7 +38,6 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
-import com.linecorp.armeria.internal.grpc.GrpcRequestUtil;
 import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;

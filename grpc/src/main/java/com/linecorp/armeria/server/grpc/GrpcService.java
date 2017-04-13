@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
-import com.linecorp.armeria.internal.grpc.GrpcRequestUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
