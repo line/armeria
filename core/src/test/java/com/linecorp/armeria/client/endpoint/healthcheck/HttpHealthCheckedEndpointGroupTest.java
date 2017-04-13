@@ -83,7 +83,7 @@ public class HttpHealthCheckedEndpointGroupTest {
 
         serverTwo.stop().get();
         await().until(
-                () ->assertThat(
+                () -> assertThat(
                         metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
                         .isEqualTo(1));
     }
