@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
@@ -329,7 +330,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
                              typeSignature);
     }
 
-    private static TypeSignature toTypeSignature(FieldValueMetaData fieldValueMetaData) {
+    @VisibleForTesting
+    static TypeSignature toTypeSignature(FieldValueMetaData fieldValueMetaData) {
         if (fieldValueMetaData instanceof StructMetaData) {
             return TypeSignature.ofNamed(((StructMetaData) fieldValueMetaData).structClass);
         }
@@ -374,8 +376,14 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
                 return STRING;
         }
 
-        assert fieldValueMetaData.isTypedef();
-        return TypeSignature.ofUnresolved(fieldValueMetaData.getTypedefName());
+        final String unresolvedName;
+        if (fieldValueMetaData.isTypedef()) {
+            unresolvedName = fieldValueMetaData.getTypedefName();
+        } else {
+            unresolvedName = null;
+        }
+
+        return TypeSignature.ofUnresolved(firstNonNull(unresolvedName, "unknown"));
     }
 
     private static FieldRequirement convertRequirement(byte value) {
