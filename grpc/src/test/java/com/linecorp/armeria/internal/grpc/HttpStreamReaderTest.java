@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.internal.grpc;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -33,9 +33,8 @@ import org.mockito.junit.MockitoRule;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.http.HttpData;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
-import com.linecorp.armeria.internal.grpc.ErrorListener;
 
+import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
 
 public class HttpStreamReaderTest {
@@ -46,7 +45,7 @@ public class HttpStreamReaderTest {
     public MockitoRule mocks = MockitoJUnit.rule();
 
     @Mock
-    private ErrorListener errorListener;
+    private StatusListener statusListener;
 
     @Mock
     private ArmeriaMessageDeframer deframer;
@@ -58,7 +57,7 @@ public class HttpStreamReaderTest {
 
     @Before
     public void setUp() {
-        reader = new HttpStreamReader(deframer, errorListener);
+        reader = new HttpStreamReader(DecompressorRegistry.getDefaultInstance(), deframer, statusListener);
     }
 
     @Test
@@ -98,7 +97,7 @@ public class HttpStreamReaderTest {
         reader.onSubscribe(subscription);
         reader.onNext(DATA);
         verify(deframer).deframe(DATA, false);
-        verify(errorListener).onError(Status.INTERNAL);
+        verify(statusListener).onError(Status.INTERNAL);
         verify(deframer).close();
     }
 
@@ -107,7 +106,7 @@ public class HttpStreamReaderTest {
         doThrow(Status.INTERNAL.asRuntimeException())
                 .when(deframer).deframe(isA(HttpData.class), anyBoolean());
         doThrow(new IllegalStateException())
-                .when(errorListener).onError(isA(Status.class));
+                .when(statusListener).onError(isA(Status.class));
         reader.onSubscribe(subscription);
         assertThatThrownBy(() -> reader.onNext(DATA)).isInstanceOf(IllegalStateException.class);
         verify(deframer).close();

@@ -44,7 +44,6 @@ import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.codec.http2.Http2Exception;
 
 /**
@@ -151,7 +150,6 @@ public final class GrpcService extends AbstractHttpService {
                 methodDef.getMethodDescriptor(),
                 compressorRegistry,
                 decompressorRegistry,
-                UnpooledByteBufAllocator.DEFAULT,
                 res,
                 maxInboundMessageSizeBytes,
                 maxOutboundMessageSizeBytes,

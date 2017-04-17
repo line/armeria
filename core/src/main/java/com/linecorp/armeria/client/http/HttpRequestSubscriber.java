@@ -51,6 +51,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private static final Logger logger = LoggerFactory.getLogger(HttpRequestSubscriber.class);
 
     enum State {
+        NEEDS_TO_WRITE_FIRST_HEADER,
         NEEDS_DATA_OR_TRAILING_HEADERS,
         DONE
     }
@@ -65,7 +66,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private final long timeoutMillis;
     private Subscription subscription;
     private ScheduledFuture<?> timeoutFuture;
-    private State state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+    private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
 
     HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
@@ -116,7 +117,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (timeoutMillis > 0) {
             timeoutFuture = eventLoop.schedule(
                     () -> {
-                        if (state != State.DONE) {
+                        if (state == State.NEEDS_TO_WRITE_FIRST_HEADER) {
                             if (reqCtx instanceof AbstractRequestContext) {
                                 ((AbstractRequestContext) reqCtx).setTimedOut();
                             }
@@ -161,6 +162,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         } else {
             write0(firstHeaders, false, true);
         }
+        state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+        cancelTimeout();
     }
 
     @Override

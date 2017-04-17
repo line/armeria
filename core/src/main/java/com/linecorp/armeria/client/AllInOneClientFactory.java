@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -190,6 +191,17 @@ public class AllInOneClientFactory extends NonDecoratingClientFactory {
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
         return clientFactories.get(scheme).newClient(uri, clientType, options);
+    }
+
+    @Override
+    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+        for (ClientFactory factory : clientFactories.values()) {
+            Optional<ClientBuilderParams> params = factory.clientBuilderParams(client);
+            if (params.isPresent()) {
+                return params;
+            }
+        }
+        return Optional.empty();
     }
 
     @Override

@@ -94,10 +94,11 @@ public final class GrpcServiceBuilder {
      * set {@link ServerConfig#defaultMaxRequestLength} and {@link ServerConfig#defaultRequestTimeoutMillis} to
      * very high values and set this to the expected limit of individual messages in the stream.
      */
-    public void setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
+    public GrpcServiceBuilder setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
         checkArgument(maxInboundMessageSizeBytes > 0,
                       "maxInboundMessageSizeBytes must be >0");
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
+        return this;
     }
 
     /**
@@ -105,10 +106,11 @@ public final class GrpcServiceBuilder {
      * This can be a safety valve to prevent overflowing network connections with large messages due to business
      * logic bugs.
      */
-    public void setMaxOutboundMessageSizeBytes(int maxOutboundMessageSizeBytes) {
+    public GrpcServiceBuilder setMaxOutboundMessageSizeBytes(int maxOutboundMessageSizeBytes) {
         checkArgument(maxOutboundMessageSizeBytes > 0,
                       "maxOutboundMessageSizeBytes must be >0");
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
+        return this;
     }
 
     /**

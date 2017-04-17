@@ -62,6 +62,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.http.HttpData;
 
 import io.grpc.Codec;
+import io.grpc.Codec.Identity;
 import io.grpc.Decompressor;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
@@ -164,12 +165,13 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     private final Listener listener;
-    private final Decompressor decompressor;
     private final int maxMessageSizeBytes;
     private final ByteBufAllocator alloc;
 
     private State state = State.HEADER;
     private int requiredLength = HEADER_LENGTH;
+    private Decompressor decompressor = Identity.NONE;
+
     private boolean compressedFlag;
     private boolean endOfStream;
     private CompositeByteBuf nextFrame;
@@ -177,15 +179,14 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private long pendingDeliveries;
     private boolean deliveryStalled = true;
     private boolean inDelivery;
+    private boolean startedDeframing;
 
     public ArmeriaMessageDeframer(Listener listener,
-                                  Decompressor decompressor,
                                   int maxMessageSizeBytes,
                                   ByteBufAllocator alloc) {
-        this.listener = listener;
-        this.decompressor = decompressor;
+        this.listener = requireNonNull(listener, "listener");
         this.maxMessageSizeBytes = maxMessageSizeBytes;
-        this.alloc = alloc;
+        this.alloc = requireNonNull(alloc, "alloc");
 
         unprocessed = alloc.compositeBuffer();
     }
@@ -230,6 +231,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         checkNotClosed();
         checkState(!this.endOfStream, "Past end of stream");
 
+        startedDeframing = true;
+
         if (!data.isEmpty()) {
             ByteBuf buf = alloc.buffer(data.length());
             buf.writeBytes(data.array(), data.offset(), data.length());
@@ -265,6 +268,12 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      */
     public boolean isClosed() {
         return unprocessed == null;
+    }
+
+    public ArmeriaMessageDeframer decompressor(Decompressor decompressor) {
+        checkState(!startedDeframing, "Deframing has already started, cannot change decompressor mid-stream.");
+        this.decompressor = decompressor;
+        return this;
     }
 
     /**
@@ -376,9 +385,10 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         // Update the required length to include the length of the frame.
         requiredLength = nextFrame.readInt();
         if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
-            throw Status.INTERNAL.withDescription(String.format("%s: Frame size %d exceeds maximum: %d. ",
-                                                                DEBUG_STRING, requiredLength,
-                                                                maxMessageSizeBytes)).asRuntimeException();
+            throw Status.RESOURCE_EXHAUSTED.withDescription(
+                    String.format("%s: Frame size %d exceeds maximum: %d. ",
+                                  DEBUG_STRING, requiredLength,
+                                  maxMessageSizeBytes)).asRuntimeException();
         }
 
         // Continue reading the frame body.

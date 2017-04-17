@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.util.Optional;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -244,6 +245,11 @@ public final class Clients {
             if (handler instanceof ClientBuilderParams) {
                 return (ClientBuilderParams) handler;
             }
+        }
+
+        Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        if (params.isPresent()) {
+            return params.get();
         }
 
         throw new IllegalArgumentException("derivation not supported by: " + client.getClass().getName());

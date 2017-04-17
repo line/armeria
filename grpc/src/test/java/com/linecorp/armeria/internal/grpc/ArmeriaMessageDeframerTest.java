@@ -65,9 +65,9 @@ public class ArmeriaMessageDeframerTest {
     @Before
     public void setUp() {
         deframer = new ArmeriaMessageDeframer(listener,
-                                              new Gzip(),
                                               MAX_MESSAGE_SIZE,
-                                              UnpooledByteBufAllocator.DEFAULT);
+                                              UnpooledByteBufAllocator.DEFAULT)
+                .decompressor(new Gzip());
     }
 
     @After

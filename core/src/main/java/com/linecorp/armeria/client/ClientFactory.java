@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import java.net.URI;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -121,6 +122,14 @@ public interface ClientFactory extends AutoCloseable {
      * @param options the {@link ClientOptions}
      */
     <T> T newClient(URI uri, Class<T> clientType, ClientOptions options);
+
+    /**
+     * Returns the {@link ClientBuilderParams} held in {@code client}. This is used when creating a new derived
+     * {@link Client} which inherits {@link ClientBuilderParams} from {@code client}. If this
+     * {@link ClientFactory} does not know how to handle the {@link ClientBuilderParams} for the provided
+     * {@code client}, it should return {@link Optional#empty()}.
+     */
+    <T> Optional<ClientBuilderParams> clientBuilderParams(T client);
 
     /**
      * Closes all clients managed by this factory and shuts down the {@link EventLoopGroup}

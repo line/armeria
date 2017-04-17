@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
 import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
@@ -167,20 +169,12 @@ public class GrpcServiceServerTest {
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // TODO(anuraag): Replace with an actual grpc client after armeria supports one.
     @Test
     public void framed() throws Exception {
-        HttpClient client = HttpClientFactory.DEFAULT
-                .newClient("none+" + server.httpUri("/"),
-                           HttpClient.class);
-        AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               TestServiceGrpc.METHOD_UNARY_CALL.getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE,
-                                GrpcSerializationFormats.PROTO.mediaType().toString()),
-                GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
-        assertThat(response.content().array())
-                .containsExactly(GrpcTestUtil.uncompressedResponseBytes());
+        TestServiceBlockingStub stub = Clients.newClient(
+                server.httpUri(GrpcSerializationFormats.PROTO, "/"),
+                TestServiceBlockingStub.class);
+        assertThat(stub.unaryCall(GrpcTestUtil.REQUEST_MESSAGE)).isEqualTo(GrpcTestUtil.RESPONSE_MESSAGE);
     }
 
 }

@@ -14,13 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.grpc;
-
-import io.grpc.Status;
-
 /**
- * A listener of GRPC error {@link Status}s, to allow, for example, serializing the error to the transport.
+ * An armeria client that uses the GRPC wire protocol.
  */
-public interface ErrorListener {
-    void onError(Status status);
-}
+package com.linecorp.armeria.client.grpc;
