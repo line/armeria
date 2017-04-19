@@ -515,8 +515,8 @@ configure(javaProjects) {
 
                             // Write the elements required by OSSRH.
                             name currentArtifactId
-                            description "Asynchronous RPC/API client/server library built on top of Java 8, " +
-                                    "Netty 4.1, HTTP/2, and Thrift (${currentArtifactId})"
+                            description "Asynchronous HTTP/2 RPC/REST client/server library built on top of " +
+                                    "Java 8, Netty, Thrift and GRPC (${currentArtifactId})"
                             url 'http://line.github.io/armeria/'
                             licenses {
                                 license {

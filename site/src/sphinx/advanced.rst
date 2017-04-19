@@ -1,3 +1,5 @@
+.. _advanced-index:
+
 Advanced topics
 ===============
 
@@ -7,3 +9,7 @@ Advanced topics
     advanced-logging
     advanced-structured-logging
     advanced-structured-logging-kafka
+    advanced-circuitbreaker
+    advanced-retry
+    advanced-zipkin
+    advanced-zookeeper

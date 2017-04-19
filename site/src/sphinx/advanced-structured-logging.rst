@@ -2,6 +2,8 @@
 .. _`RequestLogAvailability`: apidocs/index.html?com/linecorp/armeria/common/logging/RequestLogAvailability.html
 .. _`RequestContext`: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
 
+.. _advanced-structured-logging:
+
 Structured logging
 ==================
 Although traditional logging is a useful tool to diagnose the behavior of an application, it has its own

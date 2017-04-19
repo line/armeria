@@ -1,3 +1,5 @@
+.. _setup-gradle:
+
 Setting up a project with Gradle
 ================================
 
@@ -19,6 +21,7 @@ You might want to use the following  ``build.gradle`` as a starting point if you
 
     dependencies {
         ['armeria',
+         'armeria-grpc',
          'armeria-jetty',
          'armeria-kafka',
          'armeria-logback',

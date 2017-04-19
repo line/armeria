@@ -1,9 +1,14 @@
-Sending custom HTTP headers with a Thrift call
-==============================================
-To send a custom HTTP header such as authentication token with a Thrift call, you can:
+.. _client-custom-http-headers:
 
-- use the ``Clients.withHttpHeaders()`` method or
-- use the ``ClientOption.HTTP_HEADERS`` option.
+Sending custom HTTP headers
+===========================
+When send an RPC request, it is sometimes required to send HTTP headers with it, such as authentication token.
+There are four ways to customize the HTTP headers of your RPC request:
+
+- Using the ``Clients.withHttpHeaders()`` method
+- Using the ``ClientOption.HTTP_HEADERS`` option
+- Using the ``ClientBuilder.decorator()`` method
+- Using a derived client
 
 Using ``Clients.withHttpHeaders()``
 -----------------------------------
@@ -46,7 +51,8 @@ You can also nest ``withHttpHeader(s)``. The following example will send both ``
 
 Using ``ClientOption.HTTP_HEADERS``
 -----------------------------------
-If you have a custom HTTP header whose value does not change often, you can use ``ClientOption.HTTP_HEADERS``:
+If you have a custom HTTP header whose value does not change often, you can use ``ClientOption.HTTP_HEADERS``
+which is more efficient:
 
 .. code-block:: java
 
@@ -62,6 +68,28 @@ If you have a custom HTTP header whose value does not change often, you can use 
     HelloService.Iface client = cb.build(HelloService.Iface.class);
     client.hello("authorized personnel");
 
+Using ``ClientBuilder.decorator()``
+-----------------------------------
+If you want more freedom on how you manipulate the request headers, use a decorator:
+
+.. code-block:: java
+
+    ClientBuilder cb = new ClientBuilder("tbinary+http://example.com/hello");
+
+    // Add a decorator that inserts the custom header.
+    cb.decorator(HttpRequest.class, HttpResponse.class,
+                 (delegate, ctx, req) -> { // See DecoratingClientFunction.
+                     req.headers().set(AUTHORIZATION, credential);
+                     return delegate.execute(ctx, req);
+                 });
+
+    HelloService.Iface client = cb.build(HelloService.Iface.class);
+    client.hello("authorized personnel");
+
+Note that this method is as efficient as the ``ClientOption.HTTP_HEADERS`` option. Choose whichever you prefer.
+
+Using a derived client
+----------------------
 Although not as simple as using ``withHttpHeaders()``, you can create a derived client to add more custom
 headers to an existing client:
 

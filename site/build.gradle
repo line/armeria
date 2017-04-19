@@ -35,8 +35,10 @@ task javadoc(type: Javadoc,
              description: 'Generates Javadoc API documentation for the main source code.') {
 
     destinationDir = project.file("${project.buildDir}/site/apidocs")
-    publishedJavaProjects.each { source it.sourceSets.main.java.srcDirs }
-    classpath = publishedJavaProjects.inject(project.files()) { result, project ->
+
+    def javadocProjects = publishedJavaProjects - backwardCompatProjects
+    javadocProjects.each { source it.sourceSets.main.java.srcDirs }
+    classpath = javadocProjects.inject(project.files()) { result, project ->
         result.from(project.sourceSets.main.runtimeClasspath)
     }
 

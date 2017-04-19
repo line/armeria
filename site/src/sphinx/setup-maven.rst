@@ -1,5 +1,7 @@
 .. _`Maven Central Repository`: http://search.maven.org/
 
+.. _setup-maven:
+
 Setting up a project with Maven
 ===============================
 
@@ -24,6 +26,11 @@ Armeria is distributed via `Maven Central Repository`_. Add the following depend
         <dependency>
           <groupId>com.linecorp.armeria</groupId>
           <artifactId>armeria</artifactId>
+          <version>${armeria.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-grpc</artifactId>
           <version>${armeria.version}</version>
         </dependency>
         <dependency>

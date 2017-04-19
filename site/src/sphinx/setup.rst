@@ -1,3 +1,5 @@
+.. _setup:
+
 Setting up a project
 ====================
 
