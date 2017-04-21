@@ -70,8 +70,9 @@ public final class ConcurrencyLimitingHttpClient
 
     @Override
     protected Deferred<HttpResponse> defer(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final DeferredHttpResponse res = new DeferredHttpResponse();
         return new Deferred<HttpResponse>() {
+            private final DeferredHttpResponse res = new DeferredHttpResponse();
+
             @Override
             public HttpResponse response() {
                 return res;

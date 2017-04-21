@@ -22,6 +22,8 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.util.Exceptions;
@@ -48,7 +50,7 @@ public class DefaultRpcResponse extends CompletableFuture<Object> implements Rpc
      *
      * @param result the result or an RPC call
      */
-    public DefaultRpcResponse(Object result) {
+    public DefaultRpcResponse(@Nullable Object result) {
         complete(result);
     }
 

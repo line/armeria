@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.http.auth;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -25,6 +26,7 @@ import java.util.Base64.Encoder;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -39,6 +41,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -48,7 +51,7 @@ import com.linecorp.armeria.server.http.HttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-public class AuthServiceTest {
+public class HttpAuthServiceTest {
 
     private static final Encoder BASE64_ENCODER = Base64.getEncoder();
 
@@ -56,83 +59,84 @@ public class AuthServiceTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            // Auth with arbitrary authorizer
-            Authorizer<HttpRequest> authorizer = (ctx, req) ->
-                    CompletableFuture.supplyAsync(
-                            () -> "unit test".equals(req.headers().get(HttpHeaderNames.AUTHORIZATION)));
-            sb.serviceAt(
-                    "/",
-                    new AbstractHttpService() {
-                        @Override
-                        protected void doGet(
-                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                            res.respond(HttpStatus.OK);
-                        }
-                    }.decorate(HttpAuthService.newDecorator(authorizer))
-                     .decorate(LoggingService::new));
-
-            // Auth with HTTP basic
-            final Map<String, String> usernameToPassword = ImmutableMap.of("brown", "cony", "pangyo", "choco");
-            Authorizer<BasicToken> httpBasicAuthorizer = (ctx, token) -> {
-                String username = token.username();
-                String password = token.password();
-                return CompletableFuture.completedFuture(password.equals(usernameToPassword.get(username)));
-            };
-            sb.serviceAt(
-                    "/basic",
-                    new AbstractHttpService() {
-                        @Override
-                        protected void doGet(
-                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                            res.respond(HttpStatus.OK);
-                        }
-                    }.decorate(new HttpAuthServiceBuilder().addBasicAuth(httpBasicAuthorizer).newDecorator())
-                     .decorate(LoggingService::new));
-
-            // Auth with OAuth1a
-            Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
-                    CompletableFuture.completedFuture("dummy_signature".equals(token.signature()));
-            sb.serviceAt(
-                    "/oauth1a",
-                    new AbstractHttpService() {
-                        @Override
-                        protected void doGet(
-                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                            res.respond(HttpStatus.OK);
-                        }
-                    }.decorate(new HttpAuthServiceBuilder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
-                     .decorate(LoggingService::new));
-
-            // Auth with OAuth2
-            Authorizer<OAuth2Token> oAuth2aAuthorizer = (ctx, token) ->
-                    CompletableFuture.completedFuture("dummy_oauth2_token".equals(token.accessToken()));
-            sb.serviceAt(
-                    "/oauth2",
-                    new AbstractHttpService() {
-                        @Override
-                        protected void doGet(
-                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                            res.respond(HttpStatus.OK);
-                        }
-                    }.decorate(new HttpAuthServiceBuilder().addOAuth2(oAuth2aAuthorizer).newDecorator())
-                     .decorate(LoggingService::new));
-
-            // Auth with all predicates above!
-            HttpService compositeService = new AbstractHttpService() {
+            final HttpService ok = new AbstractHttpService() {
                 @Override
                 protected void doGet(
                         ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.respond(HttpStatus.OK);
                 }
             };
-            HttpAuthService compositeAuth = new HttpAuthServiceBuilder()
-                    .add(authorizer)
-                    .addBasicAuth(httpBasicAuthorizer)
-                    .addOAuth1a(oAuth1aAuthorizer)
-                    .addOAuth2(oAuth2aAuthorizer)
-                    .build(compositeService);
+
+            // Auth with arbitrary authorizer
+            Authorizer<HttpRequest> authorizer = (ctx, req) ->
+                    CompletableFuture.supplyAsync(
+                            () -> "unit test".equals(req.headers().get(HttpHeaderNames.AUTHORIZATION)));
             sb.serviceAt(
-                    "/composite", compositeAuth.decorate(LoggingService::new));
+                    "/",
+                    ok.decorate(HttpAuthService.newDecorator(authorizer))
+                      .decorate(LoggingService::new));
+
+            // Auth with HTTP basic
+            final Map<String, String> usernameToPassword = ImmutableMap.of("brown", "cony", "pangyo", "choco");
+            Authorizer<BasicToken> httpBasicAuthorizer = (ctx, token) -> {
+                String username = token.username();
+                String password = token.password();
+                return completedFuture(password.equals(usernameToPassword.get(username)));
+            };
+            sb.serviceAt(
+                    "/basic",
+                    ok.decorate(new HttpAuthServiceBuilder().addBasicAuth(httpBasicAuthorizer).newDecorator())
+                      .decorate(LoggingService::new));
+
+            // Auth with OAuth1a
+            Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
+                    completedFuture("dummy_signature".equals(token.signature()));
+            sb.serviceAt(
+                    "/oauth1a",
+                    ok.decorate(new HttpAuthServiceBuilder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
+                      .decorate(LoggingService::new));
+
+            // Auth with OAuth2
+            Authorizer<OAuth2Token> oAuth2aAuthorizer = (ctx, token) ->
+                    completedFuture("dummy_oauth2_token".equals(token.accessToken()));
+            sb.serviceAt(
+                    "/oauth2",
+                    ok.decorate(new HttpAuthServiceBuilder().addOAuth2(oAuth2aAuthorizer).newDecorator())
+                      .decorate(LoggingService::new));
+
+            // Auth with all predicates above!
+            sb.serviceAt(
+                    "/composite",
+                    new HttpAuthServiceBuilder().add(authorizer)
+                                                .addBasicAuth(httpBasicAuthorizer)
+                                                .addOAuth1a(oAuth1aAuthorizer)
+                                                .addOAuth2(oAuth2aAuthorizer)
+                                                .build(ok)
+                                                .decorate(LoggingService::new));
+
+            // Authorizer fails with an exception.
+            sb.serviceAt(
+                    "/authorizer_exception",
+                    ok.decorate(new HttpAuthServiceBuilder().add((ctx, data) -> {
+                        throw new RuntimeException("bug!");
+                    }).newDecorator())
+                      .decorate(LoggingService::new));
+
+            // AuthService fails when building a success message.
+            sb.serviceAt(
+                    "/on_success_exception",
+                    ok.decorate(service -> new HttpAuthService(service) {
+                        @Override
+                        protected CompletionStage<Boolean> authorize(HttpRequest request,
+                                                                     ServiceRequestContext ctx) {
+                            return completedFuture(true);
+                        }
+
+                        @Override
+                        protected HttpResponse onSuccess(ServiceRequestContext ctx, HttpRequest req) {
+                            throw new RuntimeException("bug!");
+                        }
+                    }).decorate(LoggingService::new));
         }
     };
 
@@ -254,6 +258,24 @@ public class AuthServiceTest {
             try (CloseableHttpResponse res = hc.execute(
                     basicGetRequest("/composite", BasicToken.of("choco", "pangyo")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 401 Unauthorized"));
+            }
+        }
+    }
+
+    @Test
+    public void testAuthorizerException() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/authorizer_exception")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 401 Unauthorized"));
+            }
+        }
+    }
+
+    @Test
+    public void testOnSuccessException() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/on_success_exception")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
             }
         }
     }
