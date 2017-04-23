@@ -37,6 +37,8 @@ final class Deserializers {
                 return (T) Byte.valueOf(str);
             } else if (clazz == Short.TYPE) {
                 return (T) Short.valueOf(str);
+            } else if (clazz == Boolean.TYPE) {
+                return (T) Boolean.valueOf(str);
             } else if (clazz == Integer.TYPE) {
                 return (T) Integer.valueOf(str);
             } else if (clazz == Long.TYPE) {
