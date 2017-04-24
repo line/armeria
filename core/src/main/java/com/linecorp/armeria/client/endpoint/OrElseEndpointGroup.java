@@ -22,7 +22,6 @@ import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
-import com.linecorp.armeria.common.util.Listenable;
 
 final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
     private final EndpointGroup first;
@@ -31,16 +30,8 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
     OrElseEndpointGroup(EndpointGroup first, EndpointGroup second) {
         this.first = requireNonNull(first, "first");
         this.second = requireNonNull(second, "second");
-        if (first instanceof Listenable) {
-            @SuppressWarnings("unchecked")
-            Listenable<List<Endpoint>> listenable = (Listenable<List<Endpoint>>) first;
-            listenable.addListener(unused -> notifyListeners(endpoints()));
-        }
-        if (second instanceof Listenable) {
-            @SuppressWarnings("unchecked")
-            Listenable<List<Endpoint>> listenable = (Listenable<List<Endpoint>>) second;
-            listenable.addListener(unused -> notifyListeners(endpoints()));
-        }
+        first.addListener(unused -> notifyListeners(endpoints()));
+        second.addListener(unused -> notifyListeners(endpoints()));
     }
 
     @Override
