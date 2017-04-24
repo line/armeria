@@ -225,6 +225,12 @@ public class HttpServiceTest {
         public String returnString(@PathParam("var") String var) {
             return var;
         }
+
+        @Get
+        @Path("/boolean/{var}")
+        public String returnBoolean(@PathParam("var") boolean var) {
+            return Boolean.toString(var);
+        }
     }
 
     @BeforeClass
@@ -350,6 +356,10 @@ public class HttpServiceTest {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic3/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("String: blah"));
+            }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic3/boolean/true")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[true]"));
             }
             // Run case 7 but illegal parameter.
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic3/int/fourty-two")))) {
