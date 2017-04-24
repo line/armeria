@@ -20,6 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -167,6 +170,39 @@ public final class Exceptions {
         requireNonNull(exception, "exception");
         exception.setStackTrace(EMPTY_STACK_TRACE);
         return exception;
+    }
+
+    /**
+     * Throws the specified exception violating the {@code throws} clause of the enclosing method.
+     * This method is useful when you need to rethrow a checked exception in {@link Function}, {@link Consumer},
+     * {@link Supplier} and {@link Runnable}, only if you are sure that the rethrown exception will be handled
+     * as a {@link Throwable} or an {@link Exception}. For example:
+     * <pre>{@code
+     * CompletableFuture.supplyAsync(() -> {
+     *     try (FileInputStream fin = new FileInputStream(...)) {
+     *         ....
+     *         return someValue;
+     *     } catch (IOException e) {
+     *         // 'throw e;' won't work because Runnable.run() does not allow any checked exceptions.
+     *         return Exceptions.throwUnsafely(e);
+     *     }
+     * }).exceptionally(CompletionActions::log);
+     * }</pre>
+     *
+     * @return This method never returns because it always throws an exception. However, combined with an
+     *         arbitrary return clause, you can terminate any non-void function with a single statement.
+     *         e.g. {@code return Exceptions.throwUnsafely(...);} vs.
+     *              {@code Exceptions.throwUnsafely(...); return null;}
+     */
+    public static <T> T throwUnsafely(Throwable cause) {
+        doThrowUnsafely(requireNonNull(cause, "cause"));
+        return null;
+    }
+
+    // This black magic causes the Java compiler to believe E is an unchecked exception type.
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void doThrowUnsafely(Throwable cause) throws E {
+        throw (E) cause;
     }
 
     /**

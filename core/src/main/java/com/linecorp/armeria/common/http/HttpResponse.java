@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.common.http;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
@@ -34,6 +37,35 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse of(Publisher<? extends HttpObject> publisher) {
         return new PublisherBasedHttpResponse(publisher);
+    }
+
+    /**
+     * Creates a new failed instance.
+     */
+    static HttpResponse ofFailed(Throwable cause) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.close(cause);
+        return res;
+    }
+
+    /**
+     * Creates a new instance that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
+     * closed with the same cause as well.
+     */
+    static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
+        requireNonNull(stage, "stage");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        stage.whenComplete((delegate, cause) -> {
+            if (cause != null) {
+                res.close(cause);
+            } else if (delegate == null) {
+                res.close(new NullPointerException("delegate stage produced a null response: " + stage));
+            } else {
+                res.delegate(delegate);
+            }
+        });
+        return res;
     }
 
     @Override
