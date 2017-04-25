@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -112,6 +113,7 @@ public class ArmeriaServerCallTest {
                 ctx);
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
+        when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
     }
 
     @Test

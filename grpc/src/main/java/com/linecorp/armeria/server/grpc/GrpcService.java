@@ -24,6 +24,8 @@ import java.util.List;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -93,6 +95,10 @@ public final class GrpcService extends AbstractHttpService {
                         "Missing or invalid Content-Type header.");
             return;
         }
+
+        // Currently only support one format.
+        ctx.logBuilder().serializationFormat(GrpcSerializationFormats.PROTO);
+
         String methodName = GrpcRequestUtil.determineMethod(ctx);
         if (methodName == null) {
             res.respond(HttpStatus.BAD_REQUEST,
@@ -110,6 +116,14 @@ public final class GrpcService extends AbstractHttpService {
             res.close();
             return;
         }
+
+        // We don't actually use the RpcRequest for request processing since it doesn't fit well with streaming.
+        // We still populate it with a reasonable method name for use in logging. The service type is currently
+        // arbitrarily set as Grpc doesn't use Class<?> to represent services - if this becomes a problem, we
+        // would need to refactor it to take a Object instead.
+        RpcRequest rpcRequest = RpcRequest.of(
+                GrpcService.class, method.getMethodDescriptor().getFullMethodName());
+        ctx.logBuilder().requestContent(rpcRequest, null);
 
         String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
         if (timeoutHeader != null) {
