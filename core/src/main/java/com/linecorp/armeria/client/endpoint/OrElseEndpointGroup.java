@@ -21,14 +21,17 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.util.AbstractListenable;
 
-final class OrElseEndpointGroup implements EndpointGroup {
+final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
     private final EndpointGroup first;
     private final EndpointGroup second;
 
     OrElseEndpointGroup(EndpointGroup first, EndpointGroup second) {
         this.first = requireNonNull(first, "first");
         this.second = requireNonNull(second, "second");
+        first.addListener(unused -> notifyListeners(endpoints()));
+        second.addListener(unused -> notifyListeners(endpoints()));
     }
 
     @Override
