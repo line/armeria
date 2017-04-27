@@ -16,12 +16,18 @@
 package com.linecorp.armeria.client.http.retrofit2;
 
 import java.io.IOException;
-import java.net.URL;
+import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 
 import com.linecorp.armeria.client.http.HttpClient;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
@@ -38,23 +44,43 @@ import okio.Buffer;
 /**
  * A {@link Call.Factory} that creates a {@link Call} instance for {@link HttpClient}.
  */
-public class ArmeriaCallFactory implements Call.Factory {
+final class ArmeriaCallFactory implements Call.Factory {
 
-    private final HttpClient httpClient;
+    private final Map<String, HttpClient> httpClients = new ConcurrentHashMap<>();
+    private final HttpClient baseHttpClient;
+    private final Function<String, HttpClient> newClientFunction;
+    private final String groupPrefix;
+    private final String baseAuthority;
 
-    /**
-     * Creates a {@link Call.Factory} using the specified {@link HttpClient} instance.
-     *
-     * @param httpClient The {@link HttpClient} instance to be used.
-     */
-    public ArmeriaCallFactory(HttpClient httpClient) {
-        this.httpClient = httpClient;
+    ArmeriaCallFactory(HttpClient baseHttpClient,
+                       Function<String, HttpClient> newClientFunction,
+                       String groupPrefix) {
+        this.baseHttpClient = baseHttpClient;
+        this.newClientFunction = newClientFunction;
+        this.groupPrefix = groupPrefix;
+        baseAuthority = baseHttpClient.uri().getAuthority();
+        httpClients.put(baseAuthority, baseHttpClient);
     }
 
     @Override
     public Call newCall(Request request) {
         return new ArmeriaCall(this, request);
     }
+
+    private boolean isGroup(String authority) {
+        return authority.startsWith(groupPrefix);
+    }
+
+    private HttpClient getHttpClient(String authority, String sessionProtocol) {
+        return httpClients.computeIfAbsent(authority, key -> {
+            final String finalAuthority = isGroup(key) ?
+                                          key.replaceFirst(groupPrefix, "group:") : key;
+            final String uriText = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(sessionProtocol))
+                                         .uriText() + "://" + finalAuthority;
+            return newClientFunction.apply(uriText);
+        });
+    }
+
 
     static class ArmeriaCall implements Call {
 
@@ -79,35 +105,36 @@ public class ArmeriaCallFactory implements Call.Factory {
             this.request = request;
         }
 
-        private static HttpResponse doCall(HttpClient httpClient, Request request) {
-            URL url = request.url().url();
-            StringBuilder uriBuilder = new StringBuilder(url.getPath());
-            if (url.getQuery() != null) {
-                uriBuilder.append('?').append(url.getQuery());
+        private static HttpResponse doCall(ArmeriaCallFactory callFactory, Request request) {
+            URI uri = request.url().uri();
+            HttpClient httpClient = callFactory.getHttpClient(uri.getAuthority(), uri.getScheme());
+            StringBuilder uriBuilder = new StringBuilder(uri.getPath());
+            if (uri.getQuery() != null) {
+                uriBuilder.append('?').append(uri.getQuery());
             }
-            String uri = uriBuilder.toString();
+            final String uriString = uriBuilder.toString();
             final HttpHeaders headers;
             switch (request.method()) {
                 case "GET":
-                    headers = HttpHeaders.of(HttpMethod.GET, uri);
+                    headers = HttpHeaders.of(HttpMethod.GET, uriString);
                     break;
                 case "HEAD":
-                    headers = HttpHeaders.of(HttpMethod.HEAD, uri);
+                    headers = HttpHeaders.of(HttpMethod.HEAD, uriString);
                     break;
                 case "POST":
-                    headers = HttpHeaders.of(HttpMethod.POST, uri);
+                    headers = HttpHeaders.of(HttpMethod.POST, uriString);
                     break;
                 case "DELETE":
-                    headers = HttpHeaders.of(HttpMethod.DELETE, uri);
+                    headers = HttpHeaders.of(HttpMethod.DELETE, uriString);
                     break;
                 case "PUT":
-                    headers = HttpHeaders.of(HttpMethod.PUT, uri);
+                    headers = HttpHeaders.of(HttpMethod.PUT, uriString);
                     break;
                 case "PATCH":
-                    headers = HttpHeaders.of(HttpMethod.PATCH, uri);
+                    headers = HttpHeaders.of(HttpMethod.PATCH, uriString);
                     break;
                 case "OPTIONS":
-                    headers = HttpHeaders.of(HttpMethod.OPTIONS, uri);
+                    headers = HttpHeaders.of(HttpMethod.OPTIONS, uriString);
                     break;
                 default:
                     throw new IllegalArgumentException("Invalid HTTP method:" + request.method());
@@ -143,12 +170,12 @@ public class ArmeriaCallFactory implements Call.Factory {
                 throw new IllegalStateException("executed already");
             }
             executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
-            httpResponse = doCall(callFactory.httpClient, request);
+            httpResponse = doCall(callFactory, request);
         }
 
         @Override
         public Response execute() throws IOException {
-            CompletableCallback completableCallback = new CompletableCallback();
+            final CompletableCallback completableCallback = new CompletableCallback();
             enqueue(completableCallback);
             try {
                 return completableCallback.join();

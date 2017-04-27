@@ -8,6 +8,7 @@ import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.ROU
 import static com.linecorp.armeria.common.SerializationFormat.NONE;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,7 +29,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -57,7 +59,9 @@ import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.Headers;
 import retrofit2.http.POST;
+import retrofit2.http.Path;
 import retrofit2.http.Query;
+import retrofit2.http.Url;
 
 public class ArmeriaCallFactoryTest {
     public static class Pojo {
@@ -99,6 +103,7 @@ public class ArmeriaCallFactoryTest {
     }
 
     interface Service {
+
         @GET("/pojo")
         CompletableFuture<Pojo> pojo();
 
@@ -122,6 +127,15 @@ public class ArmeriaCallFactoryTest {
 
         @POST("/postCustomContentType")
         CompletableFuture<Response<Void>> postCustomContentType(@Header("Content-Type") String contentType);
+
+        @GET
+        CompletableFuture<Pojo> fullUrl(@Url String url);
+
+        @GET("pojo")
+        CompletableFuture<Pojo> pojoNotRoot();
+
+        @GET("{path}")
+        CompletableFuture<Pojo> customPath(@Path("path") String path);
     }
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -131,11 +145,19 @@ public class ArmeriaCallFactoryTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.serviceAt("/pojo", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx,
+                                     HttpRequest req, HttpResponseWriter res) throws Exception {
+                    res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                "{\"name\":\"Cony\", \"age\":26}");
+                }
+            })
+              .serviceAt("/nest/pojo", new AbstractHttpService() {
                   @Override
                   protected void doGet(ServiceRequestContext ctx,
                                        HttpRequest req, HttpResponseWriter res) throws Exception {
                       res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                  "{\"name\":\"Cony\", \"age\":26}");
+                                  "{\"name\":\"Leonard\", \"age\":21}");
                   }
               })
               .serviceAt("/pojos", new AbstractHttpService() {
@@ -232,16 +254,32 @@ public class ArmeriaCallFactoryTest {
 
     @Before
     public void setUp() {
-        service = ArmeriaRetrofit.builder(Clients.newClient(ClientFactory.DEFAULT,
-                                                            server.uri(NONE, "/"), HttpClient.class))
-                                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
-                                 .build()
-                                 .create(Service.class);
+        service = new ArmeriaRetrofitBuilder(server.uri(NONE, "/"))
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
     }
 
     @Test
     public void pojo() throws Exception {
+        Pojo pojo = service.pojo().get();
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void pojoNotRoot() throws Exception {
+        Pojo pojo = service.pojoNotRoot().get();
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void pojoUsingHttpClient() throws Exception {
+        Service service = new ArmeriaRetrofitBuilder(Clients.newClient(server.uri(NONE, "/"), HttpClient.class))
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
         Pojo pojo = service.pojo().get();
         assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
     }
@@ -332,19 +370,140 @@ public class ArmeriaCallFactoryTest {
         EndpointGroupRegistry.register("foo",
                                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", server.httpPort())),
                                        ROUND_ROBIN);
-        Service service = ArmeriaRetrofit.builder(Clients.newClient(ClientFactory.DEFAULT,
-                                                                    "none+http://group:foo/", HttpClient.class))
-                                         .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
-                                         .addCallAdapterFactory(Java8CallAdapterFactory.create())
-                                         .build()
-                                         .create(Service.class);
+        Service service = new ArmeriaRetrofitBuilder("none+http://group:foo/")
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
         Response<Void> response = service.postForm("Cony", 26).get();
         // TODO(ide) Use the actual `host:port`. See https://github.com/line/armeria/issues/379
         assertThat(response.raw().request().url()).isEqualTo(
                 new HttpUrl.Builder().scheme("http")
-                                     .host("group_foo")
+                                     .host("__group__foo")
                                      .addPathSegment("postForm")
                                      .build());
+    }
+
+    @Test
+    public void urlAnnotation() throws Exception {
+        EndpointGroupRegistry.register("bar",
+                                       new StaticEndpointGroup(Endpoint.of("127.0.0.1", server.httpPort())),
+                                       ROUND_ROBIN);
+        Service service = new ArmeriaRetrofitBuilder("none+http://group:foo/")
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
+        Pojo pojo = service.fullUrl("http://__group__bar/pojo").get();
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
+
+        service = new ArmeriaRetrofitBuilder(Clients.newClient("none+http://group:foo/", HttpClient.class))
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
+        pojo = service.fullUrl("http://__group__bar/pojo").get();
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void urlAnnotation_uriWithoutScheme() throws Exception {
+        EndpointGroupRegistry.register("bar",
+                                       new StaticEndpointGroup(Endpoint.of("127.0.0.1", server.httpPort())),
+                                       ROUND_ROBIN);
+        assertThat(service.fullUrl("//localhost:" + server.httpPort() + "/nest/pojo").get()).isEqualTo(
+                new Pojo("Leonard", 21));
+        assertThat(service.fullUrl("//__group__bar/nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
+
+        assertThat(service.fullUrl("//localhost:" + server.httpPort() + "/pojo").get()).isEqualTo(
+                new Pojo("Cony", 26));
+        assertThat(service.fullUrl("//__group__bar/pojo").get()).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void sessionProtocolH1C() throws Exception {
+        Service service = new ArmeriaRetrofitBuilder("none+h1c://127.0.0.1:" + server.httpPort() + '/')
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
+        Pojo pojo = service.pojo().get();
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
+
+        service = new ArmeriaRetrofitBuilder(
+                Clients.newClient("none+h1c://127.0.0.1:" + server.httpPort() + '/', HttpClient.class))
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
+        pojo = service.pojo().get();
+        assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void baseUrlContainsPath() throws Exception {
+        Service service = new ArmeriaRetrofitBuilder(server.uri(NONE, "/nest/"))
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
+        assertThat(service.pojoNotRoot().get()).isEqualTo(new Pojo("Leonard", 21));
+        assertThat(service.pojo().get()).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void baseUrlContainsPath_httpClient() throws Exception {
+        @SuppressWarnings("ThrowableNotThrown")
+        Throwable thrown = catchThrowable(
+                () -> new ArmeriaRetrofitBuilder(
+                        Clients.newClient(server.uri(NONE, "/nest/"), HttpClient.class))
+                        .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                        .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                        .build()
+                        .create(Service.class));
+
+        assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
+                          .hasMessageContaining("/nest/");
+    }
+
+    @Test
+    public void baseUrlContainsPath_httpClientAndBasePath() throws Exception {
+        Service service = new ArmeriaRetrofitBuilder(
+                Clients.newClient(server.uri(NONE, "/"), HttpClient.class), "/nest/")
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .build()
+                .create(Service.class);
+        assertThat(service.pojoNotRoot().get()).isEqualTo(new Pojo("Leonard", 21));
+        assertThat(service.pojo().get()).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void customPath() throws Exception {
+        assertThat(service.customPath("/nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
+        assertThat(service.customPath("nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
+        assertThat(service.customPath("/pojo").get()).isEqualTo(new Pojo("Cony", 26));
+        assertThat(service.customPath("pojo").get()).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void customNewClientFunction() throws Exception {
+        AtomicInteger counter = new AtomicInteger();
+        Service service = new ArmeriaRetrofitBuilder("none+h1c://127.0.0.1:" + server.httpPort() + '/')
+                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                .addCallAdapterFactory(Java8CallAdapterFactory.create())
+                .newClientFunction(uri -> new ClientBuilder(uri)
+                        .decorator(HttpRequest.class, HttpResponse.class, (delegate, ctx, req) -> {
+                            counter.incrementAndGet();
+                            return delegate.execute(ctx, req);
+                        }).build(HttpClient.class))
+                .build().create(Service.class);
+
+        service.pojo().get();
+        assertThat(counter.get()).isEqualTo(1);
+
+        service.fullUrl("http://localhost:" + server.httpPort() + "/pojo").get();
+        assertThat(counter.get()).isEqualTo(2);
     }
 
     /**
