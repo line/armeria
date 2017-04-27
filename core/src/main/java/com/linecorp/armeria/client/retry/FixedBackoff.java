@@ -19,7 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.MoreObjects;
 
-final class FixedBackoff implements Backoff {
+final class FixedBackoff extends AbstractBackoff {
     static final Backoff NO_DELAY = new FixedBackoff(0);
 
     private final long intervalMillis;
@@ -30,7 +30,7 @@ final class FixedBackoff implements Backoff {
     }
 
     @Override
-    public long nextIntervalMillis(int numAttemptsSoFar) {
+    protected long doNextIntervalMillis(int numAttemptsSoFar) {
         return intervalMillis;
     }
 

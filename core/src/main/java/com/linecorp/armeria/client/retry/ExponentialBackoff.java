@@ -19,7 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.MoreObjects;
 
-final class ExponentialBackoff implements Backoff {
+final class ExponentialBackoff extends AbstractBackoff {
     private long currentIntervalMillis;
     private final long maxIntervalMillis;
     private final double multiplier;
@@ -35,7 +35,7 @@ final class ExponentialBackoff implements Backoff {
     }
 
     @Override
-    public long nextIntervalMillis(int numAttemptsSoFar) {
+    protected long doNextIntervalMillis(int numAttemptsSoFar) {
         if (currentIntervalMillis >= maxIntervalMillis) {
             return maxIntervalMillis;
         }

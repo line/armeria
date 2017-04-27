@@ -55,9 +55,15 @@ public interface Backoff {
     }
 
     /**
-     * Returns the amount of time to wait before attempting a retry, in milliseconds.
+     * Returns the number of milliseconds to wait for before attempting a retry.
+     *
      * @param numAttemptsSoFar the number of attempts made by a client so far, including the first attempt and
      *                         its following retries.
+     *
+     * @return the number of milliseconds to wait for before attempting a retry,
+     *         or a negative value if no further retry has to be made.
+     *
+     * @throws IllegalArgumentException if {@code numAttemptsSoFar} is equal to or less than {@code 0}
      */
     long nextIntervalMillis(int numAttemptsSoFar);
 
