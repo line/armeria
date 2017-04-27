@@ -24,27 +24,48 @@ import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 
-final class RandomBackoff implements Backoff {
+final class RandomBackoff extends AbstractBackoff {
     private final LongSupplier nextInterval;
     private final long minIntervalMillis;
     private final long maxIntervalMillis;
 
     RandomBackoff(long minIntervalMillis, long maxIntervalMillis, Supplier<Random> randomSupplier) {
-        checkArgument(minIntervalMillis > 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
+        checkArgument(minIntervalMillis >= 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
         checkArgument(minIntervalMillis <= maxIntervalMillis, "maxIntervalMillis: %s (expected: >= %s)",
                       maxIntervalMillis, minIntervalMillis);
+        requireNonNull(randomSupplier, "randomSupplier");
+
         this.minIntervalMillis = minIntervalMillis;
         this.maxIntervalMillis = maxIntervalMillis;
-        requireNonNull(randomSupplier, "randomSupplier");
-        nextInterval = minIntervalMillis == maxIntervalMillis ?
-                       () -> minIntervalMillis : () -> randomSupplier.get().longs(minIntervalMillis,
-                                                                                  maxIntervalMillis)
-                                                                     .iterator().nextLong();
+
+        final long bound = maxIntervalMillis - minIntervalMillis + 1;
+        if (minIntervalMillis == maxIntervalMillis) {
+            nextInterval = () -> minIntervalMillis;
+        } else {
+            nextInterval = () -> nextLong(randomSupplier.get(), bound) + minIntervalMillis;
+        }
     }
 
     @Override
-    public long nextIntervalMillis(int numAttemptsSoFar) {
+    protected long doNextIntervalMillis(int numAttemptsSoFar) {
         return nextInterval.getAsLong();
+    }
+
+    static long nextLong(Random random, long bound) {
+        assert bound > 0;
+        final long mask = bound - 1;
+        long result = random.nextLong();
+
+        if ((bound & mask) == 0L) {
+            // power of two
+            result &= mask;
+        } else { // reject over-represented candidates
+            for (long u = result >>> 1; u + mask - (result = u % bound) < 0L; u = random.nextLong() >>> 1) {
+                continue;
+            }
+        }
+
+        return result;
     }
 
     @Override

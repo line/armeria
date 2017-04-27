@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Random;
 
@@ -26,10 +27,23 @@ public class RandomBackoffTest {
     public void nextIntervalMillis() throws Exception {
         Random r = new Random(1);
         Backoff backoff = new RandomBackoff(10, 100, () -> r);
-        assertThat(backoff.nextIntervalMillis(0)).isEqualTo(46);
-        assertThat(backoff.nextIntervalMillis(0)).isEqualTo(13);
-        assertThat(backoff.nextIntervalMillis(0)).isEqualTo(28);
-        assertThat(backoff.nextIntervalMillis(0)).isEqualTo(40);
+        assertThat(backoff.nextIntervalMillis(1)).isEqualTo(18);
+        assertThat(backoff.nextIntervalMillis(1)).isEqualTo(93);
+        assertThat(backoff.nextIntervalMillis(1)).isEqualTo(12);
+        assertThat(backoff.nextIntervalMillis(1)).isEqualTo(95);
     }
 
+    @Test
+    public void validation() {
+        // Negative minIntervalMillis
+        assertThatThrownBy(() -> new RandomBackoff(-1, 1, Random::new))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        // minIntervalMillis > maxIntervalMillis
+        assertThatThrownBy(() -> new RandomBackoff(2, 1, Random::new))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        // Should not fail for 0-interval:
+        new RandomBackoff(0, 0, Random::new);
+    }
 }
