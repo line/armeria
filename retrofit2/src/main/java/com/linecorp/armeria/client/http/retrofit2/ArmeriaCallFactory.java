@@ -16,18 +16,25 @@
 package com.linecorp.armeria.client.http.retrofit2;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpResponse;
 
 import okhttp3.Call;
+import okhttp3.Call.Factory;
 import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.Request;
@@ -38,22 +45,38 @@ import okio.Buffer;
 /**
  * A {@link Call.Factory} that creates a {@link Call} instance for {@link HttpClient}.
  */
-public class ArmeriaCallFactory implements Call.Factory {
+final class ArmeriaCallFactory implements Call.Factory {
 
-    private final HttpClient httpClient;
+    public static final Map<SessionProtocol, Factory> factories = new ConcurrentHashMap<>();
 
-    /**
-     * Creates a {@link Call.Factory} using the specified {@link HttpClient} instance.
-     *
-     * @param httpClient The {@link HttpClient} instance to be used.
-     */
-    public ArmeriaCallFactory(HttpClient httpClient) {
-        this.httpClient = httpClient;
+    private final Map<URI, HttpClient> httpClients = new ConcurrentHashMap<>();
+    private final SessionProtocol protocol;
+
+    private ArmeriaCallFactory(SessionProtocol protocol) {
+        this.protocol = protocol;
     }
 
     @Override
     public Call newCall(Request request) {
         return new ArmeriaCall(this, request);
+    }
+
+    private boolean isGroup(URI uri) {
+        return uri.getAuthority().startsWith("group_");
+    }
+
+    private HttpClient getHttpClient(URI uri) {
+        return httpClients.computeIfAbsent(uri, key -> {
+            String authority = isGroup(key) ?
+                               key.getAuthority().replaceFirst("group_", "group:") : key.getAuthority();
+            return Clients.newClient(ClientFactory.DEFAULT,
+                                     "none+" + protocol.uriText() + "://" + authority,
+                                     HttpClient.class);
+        });
+    }
+
+    public static Factory create(SessionProtocol protocol) {
+        return factories.computeIfAbsent(protocol, key -> new ArmeriaCallFactory(protocol));
     }
 
     static class ArmeriaCall implements Call {
@@ -79,8 +102,10 @@ public class ArmeriaCallFactory implements Call.Factory {
             this.request = request;
         }
 
-        private static HttpResponse doCall(HttpClient httpClient, Request request) {
+        private static HttpResponse doCall(ArmeriaCallFactory callFactory, Request request) {
             URL url = request.url().url();
+            HttpClient httpClient = callFactory.getHttpClient(request.url().uri());
+
             StringBuilder uriBuilder = new StringBuilder(url.getPath());
             if (url.getQuery() != null) {
                 uriBuilder.append('?').append(url.getQuery());
@@ -143,7 +168,7 @@ public class ArmeriaCallFactory implements Call.Factory {
                 throw new IllegalStateException("executed already");
             }
             executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
-            httpResponse = doCall(callFactory.httpClient, request);
+            httpResponse = doCall(callFactory, request);
         }
 
         @Override
