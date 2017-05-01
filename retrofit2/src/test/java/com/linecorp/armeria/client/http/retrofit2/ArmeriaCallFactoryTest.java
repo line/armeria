@@ -422,7 +422,7 @@ public class ArmeriaCallFactoryTest {
 
     @Test
     public void sessionProtocolH1C() throws Exception {
-        Service service = new ArmeriaRetrofitBuilder("none+h1c://127.0.0.1:" + server.httpPort() + '/')
+        Service service = new ArmeriaRetrofitBuilder("none+h1c://127.0.0.1:" + server.httpPort())
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
@@ -431,7 +431,7 @@ public class ArmeriaCallFactoryTest {
         assertThat(pojo).isEqualTo(new Pojo("Cony", 26));
 
         service = new ArmeriaRetrofitBuilder(
-                Clients.newClient("none+h1c://127.0.0.1:" + server.httpPort() + '/', HttpClient.class))
+                Clients.newClient("none+h1c://127.0.0.1:" + server.httpPort(), HttpClient.class))
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
@@ -489,7 +489,7 @@ public class ArmeriaCallFactoryTest {
     @Test
     public void customNewClientFunction() throws Exception {
         AtomicInteger counter = new AtomicInteger();
-        Service service = new ArmeriaRetrofitBuilder("none+h1c://127.0.0.1:" + server.httpPort() + '/')
+        Service service = new ArmeriaRetrofitBuilder("none+h1c://127.0.0.1:" + server.httpPort())
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .newClientFunction(uri -> new ClientBuilder(uri)

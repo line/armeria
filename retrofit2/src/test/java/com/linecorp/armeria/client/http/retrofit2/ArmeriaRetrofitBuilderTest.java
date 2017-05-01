@@ -35,20 +35,36 @@ public class ArmeriaRetrofitBuilderTest {
         retrofit = new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080/",
                                                                 HttpClient.class)).build();
         assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
+
+        retrofit = new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080/",
+                                                                HttpClient.class),
+                                              "/").build();
+        assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
+
+        retrofit = new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080/",
+                                                                HttpClient.class),
+                                              "").build();
+        assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
     }
 
     @Test
     public void build_withoutSlashAtEnd() throws Exception {
-        Throwable thrown = catchThrowable(
-                () -> new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080",
-                                                                   HttpClient.class)).build());
-        assertThat(thrown).isInstanceOf(IllegalArgumentException.class).hasMessageContaining(
-                "baseUrl must end in /");
+        Retrofit retrofit = new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080",
+                                                                         HttpClient.class)).build();
+        assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
 
-        thrown = catchThrowable(
-                () -> new ArmeriaRetrofitBuilder("none+http://example.com:8080").build());
-        assertThat(thrown).isInstanceOf(IllegalArgumentException.class).hasMessageContaining(
-                "baseUrl must end in /");
+        retrofit = new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080",
+                                                                HttpClient.class),
+                                              "").build();
+        assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
+
+        retrofit = new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080",
+                                                                HttpClient.class),
+                                              "/").build();
+        assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
+
+        retrofit = new ArmeriaRetrofitBuilder("none+http://example.com:8080").build();
+        assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
     }
 
     @Test
@@ -74,7 +90,7 @@ public class ArmeriaRetrofitBuilderTest {
         Throwable thrown = catchThrowable(
                 () -> new ArmeriaRetrofitBuilder("none+http://example.com:8080/a/b/c").build());
         assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
-                          .hasMessage("baseUrl must end in /: http://example.com:8080/a/b/c");
+                          .hasMessage("baseUrl must end in /: none+http://example.com:8080/a/b/c");
 
         thrown = catchThrowable(
                 () -> new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080/",
@@ -82,13 +98,6 @@ public class ArmeriaRetrofitBuilderTest {
                                                  "/a/b/c").build());
         assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
                           .hasMessage("basePath must end in /: /a/b/c");
-
-        thrown = catchThrowable(
-                () -> new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080/",
-                                                                   HttpClient.class),
-                                                 "").build());
-        assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
-                          .hasMessage("basePath must end in /: ");
     }
 
     @Test
@@ -113,15 +122,14 @@ public class ArmeriaRetrofitBuilderTest {
                 // NB: lower-cased by OkHttp
                 .isEqualTo("http://__group__mygroup/");
 
+        assertThat(new ArmeriaRetrofitBuilder("none+http://group:myGroup").build().baseUrl()
+                                                                          .toString())
+                .isEqualTo("http://__group__mygroup/");
+
         assertThat(new ArmeriaRetrofitBuilder("none+http://group:myGroup/").groupPrefix("group_").build()
                                                                            .baseUrl()
                                                                            .toString())
                 // NB: lower-cased by OkHttp
                 .isEqualTo("http://group_mygroup/");
-
-        Throwable thrown = catchThrowable(
-                () -> new ArmeriaRetrofitBuilder("none+http://group:myGroup").build());
-        assertThat(thrown).isInstanceOf(IllegalArgumentException.class).hasMessageContaining(
-                "baseUrl must end in /");
     }
 }

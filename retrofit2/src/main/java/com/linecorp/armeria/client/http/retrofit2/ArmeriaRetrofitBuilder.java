@@ -95,7 +95,8 @@ public final class ArmeriaRetrofitBuilder {
      * @see Builder#baseUrl(String)
      */
     public ArmeriaRetrofitBuilder(String baseUrl) {
-        if (URI.create(baseUrl).getPath().isEmpty()) {
+        String path = URI.create(baseUrl).getPath();
+        if (!path.isEmpty() && !ROOT_PATH.equals(path.substring(path.length() - 1))) {
             throw new IllegalArgumentException("baseUrl must end in /: " + baseUrl);
         }
         this.baseUrl = baseUrl;
@@ -116,16 +117,13 @@ public final class ArmeriaRetrofitBuilder {
      */
     public ArmeriaRetrofitBuilder(HttpClient baseHttpClient, String basePath) {
         final String path = baseHttpClient.uri().getPath();
-        if (path.isEmpty()) {
-            throw new IllegalArgumentException("baseUrl must end in /: " + path);
-        }
-        if (!ROOT_PATH.equals(path)) {
+        if (!path.isEmpty() && !ROOT_PATH.equals(path)) {
             throw new IllegalArgumentException(
                     "ArmeriaRetrofitBuilder doesn't support http client's uri contains any path element," +
                     " current path: " + path +
                     ". If you want to using uri with path, please using constructor with basePath argument.");
         }
-        if (basePath.isEmpty() || !ROOT_PATH.equals(basePath.substring(basePath.length() - 1))) {
+        if (!basePath.isEmpty() && !ROOT_PATH.equals(basePath.substring(basePath.length() - 1))) {
             throw new IllegalArgumentException("basePath must end in /: " + basePath);
         }
         this.baseHttpClient = baseHttpClient;
