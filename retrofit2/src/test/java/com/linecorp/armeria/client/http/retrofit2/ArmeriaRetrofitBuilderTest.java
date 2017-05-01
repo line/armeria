@@ -48,6 +48,16 @@ public class ArmeriaRetrofitBuilderTest {
     }
 
     @Test
+    public void build_basePathNotBeginWithSlash() throws Exception {
+        Throwable thrown = catchThrowable(
+                () -> new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080",
+                                                                   HttpClient.class),
+                                                 "a/b/c/").build());
+        assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
+                          .hasMessage("basePath must begin with /: a/b/c/");
+    }
+
+    @Test
     public void build_withoutSlashAtEnd() throws Exception {
         Retrofit retrofit = new ArmeriaRetrofitBuilder(Clients.newClient("none+http://example.com:8080",
                                                                          HttpClient.class)).build();

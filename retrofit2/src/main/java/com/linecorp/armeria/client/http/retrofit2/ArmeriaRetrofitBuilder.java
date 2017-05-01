@@ -79,7 +79,7 @@ public final class ArmeriaRetrofitBuilder {
     private static final String DEFAULT_GROUP_PREFIX = "__group__";
     private static final Function<String, HttpClient> DEFAULT_NEW_CLIENT_FUNCTION =
             url -> Clients.newClient(ClientFactory.DEFAULT, url, HttpClient.class);
-    public static final String ROOT_PATH = "/";
+    public static final String SLASH = "/";
 
     private final Retrofit.Builder retrofitBuilder;
     private String baseUrl;
@@ -96,7 +96,7 @@ public final class ArmeriaRetrofitBuilder {
      */
     public ArmeriaRetrofitBuilder(String baseUrl) {
         String path = URI.create(baseUrl).getPath();
-        if (!path.isEmpty() && !ROOT_PATH.equals(path.substring(path.length() - 1))) {
+        if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {
             throw new IllegalArgumentException("baseUrl must end in /: " + baseUrl);
         }
         this.baseUrl = baseUrl;
@@ -108,7 +108,7 @@ public final class ArmeriaRetrofitBuilder {
      * {@link HttpClient} instance.
      */
     public ArmeriaRetrofitBuilder(HttpClient baseHttpClient) {
-        this(baseHttpClient, ROOT_PATH);
+        this(baseHttpClient, SLASH);
     }
 
     /**
@@ -117,14 +117,19 @@ public final class ArmeriaRetrofitBuilder {
      */
     public ArmeriaRetrofitBuilder(HttpClient baseHttpClient, String basePath) {
         final String path = baseHttpClient.uri().getPath();
-        if (!path.isEmpty() && !ROOT_PATH.equals(path)) {
+        if (!path.isEmpty() && !SLASH.equals(path)) {
             throw new IllegalArgumentException(
                     "ArmeriaRetrofitBuilder doesn't support http client's uri contains any path element," +
                     " current path: " + path +
                     ". If you want to using uri with path, please using constructor with basePath argument.");
         }
-        if (!basePath.isEmpty() && !ROOT_PATH.equals(basePath.substring(basePath.length() - 1))) {
-            throw new IllegalArgumentException("basePath must end in /: " + basePath);
+        if (!basePath.isEmpty()) {
+            if (!SLASH.equals(basePath.substring(0, 1))) {
+                throw new IllegalArgumentException("basePath must begin with /: " + basePath);
+            }
+            if (!SLASH.equals(basePath.substring(basePath.length() - 1))) {
+                throw new IllegalArgumentException("basePath must end in /: " + basePath);
+            }
         }
         this.baseHttpClient = baseHttpClient;
         this.basePath = basePath;
@@ -191,8 +196,7 @@ public final class ArmeriaRetrofitBuilder {
             final URI uri = URI.create(baseUrl);
             final Scheme scheme = Scheme.parse(uri.getScheme());
             basePath = uri.getPath();
-            baseHttpClient = newClientFunction.apply(
-                    scheme.uriText() + "://" + uri.getAuthority() + ROOT_PATH);
+            baseHttpClient = newClientFunction.apply(scheme.uriText() + "://" + uri.getAuthority());
         }
         return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, basePath, groupPrefix))
                               .callFactory(new ArmeriaCallFactory(baseHttpClient, newClientFunction,
