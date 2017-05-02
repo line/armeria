@@ -41,10 +41,10 @@ import com.google.common.io.ByteStreams;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.grpc.testing.Messages.Payload;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 
-import come.linecorp.armeria.grpc.testing.Messages.Payload;
-import come.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import io.grpc.Codec.Gzip;
 import io.grpc.StatusRuntimeException;
 import io.netty.buffer.Unpooled;

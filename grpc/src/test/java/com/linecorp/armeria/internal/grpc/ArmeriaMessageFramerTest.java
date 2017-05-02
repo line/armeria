@@ -29,9 +29,9 @@ import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.grpc.testing.Messages.Payload;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 
-import come.linecorp.armeria.grpc.testing.Messages.Payload;
-import come.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import io.grpc.Codec.Gzip;
 import io.grpc.StatusRuntimeException;
 import io.netty.buffer.ByteBuf;

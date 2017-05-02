@@ -67,7 +67,7 @@ public class HttpHealthCheckedEndpointGroupTest {
                 HEALTH_CHECK_PATH);
         metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
 
-        await().until(
+        await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints()).containsExactly(
                         Endpoint.of("127.0.0.1", serverOne.httpPort()),
                         Endpoint.of("127.0.0.1", serverTwo.httpPort())));
@@ -82,7 +82,7 @@ public class HttpHealthCheckedEndpointGroupTest {
                 .isEqualTo(ImmutableSet.of());
 
         serverTwo.stop().get();
-        await().until(
+        await().untilAsserted(
                 () -> assertThat(
                         metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
                         .isEqualTo(1));
@@ -99,7 +99,7 @@ public class HttpHealthCheckedEndpointGroupTest {
 
         metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
 
-        await().until(
+        await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints())
                         .containsOnly(Endpoint.of("127.0.0.1", serverOne.httpPort())));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.all.count").getValue())
@@ -124,7 +124,7 @@ public class HttpHealthCheckedEndpointGroupTest {
 
         metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
 
-        await().until(
+        await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints())
                         .containsOnly(Endpoint.of("127.0.0.1", serverOne.httpPort())));
         assertThat(metricRegistry.getGauges().get("endpointHealth.metric.all.count").getValue())

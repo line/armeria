@@ -22,9 +22,10 @@ import com.google.common.io.ByteStreams;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.MessageLite;
 
-import come.linecorp.armeria.grpc.testing.Messages.Payload;
-import come.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import come.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
+import com.linecorp.armeria.grpc.testing.Messages.Payload;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
