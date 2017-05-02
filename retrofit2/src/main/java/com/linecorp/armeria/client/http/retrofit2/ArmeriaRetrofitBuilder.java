@@ -15,19 +15,26 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
+import static com.linecorp.armeria.client.http.retrofit2.ArmeriaCallFactory.GROUP_PREFIX;
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import okhttp3.HttpUrl;
+import retrofit2.Call;
 import retrofit2.CallAdapter;
+import retrofit2.Callback;
 import retrofit2.Converter;
 import retrofit2.Retrofit;
 import retrofit2.Retrofit.Builder;
@@ -56,126 +63,96 @@ import retrofit2.Retrofit.Builder;
  *     .build();
  * }
  * </pre>
- * ArmeriaRetrofitBuilder will convert http://group:foo to http://__group__foo internally to avoid okHttp3's
- * {@link HttpUrl} throwing exception when parsing http://group:foo . To avoid your client have possibility to
- * access domain which starts with __group__, you can use {@link ArmeriaRetrofitBuilder#groupPrefix(String)} to
- * customize the internal behavior.
- *
- * <p>If you want to decorate HttpClient, using {@link ArmeriaRetrofitBuilder#newClientFunction(Function)} to
- * customize.
- * <pre>{@code
- *
- * Retrofit retrofit = new ArmeriaRetrofitBuilder("none+http://localhost:8080/")
- *     .newClientFunction(uri -> new ClientBuilder(uri)
- *             .decorator(HttpRequest.class, HttpResponse.class, LoggingClient::new)
- *             .build(HttpClient.class))
- *     .build();
- * }
- * </pre>
  */
 public final class ArmeriaRetrofitBuilder {
 
     private static final Pattern GROUP_PREFIX_PATTERN = Pattern.compile("^[_0-9a-z]+$");
-    private static final String DEFAULT_GROUP_PREFIX = "__group__";
-    private static final Function<String, HttpClient> DEFAULT_NEW_CLIENT_FUNCTION =
-            url -> Clients.newClient(ClientFactory.DEFAULT, url, HttpClient.class);
-    public static final String SLASH = "/";
+    private static final Function<? super ClientOptions, ClientOptions> DEFAULT_CONFIGURATOR =
+            Function.identity();
+    private static final String SLASH = "/";
 
     private final Retrofit.Builder retrofitBuilder;
+    private final ClientFactory clientFactory;
     private String baseUrl;
-    private HttpClient baseHttpClient;
     private String basePath;
-    private String groupPrefix = DEFAULT_GROUP_PREFIX;
-    private Function<String, HttpClient> newClientFunction = DEFAULT_NEW_CLIENT_FUNCTION;
+    private Function<? super ClientOptions, ClientOptions> configurator = DEFAULT_CONFIGURATOR;
 
     /**
-     * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
-     * url.
+     * Creates a {@link ArmeriaRetrofitBuilder} with default {@link ClientFactory}.
+     */
+    public ArmeriaRetrofitBuilder() {
+        this(ClientFactory.DEFAULT);
+    }
+
+    /**
+     * Creates a {@link ArmeriaRetrofitBuilder} with {@link ClientFactory}.
+     */
+    public ArmeriaRetrofitBuilder(ClientFactory factory) {
+        clientFactory = factory;
+        retrofitBuilder = new Retrofit.Builder();
+    }
+
+    /**
+     * Set the API base URL.
      *
      * @see Builder#baseUrl(String)
      */
-    public ArmeriaRetrofitBuilder(String baseUrl) {
+    public ArmeriaRetrofitBuilder baseUrl(String baseUrl) {
+        requireNonNull(baseUrl);
         String path = URI.create(baseUrl).getPath();
         if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {
             throw new IllegalArgumentException("baseUrl must end in /: " + baseUrl);
         }
         this.baseUrl = baseUrl;
-        retrofitBuilder = new Retrofit.Builder();
-    }
-
-    /**
-     * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
-     * {@link HttpClient} instance.
-     */
-    public ArmeriaRetrofitBuilder(HttpClient baseHttpClient) {
-        this(baseHttpClient, SLASH);
-    }
-
-    /**
-     * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
-     * {@link HttpClient} instance.
-     */
-    public ArmeriaRetrofitBuilder(HttpClient baseHttpClient, String basePath) {
-        final String path = baseHttpClient.uri().getPath();
-        if (!path.isEmpty() && !SLASH.equals(path)) {
-            throw new IllegalArgumentException(
-                    "ArmeriaRetrofitBuilder doesn't support http client's uri contains any path element," +
-                    " current path: " + path +
-                    ". If you want to using uri with path, please using constructor with basePath argument.");
-        }
-        if (!basePath.isEmpty()) {
-            if (!SLASH.equals(basePath.substring(0, 1))) {
-                throw new IllegalArgumentException("basePath must begin with /: " + basePath);
-            }
-            if (!SLASH.equals(basePath.substring(basePath.length() - 1))) {
-                throw new IllegalArgumentException("basePath must end in /: " + basePath);
-            }
-        }
-        this.baseHttpClient = baseHttpClient;
-        this.basePath = basePath;
-        retrofitBuilder = new Retrofit.Builder();
-    }
-
-    /**
-     * Set different group name prefix for avoiding conflict of endpoint which starts with __group__.
-     */
-    public ArmeriaRetrofitBuilder groupPrefix(String groupPrefix) {
-        if (!GROUP_PREFIX_PATTERN.matcher(groupPrefix).matches()) {
-            throw new IllegalArgumentException(
-                    "groupPrefix: " + groupPrefix + " (expected: " + GROUP_PREFIX_PATTERN.pattern() + ')');
-        }
-        this.groupPrefix = groupPrefix;
         return this;
     }
 
     /**
-     * Set a function for customizing HttpClient.
+     * Sets a function for creating client with custom {@link ClientOption}s.
+     *
+     * @param configurator a {@link Function} whose input is the original {@link ClientOptions} of the client
+     *                     being derived from and whose output is the {@link ClientOptions} of the new derived
+     *                     client
      */
-    public ArmeriaRetrofitBuilder newClientFunction(Function<String, HttpClient> newClientFunction) {
-        this.newClientFunction = newClientFunction;
+    public ArmeriaRetrofitBuilder withClientOptions(
+            Function<? super ClientOptions, ClientOptions> configurator) {
+        requireNonNull(configurator);
+        this.configurator = configurator;
         return this;
     }
 
     /**
+     * Add converter factory for serialization and deserialization of objects.
      * @see Retrofit.Builder#addCallAdapterFactory(Factory)
      */
     public ArmeriaRetrofitBuilder addConverterFactory(Converter.Factory factory) {
+        requireNonNull(factory);
         retrofitBuilder.addConverterFactory(factory);
         return this;
     }
 
     /**
+     * Add a call adapter factory for supporting service method return types other than {@link
+     * Call}.
      * @see Retrofit.Builder#addCallAdapterFactory(Factory)
      */
     public ArmeriaRetrofitBuilder addCallAdapterFactory(CallAdapter.Factory factory) {
+        requireNonNull(factory);
         retrofitBuilder.addCallAdapterFactory(factory);
         return this;
     }
 
     /**
+     * The executor on which {@link Callback} methods are invoked when returning {@link Call} from
+     * your service method.
+     *
+     * <p>Note: {@code executor} is not used for {@linkplain #addCallAdapterFactory custom method
+     * return types}.
+     *
      * @see Retrofit.Builder#callbackExecutor(Executor)
      */
     public ArmeriaRetrofitBuilder callbackExecutor(Executor executor) {
+        requireNonNull(executor);
         retrofitBuilder.callbackExecutor(executor);
         return this;
     }
@@ -189,18 +166,20 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Create the {@link Retrofit} instance using the configured values.
+     * Create a new {@link Retrofit} instance using the configured values.
      */
     public Retrofit build() {
-        if (baseUrl != null) {
-            final URI uri = URI.create(baseUrl);
-            final Scheme scheme = Scheme.parse(uri.getScheme());
-            basePath = uri.getPath();
-            baseHttpClient = newClientFunction.apply(scheme.uriText() + "://" + uri.getAuthority());
-        }
-        return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, basePath, groupPrefix))
-                              .callFactory(new ArmeriaCallFactory(baseHttpClient, newClientFunction,
-                                                                  groupPrefix))
+        requireNonNull(baseUrl);
+        final URI uri = URI.create(baseUrl);
+        final Scheme scheme = Scheme.parse(uri.getScheme());
+        basePath = uri.getPath();
+        final HttpClient baseHttpClient = Clients.newClient(clientFactory,
+                                                            scheme.uriText() + "://" + uri.getAuthority(),
+                                                            HttpClient.class,
+                                                            configurator.apply(ClientOptions.DEFAULT));
+        return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, basePath, GROUP_PREFIX))
+                              .callFactory(new ArmeriaCallFactory(baseHttpClient, clientFactory, configurator,
+                                                                  GROUP_PREFIX))
                               .build();
     }
 

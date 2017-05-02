@@ -24,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -46,18 +49,20 @@ import okio.Buffer;
  */
 final class ArmeriaCallFactory implements Call.Factory {
 
+    static final String GROUP_PREFIX = "group_";
     private final Map<String, HttpClient> httpClients = new ConcurrentHashMap<>();
     private final HttpClient baseHttpClient;
-    private final Function<String, HttpClient> newClientFunction;
-    private final String groupPrefix;
+    private final ClientFactory clientFactory;
+    private final Function<? super ClientOptions, ClientOptions> configurator;
     private final String baseAuthority;
 
     ArmeriaCallFactory(HttpClient baseHttpClient,
-                       Function<String, HttpClient> newClientFunction,
+                       ClientFactory clientFactory,
+                       Function<? super ClientOptions, ClientOptions> configurator,
                        String groupPrefix) {
         this.baseHttpClient = baseHttpClient;
-        this.newClientFunction = newClientFunction;
-        this.groupPrefix = groupPrefix;
+        this.clientFactory = clientFactory;
+        this.configurator = configurator;
         baseAuthority = baseHttpClient.uri().getAuthority();
         httpClients.put(baseAuthority, baseHttpClient);
     }
@@ -67,20 +72,20 @@ final class ArmeriaCallFactory implements Call.Factory {
         return new ArmeriaCall(this, request);
     }
 
-    private boolean isGroup(String authority) {
-        return authority.startsWith(groupPrefix);
+    private static boolean isGroup(String authority) {
+        return authority.startsWith(GROUP_PREFIX);
     }
 
     private HttpClient getHttpClient(String authority, String sessionProtocol) {
         return httpClients.computeIfAbsent(authority, key -> {
             final String finalAuthority = isGroup(key) ?
-                                          key.replaceFirst(groupPrefix, "group:") : key;
+                                          key.replaceFirst(GROUP_PREFIX, "group:") : key;
             final String uriText = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(sessionProtocol))
                                          .uriText() + "://" + finalAuthority;
-            return newClientFunction.apply(uriText);
+            return Clients.newClient(clientFactory, uriText, HttpClient.class,
+                                     configurator.apply(ClientOptions.DEFAULT));
         });
     }
-
 
     static class ArmeriaCall implements Call {
 
