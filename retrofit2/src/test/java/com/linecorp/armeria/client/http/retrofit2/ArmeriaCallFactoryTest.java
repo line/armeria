@@ -5,7 +5,6 @@
 package com.linecorp.armeria.client.http.retrofit2;
 
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.ROUND_ROBIN;
-import static com.linecorp.armeria.common.SerializationFormat.NONE;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -252,7 +251,7 @@ public class ArmeriaCallFactoryTest {
     @Before
     public void setUp() {
         service = new ArmeriaRetrofitBuilder()
-                .baseUrl(server.uri(NONE, "/"))
+                .baseUrl(server.uri("/"))
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
@@ -358,7 +357,7 @@ public class ArmeriaCallFactoryTest {
                                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", server.httpPort())),
                                        ROUND_ROBIN);
         Service service = new ArmeriaRetrofitBuilder()
-                .baseUrl("none+http://group:foo/")
+                .baseUrl("http://group:foo/")
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
@@ -378,7 +377,7 @@ public class ArmeriaCallFactoryTest {
                                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", server.httpPort())),
                                        ROUND_ROBIN);
         Service service = new ArmeriaRetrofitBuilder()
-                .baseUrl("none+http://group:foo/")
+                .baseUrl("http://group:foo/")
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
@@ -404,7 +403,7 @@ public class ArmeriaCallFactoryTest {
     @Test
     public void sessionProtocolH1C() throws Exception {
         Service service = new ArmeriaRetrofitBuilder()
-                .baseUrl("none+h1c://127.0.0.1:" + server.httpPort())
+                .baseUrl("h1c://127.0.0.1:" + server.httpPort())
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
@@ -416,7 +415,7 @@ public class ArmeriaCallFactoryTest {
     @Test
     public void baseUrlContainsPath() throws Exception {
         Service service = new ArmeriaRetrofitBuilder()
-                .baseUrl(server.uri(NONE, "/nest/"))
+                .baseUrl(server.uri("/nest/"))
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
@@ -437,10 +436,10 @@ public class ArmeriaCallFactoryTest {
     public void customNewClientFunction() throws Exception {
         AtomicInteger counter = new AtomicInteger();
         Service service = new ArmeriaRetrofitBuilder()
-                .baseUrl("none+h1c://127.0.0.1:" + server.httpPort())
+                .baseUrl("h1c://127.0.0.1:" + server.httpPort())
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
-                .withClientOptions(options -> {
+                .withClientOptions((url, options) -> {
                     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
                     builder.decorator(HttpRequest.class, HttpResponse.class, (delegate, ctx, req) -> {
                         counter.incrementAndGet();

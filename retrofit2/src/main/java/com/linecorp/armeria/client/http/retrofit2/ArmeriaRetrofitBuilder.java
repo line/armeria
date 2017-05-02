@@ -20,15 +20,16 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.concurrent.Executor;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import okhttp3.HttpUrl;
@@ -44,7 +45,8 @@ import retrofit2.Retrofit.Builder;
  * For example,
  * <pre>{@code
  *
- * Retrofit retrofit = new ArmeriaRetrofitBuilder("none+http://localhost:8080/")
+ * Retrofit retrofit = new ArmeriaRetrofitBuilder()
+ *     .baseUrl("http://localhost:8080/")
  *     .build();
  *
  * MyApi api = retrofit.create(MyApi.class);
@@ -59,7 +61,8 @@ import retrofit2.Retrofit.Builder;
  *                                new StaticEndpointGroup(Endpoint.of("127.0.0.1", 8080)),
  *                                ROUND_ROBIN);
  *
- * Retrofit retrofit = new ArmeriaRetrofitBuilder("none+http://group:foo/")
+ * Retrofit retrofit = new ArmeriaRetrofitBuilder()
+ *     .baseUrl("http://group:foo/")
  *     .build();
  * }
  * </pre>
@@ -67,38 +70,39 @@ import retrofit2.Retrofit.Builder;
 public final class ArmeriaRetrofitBuilder {
 
     private static final Pattern GROUP_PREFIX_PATTERN = Pattern.compile("^[_0-9a-z]+$");
-    private static final Function<? super ClientOptions, ClientOptions> DEFAULT_CONFIGURATOR =
-            Function.identity();
+    private static final BiFunction<String, ? super ClientOptions, ClientOptions> DEFAULT_CONFIGURATOR =
+            (url, options) -> options;
     private static final String SLASH = "/";
 
     private final Retrofit.Builder retrofitBuilder;
     private final ClientFactory clientFactory;
     private String baseUrl;
     private String basePath;
-    private Function<? super ClientOptions, ClientOptions> configurator = DEFAULT_CONFIGURATOR;
+    private BiFunction<String, ? super ClientOptions, ClientOptions> configurator = DEFAULT_CONFIGURATOR;
 
     /**
-     * Creates a {@link ArmeriaRetrofitBuilder} with default {@link ClientFactory}.
+     * Creates a {@link ArmeriaRetrofitBuilder} with the default {@link ClientFactory}.
      */
     public ArmeriaRetrofitBuilder() {
         this(ClientFactory.DEFAULT);
     }
 
     /**
-     * Creates a {@link ArmeriaRetrofitBuilder} with {@link ClientFactory}.
+     * Creates a {@link ArmeriaRetrofitBuilder} with the specified {@link ClientFactory}.
      */
-    public ArmeriaRetrofitBuilder(ClientFactory factory) {
-        clientFactory = factory;
+    public ArmeriaRetrofitBuilder(ClientFactory clientFactory) {
+        requireNonNull(clientFactory, "factory");
+        this.clientFactory = clientFactory;
         retrofitBuilder = new Retrofit.Builder();
     }
 
     /**
-     * Set the API base URL.
+     * Sets the API base URL.
      *
      * @see Builder#baseUrl(String)
      */
     public ArmeriaRetrofitBuilder baseUrl(String baseUrl) {
-        requireNonNull(baseUrl);
+        requireNonNull(baseUrl, "baseUrl");
         String path = URI.create(baseUrl).getPath();
         if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {
             throw new IllegalArgumentException("baseUrl must end in /: " + baseUrl);
@@ -108,56 +112,59 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Sets a function for creating client with custom {@link ClientOption}s.
+     * Sets the {@link BiFunction} that is applied to the {@link ClientOptions} of the underlying
+     * {@link HttpClient}.
      *
      * @param configurator a {@link Function} whose input is the original {@link ClientOptions} of the client
      *                     being derived from and whose output is the {@link ClientOptions} of the new derived
      *                     client
      */
     public ArmeriaRetrofitBuilder withClientOptions(
-            Function<? super ClientOptions, ClientOptions> configurator) {
-        requireNonNull(configurator);
+            BiFunction<String, ? super ClientOptions, ClientOptions> configurator) {
+        requireNonNull(configurator, "configurator");
         this.configurator = configurator;
         return this;
     }
 
     /**
-     * Add converter factory for serialization and deserialization of objects.
+     * Adds the specified converter factory for serialization and deserialization of objects.
      * @see Retrofit.Builder#addCallAdapterFactory(Factory)
      */
     public ArmeriaRetrofitBuilder addConverterFactory(Converter.Factory factory) {
-        requireNonNull(factory);
+        requireNonNull(factory, "factory");
         retrofitBuilder.addConverterFactory(factory);
         return this;
     }
 
     /**
-     * Add a call adapter factory for supporting service method return types other than {@link
+     * Adds the specified call adapter factory for supporting service method return types other than {@link
      * Call}.
      * @see Retrofit.Builder#addCallAdapterFactory(Factory)
      */
     public ArmeriaRetrofitBuilder addCallAdapterFactory(CallAdapter.Factory factory) {
-        requireNonNull(factory);
+        requireNonNull(factory, "factory");
         retrofitBuilder.addCallAdapterFactory(factory);
         return this;
     }
 
     /**
-     * The executor on which {@link Callback} methods are invoked when returning {@link Call} from
+     * Sets the {@link Executor} on which {@link Callback} methods are invoked when returning {@link Call} from
      * your service method.
      *
-     * <p>Note: {@code executor} is not used for {@linkplain #addCallAdapterFactory custom method
-     * return types}.
+     * <p>Note: {@code executor} is not used for {@link #addCallAdapterFactory custom method return types}.
      *
      * @see Retrofit.Builder#callbackExecutor(Executor)
      */
     public ArmeriaRetrofitBuilder callbackExecutor(Executor executor) {
-        requireNonNull(executor);
+        requireNonNull(executor, "executor");
         retrofitBuilder.callbackExecutor(executor);
         return this;
     }
 
     /**
+     * When calling {@link Retrofit#create} on the resulting {@link Retrofit} instance, eagerly validate
+     * the configuration of all methods in the supplied interface.
+     *
      * @see Retrofit.Builder#validateEagerly(boolean)
      */
     public ArmeriaRetrofitBuilder validateEagerly(boolean validateEagerly) {
@@ -166,18 +173,18 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Create a new {@link Retrofit} instance using the configured values.
+     * Creates a new {@link Retrofit} instance using the configured values.
      */
     public Retrofit build() {
-        requireNonNull(baseUrl);
+        requireNonNull(baseUrl, "baseUrl");
         final URI uri = URI.create(baseUrl);
-        final Scheme scheme = Scheme.parse(uri.getScheme());
-        basePath = uri.getPath();
+        final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(uri.getScheme()));
+        final String fullUri = scheme.uriText() + "://" + uri.getAuthority();
         final HttpClient baseHttpClient = Clients.newClient(clientFactory,
-                                                            scheme.uriText() + "://" + uri.getAuthority(),
+                                                            fullUri,
                                                             HttpClient.class,
-                                                            configurator.apply(ClientOptions.DEFAULT));
-        return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, basePath, GROUP_PREFIX))
+                                                            configurator.apply(fullUri, ClientOptions.DEFAULT));
+        return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, uri.getPath(), GROUP_PREFIX))
                               .callFactory(new ArmeriaCallFactory(baseHttpClient, clientFactory, configurator,
                                                                   GROUP_PREFIX))
                               .build();

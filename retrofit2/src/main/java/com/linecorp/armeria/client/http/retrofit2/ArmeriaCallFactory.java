@@ -22,7 +22,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -53,12 +53,12 @@ final class ArmeriaCallFactory implements Call.Factory {
     private final Map<String, HttpClient> httpClients = new ConcurrentHashMap<>();
     private final HttpClient baseHttpClient;
     private final ClientFactory clientFactory;
-    private final Function<? super ClientOptions, ClientOptions> configurator;
+    private final BiFunction<String, ? super ClientOptions, ClientOptions> configurator;
     private final String baseAuthority;
 
     ArmeriaCallFactory(HttpClient baseHttpClient,
                        ClientFactory clientFactory,
-                       Function<? super ClientOptions, ClientOptions> configurator,
+                       BiFunction<String, ? super ClientOptions, ClientOptions> configurator,
                        String groupPrefix) {
         this.baseHttpClient = baseHttpClient;
         this.clientFactory = clientFactory;
@@ -83,7 +83,7 @@ final class ArmeriaCallFactory implements Call.Factory {
             final String uriText = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(sessionProtocol))
                                          .uriText() + "://" + finalAuthority;
             return Clients.newClient(clientFactory, uriText, HttpClient.class,
-                                     configurator.apply(ClientOptions.DEFAULT));
+                                     configurator.apply(uriText, ClientOptions.DEFAULT));
         });
     }
 
