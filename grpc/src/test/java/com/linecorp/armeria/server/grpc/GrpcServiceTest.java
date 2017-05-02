@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -59,6 +60,7 @@ public class GrpcServiceTest {
         grpcService = (GrpcService) new GrpcServiceBuilder()
                 .addService(mock(TestServiceImplBase.class))
                 .build();
+        when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
     }
 
     @Test

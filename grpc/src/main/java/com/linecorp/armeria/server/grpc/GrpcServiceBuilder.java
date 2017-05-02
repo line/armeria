@@ -138,7 +138,7 @@ public final class GrpcServiceBuilder {
      * corresponds to their protobuf package, you will almost always want to bind to a prefix, e.g. by using
      * {@link com.linecorp.armeria.server.ServerBuilder#serviceUnder(String, Service)}.
      */
-    public Service<? extends HttpRequest, ? extends HttpResponse> build() {
+    public Service<HttpRequest, HttpResponse> build() {
         GrpcService grpcService = new GrpcService(
                 registryBuilder.build(),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),

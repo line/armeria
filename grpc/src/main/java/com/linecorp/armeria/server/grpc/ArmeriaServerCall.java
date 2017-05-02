@@ -36,6 +36,7 @@ import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -223,9 +224,13 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         closeCalled = true;
 
         if (status.isOk()) {
+            // The response is streamed so we don't have anything to set as the RpcResponse, so we set it
+            // arbitrarily so it can at least be counted.
+            ctx.logBuilder().responseContent(RpcResponse.of("success"), null);
             listener.onComplete();
         } else {
             cancelled = true;
+            ctx.logBuilder().responseContent(RpcResponse.ofFailure(status.asException()), null);
             listener.onCancel();
         }
     }
