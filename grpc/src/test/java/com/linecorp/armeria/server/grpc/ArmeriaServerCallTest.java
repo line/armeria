@@ -25,12 +25,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -40,9 +42,11 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 import com.google.protobuf.ByteString;
 
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
@@ -53,6 +57,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -64,6 +69,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.util.AsciiString;
@@ -81,7 +87,8 @@ public class ArmeriaServerCallTest {
                        .set(AsciiString.of("content-type"), "application/grpc+proto")
                        .set(AsciiString.of("grpc-encoding"), "identity")
                        .set(AsciiString.of("grpc-accept-encoding"),
-                            DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings());
+                            DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings())
+                       .asImmutable();
 
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
@@ -111,10 +118,12 @@ public class ArmeriaServerCallTest {
                 res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
-                ctx);
+                ctx,
+                GrpcSerializationFormats.PROTO);
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
         when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
+        when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
     }
 
     @Test
@@ -196,7 +205,8 @@ public class ArmeriaServerCallTest {
                 res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
-                ctx);
+                ctx,
+                GrpcSerializationFormats.PROTO);
         call.sendHeaders(new Metadata());
         HttpHeaders expectedHeaders =
                 HttpHeaders.of(HttpStatus.OK)
@@ -231,7 +241,8 @@ public class ArmeriaServerCallTest {
                 res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
-                ctx);
+                ctx,
+                GrpcSerializationFormats.PROTO);
         call.setCompression("gzip");
         call.setMessageCompression(true);
         call.sendHeaders(new Metadata());
@@ -408,7 +419,8 @@ public class ArmeriaServerCallTest {
                 DecompressorRegistry.getDefaultInstance(), res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
-                ctx);
+                ctx,
+                GrpcSerializationFormats.PROTO);
         call.messageReader().onSubscribe(subscription);
         call.setListener(listener);
         call.setCompression("gzip");
@@ -439,6 +451,49 @@ public class ArmeriaServerCallTest {
         verify(subscription).cancel();
     }
 
+    @Test
+    public void grpcWeb() throws Exception {
+        call = new ArmeriaServerCall<>(
+                HttpHeaders.of(),
+                TestServiceGrpc.METHOD_UNARY_CALL,
+                CompressorRegistry.getDefaultInstance(),
+                DecompressorRegistry.getDefaultInstance(),
+                res,
+                MAX_MESSAGE_BYTES,
+                MAX_MESSAGE_BYTES,
+                ctx,
+                GrpcSerializationFormats.PROTO_WEB);
+        call.setListener(listener);
+        call.messageReader().onSubscribe(subscription);
+        when(ctx.eventLoop()).thenReturn(new DefaultEventLoop(new DefaultEventExecutor()));
+        call.request(2);
+        ctx.eventLoop().shutdownGracefully().get();
+        call.messageReader().onNext(HttpData.of(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())));
+        call.endOfStream();
+        call.sendHeaders(new Metadata());
+        call.sendMessage(GrpcTestUtil.RESPONSE_MESSAGE);
+        call.close(Status.OK);
+
+        ArgumentCaptor<HttpObject> trailersCaptor = ArgumentCaptor.forClass(HttpObject.class);
+        verify(res, times(3)).write(trailersCaptor.capture());
+        assertThat(trailersCaptor.getAllValues().get(0))
+                .isEqualTo(
+                        HttpHeaders.copyOf(DEFAULT_RESPONSE_HEADERS)
+                                   .set(HttpHeaderNames.CONTENT_TYPE,
+                                        GrpcSerializationFormats.PROTO_WEB.mediaType().toString()));
+        assertThat(trailersCaptor.getAllValues().get(1))
+                .isEqualTo(HttpData.of(GrpcTestUtil.uncompressedResponseBytes()));
+        ByteBufHttpData data = (ByteBufHttpData) trailersCaptor.getAllValues().get(2);
+        assertThat(data.buf().getByte(0)).isEqualTo(ArmeriaServerCall.TRAILERS_FRAME_HEADER);
+        String expectedHeader = "grpc-status: 0\r\n";
+        int length = data.buf().getInt(1);
+        assertThat(length).isEqualTo(expectedHeader.length());
+        assertThat(new String(ByteBufUtil.getBytes(data.buf(), 5, length), StandardCharsets.US_ASCII))
+                .isEqualTo(expectedHeader);
+        verify(res).close();
+        verifyNoMoreInteractions(res);
+    }
+
     private ArmeriaServerCall<SimpleRequest, SimpleResponse> responseCompressionCall() {
         return new ArmeriaServerCall<>(
                 HttpHeaders.of().set(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "pied-piper, gzip"),
@@ -448,7 +503,8 @@ public class ArmeriaServerCallTest {
                 res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
-                ctx);
+                ctx,
+                GrpcSerializationFormats.PROTO);
     }
 
 }

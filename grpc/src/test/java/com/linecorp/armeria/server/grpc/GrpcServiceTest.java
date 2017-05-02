@@ -94,7 +94,7 @@ public class GrpcServiceTest {
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "grpc.testing.TestService.UnaryCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, GrpcService.CONTENT_TYPE_GRPC)),
+                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.BAD_REQUEST)
@@ -108,7 +108,7 @@ public class GrpcServiceTest {
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, GrpcService.CONTENT_TYPE_GRPC)),
+                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.OK)

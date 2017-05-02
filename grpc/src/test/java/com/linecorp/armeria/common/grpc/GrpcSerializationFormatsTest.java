@@ -17,7 +17,9 @@
 package com.linecorp.armeria.common.grpc;
 
 import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.JSON;
+import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.JSON_WEB;
 import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.PROTO;
+import static com.linecorp.armeria.common.grpc.GrpcSerializationFormats.PROTO_WEB;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
@@ -25,6 +27,7 @@ import org.junit.Test;
 public class GrpcSerializationFormatsTest {
     @Test
     public void allFormatsAreRegistered() {
-        assertThat(GrpcSerializationFormats.values()).containsExactlyInAnyOrder(PROTO, JSON);
+        assertThat(GrpcSerializationFormats.values())
+                .containsExactlyInAnyOrder(PROTO, JSON, PROTO_WEB, JSON_WEB);
     }
 }

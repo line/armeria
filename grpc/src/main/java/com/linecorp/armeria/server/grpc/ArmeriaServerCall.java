@@ -19,20 +19,25 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static io.netty.util.AsciiString.c2b;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
+import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
@@ -45,6 +50,7 @@ import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.grpc.StatusListener;
 import com.linecorp.armeria.internal.grpc.StatusMessageEscaper;
+import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Codec;
@@ -58,6 +64,9 @@ import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerCall;
 import io.grpc.Status;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.util.AsciiString;
 
 /**
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
@@ -66,8 +75,9 @@ import io.grpc.Status;
 class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         implements ArmeriaMessageDeframer.Listener, StatusListener {
 
-    // TODO(anuraag): Support json too.
-    private static final String GRPC_PROTO_CONTENT_TYPE = "application/grpc+proto";
+    // Only most significant bit of a byte is set.
+    @VisibleForTesting
+    static final byte TRAILERS_FRAME_HEADER = (byte) (1 << 7);
 
     private static final Metadata EMPTY_METADATA = new Metadata();
 
@@ -82,6 +92,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final CompressorRegistry compressorRegistry;
     private final DecompressorRegistry decompressorRegistry;
     private final ServiceRequestContext ctx;
+    private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
 
     // Only set once.
@@ -106,10 +117,12 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       HttpResponseWriter res,
                       int maxInboundMessageSizeBytes,
                       int maxOutboundMessageSizeBytes,
-                      ServiceRequestContext ctx) {
+                      ServiceRequestContext ctx,
+                      SerializationFormat serializationFormat) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
+        this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.messageReader = new HttpStreamReader(
                 requireNonNull(decompressorRegistry, "decompressorRegistry"),
                 new ArmeriaMessageDeframer(
@@ -124,7 +137,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
-        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), GrpcSerializationFormats.PROTO, method);
+        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method);
     }
 
     @Override
@@ -143,7 +156,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
 
-        headers.set(HttpHeaderNames.CONTENT_TYPE, GRPC_PROTO_CONTENT_TYPE);
+        headers.setObject(HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType());
 
         if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
             compressor = Codec.Identity.NONE;
@@ -220,7 +233,15 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             messageReader.cancel();
         }
 
-        res.write(statusToTrailers(status, sendHeadersCalled));
+        HttpHeaders trailers = statusToTrailers(status, sendHeadersCalled);
+        if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
+            // Normal trailers are not supported in grpc-web and must be encoded as a message.
+            // Message compression is not supported in grpc-web, so we don't bother using the normal
+            // ArmeriaMessageFramer.
+            res.write(serializeTrailersAsMessage(trailers));
+        } else {
+            res.write(trailers);
+        }
         res.close();
 
         closeCalled = true;
@@ -308,6 +329,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             trailers.add(GrpcHeaderNames.GRPC_MESSAGE,
                          StatusMessageEscaper.escape(status.getDescription()));
         }
+
         return trailers;
     }
 
@@ -320,6 +342,27 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.listener = requireNonNull(listener, "listener");
     }
 
+    private HttpData serializeTrailersAsMessage(HttpHeaders trailers) {
+        ByteBuf serialized = ctx.alloc().buffer();
+        boolean success = false;
+        try {
+            serialized.writeByte(TRAILERS_FRAME_HEADER);
+            // Skip, we'll set this after serializing the headers.
+            serialized.writeInt(0);
+            for (Map.Entry<AsciiString, String> trailer : trailers) {
+                encodeHeader(trailer.getKey(), trailer.getValue(), serialized);
+            }
+            int messageSize = serialized.readableBytes() - 5;
+            serialized.setInt(1, messageSize);
+            success = true;
+        } finally {
+            if (!success) {
+                serialized.release();
+            }
+        }
+        return new ByteBufHttpData(serialized, true);
+    }
+
     private static Decompressor clientDecompressor(HttpHeaders headers, DecompressorRegistry registry) {
         String encoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
         if (encoding == null) {
@@ -327,5 +370,37 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
         Decompressor decompressor = registry.lookupDecompressor(encoding);
         return firstNonNull(decompressor, Identity.NONE);
+    }
+
+    // Copied from io.netty.handler.codec.http.HttpHeadersEncoder
+    private static void encodeHeader(CharSequence name, CharSequence value, ByteBuf buf) {
+        final int nameLen = name.length();
+        final int valueLen = value.length();
+        final int entryLen = nameLen + valueLen + 4;
+        buf.ensureWritable(entryLen);
+        int offset = buf.writerIndex();
+        writeAscii(buf, offset, name, nameLen);
+        offset += nameLen;
+        buf.setByte(offset++, ':');
+        buf.setByte(offset++, ' ');
+        writeAscii(buf, offset, value, valueLen);
+        offset += valueLen;
+        buf.setByte(offset++, '\r');
+        buf.setByte(offset++, '\n');
+        buf.writerIndex(offset);
+    }
+
+    private static void writeAscii(ByteBuf buf, int offset, CharSequence value, int valueLen) {
+        if (value instanceof AsciiString) {
+            ByteBufUtil.copy((AsciiString) value, 0, buf, offset, valueLen);
+        } else {
+            writeCharSequence(buf, offset, value, valueLen);
+        }
+    }
+
+    private static void writeCharSequence(ByteBuf buf, int offset, CharSequence value, int valueLen) {
+        for (int i = 0; i < valueLen; ++i) {
+            buf.setByte(offset++, c2b(value.charAt(i)));
+        }
     }
 }
