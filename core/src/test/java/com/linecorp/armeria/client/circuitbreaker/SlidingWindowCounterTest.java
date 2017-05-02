@@ -132,7 +132,7 @@ public class SlidingWindowCounterTest {
             thread.join();
         }
 
-        await().until(() -> assertThat(counter.onFailure()).isPresent());
+        await().untilAsserted(() -> assertThat(counter.onFailure()).isPresent());
         assertThat(counter.count()).isEqualTo(new EventCount(success.get(), failure.get()));
     }
 

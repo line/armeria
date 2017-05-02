@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.0'
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.1'
     }
 }
 
@@ -34,7 +34,7 @@ protobuf {
     }
     plugins {
         grpc {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.1.2"
+            artifact = "io.grpc:protoc-gen-grpc-java:${rootProject.ext.dependencyManagement['io.grpc']['grpc-core'].version}"
         }
     }
     generateProtoTasks {

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc.interop;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -32,9 +33,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.ServerServiceDefinition;
+import io.grpc.ServerStreamTracer.Factory;
 import io.grpc.internal.AbstractServerImplBuilder;
 import io.grpc.internal.InternalServer;
-import io.grpc.internal.NoopStatsContextFactory;
 
 public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaGrpcServerBuilder> {
 
@@ -66,7 +67,7 @@ public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaG
     }
 
     @Override
-    protected InternalServer buildTransportServer() {
+    protected InternalServer buildTransportServer(List<Factory> streamTracerFactories) {
         Object registryBuilder = getFieldByReflection("registryBuilder", this, AbstractServerImplBuilder.class);
         Map<String, ServerServiceDefinition> services = getFieldByReflection("services", registryBuilder, null);
         services.values().forEach(grpcServiceBuilder::addService);
@@ -80,7 +81,7 @@ public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaG
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T getFieldByReflection(String name, Object instance, @Nullable Class<?> clazz) {
+    private static <T> T getFieldByReflection(String name, Object instance, @Nullable Class<?> clazz) {
         try {
             Field field = (clazz != null ? clazz : instance.getClass()).getDeclaredField(name);
             field.setAccessible(true);

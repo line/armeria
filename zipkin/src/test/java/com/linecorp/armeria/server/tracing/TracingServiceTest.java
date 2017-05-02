@@ -103,12 +103,14 @@ public class TracingServiceTest {
         @SuppressWarnings("unchecked")
         Service<RpcRequest, RpcResponse> delegate = mock(Service.class);
 
-        TraceData traceData = TraceData.builder()
-                                       .sample(sampled)
-                                       .spanId(SpanId.builder().traceId(1).spanId(2).parentId(3L).build())
-                                       .build();
+        final TraceData traceData;
+        if (sampled) {
+            traceData = TraceData.create(SpanId.builder().traceId(1).spanId(2).parentId(3L).build());
+        } else {
+            traceData = TraceData.NOT_SAMPLED;
+        }
 
-        TracingServiceImpl stub = new TracingServiceImpl(delegate, brave, traceData);
+        final TracingServiceImpl stub = new TracingServiceImpl(delegate, brave, traceData);
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final RpcRequest req = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");

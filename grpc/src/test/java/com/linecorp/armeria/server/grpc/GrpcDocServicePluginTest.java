@@ -31,6 +31,12 @@ import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
+import com.linecorp.armeria.grpc.testing.Messages.ReconnectInfo;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
+import com.linecorp.armeria.grpc.testing.Messages.TestMessage;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
@@ -51,12 +57,6 @@ import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 
-import come.linecorp.armeria.grpc.testing.Messages.CompressionType;
-import come.linecorp.armeria.grpc.testing.Messages.ReconnectInfo;
-import come.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import come.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import come.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import come.linecorp.armeria.grpc.testing.Messages.TestMessage;
 import io.netty.util.AsciiString;
 
 public class GrpcDocServicePluginTest {

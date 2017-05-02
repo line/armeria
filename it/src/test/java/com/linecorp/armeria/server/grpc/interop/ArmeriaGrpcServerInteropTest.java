@@ -79,7 +79,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  * Interop test based on grpc-interop-testing. Should provide reasonable confidence in armeria's
  * handling of the grpc protocol.
  */
-@Ignore // TODO(trustin): Unignore once GRPC upgrades to Netty 4.1.9
+@Ignore // TODO(trustin): Unignore once GRPC upgrades to Netty 4.1.10
 public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     private static final ApplicationProtocolConfig ALPN = new ApplicationProtocolConfig(
@@ -134,7 +134,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
             return NettyChannelBuilder
                     .forAddress("localhost", (int) getPort.invoke(this))
                     .flowControlWindow(65 * 1024)
-                    .maxMessageSize(16 * 1024 * 1024)
+                    .maxInboundMessageSize(16 * 1024 * 1024)
                     .sslContext(GrpcSslContexts
                                         .forClient()
                                         .keyManager(TestUtils.loadCert("client.pem"),

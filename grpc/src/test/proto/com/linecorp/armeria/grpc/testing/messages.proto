@@ -47,7 +47,7 @@ syntax = "proto3";
 
 package armeria.grpc.testing;
 
-option java_package = "come.linecorp.armeria.grpc.testing";
+option java_package = "com.linecorp.armeria.grpc.testing";
 
 // The type of payload that should be returned.
 enum PayloadType {

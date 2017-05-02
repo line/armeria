@@ -2,7 +2,7 @@ ch.qos.logback:
   logback-classic: { version: 1.2.2 }
 
 com.fasterxml.jackson.core:
-  jackson-annotations: { version: &JACKSON_VERSION 2.8.7 }
+  jackson-annotations: { version: &JACKSON_VERSION 2.8.8 }
   jackson-core: { version: *JACKSON_VERSION }
   jackson-databind: { version: *JACKSON_VERSION }
 
@@ -30,7 +30,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION 1.2.0
+    version: &GRPC_VERSION 1.3.0
     exclusions:
     - com.google.code.findbugs:jsr305
   grpc-interop-testing:
@@ -42,25 +42,25 @@ io.grpc:
   grpc-stub: { version: *GRPC_VERSION }
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION 4.1.9.Final }
+  netty-codec-http2: { version: &NETTY_VERSION 4.1.10.Final }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: 2.0.0.Final }
+  netty-tcnative-boringssl-static: { version: 2.0.1.Final }
 
 io.zipkin.brave:
-  brave-core: { version: &BRAVE_VERSION 4.0.6 }
+  brave-core: { version: &BRAVE_VERSION 4.2.0 }
   brave-http: { version: *BRAVE_VERSION }
 
 it.unimi.dsi:
-  fastutil: { version: 7.1.0 }
+  fastutil: { version: 7.2.0 }
 
 junit:
   junit: { version: !!str 4.12 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION 1.21.0 }
+  json-unit: { version: &JSON_UNIT_VERSION 1.22.0 }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 org.apache.hbase:
@@ -76,7 +76,7 @@ org.apache.httpcomponents:
     - commons-logging:commons-logging
 
 org.apache.kafka:
-  kafka-clients: { version: 0.10.2.0 }
+  kafka-clients: { version: 0.10.2.1 }
 
 org.apache.thrift:
   libthrift:
@@ -86,24 +86,24 @@ org.apache.thrift:
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION 8.5.13 }
+  tomcat-embed-core: { version: &TOMCAT_VERSION 8.5.14 }
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
 org.apache.zookeeper:
-  zookeeper: { version: 3.4.9 }
+  zookeeper: { version: 3.4.10 }
 
 org.assertj:
   assertj-core: { version: 3.6.2 }
 
 org.awaitility:
-  awaitility: { version: 2.0.0 }
+  awaitility: { version: 3.0.0 }
 
 org.dmonix.junit:
   zookeeper-junit: { version: !!str 1.2 }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION 9.4.3.v20170317 }
+  apache-jsp: { version: &JETTY_VERSION 9.4.4.v20170414 }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations: { version: *JETTY_VERSION }
   jetty-server: { version: *JETTY_VERSION  }
@@ -122,7 +122,7 @@ org.javassist:
   javassist: { version: 3.21.0-GA }
 
 org.mockito:
-  mockito-core: { version: 2.7.21 }
+  mockito-core: { version: 2.7.22 }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: 2.0.6 }
