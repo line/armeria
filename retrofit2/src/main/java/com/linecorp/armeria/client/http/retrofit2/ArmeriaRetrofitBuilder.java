@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.client.http.retrofit2.ArmeriaCallFactory.GROUP_PREFIX;
 import static java.util.Objects.requireNonNull;
 
@@ -27,6 +28,7 @@ import java.util.regex.Pattern;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -43,20 +45,20 @@ import retrofit2.Retrofit.Builder;
 /**
  * A helper class for creating a new {@link Retrofit} instance with {@link ArmeriaCallFactory}.
  * For example,
- * <pre>{@code
  *
+ * <pre>{@code
  * Retrofit retrofit = new ArmeriaRetrofitBuilder()
  *     .baseUrl("http://localhost:8080/")
  *     .build();
  *
  * MyApi api = retrofit.create(MyApi.class);
  * Response&lt;User&gt; user = api.getUser().execute();
- * }
- * </pre>
+ * }</pre>
  *
- * <p>ArmeriaRetrofitBuilder even supports EndpointGroup, so you can create Retrofit like below,
+ * <p>{@link ArmeriaRetrofitBuilder} even supports {@link EndpointGroup}, so you can create {@link Retrofit}
+ * like below,
+ *
  * <pre>{@code
- *
  * EndpointGroupRegistry.register("foo",
  *                                new StaticEndpointGroup(Endpoint.of("127.0.0.1", 8080)),
  *                                ROUND_ROBIN);
@@ -64,8 +66,7 @@ import retrofit2.Retrofit.Builder;
  * Retrofit retrofit = new ArmeriaRetrofitBuilder()
  *     .baseUrl("http://group:foo/")
  *     .build();
- * }
- * </pre>
+ * } </pre>
  */
 public final class ArmeriaRetrofitBuilder {
 
@@ -176,7 +177,7 @@ public final class ArmeriaRetrofitBuilder {
      * Creates a new {@link Retrofit} instance using the configured values.
      */
     public Retrofit build() {
-        requireNonNull(baseUrl, "baseUrl");
+        checkState(baseUrl != null, "baseUrl");
         final URI uri = URI.create(baseUrl);
         final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(uri.getScheme()));
         final String fullUri = scheme.uriText() + "://" + uri.getAuthority();
@@ -203,5 +204,4 @@ public final class ArmeriaRetrofitBuilder {
             return HttpUrl.parse(protocol + "://" + authority + basePath);
         }
     }
-
 }
