@@ -16,6 +16,10 @@ managedDependencies {
     // Metrics
     compile 'io.dropwizard.metrics:metrics-core'
 
+    // Prometheus
+    compile 'io.prometheus:simpleclient_common'
+    compile 'io.prometheus:simpleclient_dropwizard'
+
     // Netty
     [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
         compile "io.netty:$it"

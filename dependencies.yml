@@ -49,6 +49,10 @@ io.netty:
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-tcnative-boringssl-static: { version: 2.0.0.Final }
 
+io.prometheus:
+  simpleclient_common: { version: 0.0.21 }
+  simpleclient_dropwizard: { version: 0.0.21 }
+
 io.zipkin.brave:
   brave-core: { version: &BRAVE_VERSION 4.0.6 }
   brave-http: { version: *BRAVE_VERSION }
