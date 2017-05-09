@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2015 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,6 +15,6 @@
  */
 
 /**
- * Logging client decorators.
+ * Metric-collecting client decorators.
  */
-package com.linecorp.armeria.client.logging;
+package com.linecorp.armeria.client.metric;

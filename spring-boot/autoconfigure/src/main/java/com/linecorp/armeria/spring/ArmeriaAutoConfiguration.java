@@ -60,7 +60,7 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.http.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.http.healthcheck.HttpHealthCheckService;
-import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.netty.util.NetUtil;

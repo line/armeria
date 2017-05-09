@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.logging;
+package com.linecorp.armeria.internal.metric;
 
 import static java.util.Objects.requireNonNull;
 

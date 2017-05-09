@@ -15,6 +15,6 @@
  */
 
 /**
- * Logging client decorators.
+ * Common metric related components.
  */
-package com.linecorp.armeria.client.logging;
+package com.linecorp.armeria.common.metric;
