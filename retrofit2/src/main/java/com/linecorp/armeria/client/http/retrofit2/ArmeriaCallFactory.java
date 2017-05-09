@@ -80,6 +80,9 @@ final class ArmeriaCallFactory implements Factory {
     }
 
     private HttpClient getHttpClient(String authority, String sessionProtocol) {
+        if (baseAuthority.equals(authority)) {
+            return baseHttpClient;
+        }
         return httpClients.computeIfAbsent(authority, key -> {
             final String finalAuthority = isGroup(key) ?
                                           GROUP_PREFIX_MATCHER.matcher(key).replaceFirst("group:") : key;
