@@ -1,5 +1,4 @@
 dependencies {
-    // TODO(ide) Remove thrift dependencies
     compile project(':thrift')
     compile project(':logback')
 }
