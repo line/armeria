@@ -93,8 +93,7 @@ public final class ArmeriaRetrofitBuilder {
      * Creates a {@link ArmeriaRetrofitBuilder} with the specified {@link ClientFactory}.
      */
     public ArmeriaRetrofitBuilder(ClientFactory clientFactory) {
-        requireNonNull(clientFactory, "factory");
-        this.clientFactory = clientFactory;
+        this.clientFactory = requireNonNull(clientFactory, "factory");
         retrofitBuilder = new Retrofit.Builder();
     }
 
@@ -123,8 +122,7 @@ public final class ArmeriaRetrofitBuilder {
      */
     public ArmeriaRetrofitBuilder withClientOptions(
             BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
-        requireNonNull(configurator, "configurator");
-        this.configurator = configurator;
+        this.configurator = requireNonNull(configurator, "configurator");
         return this;
     }
 
@@ -133,8 +131,7 @@ public final class ArmeriaRetrofitBuilder {
      * @see Retrofit.Builder#addCallAdapterFactory(Factory)
      */
     public ArmeriaRetrofitBuilder addConverterFactory(Converter.Factory factory) {
-        requireNonNull(factory, "factory");
-        retrofitBuilder.addConverterFactory(factory);
+        retrofitBuilder.addConverterFactory(requireNonNull(factory, "factory"));
         return this;
     }
 
@@ -144,8 +141,7 @@ public final class ArmeriaRetrofitBuilder {
      * @see Retrofit.Builder#addCallAdapterFactory(Factory)
      */
     public ArmeriaRetrofitBuilder addCallAdapterFactory(CallAdapter.Factory factory) {
-        requireNonNull(factory, "factory");
-        retrofitBuilder.addCallAdapterFactory(factory);
+        retrofitBuilder.addCallAdapterFactory(requireNonNull(factory, "factory"));
         return this;
     }
 
@@ -158,8 +154,7 @@ public final class ArmeriaRetrofitBuilder {
      * @see Retrofit.Builder#callbackExecutor(Executor)
      */
     public ArmeriaRetrofitBuilder callbackExecutor(Executor executor) {
-        requireNonNull(executor, "executor");
-        retrofitBuilder.callbackExecutor(executor);
+        retrofitBuilder.callbackExecutor(requireNonNull(executor, "executor"));
         return this;
     }
 
