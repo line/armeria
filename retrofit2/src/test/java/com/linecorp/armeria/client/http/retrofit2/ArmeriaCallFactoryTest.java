@@ -27,7 +27,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
@@ -439,13 +438,12 @@ public class ArmeriaCallFactoryTest {
                 .baseUrl("h1c://127.0.0.1:" + server.httpPort())
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
-                .withClientOptions((url, options) -> {
-                    ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
-                    builder.decorator(HttpRequest.class, HttpResponse.class, (delegate, ctx, req) -> {
+                .withClientOptions((url, optionsBuilder) -> {
+                    optionsBuilder.decorator(HttpRequest.class, HttpResponse.class, (delegate, ctx, req) -> {
                         counter.incrementAndGet();
                         return delegate.execute(ctx, req);
                     });
-                    return builder.build();
+                    return optionsBuilder;
                 })
                 .build().create(Service.class);
 

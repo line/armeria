@@ -23,9 +23,10 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
+import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpResponse;
 
 import okhttp3.Call;
+import okhttp3.Call.Factory;
 import okhttp3.Callback;
 import okhttp3.MediaType;
 import okhttp3.Request;
@@ -45,20 +47,21 @@ import okhttp3.Response;
 import okio.Buffer;
 
 /**
- * A {@link Call.Factory} that creates a {@link Call} instance for {@link HttpClient}.
+ * A {@link Factory} that creates a {@link Call} instance for {@link HttpClient}.
  */
-final class ArmeriaCallFactory implements Call.Factory {
+final class ArmeriaCallFactory implements Factory {
 
     static final String GROUP_PREFIX = "group_";
+    private static final Pattern GROUP_PREFIX_MATCHER = Pattern.compile(GROUP_PREFIX);
     private final Map<String, HttpClient> httpClients = new ConcurrentHashMap<>();
     private final HttpClient baseHttpClient;
     private final ClientFactory clientFactory;
-    private final BiFunction<String, ? super ClientOptions, ClientOptions> configurator;
+    private final BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator;
     private final String baseAuthority;
 
     ArmeriaCallFactory(HttpClient baseHttpClient,
                        ClientFactory clientFactory,
-                       BiFunction<String, ? super ClientOptions, ClientOptions> configurator,
+                       BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator,
                        String groupPrefix) {
         this.baseHttpClient = baseHttpClient;
         this.clientFactory = clientFactory;
@@ -79,11 +82,11 @@ final class ArmeriaCallFactory implements Call.Factory {
     private HttpClient getHttpClient(String authority, String sessionProtocol) {
         return httpClients.computeIfAbsent(authority, key -> {
             final String finalAuthority = isGroup(key) ?
-                                          key.replaceFirst(GROUP_PREFIX, "group:") : key;
+                                          GROUP_PREFIX_MATCHER.matcher(key).replaceFirst("group:") : key;
             final String uriText = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(sessionProtocol))
                                          .uriText() + "://" + finalAuthority;
             return Clients.newClient(clientFactory, uriText, HttpClient.class,
-                                     configurator.apply(uriText, ClientOptions.DEFAULT));
+                                     configurator.apply(uriText, new ClientOptionsBuilder()).build());
         });
     }
 
