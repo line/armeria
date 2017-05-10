@@ -29,7 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.server.http.MaxConnectionHandler;
+import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -167,7 +167,7 @@ public final class ServerConfig {
     }
 
     static int validateMaxConnections(int maxNumConnections) {
-        return MaxConnectionHandler.validateMaxConnections(maxNumConnections);
+        return ConnectionLimitingHandler.validateMaxConnections(maxNumConnections);
     }
 
     static long validateIdleTimeoutMillis(long idleTimeoutMillis) {

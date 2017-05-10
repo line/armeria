@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http;
+package com.linecorp.armeria.internal;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,49 +23,49 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
 @Sharable
-public final class MaxConnectionHandler extends ChannelInboundHandlerAdapter {
+public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
 
-    private final int maxConnections;
-    private final AtomicInteger connections = new AtomicInteger(0);
+    private final int maxNumConnections;
+    private final AtomicInteger numConnections = new AtomicInteger();
 
-    public MaxConnectionHandler(int maxConnections) {
-        this.maxConnections = validateMaxConnections(maxConnections);
+    public ConnectionLimitingHandler(int maxNumConnections) {
+        this.maxNumConnections = validateMaxConnections(maxNumConnections);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        int conn = connections.incrementAndGet();
-        if (conn > 0 && conn <= maxConnections) {
-            ctx.channel().closeFuture().addListener(future -> connections.decrementAndGet());
+        int conn = numConnections.incrementAndGet();
+        if (conn > 0 && conn <= maxNumConnections) {
+            ctx.channel().closeFuture().addListener(future -> numConnections.decrementAndGet());
 
             // Fire channelActive to the next handlers.
             super.channelActive(ctx);
         } else {
-            connections.decrementAndGet();
+            numConnections.decrementAndGet();
             ctx.close();
         }
     }
 
     /**
-     * Returns the maximum allowed number of open connections.
+     * Returns the maximum allowed number of open numConnections.
      */
-    public int maxConnections() {
-        return maxConnections;
+    public int maxNumConnections() {
+        return maxNumConnections;
     }
 
     /**
-     * Returns the number of open connections.
+     * Returns the number of open numConnections.
      */
-    public int currentConnections() {
-        return connections.get();
+    public int numConnections() {
+        return numConnections.get();
     }
 
     /**
-     * Validates the maximum allowed number of open connections. It must be a positive number.
+     * Validates the maximum allowed number of open numConnections. It must be a positive number.
      */
     public static int validateMaxConnections(int maxConnections) {
         if (maxConnections <= 0) {
-            throw new IllegalArgumentException("maxConnections: " + maxConnections + " (expected: > 0)");
+            throw new IllegalArgumentException("maxNumConnections: " + maxConnections + " (expected: > 0)");
         }
         return maxConnections;
     }
