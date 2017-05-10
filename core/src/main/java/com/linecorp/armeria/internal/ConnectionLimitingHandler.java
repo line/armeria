@@ -18,12 +18,23 @@ package com.linecorp.armeria.internal;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
+/**
+ * Limit the number of open connections to the configured value.
+ * {@link ConnectionLimitingHandler} instance would be set to {@link ServerBootstrap#handler}.
+ */
 @Sharable
 public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConnectionLimitingHandler.class);
 
     private final int maxNumConnections;
     private final AtomicInteger numConnections = new AtomicInteger();
@@ -33,16 +44,18 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+    @SuppressWarnings("unchecked")
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        final Channel child = (Channel) msg;
+
         int conn = numConnections.incrementAndGet();
         if (conn > 0 && conn <= maxNumConnections) {
-            ctx.channel().closeFuture().addListener(future -> numConnections.decrementAndGet());
-
-            // Fire channelActive to the next handlers.
-            super.channelActive(ctx);
+            child.closeFuture().addListener(future -> numConnections.decrementAndGet());
+            super.channelRead(ctx, msg);
         } else {
             numConnections.decrementAndGet();
-            ctx.close();
+            child.unsafe().closeForcibly();
+            logger.warn("Exceeds the maximum number of open connections: " + child);
         }
     }
 
@@ -63,10 +76,10 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
     /**
      * Validates the maximum allowed number of open numConnections. It must be a positive number.
      */
-    public static int validateMaxConnections(int maxConnections) {
-        if (maxConnections <= 0) {
-            throw new IllegalArgumentException("maxNumConnections: " + maxConnections + " (expected: > 0)");
+    public static int validateMaxConnections(int maxNumConnections) {
+        if (maxNumConnections <= 0) {
+            throw new IllegalArgumentException("maxNumConnections: " + maxNumConnections + " (expected: > 0)");
         }
-        return maxConnections;
+        return maxNumConnections;
     }
 }
