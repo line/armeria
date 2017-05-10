@@ -78,8 +78,10 @@ public final class ServerBuilder {
 
     private static final int DEFAULT_NUM_BOSSES = 1;
     private static final int DEFAULT_NUM_WORKERS;
-    private static final int DEFAULT_MAX_PENDING_REQUESTS = 8;
-    private static final int DEFAULT_MAX_CONNECTIONS = 65536;
+
+    // Use Integer.MAX_VALUE not to limit open connections by default.
+    private static final int DEFAULT_MAX_CONNECTIONS = Integer.MAX_VALUE;
+
     // Use slightly greater value than the client default so that clients close the connection more often.
     private static final long DEFAULT_IDLE_TIMEOUT_MILLIS = Duration.ofSeconds(15).toMillis();
     private static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
@@ -127,7 +129,6 @@ public final class ServerBuilder {
     private VirtualHost defaultVirtualHost;
     private int numBosses = DEFAULT_NUM_BOSSES;
     private int numWorkers = DEFAULT_NUM_WORKERS;
-    private int maxPendingRequests = DEFAULT_MAX_PENDING_REQUESTS;
     private int maxConnections = DEFAULT_MAX_CONNECTIONS;
     @SuppressWarnings("RedundantFieldInitialization")
     private long idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT_MILLIS;
@@ -210,14 +211,6 @@ public final class ServerBuilder {
      */
     public ServerBuilder numWorkers(int numWorkers) {
         this.numWorkers = ServerConfig.validateNumWorkers(numWorkers);
-        return this;
-    }
-
-    /**
-     * Sets the maximum allowed number of pending requests.
-     */
-    public ServerBuilder maxPendingRequests(int maxPendingRequests) {
-        this.maxPendingRequests = ServerConfig.validateMaxPendingRequests(maxPendingRequests);
         return this;
     }
 
@@ -568,7 +561,7 @@ public final class ServerBuilder {
         }
 
         Server server = new Server(new ServerConfig(
-                ports, defaultVirtualHost, virtualHosts, numBosses, numWorkers, maxPendingRequests,
+                ports, defaultVirtualHost, virtualHosts, numBosses, numWorkers,
                 maxConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix));
@@ -580,7 +573,7 @@ public final class ServerBuilder {
     public String toString() {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts,
-                numWorkers, maxPendingRequests, maxConnections, idleTimeoutMillis,
+                numWorkers, maxConnections, idleTimeoutMillis,
                 defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix);

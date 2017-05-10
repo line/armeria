@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.server.http.MaxConnectionHandler;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -52,8 +53,6 @@ public final class ServerConfig {
 
     private final int numBosses;
     private final int numWorkers;
-    private final int maxPendingRequests;
-    private final int maxConnections;
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
     private final long defaultMaxRequestLength;
@@ -65,12 +64,14 @@ public final class ServerConfig {
 
     private final String serviceLoggerPrefix;
 
+    private final MaxConnectionHandler maxConnectionHandler;
+
     private String strVal;
 
     ServerConfig(
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
-            int numBosses, int numWorkers, int maxPendingRequests, int maxConnections,
+            int numBosses, int numWorkers, int maxConnections,
             long idleTimeoutMillis, long defaultRequestTimeoutMillis,
             long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
@@ -83,8 +84,6 @@ public final class ServerConfig {
         // Set the primitive properties.
         this.numBosses = validateNumBosses(numBosses);
         this.numWorkers = validateNumWorkers(numWorkers);
-        this.maxPendingRequests = validateMaxPendingRequests(maxPendingRequests);
-        this.maxConnections = validateMaxConnections(maxConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
@@ -103,6 +102,8 @@ public final class ServerConfig {
         }
 
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
+
+        maxConnectionHandler = new MaxConnectionHandler(maxConnections);
 
         // Set localAddresses.
         final List<ServerPort> portsCopy = new ArrayList<>();
@@ -167,21 +168,6 @@ public final class ServerConfig {
         return numWorkers;
     }
 
-    static int validateMaxPendingRequests(int maxPendingRequests) {
-        if (maxPendingRequests <= 0) {
-            throw new IllegalArgumentException(
-                    "maxPendingRequests: " + maxPendingRequests + " (expected: > 0)");
-        }
-        return maxPendingRequests;
-    }
-
-    static int validateMaxConnections(int maxConnections) {
-        if (maxConnections <= 0) {
-            throw new IllegalArgumentException("maxConnections: " + maxConnections + " (expected: > 0)");
-        }
-        return maxConnections;
-    }
-
     static long validateIdleTimeoutMillis(long idleTimeoutMillis) {
         if (idleTimeoutMillis < 0) {
             throw new IllegalArgumentException("idleTimeoutMillis: " + idleTimeoutMillis + " (expected: >= 0)");
@@ -218,6 +204,10 @@ public final class ServerConfig {
             throw new IllegalArgumentException(largerFieldName + " must be greater than or equal to" +
                                                smallerFieldName);
         }
+    }
+
+    static int validateMaxConnections(int maxConnections) {
+        return MaxConnectionHandler.validateMaxConnections(maxConnections);
     }
 
     private static VirtualHost normalizeDefaultVirtualHost(VirtualHost h, List<ServerPort> ports) {
@@ -344,20 +334,6 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the maximum allowed number of pending requests.
-     */
-    public int maxPendingRequests() {
-        return maxPendingRequests;
-    }
-
-    /**
-     * Returns the maximum allowed number of open connections.
-     */
-    public int maxConnections() {
-        return maxConnections;
-    }
-
-    /**
      * Returns the idle timeout of a connection in milliseconds.
      */
     public long idleTimeoutMillis() {
@@ -412,13 +388,20 @@ public final class ServerConfig {
         return serviceLoggerPrefix;
     }
 
+    /**
+     * Returns {@link MaxConnectionHandler} belonging to the server configuration.
+     */
+    public MaxConnectionHandler getMaxConnectionHandler() {
+        return maxConnectionHandler;
+    }
+
     @Override
     public String toString() {
         String strVal = this.strVal;
         if (strVal == null) {
             this.strVal = strVal = toString(
                     getClass(), ports(), null, virtualHosts(),
-                    numWorkers(), maxPendingRequests(), maxConnections(),
+                    numWorkers(), maxConnectionHandler.getMaxConnections(),
                     idleTimeoutMillis(), defaultRequestTimeoutMillis, defaultMaxRequestLength,
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), serviceLoggerPrefix());
@@ -430,7 +413,7 @@ public final class ServerConfig {
     static String toString(
             Class<?> type,
             Iterable<ServerPort> ports, VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
-            int numWorkers, int maxPendingRequests, int maxConnections, long idleTimeoutMillis,
+            int numWorkers, int maxConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, String serviceLoggerPrefix) {
@@ -479,8 +462,6 @@ public final class ServerConfig {
 
         buf.append("], numWorkers: ");
         buf.append(numWorkers);
-        buf.append(", maxPendingRequests: ");
-        buf.append(maxPendingRequests);
         buf.append(", maxConnections: ");
         buf.append(maxConnections);
         buf.append(", idleTimeout: ");
