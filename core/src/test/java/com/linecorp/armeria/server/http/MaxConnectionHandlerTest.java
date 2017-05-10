@@ -44,19 +44,19 @@ public class MaxConnectionHandlerTest {
         assertFalse(ch2.finish());
     }
 
+    @Test
+    public void testDefaultMaxConnections() {
+        MaxConnectionHandler handler = new MaxConnectionHandler(Integer.MAX_VALUE);
+        assertEquals(Integer.MAX_VALUE, handler.maxConnections());
+    }
+
     @Test(expected = IllegalArgumentException.class)
-    public void testMaxConnectionsRange1() {
+    public void testMaxConnectionsInvalidRange1() {
         new MaxConnectionHandler(0);
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void testMaxConnectionsRange2() {
+    public void testMaxConnectionsInvalidRange2() {
         new MaxConnectionHandler(-1);
-    }
-
-    @Test
-    public void testMaxConnectionsRange3() {
-        MaxConnectionHandler handler = new MaxConnectionHandler(Integer.MAX_VALUE);
-        assertEquals(Integer.MAX_VALUE, handler.maxConnections());
     }
 }
