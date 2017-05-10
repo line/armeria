@@ -91,7 +91,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
     @Override
     protected void initChannel(Channel ch) throws Exception {
         final ChannelPipeline p = ch.pipeline();
-        p.addLast(config.getMaxConnectionHandler());
+        p.addLast(config.maxConnectionHandler());
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingHandler.INSTANCE);
 

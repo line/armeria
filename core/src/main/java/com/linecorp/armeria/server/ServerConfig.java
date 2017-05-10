@@ -391,7 +391,7 @@ public final class ServerConfig {
     /**
      * Returns {@link MaxConnectionHandler} belonging to the server configuration.
      */
-    public MaxConnectionHandler getMaxConnectionHandler() {
+    public MaxConnectionHandler maxConnectionHandler() {
         return maxConnectionHandler;
     }
 
