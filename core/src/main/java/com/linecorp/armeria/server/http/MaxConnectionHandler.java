@@ -49,14 +49,14 @@ public final class MaxConnectionHandler extends ChannelInboundHandlerAdapter {
     /**
      * Returns the maximum allowed number of open connections.
      */
-    public int getMaxConnections() {
+    public int maxConnections() {
         return maxConnections;
     }
 
     /**
      * Returns the number of open connections.
      */
-    public int getCurrentConnections() {
+    public int currentConnections() {
         return connections.get();
     }
 

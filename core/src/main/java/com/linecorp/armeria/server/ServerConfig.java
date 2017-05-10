@@ -401,7 +401,7 @@ public final class ServerConfig {
         if (strVal == null) {
             this.strVal = strVal = toString(
                     getClass(), ports(), null, virtualHosts(),
-                    numWorkers(), maxConnectionHandler.getMaxConnections(),
+                    numWorkers(), maxConnectionHandler.maxConnections(),
                     idleTimeoutMillis(), defaultRequestTimeoutMillis, defaultMaxRequestLength,
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), serviceLoggerPrefix());

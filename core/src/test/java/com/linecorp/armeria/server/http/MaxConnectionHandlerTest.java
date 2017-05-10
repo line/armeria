@@ -30,15 +30,15 @@ public class MaxConnectionHandlerTest {
         MaxConnectionHandler handler = new MaxConnectionHandler(1);
 
         EmbeddedChannel ch1 = new EmbeddedChannel(handler);
-        assertEquals(1, handler.getCurrentConnections());
+        assertEquals(1, handler.currentConnections());
         assertTrue(ch1.isActive());
 
         EmbeddedChannel ch2 = new EmbeddedChannel(handler);
-        assertEquals(1, handler.getCurrentConnections());
+        assertEquals(1, handler.currentConnections());
         assertFalse(ch2.isActive());
 
         ch1.close();
-        assertEquals(0, handler.getCurrentConnections());
+        assertEquals(0, handler.currentConnections());
 
         assertFalse(ch1.finish());
         assertFalse(ch2.finish());
@@ -57,6 +57,6 @@ public class MaxConnectionHandlerTest {
     @Test
     public void testMaxConnectionsRange3() {
         MaxConnectionHandler handler = new MaxConnectionHandler(Integer.MAX_VALUE);
-        assertEquals(Integer.MAX_VALUE, handler.getMaxConnections());
+        assertEquals(Integer.MAX_VALUE, handler.maxConnections());
     }
 }
