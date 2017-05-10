@@ -76,6 +76,17 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     protected void delegate(StreamMessage<T> delegate) {
+        delegate(delegate, false);
+    }
+
+    /**
+     * Sets the delegate {@link HttpResponse} which will publish the stream actually, optionally receiving
+     * pooled objects from the delegate.
+     *
+     * @throws IllegalStateException if the delegate has been set already or
+     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
+     */
+    protected void delegate(StreamMessage<T> delegate, boolean withPooledObjects) {
         requireNonNull(delegate, "delegate");
         if (!delegateUpdater.compareAndSet(this, null, delegate)) {
             throw new IllegalStateException("delegate set already");
@@ -92,7 +103,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
 
         final Subscriber<T> subscriber = this.subscriber;
         if (subscriber != null && subscriber != ABORTED_SUBSCRIBER) {
-            subscribeToDelegate(subscriber, subscriberExecutor);
+            subscribeToDelegate(subscriber, subscriberExecutor, withPooledObjects);
         }
 
         if (abortPending) {
@@ -148,17 +159,30 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        subscribe0(subscriber, null);
+        subscribe0(subscriber, null, false);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
+        requireNonNull(subscriber, "subscriber");
+        subscribe0(subscriber, null, withPooledObjects);
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        subscribe0(subscriber, executor);
+        subscribe0(subscriber, executor, false);
     }
 
-    private void subscribe0(Subscriber<? super T> subscriber, Executor executor) {
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        subscribe0(subscriber, executor, withPooledObjects);
+    }
+
+    private void subscribe0(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
         if (!subscriberUpdater.compareAndSet(this, null, subscriber)) {
             if (this.subscriber == ABORTED_SUBSCRIBER) {
                 throw new IllegalStateException("cannot subscribe to an aborted publisher");
@@ -168,16 +192,17 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         }
 
         subscriberExecutor = executor;
-        subscribeToDelegate(subscriber, executor);
+        subscribeToDelegate(subscriber, executor, withPooledObjects);
     }
 
-    private void subscribeToDelegate(Subscriber<? super T> subscriber, Executor executor) {
+    private void subscribeToDelegate(
+            Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
         final StreamMessage<T> delegate = this.delegate;
         if (delegate != null) {
             if (executor == null) {
-                delegate.subscribe(subscriber);
+                delegate.subscribe(subscriber, withPooledObjects);
             } else {
-                delegate.subscribe(subscriber, executor);
+                delegate.subscribe(subscriber, executor, withPooledObjects);
             }
         }
     }

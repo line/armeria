@@ -78,12 +78,31 @@ public interface StreamMessage<T> extends Publisher<T> {
     void subscribe(Subscriber<? super T> s);
 
     /**
+     * Requests to start streaming data to the specified {@link Subscriber}, receiving pooled objects as is.
+     * Ownership of all pooled objects is transferred to the {@link Subscriber}, which must release them when
+     * finished. If you don't know what this means, use {@link StreamMessage#subscribe(Subscriber)}.
+     *
+     * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
+     */
+    void subscribe(Subscriber<? super T> s, boolean withPooledObjects);
+
+    /**
      * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
      * {@link Executor}.
      *
      * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
      */
     void subscribe(Subscriber<? super T> s, Executor executor);
+
+    /**
+     * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
+     * {@link Executor}, receiving pooled objects as is. Ownership of all pooled objects is transferred to the
+     * {@link Subscriber}, which must release them when finished. If you don't know what this means, use
+     * {@link StreamMessage#subscribe(Subscriber, Executor)}.
+     *
+     * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
+     */
+    void subscribe(Subscriber<? super T> s, Executor executor, boolean withPooledObjects);
 
     /**
      * Cancels the {@link Subscription} if any and closes this publisher.

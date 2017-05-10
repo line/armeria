@@ -29,12 +29,14 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteStreams;
@@ -48,35 +50,134 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.encoding.DeflateStreamDecoderFactory;
 import com.linecorp.armeria.client.http.encoding.HttpDecodingClient;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
+import com.linecorp.armeria.testing.server.ServerRule;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 public class HttpClientIntegrationTest {
 
     private static final String TEST_USER_AGENT_NAME = "ArmeriaTest";
 
-    private static final Server server;
+    private static final AtomicReference<ByteBuf> releasedByteBuf = new AtomicReference<>();
 
-    private static int httpPort;
-    private static ClientFactory clientFactory;
+    private static final class PoolUnawareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
-    static {
-        final ServerBuilder sb = new ServerBuilder();
+        private PoolUnawareDecorator(
+                Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+            super(delegate);
+        }
 
-        try {
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            HttpResponse res = delegate().serve(ctx, req);
+            DefaultHttpResponse decorated = new DefaultHttpResponse();
+            res.subscribe(new Subscriber<HttpObject>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(Long.MAX_VALUE);
+                }
+
+                @Override
+                public void onNext(HttpObject httpObject) {
+                    decorated.write(httpObject);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    decorated.close(t);
+                }
+
+                @Override
+                public void onComplete() {
+                    decorated.close();
+                }
+            });
+            return decorated;
+        }
+    }
+
+    private static final class PoolAwareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+
+        private PoolAwareDecorator(
+                Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            HttpResponse res = delegate().serve(ctx, req);
+            DefaultHttpResponse decorated = new DefaultHttpResponse();
+            res.subscribe(new Subscriber<HttpObject>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(Long.MAX_VALUE);
+                }
+
+                @Override
+                public void onNext(HttpObject httpObject) {
+                    if (httpObject instanceof ByteBufHttpData) {
+                        ByteBuf buf = ((ByteBufHttpData) httpObject).buf();
+                        try {
+                            decorated.write(HttpData.of(ByteBufUtil.getBytes(buf)));
+                        } finally {
+                            buf.release();
+                        }
+                    } else {
+                        decorated.write(httpObject);
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    decorated.close(t);
+                }
+
+                @Override
+                public void onComplete() {
+                    decorated.close();
+                }
+            }, true);
+            return decorated;
+        }
+    }
+
+    private static class PooledContentService extends AbstractHttpService {
+
+        @Override
+        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                throws Exception {
+            ByteBuf buf = ctx.alloc().buffer();
+            buf.writeCharSequence("pooled content", StandardCharsets.UTF_8);
+            releasedByteBuf.set(buf);
+            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, new ByteBufHttpData(buf, false));
+        }
+    }
+
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, HTTP);
 
             sb.serviceAt("/httptestbody", new AbstractHttpService() {
@@ -169,27 +270,19 @@ public class HttpClientIntegrationTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-        } catch (Exception e) {
-            throw new Error(e);
+            sb.serviceAt("/pooled", new PooledContentService());
+
+            sb.serviceAt("/pooled-aware", new PooledContentService().decorate(PoolAwareDecorator::new));
+
+            sb.serviceAt("/pooled-unaware", new PooledContentService().decorate(PoolUnawareDecorator::new));
         }
-        server = sb.build();
-    }
+    };
 
-    @BeforeClass
-    public static void init() throws Exception {
-        server.start().get();
-        httpPort = server.activePorts().values().stream()
-                         .filter(p -> p.protocol() == HTTP).findAny().get()
-                         .localAddress().getPort();
-        clientFactory = ClientFactory.DEFAULT;
-    }
+    private static final ClientFactory clientFactory = ClientFactory.DEFAULT;
 
-    @AfterClass
-    public static void destroy() throws Exception {
-        CompletableFuture.runAsync(() -> {
-            clientFactory.close();
-            server.stop();
-        });
+    @Before
+    public void clearError() {
+        releasedByteBuf.set(null);
     }
 
     /**
@@ -207,7 +300,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testRequestNoBody() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
                                               HttpClient.class);
 
         AggregatedHttpMessage response = client.execute(
@@ -222,7 +315,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testRequestWithBody() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
                                               HttpClient.class);
 
         AggregatedHttpMessage response = client.execute(
@@ -238,7 +331,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testNot200() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
                                               HttpClient.class);
 
         AggregatedHttpMessage response = client.get("/not200").aggregate().get();
@@ -274,7 +367,7 @@ public class HttpClientIntegrationTest {
         HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.USER_AGENT, TEST_USER_AGENT_NAME);
         ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
 
-        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
                                               HttpClient.class, options);
 
         AggregatedHttpMessage response = client.get("/useragent").aggregate().get();
@@ -288,7 +381,7 @@ public class HttpClientIntegrationTest {
         HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.USER_AGENT, TEST_USER_AGENT_NAME);
         ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
 
-        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort,
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
                                               HttpClient.class, options);
 
         final String OVERIDDEN_USER_AGENT_NAME = "Overridden";
@@ -304,7 +397,7 @@ public class HttpClientIntegrationTest {
     @Test
     public void httpDecoding() throws Exception {
         HttpClient client = new ClientBuilder(
-                "none+http://127.0.0.1:" + httpPort)
+                server.uri(SerializationFormat.NONE, "/"))
                 .factory(clientFactory)
                 .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator())
                 .build(HttpClient.class);
@@ -318,7 +411,7 @@ public class HttpClientIntegrationTest {
     @Test
     public void httpDecoding_deflate() throws Exception {
         HttpClient client = new ClientBuilder(
-                "none+http://127.0.0.1:" + httpPort)
+                server.uri(SerializationFormat.NONE, "/"))
                 .factory(clientFactory)
                 .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator(
                         new DeflateStreamDecoderFactory()))
@@ -333,7 +426,7 @@ public class HttpClientIntegrationTest {
     @Test
     public void httpDecoding_noEncodingApplied() throws Exception {
         HttpClient client = new ClientBuilder(
-                "none+http://127.0.0.1:" + httpPort)
+                server.uri(SerializationFormat.NONE, "/"))
                 .factory(clientFactory)
                 .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator(
                         new DeflateStreamDecoderFactory()))
@@ -377,7 +470,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort + "/hello",
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/hello"),
                                               HttpClient.class);
 
         AggregatedHttpMessage response = client.get("/world").aggregate().get();
@@ -387,11 +480,50 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, "none+http://127.0.0.1:" + httpPort + "/",
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
                                               HttpClient.class);
 
         AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
 
         assertEquals("success", response.content().toStringUtf8());
+    }
+
+    @Test
+    public void testPooledResponseDefaultSubscriber() throws Exception {
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
+                                              HttpClient.class);
+
+        AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.GET, "/pooled")).aggregate().get();
+
+        assertEquals(HttpStatus.OK, response.headers().status());
+        assertThat(response.content().toStringUtf8()).isEqualTo("pooled content");
+        assertThat(releasedByteBuf.get().refCnt()).isZero();
+    }
+
+    @Test
+    public void testPooledResponsePooledSubscriber() throws Exception {
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
+                                              HttpClient.class);
+
+        AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.GET, "/pooled-aware")).aggregate().get();
+
+        assertEquals(HttpStatus.OK, response.headers().status());
+        assertThat(response.content().toStringUtf8()).isEqualTo("pooled content");
+        assertThat(releasedByteBuf.get().refCnt()).isZero();
+    }
+
+    @Test
+    public void testUnpooledResponsePooledSubscriber() throws Exception {
+        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
+                                              HttpClient.class);
+
+        AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.GET, "/pooled-unaware")).aggregate().get();
+
+        assertEquals(HttpStatus.OK, response.headers().status());
+        assertThat(response.content().toStringUtf8()).isEqualTo("pooled content");
+        assertThat(releasedByteBuf.get().refCnt()).isZero();
     }
 }
