@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -498,7 +499,7 @@ public class HttpClientIntegrationTest {
 
         assertEquals(HttpStatus.OK, response.headers().status());
         assertThat(response.content().toStringUtf8()).isEqualTo("pooled content");
-        assertThat(releasedByteBuf.get().refCnt()).isZero();
+        await().untilAsserted(() -> assertThat(releasedByteBuf.get().refCnt()).isZero());
     }
 
     @Test
@@ -511,7 +512,7 @@ public class HttpClientIntegrationTest {
 
         assertEquals(HttpStatus.OK, response.headers().status());
         assertThat(response.content().toStringUtf8()).isEqualTo("pooled content");
-        assertThat(releasedByteBuf.get().refCnt()).isZero();
+        await().untilAsserted(() -> assertThat(releasedByteBuf.get().refCnt()).isZero());
     }
 
     @Test
@@ -524,6 +525,6 @@ public class HttpClientIntegrationTest {
 
         assertEquals(HttpStatus.OK, response.headers().status());
         assertThat(response.content().toStringUtf8()).isEqualTo("pooled content");
-        assertThat(releasedByteBuf.get().refCnt()).isZero();
+        await().untilAsserted(() -> assertThat(releasedByteBuf.get().refCnt()).isZero());
     }
 }
