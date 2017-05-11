@@ -27,8 +27,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.AllInOneClientFactory;
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -66,19 +64,12 @@ public class ConnectionLimitingHandlerTest {
 
     @Test
     public void testExceedMaxNumConnectionsOnServer() {
-        HttpClient client1 = Clients.newClient(
-                "none+http://127.0.0.1:" + server.httpPort(), HttpClient.class);
-
-        CompletableFuture<AggregatedHttpMessage> f1 = client1.get("/delay/2000").aggregate();
-        CompletableFuture<AggregatedHttpMessage> f2 = client1.get("/delay/2000").aggregate();
+        CompletableFuture<AggregatedHttpMessage> f1 = newHttpClient().get("/delay/2000").aggregate();
+        CompletableFuture<AggregatedHttpMessage> f2 = newHttpClient().get("/delay/2000").aggregate();
 
         threadSleepQuietly(1000, 0);
 
-        ClientFactory cf = new AllInOneClientFactory(true);
-        HttpClient client2 = Clients.newClient(
-                cf, "none+http://127.0.0.1:" + server.httpPort(), HttpClient.class);
-
-        CompletableFuture<AggregatedHttpMessage> f3 = client2.get("/delay/2000").aggregate();
+        CompletableFuture<AggregatedHttpMessage> f3 = newHttpClient().get("/delay/2000").aggregate();
 
         assertThat(f1.join().status()).isEqualTo(HttpStatus.OK);
         assertThat(f2.join().status()).isEqualTo(HttpStatus.OK);
@@ -86,8 +77,6 @@ public class ConnectionLimitingHandlerTest {
         assertThatThrownBy(() -> f3.join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ClosedSessionException.class);
-
-        cf.close();
     }
 
     @Test
@@ -120,6 +109,10 @@ public class ConnectionLimitingHandlerTest {
         assertThatThrownBy(() -> new ConnectionLimitingHandler(-1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("maxNumConnections: " + -1 + " (expected: > 0)");
+    }
+
+    private HttpClient newHttpClient() {
+        return Clients.newClient("none+http://127.0.0.1:" + server.httpPort(), HttpClient.class);
     }
 
     private static void threadSleepQuietly(long millis, int nanos) {
