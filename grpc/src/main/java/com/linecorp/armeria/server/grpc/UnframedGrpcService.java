@@ -43,7 +43,6 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 
-import io.grpc.Codec.Identity;
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
@@ -72,7 +71,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    UnframedGrpcService(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+    UnframedGrpcService(Service<HttpRequest, HttpResponse> delegate) {
         super(delegate);
         GrpcService grpcService =
                 delegate.as(GrpcService.class)
@@ -231,7 +230,6 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                     @Override
                     public void endOfStream() {}
                 },
-                Identity.NONE,
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE,
                 ctx.alloc());

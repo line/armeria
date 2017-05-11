@@ -46,6 +46,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.HashMap;
 import java.util.List;
 
@@ -67,8 +69,8 @@ final class HandlerRegistry {
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             ImmutableMap<String, ServerMethodDefinition<?, ?>> methods) {
-        this.services = services;
-        this.methods = methods;
+        this.services = requireNonNull(services, "services");
+        this.methods = requireNonNull(methods, "methods");
     }
 
     @Nullable

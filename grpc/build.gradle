@@ -14,6 +14,8 @@ managedDependencies {
     [ 'grpc-core', 'grpc-stub', 'grpc-protobuf' ].each {
         compile "io.grpc:$it"
     }
+
+    testCompile 'io.grpc:grpc-testing'
 }
 
 def generatedFilesDir = "$projectDir/gen-src"

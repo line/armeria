@@ -22,7 +22,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.List;
 
@@ -30,13 +29,9 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.io.ByteStreams;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.MessageLite;
 
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -45,8 +40,10 @@ import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.grpc.ErrorListener;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
+import com.linecorp.armeria.internal.grpc.HttpStreamReader;
+import com.linecorp.armeria.internal.grpc.StatusListener;
 import com.linecorp.armeria.internal.grpc.StatusMessageEscaper;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -59,20 +56,15 @@ import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
-import io.grpc.MethodDescriptor.PrototypeMarshaller;
 import io.grpc.ServerCall;
 import io.grpc.Status;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.CompositeByteBuf;
 
 /**
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
  * via {@link ServerCall.Listener}, and writing messages passed back to the response.
  */
 class ArmeriaServerCall<I, O> extends ServerCall<I, O>
-        implements ArmeriaMessageDeframer.Listener, ErrorListener {
+        implements ArmeriaMessageDeframer.Listener, StatusListener {
 
     // TODO(anuraag): Support json too.
     private static final String GRPC_PROTO_CONTENT_TYPE = "application/grpc+proto";
@@ -89,8 +81,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final HttpResponseWriter res;
     private final CompressorRegistry compressorRegistry;
     private final DecompressorRegistry decompressorRegistry;
-    private final ByteBufAllocator alloc;
     private final ServiceRequestContext ctx;
+    private final GrpcMessageMarshaller<I, O> marshaller;
 
     // Only set once.
     private ServerCall.Listener<I> listener;
@@ -111,27 +103,28 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       MethodDescriptor<I, O> method,
                       CompressorRegistry compressorRegistry,
                       DecompressorRegistry decompressorRegistry,
-                      ByteBufAllocator alloc,
                       HttpResponseWriter res,
                       int maxInboundMessageSizeBytes,
                       int maxOutboundMessageSizeBytes,
                       ServiceRequestContext ctx) {
-        this.method = method;
-        this.ctx = ctx;
+        requireNonNull(clientHeaders, "clientHeaders");
+        this.method = requireNonNull(method, "method");
+        this.ctx = requireNonNull(ctx, "ctx");
         this.messageReader = new HttpStreamReader(
+                requireNonNull(decompressorRegistry, "decompressorRegistry"),
                 new ArmeriaMessageDeframer(
                         this,
-                        clientDecompressor(clientHeaders, decompressorRegistry),
                         maxInboundMessageSizeBytes,
-                        alloc),
+                        ctx.alloc())
+                        .decompressor(clientDecompressor(clientHeaders, decompressorRegistry)),
                 this);
-        this.messageFramer = new ArmeriaMessageFramer(alloc, maxOutboundMessageSizeBytes);
-        this.res = res;
-        this.compressorRegistry = compressorRegistry;
+        this.messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
+        this.res = requireNonNull(res, "res");
+        this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
-        this.decompressorRegistry = decompressorRegistry;
-        this.alloc = alloc;
+        this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
+        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), GrpcSerializationFormats.PROTO, method);
     }
 
     @Override
@@ -182,7 +175,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!closeCalled, "call is closed");
 
         try {
-            res.write(messageFramer.writePayload(serializeMessage(message)));
+            res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
         } catch (RuntimeException e) {
             close(Status.fromThrowable(e));
             throw e;
@@ -206,7 +199,16 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     void close(Status status) {
-        close(status, EMPTY_METADATA);
+        try {
+            close(status, EMPTY_METADATA);
+        } finally {
+            if (status.isOk()) {
+                listener.onComplete();
+            } else {
+                cancelled = true;
+                listener.onCancel();
+            }
+        }
     }
 
     @Override
@@ -227,11 +229,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             // The response is streamed so we don't have anything to set as the RpcResponse, so we set it
             // arbitrarily so it can at least be counted.
             ctx.logBuilder().responseContent(RpcResponse.of("success"), null);
-            listener.onComplete();
         } else {
-            cancelled = true;
             ctx.logBuilder().responseContent(RpcResponse.ofFailure(status.asException()), null);
-            listener.onCancel();
         }
     }
 
@@ -264,50 +263,19 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         // Special case for unary calls.
         if (messageReceived && method.getType() == MethodType.UNARY) {
             close(Status.INTERNAL.withDescription(
-                    "More than one request messages for unary call or server streaming call"),
-                  new Metadata());
+                    "More than one request messages for unary call or server streaming call"));
             return;
         }
         messageReceived = true;
 
-        if (message.buf() != null) {
-            try {
-                if (isCancelled()) {
-                    return;
-                }
-                if (method.getRequestMarshaller() instanceof PrototypeMarshaller) {
-                    // Special case to parsing a protobuf from a ByteBuffer, which is highly optimized.
-                    PrototypeMarshaller<? extends MessageLite> marshaller =
-                            (PrototypeMarshaller<? extends MessageLite>) method.getRequestMarshaller();
-                    CodedInputStream stream = CodedInputStream.newInstance(message.buf().nioBuffer());
-                    try {
-                        MessageLite msg = marshaller.getMessagePrototype().getParserForType().parseFrom(stream);
-                        try {
-                            stream.checkLastTagWas(0);
-                        } catch (InvalidProtocolBufferException e) {
-                            e.setUnfinishedMessage(msg);
-                            throw e;
-                        }
-                        @SuppressWarnings("unchecked")  // We used the request marshaller so always safe.
-                        I castMsg = (I) msg;
-                        listener.onMessage(castMsg);
-                    } catch (InvalidProtocolBufferException e) {
-                        throw Status.INTERNAL.withDescription("Invalid protobuf byte sequence")
-                                             .withCause(e).asRuntimeException();
-                    }
-                }
-            } finally {
-                message.buf().release();
-            }
-        } else {
-            try (InputStream msg = message.stream()) {
-                if (isCancelled()) {
-                    return;
-                }
-                listener.onMessage(method.parseRequest(msg));
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+        if (isCancelled()) {
+            return;
+        }
+
+        try {
+            listener.onMessage(marshaller.deserializeRequest(message));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -350,22 +318,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     void setListener(Listener<I> listener) {
         checkState(this.listener == null, "listener already set");
         this.listener = requireNonNull(listener, "listener");
-    }
-
-    private ByteBuf serializeMessage(O message) throws IOException {
-        if (message instanceof MessageLite) {
-            MessageLite msg = (MessageLite) message;
-            // Special case serializing a protobuf to a ByteBuffer, which is highly optimized.
-            ByteBuf buf = alloc.buffer(msg.getSerializedSize());
-            msg.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, buf.writableBytes())));
-            buf.writerIndex(buf.capacity());
-            return buf;
-        }
-        CompositeByteBuf out = alloc.compositeBuffer();
-        try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
-            ByteStreams.copy(method.streamResponse(message), os);
-        }
-        return out;
     }
 
     private static Decompressor clientDecompressor(HttpHeaders headers, DecompressorRegistry registry) {

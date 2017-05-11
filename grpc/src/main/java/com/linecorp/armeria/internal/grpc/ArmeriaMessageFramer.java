@@ -47,6 +47,7 @@
 package com.linecorp.armeria.internal.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -86,7 +87,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private boolean closed;
 
     public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxOutboundMessageSize) {
-        this.alloc = alloc;
+        this.alloc = requireNonNull(alloc, "alloc");
         this.maxOutboundMessageSize = maxOutboundMessageSize;
     }
 
@@ -144,11 +145,10 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         int numCompressedBytes = compressed.readableBytes();
         if (maxOutboundMessageSize >= 0 && numCompressedBytes > maxOutboundMessageSize) {
             compressed.release();
-            throw Status.CANCELLED
+            throw Status.RESOURCE_EXHAUSTED
                     .withDescription(
-                            String.format("message too large %d > %d",
-                                          numCompressedBytes,
-                                          maxOutboundMessageSize))
+                            String.format(
+                                    "message too large %d > %d", numCompressedBytes, maxOutboundMessageSize))
                     .asRuntimeException();
         }
 
@@ -163,7 +163,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private ByteBuf writeUncompressed(ByteBuf message) throws IOException {
         int messageLength = message.readableBytes();
         if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
-            throw Status.CANCELLED
+            throw Status.RESOURCE_EXHAUSTED
                     .withDescription(
                             String.format("message too large %d > %d", messageLength, maxOutboundMessageSize))
                     .asRuntimeException();

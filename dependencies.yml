@@ -40,6 +40,7 @@ io.grpc:
     - com.google.guava:guava-jdk5
   grpc-protobuf: { version: *GRPC_VERSION }
   grpc-stub: { version: *GRPC_VERSION }
+  grpc-testing: { version: *GRPC_VERSION }
 
 io.netty:
   netty-codec-http2: { version: &NETTY_VERSION 4.1.10.Final }

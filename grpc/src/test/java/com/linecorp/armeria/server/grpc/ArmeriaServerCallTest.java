@@ -61,6 +61,7 @@ import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -101,12 +102,12 @@ public class ArmeriaServerCallTest {
 
     @Before
     public void setUp() {
+        when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
                 TestServiceGrpc.METHOD_UNARY_CALL,
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
-                UnpooledByteBufAllocator.DEFAULT,
                 res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
@@ -192,7 +193,6 @@ public class ArmeriaServerCallTest {
                 TestServiceGrpc.METHOD_UNARY_CALL,
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.emptyInstance(),
-                UnpooledByteBufAllocator.DEFAULT,
                 res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
@@ -228,7 +228,6 @@ public class ArmeriaServerCallTest {
                 TestServiceGrpc.METHOD_UNARY_CALL,
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
-                UnpooledByteBufAllocator.DEFAULT,
                 res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
@@ -385,7 +384,8 @@ public class ArmeriaServerCallTest {
                 HttpData.of(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.protoByteBuf(request))));
         verify(res).write(HttpHeaders.of(HttpStatus.OK)
                                      .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
-                                     .set(AsciiString.of("grpc-status"), "13")
+                                     .set(AsciiString.of("grpc-status"),
+                                          Integer.toString(Status.RESOURCE_EXHAUSTED.getCode().value()))
                                      .set(AsciiString.of("grpc-message"),
                                           "com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer: " +
                                           "Frame size 1030 exceeds maximum: 1024. "));
@@ -405,8 +405,7 @@ public class ArmeriaServerCallTest {
                 HttpHeaders.of().set(GrpcHeaderNames.GRPC_ENCODING, "gzip"),
                 TestServiceGrpc.METHOD_UNARY_CALL,
                 CompressorRegistry.getDefaultInstance(),
-                DecompressorRegistry.getDefaultInstance(),
-                UnpooledByteBufAllocator.DEFAULT, res,
+                DecompressorRegistry.getDefaultInstance(), res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
                 ctx);
@@ -446,7 +445,6 @@ public class ArmeriaServerCallTest {
                 TestServiceGrpc.METHOD_UNARY_CALL,
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
-                UnpooledByteBufAllocator.DEFAULT,
                 res,
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
