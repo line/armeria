@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.internal;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +44,9 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
     private final int maxNumConnections;
     private final AtomicInteger numConnections = new AtomicInteger();
 
+    private final AtomicBoolean droppedLogLock = new AtomicBoolean();
+    private final LongAdder numDroppedConnections = new LongAdder();
+
     public ConnectionLimitingHandler(int maxNumConnections) {
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
     }
@@ -60,8 +66,21 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
             // Set linger option to 0 to reset channel.
             child.config().setOption(ChannelOption.SO_LINGER, 0);
             child.unsafe().closeForcibly();
-            logger.warn("Exceeds the maximum number of open connections: {}", child);
+
+            numDroppedConnections.increment();
+
+            if (droppedLogLock.compareAndSet(false, true)) {
+                ctx.executor().schedule(this::writeNumDroppedConnectionsLog, 1, TimeUnit.SECONDS);
+            }
         }
+    }
+
+    private void writeNumDroppedConnectionsLog() {
+        // There might be a missing count because resetting the counter and unlocking don't execute atomically.
+        // But it might be very few, and this is just a log message. So we ignore the missing count.
+        long dropped = numDroppedConnections.sumThenReset();
+        droppedLogLock.set(false);
+        logger.warn("{} connections dropped within the last 1 second", dropped);
     }
 
     /**
