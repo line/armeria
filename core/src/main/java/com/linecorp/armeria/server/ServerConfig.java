@@ -83,7 +83,7 @@ public final class ServerConfig {
         // Set the primitive properties.
         this.numBosses = validateNumBosses(numBosses);
         this.numWorkers = validateNumWorkers(numWorkers);
-        this.maxNumConnections = validateMaxConnections(maxNumConnections);
+        this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
@@ -166,8 +166,8 @@ public final class ServerConfig {
         return numWorkers;
     }
 
-    static int validateMaxConnections(int maxNumConnections) {
-        return ConnectionLimitingHandler.validateMaxConnections(maxNumConnections);
+    static int validateMaxNumConnections(int maxNumConnections) {
+        return ConnectionLimitingHandler.validateMaxNumConnections(maxNumConnections);
     }
 
     static long validateIdleTimeoutMillis(long idleTimeoutMillis) {

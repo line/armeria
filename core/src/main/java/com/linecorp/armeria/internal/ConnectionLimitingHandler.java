@@ -23,13 +23,14 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
 /**
  * Limit the number of open connections to the configured value.
- * {@link ConnectionLimitingHandler} instance would be set to {@link ServerBootstrap#handler}.
+ * {@link ConnectionLimitingHandler} instance would be set to {@link ServerBootstrap#handler(ChannelHandler)}.
  */
 @Sharable
 public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
@@ -40,7 +41,7 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
     private final AtomicInteger numConnections = new AtomicInteger();
 
     public ConnectionLimitingHandler(int maxNumConnections) {
-        this.maxNumConnections = validateMaxConnections(maxNumConnections);
+        this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
     }
 
     @Override
@@ -55,28 +56,28 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
         } else {
             numConnections.decrementAndGet();
             child.unsafe().closeForcibly();
-            logger.warn("Exceeds the maximum number of open connections: " + child);
+            logger.warn("Exceeds the maximum number of open connections: {}", child);
         }
     }
 
     /**
-     * Returns the maximum allowed number of open numConnections.
+     * Returns the maximum allowed number of open connections.
      */
     public int maxNumConnections() {
         return maxNumConnections;
     }
 
     /**
-     * Returns the number of open numConnections.
+     * Returns the number of open connections.
      */
     public int numConnections() {
         return numConnections.get();
     }
 
     /**
-     * Validates the maximum allowed number of open numConnections. It must be a positive number.
+     * Validates the maximum allowed number of open connections. It must be a positive number.
      */
-    public static int validateMaxConnections(int maxNumConnections) {
+    public static int validateMaxNumConnections(int maxNumConnections) {
         if (maxNumConnections <= 0) {
             throw new IllegalArgumentException("maxNumConnections: " + maxNumConnections + " (expected: > 0)");
         }

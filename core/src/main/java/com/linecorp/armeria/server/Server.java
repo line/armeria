@@ -428,14 +428,7 @@ public final class Server implements AutoCloseable {
     }
 
     /**
-     * Returns the maximum allowed number of open numConnections on this {@link Server}.
-     */
-    public int maxNumConnections() {
-        return connectionLimitingHandler.maxNumConnections();
-    }
-
-    /**
-     * Returns the number of open numConnections on this {@link Server}.
+     * Returns the number of open connections on this {@link Server}.
      */
     public int numConnections() {
         return connectionLimitingHandler.numConnections();

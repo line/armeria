@@ -218,7 +218,7 @@ public final class ServerBuilder {
      * Sets the maximum allowed number of open connections.
      */
     public ServerBuilder maxNumConnections(int maxNumConnections) {
-        this.maxNumConnections = ServerConfig.validateMaxConnections(maxNumConnections);
+        this.maxNumConnections = ServerConfig.validateMaxNumConnections(maxNumConnections);
         return this;
     }
 
