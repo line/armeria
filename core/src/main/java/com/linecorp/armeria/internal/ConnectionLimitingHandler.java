@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 
 /**
  * Limit the number of open connections to the configured value.
@@ -55,6 +56,9 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
             super.channelRead(ctx, msg);
         } else {
             numConnections.decrementAndGet();
+
+            // Set linger option to 0 to reset channel.
+            child.config().setOption(ChannelOption.SO_LINGER, 0);
             child.unsafe().closeForcibly();
             logger.warn("Exceeds the maximum number of open connections: {}", child);
         }
