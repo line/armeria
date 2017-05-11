@@ -149,12 +149,15 @@ public class GrpcMessageMarshaller<I, O> {
     private ByteBuf serializeProto(Message message) throws IOException {
         if (serializationFormat.equals(GrpcSerializationFormats.PROTO)) {
             ByteBuf buf = alloc.buffer(message.getSerializedSize());
+            boolean success = false;
             try {
                 message.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, buf.writableBytes())));
                 buf.writerIndex(buf.capacity());
-            } catch (IOException | IndexOutOfBoundsException e) {
-                buf.release();
-                throw e;
+                success = true;
+            } finally {
+                if (!success) {
+                    buf.release();
+                }
             }
             return buf;
         }
