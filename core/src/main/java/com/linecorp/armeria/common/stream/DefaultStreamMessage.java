@@ -117,8 +117,6 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     @SuppressWarnings("unused")
     private volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
 
-    private volatile boolean withPooledObjects;
-
     @SuppressWarnings("unused")
     private volatile long demand; // set only via demandUpdater
 
@@ -160,8 +158,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     @Override
     public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
-        subscribe0(new SubscriptionImpl(this, subscriber, null));
-        this.withPooledObjects = withPooledObjects;
+        subscribe0(new SubscriptionImpl(this, subscriber, null, withPooledObjects));
     }
 
     @Override
@@ -175,8 +172,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        subscribe0(new SubscriptionImpl(this, subscriber, executor));
-        this.withPooledObjects = withPooledObjects;
+        subscribe0(new SubscriptionImpl(this, subscriber, executor, withPooledObjects));
     }
 
     private void subscribe0(SubscriptionImpl subscription) {
@@ -201,7 +197,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             return;
         }
 
-        final SubscriptionImpl newSubscription = new SubscriptionImpl(this, AbortingSubscriber.INSTANCE, null);
+        final SubscriptionImpl newSubscription = new SubscriptionImpl(
+                this, AbortingSubscriber.INSTANCE, null, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
             newSubscription.subscriber().onSubscribe(newSubscription);
         } else {
@@ -310,7 +307,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 @SuppressWarnings("unchecked")
                 final T o = (T) queue.remove();
                 onRemoval(o);
-                if (!withPooledObjects && o instanceof ByteBufHttpData) {
+                if (!subscription.withPooledObjects() && o instanceof ByteBufHttpData) {
                     ByteBuf buf = ((ByteBufHttpData) o).buf();
                     try {
                         subscriber.onNext(HttpData.of(ByteBufUtil.getBytes(buf)));
@@ -439,12 +436,15 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         private final DefaultStreamMessage<?> publisher;
         private final Subscriber<Object> subscriber;
         private final Executor executor;
+        private final boolean withPooledObjects;
 
         @SuppressWarnings("unchecked")
-        SubscriptionImpl(DefaultStreamMessage<?> publisher, Subscriber<?> subscriber, Executor executor) {
+        SubscriptionImpl(DefaultStreamMessage<?> publisher, Subscriber<?> subscriber, Executor executor,
+                         boolean withPooledObjects) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
+            this.withPooledObjects = withPooledObjects;
         }
 
         Subscriber<Object> subscriber() {
@@ -453,6 +453,10 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
         Executor executor() {
             return executor;
+        }
+
+        boolean withPooledObjects() {
+            return withPooledObjects;
         }
 
         @Override
