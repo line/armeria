@@ -76,6 +76,12 @@ public class ArmeriaAutoConfiguration {
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
                                                        .setProtocol(HttpSessionProtocols.HTTP);
 
+    @Bean
+    @ConditionalOnMissingBean(MetricRegistry.class)
+    MetricRegistry metricRegistry() {
+        return new MetricRegistry();
+    }
+
     /**
      * Create a {@link Server} bean.
      */

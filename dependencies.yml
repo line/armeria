@@ -65,7 +65,7 @@ it.unimi.dsi:
   fastutil: { version: 7.2.0 }
 
 javax.inject:
-  javax.inject: { version: 1 }
+  javax.inject: { version: !!str 1 }
 
 javax.validation:
   validation-api: { version: 1.1.0.Final }
