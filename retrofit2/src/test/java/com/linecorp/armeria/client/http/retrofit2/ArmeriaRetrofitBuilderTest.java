@@ -18,16 +18,39 @@ package com.linecorp.armeria.client.http.retrofit2;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import java.util.Set;
+
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.SessionProtocolProvider;
 
 import retrofit2.Retrofit;
 
 public class ArmeriaRetrofitBuilderTest {
 
+    public static final class FooProtocolProvider extends SessionProtocolProvider {
+
+        @Override
+        protected Set<Entry> entries() {
+            return ImmutableSet.of(
+                    new Entry("foo", false, false, 9999));
+        }
+    }
+
     @Test
     public void build() throws Exception {
         Retrofit retrofit = new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080/").build();
         assertThat(retrofit.baseUrl().toString()).isEqualTo("http://example.com:8080/");
+    }
+
+    @Test
+    public void build_wrongScheme() throws Exception {
+        Throwable thrown = catchThrowable(
+                () -> new ArmeriaRetrofitBuilder().baseUrl("foo://example.com:8080").build());
+        assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
+                          .hasMessage("baseUrl must have an HTTP scheme: foo://example.com:8080");
     }
 
     @Test
@@ -48,7 +71,7 @@ public class ArmeriaRetrofitBuilderTest {
         Throwable thrown = catchThrowable(
                 () -> new ArmeriaRetrofitBuilder().baseUrl("http://example.com:8080/a/b/c").build());
         assertThat(thrown).isInstanceOf(IllegalArgumentException.class)
-                          .hasMessage("baseUrl must end in /: http://example.com:8080/a/b/c");
+                          .hasMessage("baseUrl must end with /: http://example.com:8080/a/b/c");
     }
 
     @Test

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.http.retrofit2;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.client.http.retrofit2.ArmeriaCallFactory.GROUP_PREFIX;
 import static java.util.Objects.requireNonNull;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpSessionProtocols;
 
 import okhttp3.HttpUrl;
 import retrofit2.Call;
@@ -93,7 +95,7 @@ public final class ArmeriaRetrofitBuilder {
      * Creates a {@link ArmeriaRetrofitBuilder} with the specified {@link ClientFactory}.
      */
     public ArmeriaRetrofitBuilder(ClientFactory clientFactory) {
-        this.clientFactory = requireNonNull(clientFactory, "factory");
+        this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         retrofitBuilder = new Retrofit.Builder();
     }
 
@@ -104,9 +106,12 @@ public final class ArmeriaRetrofitBuilder {
      */
     public ArmeriaRetrofitBuilder baseUrl(String baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
-        String path = URI.create(baseUrl).getPath();
+        URI uri = URI.create(baseUrl);
+        checkArgument(HttpSessionProtocols.isHttp(SessionProtocol.of(uri.getScheme())),
+                      "baseUrl must have an HTTP scheme: %s", baseUrl);
+        String path = uri.getPath();
         if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {
-            throw new IllegalArgumentException("baseUrl must end in /: " + baseUrl);
+            throw new IllegalArgumentException("baseUrl must end with /: " + baseUrl);
         }
         this.baseUrl = baseUrl;
         return this;
@@ -173,7 +178,7 @@ public final class ArmeriaRetrofitBuilder {
      * Creates a new {@link Retrofit} instance using the configured values.
      */
     public Retrofit build() {
-        checkState(baseUrl != null, "baseUrl");
+        checkState(baseUrl != null, "baseUrl not set");
         final URI uri = URI.create(baseUrl);
         final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(uri.getScheme()));
         final String fullUri = scheme.uriText() + "://" + uri.getAuthority();
