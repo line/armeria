@@ -21,10 +21,16 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.List;
 
-import com.google.common.annotations.VisibleForTesting;
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -44,7 +50,6 @@ import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
-import io.netty.handler.codec.http2.Http2Exception;
 
 /**
  * A {@link AbstractHttpService} that implements the GRPC wire protocol. Interfaces and binding logic of GRPC
@@ -60,10 +65,12 @@ import io.netty.handler.codec.http2.Http2Exception;
  */
 public final class GrpcService extends AbstractHttpService {
 
-    static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
+    private static final Logger logger = LoggerFactory.getLogger(GrpcService.class);
 
-    @VisibleForTesting
-    static final String CONTENT_TYPE_GRPC = "application/grpc";
+    private static final List<SerializationFormat> SUPPORTED_SERIALIZATION_FORMATS =
+            ImmutableList.of(GrpcSerializationFormats.PROTO, GrpcSerializationFormats.PROTO_WEB);
+
+    static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
     private static final Metadata EMPTY_METADATA = new Metadata();
 
@@ -88,15 +95,16 @@ public final class GrpcService extends AbstractHttpService {
 
     @Override
     protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) throws Exception {
-        if (!verifyContentType(req.headers())) {
+        String contentType = req.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        SerializationFormat serializationFormat = findSerializationFormat(contentType);
+        if (serializationFormat == null) {
             res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                         MediaType.PLAIN_TEXT_UTF_8,
                         "Missing or invalid Content-Type header.");
             return;
         }
 
-        // Currently only support one format.
-        ctx.logBuilder().serializationFormat(GrpcSerializationFormats.PROTO);
+        ctx.logBuilder().serializationFormat(serializationFormat);
 
         String methodName = GrpcRequestUtil.determineMethod(ctx);
         if (methodName == null) {
@@ -135,7 +143,8 @@ public final class GrpcService extends AbstractHttpService {
             }
         }
 
-        ArmeriaServerCall<?, ?> call = startCall(methodName, method, ctx, req.headers(), res);
+        ArmeriaServerCall<?, ?> call = startCall(
+                methodName, method, ctx, req.headers(), res, serializationFormat);
         req.subscribe(call.messageReader());
     }
 
@@ -144,7 +153,8 @@ public final class GrpcService extends AbstractHttpService {
             ServerMethodDefinition<I, O> methodDef,
             ServiceRequestContext ctx,
             HttpHeaders headers,
-            HttpResponseWriter res) {
+            HttpResponseWriter res,
+            SerializationFormat serializationFormat) {
         ArmeriaServerCall<I, O> call = new ArmeriaServerCall<>(
                 headers,
                 methodDef.getMethodDescriptor(),
@@ -153,7 +163,8 @@ public final class GrpcService extends AbstractHttpService {
                 res,
                 maxInboundMessageSizeBytes,
                 maxOutboundMessageSizeBytes,
-                ctx);
+                ctx,
+                serializationFormat);
         ServerCall.Listener<I> listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
         if (listener == null) {
             throw new NullPointerException(
@@ -161,34 +172,6 @@ public final class GrpcService extends AbstractHttpService {
         }
         call.setListener(listener);
         return call;
-    }
-
-    private boolean verifyContentType(HttpHeaders headers) throws Http2Exception {
-        String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
-        return contentType != null && isGrpcContentType(contentType);
-    }
-
-    private static boolean isGrpcContentType(String contentType) {
-        if (CONTENT_TYPE_GRPC.length() > contentType.length()) {
-            return false;
-        }
-
-        contentType = contentType.toLowerCase();
-        if (!contentType.startsWith(CONTENT_TYPE_GRPC)) {
-            // Not a gRPC content-type.
-            return false;
-        }
-
-        if (contentType.length() == CONTENT_TYPE_GRPC.length()) {
-            // The strings match exactly.
-            return true;
-        }
-
-        // The contentType matches, but is longer than the expected string.
-        // We need to support variations on the content-type (e.g. +proto, +json) as defined by the
-        // gRPC wire spec.
-        char nextChar = contentType.charAt(CONTENT_TYPE_GRPC.length());
-        return nextChar == '+' || nextChar == ';';
     }
 
     @Override
@@ -200,5 +183,28 @@ public final class GrpcService extends AbstractHttpService {
 
     List<ServerServiceDefinition> services() {
         return registry.services();
+    }
+
+    @Nullable
+    private SerializationFormat findSerializationFormat(@Nullable String contentType) {
+        if (contentType == null) {
+            return null;
+        }
+
+        final MediaType mediaType;
+        try {
+            mediaType = MediaType.parse(contentType);
+        } catch (IllegalArgumentException e) {
+            logger.debug("Failed to parse the 'content-type' header: {}", contentType, e);
+            return null;
+        }
+
+        for (SerializationFormat format : SUPPORTED_SERIALIZATION_FORMATS) {
+            if (format.isAccepted(mediaType)) {
+                return format;
+            }
+        }
+
+        return null;
     }
 }

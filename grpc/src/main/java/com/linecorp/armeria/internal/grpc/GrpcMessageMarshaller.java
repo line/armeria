@@ -147,7 +147,7 @@ public class GrpcMessageMarshaller<I, O> {
     }
 
     private ByteBuf serializeProto(Message message) throws IOException {
-        if (serializationFormat.equals(GrpcSerializationFormats.PROTO)) {
+        if (GrpcSerializationFormats.isProto(serializationFormat)) {
             ByteBuf buf = alloc.buffer(message.getSerializedSize());
             boolean success = false;
             try {

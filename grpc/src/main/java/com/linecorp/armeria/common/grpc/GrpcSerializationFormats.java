@@ -39,7 +39,18 @@ public final class GrpcSerializationFormats {
      */
     public static final SerializationFormat JSON = SerializationFormat.of("gjson");
 
-    private static final Set<SerializationFormat> GRPC_FORMATS = ImmutableSet.of(PROTO, JSON);
+    /**
+     * GRPC-web protobuf serialization format.
+     */
+    public static final SerializationFormat PROTO_WEB = SerializationFormat.of("gproto-web");
+
+    /**
+     * GRPC-web JSON serialization format.
+     */
+    public static final SerializationFormat JSON_WEB = SerializationFormat.of("gjson-web");
+
+    private static final Set<SerializationFormat> GRPC_FORMATS = ImmutableSet.of(
+            PROTO, JSON, PROTO_WEB, JSON_WEB);
 
     /**
      * Returns the set of all known GRPC serialization formats.
@@ -53,6 +64,23 @@ public final class GrpcSerializationFormats {
      */
     public static boolean isGrpc(SerializationFormat format) {
         return values().contains(requireNonNull(format, "format"));
+    }
+
+    /**
+     * Is a proto-based GRPC serialization format.
+     */
+    public static boolean isProto(SerializationFormat format) {
+        requireNonNull(format, "format");
+        return format == PROTO || format == PROTO_WEB;
+    }
+
+    /**
+     * Returns whether the specified {@link SerializationFormat} is GRPC-web, the subset of GRPC that supports
+     * browsers.
+     */
+    public static boolean isGrpcWeb(SerializationFormat format) {
+        requireNonNull(format, "format");
+        return format == PROTO_WEB || format == JSON_WEB;
     }
 
     private GrpcSerializationFormats() {}

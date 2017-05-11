@@ -33,6 +33,8 @@ public final class GrpcSerializationFormatProvider extends SerializationFormatPr
     protected Set<Entry> entries() {
         return ImmutableSet.of(
                 new Entry("gproto", create("application", "grpc+proto")),
-                new Entry("gjson", create("application", "grpc+json")));
+                new Entry("gjson", create("application", "grpc+json")),
+                new Entry("gproto-web", create("application", "grpc-web+proto")),
+                new Entry("gjson-web", create("application", "grpc-web+json")));
     }
 }
