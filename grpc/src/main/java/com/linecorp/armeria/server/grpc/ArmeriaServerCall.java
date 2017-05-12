@@ -231,6 +231,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         messageFramer.close();
         if (!clientStreamClosed) {
             messageReader.cancel();
+            clientStreamClosed = true;
         }
 
         HttpHeaders trailers = statusToTrailers(status, sendHeadersCalled);
@@ -281,23 +282,35 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void messageRead(ByteBufOrStream message) {
-        // Special case for unary calls.
-        if (messageReceived && method.getType() == MethodType.UNARY) {
-            close(Status.INTERNAL.withDescription(
-                    "More than one request messages for unary call or server streaming call"));
-            return;
-        }
-        messageReceived = true;
-
-        if (isCancelled()) {
-            return;
-        }
+        boolean success = false;
+        final I request;
 
         try {
-            listener.onMessage(marshaller.deserializeRequest(message));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            // Special case for unary calls.
+            if (messageReceived && method.getType() == MethodType.UNARY) {
+                close(Status.INTERNAL.withDescription(
+                        "More than one request messages for unary call or server streaming call"));
+                return;
+            }
+            messageReceived = true;
+
+            if (isCancelled()) {
+                return;
+            }
+
+            try {
+                request = marshaller.deserializeRequest(message);
+                success = true;
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        } finally {
+            if (message.buf() != null && !success) {
+                message.buf().release();
+            }
         }
+
+        listener.onMessage(request);
     }
 
     @Override

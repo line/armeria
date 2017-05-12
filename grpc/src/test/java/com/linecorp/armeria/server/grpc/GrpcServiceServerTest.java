@@ -55,7 +55,10 @@ public class GrpcServiceServerTest {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             if (request.hasResponseStatus()) {
-                throw new StatusRuntimeException(Status.fromCodeValue(request.getResponseStatus().getCode()));
+                responseObserver.onError(
+                        new StatusRuntimeException(
+                                Status.fromCodeValue(request.getResponseStatus().getCode())));
+                return;
             }
             responseObserver.onNext(GrpcTestUtil.RESPONSE_MESSAGE);
             responseObserver.onCompleted();

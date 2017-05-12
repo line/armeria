@@ -105,7 +105,6 @@ public class GrpcClientTest {
                     .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .enableUnframedRequests(true)
                     .build()
                     .decorate(TestServiceImpl.EchoRequestHeadersInTrailers::new)
                     .decorate((client, ctx, req) -> {

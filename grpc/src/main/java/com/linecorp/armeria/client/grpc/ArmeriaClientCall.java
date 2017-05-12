@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
+import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
@@ -55,6 +56,7 @@ import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.Status;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
@@ -186,7 +188,18 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     @Override
     public void sendMessage(I message) {
         try {
-            req.write(messageFramer.writePayload(marshaller.serializeRequest(message)));
+            ByteBuf serialized = marshaller.serializeRequest(message);
+            boolean success = false;
+            final HttpData frame;
+            try {
+                frame = messageFramer.writePayload(serialized);
+                success = true;
+            } finally {
+                if (!success) {
+                    serialized.release();
+                }
+            }
+            req.write(frame);
         } catch (Throwable t) {
             cancel(null, t);
         }
@@ -218,6 +231,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void onError(Status status) {
+        responseReader.cancel();
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             listener.onClose(status, EMPTY_METADATA);
         }
