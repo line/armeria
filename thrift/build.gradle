@@ -1,3 +1,7 @@
+plugins {
+    id 'me.champeau.gradle.jmh' version '0.3.1'
+}
+
 managedDependencies {
     // Thrift
     compile 'org.apache.thrift:libthrift'
@@ -17,3 +21,7 @@ tasks.shadedJar.doLast {
                 includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')
     }
 }
+
+configurations.jmh.extendsFrom configurations.testRuntimeClasspath
+
+tasks.checkstyleJmh.enabled = false
