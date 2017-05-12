@@ -21,7 +21,9 @@ import static org.junit.Assert.assertEquals;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -51,7 +53,6 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.InetNameResolver;
 import io.netty.resolver.InetSocketAddressResolver;
-import io.netty.util.NetUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
 
@@ -76,21 +77,8 @@ public class HttpClientSniTest {
             final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
             final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
 
-            a.serviceAt("/", new AbstractHttpService() {
-                @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                     HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "a.com");
-                }
-            });
-
-            b.serviceAt("/", new AbstractHttpService() {
-                @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                     HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "b.com");
-                }
-            });
+            a.serviceAt("/", new SniTestService("a.com"));
+            b.serviceAt("/", new SniTestService("b.com"));
 
             a.sslContext(HTTPS, sscA.certificate(), sscA.privateKey());
             b.sslContext(HTTPS, sscB.certificate(), sscB.privateKey());
@@ -131,7 +119,7 @@ public class HttpClientSniTest {
     }
 
     private static void testMatch(String fqdn) throws Exception {
-        assertEquals(fqdn, get(fqdn));
+        assertEquals(fqdn + ": CN=" + fqdn, get(fqdn));
     }
 
     @Test
@@ -141,7 +129,7 @@ public class HttpClientSniTest {
     }
 
     private static void testMismatch(String fqdn) throws Exception {
-        assertEquals("b.com", get(fqdn));
+        assertEquals("b.com: CN=b.com", get(fqdn));
     }
 
     private static String get(String fqdn) throws Exception {
@@ -161,14 +149,43 @@ public class HttpClientSniTest {
             return new InetSocketAddressResolver(eventExecutor, new InetNameResolver(eventExecutor) {
                 @Override
                 protected void doResolve(String hostname, Promise<InetAddress> promise) {
-                    promise.setSuccess(NetUtil.LOCALHOST4);
+                    try {
+                        promise.setSuccess(newAddress(hostname));
+                    } catch (UnknownHostException e) {
+                        promise.setFailure(e);
+                    }
                 }
 
                 @Override
                 protected void doResolveAll(String hostname, Promise<List<InetAddress>> promise) {
-                    promise.setSuccess(Collections.singletonList(NetUtil.LOCALHOST4));
+                    try {
+                        promise.setSuccess(Collections.singletonList(newAddress(hostname)));
+                    } catch (UnknownHostException e) {
+                        promise.setFailure(e);
+                    }
+                }
+
+                private InetAddress newAddress(String hostname) throws UnknownHostException {
+                    return InetAddress.getByAddress(hostname, new byte[] { 127, 0, 0, 1 });
                 }
             });
+        }
+    }
+
+    private static class SniTestService extends AbstractHttpService {
+
+        private final String domainName;
+
+        SniTestService(String domainName) {
+            this.domainName = domainName;
+        }
+
+        @Override
+        protected void doGet(ServiceRequestContext ctx, HttpRequest req,
+                             HttpResponseWriter res) {
+            final X509Certificate c = (X509Certificate) ctx.sslSession().getLocalCertificates()[0];
+            final String name = c.getSubjectX500Principal().getName();
+            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, domainName + ": " + name);
         }
     }
 }
