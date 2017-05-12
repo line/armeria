@@ -44,7 +44,7 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
     private final int maxNumConnections;
     private final AtomicInteger numConnections = new AtomicInteger();
 
-    private final AtomicBoolean droppedLogLock = new AtomicBoolean();
+    private final AtomicBoolean loggingScheduled = new AtomicBoolean();
     private final LongAdder numDroppedConnections = new LongAdder();
 
     public ConnectionLimitingHandler(int maxNumConnections) {
@@ -69,14 +69,14 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
 
             numDroppedConnections.increment();
 
-            if (droppedLogLock.compareAndSet(false, true)) {
+            if (loggingScheduled.compareAndSet(false, true)) {
                 ctx.executor().schedule(this::writeNumDroppedConnectionsLog, 1, TimeUnit.SECONDS);
             }
         }
     }
 
     private void writeNumDroppedConnectionsLog() {
-        droppedLogLock.set(false);
+        loggingScheduled.set(false);
 
         long dropped = numDroppedConnections.sumThenReset();
         if (dropped > 0) {
