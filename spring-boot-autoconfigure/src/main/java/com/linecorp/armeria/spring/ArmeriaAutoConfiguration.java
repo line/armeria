@@ -43,6 +43,7 @@ import com.codahale.metrics.json.MetricsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Strings;
+import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -67,6 +68,7 @@ import io.netty.util.NetUtil;
 @Configuration
 @EnableConfigurationProperties(ArmeriaSettings.class)
 @ConditionalOnMissingBean(Server.class)
+@EnableMetrics(proxyTargetClass = true)
 public class ArmeriaAutoConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaAutoConfiguration.class);
@@ -75,12 +77,6 @@ public class ArmeriaAutoConfiguration {
 
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
                                                        .setProtocol(HttpSessionProtocols.HTTP);
-
-    @Bean
-    @ConditionalOnMissingBean(MetricRegistry.class)
-    MetricRegistry metricRegistry() {
-        return new MetricRegistry();
-    }
 
     /**
      * Create a {@link Server} bean.
@@ -101,10 +97,13 @@ public class ArmeriaAutoConfiguration {
             return null;
         }
 
-        ServerBuilder server = new ServerBuilder()
-                .gracefulShutdownTimeout(
-                        armeriaSettings.getGracefulShutdownQuietPeriodMillis(),
-                        armeriaSettings.getGracefulShutdownTimeoutMillis());
+        final ServerBuilder server = new ServerBuilder();
+        if (armeriaSettings.getGracefulShutdownQuietPeriodMillis() != -1 &&
+            armeriaSettings.getGracefulShutdownTimeoutMillis() != -1) {
+            server.gracefulShutdownTimeout(
+                    armeriaSettings.getGracefulShutdownQuietPeriodMillis(),
+                    armeriaSettings.getGracefulShutdownTimeoutMillis());
+        }
 
         configurePorts(armeriaSettings, server);
 
@@ -114,9 +113,11 @@ public class ArmeriaAutoConfiguration {
             Service<HttpRequest, HttpResponse> service =
                     (Service<HttpRequest, HttpResponse>) bean.getService();
 
-            service = service.decorate(
-                    DropwizardMetricCollectingService.newDecorator(
-                            metricRegistry, serviceMetricName(bean.getServiceName())));
+            if (armeriaSettings.isEnableDropwizardMetrics()) {
+                service = service.decorate(
+                        DropwizardMetricCollectingService.newDecorator(
+                                metricRegistry, serviceMetricName(bean.getServiceName())));
+            }
 
             server.serviceAt(bean.getPath(), service);
             docServiceRequests.addAll(bean.getExampleRequests());
@@ -126,15 +127,19 @@ public class ArmeriaAutoConfiguration {
             @SuppressWarnings("unchecked")
             Service<HttpRequest, HttpResponse> service =
                     (Service<HttpRequest, HttpResponse>) bean.getService();
-            service = service.decorate(
-                    DropwizardMetricCollectingService.newDecorator(
-                            metricRegistry, serviceMetricName(bean.getServiceName())));
+            if (armeriaSettings.isEnableDropwizardMetrics()) {
+                service = service.decorate(
+                        DropwizardMetricCollectingService.newDecorator(
+                                metricRegistry, serviceMetricName(bean.getServiceName())));
+            }
             server.service(bean.getPathMapping(), service);
         }));
 
-        server.serviceAt(armeriaSettings.getHealthCheckPath(),
-                         new HttpHealthCheckService(healthCheckers.orElseGet(Collections::emptyList)
-                                                                  .toArray(EMPTY_HEALTH_CHECKERS)));
+        if (!Strings.isNullOrEmpty(armeriaSettings.getHealthCheckPath())) {
+            server.serviceAt(armeriaSettings.getHealthCheckPath(),
+                             new HttpHealthCheckService(healthCheckers.orElseGet(Collections::emptyList)
+                                                                      .toArray(EMPTY_HEALTH_CHECKERS)));
+        }
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getDocsPath())) {
             server.serviceUnder(armeriaSettings.getDocsPath(),
@@ -161,7 +166,7 @@ public class ArmeriaAutoConfiguration {
 
         armeriaServiceInitializers.ifPresent(
                 initializers -> initializers.forEach(
-                        initializer -> initializer.configureServer(server)));
+                        initializer -> initializer.configure(server)));
 
         Server s = server.build();
         s.start().join();

@@ -44,6 +44,7 @@ public class HttpServiceRegistrationBean {
     /**
      * The pathMapping for the http service. For example, {@code PathMapping.ofPrefix("/foobar")}.
      */
+    @Nonnull
     private PathMapping pathMapping;
 
     /**

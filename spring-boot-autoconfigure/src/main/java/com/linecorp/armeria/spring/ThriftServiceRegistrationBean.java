@@ -39,7 +39,7 @@ public class ThriftServiceRegistrationBean {
     private Service<?, ?> service;
 
     /**
-     * The url path to register the service at. If not specified, defaults to {@code /api/thrift}.
+     * The url path to register the service at. If not specified, defaults to {@code /api}.
      */
     private String path = "/api";
 
@@ -65,7 +65,7 @@ public class ThriftServiceRegistrationBean {
     }
 
     /**
-     * Register a thrift {@link Service} to this bean.
+     * Register the thrift {@link Service} to this bean.
      */
     public ThriftServiceRegistrationBean setService(Service<?, ?> service) {
         this.service = service;
@@ -80,7 +80,7 @@ public class ThriftServiceRegistrationBean {
     }
 
     /**
-     * Register a url path this service map to.
+     * Register the url path this service map to.
      */
     public ThriftServiceRegistrationBean setPath(String path) {
         this.path = path;
@@ -88,14 +88,14 @@ public class ThriftServiceRegistrationBean {
     }
 
     /**
-     * Retrurns a service name to use in monitoring.
+     * Returns the service name to use in monitoring.
      */
     public String getServiceName() {
         return serviceName;
     }
 
     /**
-     * Register a service name to use in monitoring.
+     * Register the service name to use in monitoring.
      */
     public ThriftServiceRegistrationBean setServiceName(String serviceName) {
         this.serviceName = serviceName;
@@ -103,7 +103,7 @@ public class ThriftServiceRegistrationBean {
     }
 
     /**
-     * Returns a sample requests of {@link #getService()}.
+     * Returns sample requests of {@link #getService()}.
      */
     public Collection<? extends TBase<?, ?>> getExampleRequests() {
         return exampleRequests;

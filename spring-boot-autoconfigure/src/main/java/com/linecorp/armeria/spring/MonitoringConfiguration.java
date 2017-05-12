@@ -37,7 +37,6 @@ import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.codahale.metrics.jvm.ThreadStatesGaugeSet;
 import com.codahale.metrics.logback.InstrumentedAppender;
 import com.google.common.io.Resources;
-import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
 import com.ryantenney.metrics.spring.config.annotation.MetricsConfigurerAdapter;
 
 import ch.qos.logback.classic.Logger;
@@ -45,7 +44,6 @@ import ch.qos.logback.classic.LoggerContext;
 
 @Configuration
 @ConditionalOnMissingBean(MetricRegistry.class)
-@EnableMetrics(proxyTargetClass = true)
 public class MonitoringConfiguration extends MetricsConfigurerAdapter {
     @Override
     public void configureReporters(MetricRegistry registry) {

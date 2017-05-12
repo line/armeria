@@ -19,10 +19,10 @@ import com.linecorp.armeria.server.ServerBuilder;
 
 /**
  * Interface used to configure a service on the default armeria server. Can be
- * used to register aribtrary services. When possible, it is usually preferable
+ * used to register arbitrary services. When possible, it is usually preferable
  * to use convenience beans like {@link ThriftServiceRegistrationBean}.
  */
 @FunctionalInterface
 public interface ArmeriaServerConfigurator {
-    void configureServer(ServerBuilder serverBuilder);
+    void configure(ServerBuilder serverBuilder);
 }

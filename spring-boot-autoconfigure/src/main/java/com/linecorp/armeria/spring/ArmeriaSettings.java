@@ -25,9 +25,10 @@ import org.springframework.validation.annotation.Validated;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
 
 /**
- * Settings for armeria servers.
+ * Settings for armeria servers, e.g.,
  * <pre>{@code
  * armeria:
  *   ports:
@@ -135,8 +136,10 @@ public class ArmeriaSettings {
 
     /**
      * The path to serve health check requests on. Should correspond to what is
-     * registered in the load balancer.
+     * registered in the load balancer. If not set, health check service will not
+     * be registered.
      */
+    @Nullable
     private String healthCheckPath = "/internal/healthcheck";
 
     /**
@@ -158,7 +161,8 @@ public class ArmeriaSettings {
     /**
      * The number of milliseconds to wait after the last processed request to
      * be considered safe for shutdown. This should be set at least as long as
-     * the slowest possible request to guarantee graceful shutdown.
+     * the slowest possible request to guarantee graceful shutdown. If {@code -1},
+     * graceful shutdown will be disabled.
      */
     private long gracefulShutdownQuietPeriodMillis = 5000;
 
@@ -166,9 +170,16 @@ public class ArmeriaSettings {
      * The number of milliseconds to wait after going unhealthy before forcing
      * the server to shutdown regardless of if it is still processing requests.
      * This should be set as long as the maximum time for the load balancer to
-     * turn off requests to the server.
+     * turn off requests to the server. If {@code -1}, graceful shutdown will
+     * be disabled.
      */
     private long gracefulShutdownTimeoutMillis = 40000;
+
+    /**
+     * Enable to decorates all services {@link DropwizardMetricCollectingService}.
+     * The default is {@code true}.
+     */
+    private boolean enableDropwizardMetrics = true;
 
     public List<Port> getPorts() {
         return ports;
@@ -178,11 +189,12 @@ public class ArmeriaSettings {
         this.ports = ports;
     }
 
+    @Nullable
     public String getHealthCheckPath() {
         return healthCheckPath;
     }
 
-    public void setHealthCheckPath(String healthCheckPath) {
+    public void setHealthCheckPath(@Nullable String healthCheckPath) {
         this.healthCheckPath = healthCheckPath;
     }
 
@@ -219,4 +231,13 @@ public class ArmeriaSettings {
     public void setGracefulShutdownTimeoutMillis(long gracefulShutdownTimeoutMillis) {
         this.gracefulShutdownTimeoutMillis = gracefulShutdownTimeoutMillis;
     }
+
+    public boolean isEnableDropwizardMetrics() {
+        return enableDropwizardMetrics;
+    }
+
+    public void setEnableDropwizardMetrics(boolean enableDropwizardMetrics) {
+        this.enableDropwizardMetrics = enableDropwizardMetrics;
+    }
+
 }
