@@ -73,7 +73,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 
 /**
  * A {@link Service} that handles a Thrift call.
@@ -693,23 +692,29 @@ public class THttpService extends AbstractHttpService {
                                           SerializationFormat serializationFormat,
                                           String methodName, int seqId,
                                           TBase<?, ?> result) {
-        final ByteBufAllocator alloc = ctx.alloc();
-        ByteBuf buf = alloc.ioBuffer(128);
-        final TTransport transport = new TByteBufTransport(buf);
-        final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
 
+        final ByteBuf buf = ctx.alloc().buffer(128);
+        boolean success = false;
         try {
+            final TTransport transport = new TByteBufTransport(buf);
+            final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.REPLY, seqId);
             outProto.writeMessageBegin(header);
             result.write(outProto);
             outProto.writeMessageEnd();
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, result));
+
+            final HttpData encoded = new ByteBufHttpData(buf, false);
+            success = true;
+            return encoded;
         } catch (TException e) {
             throw new Error(e); // Should never reach here.
+        } finally {
+            if (!success) {
+                buf.release();
+            }
         }
-
-        return new ByteBufHttpData(buf, false);
     }
 
     private static HttpData encodeException(ServiceRequestContext ctx,
@@ -729,23 +734,28 @@ public class THttpService extends AbstractHttpService {
                     "---- END server-side trace ----");
         }
 
-        final ByteBufAllocator alloc = ctx.alloc();
-        ByteBuf buf = alloc.ioBuffer(128);
-        final TTransport transport = new TByteBufTransport(buf);
-        final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
-
+        final ByteBuf buf = ctx.alloc().buffer(128);
+        boolean success = false;
         try {
+            final TTransport transport = new TByteBufTransport(buf);
+            final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
             outProto.writeMessageBegin(header);
             appException.write(outProto);
             outProto.writeMessageEnd();
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, appException));
+
+            final HttpData encoded = new ByteBufHttpData(buf, false);
+            success = true;
+            return encoded;
         } catch (TException e) {
             throw new Error(e); // Should never reach here.
+        } finally {
+            if (!success) {
+                buf.release();
+            }
         }
-
-        return new ByteBufHttpData(buf, false);
     }
 
     private static Map<SerializationFormat, ThreadLocalTProtocol> createFormatToThreadLocalTProtocolMap() {
