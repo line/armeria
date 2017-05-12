@@ -105,6 +105,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetector.Level;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 @RunWith(Parameterized.class)
@@ -122,7 +124,9 @@ public class HttpServerTest {
                                                                : new NioEventLoopGroup(1))));
 
     private static final long MAX_CONTENT_LENGTH = 65536;
-    private static final long STREAMING_CONTENT_LENGTH = Runtime.getRuntime().maxMemory() * 2;
+    // Stream as much as twice of the heap. Stream less to avoid OOME when leak detection is enabled.
+    private static final long STREAMING_CONTENT_LENGTH =
+            Runtime.getRuntime().maxMemory() * 2 / (ResourceLeakDetector.getLevel() == Level.PARANOID ? 8 : 1);
     private static final int STREAMING_CONTENT_CHUNK_LENGTH =
             (int) Math.min(Integer.MAX_VALUE, STREAMING_CONTENT_LENGTH / 8);
 

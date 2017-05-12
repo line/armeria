@@ -716,7 +716,7 @@ configure(javaProjects) {
 
             // Print the test output when the test failed or the test output contains an Exception or an Error.
             afterTest { TestDescriptor td, TestResult tr ->
-                if (tr.resultType == TestResult.ResultType.FAILURE || buf =~ /(?:Exception|Error|Throwable):/) {
+                if (tr.resultType == TestResult.ResultType.FAILURE || buf =~ /(?:Exception|Error|Throwable|LEAK):/) {
                     def simpleClassName = td.className.substring(td.className.lastIndexOf('.') + 1)
 
                     // Add an empty line if the test progress dots were printed.
