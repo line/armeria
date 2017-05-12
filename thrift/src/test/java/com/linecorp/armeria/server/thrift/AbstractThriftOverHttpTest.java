@@ -36,6 +36,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -62,6 +64,8 @@ import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public abstract class AbstractThriftOverHttpTest {
+
+    private static final String LARGER_THAN_TLS = Strings.repeat("A", 16384);
 
     private static final Server server;
 
@@ -116,6 +120,10 @@ public abstract class AbstractThriftOverHttpTest {
                             RequestContext.current().eventLoop().schedule(
                                     () -> resultHandler.onComplete(milliseconds),
                                     milliseconds, TimeUnit.MILLISECONDS)));
+
+            // Response larger than a h1 TLS record
+            sb.serviceAt("/large", THttpService.of(
+                    (AsyncIface) (name, resultHandler) -> resultHandler.onComplete(LARGER_THAN_TLS)));
 
             sb.decorator(LoggingService::new);
 
@@ -192,6 +200,17 @@ public abstract class AbstractThriftOverHttpTest {
                             ThriftProtocolFactories.BINARY.getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
+    @Test
+    public void testLargeHttpsInvocation() throws Exception {
+        try (TTransport transport = newTransport("https", "/large")) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo(LARGER_THAN_TLS);
         }
     }
 

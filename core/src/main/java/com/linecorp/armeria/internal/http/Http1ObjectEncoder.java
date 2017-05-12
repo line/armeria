@@ -330,8 +330,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         for (;;) {
             // Ensure an HttpContent does not exceed the maximum length of a cleartext TLS record.
             final int chunkSize = Math.min(MAX_TLS_DATA_LENGTH, remaining);
-            lastFuture = write(ctx, id, new DefaultHttpContent(
-                    Unpooled.wrappedBuffer(data.array(), offset, chunkSize)), false);
+            lastFuture = write(ctx, id, new DefaultHttpContent(dataChunk(data, offset, chunkSize)), false);
             remaining -= chunkSize;
             if (remaining == 0) {
                 break;
@@ -344,7 +343,21 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         }
 
         ctx.flush();
+
+        if (data instanceof ByteBufHttpData) {
+            ((ByteBufHttpData) data).buf().release();
+        }
+
         return lastFuture;
+    }
+
+    private ByteBuf dataChunk(HttpData data, int offset, int chunkSize) {
+        if (data instanceof ByteBufHttpData) {
+            ByteBuf buf = ((ByteBufHttpData) data).buf();
+            return buf.retainedSlice(offset, chunkSize);
+        } else {
+            return Unpooled.wrappedBuffer(data.array(), offset, chunkSize);
+        }
     }
 
     private ChannelFuture write(ChannelHandlerContext ctx, int id, HttpObject obj, boolean endStream) {
