@@ -43,7 +43,7 @@ io.grpc:
   grpc-testing: { version: *GRPC_VERSION }
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION 4.1.10.Final }
+  netty-codec-http2: { version: &NETTY_VERSION 4.1.11.Final }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }

@@ -41,8 +41,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
-import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
@@ -128,7 +128,9 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
         return options.addressResolverGroup().orElseGet(
                 () -> new DnsAddressResolverGroup(
                         datagramChannelType(eventLoopGroup),
-                        DnsServerAddressStreamProviders.platformDefault()));
+                        // TODO(trustin): Use DnsServerAddressStreamProviders.platformDefault()
+                        //                once Netty fixes its bug: https://github.com/netty/netty/issues/6736
+                        DefaultDnsServerAddressStreamProvider.INSTANCE));
     }
 
     private static Class<? extends SocketChannel> channelType(EventLoopGroup eventLoopGroup) {
