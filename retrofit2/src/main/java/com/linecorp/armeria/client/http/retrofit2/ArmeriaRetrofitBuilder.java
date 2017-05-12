@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -118,12 +117,11 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Sets the {@link BiFunction} that is applied to the {@link ClientOptionsBuilder} of the underlying
-     * {@link HttpClient}.
+     * Sets the {@link BiFunction} that is applied to the underlying {@link HttpClient}.
      *
-     * @param configurator a {@link Function} whose input is the original {@link ClientOptionsBuilder} of the
-     *        client being derived from and whose output is the {@link ClientOptionsBuilder} of the new derived
-     *        client
+     * @param configurator a {@link BiFunction} whose first argument is the the URI of the server endpoint and
+     *                     whose second argument is the {@link ClientOptionsBuilder} with default options of
+     *                     the new derived client
      */
     public ArmeriaRetrofitBuilder withClientOptions(
             BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
