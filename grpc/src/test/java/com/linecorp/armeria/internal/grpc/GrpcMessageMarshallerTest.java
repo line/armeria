@@ -51,6 +51,7 @@ public class GrpcMessageMarshallerTest {
         ByteBuf serialized = marshaller.serializeRequest(GrpcTestUtil.REQUEST_MESSAGE);
         assertThat(ByteBufUtil.getBytes(serialized))
                 .containsExactly(GrpcTestUtil.REQUEST_MESSAGE.toByteArray());
+        serialized.release();
     }
 
     @Test
@@ -72,6 +73,7 @@ public class GrpcMessageMarshallerTest {
         ByteBuf serialized = marshaller.serializeResponse(GrpcTestUtil.RESPONSE_MESSAGE);
         assertThat(ByteBufUtil.getBytes(serialized))
                 .containsExactly(GrpcTestUtil.RESPONSE_MESSAGE.toByteArray());
+        serialized.release();
     }
 
     @Test

@@ -133,6 +133,9 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
         if (subscription != null) {
             subscription.cancel();
         }
+        if (!deframer.isClosed()) {
+            deframer.close();
+        }
     }
 
     private void closeDeframer() {

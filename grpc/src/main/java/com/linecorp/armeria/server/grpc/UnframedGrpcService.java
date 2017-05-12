@@ -79,7 +79,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                                 () -> new IllegalArgumentException("Decorated service must be a GrpcService."));
         methodsByName = grpcService.services()
                                    .stream()
-                                   .flatMap(service ->  service.getMethods().stream())
+                                   .flatMap(service -> service.getMethods().stream())
                                    .map(ServerMethodDefinition::getMethodDescriptor)
                                    .collect(ImmutableMap.toImmutableMap(MethodDescriptor::getFullMethodName,
                                                                         Function.identity()));
@@ -159,17 +159,25 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             HttpHeaders grpcHeaders,
             AggregatedHttpMessage clientRequest,
             DefaultHttpResponse res) {
-        final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE);
-
-        HttpData content = clientRequest.content();
-        ByteBuf message = ctx.alloc().buffer(content.length());
-        message.writeBytes(content.array(), content.offset(), content.length());
-
-        HttpData frame = framer.writePayload(message);
-        DefaultHttpRequest grpcRequest = new DefaultHttpRequest(grpcHeaders);
-        grpcRequest.write(frame);
-        grpcRequest.close();
+        final DefaultHttpRequest grpcRequest = new DefaultHttpRequest(grpcHeaders);
+        try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
+                ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
+            HttpData content = clientRequest.content();
+            ByteBuf message = ctx.alloc().buffer(content.length());
+            final HttpData frame;
+            boolean success = false;
+            try {
+                message.writeBytes(content.array(), content.offset(), content.length());
+                frame = framer.writePayload(message);
+                success = true;
+            } finally {
+                if (!success) {
+                    message.release();
+                }
+            }
+            grpcRequest.write(frame);
+            grpcRequest.close();
+        }
 
         final HttpResponse grpcResponse;
         try {
@@ -216,7 +224,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             unframedHeaders.set(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString());
         }
 
-        ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
+        try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 new Listener() {
                     @Override
                     public void messageRead(ByteBufOrStream message) {
@@ -232,8 +240,9 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                 },
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE,
-                ctx.alloc());
-        deframer.request(1);
-        deframer.deframe(grpcResponse.content(), true);
+                ctx.alloc())) {
+            deframer.request(1);
+            deframer.deframe(grpcResponse.content(), true);
+        }
     }
 }

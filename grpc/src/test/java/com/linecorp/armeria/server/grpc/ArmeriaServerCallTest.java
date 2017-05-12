@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -131,6 +132,7 @@ public class ArmeriaServerCallTest {
         ByteBuf request = GrpcTestUtil.requestByteBuf();
         assertThat(request.refCnt()).isEqualTo(1);
         call.messageRead(new ByteBufOrStream(request));
+        call.messageReader().onComplete();
         verify(listener).onMessage(GrpcTestUtil.REQUEST_MESSAGE);
         assertThat(request.refCnt()).isEqualTo(0);
     }
@@ -153,6 +155,7 @@ public class ArmeriaServerCallTest {
 
         call.messageRead(new ByteBufOrStream(
                 new GZIPInputStream(new ByteBufInputStream(request, true))));
+        call.messageReader().onComplete();
         verify(listener).onMessage(GrpcTestUtil.REQUEST_MESSAGE);
         assertThat(request.refCnt()).isEqualTo(0);
     }
@@ -178,6 +181,7 @@ public class ArmeriaServerCallTest {
     @Test
     public void readyOnStart() {
         assertThat(call.isReady()).isTrue();
+        call.messageReader().cancel();
     }
 
     @Test
@@ -189,6 +193,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void headers_defaults() throws Exception {
+        call.messageReader().cancel();
         call.sendHeaders(new Metadata());
         HttpHeaders expectedHeaders = DEFAULT_RESPONSE_HEADERS;
         verify(res).write(expectedHeaders);
@@ -197,6 +202,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void headers_noDecompressors() throws Exception {
+        call.messageReader().cancel();
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
                 TestServiceGrpc.METHOD_UNARY_CALL,
@@ -207,6 +213,7 @@ public class ArmeriaServerCallTest {
                 MAX_MESSAGE_BYTES,
                 ctx,
                 GrpcSerializationFormats.PROTO);
+        call.messageReader().cancel();
         call.sendHeaders(new Metadata());
         HttpHeaders expectedHeaders =
                 HttpHeaders.of(HttpStatus.OK)
@@ -218,6 +225,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void headers_callCompressionClientNoAccepts() throws Exception {
+        call.messageReader().cancel();
         call.setCompression("gzip");
         call.setMessageCompression(true);
         call.sendHeaders(new Metadata());
@@ -233,6 +241,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void headers_callCompressionClientNoMatch() throws Exception {
+        call.messageReader().cancel();
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of().set(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "pied-piper,quantum"),
                 TestServiceGrpc.METHOD_UNARY_CALL,
@@ -243,6 +252,7 @@ public class ArmeriaServerCallTest {
                 MAX_MESSAGE_BYTES,
                 ctx,
                 GrpcSerializationFormats.PROTO);
+        call.messageReader().cancel();
         call.setCompression("gzip");
         call.setMessageCompression(true);
         call.sendHeaders(new Metadata());
@@ -258,7 +268,9 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void headers_callCompressionClientMatch() throws Exception {
+        call.messageReader().cancel();
         call = responseCompressionCall();
+        call.messageReader().cancel();
         call.setCompression("gzip");
         call.setMessageCompression(true);
         call.sendHeaders(new Metadata());
@@ -274,6 +286,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void sendMessage() throws Exception {
+        call.messageReader().cancel();
         call.sendHeaders(new Metadata());
         call.sendMessage(GrpcTestUtil.RESPONSE_MESSAGE);
 
@@ -287,7 +300,9 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void sendCompressedMessage() throws Exception {
+        call.messageReader().cancel();
         call = responseCompressionCall();
+        call.messageReader().cancel();
         call.setListener(listener);
         call.setCompression("gzip");
         call.setMessageCompression(true);
@@ -338,7 +353,7 @@ public class ArmeriaServerCallTest {
         ctx.eventLoop().shutdownGracefully().get();
         call.messageReader().onNext(HttpData.of(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())));
         verify(listener).onMessage(GrpcTestUtil.REQUEST_MESSAGE);
-        call.endOfStream();
+        call.messageReader().onComplete();
         verify(listener).onHalfClose();
         call.sendHeaders(new Metadata());
         call.sendMessage(GrpcTestUtil.RESPONSE_MESSAGE);
@@ -361,7 +376,7 @@ public class ArmeriaServerCallTest {
         ctx.eventLoop().shutdownGracefully().get();
         call.messageReader().onNext(HttpData.of(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())));
         verify(listener).onMessage(GrpcTestUtil.REQUEST_MESSAGE);
-        call.endOfStream();
+        call.messageReader().onComplete();
         verify(listener).onHalfClose();
         call.sendHeaders(new Metadata());
         call.sendMessage(GrpcTestUtil.RESPONSE_MESSAGE);
@@ -412,6 +427,8 @@ public class ArmeriaServerCallTest {
     @Test
     public void tooLargeRequestCompressed() throws Exception {
         when(ctx.eventLoop()).thenReturn(new DefaultEventLoop(new DefaultEventExecutor()));
+        call.messageReader().cancel();
+        reset(subscription);
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of().set(GrpcHeaderNames.GRPC_ENCODING, "gzip"),
                 TestServiceGrpc.METHOD_UNARY_CALL,
@@ -453,6 +470,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void grpcWeb() throws Exception {
+        call.messageReader().cancel();
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),
                 TestServiceGrpc.METHOD_UNARY_CALL,
@@ -469,7 +487,7 @@ public class ArmeriaServerCallTest {
         call.request(2);
         ctx.eventLoop().shutdownGracefully().get();
         call.messageReader().onNext(HttpData.of(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())));
-        call.endOfStream();
+        call.messageReader().onComplete();
         call.sendHeaders(new Metadata());
         call.sendMessage(GrpcTestUtil.RESPONSE_MESSAGE);
         call.close(Status.OK);
@@ -492,6 +510,7 @@ public class ArmeriaServerCallTest {
                 .isEqualTo(expectedHeader);
         verify(res).close();
         verifyNoMoreInteractions(res);
+        data.buf().release();
     }
 
     private ArmeriaServerCall<SimpleRequest, SimpleResponse> responseCompressionCall() {
