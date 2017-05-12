@@ -176,7 +176,7 @@ public class ArmeriaSettings {
     private long gracefulShutdownTimeoutMillis = 40000;
 
     /**
-     * Enable to decorates all services {@link DropwizardMetricCollectingService}.
+     * Whether to decorate all services with {@link DropwizardMetricCollectingService}.
      * The default is {@code true}.
      */
     private boolean enableDropwizardMetrics = true;
