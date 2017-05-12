@@ -76,11 +76,12 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
     }
 
     private void writeNumDroppedConnectionsLog() {
-        // There might be a missing count because resetting the counter and unlocking don't execute atomically.
-        // But it might be very few, and this is just a log message. So we ignore the missing count.
-        long dropped = numDroppedConnections.sumThenReset();
         droppedLogLock.set(false);
-        logger.warn("{} connections dropped within the last 1 second", dropped);
+
+        long dropped = numDroppedConnections.sumThenReset();
+        if (dropped > 0) {
+            logger.warn("{} connections dropped within the last 1 second", dropped);
+        }
     }
 
     /**
