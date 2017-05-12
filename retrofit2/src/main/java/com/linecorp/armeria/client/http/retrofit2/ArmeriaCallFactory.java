@@ -22,7 +22,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -56,12 +56,12 @@ final class ArmeriaCallFactory implements Factory {
     private final Map<String, HttpClient> httpClients = new ConcurrentHashMap<>();
     private final HttpClient baseHttpClient;
     private final ClientFactory clientFactory;
-    private final BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator;
+    private final BiConsumer<String, ClientOptionsBuilder> configurator;
     private final String baseAuthority;
 
     ArmeriaCallFactory(HttpClient baseHttpClient,
                        ClientFactory clientFactory,
-                       BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator,
+                       BiConsumer<String, ClientOptionsBuilder> configurator,
                        String groupPrefix) {
         this.baseHttpClient = baseHttpClient;
         this.clientFactory = clientFactory;
@@ -88,8 +88,9 @@ final class ArmeriaCallFactory implements Factory {
                                           GROUP_PREFIX_MATCHER.matcher(key).replaceFirst("group:") : key;
             final String uriText = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(sessionProtocol))
                                          .uriText() + "://" + finalAuthority;
-            return Clients.newClient(clientFactory, uriText, HttpClient.class,
-                                     configurator.apply(uriText, new ClientOptionsBuilder()).build());
+            final ClientOptionsBuilder clientOptionsBuilder = new ClientOptionsBuilder();
+            configurator.accept(uriText, clientOptionsBuilder);
+            return Clients.newClient(clientFactory, uriText, HttpClient.class, clientOptionsBuilder.build());
         });
     }
 

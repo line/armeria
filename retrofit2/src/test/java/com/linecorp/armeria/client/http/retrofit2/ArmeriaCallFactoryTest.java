@@ -443,7 +443,6 @@ public class ArmeriaCallFactoryTest {
                         counter.incrementAndGet();
                         return delegate.execute(ctx, req);
                     });
-                    return optionsBuilder;
                 })
                 .build().create(Service.class);
 
