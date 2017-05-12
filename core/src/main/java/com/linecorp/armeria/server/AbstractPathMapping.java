@@ -84,7 +84,7 @@ public abstract class AbstractPathMapping implements PathMapping {
         return "__UNKNOWN__";
     }
 
-    static String loggerName(String pathish) {
+    protected static String loggerName(String pathish) {
         if (pathish == null) {
             return "__UNKNOWN__";
         }
