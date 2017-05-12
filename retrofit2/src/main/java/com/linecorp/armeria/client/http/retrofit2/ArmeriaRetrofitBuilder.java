@@ -22,7 +22,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.concurrent.Executor;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -72,16 +73,16 @@ import retrofit2.Retrofit.Builder;
 public final class ArmeriaRetrofitBuilder {
 
     private static final Pattern GROUP_PREFIX_PATTERN = Pattern.compile("^[_0-9a-z]+$");
-    private static final BiConsumer<String, ClientOptionsBuilder> DEFAULT_CONFIGURATOR =
-            (url, optionsBuilder) -> {
-            };
+    private static final BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder>
+            DEFAULT_CONFIGURATOR = (url, optionsBuilder) -> optionsBuilder;
     private static final String SLASH = "/";
 
     private final Retrofit.Builder retrofitBuilder;
     private final ClientFactory clientFactory;
     private String baseUrl;
     private String basePath;
-    private BiConsumer<String, ClientOptionsBuilder> configurator = DEFAULT_CONFIGURATOR;
+    private BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator =
+            DEFAULT_CONFIGURATOR;
 
     /**
      * Creates a {@link ArmeriaRetrofitBuilder} with the default {@link ClientFactory}.
@@ -117,14 +118,15 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Sets the {@link BiConsumer} that is applied to the {@link ClientOptionsBuilder} of the underlying
+     * Sets the {@link BiFunction} that is applied to the {@link ClientOptionsBuilder} of the underlying
      * {@link HttpClient}.
      *
-     * @param configurator a {@link BiConsumer} whose first argument is the the URI of the server endpoint
-     *                     and whose second argument is the {@link ClientOptionsBuilder} for creating
-     *                     {@link HttpClient}
+     * @param configurator a {@link Function} whose input is the original {@link ClientOptionsBuilder} of the
+     *        client being derived from and whose output is the {@link ClientOptionsBuilder} of the new derived
+     *        client
      */
-    public ArmeriaRetrofitBuilder withClientOptions(BiConsumer<String, ClientOptionsBuilder> configurator) {
+    public ArmeriaRetrofitBuilder withClientOptions(
+            BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
         this.configurator = requireNonNull(configurator, "configurator");
         return this;
     }
@@ -180,10 +182,9 @@ public final class ArmeriaRetrofitBuilder {
         final URI uri = URI.create(baseUrl);
         final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(uri.getScheme()));
         final String fullUri = scheme.uriText() + "://" + uri.getAuthority();
-        final ClientOptionsBuilder clientOptionsBuilder = new ClientOptionsBuilder();
-        configurator.accept(fullUri, clientOptionsBuilder);
         final HttpClient baseHttpClient =
-                Clients.newClient(clientFactory, fullUri, HttpClient.class, clientOptionsBuilder.build());
+                Clients.newClient(clientFactory, fullUri, HttpClient.class,
+                                  configurator.apply(fullUri, new ClientOptionsBuilder()).build());
         return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, uri.getPath(), GROUP_PREFIX))
                               .callFactory(new ArmeriaCallFactory(baseHttpClient, clientFactory, configurator,
                                                                   GROUP_PREFIX))
