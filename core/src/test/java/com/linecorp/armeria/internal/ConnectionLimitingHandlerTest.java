@@ -49,11 +49,9 @@ public class ConnectionLimitingHandlerTest {
         assertThat(handler.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
 
         assertThatThrownBy(() -> new ConnectionLimitingHandler(0))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("maxNumConnections: " + 0 + " (expected: > 0)");
+                .isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> new ConnectionLimitingHandler(-1))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("maxNumConnections: " + -1 + " (expected: > 0)");
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

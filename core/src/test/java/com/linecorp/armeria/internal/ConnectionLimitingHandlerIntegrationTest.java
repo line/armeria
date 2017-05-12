@@ -19,11 +19,13 @@ package com.linecorp.armeria.internal;
 import static org.apache.http.HttpVersion.HTTP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -56,16 +58,12 @@ public class ConnectionLimitingHandlerIntegrationTest {
                 assertThat(server.server().numConnections()).isEqualTo(2);
 
                 assertThatThrownBy(this::newSocketAndTest)
-                        .isInstanceOf(SocketException.class)
-                        .hasMessage("Connection reset");
+                        .isInstanceOf(SocketException.class);
 
                 assertThat(server.server().numConnections()).isEqualTo(2);
             }
 
-            // Ensure that socket s2 is closed.
-            Thread.sleep(500);
-
-            assertThat(server.server().numConnections()).isEqualTo(1);
+            await().atMost(1, TimeUnit.SECONDS).until(() -> server.server().numConnections() == 1);
 
             try (Socket s2 = newSocketAndTest()) {
                 assertThat(server.server().numConnections()).isEqualTo(2);

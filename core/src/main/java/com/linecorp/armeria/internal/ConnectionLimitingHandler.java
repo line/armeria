@@ -80,7 +80,8 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
 
         long dropped = numDroppedConnections.sumThenReset();
         if (dropped > 0) {
-            logger.warn("{} connections dropped within the last 1 second", dropped);
+            logger.warn("Dropped {} connection(s) to limit the number of open connections to {}",
+                        dropped, maxNumConnections);
         }
     }
 
