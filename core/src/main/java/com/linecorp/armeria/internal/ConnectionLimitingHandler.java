@@ -63,7 +63,7 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
         } else {
             numConnections.decrementAndGet();
 
-            // Set linger option to 0 to reset channel.
+            // Set linger option to 0 so that the server doesn't get too many TIME_WAIT states.
             child.config().setOption(ChannelOption.SO_LINGER, 0);
             child.unsafe().closeForcibly();
 
