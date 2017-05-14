@@ -28,7 +28,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,8 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
+import com.linecorp.armeria.internal.TransportType;
 import com.linecorp.armeria.server.http.HttpServerPipelineConfigurator;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -48,10 +47,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -235,21 +230,12 @@ public final class Server implements AutoCloseable {
 
         try {
             // Initialize the event loop groups.
-            if (NativeLibraries.isEpollAvailable()) {
-                final ThreadFactory bossThreadFactory =
-                        new DefaultThreadFactory("armeria-server-boss-epoll", false);
-                final ThreadFactory workerThreadFactory =
-                        new DefaultThreadFactory("armeria-server-epoll", false);
-                bossGroup = new EpollEventLoopGroup(config.numBosses(), bossThreadFactory);
-                workerGroup = new EpollEventLoopGroup(config.numWorkers(), workerThreadFactory);
-            } else {
-                final ThreadFactory bossThreadFactory =
-                        new DefaultThreadFactory("armeria-server-boss-nio", false);
-                final ThreadFactory workerThreadFactory =
-                        new DefaultThreadFactory("armeria-server-nio", false);
-                bossGroup = new NioEventLoopGroup(config.numBosses(), bossThreadFactory);
-                workerGroup = new NioEventLoopGroup(config.numWorkers(), workerThreadFactory);
-            }
+            bossGroup = TransportType.eventLoopGroup(
+                    config.numBosses(),
+                    transportType -> new DefaultThreadFactory("armeria-server-boss-" + transportType, false));
+            workerGroup = TransportType.eventLoopGroup(
+                    config.numWorkers(),
+                    transportType -> new DefaultThreadFactory("armeria-server-" + transportType, false));
 
             // Initialize the server sockets asynchronously.
             final List<ServerPort> ports = config().ports();
@@ -274,8 +260,7 @@ public final class Server implements AutoCloseable {
         ServerBootstrap b = new ServerBootstrap();
 
         b.group(bossGroup, workerGroup);
-        b.channel(NativeLibraries.isEpollAvailable() ? EpollServerSocketChannel.class
-                                                     : NioServerSocketChannel.class);
+        b.channel(TransportType.serverChannel());
         b.handler(connectionLimitingHandler);
         b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts, gracefulShutdownSupport));
 

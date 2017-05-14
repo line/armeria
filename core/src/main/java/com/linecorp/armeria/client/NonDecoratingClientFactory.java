@@ -25,7 +25,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.util.NativeLibraries;
+import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFactory;
@@ -35,6 +35,9 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
+import io.netty.channel.kqueue.KQueueDatagramChannel;
+import io.netty.channel.kqueue.KQueueEventLoopGroup;
+import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -49,10 +52,6 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * A skeletal {@link ClientFactory} that does not decorate other {@link ClientFactory}.
  */
 public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
-
-    private enum TransportType {
-        NIO, EPOLL
-    }
 
     private final EventLoopGroup eventLoopGroup;
     private final boolean closeEventLoopGroup;
@@ -85,9 +84,10 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
         this(options, type -> {
             switch (type) {
                 case NIO:
-                    return new DefaultThreadFactory("armeria-client-nio", useDaemonThreads);
                 case EPOLL:
-                    return new DefaultThreadFactory("armeria-client-epoll", useDaemonThreads);
+                case KQUEUE:
+                    return new DefaultThreadFactory("armeria-client-" + type.name().toLowerCase(),
+                                                    useDaemonThreads);
                 default:
                     throw new Error();
             }
@@ -107,7 +107,7 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
             eventLoopGroup = eventLoopOption.get();
             closeEventLoopGroup = false;
         } else {
-            eventLoopGroup = createGroup(threadFactoryFactory);
+            eventLoopGroup = TransportType.eventLoopGroup(0, threadFactoryFactory);
             closeEventLoopGroup = true;
         }
 
@@ -137,6 +137,9 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
         if (eventLoopGroup instanceof NioEventLoopGroup) {
             return NioSocketChannel.class;
         }
+        if (eventLoopGroup instanceof KQueueEventLoopGroup) {
+            return KQueueSocketChannel.class;
+        }
         if (eventLoopGroup instanceof EpollEventLoopGroup) {
             return EpollSocketChannel.class;
         }
@@ -147,6 +150,9 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
         if (eventLoopGroup instanceof NioEventLoopGroup) {
             return NioDatagramChannel.class;
         }
+        if (eventLoopGroup instanceof KQueueEventLoopGroup) {
+            return KQueueDatagramChannel.class;
+        }
         if (eventLoopGroup instanceof EpollEventLoopGroup) {
             return EpollDatagramChannel.class;
         }
@@ -156,13 +162,6 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
     private static IllegalStateException unsupportedEventLoopType(EventLoopGroup eventLoopGroup) {
         return new IllegalStateException("unsupported event loop type: " +
                                          eventLoopGroup.getClass().getName());
-    }
-
-    @SuppressWarnings("checkstyle:operatorwrap")
-    private static EventLoopGroup createGroup(Function<TransportType, ThreadFactory> threadFactoryFactory) {
-        return NativeLibraries.isEpollAvailable()
-               ? new EpollEventLoopGroup(0, threadFactoryFactory.apply(TransportType.EPOLL))
-               : new NioEventLoopGroup(0, threadFactoryFactory.apply(TransportType.NIO));
     }
 
     @Override
