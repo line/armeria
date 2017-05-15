@@ -15,6 +15,7 @@ managedDependencies {
         compile "io.grpc:$it"
     }
 
+    testCompile 'io.grpc:grpc-okhttp'
     testCompile 'io.grpc:grpc-testing'
 }
 
