@@ -89,6 +89,27 @@ service TestService {
   rpc UnimplementedCall(armeria.grpc.testing.Empty) returns (armeria.grpc.testing.Empty);
 }
 
+// A service for use in unit tests with methods for fine-grained test conditions.
+service UnitTestService {
+
+    // A unary call which always expects a standard request message and always returns a standard response.
+    rpc StaticUnaryCall(SimpleRequest) returns (SimpleResponse);
+
+    // A streaming output call which always expects a standard request message and always returns a standard
+    // streamed response.
+    rpc StaticStreamedOutputCall(SimpleRequest) returns (stream SimpleResponse);
+
+    // A call that always returns an error with no message.
+    rpc ErrorNoMessage(SimpleRequest) returns (SimpleResponse);
+
+    // A call that always returns an error with a message.
+    rpc ErrorWithMessage(SimpleRequest) returns (SimpleResponse);
+
+    // A unary call which always expects a standard request message and always turns on message compression and
+    // returns a standard response.
+    rpc StaticUnaryCallSetsMessageCompression(SimpleRequest) returns (SimpleResponse);
+}
+
 // A simple service NOT implemented at servers so clients can test for
 // that case.
 service UnimplementedService {
