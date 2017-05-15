@@ -170,7 +170,7 @@ public class ArmeriaAutoConfiguration {
 
         Server s = server.build();
         s.start().join();
-        logger.info("Armeria server started at ports: " + s.activePorts());
+        logger.info("Armeria server started at ports: {}", s.activePorts());
         return s;
     }
 

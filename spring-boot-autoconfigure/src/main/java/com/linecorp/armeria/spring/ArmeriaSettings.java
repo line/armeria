@@ -38,6 +38,7 @@ import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
  *     port: 8081
  *     protocol:HTTP
  * }</pre>
+ * TODO(ide) Adds SSL and virtualhost settings
  */
 @ConfigurationProperties(prefix = "armeria")
 @Validated

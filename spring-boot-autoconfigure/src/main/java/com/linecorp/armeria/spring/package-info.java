@@ -15,6 +15,6 @@
  */
 
 /**
- * <a href="https://projects.spring.io/spring-boot/">Spring Boot</a> integration for Armeria.
+ * <a href="https://projects.spring.io/spring-boot/">Spring Boot</a> integration.
  */
 package com.linecorp.armeria.spring;

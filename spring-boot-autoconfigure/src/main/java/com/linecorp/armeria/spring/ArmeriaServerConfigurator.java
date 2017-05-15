@@ -24,5 +24,8 @@ import com.linecorp.armeria.server.ServerBuilder;
  */
 @FunctionalInterface
 public interface ArmeriaServerConfigurator {
+    /**
+     * Configures the server using the specified {@link ServerBuilder}.
+     */
     void configure(ServerBuilder serverBuilder);
 }
