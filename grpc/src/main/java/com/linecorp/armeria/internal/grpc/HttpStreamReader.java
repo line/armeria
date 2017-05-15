@@ -43,7 +43,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
     private static final Logger logger = LoggerFactory.getLogger(HttpStreamReader.class);
 
     private final DecompressorRegistry decompressorRegistry;
-    private final StatusListener statusListener;
+    private final TransportStatusListener transportStatusListener;
 
     @VisibleForTesting
     public final ArmeriaMessageDeframer deframer;
@@ -53,10 +53,10 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
 
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
                             ArmeriaMessageDeframer deframer,
-                            StatusListener statusListener) {
+                            TransportStatusListener transportStatusListener) {
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.deframer = requireNonNull(deframer, "deframer");
-        this.statusListener = requireNonNull(statusListener, "statusListener");
+        this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
     }
 
     // Must be called from an IO thread.
@@ -88,7 +88,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
                 if (grpcMessage != null) {
                     status = status.withDescription(grpcMessage);
                 }
-                statusListener.onError(status);
+                transportStatusListener.transportReportStatus(status);
                 return;
             }
             // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
@@ -97,7 +97,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             if (grpcEncoding != null) {
                 Decompressor decompressor = decompressorRegistry.lookupDecompressor(grpcEncoding);
                 if (decompressor == null) {
-                    statusListener.onError(Status.INTERNAL.withDescription(
+                    transportStatusListener.transportReportStatus(Status.INTERNAL.withDescription(
                             "Can't find decompressor for " + grpcEncoding));
                     return;
                 }
@@ -110,7 +110,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             deframer.deframe(data, false);
         } catch (Throwable cause) {
             try {
-                statusListener.onError(Status.fromThrowable(cause));
+                transportStatusListener.transportReportStatus(Status.fromThrowable(cause));
                 return;
             } finally {
                 deframer.close();
@@ -121,7 +121,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
 
     @Override
     public void onError(Throwable cause) {
-        statusListener.onError(GrpcStatus.fromThrowable(cause));
+        transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
     }
 
     @Override

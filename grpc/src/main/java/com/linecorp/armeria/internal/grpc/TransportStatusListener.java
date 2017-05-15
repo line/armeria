@@ -22,6 +22,6 @@ import io.grpc.Status;
  * A listener of GRPC {@link Status}s. Any errors occuring within the armeria will be returned to GRPC business
  * logic through this listener, and for clients the final response {@link Status} is also returned.
  */
-public interface StatusListener {
-    void onError(Status status);
+public interface TransportStatusListener {
+    void transportReportStatus(Status status);
 }

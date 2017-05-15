@@ -44,8 +44,8 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
-import com.linecorp.armeria.internal.grpc.StatusListener;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
+import com.linecorp.armeria.internal.grpc.TransportStatusListener;
 
 import io.grpc.CallOptions;
 import io.grpc.ClientCall;
@@ -63,7 +63,7 @@ import io.netty.buffer.ByteBuf;
  * from the server, passing to business logic via {@link ClientCall.Listener}.
  */
 class ArmeriaClientCall<I, O> extends ClientCall<I, O>
-        implements ArmeriaMessageDeframer.Listener, StatusListener {
+        implements ArmeriaMessageDeframer.Listener, TransportStatusListener {
 
     private static final Runnable NO_OP = () -> { };
 
@@ -230,7 +230,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Override
-    public void onError(Status status) {
+    public void transportReportStatus(Status status) {
         responseReader.cancel();
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             listener.onClose(status, EMPTY_METADATA);
