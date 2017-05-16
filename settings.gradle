@@ -7,6 +7,8 @@ include 'jetty'
 include 'kafka'
 include 'logback'
 include 'retrofit2'
+include 'spring-boot:autoconfigure'
+include 'spring-boot:starter'
 include 'testing'
 include 'thrift'
 include 'thrift0.9'
@@ -21,3 +23,6 @@ include 'shaded-test'
 
 // Site generation project
 include 'site'
+
+project(':spring-boot:autoconfigure').name = 'spring-boot-autoconfigure'
+project(':spring-boot:starter').name = 'spring-boot-starter'

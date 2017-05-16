@@ -17,6 +17,9 @@ com.google.guava:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
 
+com.ryantenney.metrics:
+  metrics-spring: { version: 3.1.3 }
+
 com.spotify:
   completable-futures: { version: 0.3.0 }
 
@@ -26,7 +29,10 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 io.dropwizard.metrics:
-  metrics-core: { version: 3.2.2 }
+  metrics-core: { version: &DROPWIZARD_VERSION 3.2.2 }
+  metrics-json: { version: *DROPWIZARD_VERSION }
+  metrics-jvm: { version: *DROPWIZARD_VERSION }
+  metrics-logback: { version: *DROPWIZARD_VERSION }
 
 io.grpc:
   grpc-core:
@@ -57,6 +63,12 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil: { version: 7.2.0 }
+
+javax.inject:
+  javax.inject: { version: '1' }
+
+javax.validation:
+  validation-api: { version: 1.1.0.Final }
 
 junit:
   junit: { version: !!str 4.12 }
@@ -120,6 +132,9 @@ org.eclipse.jetty.http2:
 org.hamcrest:
   hamcrest-library: { version: !!str 1.3 }
 
+org.hibernate:
+  hibernate-validator: { version: 5.4.1.Final }
+
 org.javassist:
   javassist: { version: 3.21.0-GA }
 
@@ -141,3 +156,10 @@ org.slf4j:
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api: { version: *SLF4J_VERSION }
+
+org.springframework.boot:
+  spring-boot: { version: &SPRING_BOOT_VERSION 1.5.2.RELEASE }
+  spring-boot-autoconfigure: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-logging: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
