@@ -20,12 +20,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import com.google.common.io.ByteStreams;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import com.google.protobuf.util.JsonFormat;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -160,25 +162,44 @@ public class GrpcMessageMarshaller<I, O> {
                 }
             }
             return buf;
+        } else if (GrpcSerializationFormats.isJson(serializationFormat)) {
+            ByteBuf buf = alloc.buffer();
+            boolean success = false;
+            try {
+                buf.writeCharSequence(JsonFormat.printer().print(message), StandardCharsets.UTF_8);
+                success = true;
+            } finally {
+                if (!success) {
+                    buf.release();
+                }
+            }
+            return buf;
         }
-        throw new IllegalStateException("Currently only binary proto serialization is supported.");
+        throw new IllegalStateException("Unknown serialization format: " + serializationFormat);
     }
 
     private Message deserializeProto(ByteBuf buf, Message prototype) throws IOException {
-        CodedInputStream stream = CodedInputStream.newInstance(buf.nioBuffer());
-        try {
-            Message msg = prototype.getParserForType().parseFrom(stream);
+        if (GrpcSerializationFormats.isProto(serializationFormat)) {
+            CodedInputStream stream = CodedInputStream.newInstance(buf.nioBuffer());
             try {
-                stream.checkLastTagWas(0);
+                Message msg = prototype.getParserForType().parseFrom(stream);
+                try {
+                    stream.checkLastTagWas(0);
+                } catch (InvalidProtocolBufferException e) {
+                    e.setUnfinishedMessage(msg);
+                    throw e;
+                }
+                return msg;
             } catch (InvalidProtocolBufferException e) {
-                e.setUnfinishedMessage(msg);
-                throw e;
+                throw Status.INTERNAL.withDescription("Invalid protobuf byte sequence")
+                                     .withCause(e).asRuntimeException();
             }
-            return msg;
-        } catch (InvalidProtocolBufferException e) {
-            throw Status.INTERNAL.withDescription("Invalid protobuf byte sequence")
-                                 .withCause(e).asRuntimeException();
+        } else if (GrpcSerializationFormats.isJson(serializationFormat)) {
+            Message.Builder builder = prototype.newBuilderForType();
+            JsonFormat.parser().merge(buf.toString(StandardCharsets.UTF_8), builder);
+            return builder.build();
         }
+        throw new IllegalStateException("Unknown serialization format: " + serializationFormat);
     }
 
     private static MessageType marshallerType(Marshaller<?> marshaller) {

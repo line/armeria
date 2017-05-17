@@ -75,6 +75,14 @@ public final class GrpcSerializationFormats {
     }
 
     /**
+     * Is a json-based GRPC serialization format.
+     */
+    public static boolean isJson(SerializationFormat format) {
+        requireNonNull(format, "format");
+        return format == JSON || format == JSON_WEB;
+    }
+
+    /**
      * Returns whether the specified {@link SerializationFormat} is GRPC-web, the subset of GRPC that supports
      * browsers.
      */
