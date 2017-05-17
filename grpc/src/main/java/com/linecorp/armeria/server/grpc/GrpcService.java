@@ -20,18 +20,16 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -67,9 +65,6 @@ public final class GrpcService extends AbstractHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcService.class);
 
-    private static final List<SerializationFormat> SUPPORTED_SERIALIZATION_FORMATS =
-            ImmutableList.of(GrpcSerializationFormats.PROTO, GrpcSerializationFormats.PROTO_WEB);
-
     static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
     private static final Metadata EMPTY_METADATA = new Metadata();
@@ -77,6 +72,7 @@ public final class GrpcService extends AbstractHttpService {
     private final HandlerRegistry registry;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
+    private final Set<SerializationFormat> supportedSerializationFormats;
     private final int maxOutboundMessageSizeBytes;
 
     private int maxInboundMessageSizeBytes;
@@ -84,11 +80,13 @@ public final class GrpcService extends AbstractHttpService {
     GrpcService(HandlerRegistry registry,
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
+                Set<SerializationFormat> supportedSerializationFormats,
                 int maxOutboundMessageSizeBytes,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
+        this.supportedSerializationFormats = supportedSerializationFormats;
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
     }
@@ -199,7 +197,7 @@ public final class GrpcService extends AbstractHttpService {
             return null;
         }
 
-        for (SerializationFormat format : SUPPORTED_SERIALIZATION_FORMATS) {
+        for (SerializationFormat format : supportedSerializationFormats) {
             if (format.isAccepted(mediaType)) {
                 return format;
             }

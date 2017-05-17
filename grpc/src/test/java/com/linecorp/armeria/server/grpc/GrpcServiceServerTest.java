@@ -37,9 +37,11 @@ import com.google.common.base.Strings;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.util.JsonFormat;
 
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.client.http.HttpClientFactory;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -69,6 +71,8 @@ import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
 
 public class GrpcServiceServerTest {
@@ -138,6 +142,7 @@ public class GrpcServiceServerTest {
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .addService(new UnitTestServiceImpl())
                     .enableUnframedRequests(true)
+                    .supportedSerializationFormats(GrpcSerializationFormats.values())
                     .build());
         }
     };
@@ -338,5 +343,25 @@ public class GrpcServiceServerTest {
                         GrpcTestUtil.uncompressedFrame(
                                 GrpcTestUtil.protoByteBuf(GrpcTestUtil.RESPONSE_MESSAGE)),
                         serializedTrailers));
+    }
+
+    @Test
+    public void json() throws Exception {
+        HttpClient client = HttpClientFactory.DEFAULT
+                .newClient("none+" + server.httpUri("/"),
+                           HttpClient.class);
+        ByteBuf request = Unpooled.wrappedBuffer(
+                JsonFormat.printer().print(GrpcTestUtil.REQUEST_MESSAGE).getBytes(StandardCharsets.UTF_8));
+        AggregatedHttpMessage response = client.execute(
+                HttpHeaders.of(HttpMethod.POST,
+                               UnitTestServiceGrpc.METHOD_STATIC_UNARY_CALL.getFullMethodName())
+                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+json"),
+                GrpcTestUtil.uncompressedFrame(request)).aggregate().get();
+
+        ByteBuf responseMessage =
+                Unpooled.wrappedBuffer(JsonFormat.printer()
+                                                 .print(GrpcTestUtil.RESPONSE_MESSAGE)
+                                                 .getBytes(StandardCharsets.UTF_8));
+        assertThat(response.content().array()).containsExactly(GrpcTestUtil.uncompressedFrame(responseMessage));
     }
 }

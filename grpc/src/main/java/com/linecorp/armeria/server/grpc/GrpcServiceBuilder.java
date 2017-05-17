@@ -20,8 +20,14 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
+
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
@@ -38,14 +44,18 @@ import io.grpc.ServerServiceDefinition;
  */
 public final class GrpcServiceBuilder {
 
-    private final HandlerRegistry.Builder registryBuilder =
-            new HandlerRegistry.Builder();
+    private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
+            ImmutableSet.of(GrpcSerializationFormats.PROTO, GrpcSerializationFormats.PROTO_WEB);
+
+    private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
 
     @Nullable
     private DecompressorRegistry decompressorRegistry;
 
     @Nullable
     private CompressorRegistry compressorRegistry;
+
+    private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
     private int maxInboundMessageSizeBytes = GrpcService.NO_MAX_INBOUND_MESSAGE_SIZE;
 
@@ -85,6 +95,33 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder compressorRegistry(CompressorRegistry registry) {
         compressorRegistry = requireNonNull(registry, "registry");
+        return this;
+    }
+
+    /**
+     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to supporting binary
+     * protobuf formats. JSON formats are currently very inefficient and not recommended for use in production.
+     *
+     * <p>TODO(anuraaga): Use faster JSON marshalling.
+     */
+    public GrpcServiceBuilder supportedSerializationFormats(SerializationFormat... formats) {
+        return supportedSerializationFormats(ImmutableSet.copyOf(requireNonNull(formats, "formats")));
+    }
+
+    /**
+     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to supporting binary
+     * protobuf formats. JSON formats are currently very inefficient and not recommended for use in production.
+     *
+     * <p>TODO(anuraaga): Use faster JSON marshalling.
+     */
+    public GrpcServiceBuilder supportedSerializationFormats(Iterable<SerializationFormat> formats) {
+        requireNonNull(formats, "formats");
+        for (SerializationFormat format : formats) {
+            if (!GrpcSerializationFormats.isGrpc(format)) {
+                throw new IllegalArgumentException("Not a GRPC serialization format: " + format);
+            }
+        }
+        supportedSerializationFormats = ImmutableSet.copyOf(formats);
         return this;
     }
 
@@ -145,7 +182,7 @@ public final class GrpcServiceBuilder {
                 registryBuilder.build(),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
-                maxOutboundMessageSizeBytes,
+                supportedSerializationFormats, maxOutboundMessageSizeBytes,
                 maxInboundMessageSizeBytes);
         return enableUnframedRequests ? grpcService.decorate(UnframedGrpcService::new) : grpcService;
     }
