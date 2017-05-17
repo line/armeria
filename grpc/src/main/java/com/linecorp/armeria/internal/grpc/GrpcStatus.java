@@ -45,7 +45,7 @@ public final class GrpcStatus {
         }
         if (t instanceof StreamException) {
             StreamException streamException = (StreamException) t;
-            if (streamException.getMessage().contains("RST_STREAM")) {
+            if (streamException.getMessage() != null && streamException.getMessage().contains("RST_STREAM")) {
                 return Status.CANCELLED;
             }
         }
