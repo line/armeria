@@ -105,9 +105,25 @@ service UnitTestService {
     // A call that always returns an error with a message.
     rpc ErrorWithMessage(SimpleRequest) returns (SimpleResponse);
 
+    // A unary call that always throws an error (as opposed to using StreamObserver.onError). The error is
+    // thrown in the onHalfClose callback.
+    rpc UnaryThrowsError(SimpleRequest) returns (SimpleResponse);
+
+    // A streaming call that always throws an error (as opposed to using StreamObserver.onError). The error is
+    // thrown in the onMessage callback.
+    rpc StreamThrowsError(stream SimpleRequest) returns (SimpleResponse);
+
+    // A streaming call that always throws an error in the stub implementation, not message handler. The error
+    // is thrown in startCall.
+    rpc StreamThrowsErrorInStub(stream SimpleRequest) returns (SimpleResponse);
+
     // A unary call which always expects a standard request message and always turns on message compression and
     // returns a standard response.
     rpc StaticUnaryCallSetsMessageCompression(SimpleRequest) returns (SimpleResponse);
+
+    // A streaming request call that tracks incoming requests in the RequestContext to make sure it is correctly
+    // set for callbacks.
+    rpc CheckRequestContext(stream SimpleRequest) returns (SimpleResponse);
 }
 
 // A simple service NOT implemented at servers so clients can test for

@@ -43,6 +43,7 @@ import com.google.protobuf.util.JsonFormat;
 
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.client.http.HttpClientFactory;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
@@ -76,6 +77,8 @@ import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 public class GrpcServiceServerTest {
 
@@ -84,6 +87,9 @@ public class GrpcServiceServerTest {
     private static final AsciiString LARGE_PAYLOAD = AsciiString.of(Strings.repeat("a", MAX_MESSAGE_SIZE + 1));
 
     private static class UnitTestServiceImpl extends UnitTestServiceImplBase {
+
+        private static final AttributeKey<Integer> CHECK_REQUEST_CONTEXT_COUNT =
+                AttributeKey.valueOf(UnitTestServiceImpl.class, "CHECK_REQUEST_CONTEXT_COUNT");
 
         @Override
         public void staticUnaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
@@ -118,6 +124,34 @@ public class GrpcServiceServerTest {
         }
 
         @Override
+        public void unaryThrowsError(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            throw Status.ABORTED.withDescription("call aborted").asRuntimeException();
+        }
+
+        @Override
+        public StreamObserver<SimpleRequest> streamThrowsError(
+                StreamObserver<SimpleResponse> responseObserver) {
+            return new StreamObserver<SimpleRequest>() {
+                @Override
+                public void onNext(SimpleRequest value) {
+                    throw Status.ABORTED.withDescription("bad streaming message").asRuntimeException();
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onCompleted() {}
+            };
+        }
+
+        @Override
+        public StreamObserver<SimpleRequest> streamThrowsErrorInStub(
+                StreamObserver<SimpleResponse> responseObserver) {
+            throw Status.ABORTED.withDescription("bad streaming stub").asRuntimeException();
+        }
+
+        @Override
         public void staticUnaryCallSetsMessageCompression(SimpleRequest request,
                                                           StreamObserver<SimpleResponse> responseObserver) {
             if (!request.equals(REQUEST_MESSAGE)) {
@@ -130,6 +164,39 @@ public class GrpcServiceServerTest {
             callObserver.setMessageCompression(true);
             responseObserver.onNext(RESPONSE_MESSAGE);
             responseObserver.onCompleted();
+        }
+
+        @Override
+        public StreamObserver<SimpleRequest> checkRequestContext(
+                StreamObserver<SimpleResponse> responseObserver) {
+            RequestContext ctx = RequestContext.current();
+            ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).set(0);
+            return new StreamObserver<SimpleRequest>() {
+                @Override
+                public void onNext(SimpleRequest value) {
+                    RequestContext ctx = RequestContext.current();
+                    Attribute<Integer> attr = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT);
+                    attr.set(attr.get() + 1);
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onCompleted() {
+                    RequestContext ctx = RequestContext.current();
+                    int count = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).get();
+                    responseObserver.onNext(
+                            SimpleResponse.newBuilder()
+                                          .setPayload(
+                                                  Payload.newBuilder()
+                                                         .setBody(
+                                                                 ByteString.copyFromUtf8(
+                                                                         Integer.toString(count))))
+                                          .build());
+                    responseObserver.onCompleted();
+                }
+            };
         }
     }
 
@@ -187,6 +254,68 @@ public class GrpcServiceServerTest {
         streamingClient.staticStreamedOutputCall(REQUEST_MESSAGE, recorder);
         recorder.awaitCompletion();
         assertThat(recorder.getValues()).containsExactly(RESPONSE_MESSAGE, RESPONSE_MESSAGE);
+    }
+
+    @Test
+    public void error_noMessage() throws Exception {
+        StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+                () -> blockingClient.errorNoMessage(GrpcTestUtil.REQUEST_MESSAGE));
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+        assertThat(t.getStatus().getDescription()).isNull();
+    }
+
+    @Test
+    public void error_withMessage() throws Exception {
+        StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+                () -> blockingClient.errorWithMessage(GrpcTestUtil.REQUEST_MESSAGE));
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+        assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
+    }
+
+    @Test
+    public void error_thrown_unary() throws Exception {
+        StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+                () -> blockingClient.unaryThrowsError(GrpcTestUtil.REQUEST_MESSAGE));
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+        assertThat(t.getStatus().getDescription()).isEqualTo("call aborted");
+    }
+
+    @Test
+    public void error_thrown_streamMessage() throws Exception {
+        StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        StreamObserver<SimpleRequest> request = streamingClient.streamThrowsError(response);
+        request.onNext(GrpcTestUtil.REQUEST_MESSAGE);
+        response.awaitCompletion();
+        StatusRuntimeException t = (StatusRuntimeException) response.getError();
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+        assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming message");
+    }
+
+    @Test
+    public void error_thrown_streamStub() throws Exception {
+        StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        streamingClient.streamThrowsErrorInStub(response);
+        response.awaitCompletion();
+        StatusRuntimeException t = (StatusRuntimeException) response.getError();
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+        assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming stub");
+    }
+
+    @Test
+    public void requestContextSet() throws Exception {
+        StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        StreamObserver<SimpleRequest> request = streamingClient.checkRequestContext(response);
+        request.onNext(GrpcTestUtil.REQUEST_MESSAGE);
+        request.onNext(GrpcTestUtil.REQUEST_MESSAGE);
+        request.onNext(GrpcTestUtil.REQUEST_MESSAGE);
+        request.onCompleted();
+        response.awaitCompletion();
+        assertThat(response.getValues())
+                .containsExactly(
+                        SimpleResponse.newBuilder()
+                                      .setPayload(Payload.newBuilder()
+                                                         .setBody(ByteString.copyFromUtf8("3")))
+                                      .build());
     }
 
     @Test

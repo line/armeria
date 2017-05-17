@@ -29,10 +29,14 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -43,6 +47,7 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
@@ -75,6 +80,8 @@ import io.netty.util.AsciiString;
  */
 class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         implements ArmeriaMessageDeframer.Listener, TransportStatusListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerCall.class);
 
     // Only most significant bit of a byte is set.
     @VisibleForTesting
@@ -204,7 +211,11 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         // In cases where flow control is activated, this may result in excessive internal buffering.
         final boolean notifyReady = isReady();
         if (notifyReady) {
-            listener.onReady();
+            try (SafeCloseable ignored = RequestContext.push(ctx)) {
+                listener.onReady();
+            } catch (Throwable t) {
+                close(Status.fromThrowable(t), EMPTY_METADATA);
+            }
         }
     }
 
@@ -291,14 +302,22 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
         }
 
-        listener.onMessage(request);
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+            listener.onMessage(request);
+        } catch (Throwable t) {
+            close(Status.fromThrowable(t), EMPTY_METADATA);
+        }
     }
 
     @Override
     public void endOfStream() {
         clientStreamClosed = true;
         if (!closeCalled) {
-            listener.onHalfClose();
+            try (SafeCloseable ignored = RequestContext.push(ctx)) {
+                listener.onHalfClose();
+            } catch (Throwable t) {
+                close(Status.fromThrowable(t), EMPTY_METADATA);
+            }
         }
     }
 
@@ -319,11 +338,26 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // The response is streamed so we don't have anything to set as the RpcResponse, so we set it
                 // arbitrarily so it can at least be counted.
                 ctx.logBuilder().responseContent(RpcResponse.of("success"), null);
-                listener.onComplete();
+                try (SafeCloseable ignored = RequestContext.push(ctx)) {
+                    listener.onComplete();
+                } catch (Throwable t) {
+                    // This should not be possible with normal generated stubs which do not implement
+                    // onComplete, but is conceivable for a completely manually constructed stub.
+                    logger.warn("Error in gRPC onComplete handler.", t);
+                }
             } else {
                 cancelled = true;
                 ctx.logBuilder().responseContent(RpcResponse.ofFailure(newStatus.asException()), null);
-                listener.onCancel();
+                try (SafeCloseable ignored = RequestContext.push(ctx)) {
+                    listener.onCancel();
+                } catch (Throwable t) {
+                    if (!closeCalled) {
+                        // A custom error when dealing with client cancel or transport issues should be
+                        // returned. We have already closed the listener, so it will not receive any more
+                        // callbacks as designed.
+                        close(Status.fromThrowable(t), EMPTY_METADATA);
+                    }
+                }
                 // Transport error, not business logic error, so reset the stream.
                 if (!closeCalled) {
                     res.close(newStatus.asException());

@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
@@ -35,6 +36,7 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -148,9 +150,12 @@ public final class GrpcService extends AbstractHttpService {
 
         ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
-        req.subscribe(call.messageReader());
+        if (call != null) {
+            req.subscribe(call.messageReader());
+        }
     }
 
+    @Nullable
     private <I, O> ArmeriaServerCall<I, O> startCall(
             String fullMethodName,
             ServerMethodDefinition<I, O> methodDef,
@@ -168,8 +173,20 @@ public final class GrpcService extends AbstractHttpService {
                 maxOutboundMessageSizeBytes,
                 ctx,
                 serializationFormat);
-        ServerCall.Listener<I> listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
+        final ServerCall.Listener<I> listener;
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+            listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
+        } catch (Throwable t) {
+            call.setListener(new EmptyListener<>());
+            call.close(Status.fromThrowable(t), EMPTY_METADATA);
+            logger.warn(
+                    "Exception thrown from streaming request stub method before processing any request data" +
+                    " - this is likely a bug in the stub implementation.");
+            return null;
+        }
         if (listener == null) {
+            // This will never happen for normal generated stubs but could conceivably happen for manually
+            // constructed ones.
             throw new NullPointerException(
                     "startCall() returned a null listener for method " + fullMethodName);
         }
@@ -210,4 +227,6 @@ public final class GrpcService extends AbstractHttpService {
 
         return null;
     }
+
+    private static class EmptyListener<T> extends ServerCall.Listener<T> {}
 }
