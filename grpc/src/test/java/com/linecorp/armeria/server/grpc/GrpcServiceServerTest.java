@@ -31,6 +31,8 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
 import com.google.common.base.Strings;
@@ -133,6 +135,7 @@ public class GrpcServiceServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.numWorkers(1);
             sb.port(0, HTTP);
+            sb.defaultMaxRequestLength(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
@@ -143,7 +146,7 @@ public class GrpcServiceServerTest {
     };
 
     @Rule
-    public Timeout globalTimeout = new Timeout(10, TimeUnit.SECONDS);
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     private static ManagedChannel channel;
 
@@ -192,8 +195,10 @@ public class GrpcServiceServerTest {
         StatusRuntimeException t =
                 (StatusRuntimeException) catchThrowable(
                         () -> blockingClient.staticUnaryCall(request));
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
-        assertThat(t.getMessage()).contains("Frame size 16777227 exceeds maximum: 16777216");
+        // NB: Since GRPC does not support HTTP/1, it just resets the stream with an HTTP/2 CANCEL error code,
+        // which clients would interpret as Code.CANCELLED. Armeria supports HTTP/1, so more generically returns
+        // an HTTP 500.
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.UNKNOWN);
     }
 
     @Test
@@ -207,9 +212,10 @@ public class GrpcServiceServerTest {
         StatusRuntimeException t =
                 (StatusRuntimeException) catchThrowable(
                         () -> blockingClient.withCompression("gzip").staticUnaryCall(request));
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.INTERNAL);
-        assertThat(t.getMessage())
-                .contains("Compressed frame exceeds maximum frame size: 16777216. Bytes read: 16777227.");
+        // NB: Since GRPC does not support HTTP/1, it just resets the stream with an HTTP/2 CANCEL error code,
+        // which clients would interpret as Code.CANCELLED. Armeria supports HTTP/1, so more generically returns
+        // an HTTP 500.
+        assertThat(t.getStatus().getCode()).isEqualTo(Code.UNKNOWN);
     }
 
     @Test

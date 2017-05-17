@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
@@ -48,8 +49,8 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
-import com.linecorp.armeria.internal.grpc.StatusListener;
 import com.linecorp.armeria.internal.grpc.StatusMessageEscaper;
+import com.linecorp.armeria.internal.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -73,7 +74,7 @@ import io.netty.util.AsciiString;
  * via {@link ServerCall.Listener}, and writing messages passed back to the response.
  */
 class ArmeriaServerCall<I, O> extends ServerCall<I, O>
-        implements ArmeriaMessageDeframer.Listener, StatusListener {
+        implements ArmeriaMessageDeframer.Listener, TransportStatusListener {
 
     // Only most significant bit of a byte is set.
     @VisibleForTesting
@@ -107,6 +108,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     // state
     private volatile boolean cancelled;
     private volatile boolean clientStreamClosed;
+    private volatile boolean listenerClosed;
     private boolean sendHeadersCalled;
     private boolean closeCalled;
 
@@ -190,10 +192,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try {
             res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
         } catch (RuntimeException e) {
-            close(Status.fromThrowable(e));
+            close(Status.fromThrowable(e), EMPTY_METADATA);
             throw e;
         } catch (Throwable t) {
-            close(Status.fromThrowable(t));
+            close(Status.fromThrowable(t), EMPTY_METADATA);
             throw new RuntimeException(t);
         }
 
@@ -211,48 +213,27 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         return !closeCalled;
     }
 
-    void close(Status status) {
-        try {
-            close(status, EMPTY_METADATA);
-        } finally {
-            if (status.isOk()) {
-                listener.onComplete();
-            } else {
-                cancelled = true;
-                listener.onCancel();
-            }
-        }
-    }
-
     @Override
     public void close(Status status, Metadata unusedGrpcMetadata) {
         checkState(!closeCalled, "call already closed");
 
-        messageFramer.close();
-        if (!clientStreamClosed) {
-            messageReader.cancel();
-            clientStreamClosed = true;
-        }
+        closeCalled = true;
 
         HttpHeaders trailers = statusToTrailers(status, sendHeadersCalled);
+        final HttpObject trailersObj;
         if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
             // Normal trailers are not supported in grpc-web and must be encoded as a message.
             // Message compression is not supported in grpc-web, so we don't bother using the normal
             // ArmeriaMessageFramer.
-            res.write(serializeTrailersAsMessage(trailers));
+            trailersObj = serializeTrailersAsMessage(trailers);
         } else {
-            res.write(trailers);
+            trailersObj = trailers;
         }
-        res.close();
-
-        closeCalled = true;
-
-        if (status.isOk()) {
-            // The response is streamed so we don't have anything to set as the RpcResponse, so we set it
-            // arbitrarily so it can at least be counted.
-            ctx.logBuilder().responseContent(RpcResponse.of("success"), null);
-        } else {
-            ctx.logBuilder().responseContent(RpcResponse.ofFailure(status.asException()), null);
+        try {
+            res.write(trailersObj);
+            res.close();
+        } finally {
+            closeListener(status);
         }
     }
 
@@ -288,7 +269,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try {
             // Special case for unary calls.
             if (messageReceived && method.getType() == MethodType.UNARY) {
-                close(Status.INTERNAL.withDescription(
+                closeListener(Status.INTERNAL.withDescription(
                         "More than one request messages for unary call or server streaming call"));
                 return;
             }
@@ -322,8 +303,33 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     @Override
-    public void onError(Status status) {
-        close(status);
+    public void transportReportStatus(Status status) {
+        closeListener(status);
+    }
+
+    private void closeListener(Status newStatus) {
+        if (!listenerClosed) {
+            listenerClosed = true;
+            if (!clientStreamClosed) {
+                messageReader().cancel();
+                clientStreamClosed = true;
+            }
+            messageFramer.close();
+            if (newStatus.isOk()) {
+                // The response is streamed so we don't have anything to set as the RpcResponse, so we set it
+                // arbitrarily so it can at least be counted.
+                ctx.logBuilder().responseContent(RpcResponse.of("success"), null);
+                listener.onComplete();
+            } else {
+                cancelled = true;
+                ctx.logBuilder().responseContent(RpcResponse.ofFailure(newStatus.asException()), null);
+                listener.onCancel();
+                // Transport error, not business logic error, so reset the stream.
+                if (!closeCalled) {
+                    res.close(newStatus.asException());
+                }
+            }
+        }
     }
 
     static HttpHeaders statusToTrailers(Status status, boolean headersSent) {

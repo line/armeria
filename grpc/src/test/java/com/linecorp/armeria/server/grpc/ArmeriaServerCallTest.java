@@ -39,12 +39,12 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.Status;
 import io.netty.buffer.ByteBufAllocator;
@@ -104,7 +104,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void messageReadAfterClose_byteBuf() throws Exception {
-        call.close(Status.ABORTED);
+        call.close(Status.ABORTED, new Metadata());
 
         call.messageRead(new ByteBufOrStream(GrpcTestUtil.requestByteBuf()));
 
@@ -113,7 +113,7 @@ public class ArmeriaServerCallTest {
 
     @Test
     public void messageReadAfterClose_stream() throws Exception {
-        call.close(Status.ABORTED);
+        call.close(Status.ABORTED, new Metadata());
 
         call.messageRead(new ByteBufOrStream(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true)));
 
@@ -129,21 +129,7 @@ public class ArmeriaServerCallTest {
     @Test
     public void notReadyAfterClose() {
         assertThat(call.isReady()).isTrue();
-        call.close(Status.OK);
+        call.close(Status.OK, new Metadata());
         assertThat(call.isReady()).isFalse();
     }
-
-    private ArmeriaServerCall<SimpleRequest, SimpleResponse> responseCompressionCall() {
-        return new ArmeriaServerCall<>(
-                HttpHeaders.of().set(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "pied-piper, gzip"),
-                TestServiceGrpc.METHOD_UNARY_CALL,
-                CompressorRegistry.getDefaultInstance(),
-                DecompressorRegistry.getDefaultInstance(),
-                res,
-                MAX_MESSAGE_BYTES,
-                MAX_MESSAGE_BYTES,
-                ctx,
-                GrpcSerializationFormats.PROTO);
-    }
-
 }

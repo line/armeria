@@ -45,7 +45,7 @@ public class HttpStreamReaderTest {
     public MockitoRule mocks = MockitoJUnit.rule();
 
     @Mock
-    private StatusListener statusListener;
+    private TransportStatusListener transportStatusListener;
 
     @Mock
     private ArmeriaMessageDeframer deframer;
@@ -57,7 +57,8 @@ public class HttpStreamReaderTest {
 
     @Before
     public void setUp() {
-        reader = new HttpStreamReader(DecompressorRegistry.getDefaultInstance(), deframer, statusListener);
+        reader = new HttpStreamReader(DecompressorRegistry.getDefaultInstance(), deframer,
+                                      transportStatusListener);
     }
 
     @Test
@@ -97,7 +98,7 @@ public class HttpStreamReaderTest {
         reader.onSubscribe(subscription);
         reader.onNext(DATA);
         verify(deframer).deframe(DATA, false);
-        verify(statusListener).onError(Status.INTERNAL);
+        verify(transportStatusListener).transportReportStatus(Status.INTERNAL);
         verify(deframer).close();
     }
 
@@ -106,7 +107,7 @@ public class HttpStreamReaderTest {
         doThrow(Status.INTERNAL.asRuntimeException())
                 .when(deframer).deframe(isA(HttpData.class), anyBoolean());
         doThrow(new IllegalStateException())
-                .when(statusListener).onError(isA(Status.class));
+                .when(transportStatusListener).transportReportStatus(isA(Status.class));
         reader.onSubscribe(subscription);
         assertThatThrownBy(() -> reader.onNext(DATA)).isInstanceOf(IllegalStateException.class);
         verify(deframer).close();

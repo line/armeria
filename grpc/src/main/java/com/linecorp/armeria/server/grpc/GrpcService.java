@@ -61,6 +61,11 @@ import io.grpc.Status;
  *         {@link Metadata} - use armeria's HttpHeaders and decorators for accessing custom metadata sent from
  *         the client. Any usages of {@link Metadata} in the server will be silently ignored.
  *     </li>
+ *     <li>
+ *         There are some differences in the HTTP/2 error code returned from an Armeria server vs GRPC server
+ *         when dealing with transport errors and deadlines. Generally, the client will see an UNKNOWN status
+ *         when the official server may have returned CANCELED.
+ *     </li>
  * </ul>
  */
 public final class GrpcService extends AbstractHttpService {
