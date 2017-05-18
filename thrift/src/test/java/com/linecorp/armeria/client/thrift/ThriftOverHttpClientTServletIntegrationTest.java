@@ -204,18 +204,12 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
         assertEquals("Hello, old world!", client.hello("old world"));
         assertThat(sessionProtocol.get(), is(H1C));
-    }
 
-    /**
-     * When an upgrade request is rejected with 'Connection: close', the client should retry the connection
-     * attempt silently with explicit H1C.
-     */
-    @Test
-    public void sendHelloViaHttp1WithConnectionClose() throws Exception {
+        // When an upgrade request is rejected with 'Connection: close', the client should retry the connection
+        // attempt silently with explicit H1C.
+
+        sessionProtocol.set(null);
         sendConnectionClose.set(true);
-
-        final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
-        final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), sessionProtocol);
 
         assertEquals("Hello, ancient world!", client.hello("ancient world"));
         assertThat(sessionProtocol.get(), is(H1C));
