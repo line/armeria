@@ -60,6 +60,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -198,6 +199,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     }
 
     @Test
+    @Ignore("flaky") // FIXME(trustin): Flaky test
     public void sendHelloViaHttp1() throws Exception {
         final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
         final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), sessionProtocol);
