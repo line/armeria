@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,23 +20,23 @@ import com.linecorp.armeria.common.util.Exceptions;
 /**
  * A {@link RuntimeException} raised when a {@link Service} failed to find a resource.
  */
-public final class ResourceNotFoundException extends RuntimeException {
+public final class ServiceNotFoundException extends RuntimeException {
 
     private static final long serialVersionUID = 1268757990666737813L;
 
-    private static final ResourceNotFoundException INSTANCE =
-            Exceptions.clearTrace(new ResourceNotFoundException());
+    private static final ServiceNotFoundException INSTANCE =
+            Exceptions.clearTrace(new ServiceNotFoundException());
 
     /**
-     * Returns a {@link ResourceNotFoundException} which may be a singleton or a new instance, depending on
+     * Returns a {@link ServiceNotFoundException} which may be a singleton or a new instance, depending on
      * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
      */
-    public static ResourceNotFoundException get() {
-        return Exceptions.isVerbose() ? new ResourceNotFoundException() : INSTANCE;
+    public static ServiceNotFoundException get() {
+        return Exceptions.isVerbose() ? new ServiceNotFoundException() : INSTANCE;
     }
 
     /**
      * Creates a new instance.
      */
-    private ResourceNotFoundException() {}
+    private ServiceNotFoundException() {}
 }

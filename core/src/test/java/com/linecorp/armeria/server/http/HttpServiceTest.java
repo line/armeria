@@ -148,6 +148,12 @@ public class HttpServiceTest {
             // Dynamic Service with inheritance
             // Case 7, 8, 9
             sb.service(PathMapping.ofPrefix("/dynamic3"), new DynamicService());
+            sb.serviceUnder("/dynamic4",
+                            new DynamicHttpServiceBuilder()
+                                    .addMappings(new SimpleDynamicService1())
+                                    .addMappings(new SimpleDynamicService2())
+                                    .build()
+                                    .orElse(new AbstractHttpService() {}));
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -277,6 +283,24 @@ public class HttpServiceTest {
         @Path("/boolean/{var}")
         public String returnBoolean(@PathParam("var") boolean var) {
             return Boolean.toString(var);
+        }
+    }
+
+    @Converter(target = Number.class, value = TypedNumberConverter.class)
+    public static class SimpleDynamicService1 {
+        @Get
+        @Path("/int/{var}")
+        public CompletionStage<Integer> returnInt(@PathParam("var") int var) {
+            return CompletableFuture.supplyAsync(() -> var);
+        }
+    }
+
+    @Converter(target = String.class, value = TypedStringConverter.class)
+    public static class SimpleDynamicService2 {
+        @Get
+        @Path("/string/{var}")
+        public String returnString(@PathParam("var") String var) {
+            return var;
         }
     }
 
@@ -432,6 +456,19 @@ public class HttpServiceTest {
             // Run case 9 but with not-mapped HTTP method (Post).
             try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic3/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+            }
+
+            // Test OrElseHttpService
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic4/int/42")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
+            }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic4/string/blah")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[blah]"));
+            }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic4/undefined")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
             }
         }
     }

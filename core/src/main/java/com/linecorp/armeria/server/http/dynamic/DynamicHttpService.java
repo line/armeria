@@ -16,16 +16,19 @@
 
 package com.linecorp.armeria.server.http.dynamic;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collections;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.http.DefaultHttpResponse;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceNotFoundException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.http.HttpService;
@@ -55,14 +58,43 @@ public class DynamicHttpService extends AbstractHttpService {
 
         for (DynamicHttpFunctionEntry entry : entries) {
             MappedDynamicFunction mappedDynamicFunction = entry.bind(method, mappedPath);
-
             if (mappedDynamicFunction != null) {
                 return mappedDynamicFunction.serve(ctx, req);
             }
         }
 
-        DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(HttpStatus.NOT_FOUND);
-        return res;
+        throw ServiceNotFoundException.get();
+    }
+
+    /**
+     * Creates a new {@link HttpService} that tries this {@link DynamicHttpService} first and then the specified
+     * {@link HttpService} when this {@link DynamicHttpService} cannot handle the request.
+     *
+     * @param nextService the {@link HttpService} to try secondly
+     */
+    public HttpService orElse(Service<?, ? extends HttpResponse> nextService) {
+        requireNonNull(nextService, "nextService");
+        return new OrElseHttpService(this, nextService);
+    }
+
+    private static final class OrElseHttpService extends AbstractHttpService {
+
+        private final DynamicHttpService first;
+        private final Service<Request, HttpResponse> second;
+
+        @SuppressWarnings("unchecked")
+        OrElseHttpService(DynamicHttpService first, Service<?, ? extends HttpResponse> second) {
+            this.first = first;
+            this.second = (Service<Request, HttpResponse>) second;
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            try {
+                return first.serve(ctx, req);
+            } catch (ServiceNotFoundException e) {
+                return second.serve(ctx, req);
+            }
+        }
     }
 }

@@ -66,6 +66,7 @@ import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceNotFoundException;
 import com.linecorp.armeria.server.ServiceUnavailableException;
 import com.linecorp.armeria.server.VirtualHost;
 
@@ -302,7 +303,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } catch (Throwable cause) {
                 logBuilder.endRequest(cause);
                 logBuilder.endResponse(cause);
-                if (cause instanceof ResourceNotFoundException) {
+                if (cause instanceof ResourceNotFoundException ||
+                        cause instanceof ServiceNotFoundException) {
                     respond(ctx, req, HttpStatus.NOT_FOUND);
                 } else if (cause instanceof ServiceUnavailableException) {
                     respond(ctx, req, HttpStatus.SERVICE_UNAVAILABLE);
