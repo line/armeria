@@ -58,28 +58,35 @@ final class DynamicHttpFunctionImpl implements DynamicHttpFunction {
      * Returns the set of parameter names, which should be provided to invoke this function.
      */
     Set<String> parameterNames() {
-        return parameterEntries.stream().map(ParameterEntry::getName).collect(toImmutableSet());
+        return parameterEntries.stream()
+                               .filter(ParameterEntry::isPathParam)
+                               .map(ParameterEntry::getName)
+                               .collect(toImmutableSet());
     }
 
     /**
      * Returns array of parameters for method invocation.
      */
-    private Object[] parameters(Map<String, String> args) {
+    private Object[] parameters(ServiceRequestContext ctx, HttpRequest req, Map<String, String> args) {
         Object[] parameters = new Object[parameterEntries.size()];
         for (int i = 0; i < parameterEntries.size(); ++i) {
             ParameterEntry entry = parameterEntries.get(i);
-            String variable = entry.getName();
-            String value = args.get(variable);
-            assert value != null;
-            Class<?> type = entry.getType();
-            parameters[i] =  Deserializers.deserialize(value, type);
+            if (entry.isPathParam()) {
+                String value = args.get(entry.getName());
+                assert value != null;
+                parameters[i] = Deserializers.deserialize(value, entry.getType());
+            } else if (entry.getType().isAssignableFrom(ServiceRequestContext.class)) {
+                parameters[i] = ctx;
+            } else if (entry.getType().isAssignableFrom(HttpRequest.class)) {
+                parameters[i] = req;
+            }
         }
         return parameters;
     }
 
     @Override
     public Object serve(ServiceRequestContext ctx, HttpRequest req, Map<String, String> args) throws Exception {
-        Object[] parameters = parameters(args);
+        Object[] parameters = parameters(ctx, req, args);
         if (isAsynchronous) {
             return method.invoke(object, parameters);
         }

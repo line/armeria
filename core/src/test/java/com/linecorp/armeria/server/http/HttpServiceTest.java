@@ -38,6 +38,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
@@ -182,6 +183,50 @@ public class HttpServiceTest {
         @Path("/int-async/:var")
         public CompletableFuture<Integer> returnIntAsync(@PathParam("var") int var) {
             return CompletableFuture.completedFuture(var).thenApply(n -> n + 1);
+        }
+
+        @Get
+        @Path("/path/ctx/async/:var")
+        public CompletableFuture<String> returnPathCtxAsync(@PathParam("var") int var,
+                                                            ServiceRequestContext ctx,
+                                                            HttpRequest req) {
+            if (RequestContext.current() != ctx) {
+                throw new RuntimeException("ServiceRequestContext instances are not same!");
+            }
+            return CompletableFuture.completedFuture(ctx.path());
+        }
+
+        @Get
+        @Path("/path/req/async/:var")
+        public CompletableFuture<String> returnPathReqAsync(@PathParam("var") int var,
+                                                            HttpRequest req,
+                                                            ServiceRequestContext ctx) {
+            if (RequestContext.current() != ctx) {
+                throw new RuntimeException("ServiceRequestContext instances are not same!");
+            }
+            return CompletableFuture.completedFuture(req.path());
+        }
+
+        @Get
+        @Path("/path/ctx/sync/:var")
+        public String returnPathCtxSync(@PathParam("var") int var,
+                                        ServiceRequestContext ctx,
+                                        HttpRequest req) {
+            if (RequestContext.current() != ctx) {
+                throw new RuntimeException("ServiceRequestContext instances are not same!");
+            }
+            return ctx.path();
+        }
+
+        @Get
+        @Path("/path/req/sync/:var")
+        public String returnPathReqSync(@PathParam("var") int var,
+                                        HttpRequest req,
+                                        ServiceRequestContext ctx) {
+            if (RequestContext.current() != ctx) {
+                throw new RuntimeException("ServiceRequestContext instances are not same!");
+            }
+            return req.path();
         }
 
         // Throws an exception synchronously
@@ -331,6 +376,19 @@ public class HttpServiceTest {
             // Run case 6 but with not-mapped HTTP method (Post).
             try (CloseableHttpResponse res = hc.execute(new HttpPost(newUri("/dynamic2/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+            }
+            // Get a requested path as typed string from ServiceRequestContext or HttpRequest
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/path/ctx/async/1")))) {
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[/dynamic2/path/ctx/async/1]"));
+            }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/path/req/async/1")))) {
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[/dynamic2/path/req/async/1]"));
+            }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/path/ctx/sync/1")))) {
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[/dynamic2/path/ctx/sync/1]"));
+            }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic2/path/req/sync/1")))) {
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[/dynamic2/path/req/sync/1]"));
             }
             // Exceptions in business logic
             try (CloseableHttpResponse res =

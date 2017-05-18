@@ -32,7 +32,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.PathParamExtractor;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Provides various utility functions for {@link Method} object, related to {@link DynamicHttpService}.
@@ -157,7 +159,14 @@ final class Methods {
      */
     static List<ParameterEntry> parameterEntries(Method method) {
         return Arrays.stream(method.getParameters())
-                     .map(p -> new ParameterEntry(p.getType(), p.getAnnotation(PathParam.class).value()))
+                     .map(p -> {
+                         if (p.getType().isAssignableFrom(ServiceRequestContext.class) ||
+                             p.getType().isAssignableFrom(HttpRequest.class)) {
+                             return new ParameterEntry(p.getType(), null);
+                         } else {
+                             return new ParameterEntry(p.getType(), p.getAnnotation(PathParam.class).value());
+                         }
+                     })
                      .collect(toImmutableList());
     }
 
