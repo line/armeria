@@ -183,7 +183,7 @@ final class Methods {
         PathParamExtractor pathParamExtractor = pathParamExtractor(method);
         DynamicHttpFunctionImpl function = new DynamicHttpFunctionImpl(object, method);
 
-        Set<String> parameterNames = function.parameterNames();
+        Set<String> parameterNames = function.pathParamNames();
         Set<String> pathVariableNames = pathParamExtractor.variables();
         if (!pathVariableNames.containsAll(parameterNames)) {
             Set<String> missing = Sets.difference(parameterNames, pathVariableNames);
