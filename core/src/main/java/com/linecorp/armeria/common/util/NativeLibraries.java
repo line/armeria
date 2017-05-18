@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.channel.epoll.Epoll;
+import io.netty.channel.kqueue.KQueue;
 import io.netty.handler.ssl.OpenSsl;
 
 /**
@@ -34,6 +35,9 @@ public final class NativeLibraries {
 
     private static final boolean USE_EPOLL =
             !"false".equals(System.getProperty("com.linecorp.armeria.useEpoll", "true"));
+
+    private static final boolean USE_KQUEUE =
+            !"false".equals(System.getProperty("com.linecorp.armeria.useKqueue", "true"));
 
     private static final boolean USE_OPENSSL =
             !"false".equals(System.getProperty("com.linecorp.armeria.useOpenSsl", "true"));
@@ -53,6 +57,13 @@ public final class NativeLibraries {
                                              : "no (" + filterCause(Epoll.unavailabilityCause()) + ')'));
         } else {
             logger.info("/dev/epoll: disabled");
+        }
+        if (USE_KQUEUE) {
+            logger.info("kqueue: " +
+                        (KQueue.isAvailable() ? "yes"
+                                              : "no (" + filterCause(KQueue.unavailabilityCause()) + ')'));
+        } else {
+            logger.info("kqueue: disabled");
         }
 
         if (USE_OPENSSL) {
@@ -79,6 +90,14 @@ public final class NativeLibraries {
     public static boolean isEpollAvailable() {
         report();
         return USE_EPOLL && Epoll.isAvailable();
+    }
+
+    /**
+     * Returns {@code true} if JNI-based kqueue transport is available.
+     */
+    public static boolean isKqueueAvailable() {
+        report();
+        return USE_KQUEUE && KQueue.isAvailable();
     }
 
     /**

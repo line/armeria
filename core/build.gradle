@@ -21,6 +21,7 @@ managedDependencies {
         compile "io.netty:$it"
     }
     compile 'io.netty:netty-transport-native-epoll:linux-x86_64'
+    compile 'io.netty:netty-transport-native-kqueue:osx-x86_64'
     compile 'io.netty:netty-tcnative-boringssl-static'
     runtime 'org.javassist:javassist'
 

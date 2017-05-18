@@ -55,6 +55,7 @@ io.netty:
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
+  netty-transport-native-kqueue: { version: *NETTY_VERSION }
   netty-tcnative-boringssl-static: { version: 2.0.1.Final }
 
 io.zipkin.brave:
