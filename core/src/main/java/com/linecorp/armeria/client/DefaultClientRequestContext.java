@@ -20,10 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -61,14 +64,15 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, SessionProtocol sessionProtocol, Endpoint endpoint,
-            String method, String path, String fragment, ClientOptions options, Object request) {
+            HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            ClientOptions options, Object request) {
 
-        super(sessionProtocol, method, path, request);
+        super(sessionProtocol, method, path, query, request);
 
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.options = requireNonNull(options, "options");
         this.endpoint = requireNonNull(endpoint, "endpoint");
-        this.fragment = requireNonNull(fragment, "fragment");
+        this.fragment = fragment;
 
         log = new DefaultRequestLog(this);
 
@@ -111,6 +115,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
+    @Nullable
     public String fragment() {
         return fragment;
     }

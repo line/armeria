@@ -116,8 +116,13 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
         }
 
         try {
-            final RpcResponse reply = thriftClient.executeMultiplexed(
-                    path, params.clientType(), fragment, method.getName(), args);
+            final RpcResponse reply;
+            if (fragment != null) {
+                reply = thriftClient.executeMultiplexed(
+                        path, params.clientType(), fragment, method.getName(), args);
+            } else {
+                reply = thriftClient.execute(path, params.clientType(), method.getName(), args);
+            }
 
             if (callback != null) {
                 reply.handle(voidFunction((result, cause) -> {

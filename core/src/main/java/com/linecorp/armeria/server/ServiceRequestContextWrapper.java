@@ -17,17 +17,22 @@
 package com.linecorp.armeria.server;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * Wraps an existing {@link ServiceRequestContext}.
  */
 public class ServiceRequestContextWrapper
         extends RequestContextWrapper<ServiceRequestContext> implements ServiceRequestContext {
+
+    private String pathWithoutPrefix;
 
     /**
      * Creates a new instance.
@@ -52,18 +57,27 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public <T extends Service<?, ?>> T service() {
+    public String pathWithoutPrefix() {
+        if (pathWithoutPrefix == null) {
+            return pathWithoutPrefix = ServiceRequestContext.super.pathWithoutPrefix();
+        } else {
+            return pathWithoutPrefix;
+        }
+    }
+
+    @Override
+    public Map<String, String> pathParams() {
+        return delegate().pathParams();
+    }
+
+    @Override
+    public <T extends Service<? super HttpRequest, ? extends HttpResponse>> T service() {
         return delegate().service();
     }
 
     @Override
     public ExecutorService blockingTaskExecutor() {
         return delegate().blockingTaskExecutor();
-    }
-
-    @Override
-    public String mappedPath() {
-        return delegate().mappedPath();
     }
 
     @Override

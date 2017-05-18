@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.netty.channel.Channel;
@@ -42,8 +43,9 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
-    private final String method;
+    private final HttpMethod method;
     private final String path;
+    private final String query;
     private final Object request;
 
     // Callbacks
@@ -58,10 +60,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * @param request the request associated with this context
      */
     protected NonWrappingRequestContext(
-            SessionProtocol sessionProtocol, String method, String path, Object request) {
+            SessionProtocol sessionProtocol, HttpMethod method, String path, String query, Object request) {
         this.sessionProtocol = sessionProtocol;
         this.method = method;
         this.path = path;
+        this.query = query;
         this.request = request;
     }
 
@@ -106,13 +109,18 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     @Override
-    public final String method() {
+    public final HttpMethod method() {
         return method;
     }
 
     @Override
     public final String path() {
         return path;
+    }
+
+    @Override
+    public final String query() {
+        return query;
     }
 
     @Override

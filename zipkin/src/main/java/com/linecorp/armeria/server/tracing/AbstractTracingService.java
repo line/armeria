@@ -63,7 +63,7 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         final TraceData traceData = getTraceData(ctx, req);
-        final String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method();
+        final String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method().name();
         final ServerRequestAdapter requestAdapter = new InternalServerRequestAdapter(method, traceData);
 
         final ServerSpan serverSpan = serverInterceptor.openSpan(requestAdapter);

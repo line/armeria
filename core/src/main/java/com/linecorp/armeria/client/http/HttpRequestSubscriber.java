@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client.http;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.splitPathAndQuery;
+
 import java.net.InetSocketAddress;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -152,8 +155,15 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             }
         }
 
+        final String[] pathAndQuery = splitPathAndQuery(firstNonNull(firstHeaders.path(), "/"));
+        if (pathAndQuery == null) {
+            // A client specified an invalid path.
+            failAndRespond(new IllegalArgumentException("path: " + firstHeaders.path()));
+            return;
+        }
+
         logBuilder.startRequest(
-                ch, session.protocol(), host, firstHeaders.method().name(), firstHeaders.path());
+                ch, session.protocol(), host, firstHeaders.method(), pathAndQuery[0], pathAndQuery[1]);
         logBuilder.requestEnvelope(firstHeaders);
 
         if (request.isEmpty()) {

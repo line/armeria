@@ -77,6 +77,6 @@ public class HttpTracingClientTest extends HttpTracingTestBase {
     private static ClientRequestContext newClientContext(HttpRequest req) {
         return new DefaultClientRequestContext(
                 new DefaultEventLoop(), H2C, Endpoint.of("localhost", 8080),
-                req.method().toString(), req.path(), "", ClientOptions.DEFAULT, req);
+                req.method(), req.path(), null, null, ClientOptions.DEFAULT, req);
     }
 }

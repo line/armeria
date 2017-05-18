@@ -41,6 +41,7 @@ import com.github.kristofa.brave.TraceData;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.tracing.HelloService;
@@ -115,11 +116,11 @@ public class TracingServiceTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final RpcRequest req = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
         final DefaultRequestLog log = new DefaultRequestLog(ctx);
-        log.startRequest(mock(Channel.class), H2C, "localhost", TEST_METHOD, "/");
+        log.startRequest(mock(Channel.class), H2C, "localhost", HttpMethod.POST, "/", null);
         log.endRequest();
 
         // AbstractTracingService prefers RpcRequest.method() to ctx.method(), so "POST" should be ignored.
-        when(ctx.method()).thenReturn("POST");
+        when(ctx.method()).thenReturn(HttpMethod.POST);
         when(ctx.log()).thenReturn(log);
         when(ctx.logBuilder()).thenReturn(log);
         ctx.onEnter(isA(Consumer.class));

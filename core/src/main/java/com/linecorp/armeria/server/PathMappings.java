@@ -23,7 +23,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Function;
+import java.util.function.BiFunction;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.LruMap;
 import com.linecorp.armeria.server.composition.SimpleCompositeService;
@@ -34,7 +36,7 @@ import com.linecorp.armeria.server.composition.SimpleCompositeService;
  *
  * @param <T> the type of the mapped value
  */
-public class PathMappings<T> implements Function<String, PathMapped<T>> {
+public class PathMappings<T> implements BiFunction<String, String, PathMapped<T>> {
 
     private final ThreadLocal<Map<String, PathMapped<T>>> threadLocalCache;
     private final List<Entry<PathMapping, T>> patterns = new ArrayList<>();
@@ -58,12 +60,7 @@ public class PathMappings<T> implements Function<String, PathMapped<T>> {
         if (cacheSize == 0) {
             threadLocalCache = null;
         } else {
-            threadLocalCache = new ThreadLocal<Map<String, PathMapped<T>>>() {
-                @Override
-                protected Map<String, PathMapped<T>> initialValue() {
-                    return new LruMap<>(cacheSize);
-                }
-            };
+            threadLocalCache = ThreadLocal.withInitial(() -> new LruMap<>(cacheSize));
         }
     }
 
@@ -71,7 +68,8 @@ public class PathMappings<T> implements Function<String, PathMapped<T>> {
      * Adds the mapping from the specified {@link PathMapping} to the specified {@code value}.
      *
      * @return {@code this}
-     * @throws IllegalStateException if {@link #freeze()} or {@link #apply(String)} has been called already
+     * @throws IllegalStateException if {@link #freeze()} or {@link #apply(String, String)} has been called
+     *                               already
      */
     public PathMappings<T> add(PathMapping pathMapping, T value) {
         if (frozen) {
@@ -100,7 +98,7 @@ public class PathMappings<T> implements Function<String, PathMapped<T>> {
      *         {@link PathMapped#empty()} if there's no match.
      */
     @Override
-    public PathMapped<T> apply(String path) {
+    public PathMapped<T> apply(String path, @Nullable String query) {
         freeze();
 
         // Look up the cache if the cache is available.
@@ -119,9 +117,10 @@ public class PathMappings<T> implements Function<String, PathMapped<T>> {
         final int size = patterns.size();
         for (int i = 0; i < size; i++) {
             final Entry<PathMapping, T> e = patterns.get(i);
-            final String mappedPath = e.getKey().apply(path);
-            if (mappedPath != null) {
-                result = PathMapped.of(mappedPath, e.getValue());
+            final PathMapping mapping = e.getKey();
+            final PathMappingResult mappingResult = mapping.apply(path, query);
+            if (mappingResult.isPresent()) {
+                result = PathMapped.of(mapping, mappingResult, e.getValue());
                 break;
             }
         }
@@ -138,6 +137,4 @@ public class PathMappings<T> implements Function<String, PathMapped<T>> {
     public String toString() {
         return patterns.toString();
     }
-
-
 }

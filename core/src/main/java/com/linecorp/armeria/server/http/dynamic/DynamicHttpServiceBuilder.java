@@ -1,17 +1,17 @@
 /*
- * Copyright 2016 LINE Corporation
+ *  Copyright 2017 LINE Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
+ *  LINE Corporation licenses this file to you under the Apache License,
+ *  version 2.0 (the "License"); you may not use this file except in compliance
+ *  with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *  License for the specific language governing permissions and limitations
+ *  under the License.
  */
 
 package com.linecorp.armeria.server.http.dynamic;
@@ -28,7 +28,7 @@ import java.util.Optional;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.PathParamExtractor;
+import com.linecorp.armeria.server.PathMapping;
 
 /**
  * Builds a new {@link DynamicHttpService}.
@@ -42,7 +42,7 @@ public final class DynamicHttpServiceBuilder {
      * Adds a mapping from {@link Class} to {@link ResponseConverter}.
      */
     public DynamicHttpServiceBuilder addConverter(Class<?> type, ResponseConverter converter) {
-        this.converters.put(type, converter);
+        converters.put(type, converter);
         return this;
     }
 
@@ -71,7 +71,7 @@ public final class DynamicHttpServiceBuilder {
                                                 DynamicHttpFunction function) {
         DynamicHttpFunction f = DynamicHttpFunctions.of(function, converters);
         DynamicHttpFunctionEntry entry = new DynamicHttpFunctionEntry(
-                Sets.immutableEnumSet(methods), new PathParamExtractor(path), f);
+                Sets.immutableEnumSet(methods), PathMapping.of(path), f);
         validate(entry);
         entries.add(entry);
         return this;
@@ -114,7 +114,7 @@ public final class DynamicHttpServiceBuilder {
                                                                .findFirst();
         if (overlapped.isPresent()) {
             throw new IllegalArgumentException(
-                    "Mapping conflicts: " + entry.toString() + ", " + overlapped.get().toString());
+                    "Mapping conflicts: " + entry + ", " + overlapped.get());
         }
     }
 

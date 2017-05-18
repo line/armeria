@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
@@ -86,8 +87,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private SessionProtocol sessionProtocol;
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
     private String host;
-    private String method;
+    private HttpMethod method;
     private String path;
+    private String query;
     private int statusCode = -1;
 
     private Object requestEnvelope;
@@ -205,15 +207,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void startRequest(
-            Channel channel, SessionProtocol sessionProtocol, String host, String method, String path) {
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol,
+                             String host, HttpMethod method, String path, String query) {
 
-        startRequest0(channel, sessionProtocol, host, method, path, true);
+        startRequest0(channel, sessionProtocol, host, method, path, query, true);
     }
 
-    private void startRequest0(
-            Channel channel, SessionProtocol sessionProtocol, String host, String method, String path,
-            boolean updateAvailability) {
+    private void startRequest0(Channel channel, SessionProtocol sessionProtocol,
+                               String host, HttpMethod method, String path, String query,
+                               boolean updateAvailability) {
 
         if (isAvailabilityAlreadyUpdated(REQUEST_START)) {
             return;
@@ -226,6 +228,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.host = host;
         this.method = method;
         this.path = path;
+        this.query = query;
 
         if (updateAvailability) {
             updateAvailability(REQUEST_START);
@@ -269,7 +272,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String method() {
+    public HttpMethod method() {
         ensureAvailability(REQUEST_START);
         return method;
     }
@@ -278,6 +281,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public String path() {
         ensureAvailability(REQUEST_START);
         return path;
+    }
+
+    @Override
+    public String query() {
+        ensureAvailability(REQUEST_START);
+        return query;
     }
 
     @Override
@@ -403,7 +412,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
-        startRequest0(null, null, null, null, null, false);
+        startRequest0(null, null, null, null, null, null, false);
         requestEndTimeNanos = System.nanoTime();
         this.requestCause = requestCause;
         updateAvailability(flags);

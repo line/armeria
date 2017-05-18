@@ -86,6 +86,10 @@ public enum BuiltInProperty {
      */
     REQ_PATH("req.path"),
     /**
+     * {@code "req.query"} - the query of the request.
+     */
+    REQ_QUERY("req.query"),
+    /**
      * {@code "req.method"} - the method name of the request. e.g. {@code "GET"} and {@code "POST"}
      */
     REQ_METHOD("req.method"),

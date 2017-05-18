@@ -18,13 +18,15 @@ package com.linecorp.armeria.common.logging;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpMethod;
 
 import io.netty.channel.Channel;
 
 final class NoopRequestLogBuilder implements RequestLogBuilder {
+
     @Override
-    public void startRequest(
-            Channel ch, SessionProtocol sessionProtocol, String host, String method, String path) {}
+    public void startRequest(Channel ch, SessionProtocol sessionProtocol,
+                             String host, HttpMethod method, String path, String query) {}
 
     @Override
     public void serializationFormat(SerializationFormat serializationFormat) {}

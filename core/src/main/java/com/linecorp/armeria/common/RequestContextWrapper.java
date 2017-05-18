@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
@@ -81,13 +82,18 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public String method() {
+    public HttpMethod method() {
         return delegate().method();
     }
 
     @Override
     public String path() {
         return delegate().path();
+    }
+
+    @Override
+    public String query() {
+        return delegate().query();
     }
 
     @Override

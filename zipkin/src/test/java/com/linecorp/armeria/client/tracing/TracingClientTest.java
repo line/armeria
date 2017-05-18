@@ -43,6 +43,7 @@ import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 
@@ -105,9 +106,9 @@ public class TracingClientTest {
         final RpcResponse res = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 new DefaultEventLoop(), H2C, Endpoint.of("localhost", 8080),
-                "POST", "/", "", ClientOptions.DEFAULT, req);
+                HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT, req);
 
-        ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost", "POST", "/");
+        ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost", HttpMethod.POST, "/", null);
         ctx.logBuilder().endRequest();
 
         @SuppressWarnings("unchecked")

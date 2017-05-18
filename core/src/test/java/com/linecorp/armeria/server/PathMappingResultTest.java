@@ -14,26 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.server;
 
-import javax.annotation.Nullable;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.linecorp.armeria.server.ServiceRequestContext;
+import org.junit.Test;
 
-/**
- * Utilities for introspecting a GRPC request.
- */
-final class GrpcRequestUtil {
-
-    @Nullable
-    static String determineMethod(ServiceRequestContext ctx) {
-        // Remove the leading slash of the path and get the fully qualified method name
-        String path = ctx.pathWithoutPrefix();
-        if (path.charAt(0) != '/') {
-            return null;
-        }
-        return path.substring(1, path.length());
+public class PathMappingResultTest {
+    @Test
+    public void empty() {
+        final PathMappingResult result = PathMappingResult.empty();
+        assertThat(result.isPresent()).isFalse();
+        assertThatThrownBy(result::path).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(result::query).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(result::pathParams).isInstanceOf(IllegalStateException.class);
     }
-
-    private GrpcRequestUtil() {}
 }

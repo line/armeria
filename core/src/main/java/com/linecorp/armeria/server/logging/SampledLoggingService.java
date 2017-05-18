@@ -41,8 +41,8 @@ public class SampledLoggingService<I extends Request, O extends Response> extend
      * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
      */
     public static <I extends Request, O extends Response> Function<Service<I, O>, SampledLoggingService<I, O>>
-    newDecorator() {
-        return newDecorator(true, true, 1.0f);
+    newDecorator(float logSamplingRate) {
+        return newDecorator(true, true, logSamplingRate);
     }
 
     /**

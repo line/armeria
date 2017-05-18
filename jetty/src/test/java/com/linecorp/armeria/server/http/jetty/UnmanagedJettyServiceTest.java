@@ -45,7 +45,7 @@ public class UnmanagedJettyServiceTest extends WebAppContainerTest {
             jetty.start();
             sb.serviceUnder(
                     "/jsp/",
-                    JettyService.forServer(jetty).decorate(LoggingService::new));
+                    JettyService.forServer(jetty).decorate(LoggingService.newDecorator()));
         }
     };
 

@@ -197,7 +197,7 @@ public class ThriftOverHttpClientTest {
                     Service<HttpRequest, HttpResponse> service =
                             THttpService.of(h.handler(), defaultSerializationFormat);
                     if (ENABLE_LOGGING_DECORATORS) {
-                        service = service.decorate(LoggingService::new);
+                        service = service.decorate(LoggingService.newDecorator());
                     }
                     sb.serviceAt(h.path(defaultSerializationFormat), service);
                 }
@@ -282,7 +282,7 @@ public class ThriftOverHttpClientTest {
         });
 
         if (ENABLE_LOGGING_DECORATORS) {
-            decoBuilder.add(RpcRequest.class, RpcResponse.class, LoggingClient::new);
+            decoBuilder.add(RpcRequest.class, RpcResponse.class, LoggingClient.newDecorator());
         }
 
         clientOptions = ClientOptions.of(ClientOption.DECORATION.newValue(decoBuilder.build()));

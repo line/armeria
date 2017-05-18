@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
@@ -24,6 +25,8 @@ import org.slf4j.Logger;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -48,9 +51,33 @@ public interface ServiceRequestContext extends RequestContext {
     PathMapping pathMapping();
 
     /**
+     * Returns the path parameters mapped by the {@link PathMapping} associated with the {@link Service}
+     * that is handling the current {@link Request}.
+     */
+    Map<String, String> pathParams();
+
+    /**
+     * Returns the value of the specified path parameter.
+     */
+    default String pathParam(String name) {
+        return pathParams().get(name);
+    }
+
+    /**
+     * Returns the path with its prefix removed. This method can be useful for a reusable service bound
+     * at various path prefixes.
+     *
+     * @return the path with its prefix removed, starting with '/'. If the {@link #pathMapping()} is not a
+     *         prefix-mapping, the same value with {@link #path()} will be returned.
+     */
+    default String pathWithoutPrefix() {
+        return pathMapping().prefix().map(s -> path().substring(s.length() - 1)).orElseGet(this::path);
+    }
+
+    /**
      * Returns the {@link Service} that is handling the current {@link Request}.
      */
-    <T extends Service<?, ?>> T service();
+    <T extends Service<? super HttpRequest, ? extends HttpResponse>> T service();
 
     /**
      * Returns the {@link ExecutorService} that could be used for executing a potentially long-running task.
@@ -63,11 +90,12 @@ public interface ServiceRequestContext extends RequestContext {
     ExecutorService blockingTaskExecutor();
 
     /**
-     * Returns the path with its context path removed. This method can be useful for a reusable service bound
-     * at various path prefixes. For client side invocations, this method always returns the same value as
-     * {@link #path()}.
+     * @deprecated Use {@link #pathWithoutPrefix()} instead.
      */
-    String mappedPath();
+    @Deprecated
+    default String mappedPath() {
+        return pathWithoutPrefix();
+    }
 
     /**
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in

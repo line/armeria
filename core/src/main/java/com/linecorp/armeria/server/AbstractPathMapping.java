@@ -20,38 +20,20 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 /**
- * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(String)}.
+ * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(String, String)}.
  */
 public abstract class AbstractPathMapping implements PathMapping {
 
     /**
-     * Matches the specified {@code path} and translates the matched {@code path} to another path string.
-     * This method performs sanity checks on the specified {@code path}, calls {@link #doApply(String)},
-     * and then performs sanity checks on the returned {@code mappedPath}.
-     *
-     * @param path an absolute path as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
-     *         {@code null} if the specified {@code path} does not match this mapping.
+     * {@inheritDoc} This method performs sanity checks on the specified {@code path} and calls
+     * {@link #doApply(String, String)}.
      */
     @Override
-    public final String apply(String path) {
-        ensureAbsolutePath(path, "path");
-
-        final String mappedPath = doApply(path);
-        if (mappedPath == null) {
-            return null;
-        }
-
-        if (mappedPath.isEmpty()) {
-            throw new IllegalStateException("mapped path is not an absolute path: <empty>");
-        }
-
-        if (mappedPath.charAt(0) != '/') {
-            throw new IllegalStateException("mapped path is not an absolute path: " + mappedPath);
-        }
-
-        return mappedPath;
+    public final PathMappingResult apply(String path, @Nullable String query) {
+        return doApply(ensureAbsolutePath(path, "path"), query);
     }
 
     /**
@@ -71,13 +53,16 @@ public abstract class AbstractPathMapping implements PathMapping {
     }
 
     /**
-     * Invoked by {@link #apply(String)} to perform the actual path matching and translation.
+     * Invoked by {@link #apply(String, String)} to perform the actual path matching and path parameter
+     * extraction.
      *
-     * @param path an absolute path as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
-     *         {@code null} if the specified {@code path} does not match this mapping.
+     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
+     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     *              {@code null} if query does not exist.
+     * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
+     *         {@link PathMappingResult#empty()} if not matches.
      */
-    protected abstract String doApply(String path);
+    protected abstract PathMappingResult doApply(String path, @Nullable String query);
 
     @Override
     public String loggerName() {

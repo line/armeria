@@ -21,15 +21,14 @@ import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
 import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
 import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
-import java.net.URLDecoder;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
@@ -62,6 +61,7 @@ import com.linecorp.armeria.internal.http.HttpObjectEncoder;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.GracefulShutdownSupport;
 import com.linecorp.armeria.server.PathMapped;
+import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
@@ -94,15 +94,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final String ALLOWED_METHODS_STRING =
             ALLOWED_METHODS.stream().map(HttpMethod::name).collect(Collectors.joining(","));
-
-    /**
-     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
-     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
-     */
-    private static final Pattern PROHIBITED_PATH_PATTERN =
-            Pattern.compile("^/[^/]*:[^/]*/|[|<>*\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
-
-    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -261,7 +252,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         // Validate and split path and query.
-        final String[] pathAndQuery = validateAndSplitPath(originalPath);
+        final String[] pathAndQuery = splitPathAndQuery(originalPath);
         if (pathAndQuery == null) {
             // Reject requests without a valid path.
             respond(ctx, req, HttpStatus.NOT_FOUND);
@@ -269,29 +260,28 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final String path = pathAndQuery[0];
+        @Nullable
         final String query = pathAndQuery[1];
         final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
         // Find the service that matches the path.
-        final PathMapped<ServiceConfig> mapped = host.findServiceConfig(path);
+        final PathMapped<ServiceConfig> mapped = host.findServiceConfig(path, query);
         if (!mapped.isPresent()) {
             // No services matched the path.
-            handleNonExistentMapping(ctx, req, host, path);
+            handleNonExistentMapping(ctx, req, host, path, query);
             return;
         }
 
         // Decode the request and create a new invocation context from it to perform an invocation.
-        final String mappedPath = mapped.mappedPath();
+        final PathMappingResult mappingResult = mapped.mappingResult();
         final ServiceConfig serviceCfg = mapped.value();
         final Service<Request, HttpResponse> service = serviceCfg.service();
 
         final Channel channel = ctx.channel();
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, protocol, req.method().name(),
-                query != null ? path + query : path,
-                query != null ? mappedPath + query : mappedPath,
-                req, getSSLSession(channel));
+                serviceCfg, channel, protocol, req.method(),
+                mappingResult, req, getSSLSession(channel));
 
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
@@ -349,12 +339,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void handleNonExistentMapping(ChannelHandlerContext ctx, DecodedHttpRequest req,
-                                          VirtualHost host, String path) {
+                                          VirtualHost host, String path, String query) {
 
         if (path.charAt(path.length() - 1) != '/') {
             // Handle the case where /path doesn't exist but /path/ exists.
             final String pathWithSlash = path + '/';
-            if (host.findServiceConfig(pathWithSlash).isPresent()) {
+            if (host.findServiceConfig(pathWithSlash, query).isPresent()) {
                 final String location;
                 final String originalPath = req.path();
                 if (path.length() == originalPath.length()) {
@@ -387,44 +377,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         return hostname.substring(0, hostnameColonIdx);
-    }
-
-    private static String[] validateAndSplitPath(String path) {
-        // Filter out an empty path or a relative path.
-        if (path.isEmpty() || path.charAt(0) != '/') {
-            return null;
-        }
-
-        // Strip the query string.
-        final int queryPos = path.indexOf('?');
-        final String query;
-        if (queryPos >= 0) {
-            path = path.substring(0, queryPos);
-            query = path.substring(queryPos);
-        } else {
-            query = null;
-        }
-
-        try {
-            path = URLDecoder.decode(path, "UTF-8");
-        } catch (IllegalArgumentException ignored) {
-            // Malformed URL
-            return null;
-        } catch (UnsupportedEncodingException e) {
-            // Should never happen
-            throw new Error(e);
-        }
-
-        // Reject the prohibited patterns.
-        if (PROHIBITED_PATH_PATTERN.matcher(path).find()) {
-            return null;
-        }
-
-        // Work around the case where a client sends a path such as '/path//with///consecutive////slashes'.
-        return new String[] {
-                CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/"),
-                query
-        };
     }
 
     private void redirect(ChannelHandlerContext ctx, DecodedHttpRequest req, String location) {

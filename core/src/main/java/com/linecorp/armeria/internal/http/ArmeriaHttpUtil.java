@@ -41,6 +41,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
@@ -70,6 +71,15 @@ import io.netty.util.HashingStrategy;
  * <p>The conversion between HTTP/1 and HTTP/2 has been forked from Netty's {@link HttpConversionUtil}.
  */
 public final class ArmeriaHttpUtil {
+
+    /**
+     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
+     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
+     */
+    private static final Pattern PROHIBITED_PATH_PATTERN =
+            Pattern.compile("^/[^/]*:[^/]*/|[|<>*\\\\]|/\\.\\.|\\.\\.$|\\.\\./");
+
+    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
 
     /**
      * The default case-insensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
@@ -122,6 +132,139 @@ public final class ArmeriaHttpUtil {
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
+    }
+
+    /**
+     * Validates the {@link String} that contains an absolute path and a query, and splits them into
+     * the path part and the query part.
+     *
+     * @return a two-element array whose first element is an absolute path and the second element is a query.
+     *         {@code null} if the specified {@link String} is not an absolute path or invalid.
+     */
+    public static String[] splitPathAndQuery(final String pathAndQuery) {
+        final String path;
+        final String query;
+
+        if (isNullOrEmpty(pathAndQuery)) {
+            // e.g. http://example.com
+            path = "/";
+            query = null;
+        } else if (pathAndQuery.charAt(0) != '/') {
+            // Do not accept a relative path.
+            return null;
+        } else {
+            // Split by the first '?'.
+            final int queryPos = pathAndQuery.indexOf('?');
+            if (queryPos >= 0) {
+                path = pathAndQuery.substring(0, queryPos);
+                query = pathAndQuery.substring(queryPos + 1);
+            } else {
+                path = pathAndQuery;
+                query = null;
+            }
+        }
+
+        // Make sure the path and the query are encoded correctly. i.e. Do not pass poorly encoded paths
+        // and queries to services. However, do not pass the decoded paths and queries to the services,
+        // so that users have more control over the encoding.
+        if (!isValidEncoding(path) ||
+            !isValidEncoding(query)) {
+            return null;
+        }
+
+        // Reject the prohibited patterns.
+        if (PROHIBITED_PATH_PATTERN.matcher(path).find()) {
+            return null;
+        }
+
+        // Work around the case where a client sends a path such as '/path//with///consecutive////slashes'.
+        return new String[] { CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/"), query };
+    }
+
+    @SuppressWarnings({ "DuplicateCondition", "DuplicateBooleanBranch" })
+    private static boolean isValidEncoding(String value) {
+        if (value == null) {
+            return true;
+        }
+
+        final int length = value.length();
+        for (int i = 0; i < length; i++) {
+            final char ch = value.charAt(i);
+            if (ch != '%') {
+                continue;
+            }
+
+            final int end = i + 3;
+            if (end > length) {
+                // '%' or '%x' (must be followed by two hexadigits)
+                return false;
+            }
+
+            if (!isHexadigit(value.charAt(++i)) ||
+                !isHexadigit(value.charAt(++i))) {
+                // The first or second digit is not hexadecimal.
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean isHexadigit(char ch) {
+        return ch >= '0' && ch <= '9' ||
+               ch >= 'a' && ch <= 'f' ||
+               ch >= 'A' && ch <= 'F';
+    }
+
+    /**
+     * Concatenates two path strings.
+     */
+    public static String concatPaths(String path1, String path2) {
+        path2 = path2 == null ? "" : path2;
+
+        if (path1 == null || path1.isEmpty() || "/".equals(path1)) {
+            if (path2.isEmpty()) {
+                return "/";
+            }
+
+            if (path2.charAt(0) == '/') {
+                return path2; // Most requests will land here.
+            }
+
+            return new StringBuilder(path2.length() + 1)
+                    .append('/').append(path2).toString();
+        }
+
+        // At this point, we are sure path1 is neither empty nor null.
+        if (path2.isEmpty()) {
+            // Only path1 is non-empty. No need to concatenate.
+            return path1;
+        }
+
+        if (path1.charAt(path1.length() - 1) == '/') {
+            if (path2.charAt(0) == '/') {
+                // path1 ends with '/' and path2 starts with '/'.
+                // Avoid double-slash by stripping the first slash of path2.
+                return new StringBuilder(path1.length() + path2.length() - 1)
+                        .append(path1).append(path2, 1, path2.length()).toString();
+            }
+
+            // path1 ends with '/' and path2 does not start with '/'.
+            // Simple concatenation would suffice.
+            return new StringBuilder(path1.length() + path2.length())
+                    .append(path1).append(path2).toString();
+        }
+
+        if (path2.charAt(0) == '/') {
+            // path1 does not end with '/' and path2 starts with '/'.
+            // Simple concatenation would suffice.
+            return path1 + path2;
+        }
+
+        // path1 does not end with '/' and path2 does not start with '/'.
+        // Need to insert '/' between path1 and path2.
+        return new StringBuilder(path1.length() + path2.length() + 1)
+                .append(path1).append('/').append(path2).toString();
     }
 
     /**

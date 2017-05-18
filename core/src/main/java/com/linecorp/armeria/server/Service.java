@@ -56,7 +56,8 @@ public interface Service<I extends Request, O extends Response> {
      * {@code serviceType}. Use this method instead of an explicit downcast since most {@link Service}s are
      * decorated via {@link #decorate(Function)} and thus cannot be downcast. For example:
      * <pre>{@code
-     * Service s = new MyService().decorate(LoggingService::new).decorate(AuthService::new);
+     * Service s = new MyService().decorate(LoggingService.newDecorator())
+     *                            .decorate(AuthService.newDecorator());
      * MyService s1 = s.as(MyService.class);
      * LoggingService s2 = s.as(LoggingService.class);
      * AuthService s3 = s.as(AuthService.class);

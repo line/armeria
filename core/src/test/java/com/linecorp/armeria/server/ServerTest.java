@@ -73,7 +73,7 @@ public class ServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
 
             final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
-                    new EchoService().decorate(LoggingService::new);
+                    new EchoService().decorate(LoggingService.newDecorator());
 
             final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
                 @Override
@@ -85,7 +85,7 @@ public class ServerTest {
                         e.printStackTrace();
                     }
                 }
-            }.decorate(LoggingService::new);
+            }.decorate(LoggingService.newDecorator());
 
             final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
                 @Override
@@ -93,7 +93,7 @@ public class ServerTest {
                     asyncExecutorGroup.schedule(
                             () -> super.echo(aReq, res), processDelayMillis, TimeUnit.MILLISECONDS);
                 }
-            }.decorate(LoggingService::new);
+            }.decorate(LoggingService.newDecorator());
 
             final Service<HttpRequest, HttpResponse> buggy = new AbstractHttpService() {
                 @Override
@@ -102,7 +102,7 @@ public class ServerTest {
 
                     throw Exceptions.clearTrace(new Exception("bug!"));
                 }
-            }.decorate(LoggingService::new);
+            }.decorate(LoggingService.newDecorator());
 
             sb.serviceAt("/", immediateResponseOnIoThread)
               .serviceAt("/delayed", delayedResponseOnIoThread)

@@ -20,6 +20,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpMethod;
 
 import io.netty.channel.Channel;
 
@@ -44,10 +45,11 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#host()}</li>
      *   <li>{@link RequestLog#method()}</li>
      *   <li>{@link RequestLog#path()}</li>
+     *   <li>{@link RequestLog#query()}</li>
      * </ul>
      */
-    void startRequest(
-            Channel channel, SessionProtocol sessionProtocol, String host, String method, String path);
+    void startRequest(Channel channel, SessionProtocol sessionProtocol,
+                      String host, HttpMethod method, String path, String query);
 
     /**
      * Sets the {@link SerializationFormat}.

@@ -154,19 +154,19 @@ public class HttpServerTest {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
 
-            sb.serviceUnder("/delay", new AbstractHttpService() {
+            sb.serviceAt("/delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
+                    final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
                     ctx.eventLoop().schedule(() -> res.respond(HttpStatus.OK),
                                              delayMillis, TimeUnit.MILLISECONDS);
                 }
             });
 
-            sb.serviceUnder("/informed_delay", new AbstractHttpService() {
+            sb.serviceAt("/informed_delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
+                    final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
 
                     // Send 9 informational responses before sending the actual response.
                     for (int i = 1; i <= 9; i++) {
@@ -182,10 +182,10 @@ public class HttpServerTest {
                 }
             });
 
-            sb.serviceUnder("/content_delay", new AbstractHttpService() {
+            sb.serviceAt("/content_delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    final long delayMillis = Long.parseLong(ctx.mappedPath().substring(1));
+                    final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
 
                     res.write(HttpHeaders.of(HttpStatus.OK));
 
@@ -208,15 +208,17 @@ public class HttpServerTest {
                 @Override
                 protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, ctx.mappedPath().length()));
+                                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
+                                                 ctx.pathWithoutPrefix().length()));
                     res.close();
                 }
 
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .setInt(HttpHeaderNames.CONTENT_LENGTH, ctx.mappedPath().length()));
-                    res.write(HttpData.ofAscii(ctx.mappedPath()));
+                                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
+                                                 ctx.pathWithoutPrefix().length()));
+                    res.write(HttpData.ofAscii(ctx.pathWithoutPrefix()));
                     res.close();
                 }
             });
@@ -261,7 +263,7 @@ public class HttpServerTest {
             sb.serviceUnder("/zeroes", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    final long length = Long.parseLong(ctx.mappedPath().substring(1));
+                    final long length = Long.parseLong(ctx.pathWithoutPrefix().substring(1));
                     res.write(HttpHeaders.of(HttpStatus.OK)
                                          .setLong(HttpHeaderNames.CONTENT_LENGTH, length));
 

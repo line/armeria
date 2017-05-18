@@ -37,8 +37,9 @@ import java.util.stream.Collectors;
 import javax.net.ssl.SSLException;
 
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -139,7 +140,7 @@ public final class ServerBuilder {
     private Executor blockingTaskExecutor;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
-    private Function<Service<Request, Response>, Service<Request, Response>> decorator;
+    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
@@ -376,14 +377,21 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified {@link Service} at the specified exact path of the default {@link VirtualHost}.
+     * Binds the specified {@link Service} at the specified path pattern of the default {@link VirtualHost}.
+     * e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     * </ul>
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceAt(String exactPath, Service<?, ?> service) {
+    public ServerBuilder serviceAt(String pathPattern,
+                                   Service<? super HttpRequest, ? extends HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.serviceAt(exactPath, service);
+        defaultVirtualHostBuilder.serviceAt(pathPattern, service);
         return this;
     }
 
@@ -393,7 +401,8 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceUnder(String pathPrefix, Service<?, ?> service) {
+    public ServerBuilder serviceUnder(String pathPrefix,
+                                      Service<? super HttpRequest, ? extends HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
         return this;
@@ -406,7 +415,8 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service) {
+    public ServerBuilder service(PathMapping pathMapping,
+                                 Service<? super HttpRequest, ? extends HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service);
         return this;
@@ -417,7 +427,9 @@ public final class ServerBuilder {
      *             {@code armeria-logback}.
      */
     @Deprecated
-    public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
+    public ServerBuilder service(PathMapping pathMapping,
+                                 Service<? super HttpRequest, ? extends HttpResponse> service,
+                                 String loggerName) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
         return this;
@@ -510,15 +522,15 @@ public final class ServerBuilder {
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
-    public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
-            R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response> ServerBuilder decorator(
-            Function<T, R> decorator) {
+    public <T extends Service<T_I, T_O>, T_I extends HttpRequest, T_O extends HttpResponse,
+            R extends Service<R_I, R_O>, R_I extends HttpRequest, R_O extends HttpResponse>
+    ServerBuilder decorator(Function<T, R> decorator) {
 
         requireNonNull(decorator, "decorator");
 
         @SuppressWarnings("unchecked")
-        Function<Service<Request, Response>, Service<Request, Response>> castDecorator =
-                (Function<Service<Request, Response>, Service<Request, Response>>) decorator;
+        Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
+                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
 
         if (this.decorator != null) {
             this.decorator = this.decorator.andThen(castDecorator);
@@ -565,7 +577,7 @@ public final class ServerBuilder {
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix));
-        serverListeners.forEach(listener -> server.addListener(listener));
+        serverListeners.forEach(server::addListener);
         return server;
     }
 

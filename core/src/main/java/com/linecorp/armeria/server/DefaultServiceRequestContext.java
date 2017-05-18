@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nullable;
@@ -30,6 +31,9 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -45,13 +49,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final Channel ch;
     private final ServiceConfig cfg;
-    private final String mappedPath;
+    private final Map<String, String> pathParams;
     private final SSLSession sslSession;
 
     private final DefaultRequestLog log;
     private final Logger logger;
 
     private ExecutorService blockingTaskExecutor;
+    private String pathWithoutPrefix;
 
     private long requestTimeoutMillis;
     private long maxRequestLength;
@@ -69,18 +74,22 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
-            String method, String path, String mappedPath, Object request,
+            HttpMethod method, PathMappingResult pathMappingResult, Object request,
             @Nullable SSLSession sslSession) {
 
-        super(sessionProtocol, method, path, request);
+        super(sessionProtocol, method,
+              requireNonNull(pathMappingResult, "pathMappingResult").path(),
+              pathMappingResult.query(),
+              request);
 
         this.ch = ch;
         this.cfg = cfg;
-        this.mappedPath = mappedPath;
+        pathParams = pathMappingResult.pathParams();
         this.sslSession = sslSession;
 
         log = new DefaultRequestLog(this);
-        log.startRequest(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method, path);
+        log.startRequest(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method,
+                         pathMappingResult.path(), pathMappingResult.query());
         logger = newLogger(cfg);
 
         final ServerConfig serverCfg = cfg.server().config();
@@ -119,7 +128,21 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public <T extends Service<?, ?>> T service() {
+    public String pathWithoutPrefix() {
+        if (pathWithoutPrefix == null) {
+            return pathWithoutPrefix = ServiceRequestContext.super.pathWithoutPrefix();
+        } else {
+            return pathWithoutPrefix;
+        }
+    }
+
+    @Override
+    public Map<String, String> pathParams() {
+        return pathParams;
+    }
+
+    @Override
+    public <T extends Service<? super HttpRequest, ? extends HttpResponse>> T service() {
         return cfg.service();
     }
 
@@ -135,11 +158,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public EventLoop eventLoop() {
         return ch.eventLoop();
-    }
-
-    @Override
-    public String mappedPath() {
-        return mappedPath;
     }
 
     @Override
@@ -247,9 +265,9 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
            .append("://")
            .append(virtualHost().defaultHostname());
 
-        final InetSocketAddress raddr = remoteAddress();
-        if (raddr != null) {
-            buf.append(':').append(raddr.getPort());
+        final InetSocketAddress laddr = localAddress();
+        if (laddr != null) {
+            buf.append(':').append(laddr.getPort());
         } else {
             buf.append(":-1"); // Port unknown.
         }

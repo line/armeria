@@ -35,6 +35,7 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -190,16 +191,22 @@ public interface RequestContext extends AttributeMap {
     SSLSession sslSession();
 
     /**
-     * Returns the session-layer method name of the current {@link Request}. e.g. "GET" or "POST" for HTTP
+     * Returns the HTTP method of the current {@link Request}.
      */
-    String method();
+    HttpMethod method();
 
     /**
-     * Returns the absolute path part of the current {@link Request}, as defined in
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2">the
-     * section 5.1.2 of RFC2616</a>.
+     * Returns the absolute path part of the current {@link Request} URI, excluding the query part,
+     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      */
     String path();
+
+    /**
+     * Returns the query part of the current {@link Request} URI, without the leading {@code '?'},
+     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     */
+    @Nullable
+    String query();
 
     /**
      * Returns the {@link Request} associated with this context.

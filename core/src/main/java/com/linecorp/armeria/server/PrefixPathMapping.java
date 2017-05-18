@@ -17,35 +17,43 @@
 package com.linecorp.armeria.server;
 
 import java.util.Optional;
+import java.util.Set;
+
+import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableSet;
 
 final class PrefixPathMapping extends AbstractPathMapping {
 
     private final String prefix;
-    private final boolean stripPrefix;
     private final String loggerName;
     private final String metricName;
     private final String strVal;
 
-    PrefixPathMapping(String prefix, boolean stripPrefix) {
+    PrefixPathMapping(String prefix) {
         prefix = ensureAbsolutePath(prefix, "prefix");
         if (!prefix.endsWith("/")) {
             prefix += '/';
         }
 
         this.prefix = prefix;
-        this.stripPrefix = stripPrefix;
         loggerName = loggerName(prefix);
         metricName = prefix + "**";
-        strVal = "prefix: " + prefix + " (stripPrefix: " + stripPrefix + ')';
+        strVal = "prefix: " + prefix;
     }
 
     @Override
-    protected String doApply(String path) {
+    protected PathMappingResult doApply(String path, @Nullable String query) {
         if (!path.startsWith(prefix)) {
-            return null;
+            return PathMappingResult.empty();
         }
 
-        return stripPrefix ? path.substring(prefix.length() - 1) : path;
+        return PathMappingResult.of(path, query);
+    }
+
+    @Override
+    public Set<String> paramNames() {
+        return ImmutableSet.of();
     }
 
     @Override
@@ -60,7 +68,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
     @Override
     public int hashCode() {
-        return stripPrefix ? prefix.hashCode() : -prefix.hashCode();
+        return prefix.hashCode();
     }
 
     @Override
@@ -74,7 +82,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
         }
 
         final PrefixPathMapping that = (PrefixPathMapping) obj;
-        return stripPrefix == that.stripPrefix && prefix.equals(that.prefix);
+        return prefix.equals(that.prefix);
     }
 
     @Override

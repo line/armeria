@@ -64,21 +64,21 @@ public class TomcatServiceTest extends WebAppContainerTest {
                                         .serviceName(SERVICE_NAME)
                                         .configurator(s -> Collections.addAll(tomcatServices, s.findServices()))
                                         .build()
-                                        .decorate(LoggingService::new));
+                                        .decorate(LoggingService.newDecorator()));
 
             sb.serviceUnder(
                     "/jar/",
                     TomcatServiceBuilder.forClassPath(Future.class)
                                         .serviceName("TomcatServiceTest-JAR")
                                         .build()
-                                        .decorate(LoggingService::new));
+                                        .decorate(LoggingService.newDecorator()));
 
             sb.serviceUnder(
                     "/jar_altroot/",
                     TomcatServiceBuilder.forClassPath(Future.class, "/io/netty/util/concurrent")
                                         .serviceName("TomcatServiceTest-JAR-AltRoot")
                                         .build()
-                                        .decorate(LoggingService::new));
+                                        .decorate(LoggingService.newDecorator()));
         }
     };
 

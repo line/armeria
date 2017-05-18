@@ -34,9 +34,9 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.util.NativeLibraries;
 
@@ -114,7 +114,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private final String hostnamePattern;
     private final List<ServiceConfig> services = new ArrayList<>();
     private SslContext sslContext;
-    private Function<Service<Request, Response>, Service<Request, Response>> decorator;
+    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -196,17 +196,22 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Binds the specified {@link Service} at the specified exact path.
+     * Binds the specified {@link Service} at the the specified path pattern. e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     * </ul>
      */
-    public B serviceAt(String exactPath, Service<?, ?> service) {
-        service(PathMapping.ofExact(exactPath), service);
+    public B serviceAt(String pathPattern, Service<? super HttpRequest, ? extends HttpResponse> service) {
+        service(PathMapping.of(pathPattern), service);
         return self();
     }
 
     /**
-     * Binds the specified {@link Service} under the specified directory..
+     * Binds the specified {@link Service} under the specified directory.
      */
-    public B serviceUnder(String pathPrefix, Service<?, ?> service) {
+    public B serviceUnder(String pathPrefix, Service<? super HttpRequest, ? extends HttpResponse> service) {
         service(PathMapping.ofPrefix(pathPrefix), service);
         return self();
     }
@@ -214,7 +219,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    public B service(PathMapping pathMapping, Service<?, ?> service) {
+    public B service(PathMapping pathMapping, Service<? super HttpRequest, ? extends HttpResponse> service) {
         services.add(new ServiceConfig(pathMapping, service, null));
         return self();
     }
@@ -224,7 +229,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      *             {@code armeria-logback}.
      */
     @Deprecated
-    public B service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
+    public B service(PathMapping pathMapping,
+                     Service<? super HttpRequest, ? extends HttpResponse> service,
+                     String loggerName) {
         services.add(new ServiceConfig(pathMapping, service, loggerName));
         return self();
     }
@@ -237,14 +244,14 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
     @SuppressWarnings("unchecked")
-    public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
-            R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
+    public <T extends Service<T_I, T_O>, T_I extends HttpRequest, T_O extends HttpResponse,
+            R extends Service<R_I, R_O>, R_I extends HttpRequest, R_O extends HttpResponse>
     B decorator(Function<T, R> decorator) {
 
         requireNonNull(decorator, "decorator");
 
-        final Function<Service<Request, Response>, Service<Request, Response>> castDecorator =
-                (Function<Service<Request, Response>, Service<Request, Response>>) decorator;
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
+                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
 
         if (this.decorator != null) {
             this.decorator = this.decorator.andThen(castDecorator);

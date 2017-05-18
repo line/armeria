@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpMethod;
 
 import io.netty.channel.Channel;
 
@@ -246,14 +247,23 @@ public interface RequestLog {
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    String method();
+    HttpMethod method();
 
     /**
-     * Returns the path of the {@link Request}.
+     * Returns the absolute path part of the {@link Request} URI, excluding the query part,
+     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     String path();
+
+    /**
+     * Returns the query part of the {@link Request} URI, without the leading {@code '?'},
+     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    String query();
 
     /**
      * Returns the status code specific to the {@link Response} of the current {@link SessionProtocol}.

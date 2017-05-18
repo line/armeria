@@ -42,6 +42,8 @@ import org.junit.rules.TestName;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
@@ -64,11 +66,12 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.http.HttpService;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -236,7 +239,7 @@ public class RequestContextExportingAppenderTest {
         final List<ILoggingEvent> events = prepare(a -> a.addBuiltIn(BuiltInProperty.REQ_DIRECTION));
 
         MDC.put("some-prop", "some-value");
-        final ServiceRequestContext ctx = newServiceContext("/foo");
+        final ServiceRequestContext ctx = newServiceContext("/foo", null);
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
@@ -257,7 +260,7 @@ public class RequestContextExportingAppenderTest {
             }
         });
 
-        final ServiceRequestContext ctx = newServiceContext("/foo");
+        final ServiceRequestContext ctx = newServiceContext("/foo", null);
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
@@ -271,11 +274,12 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
+                           .containsEntry("req.query", null)
                            .containsEntry("scheme", "unknown+h2")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .hasSize(14);
+                           .hasSize(15);
         }
     }
 
@@ -288,7 +292,7 @@ public class RequestContextExportingAppenderTest {
             }
         });
 
-        final ServiceRequestContext ctx = newServiceContext("/foo");
+        final ServiceRequestContext ctx = newServiceContext("/foo", "name=alice");
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final RequestLogBuilder log = ctx.logBuilder();
             log.endRequest();
@@ -306,6 +310,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
+                           .containsEntry("req.query", "name=alice")
                            .containsEntry("scheme", "none+h2")
                            .containsEntry("req.content_length", "0")
                            .containsEntry("res.status_code", "-1")
@@ -314,7 +319,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsKey("elapsed_nanos")
-                           .hasSize(18);
+                           .hasSize(19);
         }
     }
 
@@ -332,7 +337,7 @@ public class RequestContextExportingAppenderTest {
             a.addHttpResponseHeader(HttpHeaderNames.DATE);
         });
 
-        final ServiceRequestContext ctx = newServiceContext("/foo");
+        final ServiceRequestContext ctx = newServiceContext("/foo", "bar=baz");
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final RequestLogBuilder log = ctx.logBuilder();
             log.serializationFormat(ThriftSerializationFormats.BINARY);
@@ -358,6 +363,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
+                           .containsEntry("req.query", "bar=baz")
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.rpc_method", "hello")
@@ -372,7 +378,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsEntry("attrs.my_attr", "some-attr")
                            .containsKey("elapsed_nanos")
-                           .hasSize(24);
+                           .hasSize(25);
         }
     }
 
@@ -389,7 +395,7 @@ public class RequestContextExportingAppenderTest {
         return event;
     }
 
-    private static ServiceRequestContext newServiceContext(String path) throws Exception {
+    private static ServiceRequestContext newServiceContext(String path, String query) throws Exception {
         final Channel ch = mock(Channel.class);
         when(ch.remoteAddress()).thenReturn(
                 new InetSocketAddress(InetAddress.getByAddress("client.com", new byte[] { 1, 2, 3, 4 }),
@@ -398,18 +404,19 @@ public class RequestContextExportingAppenderTest {
                 new InetSocketAddress(InetAddress.getByAddress("server.com", new byte[] { 5, 6, 7, 8 }),
                                       8080));
 
-        final Service<?, ?> service = mock(Service.class);
+        final HttpService service = mock(HttpService.class);
         final Server server = new ServerBuilder().withVirtualHost("some-host.server.com")
                                                  .serviceUnder("/", service)
                                                  .and().build();
         final ServiceConfig serviceConfig = server.config().findVirtualHost("some-host.server.com")
                                                   .serviceConfigs().get(0);
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, path)
+        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, path + '?' + query)
                                                           .authority("server.com:8080"));
 
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
                 serviceConfig,
-                ch, HttpSessionProtocols.H2, req.method().name(), req.path(), req.path(),
+                ch, HttpSessionProtocols.H2, req.method(),
+                PathMappingResult.of(path, query, ImmutableMap.of()),
                 req, newSslSession());
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
@@ -425,7 +432,7 @@ public class RequestContextExportingAppenderTest {
             }
         });
 
-        final ClientRequestContext ctx = newClientContext("/foo");
+        final ClientRequestContext ctx = newClientContext("/foo", "type=bar");
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
@@ -439,11 +446,12 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
+                           .containsEntry("req.query", "type=bar")
                            .containsEntry("scheme", "unknown+h2")
                            .containsEntry("tls.session_id", "0101020305080d15")
                            .containsEntry("tls.proto", "TLSv1.2")
                            .containsEntry("tls.cipher", "some-cipher")
-                           .hasSize(14);
+                           .hasSize(15);
         }
     }
 
@@ -461,7 +469,7 @@ public class RequestContextExportingAppenderTest {
             a.addHttpResponseHeader(HttpHeaderNames.DATE);
         });
 
-        final ClientRequestContext ctx = newClientContext("/bar");
+        final ClientRequestContext ctx = newClientContext("/bar", null);
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             final RequestLogBuilder log = ctx.logBuilder();
             log.serializationFormat(ThriftSerializationFormats.BINARY);
@@ -487,6 +495,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/bar")
+                           .containsEntry("req.query", null)
                            .containsEntry("scheme", "tbinary+h2")
                            .containsEntry("req.content_length", "64")
                            .containsEntry("req.rpc_method", "hello")
@@ -501,11 +510,11 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("tls.cipher", "some-cipher")
                            .containsEntry("attrs.my_attr", "some-attr")
                            .containsKey("elapsed_nanos")
-                           .hasSize(24);
+                           .hasSize(25);
         }
     }
 
-    private static ClientRequestContext newClientContext(String path) throws Exception {
+    private static ClientRequestContext newClientContext(String path, String query) throws Exception {
         final Channel ch = mock(Channel.class);
         when(ch.remoteAddress()).thenReturn(
                 new InetSocketAddress(InetAddress.getByAddress("server.com", new byte[] { 1, 2, 3, 4 }),
@@ -514,13 +523,13 @@ public class RequestContextExportingAppenderTest {
                 new InetSocketAddress(InetAddress.getByAddress("client.com", new byte[] { 5, 6, 7, 8 }),
                                       5678));
 
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, path)
+        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, path + '?' + query)
                                                           .authority("server.com:8080"));
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), HttpSessionProtocols.H2,
                 Endpoint.of("server.com", 8080),
-                req.method().name(), req.path(), "",
+                req.method(), path, query, null,
                 ClientOptions.DEFAULT, req) {
 
             @Nullable
@@ -531,7 +540,7 @@ public class RequestContextExportingAppenderTest {
         };
 
         ctx.logBuilder().startRequest(
-                ch, ctx.sessionProtocol(), "some-host.server.com", ctx.method(), ctx.path());
+                ch, ctx.sessionProtocol(), "some-host.server.com", ctx.method(), ctx.path(), ctx.query());
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;

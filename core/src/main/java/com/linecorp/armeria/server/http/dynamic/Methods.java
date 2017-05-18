@@ -1,17 +1,17 @@
 /*
- * Copyright 2016 LINE Corporation
+ *  Copyright 2017 LINE Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
+ *  LINE Corporation licenses this file to you under the Apache License,
+ *  version 2.0 (the "License"); you may not use this file except in compliance
+ *  with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *  License for the specific language governing permissions and limitations
+ *  under the License.
  */
 
 package com.linecorp.armeria.server.http.dynamic;
@@ -33,7 +33,7 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.PathParamExtractor;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -96,12 +96,12 @@ final class Methods {
     }
 
     /**
-     * Returns the {@link PathParamExtractor} instance mapped to {@code method}.
+     * Returns the {@link PathMapping} instance mapped to {@code method}.
      */
-    private static PathParamExtractor pathParamExtractor(Method method) {
+    private static PathMapping pathMapping(Method method) {
         Path mapping = method.getAnnotation(Path.class);
         String mappedTo = mapping.value();
-        return new PathParamExtractor(mappedTo);
+        return PathMapping.of(mappedTo);
     }
 
     /**
@@ -180,19 +180,19 @@ final class Methods {
         if (methods.isEmpty()) {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
-        PathParamExtractor pathParamExtractor = pathParamExtractor(method);
+        PathMapping pathMapping = pathMapping(method);
         DynamicHttpFunctionImpl function = new DynamicHttpFunctionImpl(object, method);
 
         Set<String> parameterNames = function.pathParamNames();
-        Set<String> pathVariableNames = pathParamExtractor.variables();
-        if (!pathVariableNames.containsAll(parameterNames)) {
-            Set<String> missing = Sets.difference(parameterNames, pathVariableNames);
+        Set<String> expectedParamNames = pathMapping.paramNames();
+        if (!expectedParamNames.containsAll(parameterNames)) {
+            Set<String> missing = Sets.difference(parameterNames, expectedParamNames);
             throw new IllegalArgumentException("Missing @PathParam exists: " + missing);
         }
 
         ResponseConverter converter = converter(method);
         if (converter != null) {
-            return new DynamicHttpFunctionEntry(methods, pathParamExtractor,
+            return new DynamicHttpFunctionEntry(methods, pathMapping,
                                                 DynamicHttpFunctions.of(function, converter));
         } else {
             Map<Class<?>, ResponseConverter> converterMap = new HashMap<>();
@@ -200,7 +200,7 @@ final class Methods {
             converterMap.putAll(converters);
             // Converters given by @Converter annotation
             converterMap.putAll(converters(method.getDeclaringClass()));
-            return new DynamicHttpFunctionEntry(methods, pathParamExtractor,
+            return new DynamicHttpFunctionEntry(methods, pathMapping,
                                                 DynamicHttpFunctions.of(function, converterMap));
         }
     }
@@ -210,10 +210,9 @@ final class Methods {
      * annotation.
      */
     static List<DynamicHttpFunctionEntry> entries(Object object, Map<Class<?>, ResponseConverter> converters) {
-        return Methods.requestMappingMethods(object)
-                      .stream()
-                      .map((Method method) -> entry(object, method, converters))
-                      .collect(toImmutableList());
+        return requestMappingMethods(object).stream()
+                                            .map((Method method) -> entry(object, method, converters))
+                                            .collect(toImmutableList());
     }
 
     private Methods() {}

@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -26,6 +30,7 @@ import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpMethod;
 
 final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
 
@@ -37,14 +42,26 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
 
     @Override
     public RpcResponse execute(String path, Class<?> serviceType, String method, Object... args) {
-        return executeMultiplexed(path, serviceType, "", method, args);
+        return execute0(path, serviceType, null, method, args);
     }
 
     @Override
     public RpcResponse executeMultiplexed(
             String path, Class<?> serviceType, String serviceName, String method, Object... args) {
         requireNonNull(serviceName, "serviceName");
+        return execute0(path, serviceType, serviceName, method, args);
+    }
+
+    private RpcResponse execute0(
+            String path, Class<?> serviceType, @Nullable String serviceName, String method, Object[] args) {
+
+        path = concatPaths(uri().getRawPath(), path);
+        final String[] pathAndQuery = splitPathAndQuery(path);
+        if (pathAndQuery == null) {
+            return RpcResponse.ofFailure(new IllegalArgumentException("invalid path: " + path));
+        }
+
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
-        return execute(call.method(), path, serviceName, call, DefaultRpcResponse::new);
+        return execute(HttpMethod.POST, pathAndQuery[0], null, serviceName, call, DefaultRpcResponse::new);
     }
 }
