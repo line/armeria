@@ -218,7 +218,7 @@ configure(javaProjects) {
         def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
         configFile = project.file("${checkstyleConfigDir}/checkstyle.xml")
         configProperties = [ 'checkstyleConfigDir': "$checkstyleConfigDir" ]
-        toolVersion = '7.1'
+        toolVersion = rootProject.ext.dependencyManagement['com.puppycrawl.tools']['checkstyle'].version
     }
     task checkstyle(group: 'Verification',
                     description: 'Runs the checkstyle rules.',
@@ -493,8 +493,8 @@ configure(javaProjects) {
                     }
 
                     credentials {
-                        username = project.properties.ossrhUsername
-                        password = project.properties.ossrhPassword
+                        username = project.findProperty('ossrhUsername')
+                        password = project.findProperty('ossrhPassword')
                     }
                 }
             }
