@@ -38,6 +38,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -189,10 +190,8 @@ public class HttpServiceTest {
         @Path("/path/ctx/async/:var")
         public CompletableFuture<String> returnPathCtxAsync(@PathParam("var") int var,
                                                             ServiceRequestContext ctx,
-                                                            HttpRequest req) {
-            if (RequestContext.current() != ctx) {
-                throw new RuntimeException("ServiceRequestContext instances are not same!");
-            }
+                                                            Request req) {
+            validateContextAndRequest(ctx, req);
             return CompletableFuture.completedFuture(ctx.path());
         }
 
@@ -201,20 +200,16 @@ public class HttpServiceTest {
         public CompletableFuture<String> returnPathReqAsync(@PathParam("var") int var,
                                                             HttpRequest req,
                                                             ServiceRequestContext ctx) {
-            if (RequestContext.current() != ctx) {
-                throw new RuntimeException("ServiceRequestContext instances are not same!");
-            }
+            validateContextAndRequest(ctx, req);
             return CompletableFuture.completedFuture(req.path());
         }
 
         @Get
         @Path("/path/ctx/sync/:var")
         public String returnPathCtxSync(@PathParam("var") int var,
-                                        ServiceRequestContext ctx,
-                                        HttpRequest req) {
-            if (RequestContext.current() != ctx) {
-                throw new RuntimeException("ServiceRequestContext instances are not same!");
-            }
+                                        RequestContext ctx,
+                                        Request req) {
+            validateContextAndRequest(ctx, req);
             return ctx.path();
         }
 
@@ -222,11 +217,18 @@ public class HttpServiceTest {
         @Path("/path/req/sync/:var")
         public String returnPathReqSync(@PathParam("var") int var,
                                         HttpRequest req,
-                                        ServiceRequestContext ctx) {
+                                        RequestContext ctx) {
+            validateContextAndRequest(ctx, req);
+            return req.path();
+        }
+
+        private void validateContextAndRequest(RequestContext ctx, Request req) {
             if (RequestContext.current() != ctx) {
                 throw new RuntimeException("ServiceRequestContext instances are not same!");
             }
-            return req.path();
+            if (RequestContext.current().request() != req) {
+                throw new RuntimeException("HttpRequest instances are not same!");
+            }
         }
 
         // Throws an exception synchronously
