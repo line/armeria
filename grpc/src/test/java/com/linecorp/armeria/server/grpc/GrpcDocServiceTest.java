@@ -190,10 +190,10 @@ public class GrpcDocServiceTest {
                 final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                 if (TestServiceGrpc.SERVICE_NAME.equals(serviceName) &&
                         "UnaryCall".equals(methodName)) {
-                    exampleRequests.add('{' + System.lineSeparator() +
-                                        "  \"payload\": {" + System.lineSeparator() +
-                                        "    \"body\": \"d29ybGQ=\"" + System.lineSeparator() +
-                                        "  }" + System.lineSeparator() +
+                    exampleRequests.add("{\n" +
+                                        "  \"payload\": {\n" +
+                                        "    \"body\": \"d29ybGQ=\"\n" +
+                                        "  }\n" +
                                         '}');
                 }
             });
