@@ -177,7 +177,6 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 service.methods().stream()
                        .map(method -> addMethodDocStrings(service, method, docStrings))
                        .collect(toImmutableList()),
-                service.endpoints(),
                 service.exampleHttpHeaders(),
                 docString(service.name(), service.docString(), docStrings));
     }
@@ -190,6 +189,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                                     .map(field -> addParameterDocString(service, method, field, docStrings))
                                     .collect(toImmutableList()),
                               method.exceptionTypeSignatures(),
+                              method.endpoints(),
                               method.exampleHttpHeaders(),
                               method.exampleRequests(),
                               docString(service.name() + '/' + method.name(), method.docString(), docStrings));
@@ -270,12 +270,11 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 // Reconstruct MethodInfos with the examples.
                 service.methods().stream().map(m -> new MethodInfo(
                         m.name(), m.returnTypeSignature(), m.parameters(), m.exceptionTypeSignatures(),
-                        Iterables.concat(m.exampleHttpHeaders(),
-                                         exampleHttpHeaders.get(m.name())),
+                        m.endpoints(), Iterables.concat(m.exampleHttpHeaders(),
+                                                        exampleHttpHeaders.get(m.name())),
                         Iterables.concat(m.exampleRequests(),
                                          exampleRequests.get(m.name())),
                         m.docString()))::iterator,
-                service.endpoints(),
                 Iterables.concat(service.exampleHttpHeaders(),
                                  exampleHttpHeaders.get("")),
                 service.docString());

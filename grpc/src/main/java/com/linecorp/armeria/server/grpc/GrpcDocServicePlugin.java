@@ -18,24 +18,33 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.util.JsonFormat;
 
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -105,6 +114,22 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         final Map<String, ServiceEntryBuilder> map = new LinkedHashMap<>();
         for (ServiceConfig serviceConfig : serviceConfigs) {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class).get();
+            ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
+            supportedMediaTypesBuilder.addAll(grpcService.supportedSerializationFormats()
+                                                  .stream()
+                                                  .map(SerializationFormat::mediaType)::iterator);
+            if (serviceConfig.service().as(UnframedGrpcService.class).isPresent()) {
+                if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.PROTO)) {
+                    // Normal clients of a GrpcService are not required to set a protocol when using unframed
+                    // requests but we set it here for clarity in DocService, where there may be multiple
+                    // services with similar mime types but different protocols.
+                    supportedMediaTypesBuilder.add(MediaType.PROTOBUF.withParameter("protocol", "gRPC"));
+                }
+                if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.JSON)) {
+                    supportedMediaTypesBuilder.add(MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"));
+                }
+            }
+            Set<MediaType> supportedMediaTypes = supportedMediaTypesBuilder.build();
             for (ServerServiceDefinition service : grpcService.services()) {
                 map.computeIfAbsent(
                         service.getServiceDescriptor().getName(),
@@ -128,12 +153,14 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                             map.get(serviceName).endpoint(
                                     new EndpointInfo(
                                             serviceConfig.virtualHost().hostnamePattern(),
-                                            // TODO(anuraag): Move EndpointInfo from service to function,
-                                            // which is where we display it.
-                                            path + serviceName + "/*",
+                                            // Only the URL prefix, each method is served at a different path.
+                                            path + serviceName + "/",
                                             "",
-                                            GrpcSerializationFormats.PROTO,
-                                            ImmutableList.of(GrpcSerializationFormats.PROTO)));
+                                            // No default mime type for GRPC, so just pick arbitrarily for now.
+                                            // TODO(anuraag): Consider allowing default mime type to be null.
+                                            Iterables.getFirst(supportedMediaTypes,
+                                                               GrpcSerializationFormats.PROTO.mediaType()),
+                                            supportedMediaTypes));
                         }
                     });
         }
@@ -149,6 +176,22 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                 .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
                                                 .entrySet().stream())
                 .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
+    }
+
+    @Override
+    public Set<Class<?>> supportedExampleRequestTypes() {
+        return ImmutableSet.of(Message.class);
+    }
+
+    @Override
+    public Optional<String> serializeExampleRequest(String serviceName, String methodName,
+                                                    Object exampleRequest) {
+        try {
+            return Optional.of(JsonFormat.printer().print((Message) exampleRequest));
+        } catch (InvalidProtocolBufferException e) {
+            throw new UncheckedIOException(
+                    "Invalid example request protobuf. Is it missing required fields?", e);
+        }
     }
 
     @VisibleForTesting
@@ -171,16 +214,22 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
 
     ServiceInfo newServiceInfo(ServiceEntry entry) {
         final List<MethodInfo> functions = entry.methods().stream()
-                                                .map(this::newMethodInfo)
+                                                .map(m -> newMethodInfo(m, entry))
                                                 .collect(toImmutableList());
-        return new ServiceInfo(
-                entry.name(),
-                functions,
-                entry.endpointInfos);
+        return new ServiceInfo(entry.name(), functions);
     }
 
     @VisibleForTesting
-    MethodInfo newMethodInfo(MethodDescriptor method) {
+    MethodInfo newMethodInfo(MethodDescriptor method, ServiceEntry service) {
+        Set<EndpointInfo> methodEndpoints =
+                service.endpointInfos.stream()
+                                     .map(e -> new EndpointInfo(
+                                             e.hostnamePattern(),
+                                             e.path() + method.getName(),
+                                             e.fragment(),
+                                             e.defaultMimeType(),
+                                             e.availableMimeTypes()))
+                                     .collect(toImmutableSet());
         return new MethodInfo(
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),
@@ -190,7 +239,8 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                                 "request",
                                 FieldRequirement.REQUIRED,
                                 namedMessageSignature(method.getInputType()))),
-                ImmutableList.of());
+                ImmutableList.of(),
+                methodEndpoints);
     }
 
     @VisibleForTesting

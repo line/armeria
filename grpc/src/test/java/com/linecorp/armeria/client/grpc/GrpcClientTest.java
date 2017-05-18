@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static com.linecorp.armeria.grpc.testing.Messages.PayloadType.COMPRESSABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -370,7 +371,7 @@ public class GrpcClientTest {
         StreamObserver<StreamingOutputCallRequest> requestObserver
                 = asyncStub.fullDuplexCall(responseObserver);
         requestObserver.onNext(request);
-        assertThat(responseObserver.firstValue().get()).isEqualTo(goldenResponse);
+        await().untilAsserted(() -> assertThat(responseObserver.firstValue().get()).isEqualTo(goldenResponse));
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).hasSize(1);

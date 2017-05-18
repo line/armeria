@@ -1,7 +1,9 @@
 'use strict';
 
 $(function () {
+  // TODO(anuraag): Set debug information in server.
   var TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
+  var UNFRAMED_GRPC_JSON_TYPE = 'application/json; charset=utf-8; protocol=gRPC';
 
   var specification = {};
   var navTemplate = Handlebars.compile($('#nav-template').html());
@@ -218,7 +220,6 @@ $(function () {
       return;
     }
 
-    processService(serviceInfo);
     processMethod(methodInfo);
 
     makeActive('nav-method-' + serviceName + '/' + methodName);
@@ -300,13 +301,15 @@ $(function () {
         return false;
       }
 
-      var method = serviceInfo.debugFragment ? serviceInfo.debugFragment + ':' + methodInfo.name
-                                             : methodInfo.name;
+      var method = methodInfo.debugFragment ? methodInfo.debugFragment + ':' + methodInfo.name
+                                            : methodInfo.name;
 
-      var request = '{"method":"' + method + '","type":"CALL","args":' + argsText + '}';
+      var request = methodInfo.debugMimeType === TTEXT_MIME_TYPE ?
+                    '{"method":"' + method + '","type":"CALL","args":' + argsText + '}' :
+                    argsText;
       $.ajax({
         type: 'POST',
-        url: serviceInfo.debugPath,
+        url: methodInfo.debugPath,
         data: request,
         beforeSend: function (xhr) {
           Object.keys(httpHeaders).forEach(function (name) {
@@ -319,7 +322,8 @@ $(function () {
             }
           });
         },
-        contentType: TTEXT_MIME_TYPE,
+        contentType: methodInfo.debugMimeType,
+        dataType: 'text',
         success: function (response) {
           var result = response.length > 0 ? response : "Request sent to one-way function";
           debugResponse.text(result);
@@ -401,30 +405,6 @@ $(function () {
     }
   }
 
-  function processService(serviceInfo) {
-    serviceInfo.endpoints.forEach(function(endpoint) {
-      processPath(serviceInfo, endpoint);
-    });
-  }
-
-  function processPath(serviceInfo, endpointInfo) {
-    var availableMimeTypes = endpointInfo.availableMimeTypes;
-    for (var idx = 0; idx < availableMimeTypes.length; idx++) {
-      var mimeType = availableMimeTypes[idx];
-      if (mimeType === TTEXT_MIME_TYPE && serviceInfo.debugPath == undefined) {
-        serviceInfo.debugPath = endpointInfo.path;
-        if (typeof endpointInfo.fragment === 'string') {
-            serviceInfo.debugFragment = endpointInfo.fragment;
-        } else {
-            serviceInfo.debugFragment = '';
-        }
-      }
-      if (mimeType === endpointInfo.defaultMimeType) {
-        availableMimeTypes[idx] = '<b>' + mimeType + '</b>';
-      }
-    }
-  }
-
   function processMethod(methodInfo) {
     methodInfo.parameters.forEach(function(p) {
         p.typeSignatureHtml = getTypeSignatureHtml(p.typeSignature);
@@ -436,6 +416,30 @@ $(function () {
     methodInfo.exceptionTypeSignatures.forEach(function(e) {
         methodInfo.exceptionTypeSignaturesHtml.push(getTypeSignatureHtml(e));
     });
+
+    methodInfo.endpoints.forEach(function(endpoint) {
+      processPath(methodInfo, endpoint);
+    });
+  }
+
+  function processPath(methodInfo, endpointInfo) {
+    var availableMimeTypes = endpointInfo.availableMimeTypes;
+    for (var idx = 0; idx < availableMimeTypes.length; idx++) {
+      var mimeType = availableMimeTypes[idx];
+      if ((mimeType === TTEXT_MIME_TYPE || mimeType === UNFRAMED_GRPC_JSON_TYPE) &&
+          methodInfo.debugPath == undefined) {
+        methodInfo.debugPath = endpointInfo.path;
+        methodInfo.debugMimeType = mimeType;
+        if (typeof endpointInfo.fragment === 'string') {
+          methodInfo.debugFragment = endpointInfo.fragment;
+        } else {
+          methodInfo.debugFragment = '';
+        }
+      }
+      if (mimeType === endpointInfo.defaultMimeType) {
+        availableMimeTypes[idx] = '<b>' + mimeType + '</b>';
+      }
+    }
   }
 
   function getTypeSignatureHtml(typeSignature) {

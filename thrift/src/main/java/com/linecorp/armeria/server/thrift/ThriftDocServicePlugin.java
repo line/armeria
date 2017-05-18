@@ -151,12 +151,10 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         }
         final Method[] methods = interfaceClass.getDeclaredMethods();
 
-        return new ServiceInfo(name,
-                               Arrays.stream(methods).map(ThriftDocServicePlugin::newMethodInfo)::iterator,
-                               endpoints);
+        return new ServiceInfo(name, Arrays.stream(methods).map(m -> newMethodInfo(m, endpoints))::iterator);
     }
 
-    private static MethodInfo newMethodInfo(Method method) {
+    private static MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints) {
         requireNonNull(method, "method");
 
         final String methodName = method.getName();
@@ -188,7 +186,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         final MethodInfo methodInfo =
                 newMethodInfo(methodName, argsClass,
                               (Class<? extends TBase<?, ?>>) resultClass,
-                              (Class<? extends TException>[]) method.getExceptionTypes());
+                              (Class<? extends TException>[]) method.getExceptionTypes(),
+                              endpoints);
         return methodInfo;
     }
 
@@ -196,10 +195,12 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     private static MethodInfo newMethodInfo(String name,
                                             Class<? extends TBase<?, ?>> argsClass,
                                             @Nullable Class<? extends TBase<?, ?>> resultClass,
-                                            Class<? extends TException>[] exceptionClasses) {
+                                            Class<? extends TException>[] exceptionClasses,
+                                            Iterable<EndpointInfo> endpoints) {
         requireNonNull(name, "name");
         requireNonNull(argsClass, "argsClass");
         requireNonNull(exceptionClasses, "exceptionClasses");
+        requireNonNull(endpoints, "endpoints");
 
         final List<FieldInfo> parameters =
                 FieldMetaData.getStructMetaDataMap(argsClass).values().stream()
@@ -233,7 +234,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
                       .map(TypeSignature::ofNamed)
                       .collect(toImmutableList());
 
-        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures);
+        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints);
     }
 
     private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {

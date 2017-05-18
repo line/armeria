@@ -121,15 +121,18 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
 
         HttpHeaders grpcHeaders = HttpHeaders.copyOf(clientHeaders);
 
+        final MediaType framedContentType;
         if (mediaType.is(MediaType.PROTOBUF)) {
-            grpcHeaders.set(
-                    HttpHeaderNames.CONTENT_TYPE, GrpcSerializationFormats.PROTO.mediaType().toString());
+            framedContentType = GrpcSerializationFormats.PROTO.mediaType();
+        } else if (mediaType.is(MediaType.JSON_UTF_8)) {
+            framedContentType = GrpcSerializationFormats.JSON.mediaType();
         } else {
             res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                         MediaType.PLAIN_TEXT_UTF_8,
                         "Unsupported media type. Only application/protobuf is supported.");
             return res;
         }
+        grpcHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, framedContentType);
 
         if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
             res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
@@ -221,7 +224,9 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                 grpcResponse.headers().get(HttpHeaderNames.CONTENT_TYPE));
         HttpHeaders unframedHeaders = HttpHeaders.copyOf(grpcResponse.headers());
         if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
-            unframedHeaders.set(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString());
+            unframedHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF);
+        } else if (grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
+            unframedHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8);
         }
 
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
@@ -231,8 +236,8 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                         // We know there is only one message in total, so don't bother with checking endOfStream
                         // We also know that we don't support compression, so this is always a ByteBuffer.
                         HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
-                        res.respond(AggregatedHttpMessage.of(
-                                unframedHeaders, unframedContent));
+                        unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
+                        res.respond(AggregatedHttpMessage.of(unframedHeaders, unframedContent));
                     }
 
                     @Override

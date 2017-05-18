@@ -33,20 +33,29 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.grpc.testing.Messages.Payload;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
+
+import io.grpc.stub.StreamObserver;
 
 public class GrpcDocServiceTest {
 
@@ -58,17 +67,49 @@ public class GrpcDocServiceTest {
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
                                                   .findServiceByName("ReconnectService");
 
+    private static class TestService extends TestServiceImplBase {
+
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(
+                    SimpleResponse.newBuilder()
+                                  .setPayload(
+                                          Payload.newBuilder()
+                                                 .setBody(
+                                                         ByteString.copyFromUtf8(
+                                                                 "hello" +
+                                                                 request.getPayload().getBody()
+                                                                        .toStringUtf8())))
+                                  .build());
+            responseObserver.onCompleted();
+        }
+    }
+
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.serviceUnder("/test", new GrpcServiceBuilder()
-                    .addService(mock(TestServiceImplBase.class))
+                    .addService(new TestService())
+                    .supportedSerializationFormats(GrpcSerializationFormats.values())
+                    .enableUnframedRequests(true)
                     .build());
             sb.serviceUnder("/reconnect", new GrpcServiceBuilder()
                     .addService(mock(ReconnectServiceImplBase.class))
                     .build());
-            sb.serviceUnder("/docs/", new DocService().decorate(LoggingService::new));
+            sb.serviceUnder(
+                    "/docs/",
+                    new DocServiceBuilder()
+                            .exampleRequestForMethod(
+                                    TestServiceGrpc.SERVICE_NAME,
+                                    "UnaryCall",
+                                    SimpleRequest.newBuilder()
+                                                 .setPayload(
+                                                         Payload.newBuilder()
+                                                                .setBody(ByteString.copyFromUtf8("world")))
+                                                 .build())
+                            .build()
+                            .decorate(LoggingService::new));
         }
     };
 
@@ -77,22 +118,37 @@ public class GrpcDocServiceTest {
         List<ServiceEntry> entries = ImmutableList.of(
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
-                        ImmutableList.of(new EndpointInfo("*",
-                                                          "/test/armeria.grpc.testing.TestService/*",
-                                                          "",
-                                                          GrpcSerializationFormats.PROTO,
-                                                          ImmutableSet.of(GrpcSerializationFormats.PROTO)))),
+                        ImmutableList.of(
+                                new EndpointInfo("*",
+                                                 "/test/armeria.grpc.testing.TestService/",
+                                                 "",
+                                                 GrpcSerializationFormats.PROTO.mediaType(),
+                                                 ImmutableSet.of(
+                                                         GrpcSerializationFormats.PROTO.mediaType(),
+                                                         GrpcSerializationFormats.JSON.mediaType(),
+                                                         GrpcSerializationFormats.PROTO_WEB.mediaType(),
+                                                         GrpcSerializationFormats.JSON_WEB.mediaType(),
+                                                         MediaType.PROTOBUF
+                                                                 .withParameter("protocol", "gRPC"),
+                                                         MediaType.JSON_UTF_8
+                                                                 .withParameter("protocol", "gRPC"))))),
                 new ServiceEntry(
                         RECONNECT_SERVICE_DESCRIPTOR,
                         ImmutableList.of(new EndpointInfo(
                                 "*",
-                                "/reconnect/armeria.grpc.testing.ReconnectService/*",
+                                "/reconnect/armeria.grpc.testing.ReconnectService/",
                                 "",
                                 GrpcSerializationFormats.PROTO,
-                                ImmutableSet.of(GrpcSerializationFormats.PROTO)))));
+                                ImmutableSet.of(
+                                        GrpcSerializationFormats.PROTO,
+                                        GrpcSerializationFormats.PROTO_WEB)))));
         final ObjectMapper mapper = new ObjectMapper();
 
         final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(entries));
+
+        // The specification generated by GrpcDocServicePlugin does not include the examples specified
+        // when building a DocService, so we add them manually here.
+        addExamples(expectedJson);
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpGet req = new HttpGet(specificationUri());
@@ -123,6 +179,25 @@ public class GrpcDocServiceTest {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 405 Method Not Allowed");
             }
         }
+    }
+
+    private static void addExamples(JsonNode json) {
+        json.get("services").forEach(service -> {
+            final String serviceName = service.get("name").textValue();
+            // Add the method-specific examples.
+            service.get("methods").forEach(method -> {
+                final String methodName = method.get("name").textValue();
+                final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
+                if (TestServiceGrpc.SERVICE_NAME.equals(serviceName) &&
+                        "UnaryCall".equals(methodName)) {
+                    exampleRequests.add('{' + System.lineSeparator() +
+                                        "  \"payload\": {" + System.lineSeparator() +
+                                        "    \"body\": \"d29ybGQ=\"" + System.lineSeparator() +
+                                        "  }" + System.lineSeparator() +
+                                        '}');
+                }
+            });
+        });
     }
 
     private static void removeDocStrings(JsonNode json) {

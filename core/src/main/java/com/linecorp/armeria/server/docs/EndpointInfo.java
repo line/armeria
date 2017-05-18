@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Comparator;
@@ -30,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.MediaType;
@@ -53,15 +53,24 @@ public final class EndpointInfo {
      */
     public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
                         SerializationFormat defaultFormat, Iterable<SerializationFormat> availableFormats) {
+        this(hostnamePattern, path, fragment, defaultFormat.mediaType(),
+             Streams.stream(availableFormats).map(SerializationFormat::mediaType)::iterator);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
+                        MediaType defaultMimeType, Iterable<MediaType> availableMimeTypes) {
 
         this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
         this.path = requireNonNull(path, "path");
         this.fragment = Strings.emptyToNull(fragment);
-        defaultMimeType = requireNonNull(defaultFormat, "defaultFormat").mediaType();
+        this.defaultMimeType = requireNonNull(defaultMimeType, "defaultFormat");
 
-        availableMimeTypes = Streams.stream(availableFormats)
-                                    .map(SerializationFormat::mediaType)
-                                    .collect(toImmutableSortedSet(Comparator.comparing(MediaType::toString)));
+        this.availableMimeTypes = ImmutableSortedSet.copyOf(
+                Comparator.comparing(MediaType::toString),
+                requireNonNull(availableMimeTypes, "availableMimeTypes"));
     }
 
     /**

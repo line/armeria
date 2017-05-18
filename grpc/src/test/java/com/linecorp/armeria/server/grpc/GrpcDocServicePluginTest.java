@@ -92,24 +92,6 @@ public class GrpcDocServicePluginTest {
                 .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME);
-
-        ServiceInfo testServiceInfo = services.get(TestServiceGrpc.SERVICE_NAME);
-        assertThat(testServiceInfo.endpoints())
-                .containsExactly(new EndpointInfo(
-                        "*",
-                        "/test/armeria.grpc.testing.TestService/*",
-                        "",
-                        GrpcSerializationFormats.PROTO,
-                        ImmutableSet.of(GrpcSerializationFormats.PROTO)));
-
-        ServiceInfo fooServiceInfo = services.get(ReconnectServiceGrpc.SERVICE_NAME);
-        assertThat(fooServiceInfo.endpoints())
-                .containsExactly(new EndpointInfo(
-                        "*",
-                        "/reconnect/armeria.grpc.testing.ReconnectService/*",
-                        "",
-                        GrpcSerializationFormats.PROTO,
-                        ImmutableSet.of(GrpcSerializationFormats.PROTO)));
     }
 
     @Test
@@ -140,7 +122,16 @@ public class GrpcDocServicePluginTest {
     @Test
     public void newMethodInfo() throws Exception {
         MethodInfo methodInfo = generator.newMethodInfo(
-                TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"));
+                TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"),
+                new ServiceEntry(
+                        TEST_SERVICE_DESCRIPTOR,
+                        ImmutableList.of(
+                                new EndpointInfo("*", "/foo/", "",
+                                                 GrpcSerializationFormats.PROTO,
+                                                 ImmutableSet.of(GrpcSerializationFormats.PROTO)),
+                                new EndpointInfo("*", "/debug/foo/", "",
+                                                 GrpcSerializationFormats.JSON,
+                                                 ImmutableSet.of(GrpcSerializationFormats.JSON)))));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
         assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
         assertThat(methodInfo.returnTypeSignature().namedTypeDescriptor())
@@ -153,6 +144,13 @@ public class GrpcDocServicePluginTest {
                 .contains(SimpleRequest.getDescriptor());
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
         assertThat(methodInfo.docString()).isNull();
+        assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
+                new EndpointInfo("*", "/foo/UnaryCall", "",
+                                 GrpcSerializationFormats.PROTO,
+                                 ImmutableSet.of(GrpcSerializationFormats.PROTO)),
+                new EndpointInfo("*", "/debug/foo/UnaryCall", "",
+                                 GrpcSerializationFormats.JSON,
+                                 ImmutableSet.of(GrpcSerializationFormats.JSON)));
     }
 
     @Test
@@ -167,14 +165,6 @@ public class GrpcDocServicePluginTest {
                                 new EndpointInfo("*", "/debug/foo", "b",
                                                  GrpcSerializationFormats.JSON,
                                                  ImmutableSet.of(GrpcSerializationFormats.JSON)))));
-        assertThat(service.endpoints()).hasSize(2);
-        assertThat(service.endpoints()).containsExactlyInAnyOrder(
-                new EndpointInfo("*", "/debug/foo", "b",
-                                 GrpcSerializationFormats.JSON,
-                                 ImmutableSet.of(GrpcSerializationFormats.JSON)),
-                new EndpointInfo("*", "/foo", "a",
-                                 GrpcSerializationFormats.PROTO,
-                                 ImmutableSet.of(GrpcSerializationFormats.PROTO)));
 
         Map<String, MethodInfo> functions = service
                 .methods()
