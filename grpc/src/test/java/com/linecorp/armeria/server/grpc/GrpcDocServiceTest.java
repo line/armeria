@@ -71,15 +71,10 @@ public class GrpcDocServiceTest {
 
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            ByteString body = ByteString.copyFromUtf8("hello " + request.getPayload().getBody().toStringUtf8());
             responseObserver.onNext(
                     SimpleResponse.newBuilder()
-                                  .setPayload(
-                                          Payload.newBuilder()
-                                                 .setBody(
-                                                         ByteString.copyFromUtf8(
-                                                                 "hello" +
-                                                                 request.getPayload().getBody()
-                                                                        .toStringUtf8())))
+                                  .setPayload(Payload.newBuilder().setBody(body))
                                   .build());
             responseObserver.onCompleted();
         }

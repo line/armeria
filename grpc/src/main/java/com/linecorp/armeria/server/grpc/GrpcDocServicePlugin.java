@@ -116,8 +116,8 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class).get();
             ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
             supportedMediaTypesBuilder.addAll(grpcService.supportedSerializationFormats()
-                                                  .stream()
-                                                  .map(SerializationFormat::mediaType)::iterator);
+                                                         .stream()
+                                                         .map(SerializationFormat::mediaType)::iterator);
             if (serviceConfig.service().as(UnframedGrpcService.class).isPresent()) {
                 if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.PROTO)) {
                     // Normal clients of a GrpcService are not required to set a protocol when using unframed
@@ -154,7 +154,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                                     new EndpointInfo(
                                             serviceConfig.virtualHost().hostnamePattern(),
                                             // Only the URL prefix, each method is served at a different path.
-                                            path + serviceName + "/",
+                                            path + serviceName + '/',
                                             "",
                                             // No default mime type for GRPC, so just pick arbitrarily for now.
                                             // TODO(anuraag): Consider allowing default mime type to be null.

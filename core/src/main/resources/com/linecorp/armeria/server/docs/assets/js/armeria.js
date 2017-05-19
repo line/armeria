@@ -430,6 +430,14 @@ $(function () {
           methodInfo.debugPath == undefined) {
         methodInfo.debugPath = endpointInfo.path;
         methodInfo.debugMimeType = mimeType;
+        if (mimeType === TTEXT_MIME_TYPE) {
+          methodInfo.debugFormatLink =
+            '<a href="https://github.com/line/armeria/blob/13b0510205a84e1a3cd17509e7d39116d050b6b3/' +
+            'src/main/java/com/linecorp/armeria/common/thrift/text/TTextProtocol.java">TText</a>';
+        } else if (mimeType === UNFRAMED_GRPC_JSON_TYPE) {
+          methodInfo.debugFormatLink =
+            '<a href="https://developers.google.com/protocol-buffers/docs/proto3#json">Protobuf</a>';
+        }
         if (typeof endpointInfo.fragment === 'string') {
           methodInfo.debugFragment = endpointInfo.fragment;
         } else {
