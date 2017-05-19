@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.it.client.retry;
 
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -26,8 +27,7 @@ import static org.mockito.Mockito.when;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.mockito.Mockito;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -38,77 +38,60 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.test.AbstractServiceServer;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 public class RetryingRpcClientTest {
     private static final RetryRequestStrategy<RpcRequest, RpcResponse> ALWAYS = (unused1, unused2) -> true;
     private static final RetryRequestStrategy<RpcRequest, RpcResponse> ALWAYS_HANDLES_EXCEPTION =
             (request, response) -> false;
 
-    @Rule
-    public MockitoRule rule = MockitoJUnit.rule();
-
     @Mock
-    HelloService.Iface serviceHandler;
+    HelloService.Iface serviceHandler = Mockito.mock(HelloService.Iface.class);
+
+    @Rule
+    public final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceAt("/thrift", THttpService.of(serviceHandler));
+        }
+    };
 
     @Test
     public void execute() throws Exception {
-        try (ServiceServer server = new ServiceServer(serviceHandler).start()) {
-            HelloService.Iface client = new ClientBuilder(
-                    "tbinary+http://127.0.0.1:" + server.port() + "/thrift")
-                    .decorator(RpcRequest.class, RpcResponse.class,
-                               RetryingRpcClient.newDecorator(ALWAYS_HANDLES_EXCEPTION))
-                    .build(HelloService.Iface.class);
-            when(serviceHandler.hello(anyString()))
-                    .thenReturn("world");
-            assertThat(client.hello("hello")).isEqualTo("world");
-            verify(serviceHandler, only()).hello("hello");
-        }
+        HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
+                .decorator(RpcRequest.class, RpcResponse.class,
+                           RetryingRpcClient.newDecorator(ALWAYS_HANDLES_EXCEPTION))
+                .build(HelloService.Iface.class);
+        when(serviceHandler.hello(anyString()))
+                .thenReturn("world");
+        assertThat(client.hello("hello")).isEqualTo("world");
+        verify(serviceHandler, only()).hello("hello");
     }
 
     @Test
     public void execute_retry() throws Exception {
-        try (ServiceServer server = new ServiceServer(serviceHandler).start()) {
-            HelloService.Iface client = new ClientBuilder(
-                    "tbinary+http://127.0.0.1:" + server.port() + "/thrift")
-                    .decorator(RpcRequest.class, RpcResponse.class,
-                               RetryingRpcClient.newDecorator(ALWAYS_HANDLES_EXCEPTION))
-                    .build(HelloService.Iface.class);
-            when(serviceHandler.hello(anyString()))
-                    .thenThrow(new IllegalArgumentException())
-                    .thenThrow(new IllegalArgumentException())
-                    .thenReturn("world");
-            assertThat(client.hello("hello")).isEqualTo("world");
-            verify(serviceHandler, times(3)).hello("hello");
-        }
+        HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
+                .decorator(RpcRequest.class, RpcResponse.class,
+                           RetryingRpcClient.newDecorator(ALWAYS_HANDLES_EXCEPTION))
+                .build(HelloService.Iface.class);
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenReturn("world");
+        assertThat(client.hello("hello")).isEqualTo("world");
+        verify(serviceHandler, times(3)).hello("hello");
     }
 
     @Test
     public void execute_reachedMaxAttempts() throws Exception {
-        try (ServiceServer server = new ServiceServer(serviceHandler).start()) {
-            HelloService.Iface client = new ClientBuilder(
-                    "tbinary+http://127.0.0.1:" + server.port() + "/thrift")
-                    .decorator(RpcRequest.class, RpcResponse.class,
-                               RetryingRpcClient.newDecorator(ALWAYS,
-                                                              () -> Backoff.withoutDelay().withMaxAttempts(1)))
-                    .build(HelloService.Iface.class);
-            when(serviceHandler.hello(anyString()))
-                    .thenThrow(new IllegalArgumentException());
-            assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(Exception.class);
-            verify(serviceHandler, times(1)).hello("hello");
-        }
-    }
-
-    private static class ServiceServer extends AbstractServiceServer {
-        private final THttpService handler;
-
-        ServiceServer(HelloService.Iface handler) {
-            this.handler = THttpService.of(handler);
-        }
-
-        @Override
-        protected void configureServer(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/thrift", handler);
-        }
+        HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
+                .decorator(RpcRequest.class, RpcResponse.class,
+                           RetryingRpcClient.newDecorator(ALWAYS,
+                                                          () -> Backoff.withoutDelay().withMaxAttempts(1)))
+                .build(HelloService.Iface.class);
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException());
+        assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(Exception.class);
+        verify(serviceHandler, times(1)).hello("hello");
     }
 }

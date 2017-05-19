@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.client.retry.AbstractBackoff.validateNumAttemptsSoFar;
 
 import com.google.common.base.MoreObjects;
 
@@ -30,6 +31,7 @@ final class AttemptLimitingBackoff extends BackoffWrapper {
 
     @Override
     public long nextIntervalMillis(int numAttemptsSoFar) {
+        validateNumAttemptsSoFar(numAttemptsSoFar);
         if (numAttemptsSoFar >= maxAttempts) {
             return -1;
         }

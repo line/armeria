@@ -27,6 +27,7 @@ import org.apache.zookeeper.ZooKeeper;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 
 import junitextensions.OptionAssert;
+import zookeeperjunit.CloseableZooKeeper;
 import zookeeperjunit.ZooKeeperAssert;
 
 public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAssert, OptionAssert {
@@ -86,7 +88,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         //all servers start and with zNode created
         sampleEndpoints.forEach(
                 endpoint -> assertExists(zNode + '/' + endpoint.host() + '_' + endpoint.port()));
-        instance().connect().forEach(zkClient -> {
+        try (CloseableZooKeeper zkClient = connection()) {
             try {
                 sampleEndpoints.forEach(endpoint -> {
                     try {
@@ -113,9 +115,10 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
             } catch (Throwable throwable) {
                 fail(throwable.getMessage());
             }
-        });
+        }
     }
 
+    @Ignore  // FIXME: https://github.com/line/armeria/issues/477
     @Test
     public void testConnectionRecovery() throws Exception {
         ZooKeeperRegistration zkConnector = zkConnectors.get(0);

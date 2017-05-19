@@ -42,6 +42,8 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
+
 /**
  * A struct parsing context. Builds a map from field name to TField.
  *
@@ -136,6 +138,10 @@ class StructContext extends PairContext {
                 if (isTApplicationException(clazz)) {
                     return clazz;
                 }
+
+                if (isTApplicationExceptions(clazz)) {
+                    return TApplicationException.class;
+                }
             } catch (ClassNotFoundException ex) {
                 log.warn("Can't find class: " + className, ex);
             }
@@ -149,6 +155,10 @@ class StructContext extends PairContext {
 
     private static boolean isTApplicationException(Class<?> clazz) {
         return TApplicationException.class.isAssignableFrom(clazz);
+    }
+
+    private static boolean isTApplicationExceptions(Class<?> clazz) {
+        return clazz == TApplicationExceptions.class;
     }
 
     private static boolean isAbstract(Class<?> clazz) {

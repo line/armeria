@@ -1,0 +1,21 @@
+dependencies {
+    // Tomcat
+    [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
+        compile "org.apache.tomcat.embed:$it:8.0.43"
+    }
+}
+
+managedDependencies {
+    // Replace commons-logging (Tomcat's logging API) with SLF4J.
+    runtime 'org.slf4j:jcl-over-slf4j'
+}
+
+// Use the sources from 'armeria-tomcat' as well as ours.
+// NB: We should not add these in the 'sourceSets' directive because that will make the directories mentioned
+//     below are added to two projects and having a source directory with two output directories will confuse
+//     the IDE.
+tasks.compileJava.source "${rootProject.projectDir}/tomcat/src/main/java"
+tasks.compileJava.exclude '**/Tomcat85*'
+tasks.processResources.from "${rootProject.projectDir}/tomcat/src/main/resources"
+tasks.compileTestJava.source "${rootProject.projectDir}/tomcat/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/tomcat/src/test/resources"

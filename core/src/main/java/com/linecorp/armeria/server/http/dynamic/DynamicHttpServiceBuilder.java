@@ -28,6 +28,7 @@ import java.util.Optional;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.PathParamExtractor;
 
 /**
  * Builds a new {@link DynamicHttpService}.
@@ -70,7 +71,7 @@ public final class DynamicHttpServiceBuilder {
                                                 DynamicHttpFunction function) {
         DynamicHttpFunction f = DynamicHttpFunctions.of(function, converters);
         DynamicHttpFunctionEntry entry = new DynamicHttpFunctionEntry(
-                Sets.immutableEnumSet(methods), DynamicPath.of(path), f);
+                Sets.immutableEnumSet(methods), new PathParamExtractor(path), f);
         validate(entry);
         entries.add(entry);
         return this;

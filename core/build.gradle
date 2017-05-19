@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'net.sf.proguard:proguard-gradle:5.3.2'
+        classpath 'net.sf.proguard:proguard-gradle:5.3.3'
     }
 }
 
@@ -61,7 +61,16 @@ task trimShadedJar(type: ProGuardTask,
         }
     }
 
-    libraryjars files(configurations.runtime.collect())
+    def dependencyJars = []
+    publishedJavaProjects.each {
+        // NB: ProGuardTask picks the dependencies added *after* evaluation correctly
+        //     because libraryjar() intentionally keeps the specified dependencies as-is.
+        //     See ProGuardTask.libraryjar() for more information.
+        it.afterEvaluate {
+            dependencyJars.addAll(it.configurations.runtime.collect())
+        }
+    }
+    libraryjars files(dependencyJars)
     libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
 
     dontoptimize

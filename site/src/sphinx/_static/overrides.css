@@ -189,3 +189,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 6px 10px;
 }
 
+/* Do not add left-margin for line-blocks */
+.rst-content .line-block {
+  margin-left: 0px;
+}

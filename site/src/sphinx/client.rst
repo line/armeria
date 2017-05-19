@@ -1,4 +1,4 @@
-.. _`Sphinx`: http://sphinx.pocoo.org/
+.. _client-index:
 
 Writing a client
 ================
@@ -6,7 +6,8 @@ Writing a client
 .. toctree::
     :maxdepth: 1
 
-    client-basics
     client-http
-    client-http-retrofit
-    client-thrift-custom-http-headers
+    client-retrofit
+    client-thrift
+    client-decorator
+    client-custom-http-headers

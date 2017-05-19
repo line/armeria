@@ -43,7 +43,9 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
+import io.netty.handler.codec.http2.Http2ConnectionPrefaceWrittenEvent;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCountUtil;
@@ -134,7 +136,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                                             responseTimeoutMillis, maxContentLength);
         req.subscribe(
                 new HttpRequestSubscriber(channel, requestEncoder,
-                                          numRequestsSent, req, wrappedRes, ctx.logBuilder(),
+                                          numRequestsSent, req, wrappedRes, ctx,
                                           writeTimeoutMillis),
                 channel.eventLoop());
 
@@ -197,7 +199,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                requestEncoder = new Http1ObjectEncoder(false);
+                requestEncoder = new Http1ObjectEncoder(false, protocol.isTls());
                 responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
             } else if (protocol == H2 || protocol == H2C) {
                 final Http2ConnectionHandler handler = ctx.pipeline().get(Http2ConnectionHandler.class);
@@ -221,7 +223,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
-        if (evt instanceof SslCloseCompletionEvent) {
+        if (evt instanceof Http2ConnectionPrefaceWrittenEvent ||
+            evt instanceof SslCloseCompletionEvent ||
+            evt instanceof ChannelInputShutdownReadComplete) {
+            // Expected events
             return;
         }
 

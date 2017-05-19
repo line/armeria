@@ -104,7 +104,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
         final ClientOption<?> opt = optionValue.option();
         if (opt == ClientOption.DECORATION) {
             final ClientDecoration d = (ClientDecoration) optionValue.value();
-            d.entries().forEach(e -> decorator((Class) e.requestType(), e.responseType(),
+            d.entries().forEach(e -> decorator(e.requestType(), e.responseType(),
                                                (Function) e.decorator()));
         } else if (opt == ClientOption.HTTP_HEADERS) {
             final HttpHeaders h = (HttpHeaders) optionValue.value();
@@ -163,10 +163,33 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
 
     /**
      * Adds the specified {@code decorator}.
+     *
+     * @param requestType the type of the {@link Request} that the {@code decorator} is interested in
+     * @param responseType the type of the {@link Response} that the {@code decorator} is interested in
+     * @param decorator the {@link Function} that transforms a {@link Client} to another
+     * @param <T> the type of the {@link Client} being decorated
+     * @param <R> the type of the {@link Client} produced by the {@code decorator}
+     * @param <I> the {@link Request} type of the {@link Client} being decorated
+     * @param <O> the {@link Response} type of the {@link Client} being decorated
      */
     public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
             I extends Request, O extends Response>
     B decorator(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
+        decoration.add(requestType, responseType, decorator);
+        return self();
+    }
+
+    /**
+     * Adds the specified {@code decorator}.
+     *
+     * @param requestType the type of the {@link Request} that the {@code decorator} is interested in
+     * @param responseType the type of the {@link Response} that the {@code decorator} is interested in
+     * @param decorator the {@link DecoratingClientFunction} that intercepts an invocation
+     * @param <I> the {@link Request} type of the {@link Client} being decorated
+     * @param <O> the {@link Response} type of the {@link Client} being decorated
+     */
+    public <I extends Request, O extends Response>
+    B decorator(Class<I> requestType, Class<O> responseType, DecoratingClientFunction<I, O> decorator) {
         decoration.add(requestType, responseType, decorator);
         return self();
     }

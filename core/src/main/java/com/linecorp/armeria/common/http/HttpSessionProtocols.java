@@ -55,7 +55,7 @@ public final class HttpSessionProtocols {
     public static final SessionProtocol H2 = SessionProtocol.of("h2");
 
     /**
-     * HTTP/2 - over TLS.
+     * HTTP/2 - cleartext.
      */
     public static final SessionProtocol H2C = SessionProtocol.of("h2c");
 

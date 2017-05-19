@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.NativeLibraries;
+import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.server.http.HttpServerPipelineConfigurator;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -78,6 +79,8 @@ public final class Server implements AutoCloseable {
             Collections.unmodifiableMap(activePorts);
 
     private final List<ServerListener> listeners = new CopyOnWriteArrayList<>();
+
+    private final ConnectionLimitingHandler connectionLimitingHandler;
 
     private volatile ServerPort primaryActivePort;
     private volatile EventLoopGroup bossGroup;
@@ -121,6 +124,8 @@ public final class Server implements AutoCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+
+        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
     }
 
     /**
@@ -271,6 +276,7 @@ public final class Server implements AutoCloseable {
         b.group(bossGroup, workerGroup);
         b.channel(NativeLibraries.isEpollAvailable() ? EpollServerSocketChannel.class
                                                      : NioServerSocketChannel.class);
+        b.handler(connectionLimitingHandler);
         b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts, gracefulShutdownSupport));
 
         return b.bind(port.localAddress());
@@ -419,6 +425,13 @@ public final class Server implements AutoCloseable {
         if (interrupted) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * Returns the number of open connections on this {@link Server}.
+     */
+    public int numConnections() {
+        return connectionLimitingHandler.numConnections();
     }
 
     enum StateType {

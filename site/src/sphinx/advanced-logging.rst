@@ -4,6 +4,8 @@
 .. _`RequestContext`: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
 .. _`MDC`: http://logback.qos.ch/manual/mdc.html
 
+.. _advanced-logging:
+
 Logging contextual information
 ==============================
 With Armeria's `Logback`_ integration, you can log the properties of the `RequestContext`_ of the

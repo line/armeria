@@ -1,132 +1,132 @@
-.. _`Swagger`: http://petstore.swagger.io/
-.. _`Client basics`: client-basics.html
-.. _`Serving static files`: server-http-file.html
-.. _`Embedding Apache Tomcat`: server-http-tomcat.html
-.. _`ServerBuilder`: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
-.. _`Service`: apidocs/index.html?com/linecorp/armeria/server/Service.html
+.. _`a name-based virtual host`: https://en.wikipedia.org/wiki/Virtual_hosting#Name-based
+.. _LoggingService: apidocs/index.html?com/linecorp/armeria/server/logging/LoggingService.html
+.. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
+.. _VirtualHost: apidocs/index.html?com/linecorp/armeria/server/VirtualHost.html
+.. _VirtualHostBuilder: apidocs/index.html?com/linecorp/armeria/server/VirtualHostBuilder.html
+
+.. _server-basics:
 
 Server basics
 =============
 
-Let's assume we have the following Thrift IDL:
-
-.. code-block:: thrift
-
-    namespace java com.example.thrift
-
-    service HelloService {
-        string hello(1:string name)
-    }
-
-The Apache Thrift compiler will produce some Java code under the ``com.example.thrift`` package. The most
-noteworthy one is ``HelloService.java`` which defines the service interfaces we will implement:
+To start a server, you need to build it first. Use `ServerBuilder`_:
 
 .. code-block:: java
 
-    import org.apache.thrift.TException;
-    import org.apache.thrift.async.AsyncMethodCallback;
-
-    public class HelloService {
-        public interface Iface {
-            public String hello(String name) throws TException;
-        }
-
-        public interface AsyncIface {
-            public void hello(String name, AsyncMethodCallback resultHandler) throws TException;
-        }
-        ...
-    }
-
-If you are interested in going fully asynchronous, it is recommended to implement the ``AsyncIface`` interface,
-while it is slightly easier to implement the synchronous ``Iface`` interface:
-
-.. code-block:: java
-
-    import org.apache.thrift.TException;
-    import org.apache.thrift.async.AsyncMethodCallback;
-
-    public class MyHelloService implements HelloService.AsyncIface {
-        @Override
-        public void hello(String name, AsyncMethodCallback resultHandler) throws TException {
-            resultHandler.onComplete("Hello, " + name + '!');
-        }
-    }
-
-    // or synchronously:
-    public class MyHelloService implements HelloService.Iface {
-        @Override
-        public String hello(String name) throws TException {
-            return "Hello, " + name + '!';
-        }
-    }
-
-Bootstraping an Armeria server
-------------------------------
-You can configure an Armeria server using the fluent builder pattern, as shown below:
-
-.. code-block:: java
-
-    import com.linecorp.armeria.common.http.HttpSessionProtocols;
-    import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
     import com.linecorp.armeria.server.Server;
     import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.thrift.THttpService;
-
-    HelloService.AsyncIface helloHandler = new MyHelloService();
 
     ServerBuilder sb = new ServerBuilder();
-    sb.port(8080, HttpSessionProtocols.HTTP); // or just port(8080, "http")
-    sb.serviceAt(
-            "/hello",
-            THttpService.of(helloHandler, ThriftSerializationFormats.BINARY)
-                        .decorate(LoggingService::new)).build();
-
+    // TODO: Configure your server here.
     Server server = sb.build();
-    server.start().join();
+    server.start();
 
-In the example above, we created a new ``ServerBuilder`` and added a new ``ThriftService`` to it.
-The ``ThriftService`` is bound at the path ``/hello`` and will use the TBinary format.
+Ports
+-----
 
-We also decorated the ``ThriftService`` using ``LoggingService``, which logs all Thrift calls and replies.
-You might be interested in decorating a service using other decorators, to gather metrics for example.
-
-Note that you can add more than one ``ThriftService`` (or any ``Service`` implementation) to a ``Server``.
-
-Adding a documentation service
-------------------------------
-As usual, we could browse a Thrift IDL in a text editor to see the list of the available structs and
-services. However, most of us will admit that it will be much nicer if we could browse such information
-like we do for RESTful services via `Swagger`_.
-
-Armeria provides a service called ``DocService``, which discovers all ``ThriftService`` in your Armeria server
-and lets you browse the available service operations and structs:
+To serve anything, you need to specify which TCP/IP port you want to bind onto:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.docs.DocService;
-    import com.linecorp.armeria.server.thrift.THttpService;
+    import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 
     ServerBuilder sb = new ServerBuilder();
-    sb.serviceAt("/foo/", THttpService.of(...))
-      .serviceAt("/bar/", THttpService.of(...))
-      .serviceUnder("/docs/", new DocService());
+    // Configure an HTTP port.
+    sb.port(8080, HTTP);
+    // TODO: Add your services here.
+    Server server = sb.build();
+    CompletableFuture<Void> future = server.start();
+    future.join();
 
-Note that we used ``serviceUnder()`` for ``DocService`` unlike the other services. ``serviceUnder()`` binds
-a service to a directory recursively (prefix match) while ``serviceAt()`` binds to a specific path only
-(exact-match.)
+Services
+--------
 
-If you open ``http://127.0.0.1:8080/docs/`` in your browser, you will see the documentation pages produced by
-the ``DocService``. Here's a sample, generated from the Cassandra Thrift IDL:
+Even if we opened a port, it's of no use if we didn't bind any services to them. Let's add some:
 
-.. image:: _images/docservice.png
+.. code-block:: java
 
-Next steps
-----------
+    import com.linecorp.armeria.common.MediaType;
+    import com.linecorp.armeria.common.http.HttpRequest;
+    import com.linecorp.armeria.common.http.HttpResponseWriter;
+    import com.linecorp.armeria.common.http.HttpStatus;
 
-- `Client basics`_ if you want to make a Thrift call to your Armeria server
-- `Serving static files`_ if you want to serve static files in your Armeria server
-- `Embedding Apache Tomcat`_ if you want to run your JEE web application on the same port
-- or you could explore the server-side API documentation:
-   - `ServerBuilder`_
-   - `Service`_
+    import com.linecorp.armeria.server.ServiceRequestContext;
+    import com.linecorp.armeria.server.http.AbstractHttpService;
+
+    ServerBuilder sb = new ServerBuilder();
+    sb.port(8080, HTTP);
+
+    // Add a simple 'Hello, world!' service.
+    sb.serviceAt("/", new AbstractHttpService() {
+        @Override
+        protected void doGet(ServiceRequestContext ctx,
+                             HttpRequest req, HttpResponseWriter res) {
+            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, world!");
+        }
+    });
+
+    // Similar to the 'Hello, world!' service, but gets the name from the request path
+    sb.serviceUnder("/hello", new AbstractHttpService() {
+        @Override
+        protected void doGet(ServiceRequestContext ctx,
+                             HttpRequest req, HttpResponseWriter res) {
+            String path = ctx.mappedPath();  // Get the path without the prefix ('/hello')
+            String name = path.substring(1); // Strip the leading slash ('/')
+            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, " + name + '!');
+        }
+    }.decorate(LoggingService::new));
+
+    Server server = sb.build();
+    CompletableFuture<Void> future = server.start();
+    future.join();
+
+As described in the example, ``serviceAt()`` and ``serviceUnder()`` performs an exact match and a prefix match
+on a request path respectively. `ServerBuilder`_ also provides advanced path mapping such as regex and glob
+pattern matching.
+
+Also, we decorated the second service using LoggingService_, which logs all requests and responses. You might
+be interested in decorating a service using other decorators, for example to gather metrics.
+
+
+SSL/TLS
+-------
+
+You can also add an HTTPS port with your certificate and its private key files:
+
+.. code-block:: java
+
+    import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+
+    ServerBuilder sb = new ServerBuilder();
+    sb.port(8443, HTTPS)
+      .sslContext(HTTPS, new File("certificate.crt"), new File("private.key"), "myPassphrase");
+    ...
+
+Virtual hosts
+-------------
+
+Use ``ServerBuilder.withVirtualHost()`` to configure `a name-based virtual host`_:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.VirtualHost;
+    import com.linecorp.armeria.server.VirtualHostBuilder;
+
+    ServerBuilder sb = new ServerBuilder();
+    // Configure foo.com.
+    sb.withVirtualHost("foo.com")
+      .serviceAt(...)
+      .sslContext(...)
+      .and() // Configure *.bar.com.
+      .withVirtualHost("*.bar.com")
+      .serviceAt(...)
+      .sslContext(...)
+      .and() // Configure the default virtual host.
+      .serviceAt(...)
+      .sslContext(...);
+    ...
+
+See also
+--------
+
+- :ref:`server-decorator`

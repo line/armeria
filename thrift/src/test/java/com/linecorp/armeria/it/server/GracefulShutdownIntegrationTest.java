@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.it.server;
 
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
@@ -26,41 +27,46 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService.AsyncIface;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
-public class GracefulShutdownIntegrationTest extends AbstractServerTest {
+public class GracefulShutdownIntegrationTest {
 
-    private long baselineNanos;
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.gracefulShutdownTimeout(1000L, 2000L);
+            sb.defaultRequestTimeoutMillis(0); // Disable RequestTimeoutException.
 
-    @Override
-    protected void configureServer(ServerBuilder sb) {
-        sb.gracefulShutdownTimeout(1000L, 2000L);
-        sb.defaultRequestTimeoutMillis(0); // Disable RequestTimeoutException.
+            sb.serviceAt("/sleep", THttpService.of(
+                    (AsyncIface) (milliseconds, resultHandler) ->
+                            RequestContext.current().eventLoop().schedule(
+                                    () -> resultHandler.onComplete(milliseconds), milliseconds, MILLISECONDS)));
+        }
+    };
 
-        sb.serviceAt("/sleep", THttpService.of(
-                (AsyncIface) (milliseconds, resultHandler) ->
-                        RequestContext.current().eventLoop().schedule(
-                                () -> resultHandler.onComplete(milliseconds), milliseconds, MILLISECONDS)));
-    }
+    private static long baselineNanos;
 
-    private long baselineNanos() throws Exception {
+    private static long baselineNanos() throws Exception {
         if (baselineNanos != 0) {
             return baselineNanos;
         }
 
         // Measure the baseline time taken for stopping the server without handling any requests.
-        startServer();
+        server.start();
         final long startTime = System.nanoTime();
-        stopServer();
+        server.stop().join();
         final long stopTime = System.nanoTime();
 
         return baselineNanos = stopTime - startTime;
@@ -71,11 +77,11 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
         final long baselineNanos = baselineNanos();
 
         // Measure the time taken for stopping the server after handling a single request.
-        startServer();
+        server.start();
         SleepService.Iface client = newClient();
         client.sleep(0);
         final long startTime = System.nanoTime();
-        stopServer();
+        server.stop().join();
         final long stopTime = System.nanoTime();
 
         // .. which should be on par with the baseline.
@@ -86,7 +92,7 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
     @Test(timeout = 20000L)
     public void waitsForRequestToComplete() throws Exception {
         final long baselineNanos = baselineNanos();
-        startServer();
+        server.start();
 
         SleepService.Iface client = newClient();
         AtomicBoolean completed = new AtomicBoolean(false);
@@ -105,7 +111,7 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
         latch.await();
 
         final long startTime = System.nanoTime();
-        stopServer();
+        server.stop().join();
         final long stopTime = System.nanoTime();
         assertTrue(completed.get());
 
@@ -117,7 +123,7 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
     @Test(timeout = 20000L)
     public void interruptsSlowRequests() throws Exception {
         final long baselineNanos = baselineNanos();
-        startServer();
+        server.start();
 
         SleepService.Iface client = newClient();
         AtomicBoolean completed = new AtomicBoolean(false);
@@ -139,7 +145,7 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
         latch1.await();
 
         final long startTime = System.nanoTime();
-        stopServer();
+        server.stop().join();
         assertFalse(completed.get());
 
         // 'client.sleep()' must fail immediately when the server closes the connection.
@@ -154,13 +160,13 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
     @Test(timeout = 20000)
     public void testHardTimeout() throws Exception {
         final long baselineNanos = baselineNanos();
-        startServer();
+        final Server server = GracefulShutdownIntegrationTest.server.start();
 
         // Keep sending a request after shutdown starts so that the hard limit is reached.
         SleepService.Iface client = newClient();
         final CompletableFuture<Long> stopFuture = CompletableFuture.supplyAsync(() -> {
             final long startTime = System.nanoTime();
-            AbstractServerTest.stopServer();
+            server.stop().join();
             final long stopTime = System.nanoTime();
             return stopTime - startTime;
         });
@@ -181,7 +187,6 @@ public class GracefulShutdownIntegrationTest extends AbstractServerTest {
     }
 
     private static SleepService.Iface newClient() throws Exception {
-        String uri = "tbinary+" + uri("/sleep");
-        return Clients.newClient(uri, SleepService.Iface.class);
+        return Clients.newClient(server.uri(BINARY, "/sleep"), SleepService.Iface.class);
     }
 }

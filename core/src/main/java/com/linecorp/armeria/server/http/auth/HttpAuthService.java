@@ -27,19 +27,19 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
-import com.linecorp.armeria.common.http.DeferredHttpResponse;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 
 /**
  * A {@link DecoratingService} that provides HTTP authorization functionality.
  */
-public abstract class HttpAuthService
-        extends DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse> {
+public abstract class HttpAuthService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpAuthService.class);
 
@@ -101,20 +101,16 @@ public abstract class HttpAuthService
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        DeferredHttpResponse res = new DeferredHttpResponse();
-
-        authorize(req, ctx).whenCompleteAsync((result, t) -> {
+        return HttpResponse.from(authorize(req, ctx).handleAsync((result, t) -> {
             try {
                 if (t != null || !result) {
-                    res.delegate(onFailure(ctx, req, t));
+                    return onFailure(ctx, req, t);
                 } else {
-                    res.delegate(onSuccess(ctx, req));
+                    return onSuccess(ctx, req);
                 }
-            } catch (Throwable cause) {
-                res.close(cause);
+            } catch (Exception e) {
+                return Exceptions.throwUnsafely(e);
             }
-        }, ctx.contextAwareEventLoop());
-
-        return res;
+        }, ctx.contextAwareEventLoop()));
     }
 }

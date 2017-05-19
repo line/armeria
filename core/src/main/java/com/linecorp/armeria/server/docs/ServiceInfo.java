@@ -17,19 +17,23 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSortedMap.toImmutableSortedMap;
+import static com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet;
+import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collection;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -41,43 +45,44 @@ import com.linecorp.armeria.server.Service;
 public final class ServiceInfo {
 
     private final String name;
-    private final Map<String, FunctionInfo> functions;
-    private final Map<String, ClassInfo> classes;
-    private final Map<String, EndpointInfo> endpoints;
-    private final String docString;
+    private final Set<MethodInfo> methods;
+    private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHttpHeaders;
+    private final String docString;
 
     /**
      * Creates a new instance.
      */
     public ServiceInfo(String name,
-                       Iterable<FunctionInfo> functions,
-                       Iterable<ClassInfo> classes,
+                       Iterable<MethodInfo> methods,
+                       Iterable<EndpointInfo> endpoints) {
+        this(name, methods, endpoints, ImmutableList.of(), null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ServiceInfo(String name,
+                       Iterable<MethodInfo> methods,
                        Iterable<EndpointInfo> endpoints,
-                       @Nullable String docString,
-                       Iterable<HttpHeaders> exampleHttpHeaders) {
+                       Iterable<HttpHeaders> exampleHttpHeaders,
+                       @Nullable String docString) {
 
         this.name = requireNonNull(name, "name");
 
-        requireNonNull(functions, "functions");
-        requireNonNull(classes, "classes");
+        requireNonNull(methods, "methods");
         requireNonNull(endpoints, "endpoints");
 
-        this.functions = Streams.stream(functions)
-                                .collect(toImmutableSortedMap(Comparator.naturalOrder(),
-                                                              FunctionInfo::name, Function.identity()));
-        this.classes = Streams.stream(classes)
-                              .collect(toImmutableSortedMap(Comparator.naturalOrder(),
-                                                            ClassInfo::name, Function.identity()));
+        this.methods = Streams.stream(methods)
+                              .collect(toImmutableSortedSet(comparing(MethodInfo::name)));
         this.endpoints = Streams.stream(endpoints)
-                                .collect(toImmutableSortedMap(Comparator.naturalOrder(),
-                                                              e -> e.hostnamePattern() + ':' + e.path(),
-                                                              Function.identity()));
-        this.docString = docString;
+                                .collect(toImmutableSortedSet(comparing(
+                                        e -> e.hostnamePattern() + ':' + e.path())));
         this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
                                          .map(HttpHeaders::copyOf)
                                          .map(HttpHeaders::asImmutable)
                                          .collect(toImmutableList());
+        this.docString = Strings.emptyToNull(docString);
     }
 
     /**
@@ -89,41 +94,51 @@ public final class ServiceInfo {
     }
 
     /**
-     * Returns the simple type name of the service, which does not contain the package name.
+     * Returns the metadata about the methods available in the service.
      */
     @JsonProperty
-    public String simpleName() {
-        return name.substring(name.lastIndexOf('.') + 1);
-    }
-
-    /**
-     * Returns the metadata about the functions available in the service.
-     */
-    @JsonProperty
-    public Map<String, FunctionInfo> functions() {
-        return functions;
-    }
-
-    /**
-     * Returns the metadata about the structs, enums and exceptions related with the service.
-     */
-    @JsonProperty
-    public Map<String, ClassInfo> classes() {
-        return classes;
+    public Set<MethodInfo> methods() {
+        return methods;
     }
 
     /**
      * Returns the endpoints exposed by the service.
      */
     @JsonProperty
-    public Collection<EndpointInfo> endpoints() {
-        return endpoints.values();
+    public Set<EndpointInfo> endpoints() {
+        return endpoints;
+    }
+
+    /**
+     * Returns all enum, struct and exception {@link TypeSignature}s referred to by this service.
+     */
+    public Set<TypeSignature> findNamedTypes() {
+        final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
+        methods().forEach(m -> {
+            findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
+            m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
+            m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
+        });
+
+        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
+    }
+
+    static void findNamedTypes(Set<TypeSignature> collectedNamedTypes, TypeSignature typeSignature) {
+        if (typeSignature.isNamed()) {
+            collectedNamedTypes.add(typeSignature);
+        }
+
+        if (typeSignature.isContainer()) {
+            typeSignature.typeParameters().forEach(p -> findNamedTypes(collectedNamedTypes, p));
+        }
     }
 
     /**
      * Returns the documentation string.
      */
     @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
     public String docString() {
         return docString;
     }
@@ -148,25 +163,23 @@ public final class ServiceInfo {
 
         final ServiceInfo that = (ServiceInfo) o;
         return Objects.equals(name, that.name) &&
-               Objects.equals(functions, that.functions) &&
-               Objects.equals(classes, that.classes) &&
+               Objects.equals(methods, that.methods) &&
                Objects.equals(endpoints, that.endpoints);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, functions, classes, endpoints);
+        return Objects.hash(name, methods, endpoints);
     }
 
     @Override
     public String toString() {
         return "ServiceInfo{" +
                "name='" + name() + '\'' +
-               ", functions=" + functions() +
-               ", classes=" + classes() +
+               ", methods=" + methods() +
                ", endpoints=" + endpoints() +
-               ", docString=" + docString() +
                ", exampleHttpHeaders=" + exampleHttpHeaders() +
+               ", docString=" + docString() +
                '}';
     }
 }

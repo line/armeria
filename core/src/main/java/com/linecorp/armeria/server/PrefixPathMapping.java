@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.Optional;
+
 final class PrefixPathMapping extends AbstractPathMapping {
 
     private final String prefix;
@@ -73,6 +75,11 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
         final PrefixPathMapping that = (PrefixPathMapping) obj;
         return stripPrefix == that.stripPrefix && prefix.equals(that.prefix);
+    }
+
+    @Override
+    public Optional<String> prefix() {
+        return Optional.of(prefix);
     }
 
     @Override

@@ -17,9 +17,8 @@
 package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import java.util.concurrent.Executors;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -36,10 +35,10 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.grpc.internal.GrpcUtil;
-import io.grpc.testing.integration.TestServiceImpl;
 import io.netty.util.AsciiString;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
@@ -58,9 +57,10 @@ public class GrpcServiceTest {
     @Before
     public void setUp() {
         response = new DefaultHttpResponse();
-        grpcService = new GrpcServiceBuilder()
-                .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+        grpcService = (GrpcService) new GrpcServiceBuilder()
+                .addService(mock(TestServiceImplBase.class))
                 .build();
+        when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
     }
 
     @Test
@@ -70,7 +70,7 @@ public class GrpcServiceTest {
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.BAD_REQUEST)
+                HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                            .set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8"),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
@@ -83,7 +83,7 @@ public class GrpcServiceTest {
                                           .set(HttpHeaderNames.CONTENT_TYPE, "application/json")),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.BAD_REQUEST)
+                HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                            .set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8"),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
@@ -94,7 +94,7 @@ public class GrpcServiceTest {
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "grpc.testing.TestService.UnaryCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, GrpcUtil.CONTENT_TYPE_GRPC)),
+                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.BAD_REQUEST)
@@ -108,11 +108,11 @@ public class GrpcServiceTest {
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, GrpcUtil.CONTENT_TYPE_GRPC)),
+                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.OK)
-                           .set(HttpHeaderNames.CONTENT_TYPE, GrpcUtil.CONTENT_TYPE_GRPC)
+                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
                            .set(AsciiString.of("grpc-status"), "12")
                            .set(AsciiString.of("grpc-message"),
                                 "Method not found: grpc.testing.TestService/FooCall")

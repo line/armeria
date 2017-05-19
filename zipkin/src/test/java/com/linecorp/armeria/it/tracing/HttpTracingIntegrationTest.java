@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.it.tracing;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.github.kristofa.brave.Brave;
@@ -44,12 +45,12 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.tracing.HttpTracingService;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import zipkin.Span;
 import zipkin.reporter.Reporter;
 
-public class HttpTracingIntegrationTest extends AbstractServerTest {
+public class HttpTracingIntegrationTest {
 
     private static final ReporterImpl spanReporter = new ReporterImpl();
 
@@ -58,33 +59,34 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
     private HelloService.AsyncIface barClient;
     private HelloService.AsyncIface quxClient;
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.port(0, HTTP);
+    @Rule
+    public final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceAt("/foo", decorate("service/foo", THttpService.of(
+                    (AsyncIface) (name, resultHandler) ->
+                            barClient.hello("Miss. " + name, new DelegatingCallback(resultHandler)))));
 
-        sb.serviceAt("/foo", decorate("service/foo", THttpService.of(
-                (AsyncIface) (name, resultHandler) ->
-                        barClient.hello("Miss. " + name, new DelegatingCallback(resultHandler)))));
+            sb.serviceAt("/bar", decorate("service/bar", THttpService.of(
+                    (AsyncIface) (name, resultHandler) -> {
+                        if (name.startsWith("Miss. ")) {
+                            name = "Ms. " + name.substring(6);
+                        }
+                        quxClient.hello(name, new DelegatingCallback(resultHandler));
+                    })));
 
-        sb.serviceAt("/bar", decorate("service/bar", THttpService.of(
-                (AsyncIface) (name, resultHandler) -> {
-                    if (name.startsWith("Miss. ")) {
-                        name = "Ms. " + name.substring(6);
-                    }
-                    quxClient.hello(name, new DelegatingCallback(resultHandler));
-                })));
-
-        sb.serviceAt("/qux", decorate("service/qux", THttpService.of(
-                (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!'))));
-    }
+            sb.serviceAt("/qux", decorate("service/qux", THttpService.of(
+                    (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!'))));
+        }
+    };
 
     @Before
     public void setupClients() {
-        fooClient = new ClientBuilder("tbinary+" + uri("/foo"))
+        fooClient = new ClientBuilder(server.uri(BINARY, "/foo"))
                 .decorator(HttpRequest.class, HttpResponse.class,
                            HttpTracingClient.newDecorator(newBrave("client/foo")))
                 .build(HelloService.Iface.class);
-        fooClientWithoutTracing = Clients.newClient("tbinary+" + uri("/foo"), HelloService.Iface.class);
+        fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
     }
@@ -98,8 +100,8 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
         return HttpTracingService.newDecorator(newBrave(name)).apply(service);
     }
 
-    private static HelloService.AsyncIface newClient(String path) {
-        return new ClientBuilder("tbinary+" + uri(path))
+    private HelloService.AsyncIface newClient(String path) {
+        return new ClientBuilder(server.uri(BINARY, path))
                 .decorator(HttpRequest.class, HttpResponse.class,
                            HttpTracingClient.newDecorator(newBrave("client" + path)))
                 .build(HelloService.AsyncIface.class);

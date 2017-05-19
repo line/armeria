@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.junit.Test;
@@ -102,12 +103,14 @@ public class TracingServiceTest {
         @SuppressWarnings("unchecked")
         Service<RpcRequest, RpcResponse> delegate = mock(Service.class);
 
-        TraceData traceData = TraceData.builder()
-                                       .sample(sampled)
-                                       .spanId(SpanId.builder().traceId(1).spanId(2).parentId(3L).build())
-                                       .build();
+        final TraceData traceData;
+        if (sampled) {
+            traceData = TraceData.create(SpanId.builder().traceId(1).spanId(2).parentId(3L).build());
+        } else {
+            traceData = TraceData.NOT_SAMPLED;
+        }
 
-        TracingServiceImpl stub = new TracingServiceImpl(delegate, brave, traceData);
+        final TracingServiceImpl stub = new TracingServiceImpl(delegate, brave, traceData);
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final RpcRequest req = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
@@ -119,8 +122,8 @@ public class TracingServiceTest {
         when(ctx.method()).thenReturn("POST");
         when(ctx.log()).thenReturn(log);
         when(ctx.logBuilder()).thenReturn(log);
-        ctx.onEnter(isA(Runnable.class));
-        ctx.onExit(isA(Runnable.class));
+        ctx.onEnter(isA(Consumer.class));
+        ctx.onExit(isA(Consumer.class));
 
         RpcResponse res = RpcResponse.of("Hello, trustin!");
         when(delegate.serve(ctx, req)).thenReturn(res);

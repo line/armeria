@@ -168,7 +168,8 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                         ChannelPromise promise) throws Exception {
 
         // Remember the requested remote address for later use.
-        this.remoteAddress = (InetSocketAddress) remoteAddress;
+        final InetSocketAddress inetRemoteAddr = (InetSocketAddress) remoteAddress;
+        this.remoteAddress = inetRemoteAddr;
 
         // Configure the pipeline.
         final Channel ch = ctx.channel();
@@ -179,7 +180,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         try {
             if (sslCtx != null) {
-                configureAsHttps(ch);
+                configureAsHttps(ch, inetRemoteAddr);
             } else {
                 configureAsHttp(ch);
             }
@@ -198,9 +199,11 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     /**
      * @see <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>
      */
-    private void configureAsHttps(Channel ch) {
+    private void configureAsHttps(Channel ch, InetSocketAddress remoteAddr) {
         final ChannelPipeline p = ch.pipeline();
-        final SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
+        final SslHandler sslHandler = sslCtx.newHandler(ch.alloc(),
+                                                        remoteAddr.getHostString(),
+                                                        remoteAddr.getPort());
         p.addLast(sslHandler);
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {

@@ -21,4 +21,8 @@ final class ParameterEntry {
     String getName() {
         return name;
     }
+
+    boolean isPathParam() {
+        return name != null;
+    }
 }

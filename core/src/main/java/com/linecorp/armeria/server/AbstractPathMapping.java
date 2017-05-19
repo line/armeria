@@ -142,4 +142,9 @@ public abstract class AbstractPathMapping implements PathMapping {
     public Optional<String> exactPath() {
         return Optional.empty();
     }
+
+    @Override
+    public Optional<String> prefix() {
+        return Optional.empty();
+    }
 }

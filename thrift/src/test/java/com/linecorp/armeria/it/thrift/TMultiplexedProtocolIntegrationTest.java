@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.it.thrift;
 
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -24,43 +25,46 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.thrift.TApplicationException;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 /**
  * Ensures TMultiplexedProtocol works.
  */
-public class TMultiplexedProtocolIntegrationTest extends AbstractServerTest {
+public class TMultiplexedProtocolIntegrationTest {
 
-    private final Queue<String> methodNames = new LinkedBlockingQueue<>();
+    private static final Queue<String> methodNames = new LinkedBlockingQueue<>();
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.port(0, HttpSessionProtocols.HTTP);
-        sb.serviceAt(
-                "/", THttpService.of(ImmutableMap.of("", (Iface) name -> "none:" + name,
-                                                     "foo", name -> "foo:" + name,
-                                                     "bar", name -> "bar:" + name)).decorate(
-                        (delegate, ctx, req) -> {
-                            ctx.log().addListener(log -> {
-                                final RpcRequest call = (RpcRequest) log.requestContent();
-                                if (call != null) {
-                                    methodNames.add(call.method());
-                                }
-                            }, RequestLogAvailability.REQUEST_CONTENT);
-                            return delegate.serve(ctx, req);
-                        }));
-    }
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceAt(
+                    "/",
+                    THttpService.of(ImmutableMap.of("", (Iface) name -> "none:" + name,
+                                                    "foo", name -> "foo:" + name,
+                                                    "bar", name -> "bar:" + name))
+                                .decorate((delegate, ctx, req) -> {
+                                    ctx.log().addListener(log -> {
+                                        final RpcRequest call = (RpcRequest) log.requestContent();
+                                        if (call != null) {
+                                            methodNames.add(call.method());
+                                        }
+                                    }, RequestLogAvailability.REQUEST_CONTENT);
+                                    return delegate.serve(ctx, req);
+                                }));
+        }
+    };
 
     @Before
     public void clearMethodNames() {
@@ -80,7 +84,7 @@ public class TMultiplexedProtocolIntegrationTest extends AbstractServerTest {
     }
 
     private static Iface client(String serviceName) {
-        String uri = "tbinary+" + uri("/");
+        String uri = server.uri(BINARY, "/");
         if (!serviceName.isEmpty()) {
             uri += '#' + serviceName;
         }

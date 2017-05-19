@@ -1,4 +1,6 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.internal.DefaultZipCompressor
+import com.github.jengelman.gradle.plugins.shadow.internal.ZipCompressor
+import org.apache.tools.zip.ZipOutputStream
 import org.yaml.snakeyaml.Yaml
 
 buildscript {
@@ -28,7 +30,12 @@ ext {
     javaProjects = subprojects.findAll { it.name != 'site' }
 
     // The list of Java projects whose artifacts are published to the Maven repository
-    publishedJavaProjects = javaProjects.findAll { it.name != 'it' && it.name != 'shaded-test' }
+    publishedJavaProjects = javaProjects.findAll {
+        !(it.name in ['it', 'shaded-test', 'testing'])
+    }
+
+    // The list of backward-compatibility Java projects which have the namespace conflicts with other projects.
+    backwardCompatProjects = publishedJavaProjects.findAll { it.name in [ 'thrift0.9', 'tomcat8.0' ] }
 
     // The list of Gradle task names specified in the startup parameters.
     requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
@@ -95,6 +102,7 @@ configure(javaProjects) {
         isPublishing = { gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null }
         isSigning = { signing.signatory != null && (project.ext.isReleaseVersion() || project.hasProperty('sign')) }
 
+        thriftPath = "${rootProject.projectDir}/gradle/thrift/thrift.${osdetector.classifier}"
         onIdeImport = { Closure action ->
             if (!requestedTaskNames.empty) {
                 return
@@ -160,6 +168,9 @@ configure(javaProjects) {
         if (project.name != 'core') {
             compile project(':core')
         }
+
+        // Testing utilities
+        testCompile project(':testing')
     }
 
     managedDependencies {
@@ -195,40 +206,11 @@ configure(javaProjects) {
         testCompile 'junit:junit'
         testCompile 'net.javacrumbs.json-unit:json-unit'
         testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
+        testCompile 'org.awaitility:awaitility'
         testCompile 'org.hamcrest:hamcrest-library'
         testCompile 'org.assertj:assertj-core'
         testCompile 'org.mockito:mockito-core'
         testCompile 'org.apache.httpcomponents:httpclient'
-    }
-
-    // Copy test resources to the same directory with test classes, because some tests such as
-    // TomcatServiceTest assume so.
-    sourceSets {
-        test {
-            def testOutputDir = "${project.buildDir}/classes/test"
-            output.classesDir = testOutputDir
-            output.resourcesDir = testOutputDir
-
-            // Add shared logback configuration.
-            resources.srcDir "${rootProject.projectDir}/settings/logback"
-
-            // Add 'java-shared' directory to the source set, if exists.
-            def javaSharedDir = "${project.projectDir}/src/test/java-shared"
-            if (project.file(javaSharedDir).isDirectory()) {
-                java.srcDir javaSharedDir
-            }
-
-            // Add 'resources-shared' directory to the source set, if exists.
-            def resourcesSharedDir = "${project.projectDir}/src/test/resources-shared"
-            if (project.file(resourcesSharedDir).isDirectory()) {
-                resources.srcDir resourcesSharedDir
-            }
-
-            // Add the 'java-shared' directory of the 'core' project to the source set.
-            if (project.name != 'core') {
-                java.srcDir "${rootProject.projectDir}/core/src/test/java-shared"
-            }
-        }
     }
 
     // Enforce checkstyle rules.
@@ -236,7 +218,7 @@ configure(javaProjects) {
         def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
         configFile = project.file("${checkstyleConfigDir}/checkstyle.xml")
         configProperties = [ 'checkstyleConfigDir': "$checkstyleConfigDir" ]
-        toolVersion = '7.1'
+        toolVersion = rootProject.ext.dependencyManagement['com.puppycrawl.tools']['checkstyle'].version
     }
     task checkstyle(group: 'Verification',
                     description: 'Runs the checkstyle rules.',
@@ -268,7 +250,9 @@ configure(javaProjects) {
         afterEvaluate {
             // Include all sources and classes directories so that the report includes other modules.
             sourceDirectories = files(javaProjects.inject([], { a, b -> a + b.sourceSets.main.java.srcDirs }))
-            classDirectories = files(javaProjects.inject([], { a, b -> a + b.sourceSets.main.output.classesDir }))
+            classDirectories = files(javaProjects.inject([], { a, b ->
+                b in backwardCompatProjects ? a : a + b.sourceSets.main.output.classesDir
+            }))
         }
     }
 
@@ -316,9 +300,7 @@ configure(javaProjects) {
         dependencies {
             if (project.name != 'core') {
                 // Only want to rewrite source references, not bundle dependencies.
-                // TODO(anuraag): We include grpc-core for the grpc project to shade its internal package for now.
-                // Remove this after the dependency on grpc internal package is removed.
-                exclude(dependency({ (project.name != 'grpc' || !it.name.startsWith('io.grpc:grpc-core:')) }))
+                exclude(dependency({ true }))
             } else {
                 // Shade the relocated dependencies only.
                 exclude(dependency({ dep ->
@@ -386,8 +368,6 @@ configure(javaProjects) {
     // Compile the Thrift service definitions.
     task compileThrift(group: 'Build',
                        description: 'Compiles the .thrift files') {
-        def thriftPath = "${rootProject.projectDir}/gradle/thrift/thrift.${osdetector.classifier}"
-
         [ 'main', 'test' ].each { scope ->
             def inputDir = "${project.projectDir}/src/${scope}/thrift"
             def outputDir = "${project.projectDir}/src/${scope}/gen-java"
@@ -404,7 +384,7 @@ configure(javaProjects) {
                     }.each { sourceFile ->
                         project.mkdir(outputDir)
                         project.exec {
-                            commandLine thriftPath,
+                            commandLine project.ext.thriftPath,
                                     '-gen', 'java',
                                     '-out', outputDir,
                                     '-I', "${sourceFile.parentFile.absolutePath}",
@@ -513,8 +493,8 @@ configure(javaProjects) {
                     }
 
                     credentials {
-                        username = project.properties.ossrhUsername
-                        password = project.properties.ossrhPassword
+                        username = project.findProperty('ossrhUsername')
+                        password = project.findProperty('ossrhPassword')
                     }
                 }
             }
@@ -535,8 +515,8 @@ configure(javaProjects) {
 
                             // Write the elements required by OSSRH.
                             name currentArtifactId
-                            description "Asynchronous RPC/API client/server library built on top of Java 8, " +
-                                    "Netty 4.1, HTTP/2, and Thrift (${currentArtifactId})"
+                            description "Asynchronous HTTP/2 RPC/REST client/server library built on top of " +
+                                    "Java 8, Netty, Thrift and GRPC (${currentArtifactId})"
                             url 'http://line.github.io/armeria/'
                             licenses {
                                 license {
@@ -736,7 +716,7 @@ configure(javaProjects) {
 
             // Print the test output when the test failed or the test output contains an Exception or an Error.
             afterTest { TestDescriptor td, TestResult tr ->
-                if (tr.resultType == TestResult.ResultType.FAILURE || buf =~ /(?:Exception|Error|Throwable):/) {
+                if (tr.resultType == TestResult.ResultType.FAILURE || buf =~ /(?:Exception|Error|Throwable|LEAK):/) {
                     def simpleClassName = td.className.substring(td.className.lastIndexOf('.') + 1)
 
                     // Add an empty line if the test progress dots were printed.
@@ -961,4 +941,21 @@ private static String executeCommand(String[] command) {
     }
 
     return proc.in.text.trim()
+}
+
+// TODO(trustin): Remove this workaround once a newer version of shadow plugin is released.
+// Work around the bug where ShadowJar does not set the character set of the output JAR correctly.
+// See: https://github.com/johnrengelman/shadow/issues/283
+class ShadowJar extends com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar {
+    @Override
+    protected ZipCompressor getInternalCompressor() {
+        return new DefaultZipCompressor(false, ZipOutputStream.DEFLATED) {
+            @Override
+            ZipOutputStream createArchiveOutputStream(File destination) {
+                ZipOutputStream zout = super.createArchiveOutputStream(destination)
+                zout.setEncoding("UTF-8")
+                return zout
+            }
+        }
+    }
 }

@@ -19,9 +19,11 @@ package com.linecorp.armeria.client.http;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.net.URI;
+import java.util.Optional;
 import java.util.Set;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DefaultClientBuilderParams;
@@ -114,6 +116,11 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
+    }
+
+    @Override
+    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+        return Optional.empty();
     }
 
     private DefaultHttpClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,

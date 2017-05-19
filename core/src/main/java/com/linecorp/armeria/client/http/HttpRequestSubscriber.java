@@ -25,8 +25,10 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.client.http.HttpResponseDecoder.HttpResponseWrapper;
+import com.linecorp.armeria.common.AbstractRequestContext;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -49,6 +51,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private static final Logger logger = LoggerFactory.getLogger(HttpRequestSubscriber.class);
 
     enum State {
+        NEEDS_TO_WRITE_FIRST_HEADER,
         NEEDS_DATA_OR_TRAILING_HEADERS,
         DONE
     }
@@ -58,15 +61,16 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private final int id;
     private final HttpRequest request;
     private final HttpResponseWrapper response;
+    private final ClientRequestContext reqCtx;
     private final RequestLogBuilder logBuilder;
     private final long timeoutMillis;
     private Subscription subscription;
     private ScheduledFuture<?> timeoutFuture;
-    private State state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+    private State state = State.NEEDS_TO_WRITE_FIRST_HEADER;
 
     HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
-                          RequestLogBuilder logBuilder, long timeoutMillis) {
+                          ClientRequestContext reqCtx, long timeoutMillis) {
 
         ctx = ch.pipeline().lastContext();
 
@@ -74,7 +78,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         this.id = id;
         this.request = request;
         this.response = response;
-        this.logBuilder = logBuilder;
+        this.reqCtx = reqCtx;
+        logBuilder = reqCtx.logBuilder();
         this.timeoutMillis = timeoutMillis;
     }
 
@@ -112,7 +117,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (timeoutMillis > 0) {
             timeoutFuture = eventLoop.schedule(
                     () -> {
-                        if (state != State.DONE) {
+                        if (state == State.NEEDS_TO_WRITE_FIRST_HEADER) {
+                            if (reqCtx instanceof AbstractRequestContext) {
+                                ((AbstractRequestContext) reqCtx).setTimedOut();
+                            }
                             failAndRespond(WriteTimeoutException.get());
                         }
                     },
@@ -154,6 +162,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         } else {
             write0(firstHeaders, false, true);
         }
+        state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+        cancelTimeout();
     }
 
     @Override

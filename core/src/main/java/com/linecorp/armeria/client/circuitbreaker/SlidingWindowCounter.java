@@ -88,7 +88,9 @@ final class SlidingWindowCounter implements EventCounter {
             event.increment(bucket);
             reservoir.offer(bucket);
             return Optional.empty();
-        } else if (tickerNanos < currentBucket.timestamp() + updateIntervalNanos) {
+        }
+
+        if (tickerNanos < currentBucket.timestamp() + updateIntervalNanos) {
             // increments the current bucket since it is exactly latest
             event.increment(currentBucket);
             return Optional.empty();

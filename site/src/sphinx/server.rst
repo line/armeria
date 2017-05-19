@@ -1,4 +1,4 @@
-.. _`Sphinx`: http://sphinx.pocoo.org/
+.. _server-index:
 
 Writing a server
 ================
@@ -7,5 +7,10 @@ Writing a server
     :maxdepth: 1
 
     server-basics
+    server-decorator
+    server-grpc
+    server-thrift
+    server-docservice
+    server-rest
     server-http-file
-    server-http-tomcat
+    server-servlet

@@ -22,13 +22,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.apache.thrift.AsyncProcessFunction;
-import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
@@ -38,13 +37,14 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
+import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -65,11 +65,14 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * A {@link Service} that handles a Thrift call.
@@ -138,7 +141,8 @@ public class THttpService extends AbstractHttpService {
                                   SerializationFormat defaultSerializationFormat) {
 
         return new THttpService(ThriftCallService.of(implementation),
-                                defaultSerializationFormat, ThriftSerializationFormats.values());
+                                newAllowedSerializationFormats(defaultSerializationFormat,
+                                                               ThriftSerializationFormats.values()));
     }
 
     /**
@@ -158,9 +162,9 @@ public class THttpService extends AbstractHttpService {
      */
     public static THttpService of(Map<String, ?> implementations,
                                   SerializationFormat defaultSerializationFormat) {
-
         return new THttpService(ThriftCallService.of(implementations),
-                                defaultSerializationFormat, ThriftSerializationFormats.values());
+                                newAllowedSerializationFormats(defaultSerializationFormat,
+                                                               ThriftSerializationFormats.values()));
     }
 
     /**
@@ -236,13 +240,9 @@ public class THttpService extends AbstractHttpService {
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
-        requireNonNull(otherAllowedSerializationFormats, "otherAllowedSerializationFormats");
-
-        final Set<SerializationFormat> allowedSerializationFormatsSet =
-                newAllowedSerializationFormats(defaultSerializationFormat, otherAllowedSerializationFormats);
-
         return new THttpService(ThriftCallService.of(implementation),
-                                defaultSerializationFormat, allowedSerializationFormatsSet);
+                                newAllowedSerializationFormats(defaultSerializationFormat,
+                                                               otherAllowedSerializationFormats));
     }
 
     /**
@@ -266,13 +266,9 @@ public class THttpService extends AbstractHttpService {
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
-        requireNonNull(otherAllowedSerializationFormats, "otherAllowedSerializationFormats");
-
-        final Set<SerializationFormat> allowedSerializationFormatsSet =
-                newAllowedSerializationFormats(defaultSerializationFormat, otherAllowedSerializationFormats);
-
         return new THttpService(ThriftCallService.of(implementations),
-                                defaultSerializationFormat, allowedSerializationFormatsSet);
+                                newAllowedSerializationFormats(defaultSerializationFormat,
+                                                               otherAllowedSerializationFormats));
     }
 
     /**
@@ -298,8 +294,11 @@ public class THttpService extends AbstractHttpService {
     public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat) {
 
-        return delegate -> new THttpService(delegate,
-                                            defaultSerializationFormat, ThriftSerializationFormats.values());
+        final SerializationFormat[] allowedSerializationFormatArray = newAllowedSerializationFormats(
+                defaultSerializationFormat,
+                ThriftSerializationFormats.values());
+
+        return delegate -> new THttpService(delegate, allowedSerializationFormatArray);
     }
 
     /**
@@ -336,44 +335,42 @@ public class THttpService extends AbstractHttpService {
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
-        requireNonNull(otherAllowedSerializationFormats, "otherAllowedSerializationFormats");
+        final SerializationFormat[] allowedSerializationFormatArray = newAllowedSerializationFormats(
+                defaultSerializationFormat, otherAllowedSerializationFormats);
 
-        final Set<SerializationFormat> allowedSerializationFormatsSet =
-                newAllowedSerializationFormats(defaultSerializationFormat, otherAllowedSerializationFormats);
-
-        return delegate -> new THttpService(delegate,
-                                            defaultSerializationFormat, allowedSerializationFormatsSet);
+        return delegate -> new THttpService(delegate, allowedSerializationFormatArray);
     }
 
     // TODO(trustin): Make this method private once we remove ThriftService.
-    static ImmutableSet<SerializationFormat> newAllowedSerializationFormats(
+    static SerializationFormat[] newAllowedSerializationFormats(
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
-        return ImmutableSet.<SerializationFormat>builder()
-                .add(defaultSerializationFormat)
-                .addAll(otherAllowedSerializationFormats)
-                .build();
+
+        requireNonNull(defaultSerializationFormat, "defaultSerializationFormat");
+        requireNonNull(otherAllowedSerializationFormats, "otherAllowedSerializationFormats");
+
+        final Set<SerializationFormat> set = new LinkedHashSet<>();
+        set.add(defaultSerializationFormat);
+        Iterables.addAll(set, otherAllowedSerializationFormats);
+        return set.toArray(new SerializationFormat[set.size()]);
     }
 
     private final Service<RpcRequest, RpcResponse> delegate;
-    private final SerializationFormat defaultSerializationFormat;
+    private final SerializationFormat[] allowedSerializationFormatArray;
     private final Set<SerializationFormat> allowedSerializationFormats;
     private final ThriftCallService thriftService;
 
     // TODO(trustin): Make this contructor private once we remove ThriftService.
     THttpService(Service<RpcRequest, RpcResponse> delegate,
-                 SerializationFormat defaultSerializationFormat,
-                 Set<SerializationFormat> allowedSerializationFormats) {
+                 SerializationFormat[] allowedSerializationFormatArray) {
 
         requireNonNull(delegate, "delegate");
-        requireNonNull(defaultSerializationFormat, "defaultSerializationFormat");
-        requireNonNull(allowedSerializationFormats, "allowedSerializationFormats");
 
         this.delegate = delegate;
         thriftService = findThriftService(delegate);
 
-        this.defaultSerializationFormat = defaultSerializationFormat;
-        this.allowedSerializationFormats = ImmutableSet.copyOf(allowedSerializationFormats);
+        this.allowedSerializationFormatArray = allowedSerializationFormatArray;
+        allowedSerializationFormats = ImmutableSet.copyOf(allowedSerializationFormatArray);
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -403,7 +400,7 @@ public class THttpService extends AbstractHttpService {
      * Returns the default serialization format of this service.
      */
     public SerializationFormat defaultSerializationFormat() {
-        return defaultSerializationFormat;
+        return allowedSerializationFormatArray[0];
     }
 
     @Override
@@ -437,44 +434,45 @@ public class THttpService extends AbstractHttpService {
 
         SerializationFormat serializationFormat;
         if (contentType != null) {
-            try {
-                serializationFormat = SerializationFormat.find(MediaType.parse(contentType))
-                                                         .orElse(defaultSerializationFormat);
-            } catch (IllegalArgumentException e) {
-                logger.debug("Failed to parse the 'content-type' header: {}", contentType, e);
-                serializationFormat = null;
-            }
-
-            if (serializationFormat == null ||
-                !allowedSerializationFormats.contains(serializationFormat)) {
+            serializationFormat = findSerializationFormat(contentType);
+            if (serializationFormat == null) {
                 res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                             MediaType.PLAIN_TEXT_UTF_8, PROTOCOL_NOT_SUPPORTED);
                 return null;
             }
         } else {
-            serializationFormat = defaultSerializationFormat;
+            serializationFormat = defaultSerializationFormat();
         }
 
-        final String accept = headers.get(HttpHeaderNames.ACCEPT);
-        if (accept != null) {
-            // If accept header is present, make sure it is sane. Currently, we do not support accept
-            // headers with a different format than the content type header.
-            SerializationFormat outputSerializationFormat;
-            try {
-                outputSerializationFormat =
-                        SerializationFormat.find(MediaType.parse(accept)).orElse(serializationFormat);
-            } catch (IllegalArgumentException e) {
-                logger.debug("Failed to parse the 'accept' header: {}", accept, e);
-                outputSerializationFormat = null;
-            }
-            if (outputSerializationFormat != serializationFormat) {
-                res.respond(HttpStatus.NOT_ACCEPTABLE,
-                            MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
-                return null;
-            }
+        // If accept header is present, make sure it is sane. Currently, we do not support accept
+        // headers with a different format than the content type header.
+        final List<String> acceptHeaders = headers.getAll(HttpHeaderNames.ACCEPT);
+        if (!acceptHeaders.isEmpty() &&
+            !serializationFormat.mediaTypes().matchHeaders(acceptHeaders).isPresent()) {
+            res.respond(HttpStatus.NOT_ACCEPTABLE,
+                        MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
+            return null;
         }
 
         return serializationFormat;
+    }
+
+    private SerializationFormat findSerializationFormat(String contentType) {
+        final MediaType mediaType;
+        try {
+            mediaType = MediaType.parse(contentType);
+        } catch (IllegalArgumentException e) {
+            logger.debug("Failed to parse the 'content-type' header: {}", contentType, e);
+            return null;
+        }
+
+        for (SerializationFormat format : allowedSerializationFormatArray) {
+            if (format.isAccepted(mediaType)) {
+                return format;
+            }
+        }
+
+        return null;
     }
 
     private void decodeAndInvoke(
@@ -493,7 +491,7 @@ public class THttpService extends AbstractHttpService {
 
         try {
             final TMessage header;
-            final TBase<TBase<?, ?>, TFieldIdEnum> args;
+            final TBase<?, ?> args;
 
             try {
                 header = inProto.readMessageBegin();
@@ -542,20 +540,9 @@ public class THttpService extends AbstractHttpService {
 
             // Decode the invocation parameters.
             try {
-                if (f.isAsync()) {
-                    AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object> asyncFunc =
-                            f.asyncFunc();
-
-                    args = asyncFunc.getEmptyArgsInstance();
-                    args.read(inProto);
-                    inProto.readMessageEnd();
-                } else {
-                    ProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>> syncFunc = f.syncFunc();
-
-                    args = syncFunc.getEmptyArgsInstance();
-                    args.read(inProto);
-                    inProto.readMessageEnd();
-                }
+                args = f.newArgs();
+                args.read(inProto);
+                inProto.readMessageEnd();
 
                 decodedReq = toRpcRequest(f.serviceType(), header.name, args);
                 ctx.logBuilder().requestContent(decodedReq, new ThriftCall(header, args));
@@ -627,13 +614,10 @@ public class THttpService extends AbstractHttpService {
     private static RpcRequest toRpcRequest(Class<?> serviceType, String method, TBase<?, ?> thriftArgs) {
         requireNonNull(thriftArgs, "thriftArgs");
 
-        @SuppressWarnings("unchecked")
-        final TBase<TBase<?, ?>, TFieldIdEnum> castThriftArgs = (TBase<TBase<?, ?>, TFieldIdEnum>) thriftArgs;
-
         // NB: The map returned by FieldMetaData.getStructMetaDataMap() is an EnumMap,
         //     so the parameter ordering is preserved correctly during iteration.
         final Set<? extends TFieldIdEnum> fields =
-                FieldMetaData.getStructMetaDataMap(castThriftArgs.getClass()).keySet();
+                FieldMetaData.getStructMetaDataMap(thriftArgs.getClass()).keySet();
 
         // Handle the case where the number of arguments is 0 or 1.
         final int numFields = fields.size();
@@ -642,13 +626,13 @@ public class THttpService extends AbstractHttpService {
                 return RpcRequest.of(serviceType, method);
             case 1:
                 return RpcRequest.of(serviceType, method,
-                                     ThriftFieldAccess.get(castThriftArgs, fields.iterator().next()));
+                                     ThriftFieldAccess.get(thriftArgs, fields.iterator().next()));
         }
 
         // Handle the case where the number of arguments is greater than 1.
         final List<Object> list = new ArrayList<>(numFields);
         for (TFieldIdEnum field : fields) {
-            list.add(ThriftFieldAccess.get(castThriftArgs, field));
+            list.add(ThriftFieldAccess.get(thriftArgs, field));
         }
 
         return RpcRequest.of(serviceType, method, list);
@@ -658,7 +642,7 @@ public class THttpService extends AbstractHttpService {
             ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Object returnValue) {
 
-        TBase<TBase<?, ?>, TFieldIdEnum> wrappedResult = func.newResult();
+        final TBase<?, ?> wrappedResult = func.newResult();
         func.setSuccess(wrappedResult, returnValue);
         respond(serializationFormat,
                 encodeSuccess(ctx, rpcRes, serializationFormat, func.name(), seqId, wrappedResult),
@@ -676,7 +660,7 @@ public class THttpService extends AbstractHttpService {
             ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
 
-        final TBase<TBase<?, ?>, TFieldIdEnum> result = func.newResult();
+        final TBase<?, ?> result = func.newResult();
         final HttpData content;
         if (func.setException(result, cause)) {
             content = encodeSuccess(ctx, rpcRes, serializationFormat, func.name(), seqId, result);
@@ -707,23 +691,30 @@ public class THttpService extends AbstractHttpService {
                                           RpcResponse reply,
                                           SerializationFormat serializationFormat,
                                           String methodName, int seqId,
-                                          TBase<TBase<?, ?>, TFieldIdEnum> result) {
+                                          TBase<?, ?> result) {
 
-        final TMemoryBuffer buf = new TMemoryBuffer(128);
-        final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(buf);
-
+        final ByteBuf buf = ctx.alloc().buffer(128);
+        boolean success = false;
         try {
+            final TTransport transport = new TByteBufTransport(buf);
+            final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.REPLY, seqId);
             outProto.writeMessageBegin(header);
             result.write(outProto);
             outProto.writeMessageEnd();
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, result));
+
+            final HttpData encoded = new ByteBufHttpData(buf, false);
+            success = true;
+            return encoded;
         } catch (TException e) {
             throw new Error(e); // Should never reach here.
+        } finally {
+            if (!success) {
+                buf.release();
+            }
         }
-
-        return HttpData.of(buf.getArray(), 0, buf.length());
     }
 
     private static HttpData encodeException(ServiceRequestContext ctx,
@@ -743,21 +734,28 @@ public class THttpService extends AbstractHttpService {
                     "---- END server-side trace ----");
         }
 
-        final TMemoryBuffer buf = new TMemoryBuffer(128);
-        final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(buf);
-
+        final ByteBuf buf = ctx.alloc().buffer(128);
+        boolean success = false;
         try {
+            final TTransport transport = new TByteBufTransport(buf);
+            final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
             outProto.writeMessageBegin(header);
             appException.write(outProto);
             outProto.writeMessageEnd();
 
             ctx.logBuilder().responseContent(reply, new ThriftReply(header, appException));
+
+            final HttpData encoded = new ByteBufHttpData(buf, false);
+            success = true;
+            return encoded;
         } catch (TException e) {
             throw new Error(e); // Should never reach here.
+        } finally {
+            if (!success) {
+                buf.release();
+            }
         }
-
-        return HttpData.of(buf.getArray(), 0, buf.length());
     }
 
     private static Map<SerializationFormat, ThreadLocalTProtocol> createFormatToThreadLocalTProtocolMap() {

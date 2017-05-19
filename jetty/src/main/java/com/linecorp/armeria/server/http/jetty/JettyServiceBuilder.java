@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.RequestLog;
@@ -52,7 +53,7 @@ public final class JettyServiceBuilder {
     private Boolean dumpBeforeStop;
     private Handler handler;
     private RequestLog requestLog;
-    private SessionIdManager sessionIdManager;
+    private Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
     private Long stopTimeoutMillis;
 
     /**
@@ -144,12 +145,27 @@ public final class JettyServiceBuilder {
     }
 
     /**
-     * Sets the {@link SessionIdManager} of the Jetty {@link Server}.
+     * Sets the {@link SessionIdManager} of the Jetty {@link Server}. This method is a shortcut of:
+     * <pre>{@code
+     * sessionIdManagerFactory(server -> sessionIdManager);
+     * }</pre>
      *
      * @see Server#setSessionIdManager(SessionIdManager)
      */
     public JettyServiceBuilder sessionIdManager(SessionIdManager sessionIdManager) {
-        this.sessionIdManager = requireNonNull(sessionIdManager, "sessionIdManager");
+        requireNonNull(sessionIdManager, "sessionIdManager");
+        return sessionIdManagerFactory(server -> sessionIdManager);
+    }
+
+    /**
+     * Sets the factory that creates a new instance of {@link SessionIdManager} for the Jetty {@link Server}.
+     *
+     * @see Server#setSessionIdManager(SessionIdManager)
+     */
+    public JettyServiceBuilder sessionIdManagerFactory(
+            Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory) {
+        requireNonNull(sessionIdManagerFactory, "sessionIdManagerFactory");
+        this.sessionIdManagerFactory = sessionIdManagerFactory;
         return this;
     }
 
@@ -194,7 +210,7 @@ public final class JettyServiceBuilder {
     public JettyService build() {
         return JettyService.forConfig(new JettyServiceConfig(
                 hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
-                sessionIdManager, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
+                sessionIdManagerFactory, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
                 configurators));
     }
 
@@ -202,7 +218,7 @@ public final class JettyServiceBuilder {
     public String toString() {
         return JettyServiceConfig.toString(
                 this, hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
-                sessionIdManager, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
+                sessionIdManagerFactory, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
                 configurators);
     }
 }

@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.DecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.Response;
  * @param <O> the {@link Response} type
  */
 public abstract class RetryingClient<I extends Request, O extends Response>
-        extends DecoratingClient<I, O, I, O> {
+        extends SimpleDecoratingClient<I, O> {
     private final Supplier<? extends Backoff> backoffSupplier;
     private final RetryRequestStrategy<I, O> retryStrategy;
 

@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.LruMap;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.http.HttpService;
@@ -330,6 +331,12 @@ public final class HttpFileService extends AbstractHttpService {
         OrElseHttpService(HttpFileService first, Service<?, ? extends HttpResponse> second) {
             this.first = first;
             this.second = (Service<Request, HttpResponse>) second;
+        }
+
+        @Override
+        public void serviceAdded(ServiceConfig cfg) throws Exception {
+            first.serviceAdded(cfg);
+            second.serviceAdded(cfg);
         }
 
         @Override

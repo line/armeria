@@ -36,9 +36,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
@@ -48,11 +51,11 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
@@ -61,6 +64,8 @@ import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 public abstract class AbstractThriftOverHttpTest {
+
+    private static final String LARGER_THAN_TLS = Strings.repeat("A", 16384);
 
     private static final Server server;
 
@@ -116,11 +121,15 @@ public abstract class AbstractThriftOverHttpTest {
                                     () -> resultHandler.onComplete(milliseconds),
                                     milliseconds, TimeUnit.MILLISECONDS)));
 
+            // Response larger than a h1 TLS record
+            sb.serviceAt("/large", THttpService.of(
+                    (AsyncIface) (name, resultHandler) -> resultHandler.onComplete(LARGER_THAN_TLS)));
+
             sb.decorator(LoggingService::new);
 
             final Function<Service<HttpRequest, HttpResponse>,
                            Service<HttpRequest, HttpResponse>> logCollectingDecorator =
-                    s -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
+                    s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             if (recordMessageLogs) {
@@ -186,6 +195,77 @@ public abstract class AbstractThriftOverHttpTest {
     @Test
     public void testHttpsInvocation() throws Exception {
         try (TTransport transport = newTransport("https", "/hello")) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
+    @Test
+    public void testLargeHttpsInvocation() throws Exception {
+        try (TTransport transport = newTransport("https", "/large")) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo(LARGER_THAN_TLS);
+        }
+    }
+
+    @Test
+    public void testAcceptHeaderWithCommaSeparatedMediaTypes() throws Exception {
+        try (TTransport transport = newTransport("http", "/hello",
+                                                 HttpHeaders.of(HttpHeaderNames.ACCEPT, "text/plain, */*"))) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
+    @Test
+    public void testAcceptHeaderWithQValues() throws Exception {
+        // Server should choose TBINARY because it has higher q-value (0.5) than that of TTEXT (0.2)
+        try (TTransport transport = newTransport(
+                "http", "/hello",
+                HttpHeaders.of(HttpHeaderNames.ACCEPT,
+                               "application/x-thrift; protocol=TTEXT; q=0.2, " +
+                               "application/x-thrift; protocol=TBINARY; q=0.5"))) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
+    @Test
+    public void testAcceptHeaderWithDefaultQValues() throws Exception {
+        // Server should choose TBINARY because it has higher q-value (default 1.0) than that of TTEXT (0.2)
+        try (TTransport transport = newTransport(
+                "http", "/hello",
+                HttpHeaders.of(HttpHeaderNames.ACCEPT,
+                               "application/x-thrift; protocol=TTEXT; q=0.2, " +
+                               "application/x-thrift; protocol=TBINARY"))) {
+            HelloService.Client client =
+                    new HelloService.Client.Factory().getClient(
+                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+
+            assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+        }
+    }
+
+    @Test
+    public void testAcceptHeaderWithUnsupportedMediaTypes() throws Exception {
+        // Server should choose TBINARY because it does not support the media type
+        // with the highest preference (text/plain).
+        try (TTransport transport = newTransport(
+                "http", "/hello",
+                HttpHeaders.of(HttpHeaderNames.ACCEPT,
+                               "application/x-thrift; protocol=TBINARY; q=0.2, text/plain"))) {
             HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
                             ThriftProtocolFactories.BINARY.getProtocol(transport));
@@ -277,10 +357,15 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     protected final TTransport newTransport(String scheme, String path) throws TTransportException {
-        return newTransport(newUri(scheme, path));
+        return newTransport(scheme, path, HttpHeaders.EMPTY_HEADERS);
     }
 
-    protected abstract TTransport newTransport(String uri) throws TTransportException;
+    protected final TTransport newTransport(String scheme, String path,
+                                            HttpHeaders headers) throws TTransportException {
+        return newTransport(newUri(scheme, path), headers);
+    }
+
+    protected abstract TTransport newTransport(String uri, HttpHeaders headers) throws TTransportException;
 
     protected static String newUri(String scheme, String path) {
         switch (scheme) {

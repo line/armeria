@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public final class LoggingClient<I extends Request, O extends Response> extends DecoratingClient<I, O, I, O> {
+public final class LoggingClient<I extends Request, O extends Response> extends SimpleDecoratingClient<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
 

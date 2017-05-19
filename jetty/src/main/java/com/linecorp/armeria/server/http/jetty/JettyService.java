@@ -113,7 +113,8 @@ public final class JettyService implements HttpService {
 
             config.handler().ifPresent(server::setHandler);
             config.requestLog().ifPresent(server::setRequestLog);
-            config.sessionIdManager().ifPresent(server::setSessionIdManager);
+            config.sessionIdManagerFactory().ifPresent(
+                    factory -> server.setSessionIdManager(factory.apply(server)));
 
             config.handlerWrappers().forEach(server::insertHandler);
             config.attrs().forEach(server::setAttribute);

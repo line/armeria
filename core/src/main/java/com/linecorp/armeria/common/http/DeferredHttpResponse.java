@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.stream.DeferredStreamMessage;
  *         // Delay all requests by 3 seconds.
  *         DeferredHttpResponse res = new DeferredHttpResponse();
  *         ctx.eventLoop().schedule(() -> {
- *             res.setDelegate(delegate().serve(ctx, req));
+ *             res.delegate(delegate().serve(ctx, req));
  *         }, 3, TimeUnit.SECONDS);
  *         return res;
  *     }

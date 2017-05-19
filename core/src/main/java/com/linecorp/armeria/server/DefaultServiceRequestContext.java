@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
@@ -205,6 +206,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         return log;
     }
 
+    @Override
+    public ByteBufAllocator alloc() {
+        return ch.alloc();
+    }
+
     /**
      * Sets the listener that is notified when the {@linkplain #requestTimeoutMillis()} request timeout} of
      * the request is changed.
@@ -239,10 +245,16 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         buf.append('[')
            .append(sessionProtocol().uriText())
            .append("://")
-           .append(virtualHost().defaultHostname())
-           .append(':')
-           .append(((InetSocketAddress) remoteAddress()).getPort())
-           .append(path())
+           .append(virtualHost().defaultHostname());
+
+        final InetSocketAddress raddr = remoteAddress();
+        if (raddr != null) {
+            buf.append(':').append(raddr.getPort());
+        } else {
+            buf.append(":-1"); // Port unknown.
+        }
+
+        buf.append(path())
            .append('#')
            .append(method())
            .append(']');

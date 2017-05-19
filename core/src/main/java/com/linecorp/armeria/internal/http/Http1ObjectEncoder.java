@@ -59,7 +59,25 @@ import io.netty.util.collection.IntObjectMap;
 
 public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
+    /**
+     * The maximum allowed length of an HTTP chunk when TLS is enabled.
+     * <ul>
+     *   <li>16384 - The maximum length of a cleartext TLS record.</li>
+     *   <li>6 - The maximum header length of an HTTP chunk. i.e. "4000\r\n".length()</li>
+     * </ul>
+     *
+     * <p>To be precise, we have a chance of wasting 6 bytes because we may not use chunked encoding,
+     * but it is not worth adding complexity to be that precise.
+     */
+    private static final int MAX_TLS_DATA_LENGTH = 16384 - 6;
+
+    /**
+     * A non-last empty {@link HttpContent}.
+     */
+    private static final HttpContent EMPTY_CONTENT = new DefaultHttpContent(Unpooled.EMPTY_BUFFER);
+
     private final boolean server;
+    private final boolean isTls;
 
     /**
      * The ID of the request which is at its turn to send a response.
@@ -79,10 +97,11 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
     /**
      * The map which maps a request ID to its related pending response.
      */
-    private final IntObjectMap<PendingWrites> pendingWrites = new IntObjectHashMap<>();
+    private final IntObjectMap<PendingWrites> pendingWritesMap = new IntObjectHashMap<>();
 
-    public Http1ObjectEncoder(boolean server) {
+    public Http1ObjectEncoder(boolean server, boolean isTls) {
         this.server = server;
+        this.isTls = isTls;
     }
 
     @Override
@@ -92,15 +111,66 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             return ctx.newFailedFuture(ClosedSessionException.get());
         }
 
-        final HttpObject converted;
         try {
-            converted = server ? convertServerHeaders(streamId, headers, endStream)
-                               : convertClientHeaders(streamId, headers, endStream);
-
-            return write(ctx, id, converted, endStream);
+            return server ? writeServerHeaders(ctx, id, streamId, headers, endStream)
+                          : writeClientHeaders(ctx, id, streamId, headers, endStream);
         } catch (Throwable t) {
             return ctx.newFailedFuture(t);
         }
+    }
+
+    private ChannelFuture writeServerHeaders(
+            ChannelHandlerContext ctx, int id, int streamId,
+            HttpHeaders headers, boolean endStream) throws Http2Exception {
+
+        final HttpObject converted = convertServerHeaders(streamId, headers, endStream);
+        final HttpStatus status = headers.status();
+        if (status == null) {
+            // Trailing headers
+            final ChannelFuture f = write(ctx, id, converted, endStream);
+            ctx.flush();
+            return f;
+        }
+
+        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+            // Informational status headers.
+            final ChannelFuture f = write(ctx, id, converted, false);
+            if (endStream) {
+                // Can't end a stream with informational status in HTTP/1.
+                f.addListener(ChannelFutureListener.CLOSE);
+            }
+            ctx.flush();
+            return f;
+        }
+
+        // Non-informational status headers.
+        return writeNonInformationalHeaders(ctx, id, converted, endStream);
+    }
+
+    private ChannelFuture writeClientHeaders(
+            ChannelHandlerContext ctx, int id, int streamId,
+            HttpHeaders headers, boolean endStream) throws Http2Exception {
+
+        return writeNonInformationalHeaders(
+                ctx, id, convertClientHeaders(streamId, headers, endStream), endStream);
+    }
+
+    private ChannelFuture writeNonInformationalHeaders(
+            ChannelHandlerContext ctx, int id, HttpObject converted, boolean endStream) {
+
+        ChannelFuture f;
+        if (converted instanceof LastHttpContent) {
+            assert endStream;
+            f = write(ctx, id, converted, true);
+        } else {
+            f = write(ctx, id, converted, false);
+            if (endStream) {
+                f = write(ctx, id, LastHttpContent.EMPTY_LAST_CONTENT, true);
+            }
+        }
+
+        ctx.flush();
+        return f;
     }
 
     private HttpObject convertServerHeaders(
@@ -221,17 +291,72 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             return ctx.newFailedFuture(ClosedSessionException.get());
         }
 
+        final int length = data.length();
+        if (length == 0) {
+            final HttpContent content = endStream ? LastHttpContent.EMPTY_LAST_CONTENT : EMPTY_CONTENT;
+            final ChannelFuture future = write(ctx, id, content, endStream);
+            ctx.flush();
+            return future;
+        }
+
         try {
-            final ByteBuf buf = toByteBuf(ctx, data);
-            final HttpContent content;
-            if (endStream) {
-                content = new DefaultLastHttpContent(buf);
+            if (isTls && length > MAX_TLS_DATA_LENGTH) {
+                // TLS and data.length() > MAX_TLS_DATA_LENGTH
+                return doWriteSplitData(ctx, id, data, endStream);
             } else {
-                content = new DefaultHttpContent(buf);
+                // Cleartext connection or data.length() <= MAX_TLS_DATA_LENGTH
+                final ByteBuf buf = toByteBuf(ctx, data);
+                final HttpContent content;
+                if (endStream) {
+                    content = new DefaultLastHttpContent(buf);
+                } else {
+                    content = new DefaultHttpContent(buf);
+                }
+                ChannelFuture future = write(ctx, id, content, endStream);
+                ctx.flush();
+                return future;
             }
-            return write(ctx, id, content, endStream);
         } catch (Throwable t) {
             return ctx.newFailedFuture(t);
+        }
+    }
+
+    private ChannelFuture doWriteSplitData(
+            ChannelHandlerContext ctx, int id, HttpData data, boolean endStream) {
+
+        int offset = data.offset();
+        int remaining = data.length();
+        ChannelFuture lastFuture;
+        for (;;) {
+            // Ensure an HttpContent does not exceed the maximum length of a cleartext TLS record.
+            final int chunkSize = Math.min(MAX_TLS_DATA_LENGTH, remaining);
+            lastFuture = write(ctx, id, new DefaultHttpContent(dataChunk(data, offset, chunkSize)), false);
+            remaining -= chunkSize;
+            if (remaining == 0) {
+                break;
+            }
+            offset += chunkSize;
+        }
+
+        if (endStream) {
+            lastFuture = write(ctx, id, LastHttpContent.EMPTY_LAST_CONTENT, true);
+        }
+
+        ctx.flush();
+
+        if (data instanceof ByteBufHttpData) {
+            ((ByteBufHttpData) data).buf().release();
+        }
+
+        return lastFuture;
+    }
+
+    private ByteBuf dataChunk(HttpData data, int offset, int chunkSize) {
+        if (data instanceof ByteBufHttpData) {
+            ByteBuf buf = ((ByteBufHttpData) data).buf();
+            return buf.retainedSlice(offset, chunkSize);
+        } else {
+            return Unpooled.wrappedBuffer(data.array(), offset, chunkSize);
         }
     }
 
@@ -242,10 +367,10 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             return ctx.newFailedFuture(ClosedPublisherException.get());
         }
 
-        final PendingWrites currentPendingWrites = pendingWrites.get(id);
+        final PendingWrites currentPendingWrites = pendingWritesMap.get(id);
         if (id == currentId) {
             if (currentPendingWrites != null) {
-                pendingWrites.remove(id);
+                pendingWritesMap.remove(id);
                 flushPendingWrites(ctx, currentPendingWrites);
             }
 
@@ -255,7 +380,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
                 // The next PendingWrites might be complete already.
                 for (;;) {
-                    final PendingWrites nextPendingWrites = pendingWrites.get(currentId);
+                    final PendingWrites nextPendingWrites = pendingWritesMap.get(currentId);
                     if (nextPendingWrites == null) {
                         break;
                     }
@@ -265,28 +390,28 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
                         break;
                     }
 
-                    pendingWrites.remove(currentId);
+                    pendingWritesMap.remove(currentId);
                     currentId++;
                 }
             }
 
-            ctx.flush();
             return future;
         } else {
             final ChannelPromise promise = ctx.newPromise();
             final Entry<HttpObject, ChannelPromise> entry = new SimpleImmutableEntry<>(obj, promise);
-
+            final PendingWrites pendingWrites;
             if (currentPendingWrites == null) {
-                final PendingWrites newPendingWrites = new PendingWrites();
+                pendingWrites = new PendingWrites();
                 maxIdWithPendingWrites = Math.max(maxIdWithPendingWrites, id);
-                newPendingWrites.add(entry);
-                pendingWrites.put(id, newPendingWrites);
+                pendingWritesMap.put(id, pendingWrites);
             } else {
-                currentPendingWrites.add(entry);
+                pendingWrites = currentPendingWrites;
             }
 
+            pendingWrites.add(entry);
+
             if (endStream) {
-                currentPendingWrites.setEndOfStream();
+                pendingWrites.setEndOfStream();
             }
 
             return promise;
@@ -311,7 +436,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
         minClosedId = Math.min(minClosedId, id);
         for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
-            final PendingWrites pendingWrites = this.pendingWrites.remove(i);
+            final PendingWrites pendingWrites = this.pendingWritesMap.remove(i);
             for (;;) {
                 final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
                 if (e == null) {
@@ -331,12 +456,12 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
     @Override
     protected void doClose() {
-        if (pendingWrites.isEmpty()) {
+        if (pendingWritesMap.isEmpty()) {
             return;
         }
 
         final ClosedSessionException cause = ClosedSessionException.get();
-        for (Queue<Entry<HttpObject, ChannelPromise>> queue : pendingWrites.values()) {
+        for (Queue<Entry<HttpObject, ChannelPromise>> queue : pendingWritesMap.values()) {
             for (;;) {
                 final Entry<HttpObject, ChannelPromise> e = queue.poll();
                 if (e == null) {
@@ -347,7 +472,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             }
         }
 
-        pendingWrites.clear();
+        pendingWritesMap.clear();
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {
@@ -358,6 +483,11 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
         PendingWrites() {
             super(4);
+        }
+
+        @Override
+        public boolean add(Entry<HttpObject, ChannelPromise> httpObjectChannelPromiseEntry) {
+            return isEndOfStream() ? false : super.add(httpObjectChannelPromiseEntry);
         }
 
         boolean isEndOfStream() {

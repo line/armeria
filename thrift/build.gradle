@@ -1,3 +1,7 @@
+plugins {
+    id 'me.champeau.gradle.jmh' version '0.3.1'
+}
+
 managedDependencies {
     // Thrift
     compile 'org.apache.thrift:libthrift'
@@ -9,6 +13,7 @@ managedDependencies {
 
 // Keep the original Guava references in ThriftListenableFuture,
 // which is the only place we expose Guava classes in our public API.
+// NB: Keep this same with 'armeria-thrift0.9'.
 tasks.shadedJar.exclude 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*'
 tasks.shadedJar.doLast {
     ant.jar(update: true, destfile: tasks.shadedJar.archivePath) {
@@ -16,3 +21,7 @@ tasks.shadedJar.doLast {
                 includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')
     }
 }
+
+configurations.jmh.extendsFrom configurations.testRuntimeClasspath
+
+tasks.checkstyleJmh.enabled = false

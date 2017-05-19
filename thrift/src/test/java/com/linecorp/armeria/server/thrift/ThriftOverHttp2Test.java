@@ -18,9 +18,15 @@ package com.linecorp.armeria.server.thrift;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
+import com.linecorp.armeria.common.http.HttpHeaders;
+
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+
 public class ThriftOverHttp2Test extends AbstractThriftOverHttpTest {
     @Override
-    protected TTransport newTransport(String uri) throws TTransportException {
-        return new THttp2Client(uri);
+    protected TTransport newTransport(String uri, HttpHeaders headers) throws TTransportException {
+        final io.netty.handler.codec.http.HttpHeaders nettyDefaultHeaders = new DefaultHttpHeaders();
+        headers.names().forEach(name -> nettyDefaultHeaders.set(name, headers.getAll(name)));
+        return new THttp2Client(uri, nettyDefaultHeaders);
     }
 }

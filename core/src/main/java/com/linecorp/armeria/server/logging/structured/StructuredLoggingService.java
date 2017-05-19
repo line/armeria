@@ -22,12 +22,12 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 
 /**
  * A decorating service which provides support of structured and optionally externalized request/response
@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @param <L> the type of the structured log representation
  */
 public abstract class StructuredLoggingService<I extends Request, O extends Response, L>
-        extends DecoratingService<I, O, I, O> {
+        extends SimpleDecoratingService<I, O> {
 
     private final StructuredLogBuilder<L> logBuilder;
     private Server associatedServer;

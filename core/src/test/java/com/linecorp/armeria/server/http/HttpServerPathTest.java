@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.io.ByteStreams;
@@ -34,31 +35,32 @@ import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.util.NetUtil;
 
-public class HttpServerPathTest extends AbstractServerTest {
+public class HttpServerPathTest {
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.port(0, HttpSessionProtocols.HTTP);
-        sb.serviceAt("/service/foo", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
-                    throws Exception {
-                res.respond(HttpStatus.OK);
-            }
-        });
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.port(0, HttpSessionProtocols.HTTP);
+            sb.serviceAt("/service/foo", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.respond(HttpStatus.OK);
+                }
+            });
 
-        sb.serviceUnder("/", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
-                    throws Exception {
-                res.respond(HttpStatus.OK);
-            }
-        });
-    }
+            sb.serviceUnder("/", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    res.respond(HttpStatus.OK);
+                }
+            });
+        }
+    };
 
     private static final Map<String, HttpStatus> TEST_URLS = new HashMap<>();
 
@@ -113,7 +115,7 @@ public class HttpServerPathTest extends AbstractServerTest {
     private static void urlPathAssertion(HttpStatus expected, String path) throws Exception {
         final String requestString = "GET " + path + " HTTP/1.0\r\n\r\n";
 
-        try (Socket s = new Socket(NetUtil.LOCALHOST, httpPort())) {
+        try (Socket s = new Socket(NetUtil.LOCALHOST, server.httpPort())) {
             s.setSoTimeout(10000);
             s.getOutputStream().write(requestString.getBytes(StandardCharsets.US_ASCII));
             assertThat(new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII))

@@ -17,19 +17,27 @@
 package com.linecorp.armeria.client.endpoint;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.util.Listenable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * A list of {@link Endpoint}s.
  */
 @FunctionalInterface
-public interface EndpointGroup extends SafeCloseable {
+public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable {
     /**
      * Return the endpoints held by this {@link EndpointGroup}.
      */
     List<Endpoint> endpoints();
+
+    @Override
+    default void addListener(Consumer<? super List<Endpoint>> listener) {}
+
+    @Override
+    default void removeListener(Consumer<?> listener) {}
 
     @Override
     default void close() {}

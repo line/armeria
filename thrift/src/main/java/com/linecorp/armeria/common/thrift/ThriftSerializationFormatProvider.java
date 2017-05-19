@@ -16,12 +16,13 @@
 
 package com.linecorp.armeria.common.thrift;
 
-import static com.linecorp.armeria.common.MediaType.create;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SerializationFormatProvider;
 
@@ -33,16 +34,28 @@ public final class ThriftSerializationFormatProvider extends SerializationFormat
     protected Set<Entry> entries() {
         return ImmutableSet.of(
                 new Entry("tbinary",
-                          create("application", "x-thrift").withParameter("protocol", "TBINARY"),
-                          create("application", "vnd.apache.thrift.binary")),
+                          create("x-thrift", "TBINARY"),
+                          create("vnd.apache.thrift.binary")),
                 new Entry("tcompact",
-                          create("application", "x-thrift").withParameter("protocol", "TCOMPACT"),
-                          create("application", "vnd.apache.thrift.compact")),
+                          create("x-thrift", "TCOMPACT"),
+                          create("vnd.apache.thrift.compact")),
                 new Entry("tjson",
-                          create("application", "x-thrift").withParameter("protocol", "TJSON"),
-                          create("application", "vnd.apache.thrift.json")),
+                          create("x-thrift", "TJSON"),
+                          create("x-thrift", "TJSON").withCharset(UTF_8),
+                          create("vnd.apache.thrift.json"),
+                          create("vnd.apache.thrift.json").withCharset(UTF_8)),
                 new Entry("ttext",
-                          create("application", "x-thrift").withParameter("protocol", "TTEXT"),
-                          create("application", "vnd.apache.thrift.text")));
+                          create("x-thrift", "TTEXT"),
+                          create("x-thrift", "TTEXT").withCharset(UTF_8),
+                          create("vnd.apache.thrift.text"),
+                          create("vnd.apache.thrift.text").withCharset(UTF_8)));
+    }
+
+    private static MediaType create(String subtype) {
+        return MediaType.create("application", subtype);
+    }
+
+    private static MediaType create(String subtype, String protocol) {
+        return create(subtype).withParameter("protocol", protocol);
     }
 }

@@ -44,15 +44,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.SessionOption;
 import com.linecorp.armeria.client.SessionOptionValue;
 import com.linecorp.armeria.client.SessionOptions;
@@ -276,20 +273,13 @@ public class ThriftOverHttpClientTest {
                         poolHandlerDecoratorOptVal,
                         SessionOption.USE_HTTP2_PREFACE.newValue(false))));
 
-        final Function<Client<RpcRequest, RpcResponse>,
-                       Client<RpcRequest, RpcResponse>> logCollectingDecorator =
-                s -> new DecoratingClient<RpcRequest, RpcResponse, RpcRequest, RpcResponse>(s) {
-                    @Override
-                    public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
-                        if (recordMessageLogs) {
-                            ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
-                        }
-                        return delegate().execute(ctx, req);
-                    }
-                };
-
         final ClientDecorationBuilder decoBuilder = new ClientDecorationBuilder();
-        decoBuilder.add(RpcRequest.class, RpcResponse.class, logCollectingDecorator);
+        decoBuilder.add(RpcRequest.class, RpcResponse.class, (delegate, ctx, req) -> {
+            if (recordMessageLogs) {
+                ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
+            }
+            return delegate.execute(ctx, req);
+        });
 
         if (ENABLE_LOGGING_DECORATORS) {
             decoBuilder.add(RpcRequest.class, RpcResponse.class, LoggingClient::new);

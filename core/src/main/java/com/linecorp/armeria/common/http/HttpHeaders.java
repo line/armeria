@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import javax.annotation.Nullable;
+
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
@@ -159,6 +161,7 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     /**
      * Gets the {@link HttpHeaderNames#STATUS} header or {@code null} if there is no such header.
      */
+    @Nullable
     HttpStatus status();
 
     /**

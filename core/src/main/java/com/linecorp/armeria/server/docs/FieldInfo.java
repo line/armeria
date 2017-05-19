@@ -22,8 +22,11 @@ import java.util.Objects;
 
 import javax.annotation.Nullable;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 
 /**
  * Metadata about a field of a struct or an exception.
@@ -32,24 +35,25 @@ public final class FieldInfo {
 
     private final String name;
     private final FieldRequirement requirement;
-    private final TypeInfo typeInfo;
+    private final TypeSignature typeSignature;
     private final String docString;
 
     /**
      * Creates a new instance.
      */
-    public FieldInfo(String name, FieldRequirement requirement, TypeInfo typeInfo) {
-        this(name, requirement, typeInfo, null);
+    public FieldInfo(String name, FieldRequirement requirement, TypeSignature typeSignature) {
+        this(name, requirement, typeSignature, null);
     }
 
     /**
      * Creates a new instance.
      */
-    public FieldInfo(String name, FieldRequirement requirement, TypeInfo typeInfo, @Nullable String docString) {
+    public FieldInfo(String name, FieldRequirement requirement,
+                     TypeSignature typeSignature, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
         this.requirement = requireNonNull(requirement, "requirement");
-        this.typeInfo = requireNonNull(typeInfo, "typeInfo");
-        this.docString = docString;
+        this.typeSignature = requireNonNull(typeSignature, "typeSignature");
+        this.docString = Strings.emptyToNull(docString);
     }
 
     /**
@@ -72,14 +76,16 @@ public final class FieldInfo {
      * Returns the metadata about the type of the field.
      */
     @JsonProperty
-    public TypeInfo typeInfo() {
-        return typeInfo;
+    public TypeSignature typeSignature() {
+        return typeSignature;
     }
 
     /**
      * Returns the documentation string of the field.
      */
     @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
     public String docString() {
         return docString;
     }
@@ -97,12 +103,12 @@ public final class FieldInfo {
         final FieldInfo that = (FieldInfo) o;
         return name.equals(that.name) &&
                requirement == that.requirement &&
-               typeInfo.equals(that.typeInfo);
+               typeSignature.equals(that.typeSignature);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, requirement, typeInfo);
+        return Objects.hash(name, requirement, typeSignature);
     }
 
     @Override
@@ -110,7 +116,7 @@ public final class FieldInfo {
         return MoreObjects.toStringHelper(this)
                           .add("name", name)
                           .add("requirement", requirement)
-                          .add("typeInfo", typeInfo)
+                          .add("typeSignature", typeSignature)
                           .toString();
     }
 }

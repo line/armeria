@@ -5,7 +5,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 
-import com.linecorp.armeria.common.http.DeferredHttpResponse;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -33,23 +32,14 @@ final class MappedDynamicFunction extends AbstractHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        try {
-            Object ret = function.serve(ctx, req, args);
-            if (!(ret instanceof CompletionStage)) {
-                throw new IllegalStateException("Illegal return type: " + ret.getClass().getSimpleName());
-            }
-            ((CompletionStage<HttpResponse>) ret)
-                    .whenComplete((httpResponse, t) -> {
-                        if (t != null) {
-                            res.close(t);
-                        } else {
-                            res.delegate(httpResponse);
-                        }
-                    });
-        } catch (Throwable e) {
-            res.close(e);
+        final Object ret = function.serve(ctx, req, args);
+        if (!(ret instanceof CompletionStage)) {
+            return HttpResponse.ofFailed(new IllegalStateException(
+                    "illegal return type: " + ret.getClass().getSimpleName()));
         }
-        return res;
+
+        @SuppressWarnings("unchecked")
+        CompletionStage<HttpResponse> castStage = (CompletionStage<HttpResponse>) ret;
+        return HttpResponse.from(castStage);
     }
 }

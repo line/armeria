@@ -32,194 +32,86 @@ import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.test.AbstractServiceServer;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 public class StaticEndpointGroupIntegrationTest {
     @Rule
-    public TestName name = new TestName();
-
-    private static class ServiceServer extends AbstractServiceServer {
-        private final HelloService.Iface handler = dump -> "host:127.0.0.1:" + port();
-
-        @Override
-        protected void configureServer(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/serverIp", THttpService.of(handler));
-        }
-    }
-
-    @Test
-    public void testRoundRobinSelect() {
-        EndpointGroup endpointGroup = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234),
-                Endpoint.of("127.0.0.1", 2345),
-                Endpoint.of("127.0.0.1", 3456));
-        String groupName = name.getMethodName();
-
-        EndpointGroupRegistry.register(groupName, endpointGroup, WEIGHTED_ROUND_ROBIN);
-
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-    }
-
-    @Test
-    public void testWeightedRoundRobinSelect() {
-        //weight 1,2,3
-        EndpointGroup endpointGroup = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 1),
-                Endpoint.of("127.0.0.1", 2345, 2),
-                Endpoint.of("127.0.0.1", 3456, 3));
-        String groupName = name.getMethodName();
-
-        EndpointGroupRegistry.register(groupName, endpointGroup, WEIGHTED_ROUND_ROBIN);
-
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-
-        //weight 3,2,2
-        EndpointGroup endpointGroup2 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 3),
-                Endpoint.of("127.0.0.1", 2345, 2),
-                Endpoint.of("127.0.0.1", 3456, 2));
-        EndpointGroupRegistry.register(groupName, endpointGroup2, WEIGHTED_ROUND_ROBIN);
-
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-
-        //weight 4,4,4
-        EndpointGroup endpointGroup3 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 4),
-                Endpoint.of("127.0.0.1", 2345, 4),
-                Endpoint.of("127.0.0.1", 3456, 4));
-        EndpointGroupRegistry.register(groupName, endpointGroup3, WEIGHTED_ROUND_ROBIN);
-
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-
-        //weight 2,4,6
-        EndpointGroup endpointGroup4 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", 1234, 2),
-                Endpoint.of("127.0.0.1", 2345, 4),
-                Endpoint.of("127.0.0.1", 3456, 6));
-        EndpointGroupRegistry.register(groupName, endpointGroup4, WEIGHTED_ROUND_ROBIN);
-
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        //new round
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:1234"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:2345"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-        assertThat(EndpointGroupRegistry.selectNode(groupName).authority(), is("127.0.0.1:3456"));
-
-    }
+    public final TestName name = new TestName();
+    @Rule
+    public final ServerRule serverOne = new IpServerRule();
+    @Rule
+    public final ServerRule serverTwo = new IpServerRule();
+    @Rule
+    public final ServerRule serverThree = new IpServerRule();
 
     @Test
     public void testRoundRobinServerGroup() throws Exception {
-        ServiceServer serverOne = new ServiceServer().start();
-        ServiceServer serverTwo = new ServiceServer().start();
-        ServiceServer serverThree = new ServiceServer().start();
+        serverOne.start();
+        serverTwo.start();
+        serverThree.start();
 
         EndpointGroup endpointGroup = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", serverOne.port()),
-                Endpoint.of("127.0.0.1", serverTwo.port()),
-                Endpoint.of("127.0.0.1", serverThree.port()));
+                Endpoint.of("127.0.0.1", serverOne.httpPort()),
+                Endpoint.of("127.0.0.1", serverTwo.httpPort()),
+                Endpoint.of("127.0.0.1", serverThree.httpPort()));
         String groupName = name.getMethodName();
         String endpointGroupMark = "group:";
 
         EndpointGroupRegistry.register(groupName, endpointGroup, WEIGHTED_ROUND_ROBIN);
 
-        HelloService.Iface ipService = Clients.newClient("ttext+http://" + endpointGroupMark + groupName + "/serverIp",
-                                                         HelloService.Iface.class);
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
+        HelloService.Iface ipService = Clients.newClient(
+                "ttext+http://" + endpointGroupMark + groupName + "/serverIp",
+                HelloService.Iface.class);
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.httpPort()));
 
         StaticEndpointGroup serverGroup2 = new StaticEndpointGroup(
-                Endpoint.of("127.0.0.1", serverOne.port(), 2),
-                Endpoint.of("127.0.0.1", serverTwo.port(), 4),
-                Endpoint.of("127.0.0.1", serverThree.port(), 2));
+                Endpoint.of("127.0.0.1", serverOne.httpPort(), 2),
+                Endpoint.of("127.0.0.1", serverTwo.httpPort(), 4),
+                Endpoint.of("127.0.0.1", serverThree.httpPort(), 2));
 
         EndpointGroupRegistry.register(groupName, serverGroup2, WEIGHTED_ROUND_ROBIN);
 
         ipService = Clients.newClient("tbinary+http://" + endpointGroupMark + groupName + "/serverIp",
                                       HelloService.Iface.class);
 
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
 
         //new round
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverThree.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverTwo.httpPort()));
 
         //direct connect to ip host
-        ipService = Clients.newClient("tbinary+http://127.0.0.1:" + serverOne.port() + "/serverIp",
+        ipService = Clients.newClient("tbinary+http://127.0.0.1:" + serverOne.httpPort() + "/serverIp",
                                       HelloService.Iface.class);
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
-        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.port()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.httpPort()));
+        assertThat(ipService.hello("ip"), is("host:127.0.0.1:" + serverOne.httpPort()));
+    }
 
-        serverOne.close();
-        serverTwo.close();
-        serverThree.close();
+    private static class IpServerRule extends ServerRule {
+        private final HelloService.Iface handler = dump -> "host:127.0.0.1:" + httpPort();
+
+        protected IpServerRule() {
+            super(false); // Disable auto-start.
+        }
+
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceAt("/serverIp", THttpService.of(handler));
+        }
     }
 }

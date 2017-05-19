@@ -34,6 +34,7 @@ import com.twitter.zipkin.gen.Span;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -50,7 +51,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
  * @param <O> the {@link Response} type
  */
 public abstract class AbstractTracingClient<I extends Request, O extends Response>
-        extends DecoratingClient<I, O, I, O> {
+        extends SimpleDecoratingClient<I, O> {
 
     private final ClientTracingInterceptor clientInterceptor;
 

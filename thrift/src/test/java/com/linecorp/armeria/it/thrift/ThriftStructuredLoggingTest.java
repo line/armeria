@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.it.thrift;
 
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
 import org.apache.thrift.protocol.TMessageType;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.junit.MockitoJUnit;
@@ -41,11 +43,9 @@ import com.linecorp.armeria.server.thrift.ThriftStructuredLog;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_result;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
-public class ThriftStructuredLoggingTest extends AbstractServerTest {
-    @Rule
-    public final MockitoRule mockitoRule = MockitoJUnit.rule();
+public class ThriftStructuredLoggingTest {
 
     private static final BlockingQueue<ThriftStructuredLog> writtenLogs = new LinkedTransferQueue<>();
 
@@ -70,21 +70,26 @@ public class ThriftStructuredLoggingTest extends AbstractServerTest {
         }
     }
 
-    private MockedStructuredLoggingService<?, ?> loggingService;
+    private static MockedStructuredLoggingService<?, ?> loggingService;
+
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            loggingService = new MockedStructuredLoggingService<>(
+                    THttpService.of((HelloService.Iface) name -> "Hello " + name));
+            sb.serviceAt("/hello", loggingService);
+        }
+    };
 
     private static HelloService.Iface newClient() throws Exception {
-        String uri = "tbinary+" + uri("/hello");
+        server.start();
+        String uri = server.uri(BINARY, "/hello");
         return Clients.newClient(uri, HelloService.Iface.class);
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    protected void configureServer(ServerBuilder sb) {
-        loggingService = new MockedStructuredLoggingService<>(
-                THttpService.of((HelloService.Iface) name -> "Hello " + name));
-
-        sb.serviceAt("/hello", loggingService);
-    }
+    @Rule
+    public final MockitoRule mockitoRule = MockitoJUnit.rule();
 
     @Test(timeout = 10000)
     public void testStructuredLogging() throws Exception {
@@ -114,7 +119,7 @@ public class ThriftStructuredLoggingTest extends AbstractServerTest {
 
     @Test(timeout = 10000)
     public void testWriterClosed() throws Exception {
-        stopServer();
+        server.stop().join();
         assertThat(loggingService.closed).isEqualTo(1);
     }
 }

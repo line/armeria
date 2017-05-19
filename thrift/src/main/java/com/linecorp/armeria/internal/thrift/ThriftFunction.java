@@ -49,7 +49,7 @@ public final class ThriftFunction {
     private final Type type;
     private final Class<?> serviceType;
     private final String name;
-    private final TBase<TBase<?, ?>, TFieldIdEnum> result;
+    private final TBase<?, ?> result;
     private final TFieldIdEnum[] argFields;
     private final TFieldIdEnum successField;
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
@@ -67,9 +67,7 @@ public final class ThriftFunction {
 
     private ThriftFunction(
             Class<?> serviceType, String name, Object func, Type type,
-            TFieldIdEnum[] argFields,
-            TBase<TBase<?, ?>, TFieldIdEnum> result,
-            Class<?>[] declaredExceptions) throws Exception {
+            TFieldIdEnum[] argFields, TBase<?, ?> result, Class<?>[] declaredExceptions) throws Exception {
 
         this.func = func;
         this.type = type;
@@ -85,8 +83,8 @@ public final class ThriftFunction {
         TFieldIdEnum successField = null;
 
         if (result != null) { // if not oneway
-            @SuppressWarnings("rawtypes")
-            final Class<? extends TBase> resultType = result.getClass();
+            @SuppressWarnings("unchecked")
+            final Class<? extends TBase<?, ?>> resultType = (Class<? extends TBase<?, ?>>) result.getClass();
             @SuppressWarnings("unchecked")
             final Map<TFieldIdEnum, FieldMetaData> metaDataMap =
                     (Map<TFieldIdEnum, FieldMetaData>) FieldMetaData.getStructMetaDataMap(resultType);
@@ -141,8 +139,8 @@ public final class ThriftFunction {
      * @throws ClassCastException if this function is asynchronous
      */
     @SuppressWarnings("unchecked")
-    public ProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>> syncFunc() {
-        return (ProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>>) func;
+    public ProcessFunction<Object, TBase<?, ?>> syncFunc() {
+        return (ProcessFunction<Object, TBase<?, ?>>) func;
     }
 
     /**
@@ -151,8 +149,8 @@ public final class ThriftFunction {
      * @throws ClassCastException if this function is synchronous
      */
     @SuppressWarnings("unchecked")
-    public AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object> asyncFunc() {
-        return (AsyncProcessFunction<Object, TBase<TBase<?, ?>, TFieldIdEnum>, Object>) func;
+    public AsyncProcessFunction<Object, TBase<?, ?>, Object> asyncFunc() {
+        return (AsyncProcessFunction<Object, TBase<?, ?>, Object>) func;
     }
 
     /**
@@ -193,7 +191,7 @@ public final class ThriftFunction {
     /**
      * Returns a new empty arguments instance.
      */
-    public TBase<TBase<?, ?>, TFieldIdEnum> newArgs() {
+    public TBase<?, ?> newArgs() {
         if (isAsync()) {
             return asyncFunc().getEmptyArgsInstance();
         } else {
@@ -204,12 +202,12 @@ public final class ThriftFunction {
     /**
      * Returns a new arguments instance.
      */
-    public TBase<TBase<?, ?>, TFieldIdEnum> newArgs(List<Object> args) {
+    public TBase<?, ?> newArgs(List<Object> args) {
         requireNonNull(args, "args");
-        final TBase<TBase<?, ?>, TFieldIdEnum> newArgs = newArgs();
+        final TBase<?, ?> newArgs = newArgs();
         final int size = args.size();
         for (int i = 0; i < size; i++) {
-            newArgs.setFieldValue(argFields[i], args.get(i));
+            ThriftFieldAccess.set(newArgs, argFields[i], args.get(i));
         }
         return newArgs;
     }
@@ -217,25 +215,25 @@ public final class ThriftFunction {
     /**
      * Returns a new empty result instance.
      */
-    public TBase<TBase<?, ?>, TFieldIdEnum> newResult() {
+    public TBase<?, ?> newResult() {
         return result.deepCopy();
     }
 
     /**
      * Sets the success field of the specified {@code result} to the specified {@code value}.
      */
-    public void setSuccess(TBase<?, TFieldIdEnum> result, Object value) {
+    public void setSuccess(TBase<?, ?> result, Object value) {
         if (successField != null) {
-            result.setFieldValue(successField, value);
+            ThriftFieldAccess.set(result, successField, value);
         }
     }
 
     /**
      * Converts the specified {@code result} into a Java object.
      */
-    public Object getResult(TBase<TBase<?, ?>, TFieldIdEnum> result) throws TException {
+    public Object getResult(TBase<?, ?> result) throws TException {
         for (TFieldIdEnum fieldIdEnum : exceptionFields()) {
-            if (result.isSet(fieldIdEnum)) {
+            if (ThriftFieldAccess.isSet(result, fieldIdEnum)) {
                 throw (TException) ThriftFieldAccess.get(result, fieldIdEnum);
             }
         }
@@ -243,7 +241,7 @@ public final class ThriftFunction {
         final TFieldIdEnum successField = successField();
         if (successField == null) { //void method
             return null;
-        } else if (result.isSet(successField)) {
+        } else if (ThriftFieldAccess.isSet(result, successField)) {
             return ThriftFieldAccess.get(result, successField);
         } else {
             throw new TApplicationException(
@@ -252,23 +250,21 @@ public final class ThriftFunction {
         }
     }
 
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult(ProcessFunction<?, ?> func) {
+    private static TBase<?, ?> getResult(ProcessFunction<?, ?> func) {
         return getResult0(Type.SYNC, func.getClass(), func.getMethodName());
     }
 
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult(AsyncProcessFunction<?, ?, ?> asyncFunc) {
+    private static TBase<?, ?> getResult(AsyncProcessFunction<?, ?, ?> asyncFunc) {
         return getResult0(Type.ASYNC, asyncFunc.getClass(), asyncFunc.getMethodName());
     }
 
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getResult0(
-            Type type, Class<?> funcClass, String methodName) {
+    private static TBase<?, ?> getResult0(Type type, Class<?> funcClass, String methodName) {
 
         final String resultTypeName = typeName(type, funcClass, methodName, methodName + "_result");
         try {
             @SuppressWarnings("unchecked")
-            Class<TBase<TBase<?, ?>, TFieldIdEnum>> resultType =
-                    (Class<TBase<TBase<?, ?>, TFieldIdEnum>>) Class.forName(
-                            resultTypeName, false, funcClass.getClassLoader());
+            final Class<TBase<?, ?>> resultType =
+                    (Class<TBase<?, ?>>) Class.forName(resultTypeName, false, funcClass.getClassLoader());
             return resultType.newInstance();
         } catch (ClassNotFoundException ignored) {
             // Oneway function does not have a result type.
@@ -281,34 +277,31 @@ public final class ThriftFunction {
     /**
      * Sets the exception field of the specified {@code result} to the specified {@code cause}.
      */
-    public boolean setException(TBase<?, TFieldIdEnum> result, Throwable cause) {
+    public boolean setException(TBase<?, ?> result, Throwable cause) {
         Class<?> causeType = cause.getClass();
-        for (Entry<Class<Throwable>, TFieldIdEnum> e: exceptionFields.entrySet()) {
+        for (Entry<Class<Throwable>, TFieldIdEnum> e : exceptionFields.entrySet()) {
             if (e.getKey().isAssignableFrom(causeType)) {
-                result.setFieldValue(e.getValue(), cause);
+                ThriftFieldAccess.set(result, e.getValue(), cause);
                 return true;
             }
         }
         return false;
     }
 
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getArgs(ProcessFunction<?, ?> func) {
+    private static TBase<?, ?> getArgs(ProcessFunction<?, ?> func) {
         return getArgs0(Type.SYNC, func.getClass(), func.getMethodName());
     }
 
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getArgs(AsyncProcessFunction<?, ?, ?> asyncFunc) {
+    private static TBase<?, ?> getArgs(AsyncProcessFunction<?, ?, ?> asyncFunc) {
         return getArgs0(Type.ASYNC, asyncFunc.getClass(), asyncFunc.getMethodName());
     }
 
-    private static TBase<TBase<?, ?>, TFieldIdEnum> getArgs0(
-            Type type, Class<?> funcClass, String methodName) {
-
+    private static TBase<?, ?> getArgs0(Type type, Class<?> funcClass, String methodName) {
         final String argsTypeName = typeName(type, funcClass, methodName, methodName + "_args");
         try {
             @SuppressWarnings("unchecked")
-            Class<TBase<TBase<?, ?>, TFieldIdEnum>> argsType =
-                    (Class<TBase<TBase<?, ?>, TFieldIdEnum>>) Class.forName(
-                            argsTypeName, false, funcClass.getClassLoader());
+            final Class<TBase<?, ?>> argsType =
+                    (Class<TBase<?, ?>>) Class.forName(argsTypeName, false, funcClass.getClassLoader());
             return argsType.newInstance();
         } catch (Exception e) {
             throw new IllegalStateException("cannot determine the args class of method: " + methodName, e);

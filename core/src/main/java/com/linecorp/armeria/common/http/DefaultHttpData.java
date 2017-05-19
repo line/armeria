@@ -21,7 +21,7 @@ import com.google.common.base.MoreObjects;
 /**
  * Default {@link HttpData} implementation.
  */
-public final class DefaultHttpData implements HttpData {
+public final class DefaultHttpData extends AbstractHttpData {
 
     private final byte[] data;
     private final int offset;
@@ -54,41 +54,6 @@ public final class DefaultHttpData implements HttpData {
     }
 
     @Override
-    public int hashCode() {
-        final int end = offset + length;
-        int hash = 1;
-        for (int i = offset; i < end; i++) {
-            hash = hash * 31 + data[i];
-        }
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof HttpData)) {
-            return false;
-        }
-
-        if (this == obj) {
-            return true;
-        }
-
-        final HttpData that = (HttpData) obj;
-        if (length() != that.length()) {
-            return false;
-        }
-
-        final int endOffset = offset + length;
-        for (int i = offset, j = that.offset(); i < endOffset; i++, j++) {
-            if (data[i] != data[j]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    @Override
     @SuppressWarnings("ImplicitArrayToString")
     public String toString() {
         return MoreObjects.toStringHelper(this)
@@ -100,5 +65,10 @@ public final class DefaultHttpData implements HttpData {
     @Override
     public boolean isEndOfStream() {
         return endOfStream;
+    }
+
+    @Override
+    protected byte getByte(int index) {
+        return data[offset + index];
     }
 }

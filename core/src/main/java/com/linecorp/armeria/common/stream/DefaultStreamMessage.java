@@ -31,7 +31,12 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.http.ByteBufHttpData;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 
 /**
  * A {@link StreamMessage} which buffers the elements to be signaled into a {@link Queue}.
@@ -147,14 +152,27 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        subscribe0(new SubscriptionImpl(this, subscriber, null));
+        subscribe(subscriber, false);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
+        requireNonNull(subscriber, "subscriber");
+        subscribe0(new SubscriptionImpl(this, subscriber, null, withPooledObjects));
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        subscribe0(new SubscriptionImpl(this, subscriber, executor));
+        subscribe(subscriber, executor, false);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        subscribe0(new SubscriptionImpl(this, subscriber, executor, withPooledObjects));
     }
 
     private void subscribe0(SubscriptionImpl subscription) {
@@ -179,7 +197,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             return;
         }
 
-        final SubscriptionImpl newSubscription = new SubscriptionImpl(this, AbortingSubscriber.INSTANCE, null);
+        final SubscriptionImpl newSubscription = new SubscriptionImpl(
+                this, AbortingSubscriber.INSTANCE, null, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
             newSubscription.subscriber().onSubscribe(newSubscription);
         } else {
@@ -288,7 +307,16 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 @SuppressWarnings("unchecked")
                 final T o = (T) queue.remove();
                 onRemoval(o);
-                subscriber.onNext(o);
+                if (!subscription.withPooledObjects() && o instanceof ByteBufHttpData) {
+                    ByteBuf buf = ((ByteBufHttpData) o).buf();
+                    try {
+                        subscriber.onNext(HttpData.of(ByteBufUtil.getBytes(buf)));
+                    } finally {
+                        buf.release();
+                    }
+                } else {
+                    subscriber.onNext(o);
+                }
                 return true;
             }
         }
@@ -377,23 +405,29 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 break;
             }
 
-            if (e instanceof CloseEvent) {
-                final Throwable closeCause = ((CloseEvent) e).cause();
-                if (closeCause != null) {
-                    closeFuture.completeExceptionally(closeCause);
-                } else {
-                    closeFuture.complete(null);
+            try {
+                if (e instanceof CloseEvent) {
+                    final Throwable closeCause = ((CloseEvent) e).cause();
+                    if (closeCause != null) {
+                        closeFuture.completeExceptionally(closeCause);
+                    } else {
+                        closeFuture.complete(null);
+                    }
+                    continue;
                 }
-                continue;
-            }
 
-            if (e instanceof CompletableFuture) {
-                ((CompletableFuture<?>) e).completeExceptionally(cause);
-            }
+                if (e instanceof CompletableFuture) {
+                    ((CompletableFuture<?>) e).completeExceptionally(cause);
+                }
 
-            @SuppressWarnings("unchecked")
-            T obj = (T) e;
-            onRemoval(obj);
+                @SuppressWarnings("unchecked")
+                T obj = (T) e;
+                onRemoval(obj);
+            } finally {
+                if (e instanceof ByteBufHttpData) {
+                    ((ByteBufHttpData) e).buf().release();
+                }
+            }
         }
     }
 
@@ -402,12 +436,15 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         private final DefaultStreamMessage<?> publisher;
         private final Subscriber<Object> subscriber;
         private final Executor executor;
+        private final boolean withPooledObjects;
 
         @SuppressWarnings("unchecked")
-        SubscriptionImpl(DefaultStreamMessage<?> publisher, Subscriber<?> subscriber, Executor executor) {
+        SubscriptionImpl(DefaultStreamMessage<?> publisher, Subscriber<?> subscriber, Executor executor,
+                         boolean withPooledObjects) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
+            this.withPooledObjects = withPooledObjects;
         }
 
         Subscriber<Object> subscriber() {
@@ -416,6 +453,10 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
         Executor executor() {
             return executor;
+        }
+
+        boolean withPooledObjects() {
+            return withPooledObjects;
         }
 
         @Override
@@ -450,6 +491,9 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                                                : CANCELLED_CLOSE;
 
                 publisher.pushObject(closeEvent);
+            } else {
+                // Ensure the closeFuture is notified if not notified yet.
+                publisher.notifySubscriber();
             }
         }
 

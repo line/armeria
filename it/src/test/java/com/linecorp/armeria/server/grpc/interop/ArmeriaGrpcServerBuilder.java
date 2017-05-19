@@ -18,7 +18,9 @@ package com.linecorp.armeria.server.grpc.interop;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
@@ -26,22 +28,27 @@ import javax.net.ssl.SSLException;
 import com.google.instrumentation.stats.StatsContextFactory;
 
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.ServerServiceDefinition;
+import io.grpc.ServerStreamTracer.Factory;
 import io.grpc.internal.AbstractServerImplBuilder;
 import io.grpc.internal.InternalServer;
-import io.grpc.internal.NoopStatsContextFactory;
 
 public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaGrpcServerBuilder> {
 
     private final com.linecorp.armeria.server.ServerBuilder armeriaServerBuilder;
     private final GrpcServiceBuilder grpcServiceBuilder;
+    private final AtomicReference<ServiceRequestContext> ctxCapture;
 
-    public ArmeriaGrpcServerBuilder(com.linecorp.armeria.server.ServerBuilder armeriaServerBuilder,
-                                    GrpcServiceBuilder grpcServiceBuilder) {
+    public ArmeriaGrpcServerBuilder(ServerBuilder armeriaServerBuilder,
+                                    GrpcServiceBuilder grpcServiceBuilder,
+                                    AtomicReference<ServiceRequestContext> ctxCapture) {
         this.armeriaServerBuilder = armeriaServerBuilder;
         this.grpcServiceBuilder = grpcServiceBuilder;
+        this.ctxCapture = ctxCapture;
     }
 
     @Override
@@ -60,17 +67,21 @@ public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaG
     }
 
     @Override
-    protected InternalServer buildTransportServer() {
+    protected InternalServer buildTransportServer(List<Factory> streamTracerFactories) {
         Object registryBuilder = getFieldByReflection("registryBuilder", this, AbstractServerImplBuilder.class);
         Map<String, ServerServiceDefinition> services = getFieldByReflection("services", registryBuilder, null);
         services.values().forEach(grpcServiceBuilder::addService);
 
-        armeriaServerBuilder.serviceUnder("/", grpcServiceBuilder.build());
+        armeriaServerBuilder.serviceUnder("/", grpcServiceBuilder.build()
+                                                                 .decorate((delegate, ctx, req) -> {
+                                                                     ctxCapture.set(ctx);
+                                                                     return delegate.serve(ctx, req);
+                                                                 }));
         return new ArmeriaGrpcServer(armeriaServerBuilder.build());
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T getFieldByReflection(String name, Object instance, @Nullable Class<?> clazz) {
+    private static <T> T getFieldByReflection(String name, Object instance, @Nullable Class<?> clazz) {
         try {
             Field field = (clazz != null ? clazz : instance.getClass()).getDeclaredField(name);
             field.setAccessible(true);

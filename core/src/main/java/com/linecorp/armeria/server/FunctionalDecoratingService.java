@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.Response;
  * @see Service#decorate(DecoratingServiceFunction)
  */
 final class FunctionalDecoratingService<I extends Request, O extends Response>
-        extends DecoratingService<I, O, I, O> {
+        extends SimpleDecoratingService<I, O> {
 
     private final DecoratingServiceFunction<? super I, ? extends O> function;
 

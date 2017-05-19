@@ -1,60 +1,30 @@
+ext {
+    requiredProjects = rootProject.ext.publishedJavaProjects + project(':testing')
+}
+
 // Evaluate other projects first so that their dependencies are fully populated.
-rootProject.ext.publishedJavaProjects.each {
+project.ext.requiredProjects.each {
     evaluationDependsOn it.path
 }
 
-ext {
-    getTestConfigurations = { testProject -> testProject.configurations.findAll { cfg ->
-        cfg.name in ['compile', 'runtime', 'testCompile', 'testRuntime']
-    }}
-    testConfigurations = getTestConfigurations(project)
+// Clear the common dependencies set by the root project because we don't use them at all.
+configurations.each {
+    if (it.name != 'javaAgent') {
+        it.dependencies.clear()
+    }
 }
-// Clear the common dependencies set by the root project to make sure we do not pull the unshaded projects.
-ext.testConfigurations.each { it.dependencies.clear() }
-ext.testConfigurations.each { assert it.dependencies.empty } // Make sure we did not clear the copy.
 
 // Clear the common source sets set by the root project to make sure we do not compile anything additionally.
 sourceSets.findAll().each { set ->
     set.java.srcDirs = []
     set.resources.srcDirs = []
 }
-sourceSets.findAll().each { set ->
-    // Make sure we did not clear the copy.
-    assert set.java.srcDirs.empty
-    assert set.resources.srcDirs.empty
-}
 
-dependencies {
-    def addShaded = { Project testProject ->
-        if (testProject.tasks.findByName('trimShadedJar')) {
-            assert testProject.name == 'core'
-            testRuntime files(testProject.tasks.trimShadedJar.outJarFiles)
-        } else {
-            assert testProject.name != 'core'
-            testRuntime files(testProject.tasks.shadedJar.archivePath)
-        }
-
-        // Collect all dependencies of the project.
-        def allDeps = project.ext.getTestConfigurations(testProject).inject([]) { a, b -> a + b.dependencies }
-        allDeps.each { dep ->
-            // Do not pull the the shaded dependencies in.
-            if ("${dep.group}:${dep.name}".toString() in relocations.collect { it[0] }) {
-                return
-            }
-            if (dep instanceof ProjectDependency) {
-                owner.call(dep.dependencyProject) // Recurse.
-            } else {
-                testRuntime dep
-            }
-        }
-    }
-
-    // Pull all shaded JARs and their dependencies in.
-    rootProject.ext.publishedJavaProjects.each { addShaded it }
-}
+// Pull all shaded JARs and their dependencies in.
+project.ext.requiredProjects.each { addDependencies it }
 
 task allShadedJars {
-    rootProject.ext.publishedJavaProjects.each { testProject ->
+    project.ext.requiredProjects.each { testProject ->
         dependsOn testProject.tasks.assemble
     }
 }
@@ -64,7 +34,7 @@ task shadedTest(group: 'Verification',
 tasks.test.dependsOn tasks.shadedTest
 
 rootProject.ext.publishedJavaProjects.each { testProject ->
-    def shadedTestJarExtractTask = tasks.create("shaded${testProject.name.capitalize()}TestJarExtract", Copy) {
+    def shadedTestJarExtractTask = tasks.create(shadedName(testProject, 'TestJarExtract'), Copy) {
         def shadedTestJarTask = testProject.tasks.shadedTestJar
         dependsOn shadedTestJarTask
 
@@ -77,18 +47,20 @@ rootProject.ext.publishedJavaProjects.each { testProject ->
         into file("${sourceSets.test.output.classesDir.parent}/test-${testProject.name}")
     }
 
-    def shadedTestTask = tasks.create("shaded${testProject.name.capitalize()}Test", Test) {
+    def shadedTestTask = tasks.create(shadedName(testProject, 'Test'), Test) {
+        Configuration cfg = configurations.getByName(shadedName(testProject))
+        dependsOn cfg
         dependsOn tasks.allShadedJars
         dependsOn tasks.copyJavaAgents
         dependsOn shadedTestJarExtractTask
 
         // The tests against the shaded artifacts should run after testing against the unshaded ones.
-        rootProject.ext.publishedJavaProjects.each {
+        project.ext.requiredProjects.each {
             shouldRunAfter it.tasks.test
         }
 
         testClassesDir = shadedTestJarExtractTask.destinationDir
-        classpath = files(testClassesDir) + classpath
+        classpath = files(testClassesDir) + files(cfg.files)
 
         exclude('**/internal/shaded/**')
 
@@ -104,4 +76,54 @@ jacocoTestReport {
     reports {
         xml.enabled false
     }
+}
+
+/**
+ * Finds the dependencies of {@code initialProject} recursively and adds the found dependencies to
+ * the configuration named as {@code "shaded${initialProject.name}"}.
+ */
+private void addDependencies(Project initialProject,
+                             Project recursedProject = initialProject,
+                             Set<Project> visitedProjects = new HashSet<>()) {
+
+    if (visitedProjects.contains(recursedProject)) {
+        return
+    } else {
+        visitedProjects.add(recursedProject);
+    }
+
+    def configName = shadedName(initialProject)
+    project.configurations.maybeCreate(configName)
+
+    if (recursedProject.tasks.findByName('trimShadedJar')) {
+        assert recursedProject.name == 'core'
+        project.dependencies.add(configName, files(recursedProject.tasks.trimShadedJar.outJarFiles))
+    } else {
+        assert recursedProject.name != 'core'
+        project.dependencies.add(configName, files(recursedProject.tasks.shadedJar.archivePath))
+    }
+
+    // Collect all dependencies of the project.
+    def allDeps = testConfigurations(recursedProject).inject([]) { a, b -> a + b.dependencies }
+    allDeps.each { dep ->
+        // Do not pull the the shaded dependencies in.
+        if ("${dep.group}:${dep.name}".toString() in relocations.collect { it[0] }) {
+            return
+        }
+        if (dep instanceof ProjectDependency) {
+            addDependencies(initialProject, dep.dependencyProject, visitedProjects) // Recurse.
+        } else {
+            project.dependencies.add(configName, dep)
+        }
+    }
+}
+
+private static Collection<Configuration> testConfigurations(Project project) {
+    return project.configurations.findAll { cfg ->
+        cfg.name in ['compile', 'runtime', 'testCompile', 'testRuntime']
+    }
+}
+
+private static String shadedName(Project project, String suffix = '') {
+    return "shaded${project.name.capitalize()}${suffix}"
 }

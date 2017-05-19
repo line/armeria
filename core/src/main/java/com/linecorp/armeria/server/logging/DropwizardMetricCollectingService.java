@@ -30,9 +30,9 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.logging.DropwizardMetricCollector;
-import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 
 /**
  * Decorates a {@link Service} to collect metrics into Dropwizard {@link MetricRegistry}.
@@ -55,7 +55,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * @param <O> the {@link Response} type
  */
 public final class DropwizardMetricCollectingService<I extends Request, O extends Response>
-        extends DecoratingService<I, O, I, O> {
+        extends SimpleDecoratingService<I, O> {
 
     /**
      * Returns a new {@link Service} decorator that tracks request stats using the Dropwizard metrics
