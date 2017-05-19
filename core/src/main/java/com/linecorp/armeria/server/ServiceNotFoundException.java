@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  */
 public final class ServiceNotFoundException extends RuntimeException {
 
-    private static final long serialVersionUID = 1268757990666737813L;
+    private static final long serialVersionUID = -3985509541647035904L;
 
     private static final ServiceNotFoundException INSTANCE =
             Exceptions.clearTrace(new ServiceNotFoundException());
