@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.escape.Escaper;
 import com.google.common.escape.Escapers;
 
@@ -29,16 +28,14 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 import okhttp3.HttpUrl;
 import retrofit2.Retrofit;
+import retrofit2.Retrofit.Builder;
 
 /**
  * A helper class for creating a new {@link Retrofit} instance with {@link ArmeriaCallFactory}.
  * For example,
  * <pre>{@code
- * HttpClient httpClient = Clients.newClient(ClientFactory.DEFAULT,
- *                                           "none+http://localhost:8080",
- *                                           HttpClient.class);
  *
- * Retrofit retrofit = ArmeriaRetrofit.builder(httpClient)
+ * Retrofit retrofit = ArmeriaRetrofit.builder("none+http://localhost:8080")
  *     .addConverterFactory(GsonConverterFactory.create())
  *     .build();
  *
@@ -48,37 +45,50 @@ import retrofit2.Retrofit;
  * </pre>
  */
 public final class ArmeriaRetrofit {
+
     private static final Escaper GROUP_NAME_ESCAPER = Escapers.builder()
-                                                              .addEscape('@', "_")
-                                                              .addEscape('/', "_")
-                                                              .addEscape('\\', "_")
-                                                              .addEscape('?', "_")
-                                                              .addEscape('#', "_")
                                                               .addEscape(':', "_")
                                                               .build();
 
     /**
      * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
      * {@link HttpClient} instance.
+     *
+     * @deprecated Use {@link String} instead.
      */
+    @Deprecated
     public static Retrofit.Builder builder(HttpClient httpClient) {
-        return new Retrofit.Builder()
-                .baseUrl(convertToOkHttpUrl(httpClient.uri()))
-                .callFactory(new ArmeriaCallFactory(httpClient));
+        return builder(httpClient.uri());
     }
 
-    @VisibleForTesting
-    static HttpUrl convertToOkHttpUrl(URI uri) {
+    /**
+     * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
+     * {@link URI} instance.
+     *
+     * @see Builder#baseUrl(String)
+     */
+    public static Retrofit.Builder builder(URI uri) {
         requireNonNull(uri.getScheme(), "uri does not contain the scheme component.");
+        SessionProtocol sessionProtocol = Scheme.tryParse(uri.getScheme())
+                                                .map(Scheme::sessionProtocol)
+                                                .orElseGet(() -> SessionProtocol.of(uri.getScheme()));
+        return new Retrofit.Builder()
+                .baseUrl(convertToOkHttpUrl(sessionProtocol, uri.getAuthority(), uri.getPath()))
+                .callFactory(ArmeriaCallFactory.create(sessionProtocol));
+    }
 
-        SessionProtocol sessionProtocol =
-                Scheme.tryParse(uri.getScheme())
-                      .map(Scheme::sessionProtocol)
-                      .orElseGet(() -> SessionProtocol.of(uri.getScheme()));
+    /**
+     * Creates a {@link Retrofit.Builder} with {@link ArmeriaCallFactory} using the specified
+     * url.
+     *
+     * @see Builder#baseUrl(String)
+     */
+    public static Retrofit.Builder builder(String url) {
+        return builder(URI.create(url));
+    }
 
+    private static HttpUrl convertToOkHttpUrl(SessionProtocol sessionProtocol, String authority, String path) {
         String protocol = sessionProtocol.isTls() ? "https" : "http";
-        String authority = uri.getAuthority();
-        String path = uri.getPath();
         final HttpUrl okHttpUrl = HttpUrl.parse(protocol + "://" + authority + path);
         if (okHttpUrl == null) {
             return HttpUrl.parse(protocol + "://" + GROUP_NAME_ESCAPER.escape(authority) + path);
