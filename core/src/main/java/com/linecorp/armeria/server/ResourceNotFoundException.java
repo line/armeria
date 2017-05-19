@@ -24,7 +24,6 @@ public final class ResourceNotFoundException extends RuntimeException {
 
     private static final long serialVersionUID = 1268757990666737813L;
 
-
     private static final ResourceNotFoundException INSTANCE =
             Exceptions.clearTrace(new ResourceNotFoundException());
 
