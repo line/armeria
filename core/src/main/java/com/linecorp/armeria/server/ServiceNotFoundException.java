@@ -18,7 +18,7 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A {@link RuntimeException} raised when a {@link Service} failed to find a resource.
+ * A {@link RuntimeException} raised when a {@link Service} cannot handle a request.
  */
 public final class ServiceNotFoundException extends RuntimeException {
 

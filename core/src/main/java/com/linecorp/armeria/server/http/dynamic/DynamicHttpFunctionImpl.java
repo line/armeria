@@ -55,7 +55,7 @@ final class DynamicHttpFunctionImpl implements DynamicHttpFunction {
     }
 
     /**
-     * Returns the set of parameter names which have a annotation of {@link PathParam}.
+     * Returns the set of parameter names which have an annotation of {@link PathParam}.
      */
     Set<String> pathParamNames() {
         return parameterEntries.stream()
