@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceNotFoundException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
@@ -86,6 +87,12 @@ public class DynamicHttpService extends AbstractHttpService {
         OrElseHttpService(DynamicHttpService first, Service<?, ? extends HttpResponse> second) {
             this.first = first;
             this.second = (Service<Request, HttpResponse>) second;
+        }
+
+        @Override
+        public void serviceAdded(ServiceConfig cfg) throws Exception {
+            first.serviceAdded(cfg);
+            second.serviceAdded(cfg);
         }
 
         @Override
