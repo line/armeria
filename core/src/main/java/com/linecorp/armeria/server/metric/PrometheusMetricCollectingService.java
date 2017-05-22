@@ -37,11 +37,11 @@ import io.prometheus.client.CollectorRegistry;
  * @param <I> {@link Request} type
  * @param <O> {@link Response} type
  */
-public final class PrometheusMetricCollectionService
+public final class PrometheusMetricCollectingService
         <T extends MetricLabel<T>, I extends Request, O extends Response>
         extends SimpleDecoratingService<I, O> {
     /**
-     * Returns a new {@link Service} decorator that tracks request stats using the Prometheus metrics  library.
+     * Returns a new {@link Service} decorator that tracks request stats using the Prometheus metrics library.
      *
      * @param <I> Request type
      * @param <O> Response type
@@ -51,14 +51,14 @@ public final class PrometheusMetricCollectionService
      * @return A service decorator function
      */
     public static <T extends MetricLabel<T>, I extends Request, O extends Response>
-    Function<Service<? super I, ? extends O>, PrometheusMetricCollectionService<T, I, O>>
+    Function<Service<? super I, ? extends O>, PrometheusMetricCollectingService<T, I, O>>
     newDecorator(CollectorRegistry collectorRegistry,
                  T[] metricLabels,
                  Function<RequestLog, Map<T, String>> labelingFunction) {
         PrometheusMetricRequestDecorator<T, I, O> decoratingServiceFunction =
                 PrometheusMetricRequestDecorator.decorateService(collectorRegistry, metricLabels,
                                                                  labelingFunction);
-        return service -> new PrometheusMetricCollectionService<>(service, decoratingServiceFunction);
+        return service -> new PrometheusMetricCollectingService<>(service, decoratingServiceFunction);
     }
 
     /**
@@ -72,19 +72,19 @@ public final class PrometheusMetricCollectionService
      * @return A service decorator function
      */
     public static <T extends MetricLabel<T>, I extends Request, O extends Response>
-    Function<Service<? super I, ? extends O>, PrometheusMetricCollectionService<T, I, O>>
+    Function<Service<? super I, ? extends O>, PrometheusMetricCollectingService<T, I, O>>
     newDecorator(CollectorRegistry collectorRegistry,
                  Iterable<T> metricLabels,
                  Function<RequestLog, Map<T, String>> labelingFunction) {
         PrometheusMetricRequestDecorator<T, I, O> decoratingServiceFunction =
                 PrometheusMetricRequestDecorator.decorateService(collectorRegistry, metricLabels,
                                                                  labelingFunction);
-        return service -> new PrometheusMetricCollectionService<>(service, decoratingServiceFunction);
+        return service -> new PrometheusMetricCollectingService<>(service, decoratingServiceFunction);
     }
 
     private final PrometheusMetricRequestDecorator<T, I, O> requestDecorator;
 
-    private PrometheusMetricCollectionService(Service<? super I, ? extends O> delegate,
+    private PrometheusMetricCollectingService(Service<? super I, ? extends O> delegate,
                                               PrometheusMetricRequestDecorator<T, I, O> requestDecorator) {
         super(delegate);
         this.requestDecorator = requestDecorator;

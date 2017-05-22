@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.server.http.metric;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
-import java.util.Objects;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -36,15 +37,15 @@ import io.prometheus.client.exporter.common.TextFormat;
 public class PrometheusExporterHttpService extends AbstractHttpService {
     private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
 
-    private final CollectorRegistry prometheusRegistry;
+    private final CollectorRegistry collectorRegistry;
 
     /**
      * Create a {@link PrometheusExporterHttpService} instance.
-     * @param prometheusRegistry Prometheus registry
+     * @param collectorRegistry Prometheus registry
      */
-    public PrometheusExporterHttpService(CollectorRegistry prometheusRegistry) {
-        Objects.requireNonNull(prometheusRegistry, "prometheusRegistry");
-        this.prometheusRegistry = prometheusRegistry;
+    public PrometheusExporterHttpService(CollectorRegistry collectorRegistry) {
+        requireNonNull(collectorRegistry, "collectorRegistry");
+        this.collectorRegistry = collectorRegistry;
     }
 
     @Override
@@ -52,7 +53,7 @@ public class PrometheusExporterHttpService extends AbstractHttpService {
                          HttpResponseWriter res) throws Exception {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(stream)) {
-            TextFormat.write004(writer, prometheusRegistry.metricFamilySamples());
+            TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
         }
         res.respond(HttpStatus.OK, CONTENT_TYPE_004, stream.toByteArray());
     }

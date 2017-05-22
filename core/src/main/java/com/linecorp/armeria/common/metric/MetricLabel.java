@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
@@ -16,21 +16,23 @@
 
 package com.linecorp.armeria.common.metric;
 
+import io.prometheus.client.Collector;
+
 /**
- * User definable label name for metrics (ex. {@link io.prometheus.client.Collector}).
+ * User definable label name for metrics (ex. {@link Collector}).
  *
  * <p>Example:
  * <pre>{@code
- * public enum MyMetricLabel implements MetricLabel<MyMetricLabel> {
- *  path,
- *  handler,
- *  method,
- * }
- * }
- * </pre>
+ * public enum MyMetricLabel implements MetricLabel&lt;MyMetricLabel&gt; {
+ *     path,
+ *     handler,
+ *     method,
+ * }}</pre>
+ *
  * @param <T> the implementing class
  */
-public interface MetricLabel<T extends MetricLabel> extends Comparable<T> {
+@FunctionalInterface
+public interface MetricLabel<T extends MetricLabel<T>> extends Comparable<T> {
     /**
      * Returns a single label name.
      * @return label name
@@ -39,6 +41,6 @@ public interface MetricLabel<T extends MetricLabel> extends Comparable<T> {
 
     @Override
     default int compareTo(T o) {
-        return this.name().compareTo(o.name());
+        return name().compareTo(o.name());
     }
 }
