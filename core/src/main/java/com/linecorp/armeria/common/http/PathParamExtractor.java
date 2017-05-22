@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.http;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -144,12 +143,12 @@ public final class PathParamExtractor {
 
     /**
      * Returns extracting results with given {@code path}.
-     * If the {@code path} does not match, returns an empty {@link Map}.
+     * If the {@code path} does not match, returns {@code null}.
      */
     public Map<String, String> extract(String path) {
         Matcher matcher = pattern.matcher(path);
         if (!matcher.matches()) {
-            return Collections.emptyMap();
+            return null;
         }
 
         return variables.stream()

@@ -34,12 +34,12 @@ public class PathParamExtractorTest {
     }
 
     @Test
-    public void givenNoMatchingPathParam_whenExtract_thenReturnsEmptyMap() throws Exception {
+    public void givenNoMatchingPathParam_whenExtract_thenReturnsNull() throws Exception {
         PathParamExtractor ppe = new PathParamExtractor("/service/{value}");
 
         Map<String, String> values = ppe.extract("/service2/hello");
 
-        assertThat(values).isEmpty();
+        assertThat(values).isNull();
     }
 
     @Test

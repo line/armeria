@@ -75,12 +75,12 @@ final class DynamicHttpFunctionEntry {
      */
     @Nullable
     MappedDynamicFunction bind(HttpMethod method, String mappedPath) {
-        if (!this.methods.contains(method)) {
+        if (!methods.contains(method)) {
             return null;
         }
 
         Map<String, String> args = pathParamExtractor.extract(mappedPath);
-        if (args.isEmpty()) {
+        if (args == null) {
             return null;
         }
 
