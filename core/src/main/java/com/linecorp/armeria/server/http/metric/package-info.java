@@ -15,6 +15,6 @@
  */
 
 /**
- * Logging client decorators.
+ * Prometheus export Service.
  */
-package com.linecorp.armeria.client.logging;
+package com.linecorp.armeria.server.http.metric;

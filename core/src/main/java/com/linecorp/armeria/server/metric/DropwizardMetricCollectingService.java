@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.logging;
+package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.internal.logging.DropwizardMetricCollector;
+import com.linecorp.armeria.internal.metric.DropwizardMetricCollector;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;

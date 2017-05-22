@@ -15,6 +15,7 @@
  */
 
 /**
- * Logging client decorators.
+ * Various metrics related classes used internally.
+ * Anything in this package can be changed or removed at any time.
  */
-package com.linecorp.armeria.client.logging;
+package com.linecorp.armeria.internal.metric;

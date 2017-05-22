@@ -25,7 +25,7 @@ import org.springframework.validation.annotation.Validated;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
 
 /**
  * Settings for armeria servers, e.g.,

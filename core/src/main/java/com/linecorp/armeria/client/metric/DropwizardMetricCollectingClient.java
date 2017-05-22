@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.logging;
+package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.internal.logging.DropwizardMetricCollector;
+import com.linecorp.armeria.internal.metric.DropwizardMetricCollector;
 
 /**
  * Decorates a {@link Client} to collect metrics into Dropwizard {@link MetricRegistry}.

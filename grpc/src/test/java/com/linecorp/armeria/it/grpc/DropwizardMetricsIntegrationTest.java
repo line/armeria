@@ -41,7 +41,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
-import com.linecorp.armeria.server.logging.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.stub.StreamObserver;
