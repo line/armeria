@@ -95,15 +95,9 @@ public class ThriftDocServicePluginTest {
 
         // Ensure each service contains all endpoints and example HTTP headers.
         final ServiceInfo helloServiceInfo = services.get(HelloService.class.getName());
-        assertThat(helloServiceInfo.endpoints())
-                .containsExactly(new EndpointInfo("*", "/hello", "", ThriftSerializationFormats.BINARY,
-                                                  ThriftSerializationFormats.values()));
         assertThat(helloServiceInfo.exampleHttpHeaders()).isEmpty();
 
         final ServiceInfo fooServiceInfo = services.get(FooService.class.getName());
-        assertThat(fooServiceInfo.endpoints())
-                .containsExactly(new EndpointInfo("*", "/foo", "", ThriftSerializationFormats.COMPACT,
-                                                  ImmutableSet.of(ThriftSerializationFormats.COMPACT)));
         assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
 
         // Ensure the example request exists as well.
@@ -114,6 +108,9 @@ public class ThriftDocServicePluginTest {
         assertThat(methods).containsKey("bar4");
         final MethodInfo bar4 = methods.get("bar4");
         assertThat(bar4.exampleRequests()).isEmpty();
+        assertThat(bar4.endpoints())
+                .containsExactly(new EndpointInfo("*", "/foo", "", ThriftSerializationFormats.COMPACT,
+                                                  ImmutableSet.of(ThriftSerializationFormats.COMPACT)));
     }
 
     @Test
@@ -147,14 +144,6 @@ public class ThriftDocServicePluginTest {
                         new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
                                          ImmutableSet.of(ThriftSerializationFormats.TEXT))));
 
-        assertThat(service.endpoints()).hasSize(2);
-        // Should be sorted alphabetically
-        assertThat(service.endpoints()).containsExactlyInAnyOrder(
-                new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
-                                 ImmutableSet.of(ThriftSerializationFormats.TEXT)),
-                new EndpointInfo("*", "/foo", "a", ThriftSerializationFormats.BINARY,
-                                 ImmutableSet.of(ThriftSerializationFormats.BINARY)));
-
         final Map<String, MethodInfo> methods =
                 service.methods().stream().collect(toImmutableMap(MethodInfo::name, Function.identity()));
         assertThat(methods).hasSize(6);
@@ -164,6 +153,11 @@ public class ThriftDocServicePluginTest {
         assertThat(bar1.returnTypeSignature()).isEqualTo(TypeSignature.ofBase("void"));
         assertThat(bar1.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar1.exampleRequests().isEmpty());
+        assertThat(bar1.endpoints()).containsExactlyInAnyOrder(
+                new EndpointInfo("*", "/debug/foo", "b", ThriftSerializationFormats.TEXT,
+                                 ImmutableSet.of(ThriftSerializationFormats.TEXT)),
+                new EndpointInfo("*", "/foo", "a", ThriftSerializationFormats.BINARY,
+                                 ImmutableSet.of(ThriftSerializationFormats.BINARY)));
 
         final TypeSignature string = TypeSignature.ofBase("string");
         final MethodInfo bar2 = methods.get("bar2");

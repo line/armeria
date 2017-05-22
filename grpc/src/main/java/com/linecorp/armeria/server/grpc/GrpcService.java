@@ -205,6 +205,10 @@ public final class GrpcService extends AbstractHttpService {
         return registry.services();
     }
 
+    Set<SerializationFormat> supportedSerializationFormats() {
+        return supportedSerializationFormats;
+    }
+
     @Nullable
     private SerializationFormat findSerializationFormat(@Nullable String contentType) {
         if (contentType == null) {

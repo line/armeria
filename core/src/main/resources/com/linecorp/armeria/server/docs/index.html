@@ -154,7 +154,7 @@
           </div>
           {{/if}}
 
-          {{#if service.endpoints.length}}
+          {{#if method.endpoints.length}}
           <h2 class="sub-header">Endpoints</h2>
           <div class="table-responsive">
             <table class="table table-striped table-condensed">
@@ -166,7 +166,7 @@
               </tr>
               </thead>
               <tbody>
-              {{#each service.endpoints}}
+              {{#each method.endpoints}}
               <tr>
                 <td><code>{{{hostnamePattern}}}</code></td>
                 <td><code>{{{path}}}{{#if fragment}}#{{fragment}}{{/if}}</code></td>
@@ -184,14 +184,14 @@
           </div>
           {{/if}}
 
-          {{#if service.debugPath}}
+          {{#if method.debugPath}}
           <h2 class="sub-header">Debug</h2>
           <div class="row">
             <div class="col-sm-6">
               <div>
                 <label>
                   Arguments as a
-                  <a href="https://github.com/line/armeria/blob/13b0510205a84e1a3cd17509e7d39116d050b6b3/src/main/java/com/linecorp/armeria/common/thrift/text/TTextProtocol.java">TText</a>
+                  {{{ method.debugFormatLink }}}
                   JSON object:
                 </label>
                 <textarea class="debug-textarea form-control code">{&#10;&#32;&#32;"": ""&#10;}&#10;</textarea>
@@ -209,7 +209,7 @@
                 </div>
               </div>
               <div>
-                <button class="debug-submit btn btn-primary">Submit to: <code>{{{service.debugPath}}}</code></button>
+                <button class="debug-submit btn btn-primary">Submit to: <code>{{{method.debugPath}}}</code></button>
               </div>
             </div>
             <div class="col-sm-6">

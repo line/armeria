@@ -168,10 +168,10 @@ public final class DocServiceBuilder {
      * exampleRequest(serviceType.getName(), exampleRequests);
      * }</pre>
      */
-    public DocServiceBuilder exampleRequest(Class<?> serviceType, String methodName,
-                                            Object... exampleRequests) {
+    public DocServiceBuilder exampleRequestForMethod(Class<?> serviceType, String methodName,
+                                                     Object... exampleRequests) {
         requireNonNull(exampleRequests, "exampleRequests");
-        return exampleRequest(serviceType, methodName, ImmutableList.copyOf(exampleRequests));
+        return exampleRequestForMethod(serviceType, methodName, ImmutableList.copyOf(exampleRequests));
     }
 
     /**
@@ -181,26 +181,26 @@ public final class DocServiceBuilder {
      * exampleRequest(serviceType.getName(), exampleRequests);
      * }</pre>
      */
-    public DocServiceBuilder exampleRequest(Class<?> serviceType, String methodName,
-                                            Iterable<?> exampleRequests) {
+    public DocServiceBuilder exampleRequestForMethod(Class<?> serviceType, String methodName,
+                                                     Iterable<?> exampleRequests) {
         requireNonNull(serviceType, "serviceType");
-        return exampleRequest(serviceType.getName(), methodName, exampleRequests);
+        return exampleRequestForMethod(serviceType.getName(), methodName, exampleRequests);
     }
 
     /**
      * Adds the example requests for the method with the specified service and method name.
      */
-    public DocServiceBuilder exampleRequest(String serviceName, String methodName,
-                                            Object... exampleRequests) {
+    public DocServiceBuilder exampleRequestForMethod(String serviceName, String methodName,
+                                                     Object... exampleRequests) {
         requireNonNull(exampleRequests, "exampleRequests");
-        return exampleRequest(serviceName, methodName, ImmutableList.copyOf(exampleRequests));
+        return exampleRequestForMethod(serviceName, methodName, ImmutableList.copyOf(exampleRequests));
     }
 
     /**
      * Adds the example requests for the method with the specified service and method name.
      */
-    public DocServiceBuilder exampleRequest(String serviceName, String methodName,
-                                            Iterable<?> exampleRequests) {
+    public DocServiceBuilder exampleRequestForMethod(String serviceName, String methodName,
+                                                     Iterable<?> exampleRequests) {
         requireNonNull(serviceName, "serviceName");
         requireNonNull(methodName, "methodName");
         requireNonNull(exampleRequests, "exampleRequests");

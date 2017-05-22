@@ -385,6 +385,8 @@ public class GrpcServiceServerTest {
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
         SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
         assertThat(message).isEqualTo(RESPONSE_MESSAGE);
+        assertThat(response.headers().getInt(HttpHeaderNames.CONTENT_LENGTH))
+                .isEqualTo(response.content().length());
     }
 
     @Test
@@ -400,6 +402,8 @@ public class GrpcServiceServerTest {
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
         SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
         assertThat(message).isEqualTo(RESPONSE_MESSAGE);
+        assertThat(response.headers().getInt(HttpHeaderNames.CONTENT_LENGTH))
+                .isEqualTo(response.content().length());
     }
 
     @Test

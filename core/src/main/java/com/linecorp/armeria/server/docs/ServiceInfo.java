@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
@@ -31,6 +30,7 @@ import javax.annotation.Nullable;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
@@ -46,7 +46,6 @@ public final class ServiceInfo {
 
     private final String name;
     private final Set<MethodInfo> methods;
-    private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHttpHeaders;
     private final String docString;
 
@@ -54,9 +53,8 @@ public final class ServiceInfo {
      * Creates a new instance.
      */
     public ServiceInfo(String name,
-                       Iterable<MethodInfo> methods,
-                       Iterable<EndpointInfo> endpoints) {
-        this(name, methods, endpoints, ImmutableList.of(), null);
+                       Iterable<MethodInfo> methods) {
+        this(name, methods, ImmutableList.of(), null);
     }
 
     /**
@@ -64,20 +62,14 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
-                       Iterable<EndpointInfo> endpoints,
                        Iterable<HttpHeaders> exampleHttpHeaders,
                        @Nullable String docString) {
 
         this.name = requireNonNull(name, "name");
 
         requireNonNull(methods, "methods");
-        requireNonNull(endpoints, "endpoints");
 
-        this.methods = Streams.stream(methods)
-                              .collect(toImmutableSortedSet(comparing(MethodInfo::name)));
-        this.endpoints = Streams.stream(endpoints)
-                                .collect(toImmutableSortedSet(comparing(
-                                        e -> e.hostnamePattern() + ':' + e.path())));
+        this.methods = ImmutableSortedSet.copyOf(comparing(MethodInfo::name), methods);
         this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
                                          .map(HttpHeaders::copyOf)
                                          .map(HttpHeaders::asImmutable)
@@ -99,14 +91,6 @@ public final class ServiceInfo {
     @JsonProperty
     public Set<MethodInfo> methods() {
         return methods;
-    }
-
-    /**
-     * Returns the endpoints exposed by the service.
-     */
-    @JsonProperty
-    public Set<EndpointInfo> endpoints() {
-        return endpoints;
     }
 
     /**
@@ -162,24 +146,21 @@ public final class ServiceInfo {
         }
 
         final ServiceInfo that = (ServiceInfo) o;
-        return Objects.equals(name, that.name) &&
-               Objects.equals(methods, that.methods) &&
-               Objects.equals(endpoints, that.endpoints);
+        return name.equals(that.name) && methods.equals(that.methods);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, methods, endpoints);
+        return Objects.hash(name, methods);
     }
 
     @Override
     public String toString() {
-        return "ServiceInfo{" +
-               "name='" + name() + '\'' +
-               ", methods=" + methods() +
-               ", endpoints=" + endpoints() +
-               ", exampleHttpHeaders=" + exampleHttpHeaders() +
-               ", docString=" + docString() +
-               '}';
+        return MoreObjects.toStringHelper(this)
+                .add("name", name)
+                .add("methods", methods)
+                .add("exampleHttpHeaders", exampleHttpHeaders)
+                .add("docstring", docString)
+                .toString();
     }
 }
