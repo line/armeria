@@ -60,7 +60,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,6 +68,7 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -85,6 +85,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ThriftOverHttpClientTServletIntegrationTest.class);
+
+    private static final int MAX_RETRIES = 9;
 
     private static final String TSERVLET_PATH = "/thrift";
 
@@ -199,13 +201,26 @@ public class ThriftOverHttpClientTServletIntegrationTest {
     }
 
     @Test
-    @Ignore("flaky") // FIXME(trustin): Flaky test
     public void sendHelloViaHttp1() throws Exception {
         final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
         final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), sessionProtocol);
 
-        assertEquals("Hello, old world!", client.hello("old world"));
-        assertThat(sessionProtocol.get(), is(H1C));
+        for (int i = 0; i <= MAX_RETRIES; i++) {
+            try {
+                assertEquals("Hello, old world!", client.hello("old world"));
+                assertThat(sessionProtocol.get(), is(H1C));
+                if (i != 0) {
+                    logger.warn("Succeeded after {} retries.", i);
+                }
+                break;
+            } catch (ClosedSessionException e) {
+                // Flaky test; try again.
+                // FIXME(trustin): Fix flakiness.
+                if (i == MAX_RETRIES) {
+                    throw e;
+                }
+            }
+        }
     }
 
     /**
@@ -219,8 +234,22 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         final AtomicReference<SessionProtocol> sessionProtocol = new AtomicReference<>();
         final HelloService.Iface client = newSchemeCapturingClient(http1uri(HTTP), sessionProtocol);
 
-        assertEquals("Hello, ancient world!", client.hello("ancient world"));
-        assertThat(sessionProtocol.get(), is(H1C));
+        for (int i = 0; i <= MAX_RETRIES; i++) {
+            try {
+                assertEquals("Hello, ancient world!", client.hello("ancient world"));
+                assertThat(sessionProtocol.get(), is(H1C));
+                if (i != 0) {
+                    logger.warn("Succeeded after {} retries.", i);
+                }
+                break;
+            } catch (ClosedSessionException e) {
+                // Flaky test; try again.
+                // FIXME(trustin): Fix flakiness.
+                if (i == MAX_RETRIES) {
+                    throw e;
+                }
+            }
+        }
     }
 
     @Test
