@@ -42,6 +42,7 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
@@ -235,6 +236,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             listener.onClose(status, EMPTY_METADATA);
         }
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status), null);
         notifyExecutor();
     }
 

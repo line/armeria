@@ -19,26 +19,29 @@ package com.linecorp.armeria.it.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.given;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 
 import com.codahale.metrics.MetricRegistry;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.http.HttpClient;
-import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.metric.DropwizardMetricCollectingClient;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
@@ -77,7 +80,10 @@ public class DropwizardMetricsIntegrationTest {
         }
     };
 
-    @Test(timeout = 10000L)
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+
+    @Test
     public void normal() throws Exception {
         makeRequest("world");
         makeRequest("world");
@@ -91,13 +97,24 @@ public class DropwizardMetricsIntegrationTest {
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 metricRegistry.getTimers().get(serverMetricName("UnaryCall", "requests")).getCount())
                 .isEqualTo(7));
+        given().ignoreExceptions().untilAsserted(() -> assertThat(
+                metricRegistry.getTimers().get(clientMetricName("UnaryCall", "requests")).getCount())
+                .isEqualTo(7));
         assertThat(metricRegistry.getMeters().get(serverMetricName("UnaryCall", "successes")).getCount())
+                .isEqualTo(4);
+        assertThat(metricRegistry.getMeters().get(clientMetricName("UnaryCall", "successes")).getCount())
                 .isEqualTo(4);
         assertThat(metricRegistry.getMeters().get(serverMetricName("UnaryCall", "failures")).getCount())
                 .isEqualTo(3);
+        assertThat(metricRegistry.getMeters().get(clientMetricName("UnaryCall", "failures")).getCount())
+                .isEqualTo(3);
         assertThat(metricRegistry.getMeters().get(serverMetricName("UnaryCall", "requestBytes")).getCount())
                 .isEqualTo(98);
+        assertThat(metricRegistry.getMeters().get(clientMetricName("UnaryCall", "requestBytes")).getCount())
+                .isEqualTo(98);
         assertThat(metricRegistry.getMeters().get(serverMetricName("UnaryCall", "responseBytes")).getCount())
+                .isEqualTo(20);
+        assertThat(metricRegistry.getMeters().get(clientMetricName("UnaryCall", "responseBytes")).getCount())
                 .isEqualTo(20);
     }
 
@@ -107,22 +124,25 @@ public class DropwizardMetricsIntegrationTest {
                                    "armeria.grpc.testing.TestService/" + method, property);
     }
 
-    // TODO(anuraag): Switch to real client after armeria supports grpc client.
+    private static String clientMetricName(String method, String property) {
+        return MetricRegistry.name("clients",
+                                   "armeria.grpc.testing.TestService/" + method, property);
+    }
+
     private static void makeRequest(String name) throws Exception {
-        HttpClient client = Clients.newClient(server.httpUri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class);
+        TestServiceBlockingStub client = new ClientBuilder(server.uri(GrpcSerializationFormats.PROTO, "/"))
+                .decorator(HttpRequest.class, HttpResponse.class,
+                           DropwizardMetricCollectingClient.newDecorator(
+                                   metricRegistry, MetricRegistry.name("clients")))
+                .build(TestServiceBlockingStub.class);
+
         SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setPayload(Payload.newBuilder()
                                                 .setBody(ByteString.copyFromUtf8(name)))
                              .build();
         try {
-            client.execute(
-                    HttpHeaders.of(HttpMethod.POST,
-                                   TestServiceGrpc.METHOD_UNARY_CALL.getFullMethodName())
-                               .set(HttpHeaderNames.CONTENT_TYPE,
-                                    GrpcSerializationFormats.PROTO.mediaType().toString()),
-                    GrpcTestUtil.uncompressedFrame(GrpcTestUtil.protoByteBuf(request))).aggregate().get();
+            client.unaryCall(request);
         } catch (Throwable t) {
             // Ignore, we will count these up
         }

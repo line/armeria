@@ -37,7 +37,6 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
@@ -52,6 +51,7 @@ import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.grpc.StatusMessageEscaper;
@@ -334,10 +334,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 clientStreamClosed = true;
             }
             messageFramer.close();
+            ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus), null);
             if (newStatus.isOk()) {
-                // The response is streamed so we don't have anything to set as the RpcResponse, so we set it
-                // arbitrarily so it can at least be counted.
-                ctx.logBuilder().responseContent(RpcResponse.of("success"), null);
                 try (SafeCloseable ignored = RequestContext.push(ctx)) {
                     listener.onComplete();
                 } catch (Throwable t) {
@@ -347,7 +345,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             } else {
                 cancelled = true;
-                ctx.logBuilder().responseContent(RpcResponse.ofFailure(newStatus.asException()), null);
                 try (SafeCloseable ignored = RequestContext.push(ctx)) {
                     listener.onCancel();
                 } catch (Throwable t) {

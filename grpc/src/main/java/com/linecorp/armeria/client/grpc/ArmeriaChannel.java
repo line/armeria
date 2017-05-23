@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -80,8 +81,12 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                 HttpHeaders
                         .of(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
                         .set(HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType().toString()));
+        ClientRequestContext ctx = newContext(method.getFullMethodName(), req);
+        ctx.logBuilder().serializationFormat(serializationFormat);
+        ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
+        ctx.logBuilder().deferResponseContent();
         return new ArmeriaClientCall<>(
-                newContext(method.getFullMethodName(), req),
+                ctx,
                 httpClient,
                 req,
                 method,
