@@ -302,6 +302,12 @@ public class HttpServiceTest {
         public String returnString(@PathParam("var") String var) {
             return var;
         }
+
+        @Get
+        @Path("/no-path-param")
+        public String noPathParam() {
+            return "no-path-param";
+        }
     }
 
     @BeforeClass
@@ -466,6 +472,10 @@ public class HttpServiceTest {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic4/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("String[blah]"));
+            }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic4/no-path-param")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[no-path-param]"));
             }
             try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/dynamic4/undefined")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
