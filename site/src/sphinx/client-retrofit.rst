@@ -43,9 +43,9 @@ The integration is done by creating an ``HttpClient`` that connects to the desir
         CompletableFuture<UserInfo> getUserInfo(@Path("id") String id);
     }
 
-    HttpClient httpClient = Clients.newClient("none+http://localhost:8080", HttpClient.class);
+    HttpClient httpClient = Clients.newClient("none+http://localhost:8080/", HttpClient.class);
 
-    Retrofit retrofit = ArmeriaRetrofit.builder(httpClient)
+    Retrofit retrofit = new ArmeriaRetrofitBuilder(httpClient)
                                        .addConverterFactory(JacksonConverterFactory.create())
                                        .addCallAdapterFactory(Java8CallAdapterFactory.create())
                                        .build();
