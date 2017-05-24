@@ -16,13 +16,17 @@
 
 package com.linecorp.armeria.client.grpc;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -39,8 +43,10 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
+import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 
 import io.grpc.Channel;
+import io.grpc.MethodDescriptor;
 import io.grpc.stub.AbstractStub;
 
 /**
@@ -55,8 +61,6 @@ public class GrpcClientFactory extends DecoratingClientFactory {
                     .flatMap(p -> GrpcSerializationFormats
                             .values()
                             .stream()
-                            // TODO(anuraag): Remove this line after JSON support is added.
-                            .filter(f -> f.equals(GrpcSerializationFormats.PROTO))
                             .map(f -> Scheme.of(f, p)))
                     .collect(toImmutableSet());
 
@@ -119,7 +123,8 @@ public class GrpcClientFactory extends DecoratingClientFactory {
                 httpClient,
                 scheme.sessionProtocol(),
                 newEndpoint(uri),
-                serializationFormat);
+                serializationFormat,
+                GrpcJsonUtil.jsonMarshaller(stubMethods(stubClass)));
 
         try {
             // Verified createClientMethod.getReturnType == clientType
@@ -153,6 +158,21 @@ public class GrpcClientFactory extends DecoratingClientFactory {
         }
 
         return httpClientFactory;
+    }
+
+    private static List<MethodDescriptor<?, ?>> stubMethods(Class<?> stubClass) {
+        return Arrays.stream(stubClass.getDeclaredFields())
+                     .filter(field -> ((field.getModifiers() & Modifier.PUBLIC) != 0) &&
+                                      ((field.getModifiers() & Modifier.STATIC) != 0) &&
+                                      MethodDescriptor.class.isAssignableFrom(field.getType()))
+                     .map(field -> {
+                         try {
+                             return (MethodDescriptor<?, ?>) field.get(null);
+                         } catch (IllegalAccessException e) {
+                             throw new IllegalStateException("Modifier is public so can't happen.");
+                         }
+                     })
+                     .collect(toImmutableList());
     }
 
     private Client<HttpRequest, HttpResponse> newHttpClient(URI uri, Scheme scheme, ClientOptions options) {

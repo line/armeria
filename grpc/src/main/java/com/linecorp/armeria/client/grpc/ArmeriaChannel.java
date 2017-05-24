@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.grpc;
 
 import java.net.URI;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
@@ -61,17 +63,20 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     private final SessionProtocol sessionProtocol;
     private final Endpoint endpoint;
     private final SerializationFormat serializationFormat;
+    private final MessageMarshaller jsonMarshaller;
 
     ArmeriaChannel(ClientBuilderParams params,
                    Client<HttpRequest, HttpResponse> httpClient,
                    SessionProtocol sessionProtocol,
                    Endpoint endpoint,
-                   SerializationFormat serializationFormat) {
+                   SerializationFormat serializationFormat,
+                   MessageMarshaller jsonMarshaller) {
         this.params = params;
         this.httpClient = httpClient;
         this.sessionProtocol = sessionProtocol;
         this.endpoint = endpoint;
         this.serializationFormat = serializationFormat;
+        this.jsonMarshaller = jsonMarshaller;
     }
 
     @Override
@@ -99,7 +104,9 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                                 (long) DEFAULT_MAX_INBOUND_MESSAGE_SIZE).intValue()),
                 callOptions,
                 CompressorRegistry.getDefaultInstance(),
-                DecompressorRegistry.getDefaultInstance());
+                DecompressorRegistry.getDefaultInstance(),
+                serializationFormat,
+                jsonMarshaller);
     }
 
     @Override

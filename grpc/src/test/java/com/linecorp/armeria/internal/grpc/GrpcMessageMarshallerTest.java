@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,7 +44,11 @@ public class GrpcMessageMarshallerTest {
         marshaller = new GrpcMessageMarshaller<>(
                 ByteBufAllocator.DEFAULT,
                 GrpcSerializationFormats.PROTO,
-                TestServiceGrpc.METHOD_UNARY_CALL);
+                TestServiceGrpc.METHOD_UNARY_CALL,
+                MessageMarshaller.builder()
+                                 .register(SimpleRequest.getDefaultInstance())
+                                 .register(SimpleResponse.getDefaultInstance())
+                                 .build());
     }
 
     @Test

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -95,7 +96,8 @@ public class ArmeriaServerCallTest {
                 MAX_MESSAGE_BYTES,
                 MAX_MESSAGE_BYTES,
                 ctx,
-                GrpcSerializationFormats.PROTO);
+                GrpcSerializationFormats.PROTO,
+                MessageMarshaller.builder().build());
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
         when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));

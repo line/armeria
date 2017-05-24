@@ -25,13 +25,14 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
@@ -98,7 +99,9 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             int maxInboundMessageSizeBytes,
             CallOptions callOptions,
             CompressorRegistry compressorRegistry,
-            DecompressorRegistry decompressorRegistry) {
+            DecompressorRegistry decompressorRegistry,
+            SerializationFormat serializationFormat,
+            MessageMarshaller jsonMarshaller) {
         this.ctx = ctx;
         this.httpClient = httpClient;
         this.req = req;
@@ -106,7 +109,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
         this.messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
-        this.marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), GrpcSerializationFormats.PROTO, method);
+        this.marshaller = new GrpcMessageMarshaller<>(
+                ctx.alloc(), serializationFormat, method, jsonMarshaller);
         responseReader = new HttpStreamReader(
                 decompressorRegistry,
                 new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc()),

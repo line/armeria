@@ -20,14 +20,14 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
 import com.google.common.io.ByteStreams;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
-import com.google.protobuf.util.JsonFormat;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -57,15 +57,18 @@ public class GrpcMessageMarshaller<I, O> {
     private final ByteBufAllocator alloc;
     private final SerializationFormat serializationFormat;
     private final MethodDescriptor<I, O> method;
+    private final MessageMarshaller jsonMarshaller;
     private final MessageType requestType;
     private final MessageType responseType;
 
     public GrpcMessageMarshaller(ByteBufAllocator alloc,
                                  SerializationFormat serializationFormat,
-                                 MethodDescriptor<I, O> method) {
+                                 MethodDescriptor<I, O> method,
+                                 MessageMarshaller jsonMarshaller) {
         this.alloc = requireNonNull(alloc, "alloc");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.method = requireNonNull(method, "method");
+        this.jsonMarshaller = requireNonNull(jsonMarshaller, "jsonMarshaller");
         requestType = marshallerType(method.getRequestMarshaller());
         responseType = marshallerType(method.getResponseMarshaller());
     }
@@ -165,8 +168,8 @@ public class GrpcMessageMarshaller<I, O> {
         } else if (GrpcSerializationFormats.isJson(serializationFormat)) {
             ByteBuf buf = alloc.buffer();
             boolean success = false;
-            try {
-                buf.writeCharSequence(JsonFormat.printer().print(message), StandardCharsets.UTF_8);
+            try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
+                jsonMarshaller.writeValue(message, os);
                 success = true;
             } finally {
                 if (!success) {
@@ -196,7 +199,9 @@ public class GrpcMessageMarshaller<I, O> {
             }
         } else if (GrpcSerializationFormats.isJson(serializationFormat)) {
             Message.Builder builder = prototype.newBuilderForType();
-            JsonFormat.parser().merge(buf.toString(StandardCharsets.UTF_8), builder);
+            try (ByteBufInputStream is = new ByteBufInputStream(buf, /* releaseOnClose */ false)) {
+                jsonMarshaller.mergeValue(is, builder);
+            }
             return builder.build();
         }
         throw new IllegalStateException("Unknown serialization format: " + serializationFormat);

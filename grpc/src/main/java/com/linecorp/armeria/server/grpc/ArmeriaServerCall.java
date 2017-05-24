@@ -29,6 +29,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,7 +128,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       int maxInboundMessageSizeBytes,
                       int maxOutboundMessageSizeBytes,
                       ServiceRequestContext ctx,
-                      SerializationFormat serializationFormat) {
+                      SerializationFormat serializationFormat,
+                      MessageMarshaller jsonMarshaller) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -146,7 +148,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
-        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method);
+        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller);
     }
 
     @Override

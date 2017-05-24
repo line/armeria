@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -24,6 +25,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -46,6 +49,7 @@ import com.linecorp.armeria.server.http.AbstractHttpService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServerCall;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
@@ -80,6 +84,7 @@ public final class GrpcService extends AbstractHttpService {
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
+    private final MessageMarshaller jsonMarshaller;
     private final int maxOutboundMessageSizeBytes;
 
     private int maxInboundMessageSizeBytes;
@@ -94,6 +99,7 @@ public final class GrpcService extends AbstractHttpService {
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
+        jsonMarshaller = jsonMarshaller(registry);
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
     }
@@ -166,7 +172,8 @@ public final class GrpcService extends AbstractHttpService {
                 maxInboundMessageSizeBytes,
                 maxOutboundMessageSizeBytes,
                 ctx,
-                serializationFormat);
+                serializationFormat,
+                jsonMarshaller);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
@@ -224,6 +231,15 @@ public final class GrpcService extends AbstractHttpService {
         }
 
         return null;
+    }
+
+    private static MessageMarshaller jsonMarshaller(HandlerRegistry registry) {
+        List<MethodDescriptor<?, ?>> methods =
+                registry.services().stream()
+                        .flatMap(service -> service.getMethods().stream())
+                        .map(ServerMethodDefinition::getMethodDescriptor)
+                        .collect(toImmutableList());
+        return GrpcJsonUtil.jsonMarshaller(methods);
     }
 
     private static class EmptyListener<T> extends ServerCall.Listener<T> {}

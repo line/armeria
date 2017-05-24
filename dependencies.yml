@@ -119,6 +119,9 @@ org.assertj:
 org.awaitility:
   awaitility: { version: '3.0.0' }
 
+org.curioswitch.curiostack:
+  protobuf-jackson: { version: '0.1.0' }
+
 org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 

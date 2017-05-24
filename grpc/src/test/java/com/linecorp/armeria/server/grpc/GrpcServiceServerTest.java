@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -39,8 +40,10 @@ import com.google.common.base.Strings;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.util.JsonFormat;
 
+import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.client.http.HttpClientFactory;
 import com.linecorp.armeria.common.RequestContext;
@@ -49,6 +52,8 @@ import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -74,8 +79,6 @@ import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -486,21 +489,21 @@ public class GrpcServiceServerTest {
 
     @Test
     public void json() throws Exception {
-        HttpClient client = HttpClientFactory.DEFAULT
-                .newClient("none+" + server.httpUri("/"),
-                           HttpClient.class);
-        ByteBuf request = Unpooled.wrappedBuffer(
-                JsonFormat.printer().print(GrpcTestUtil.REQUEST_MESSAGE).getBytes(StandardCharsets.UTF_8));
-        AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.METHOD_STATIC_UNARY_CALL.getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+json"),
-                GrpcTestUtil.uncompressedFrame(request)).aggregate().get();
-
-        ByteBuf responseMessage =
-                Unpooled.wrappedBuffer(JsonFormat.printer()
-                                                 .print(GrpcTestUtil.RESPONSE_MESSAGE)
-                                                 .getBytes(StandardCharsets.UTF_8));
-        assertThat(response.content().array()).containsExactly(GrpcTestUtil.uncompressedFrame(responseMessage));
+        AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
+        UnitTestServiceBlockingStub jsonStub =
+                new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
+                        .decorator(HttpRequest.class, HttpResponse.class,
+                                   client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
+                                       @Override
+                                       public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                               throws Exception {
+                                           requestHeaders.set(req.headers());
+                                           return delegate().execute(ctx, req);
+                                       }
+                                   })
+                        .build(UnitTestServiceBlockingStub.class);
+        SimpleResponse response = jsonStub.staticUnaryCall(GrpcTestUtil.REQUEST_MESSAGE);
+        assertThat(response).isEqualTo(GrpcTestUtil.RESPONSE_MESSAGE);
+        assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("application/grpc+json");
     }
 }
