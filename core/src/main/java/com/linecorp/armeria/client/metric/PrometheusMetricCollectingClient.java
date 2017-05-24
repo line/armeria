@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
@@ -37,11 +37,11 @@ import io.prometheus.client.CollectorRegistry;
  * @param <I> {@link Request} type
  * @param <O> {@link Response} type
  */
-public final class PrometheusMetricCollectionClient<T extends MetricLabel<T>,
+public final class PrometheusMetricCollectingClient<T extends MetricLabel<T>,
         I extends Request, O extends Response> extends SimpleDecoratingClient<I, O> {
 
     /**
-     * Returns a new {@link Client} decorator that tracks request stats using the Prometheus metrics  library.
+     * Returns a new {@link Client} decorator that tracks request stats using the Prometheus metrics library.
      *
      * @param <I> Request type
      * @param <O> Response type
@@ -51,7 +51,7 @@ public final class PrometheusMetricCollectionClient<T extends MetricLabel<T>,
      * @return A client decorator function
      */
     public static <T extends MetricLabel<T>, I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, PrometheusMetricCollectionClient<T, I, O>>
+    Function<Client<? super I, ? extends O>, PrometheusMetricCollectingClient<T, I, O>>
     newDecorator(CollectorRegistry collectorRegistry,
                  T[] metricLabels,
                  Function<RequestLog, Map<T, String>> labelingFunction) {
@@ -59,11 +59,11 @@ public final class PrometheusMetricCollectionClient<T extends MetricLabel<T>,
                 PrometheusMetricRequestDecorator.decorateClient(collectorRegistry,
                                                                 metricLabels,
                                                                 labelingFunction);
-        return client -> new PrometheusMetricCollectionClient<>(client, requestDecorator);
+        return client -> new PrometheusMetricCollectingClient<>(client, requestDecorator);
     }
 
     /**
-     * Returns a new {@link Client} decorator that tracks request stats using the Prometheus metrics  library.
+     * Returns a new {@link Client} decorator that tracks request stats using the Prometheus metrics library.
      *
      * @param <I> Request type
      * @param <O> Response type
@@ -73,7 +73,7 @@ public final class PrometheusMetricCollectionClient<T extends MetricLabel<T>,
      * @return A client decorator function
      */
     public static <T extends MetricLabel<T>, I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, PrometheusMetricCollectionClient<T, I, O>>
+    Function<Client<? super I, ? extends O>, PrometheusMetricCollectingClient<T, I, O>>
     newDecorator(CollectorRegistry collectorRegistry,
                  Iterable<T> metricLabels,
                  Function<RequestLog, Map<T, String>> labelingFunction) {
@@ -81,12 +81,12 @@ public final class PrometheusMetricCollectionClient<T extends MetricLabel<T>,
                 PrometheusMetricRequestDecorator.decorateClient(collectorRegistry,
                                                                 metricLabels,
                                                                 labelingFunction);
-        return client -> new PrometheusMetricCollectionClient<>(client, requestDecorator);
+        return client -> new PrometheusMetricCollectingClient<>(client, requestDecorator);
     }
 
     private final PrometheusMetricRequestDecorator<T, I, O> requestDecorator;
 
-    private PrometheusMetricCollectionClient(
+    private PrometheusMetricCollectingClient(
             Client<? super I, ? extends O> delegate,
             PrometheusMetricRequestDecorator<T, I, O> requestDecorator) {
         super(delegate);

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.it.metrics;
+package com.linecorp.armeria.it.metric;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;

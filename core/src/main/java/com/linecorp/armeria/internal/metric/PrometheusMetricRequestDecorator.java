@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.metric;
 
+import static com.linecorp.armeria.internal.metric.PrometheusUtil.registerIfAbsent;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -37,11 +37,9 @@ import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.metric.MetricLabel;
-import com.linecorp.armeria.common.metric.PrometheusRegistry;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.prometheus.client.Collector;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.Counter;
 import io.prometheus.client.Gauge;
@@ -60,7 +58,7 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
     private static final String HELP_STRING = "Armeria client/server request metric";
 
     /**
-     * Returns a new {@link Service} decorator that tracks request stats using the Prometheus metrics  library.
+     * Returns a new {@link Service} decorator that tracks request stats using the Prometheus metrics library.
      *
      * @param <I> Request type
      * @param <O> Response type
@@ -81,7 +79,7 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
     }
 
     /**
-     * Returns a new {@link Service} decorator that tracks request stats using the Prometheus metrics  library.
+     * Returns a new {@link Service} decorator that tracks request stats using the Prometheus metrics library.
      *
      * @param <I> Request type
      * @param <O> Response type
@@ -102,7 +100,7 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
     }
 
     /**
-     * Returns a new {@link Client} decorator that tracks request stats using the Prometheus metrics  library.
+     * Returns a new {@link Client} decorator that tracks request stats using the Prometheus metrics library.
      *
      * @param <I> Request type
      * @param <O> Response type
@@ -123,7 +121,7 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
     }
 
     /**
-     * Returns a new {@link Client} decorator that tracks request stats using the Prometheus metrics  library.
+     * Returns a new {@link Client} decorator that tracks request stats using the Prometheus metrics library.
      *
      * @param <I> Request type
      * @param <O> Response type
@@ -161,10 +159,10 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
         requireNonNull(prefix, "prefix");
 
         this.labelingFunction = labelingFunction;
-        this.metricAdapter = new MetricAdapter<>(collectorRegistry, metricLabelsCopy, prefix, HELP_STRING);
+        metricAdapter = new MetricAdapter<>(collectorRegistry, metricLabelsCopy, prefix, HELP_STRING);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
     private PrometheusMetricRequestDecorator(
             CollectorRegistry collectorRegistry,
             Iterable<T> metricLabels,
@@ -278,93 +276,71 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
                                                     .sorted()
                                                     .map(MetricLabel::name)
                                                     .toArray(String[]::new);
-            timer = register(collectorRegistry, namePrefix + "_request_duration_seconds",
-                             name -> newSummary(Summary.build())
-                                     .name(name)
-                                     .labelNames(metricLabelNames)
-                                     .help(help)
-                                     .create());
-            success = register(collectorRegistry, namePrefix + "_request_success_total",
-                               name -> Counter.build().name(name)
-                                              .labelNames(metricLabelNames)
-                                              .help(help)
-                                              .create());
-            failure = register(collectorRegistry, namePrefix + "_request_failure_total",
-                               name -> Counter.build().name(name)
-                                              .labelNames(metricLabelNames)
-                                              .help(help)
-                                              .create());
-            activeRequests = register(collectorRegistry, namePrefix + "_request_active",
-                                      name -> Gauge.build().name(name)
-                                                   .labelNames(metricLabelNames)
-                                                   .help(help)
-                                                   .create());
-            requestBytes = register(collectorRegistry, namePrefix + "_request_size_bytes",
-                                    name -> newSummary(Summary.build())
-                                            .name(name)
-                                            .labelNames(metricLabelNames)
-                                            .help(help)
-                                            .create());
-            responseBytes = register(collectorRegistry, namePrefix + "_response_size_bytes",
-                                     name -> newSummary(Summary.build())
-                                             .name(name)
-                                             .labelNames(metricLabelNames)
-                                             .help(help)
-                                             .create());
+            timer = registerIfAbsent(collectorRegistry, namePrefix + "_request_duration_seconds",
+                                     name -> newSummary(name, help, metricLabelNames));
+            success = registerIfAbsent(collectorRegistry, namePrefix + "_request_success_total",
+                                       name -> Counter.build(name, help)
+                                                      .labelNames(metricLabelNames)
+                                                      .create());
+            failure = registerIfAbsent(collectorRegistry, namePrefix + "_request_failure_total",
+                                       name -> Counter.build(name, help)
+                                                      .labelNames(metricLabelNames)
+                                                      .create());
+            activeRequests = registerIfAbsent(collectorRegistry, namePrefix + "_request_active",
+                                              name -> Gauge.build(name, help)
+                                                           .labelNames(metricLabelNames)
+                                                           .create());
+            requestBytes = registerIfAbsent(collectorRegistry, namePrefix + "_request_size_bytes",
+                                            name -> newSummary(name, help, metricLabelNames));
+            responseBytes = registerIfAbsent(collectorRegistry, namePrefix + "_response_size_bytes",
+                                             name -> newSummary(name, help, metricLabelNames));
         }
 
-        private Summary.Builder newSummary(Summary.Builder builder) {
-            return builder.quantile(.5, .01)
+        private static Summary newSummary(String name, String help, String... metricLabelNames) {
+            return Summary.build(name, help)
+                          .labelNames(metricLabelNames)
+                          .quantile(.5, .01)
                           .quantile(.75, .01)
                           .quantile(.95, .01)
                           .quantile(.98, .01)
                           .quantile(.99, .01)
-                          .quantile(.999, .01);
+                          .quantile(.999, .01)
+                          .create();
         }
 
-        private MetricAdapter seconds(String[] values, double seconds) throws Exception {
+        private MetricAdapter<T> seconds(String[] values, double seconds) throws Exception {
             timer.labels(values).observe(seconds);
             return this;
         }
 
-        private MetricAdapter success(String[] values) {
+        private MetricAdapter<T> success(String[] values) {
             success.labels(values).inc();
             return this;
         }
 
-        private MetricAdapter failure(String[] values) {
+        private MetricAdapter<T> failure(String[] values) {
             failure.labels(values).inc();
             return this;
         }
 
-        private MetricAdapter incActiveRequests(String[] values) {
+        private MetricAdapter<T> incActiveRequests(String[] values) {
             activeRequests.labels(values).inc();
             return this;
         }
 
-        private MetricAdapter decActiveRequests(String[] values) {
+        private MetricAdapter<T> decActiveRequests(String[] values) {
             activeRequests.labels(values).dec();
             return this;
         }
 
-        private MetricAdapter requestBytes(String[] values, RequestLog log) {
+        private MetricAdapter<T> requestBytes(String[] values, RequestLog log) {
             requestBytes.labels(values).observe(log.requestLength());
             return this;
         }
 
-        private MetricAdapter responseBytes(String[] values, RequestLog log) {
+        private MetricAdapter<T> responseBytes(String[] values, RequestLog log) {
             responseBytes.labels(values).observe(log.responseLength());
             return this;
-        }
-
-        private static <T extends Collector> T register(CollectorRegistry collectorRegistry,
-                                                        String name, Function<String, T> createCollector) {
-            if (collectorRegistry instanceof PrometheusRegistry) {
-                return ((PrometheusRegistry)collectorRegistry).register(name, createCollector);
-            }
-            T collector = createCollector.apply(name);
-            collectorRegistry.register(collector);
-            return collector;
         }
     }
 }
