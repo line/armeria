@@ -101,7 +101,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             CompressorRegistry compressorRegistry,
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
-            MessageMarshaller jsonMarshaller) {
+            @Nullable MessageMarshaller jsonMarshaller) {
         this.ctx = ctx;
         this.httpClient = httpClient;
         this.req = req;

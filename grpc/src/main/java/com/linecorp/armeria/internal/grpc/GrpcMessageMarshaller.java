@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.internal.grpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+
+import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
@@ -64,11 +67,13 @@ public class GrpcMessageMarshaller<I, O> {
     public GrpcMessageMarshaller(ByteBufAllocator alloc,
                                  SerializationFormat serializationFormat,
                                  MethodDescriptor<I, O> method,
-                                 MessageMarshaller jsonMarshaller) {
+                                 @Nullable MessageMarshaller jsonMarshaller) {
         this.alloc = requireNonNull(alloc, "alloc");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.method = requireNonNull(method, "method");
-        this.jsonMarshaller = requireNonNull(jsonMarshaller, "jsonMarshaller");
+        checkArgument(!GrpcSerializationFormats.isJson(serializationFormat) || jsonMarshaller != null,
+                      "jsonMarshaller must be non-null when serializationFormat is JSON.");
+        this.jsonMarshaller = jsonMarshaller;
         requestType = marshallerType(method.getRequestMarshaller());
         responseType = marshallerType(method.getResponseMarshaller());
     }

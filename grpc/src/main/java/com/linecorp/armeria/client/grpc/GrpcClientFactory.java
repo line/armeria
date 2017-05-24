@@ -30,6 +30,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
@@ -118,13 +120,15 @@ public class GrpcClientFactory extends DecoratingClientFactory {
 
         Client<HttpRequest, HttpResponse> httpClient = newHttpClient(uri, scheme, options);
 
+        MessageMarshaller jsonMarshaller = GrpcSerializationFormats.isJson(serializationFormat) ?
+                                           GrpcJsonUtil.jsonMarshaller(stubMethods(stubClass)) : null;
         ArmeriaChannel channel = new ArmeriaChannel(
                 new DefaultClientBuilderParams(this, uri, clientType, options),
                 httpClient,
                 scheme.sessionProtocol(),
                 newEndpoint(uri),
                 serializationFormat,
-                GrpcJsonUtil.jsonMarshaller(stubMethods(stubClass)));
+                jsonMarshaller);
 
         try {
             // Verified createClientMethod.getReturnType == clientType

@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.grpc;
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
 import com.linecorp.armeria.client.Client;
@@ -70,7 +72,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                    SessionProtocol sessionProtocol,
                    Endpoint endpoint,
                    SerializationFormat serializationFormat,
-                   MessageMarshaller jsonMarshaller) {
+                   @Nullable MessageMarshaller jsonMarshaller) {
         this.params = params;
         this.httpClient = httpClient;
         this.sessionProtocol = sessionProtocol;
