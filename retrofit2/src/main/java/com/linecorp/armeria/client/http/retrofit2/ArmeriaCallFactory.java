@@ -61,8 +61,7 @@ final class ArmeriaCallFactory implements Factory {
 
     ArmeriaCallFactory(HttpClient baseHttpClient,
                        ClientFactory clientFactory,
-                       BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator,
-                       String groupPrefix) {
+                       BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
         this.baseHttpClient = baseHttpClient;
         this.clientFactory = clientFactory;
         this.configurator = configurator;
@@ -109,6 +108,7 @@ final class ArmeriaCallFactory implements Factory {
 
         private volatile HttpResponse httpResponse;
 
+        @SuppressWarnings("FieldMayBeFinal")
         private volatile ExecutionState executionState = ExecutionState.IDLE;
 
         ArmeriaCall(ArmeriaCallFactory callFactory, Request request) {
