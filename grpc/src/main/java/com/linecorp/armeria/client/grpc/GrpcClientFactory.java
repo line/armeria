@@ -112,10 +112,7 @@ public class GrpcClientFactory extends DecoratingClientFactory {
                                                clientType);
         }
 
-        Client<HttpRequest, HttpResponse> httpClient = options.decoration().decorate(
-                HttpRequest.class,
-                HttpResponse.class,
-                newHttpClient(uri, scheme, options));
+        Client<HttpRequest, HttpResponse> httpClient = newHttpClient(uri, scheme, options);
 
         ArmeriaChannel channel = new ArmeriaChannel(
                 new DefaultClientBuilderParams(this, uri, clientType, options),
