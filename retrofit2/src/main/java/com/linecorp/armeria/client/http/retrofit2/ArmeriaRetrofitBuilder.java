@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
-import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
@@ -71,7 +70,6 @@ import retrofit2.Retrofit.Builder;
  */
 public final class ArmeriaRetrofitBuilder {
 
-    private static final Pattern GROUP_PREFIX_PATTERN = Pattern.compile("^[_0-9a-z]+$");
     private static final BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder>
             DEFAULT_CONFIGURATOR = (url, optionsBuilder) -> optionsBuilder;
     private static final String SLASH = "/";
@@ -79,7 +77,6 @@ public final class ArmeriaRetrofitBuilder {
     private final Retrofit.Builder retrofitBuilder;
     private final ClientFactory clientFactory;
     private String baseUrl;
-    private String basePath;
     private BiFunction<String, ? super ClientOptionsBuilder, ClientOptionsBuilder> configurator =
             DEFAULT_CONFIGURATOR;
 
@@ -131,7 +128,7 @@ public final class ArmeriaRetrofitBuilder {
 
     /**
      * Adds the specified converter factory for serialization and deserialization of objects.
-     * @see Retrofit.Builder#addCallAdapterFactory(Factory)
+     * @see Retrofit.Builder#addCallAdapterFactory(CallAdapter.Factory)
      */
     public ArmeriaRetrofitBuilder addConverterFactory(Converter.Factory factory) {
         retrofitBuilder.addConverterFactory(requireNonNull(factory, "factory"));
@@ -141,7 +138,7 @@ public final class ArmeriaRetrofitBuilder {
     /**
      * Adds the specified call adapter factory for supporting service method return types other than {@link
      * Call}.
-     * @see Retrofit.Builder#addCallAdapterFactory(Factory)
+     * @see Retrofit.Builder#addCallAdapterFactory(CallAdapter.Factory)
      */
     public ArmeriaRetrofitBuilder addCallAdapterFactory(CallAdapter.Factory factory) {
         retrofitBuilder.addCallAdapterFactory(requireNonNull(factory, "factory"));
@@ -184,8 +181,7 @@ public final class ArmeriaRetrofitBuilder {
                 Clients.newClient(clientFactory, fullUri, HttpClient.class,
                                   configurator.apply(fullUri, new ClientOptionsBuilder()).build());
         return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, uri.getPath(), GROUP_PREFIX))
-                              .callFactory(new ArmeriaCallFactory(baseHttpClient, clientFactory, configurator,
-                                                                  GROUP_PREFIX))
+                              .callFactory(new ArmeriaCallFactory(baseHttpClient, clientFactory, configurator))
                               .build();
     }
 
