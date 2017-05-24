@@ -15,6 +15,8 @@ managedDependencies {
         compile "io.grpc:$it"
     }
 
+    compile 'org.curioswitch.curiostack:protobuf-jackson'
+
     testCompile 'io.grpc:grpc-okhttp'
     testCompile 'io.grpc:grpc-testing'
 }

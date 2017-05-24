@@ -100,9 +100,7 @@ public final class GrpcServiceBuilder {
 
     /**
      * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to supporting binary
-     * protobuf formats. JSON formats are currently very inefficient and not recommended for use in production.
-     *
-     * <p>TODO(anuraaga): Use faster JSON marshalling.
+     * protobuf formats. Enabling JSON can be useful, e.g., when migrating existing JSON services to gRPC.
      */
     public GrpcServiceBuilder supportedSerializationFormats(SerializationFormat... formats) {
         return supportedSerializationFormats(ImmutableSet.copyOf(requireNonNull(formats, "formats")));
