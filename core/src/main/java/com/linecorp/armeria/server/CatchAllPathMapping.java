@@ -43,6 +43,11 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     }
 
     @Override
+    public Optional<String> prefix() {
+        return PREFIX_PATH_OPT;
+    }
+
+    @Override
     public String toString() {
         return "catchAll";
     }
