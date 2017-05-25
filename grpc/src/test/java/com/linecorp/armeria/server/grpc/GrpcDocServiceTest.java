@@ -89,9 +89,6 @@ public class GrpcDocServiceTest {
                     .supportedSerializationFormats(GrpcSerializationFormats.values())
                     .enableUnframedRequests(true)
                     .build());
-            sb.serviceUnder("/reconnect", new GrpcServiceBuilder()
-                    .addService(mock(ReconnectServiceImplBase.class))
-                    .build());
             sb.serviceUnder(
                     "/docs/",
                     new DocServiceBuilder()
@@ -105,6 +102,9 @@ public class GrpcDocServiceTest {
                                                  .build())
                             .build()
                             .decorate(LoggingService::new));
+            sb.serviceUnder("/", new GrpcServiceBuilder()
+                    .addService(mock(ReconnectServiceImplBase.class))
+                    .build());
         }
     };
 
@@ -131,7 +131,7 @@ public class GrpcDocServiceTest {
                         RECONNECT_SERVICE_DESCRIPTOR,
                         ImmutableList.of(new EndpointInfo(
                                 "*",
-                                "/reconnect/armeria.grpc.testing.ReconnectService/",
+                                "/armeria.grpc.testing.ReconnectService/",
                                 "",
                                 GrpcSerializationFormats.PROTO,
                                 ImmutableSet.of(
