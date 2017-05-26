@@ -76,7 +76,7 @@ looked like the following:
 
         @Override
         public void onFailure(Throwable t) {
-          t.printStackTrace();
+            t.printStackTrace();
         }
     });
 
