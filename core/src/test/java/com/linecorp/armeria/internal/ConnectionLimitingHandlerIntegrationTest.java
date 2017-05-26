@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -63,7 +62,7 @@ public class ConnectionLimitingHandlerIntegrationTest {
                 assertThat(server.server().numConnections()).isEqualTo(2);
             }
 
-            await().atMost(10, TimeUnit.SECONDS).until(() -> server.server().numConnections() == 1);
+            await().until(() -> server.server().numConnections() == 1);
 
             try (Socket s2 = newSocketAndTest()) {
                 assertThat(server.server().numConnections()).isEqualTo(2);

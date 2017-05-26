@@ -20,12 +20,11 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.given;
+import static org.awaitility.Awaitility.await;
 
 import java.util.EnumSet;
 import java.util.SortedMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.apache.thrift.TApplicationException;
@@ -104,20 +103,19 @@ public class PrometheusMetricsIntegrationTest {
         makeRequest1("world");
 
         // Wait until all RequestLogs are collected.
-        given().atMost(10, TimeUnit.SECONDS)
-               .untilAsserted(() -> assertThat(makeMetricsRequest().content().toStringUtf8())
-                       .contains("armeria_server_request_duration_seconds_count{path=\"/thrift1",
-                                 "armeria_server_request_size_bytes_count{path=\"/thrift1",
-                                 "armeria_server_response_size_bytes_count{path=\"/thrift1",
-                                 "armeria_client_request_duration_seconds_count{path=\"/thrift1",
-                                 "armeria_client_request_size_bytes_count{path=\"/thrift1",
-                                 "armeria_client_response_size_bytes_count{path=\"/thrift1",
-                                 "armeria_server_request_success_total{path=\"/thrift1",
-                                 "armeria_server_request_failure_total{path=\"/thrift1",
-                                 "armeria_client_request_success_total{path=\"/thrift1",
-                                 "armeria_client_request_failure_total{path=\"/thrift1",
-                                 "armeria_server_request_active{path=\"/thrift1",
-                                 "armeria_client_request_active{path=\"/thrift1"));
+        await().untilAsserted(() -> assertThat(makeMetricsRequest().content().toStringUtf8())
+                .contains("armeria_server_request_duration_seconds_count{path=\"/thrift1",
+                          "armeria_server_request_size_bytes_count{path=\"/thrift1",
+                          "armeria_server_response_size_bytes_count{path=\"/thrift1",
+                          "armeria_client_request_duration_seconds_count{path=\"/thrift1",
+                          "armeria_client_request_size_bytes_count{path=\"/thrift1",
+                          "armeria_client_response_size_bytes_count{path=\"/thrift1",
+                          "armeria_server_request_success_total{path=\"/thrift1",
+                          "armeria_server_request_failure_total{path=\"/thrift1",
+                          "armeria_client_request_success_total{path=\"/thrift1",
+                          "armeria_client_request_failure_total{path=\"/thrift1",
+                          "armeria_server_request_active{path=\"/thrift1",
+                          "armeria_client_request_active{path=\"/thrift1"));
 
         final String content = makeMetricsRequest().content().toStringUtf8();
 
@@ -171,18 +169,17 @@ public class PrometheusMetricsIntegrationTest {
         makeRequest2("world");
 
         // Wait until all RequestLogs are collected.
-        given().atMost(10, TimeUnit.SECONDS)
-               .untilAsserted(() -> assertThat(makeMetricsRequest().content().toStringUtf8())
-                       .contains("armeria_server_request_duration_seconds_count{path=\"/thrift2",
-                                 "armeria_server_request_size_bytes_count{path=\"/thrift2",
-                                 "armeria_server_response_size_bytes_count{path=\"/thrift2",
-                                 "armeria_client_request_duration_seconds_count{path=\"/thrift2",
-                                 "armeria_client_request_size_bytes_count{path=\"/thrift2",
-                                 "armeria_client_response_size_bytes_count{path=\"/thrift2",
-                                 "armeria_server_request_success_total{path=\"/thrift2",
-                                 "armeria_client_request_success_total{path=\"/thrift2",
-                                 "armeria_server_request_active{path=\"/thrift2",
-                                 "armeria_client_request_active{path=\"/thrift2"));
+        await().untilAsserted(() -> assertThat(makeMetricsRequest().content().toStringUtf8())
+                .contains("armeria_server_request_duration_seconds_count{path=\"/thrift2",
+                          "armeria_server_request_size_bytes_count{path=\"/thrift2",
+                          "armeria_server_response_size_bytes_count{path=\"/thrift2",
+                          "armeria_client_request_duration_seconds_count{path=\"/thrift2",
+                          "armeria_client_request_size_bytes_count{path=\"/thrift2",
+                          "armeria_client_response_size_bytes_count{path=\"/thrift2",
+                          "armeria_server_request_success_total{path=\"/thrift2",
+                          "armeria_client_request_success_total{path=\"/thrift2",
+                          "armeria_server_request_active{path=\"/thrift2",
+                          "armeria_client_request_active{path=\"/thrift2"));
 
         final String content = makeMetricsRequest().content().toStringUtf8();
 

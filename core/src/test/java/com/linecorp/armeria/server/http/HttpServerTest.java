@@ -22,6 +22,7 @@ import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
 import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
 import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
 import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
@@ -46,11 +47,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -138,6 +141,7 @@ public class HttpServerTest {
         return ImmutableList.of(H1C, H1, H2C, H2);
     }
 
+    private static final AtomicInteger pendingRequestLogs = new AtomicInteger();
     private static final BlockingQueue<RequestLog> requestLogs = new LinkedBlockingQueue<>();
     private static volatile long serverRequestTimeoutMillis;
     private static volatile long serverMaxRequestLength;
@@ -369,9 +373,13 @@ public class HttpServerTest {
                     s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                            pendingRequestLogs.incrementAndGet();
                             ctx.setRequestTimeoutMillis(serverRequestTimeoutMillis);
                             ctx.setMaxRequestLength(serverMaxRequestLength);
-                            ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);
+                            ctx.log().addListener(log -> {
+                                pendingRequestLogs.decrementAndGet();
+                                requestLogs.add(log);
+                            }, RequestLogAvailability.COMPLETE);
                             return delegate().serve(ctx, req);
                         }
                     };
@@ -394,15 +402,23 @@ public class HttpServerTest {
     }
 
     @Before
-    public void reset() {
-        requestLogs.clear();
-
+    public void resetOptions() {
         serverRequestTimeoutMillis = 10000L;
         clientWriteTimeoutMillis = 3000L;
         clientResponseTimeoutMillis = 10000L;
 
         serverMaxRequestLength = MAX_CONTENT_LENGTH;
         clientMaxResponseLength = MAX_CONTENT_LENGTH;
+    }
+
+    @After
+    public void clearRequestLogs() {
+        try {
+            await().until(() -> pendingRequestLogs.get() == 0);
+        } finally {
+            pendingRequestLogs.set(0);
+            requestLogs.clear();
+        }
     }
 
     @Test(timeout = 10000)

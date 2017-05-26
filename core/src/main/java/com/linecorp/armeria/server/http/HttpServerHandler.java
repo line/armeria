@@ -319,13 +319,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // clean up the request stream when response stream ends.
             gracefulShutdownSupport.inc();
             unfinishedRequests++;
-            res.closeFuture().handle(voidFunction((ret, cause) -> {
-                req.abort();
+
+            req.closeFuture().handle(voidFunction((ret, cause) -> {
                 if (cause == null) {
                     logBuilder.endRequest();
                 } else {
                     logBuilder.endRequest(cause);
                 }
+            })).exceptionally(CompletionActions::log);
+
+            res.closeFuture().handle(voidFunction((ret, cause) -> {
+                req.abort();
+                // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
                 eventLoop.execute(() -> {
                     gracefulShutdownSupport.dec();
                     if (--unfinishedRequests == 0 && handledLastRequest) {
