@@ -9,10 +9,10 @@
 .. _client-grpc:
 
 Calling a gRPC service
-========================
+======================
 
-Let's assume we have the following gRPC_ service definition:, served at ``http://127.0.0.1:8080/``, just like
-used in :ref:`server-grpc`:
+Let's assume we have the following gRPC_ service definition, served at ``http://127.0.0.1:8080/``, just like
+what we used in :ref:`server-grpc`:
 
 .. code-block:: protobuf
 
