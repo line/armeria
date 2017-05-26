@@ -62,6 +62,7 @@ import com.linecorp.armeria.server.http.dynamic.Path;
 import com.linecorp.armeria.server.http.dynamic.PathParam;
 import com.linecorp.armeria.server.http.dynamic.Post;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.common.AnticipatedException;
 
 public class HttpServiceTest {
 
@@ -244,7 +245,7 @@ public class HttpServiceTest {
         @Get
         @Path("/exception/:var")
         public int exception(@PathParam("var") int var) {
-            throw new IllegalArgumentException("bad var!");
+            throw new AnticipatedException("bad var!");
         }
 
         // Throws an exception asynchronously
@@ -252,7 +253,7 @@ public class HttpServiceTest {
         @Path("/exception-async/:var")
         public CompletableFuture<Integer> exceptionAsync(@PathParam("var") int var) {
             CompletableFuture<Integer> future = new CompletableFuture<>();
-            future.completeExceptionally(new IllegalArgumentException("bad var!"));
+            future.completeExceptionally(new AnticipatedException("bad var!"));
             return future;
         }
     }

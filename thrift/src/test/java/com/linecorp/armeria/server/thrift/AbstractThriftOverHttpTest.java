@@ -50,7 +50,6 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -60,6 +59,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
+import com.linecorp.armeria.testing.common.AnticipatedException;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
@@ -111,7 +111,7 @@ public abstract class AbstractThriftOverHttpTest {
 
             sb.serviceAt("/exception", THttpService.of(
                     (AsyncIface) (name, resultHandler) ->
-                            resultHandler.onError(Exceptions.clearTrace(new Exception(name)))));
+                            resultHandler.onError(new AnticipatedException(name))));
 
             sb.serviceAt("/hellochild", THttpService.of(new HelloServiceChild()));
 

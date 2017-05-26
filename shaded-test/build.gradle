@@ -1,3 +1,5 @@
+import com.google.common.base.CaseFormat
+
 ext {
     requiredProjects = rootProject.ext.publishedJavaProjects + project(':testing')
 }
@@ -125,5 +127,5 @@ private static Collection<Configuration> testConfigurations(Project project) {
 }
 
 private static String shadedName(Project project, String suffix = '') {
-    return "shaded${project.name.capitalize()}${suffix}"
+    return "shaded${CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_CAMEL, project.name)}${suffix}"
 }
