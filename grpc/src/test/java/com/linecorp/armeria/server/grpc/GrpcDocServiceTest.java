@@ -101,7 +101,7 @@ public class GrpcDocServiceTest {
                                                                 .setBody(ByteString.copyFromUtf8("world")))
                                                  .build())
                             .build()
-                            .decorate(LoggingService::new));
+                            .decorate(LoggingService.newDecorator()));
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(mock(ReconnectServiceImplBase.class))
                     .build());

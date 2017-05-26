@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Function;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,25 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
 
     private static final String REQUEST_FORMAT = "{} Request: {}";
     private static final String RESPONSE_FORMAT = "{} Response: {}";
+
+    /**
+     * Returns a new {@link Client} decorator that logs {@link Request}s and {@link Response}s at
+     * {@link LogLevel#INFO}.
+     */
+    public static <I extends Request, O extends Response>
+    Function<Client<I, O>, LoggingClient<I, O>> newDecorator() {
+        return LoggingClient::new;
+    }
+
+    /**
+     * Returns a new {@link Client} decorator that logs {@link Request}s and {@link Response}s.
+     *
+     * @param level the log level
+     */
+    public static <I extends Request, O extends Response>
+    Function<Client<I, O>, LoggingClient<I, O>> newDecorator(LogLevel level) {
+        return delegate -> new LoggingClient<>(delegate, level);
+    }
 
     private final LogLevel level;
 

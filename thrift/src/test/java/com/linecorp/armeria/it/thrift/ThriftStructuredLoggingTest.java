@@ -32,6 +32,8 @@ import org.mockito.junit.MockitoRule;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
@@ -70,7 +72,7 @@ public class ThriftStructuredLoggingTest {
         }
     }
 
-    private static MockedStructuredLoggingService<?, ?> loggingService;
+    private static MockedStructuredLoggingService<? super HttpRequest, ? extends HttpResponse> loggingService;
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {

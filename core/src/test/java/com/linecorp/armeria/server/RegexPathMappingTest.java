@@ -26,4 +26,26 @@ public class RegexPathMappingTest {
     public void testLoggerName() throws Exception {
         assertThat(ofRegex("foo/bar").loggerName()).isEqualTo("regex.foo_bar");
     }
+
+    @Test
+    public void basic() {
+        final PathMapping mapping = ofRegex("foo");
+        final PathMappingResult result = mapping.apply("/barfoobar", null);
+        assertThat(result.isPresent()).isTrue();
+        assertThat(result.path()).isEqualTo("/barfoobar");
+        assertThat(result.query()).isNull();
+        assertThat(result.pathParams()).isEmpty();
+    }
+
+    @Test
+    public void pathParams() {
+        final PathMapping mapping = ofRegex("^/files/(?<fileName>.*)$");
+        assertThat(mapping.paramNames()).containsExactly("fileName");
+
+        final PathMappingResult result = mapping.apply("/files/images/avatar.jpg", "size=512");
+        assertThat(result.isPresent()).isTrue();
+        assertThat(result.path()).isEqualTo("/files/images/avatar.jpg");
+        assertThat(result.query()).isEqualTo("size=512");
+        assertThat(result.pathParams()).containsEntry("fileName", "images/avatar.jpg").hasSize(1);
+    }
 }

@@ -88,7 +88,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                 HttpHeaders
                         .of(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
                         .set(HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType().toString()));
-        ClientRequestContext ctx = newContext(method.getFullMethodName(), req);
+        ClientRequestContext ctx = newContext(HttpMethod.POST, req);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
         ctx.logBuilder().deferResponseContent();
@@ -136,14 +136,15 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
         return params.options();
     }
 
-    private ClientRequestContext newContext(String method, HttpRequest req) {
+    private ClientRequestContext newContext(HttpMethod method, HttpRequest req) {
         return new DefaultClientRequestContext(
                 factory().eventLoopSupplier().get(),
                 sessionProtocol,
                 endpoint,
                 method,
-                uri().getPath(),
-                "",
+                uri().getRawPath(),
+                uri().getRawQuery(),
+                null,
                 options(),
                 req);
     }

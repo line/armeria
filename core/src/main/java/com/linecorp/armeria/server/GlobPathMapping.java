@@ -16,7 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.Set;
 import java.util.regex.Pattern;
+
+import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableSet;
 
 final class GlobPathMapping extends AbstractPathMapping {
 
@@ -33,8 +38,14 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected String doApply(String path) {
-        return pattern.matcher(path).matches() ? path : null;
+    protected PathMappingResult doApply(String path, @Nullable String query) {
+        return pattern.matcher(path).matches() ? PathMappingResult.of(path, query)
+                                               : PathMappingResult.empty();
+    }
+
+    @Override
+    public Set<String> paramNames() {
+        return ImmutableSet.of();
     }
 
     @Override

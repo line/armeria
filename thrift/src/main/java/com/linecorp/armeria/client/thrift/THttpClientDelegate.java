@@ -38,6 +38,8 @@ import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransportException;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.InvalidResponseException;
@@ -68,17 +70,14 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
     private final AtomicInteger nextSeqId = new AtomicInteger();
 
     private final Client<HttpRequest, HttpResponse> httpClient;
-    private final String path;
     private final SerializationFormat serializationFormat;
     private final TProtocolFactory protocolFactory;
     private final String mediaType;
     private final Map<Class<?>, ThriftServiceMetadata> metadataMap = new ConcurrentHashMap<>();
 
-    THttpClientDelegate(Client<HttpRequest, HttpResponse> httpClient, String path,
+    THttpClientDelegate(Client<HttpRequest, HttpResponse> httpClient,
                         SerializationFormat serializationFormat) {
-
         this.httpClient = httpClient;
-        this.path = path;
         this.serializationFormat = serializationFormat;
         protocolFactory = ThriftProtocolFactories.get(serializationFormat);
         mediaType = serializationFormat.mediaType().toString();
@@ -118,7 +117,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             ctx.logBuilder().requestContent(call, new ThriftCall(header, tArgs));
 
             final DefaultHttpRequest httpReq = new DefaultHttpRequest(
-                    HttpHeaders.of(HttpMethod.POST, path)
+                    HttpHeaders.of(HttpMethod.POST, ctx.path())
                                .set(HttpHeaderNames.CONTENT_TYPE, mediaType), true);
             httpReq.write(HttpData.of(outTransport.getArray(), 0, outTransport.length()));
             httpReq.close();
@@ -156,7 +155,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
     private static String fullMethod(ClientRequestContext ctx, String method) {
         final String service = ctx.fragment();
-        if (service.isEmpty()) {
+        if (Strings.isNullOrEmpty(service)) {
             return method;
         } else {
             return service + ':' + method;

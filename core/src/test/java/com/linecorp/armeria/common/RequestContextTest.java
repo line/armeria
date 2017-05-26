@@ -51,6 +51,7 @@ import org.mockito.junit.MockitoRule;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.http.DefaultHttpRequest;
+import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -475,7 +476,7 @@ public class RequestContextTest {
 
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
-            super(HttpSessionProtocols.HTTP, "GET", "/", new DefaultHttpRequest());
+            super(HttpSessionProtocols.HTTP, HttpMethod.GET, "/", null, new DefaultHttpRequest());
         }
 
         @Override

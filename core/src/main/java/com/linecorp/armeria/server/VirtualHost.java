@@ -30,8 +30,8 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -214,14 +214,20 @@ public final class VirtualHost {
     /**
      * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
      *
-     * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
+     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
+     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     *              {@code null} if query does not exist.
+     *
+     * @return the {@link ServiceConfig} wrapped by a {@link PathMapped} if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
-    public PathMapped<ServiceConfig> findServiceConfig(String path) {
-        return serviceMapping.apply(path);
+    public PathMapped<ServiceConfig> findServiceConfig(String path, @Nullable String query) {
+        requireNonNull(path, "path");
+        return serviceMapping.apply(path, query);
     }
 
-    VirtualHost decorate(@Nullable Function<Service<Request, Response>, Service<Request, Response>> decorator) {
+    VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
+                                            Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {
             return this;
         }
@@ -229,7 +235,7 @@ public final class VirtualHost {
         final List<ServiceConfig> services =
                 this.services.stream().map(cfg -> {
                     final PathMapping pathMapping = cfg.pathMapping();
-                    final Service<Request, Response> service = decorator.apply(cfg.service());
+                    final Service<HttpRequest, HttpResponse> service = decorator.apply(cfg.service());
                     final String loggerName = cfg.loggerName().orElse(null);
                     return new ServiceConfig(pathMapping, service, loggerName);
                 }).collect(Collectors.toList());

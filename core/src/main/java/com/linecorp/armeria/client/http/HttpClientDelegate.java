@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.http;
 
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -22,7 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,8 +61,6 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
             ch -> ch.eventLoop().newSucceededFuture(HttpSession.get(ch).isActive());
 
-    private static final Pattern CONSECUTIVE_SLASHES_PATTERN = Pattern.compile("/{2,}");
-
     final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> map = new ConcurrentHashMap<>();
 
     private final HttpClientFactory factory;
@@ -75,7 +73,10 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Endpoint endpoint = ctx.endpoint().resolve().withDefaultPort(ctx.sessionProtocol().defaultPort());
         autoFillHeaders(ctx, endpoint, req);
-        sanitizePath(req);
+        if (!sanitizePath(req)) {
+            req.abort();
+            return HttpResponse.ofFailed(new IllegalArgumentException("invalid path: " + req.path()));
+        }
 
         final PoolKey poolKey = new PoolKey(
                 InetSocketAddress.createUnresolved(endpoint.host(), endpoint.port()),
@@ -148,24 +149,23 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
     }
 
-    private static void sanitizePath(HttpRequest req) {
-        final String path = req.path();
-        if (path == null || path.isEmpty()) {
-            req.path("/");
-            return;
+    private static boolean sanitizePath(HttpRequest req) {
+        final String[] pathAndQuery = splitPathAndQuery(req.path());
+        if (pathAndQuery == null) {
+            return false;
         }
 
-        // Remove consecutive slashes from the path.
-        final int queryStart = path.indexOf('?');
-        if (queryStart < 0) {
-            final String newPath = CONSECUTIVE_SLASHES_PATTERN.matcher(path).replaceAll("/");
-            if (newPath != path) {
-                req.path(newPath);
-            }
+        final String path = pathAndQuery[0];
+        final String query = pathAndQuery[1];
+        final String newPathAndQuery;
+        if (query != null) {
+            newPathAndQuery = path + '?' + query;
         } else {
-            req.path(CONSECUTIVE_SLASHES_PATTERN.matcher(path.substring(0, queryStart)).replaceAll("/") +
-                     path.substring(queryStart));
+            newPathAndQuery = path;
         }
+
+        req.path(newPathAndQuery);
+        return true;
     }
 
     private KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {

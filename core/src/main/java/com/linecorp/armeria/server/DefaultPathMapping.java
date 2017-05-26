@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.http;
+package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
@@ -27,21 +27,27 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.base.MoreObjects;
+import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 /**
- * A path param extractor. It holds three things:
+ * The default {@link PathMapping} implementation. It holds three things:
  * <ul>
- *   <li>A regex-compiled form of the path. It is used for matching and extracting.</li>
- *   <li>A skeleton of the path. It is used for duplication detecting.</li>
- *   <li>A set of variables declared in the path.</li>
+ *   <li>The regex-compiled form of the path. It is used for matching and extracting.</li>
+ *   <li>The skeleton of the path. It is used for duplication detecting.</li>
+ *   <li>A set of path parameters declared in the path pattern</li>
  * </ul>
- *
  */
-public final class PathParamExtractor {
+final class DefaultPathMapping extends AbstractPathMapping {
 
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
+
+    /**
+     * The original path pattern specified in the constructor.
+     */
+    private final String pathPattern;
 
     /**
      * Regex form of given path, which will be used for matching or extracting.
@@ -59,41 +65,44 @@ public final class PathParamExtractor {
     private final String skeleton;
 
     /**
-     * Set of the variables declared in this path param extractor.
+     * The names of the path parameters this mapping will extract.
      */
-    private final ImmutableSet<String> variables;
+    private final Set<String> paramNames;
 
     /**
-     * Create a {@link PathParamExtractor} instance from given {@code pathPattern}.
+     * Create a {@link DefaultPathMapping} instance from given {@code pathPattern}.
      *
      * @param pathPattern the {@link String} that contains path params.
      *             e.g. {@code /users/{name}} or {@code /users/:name}
      *
      * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
      */
-    public PathParamExtractor(String pathPattern) {
+    DefaultPathMapping(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
 
-        final String matchPath = pathPattern.charAt(0) == '/' ? pathPattern : "/" + pathPattern;
-        if (!VALID_PATTERN.matcher(matchPath).matches()) {
-            throw new IllegalArgumentException("pathPattern: " + pathPattern);
+        if (!pathPattern.startsWith("/")) {
+            throw new IllegalArgumentException("pathPattern: " + pathPattern + " (must start with '/')");
+        }
+
+        if (!VALID_PATTERN.matcher(pathPattern).matches()) {
+            throw new IllegalArgumentException("pathPattern: " + pathPattern + " (invalid pattern)");
         }
 
         StringJoiner patternJoiner = new StringJoiner("/");
         StringJoiner skeletonJoiner = new StringJoiner("/");
         Set<String> placeholders = new HashSet<>();
         for (String token : pathPattern.split("/")) {
-            String variable = variable(token);
-            if (variable != null) {
-                if (!placeholders.contains(variable)) {
-                    // If the given token is a first occurred variable mark, add it to the variable set and
+            String paramName = paramName(token);
+            if (paramName != null) {
+                if (!placeholders.contains(paramName)) {
+                    // If the given token appeared first time, add it to the set and
                     // replace it to named group expression in regex.
-                    placeholders.add(variable);
-                    patternJoiner.add(String.format("(?<%s>[^/]+)", variable));
+                    placeholders.add(paramName);
+                    patternJoiner.add(String.format("(?<%s>[^/]+)", paramName));
                 } else {
-                    // If the given token is a re-occurred variable mark, replace it to backreference expression
+                    // If the given token appeared before, replace it with a back-reference expression
                     // in regex.
-                    patternJoiner.add(String.format("\\k<%s>", variable));
+                    patternJoiner.add(String.format("\\k<%s>", paramName));
                 }
                 skeletonJoiner.add("{}");
             } else {
@@ -103,19 +112,22 @@ public final class PathParamExtractor {
             }
         }
 
-        pattern = Pattern.compile(patternJoiner + "(\\?.*)*");
+        this.pathPattern = pathPattern;
+        pattern = Pattern.compile(patternJoiner.toString());
         skeleton = skeletonJoiner.toString();
-        variables = ImmutableSet.copyOf(placeholders);
+        paramNames = ImmutableSet.copyOf(placeholders);
     }
 
     /**
-     * Returns variable contained in the path element. If it contains no variable, returns null.
-     *
-     * <p>e.g. {variable} -> variable
-     * :variable -> variable
-     * constant -> constant
+     * Returns the name of the path parameter contained in the path element. If it contains no path parameter,
+     * {@code null} is returned. e.g.
+     * <ul>
+     *   <li>{@code "{foo}"} -> {@code "foo"}</li>
+     *   <li>{@code ":bar"} -> {@code "bar"}</li>
+     *   <li>{@code "baz"} -> {@code null}</li>
+     * </ul>
      */
-    private String variable(String token) {
+    private static String paramName(String token) {
         if (token.startsWith("{") && token.endsWith("}")) {
             return token.substring(1, token.length() - 1);
         }
@@ -130,29 +142,31 @@ public final class PathParamExtractor {
     /**
      * Returns the skeleton.
      */
-    public String skeleton() {
+    String skeleton() {
         return skeleton;
     }
 
-    /**
-     * Returns the variables.
-     */
-    public Set<String> variables() {
-        return variables;
+    @Override
+    public Set<String> paramNames() {
+        return paramNames;
     }
 
-    /**
-     * Returns extracting results with given {@code path}.
-     * If the {@code path} does not match, returns {@code null}.
-     */
-    public Map<String, String> extract(String path) {
-        Matcher matcher = pattern.matcher(path);
+    @Override
+    protected PathMappingResult doApply(String path, @Nullable String query) {
+        final Matcher matcher = pattern.matcher(path);
         if (!matcher.matches()) {
-            return null;
+            return PathMappingResult.empty();
         }
 
-        return variables.stream()
-                        .collect(toImmutableMap(Function.identity(), matcher::group));
+        final Map<String, String> pathParams;
+        if (paramNames.isEmpty()) {
+            pathParams = ImmutableMap.of();
+        } else {
+            pathParams = paramNames.stream()
+                                   .collect(toImmutableMap(Function.identity(), matcher::group));
+        }
+
+        return PathMappingResult.of(path, query, pathParams);
     }
 
     @Override
@@ -164,7 +178,7 @@ public final class PathParamExtractor {
             return false;
         }
 
-        PathParamExtractor that = (PathParamExtractor) o;
+        DefaultPathMapping that = (DefaultPathMapping) o;
 
         return pattern.pattern().equals(that.pattern.pattern());
     }
@@ -176,7 +190,6 @@ public final class PathParamExtractor {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("pattern", pattern).toString();
+        return pathPattern;
     }
 }

@@ -15,29 +15,44 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.linecorp.armeria.server.PathManipulators.Prepend;
-import com.linecorp.armeria.server.PathManipulators.StripParents;
-import com.linecorp.armeria.server.PathManipulators.StripPrefixByNumPathComponents;
-import com.linecorp.armeria.server.PathManipulators.StripPrefixByPathPrefix;
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
- * Matches the absolute path part of a URI and translates the matched path to another path string.
- * The translated path, returned by {@link #apply(String)}, determines the value of
- * {@link ServiceRequestContext#mappedPath()}.
+ * Matches the absolute path part of a URI and extracts path parameters from it.
  */
 public interface PathMapping {
 
     /**
+     * Creates a new {@link PathMapping} that matches the specified {@code pathPattern}. e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     * </ul>
+     */
+    static PathMapping of(String pathPattern) {
+        ensureAbsolutePath(pathPattern, "pathPattern");
+
+        if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
+            return ofExact(pathPattern);
+        }
+        return new DefaultPathMapping(pathPattern);
+    }
+
+    /**
      * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
-     * the specified regular expression, as defined in {@link Pattern}. The returned {@link PathMapping} does
-     * not perform any translation. To create a {@link PathMapping} that performs a translation, use the
-     * decorator methods like {@link #stripPrefix(String)}.
+     * the specified regular expression and extracts the values of the named groups.
+     * e.g. {@code "^/users/(?<userId>[0-9]+)$"} will extract the second numeric part of the path into
+     *      the {@code "userId"} path parameter.
      */
     static PathMapping ofRegex(Pattern regex) {
         return new RegexPathMapping(regex);
@@ -45,9 +60,9 @@ public interface PathMapping {
 
     /**
      * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
-     * the specified regular expression, as defined in {@link Pattern}. The returned {@link PathMapping} does
-     * not perform any translation. To create a {@link PathMapping} that performs a translation, use the
-     * decorator methods like {@link #stripPrefix(String)}.
+     * the specified regular expression and extracts the values of the named groups.
+     * e.g. {@code "^/users/(?<userId>[0-9]+)$"} will extract the second numeric part of the path into
+     *      the {@code "userId"} path parameter.
      */
     static PathMapping ofRegex(String regex) {
         return ofRegex(Pattern.compile(requireNonNull(regex, "regex")));
@@ -56,9 +71,7 @@ public interface PathMapping {
     /**
      * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
      * the specified glob expression, where {@code "*"} matches a path component non-recursively and
-     * {@code "**"} matches path components recursively. The returned {@link PathMapping} does not perform any
-     * translation. To create a {@link PathMapping} that performs a translation, use the decorator methods like
-     * {@link #stripPrefix(String)}.
+     * {@code "**"} matches path components recursively.
      */
     static PathMapping ofGlob(String glob) {
         requireNonNull(glob, "glob");
@@ -72,66 +85,47 @@ public interface PathMapping {
 
     /**
      * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
-     * under the specified directory prefix. It also removes the specified directory prefix from the matched
-     * path so that {@link ServiceRequestContext#mappedPath()} does not have the specified directory prefix.
-     * For example, when {@code pathPrefix} is {@code "/foo/"}:
-     * <ul>
-     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
-     *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
-     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
-     * </ul>
-     * This method is a shortcut to {@link #ofPrefix(String, boolean) ofPrefix(pathPrefix, true)}.
+     * under the specified directory prefix.
      */
     static PathMapping ofPrefix(String pathPrefix) {
-        return ofPrefix(pathPrefix, true);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
-     * under the specified directory prefix. When {@code stripPrefix} is {@code true}, it also removes the
-     * specified directory prefix from the matched path so that {@link ServiceRequestContext#mappedPath()}
-     * does not have the specified directory prefix. For example, when {@code pathPrefix} is {@code "/foo/"}:
-     * <ul>
-     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
-     *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
-     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
-     * </ul>
-     */
-    static PathMapping ofPrefix(String pathPrefix, boolean stripPrefix) {
         requireNonNull(pathPrefix, "pathPrefix");
         if ("/".equals(pathPrefix)) {
             // Every path starts with '/'.
             return ofCatchAll();
         }
 
-        return new PrefixPathMapping(pathPrefix, stripPrefix);
+        return new PrefixPathMapping(pathPrefix);
     }
 
     /**
-     * Creates a new {@link PathMapping} that performs an exact match. The returned {@link PathMapping} always
-     * translates the matched path to {@code "/"}.
+     * Creates a new {@link PathMapping} that performs an exact match.
      */
     static PathMapping ofExact(String exactPath) {
         return new ExactPathMapping(exactPath);
     }
 
     /**
-     * Returns a singleton {@link PathMapping} that always matches any path. The returned {@link PathMapping}
-     * does not perform any translation. To create a {@link PathMapping} that performs a translation, use the
-     * decorator methods like {@link #stripPrefix(String)}.
+     * Returns a singleton {@link PathMapping} that always matches any path.
      */
     static PathMapping ofCatchAll() {
         return CatchAllPathMapping.INSTANCE;
     }
 
     /**
-     * Matches the specified {@code path} and translates the matched {@code path} to another path string.
+     * Matches the specified {@code path} and extracts the path parameters from it.
      *
-     * @param path an absolute path as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
-     *         {@code null} if the specified {@code path} does not match this mapping.
+     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
+     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     *              {@code null} if query does not exist.
+     * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
+     *         {@link PathMappingResult#empty()} if not matches.
      */
-    String apply(String path);
+    PathMappingResult apply(String path, @Nullable String query);
+
+    /**
+     * Returns the names of the path parameters extracted by this mapping.
+     */
+    Set<String> paramNames();
 
     /**
      * Returns the logger name.
@@ -158,63 +152,8 @@ public interface PathMapping {
      * Returns the prefix of this path mapping if it is a prefix mapping, or {@link Optional#empty}
      * otherwise. This can be useful for services which provide logic after scanning the server's mapped
      * services, e.g. {@link DocService}
+     *
+     * @return the prefix that ends with '/' if this mapping is a prefix mapping
      */
     Optional<String> prefix();
-
-    /**
-     * Creates a new {@link PathMapping} that removes the specified {@code pathPrefix} from the matched path
-     * so that the {@link ServiceRequestContext#mappedPath()} does not have the specified {@code pathPrefix}.
-     * This method is useful when used with {@link #ofRegex(Pattern)} or {@link #ofGlob(String)}. For example:
-     * <pre>{@code
-     * PathMapping.ofRegex("^/foo/[^/]+/bar/.*$").stripPrefix("/foo/");
-     * PathMapping.ofGlob("^/foo/&#42;/bar/&#42;&#42;").stripPrefix("/foo/");
-     * }</pre>
-     */
-    default PathMapping stripPrefix(String pathPrefix) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        if (pathPrefix.isEmpty()) {
-            return this;
-        }
-
-        return new StripPrefixByPathPrefix(this, pathPrefix);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that removes the first {@code <numPathComponents>} path components
-     * from the matched path so that the {@link ServiceRequestContext#mappedPath()} does not have
-     * unnecessary path prefixes. This method is useful when used with {@link #ofRegex(Pattern)} or
-     * {@link #ofGlob(String)}. For example:
-     * <pre>{@code
-     * PathMapping.ofRegex("^/(foo|bar)/[^/]+/baz/.*$").stripPrefix(1);
-     * PathMapping.ofGlob("^/foo/&#42;/baz/&#42;&#42;").stripPrefix(1);
-     * }</pre>
-     */
-    default PathMapping stripPrefix(int numPathComponents) {
-        if (numPathComponents == 0) {
-            return this;
-        }
-
-        return new StripPrefixByNumPathComponents(this, numPathComponents);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that removes all parent components from the matched path so that
-     * the {@link ServiceRequestContext#mappedPath()} contains only a single path component. This method
-     * is useful when you are interested only in the file name part of the path.
-     */
-    default PathMapping stripParents() {
-        return new StripParents(this);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that prepends the specified {@code pathPrefix} to the matched path.
-     */
-    default PathMapping prepend(String pathPrefix) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        if (pathPrefix.isEmpty() || "/".equals(pathPrefix)) {
-            return this;
-        }
-
-        return new Prepend(this, pathPrefix);
-    }
 }

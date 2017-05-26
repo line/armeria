@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -48,10 +48,9 @@ final class DynamicHttpFunctionImpl implements DynamicHttpFunction {
     DynamicHttpFunctionImpl(Object object, Method method) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
-        this.parameterEntries = Methods.parameterEntries(method);
-        this.isAsynchronous =
-                HttpResponse.class.isAssignableFrom(method.getReturnType()) ||
-                CompletionStage.class.isAssignableFrom(method.getReturnType());
+        parameterEntries = Methods.parameterEntries(method);
+        isAsynchronous = HttpResponse.class.isAssignableFrom(method.getReturnType()) ||
+                         CompletionStage.class.isAssignableFrom(method.getReturnType());
     }
 
     /**

@@ -38,7 +38,6 @@ import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.util.ServerInfo;
-import org.apache.catalina.util.URLEncoder;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.Request;
 import org.apache.coyote.Response;
@@ -83,20 +82,6 @@ public final class TomcatService implements HttpService {
 
     private static final Set<LifecycleState> TOMCAT_START_STATES = Sets.immutableEnumSet(
             LifecycleState.STARTED, LifecycleState.STARTING, LifecycleState.STARTING_PREP);
-
-    private static final URLEncoder TOMCAT_URL_ENCODER;
-
-    static {
-        // Initialize the default URLEncoder.
-        // NB: We could have used URLEncoder.DEFAULT, but it's not available in pre-8.5.
-        TOMCAT_URL_ENCODER = new URLEncoder();
-        TOMCAT_URL_ENCODER.addSafeCharacter('~');
-        TOMCAT_URL_ENCODER.addSafeCharacter('-');
-        TOMCAT_URL_ENCODER.addSafeCharacter('_');
-        TOMCAT_URL_ENCODER.addSafeCharacter('.');
-        TOMCAT_URL_ENCODER.addSafeCharacter('*');
-        TOMCAT_URL_ENCODER.addSafeCharacter('/');
-    }
 
     static final TomcatHandler TOMCAT_HANDLER;
 
@@ -426,8 +411,7 @@ public final class TomcatService implements HttpService {
 
     @Nullable
     private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage req) {
-        final String mappedPath = ctx.mappedPath();
-
+        final String mappedPath = ctx.pathWithoutPrefix();
         final Request coyoteReq = new Request();
 
         coyoteReq.scheme().setString(req.scheme());
@@ -454,6 +438,7 @@ public final class TomcatService implements HttpService {
                 int port = Integer.parseInt(hostHeader.substring(colonPos + 1));
                 coyoteReq.setServerPort(port);
             } catch (NumberFormatException e) {
+                // Invalid port number
                 return null;
             }
         }
@@ -463,16 +448,12 @@ public final class TomcatService implements HttpService {
         coyoteReq.method().setString(method.name());
 
         // Set the request URI.
-        // Do not use URLEncoder.encode(path, encoding); it is not available in some older Tomcats.
-        @SuppressWarnings("deprecation")
-        final byte[] uriBytes = TOMCAT_URL_ENCODER.encode(mappedPath)
-                                                  .getBytes(StandardCharsets.US_ASCII);
+        final byte[] uriBytes = mappedPath.getBytes(StandardCharsets.US_ASCII);
         coyoteReq.requestURI().setBytes(uriBytes, 0, uriBytes.length);
 
         // Set the query string if any.
-        final int queryIndex = req.path().indexOf('?');
-        if (queryIndex >= 0) {
-            coyoteReq.queryString().setString(req.path().substring(queryIndex + 1));
+        if (ctx.query() != null) {
+            coyoteReq.queryString().setString(ctx.query());
         }
 
         // Set the headers.

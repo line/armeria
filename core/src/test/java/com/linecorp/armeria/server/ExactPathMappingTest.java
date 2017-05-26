@@ -24,13 +24,18 @@ import org.junit.Test;
 public class ExactPathMappingTest {
 
     @Test
-    public void shouldReturnNullOnMismatch() {
-        assertThat(new ExactPathMapping("/find/me").apply("/find/me/not")).isNull();
+    public void shouldReturnEmptyOnMismatch() {
+        final PathMappingResult result = new ExactPathMapping("/find/me").apply("/find/me/not", null);
+        assertThat(result.isPresent()).isFalse();
     }
 
     @Test
-    public void shouldReturnExactPathOnMatch() {
-        assertThat(new ExactPathMapping("/find/me").apply("/find/me")).isEqualTo("/find/me");
+    public void shouldReturnNonEmptyOnMatch() {
+        final PathMappingResult result = new ExactPathMapping("/find/me").apply("/find/me", null);
+        assertThat(result.isPresent()).isTrue();
+        assertThat(result.path()).isEqualTo("/find/me");
+        assertThat(result.query()).isNull();
+        assertThat(result.pathParams()).isEmpty();
     }
 
     @Test

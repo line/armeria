@@ -66,7 +66,7 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         // create new request adapter to catch generated spanId
-        final String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method();
+        final String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method().name();
         final InternalClientRequestAdapter requestAdapter =
                 new InternalClientRequestAdapter(
                         Endpoint.builder()

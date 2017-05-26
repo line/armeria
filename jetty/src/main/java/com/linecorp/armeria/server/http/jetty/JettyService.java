@@ -30,7 +30,6 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.servlet.DispatcherType;
 
@@ -50,7 +49,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
-import com.google.common.net.UrlEscapers;
 
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
@@ -324,10 +322,7 @@ public final class JettyService implements HttpService {
         uriBuf.append(aHeaders.path());
 
         final HttpURI uri = new HttpURI(uriBuf.toString());
-        final String encoded = PATH_SPLITTER.splitToList(ctx.mappedPath()).stream()
-                                            .map(UrlEscapers.urlPathSegmentEscaper()::escape)
-                                            .collect(Collectors.joining("/"));
-        uri.setPath(encoded);
+        uri.setPath(ctx.pathWithoutPrefix());
 
         // Convert HttpHeaders to HttpFields
         final HttpFields jHeaders = new HttpFields(aHeaders.size());

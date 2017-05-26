@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.http;
 
-import static com.linecorp.armeria.client.http.DefaultHttpClient.concatPaths;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -64,21 +63,5 @@ public class DefaultHttpClientTest {
 
         String concatPath = httpRequestArgumentCaptor.getValue().path();
         assertThat(concatPath).isEqualTo("/hello/world/test?q1=foo");
-    }
-
-    @Test
-    public void testConcatPaths() throws Exception {
-        assertThat(concatPaths(null, "a")).isEqualTo("/a");
-        assertThat(concatPaths(null, "/a")).isEqualTo("/a");
-
-        assertThat(concatPaths("", "a")).isEqualTo("/a");
-        assertThat(concatPaths("", "/a")).isEqualTo("/a");
-
-        assertThat(concatPaths("/", "a")).isEqualTo("/a");
-        assertThat(concatPaths("/", "/a")).isEqualTo("/a");
-
-        assertThat(concatPaths("/a", "b")).isEqualTo("/a/b");
-        assertThat(concatPaths("/a", "/b")).isEqualTo("/a/b");
-        assertThat(concatPaths("/a/", "/b")).isEqualTo("/a/b");
     }
 }

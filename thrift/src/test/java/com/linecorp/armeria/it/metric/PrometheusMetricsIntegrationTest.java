@@ -264,7 +264,7 @@ public class PrometheusMetricsIntegrationTest {
         } else if (requestEnvelope instanceof HttpHeaders) {
             methodName = ((HttpHeaders) requestEnvelope).method().name();
         } else {
-            methodName = log.method();
+            methodName = log.method().name();
         }
 
         if (requestEnvelope instanceof HttpHeaders) {

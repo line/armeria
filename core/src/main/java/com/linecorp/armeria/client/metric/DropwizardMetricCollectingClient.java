@@ -102,7 +102,7 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
         }
 
         if (methodName == null) {
-            methodName = MoreObjects.firstNonNull(log.method(), "__UNKNOWN_METHOD__");
+            methodName = MoreObjects.firstNonNull(log.method().name(), "__UNKNOWN_METHOD__");
         }
 
         return MetricRegistry.name(metricNamePrefix, methodName);

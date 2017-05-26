@@ -73,44 +73,46 @@ public class HttpServiceTest {
         final ServerBuilder sb = new ServerBuilder();
 
         try {
-            sb.service(
-                    PathMapping.ofGlob("/hello/*").stripPrefix(1),
+            sb.serviceAt(
+                    "/hello/{name}",
                     new AbstractHttpService() {
                         @Override
                         protected void doGet(
                                 ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
 
-                            final String name = ctx.mappedPath().substring(1);
+                            final String name = ctx.pathParam("name");
                             res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
                         }
-                    }.decorate(LoggingService::new))
-              .serviceAt(
-                      "/200",
-                      new AbstractHttpService() {
-                          @Override
-                          protected void doHead(
-                                  ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    }.decorate(LoggingService.newDecorator()));
 
-                              res.respond(HttpStatus.OK);
-                          }
+            sb.serviceAt(
+                    "/200",
+                    new AbstractHttpService() {
+                        @Override
+                        protected void doHead(
+                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
 
-                          @Override
-                          protected void doGet(
-                                  ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                            res.respond(HttpStatus.OK);
+                        }
 
-                              res.respond(HttpStatus.OK);
-                          }
-                      }.decorate(LoggingService::new))
-              .serviceAt(
-                      "/204",
-                      new AbstractHttpService() {
-                          @Override
-                          protected void doGet(
-                                  ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                        @Override
+                        protected void doGet(
+                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
 
-                              res.respond(HttpStatus.NO_CONTENT);
-                          }
-                      }.decorate(LoggingService::new));
+                            res.respond(HttpStatus.OK);
+                        }
+                    }.decorate(LoggingService.newDecorator()));
+
+            sb.serviceAt(
+                    "/204",
+                    new AbstractHttpService() {
+                        @Override
+                        protected void doGet(
+                                ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+
+                            res.respond(HttpStatus.NO_CONTENT);
+                        }
+                    }.decorate(LoggingService.newDecorator()));
 
             // Dynamic Service with DynamicHttpServiceBuilder and direct mappings
             sb.service(PathMapping.ofPrefix("/dynamic1"), new DynamicHttpServiceBuilder()
@@ -137,14 +139,14 @@ public class HttpServiceTest {
                     .addMapping(EnumSet.of(HttpMethod.GET), "/string/{var}",
                                 (ctx, req, args) -> args.get("var"), new TypedStringConverter()
                     )
-                    .build().decorate(LoggingService::new));
+                    .build().decorate(LoggingService.newDecorator()));
             // Dynamic Service with DynamicHttpServiceBuilder and direct mappings
             sb.service(PathMapping.ofPrefix("/dynamic2"), new DynamicHttpServiceBuilder()
                     // Default ResponseConverter for Integer
                     .addConverter(Integer.class, new NaiveIntConverter())
                     // Case 4, 5, 6
                     .addMappings(new ResponseStrategy())
-                    .build().decorate(LoggingService::new));
+                    .build().decorate(LoggingService.newDecorator()));
             // Dynamic Service with inheritance
             // Case 7, 8, 9
             sb.service(PathMapping.ofPrefix("/dynamic3"), new DynamicService());
@@ -159,6 +161,7 @@ public class HttpServiceTest {
         }
         server = sb.build();
     }
+
 
     @Converter(target = Number.class, value = TypedNumberConverter.class)
     @Converter(target = String.class, value = TypedStringConverter.class)
@@ -194,41 +197,41 @@ public class HttpServiceTest {
 
         @Get
         @Path("/path/ctx/async/:var")
-        public CompletableFuture<String> returnPathCtxAsync(@PathParam("var") int var,
-                                                            ServiceRequestContext ctx,
-                                                            Request req) {
+        public static CompletableFuture<String> returnPathCtxAsync(@PathParam("var") int var,
+                                                                   ServiceRequestContext ctx,
+                                                                   Request req) {
             validateContextAndRequest(ctx, req);
             return CompletableFuture.completedFuture(ctx.path());
         }
 
         @Get
         @Path("/path/req/async/:var")
-        public CompletableFuture<String> returnPathReqAsync(@PathParam("var") int var,
-                                                            HttpRequest req,
-                                                            ServiceRequestContext ctx) {
+        public static CompletableFuture<String> returnPathReqAsync(@PathParam("var") int var,
+                                                                   HttpRequest req,
+                                                                   ServiceRequestContext ctx) {
             validateContextAndRequest(ctx, req);
             return CompletableFuture.completedFuture(req.path());
         }
 
         @Get
         @Path("/path/ctx/sync/:var")
-        public String returnPathCtxSync(@PathParam("var") int var,
-                                        RequestContext ctx,
-                                        Request req) {
+        public static String returnPathCtxSync(@PathParam("var") int var,
+                                               RequestContext ctx,
+                                               Request req) {
             validateContextAndRequest(ctx, req);
             return ctx.path();
         }
 
         @Get
         @Path("/path/req/sync/:var")
-        public String returnPathReqSync(@PathParam("var") int var,
-                                        HttpRequest req,
-                                        RequestContext ctx) {
+        public static String returnPathReqSync(@PathParam("var") int var,
+                                               HttpRequest req,
+                                               RequestContext ctx) {
             validateContextAndRequest(ctx, req);
             return req.path();
         }
 
-        private void validateContextAndRequest(RequestContext ctx, Request req) {
+        private static void validateContextAndRequest(RequestContext ctx, Request req) {
             if (RequestContext.current() != ctx) {
                 throw new RuntimeException("ServiceRequestContext instances are not same!");
             }

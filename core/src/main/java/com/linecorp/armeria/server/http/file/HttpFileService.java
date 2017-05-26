@@ -48,6 +48,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.http.HttpService;
+import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
 import com.linecorp.armeria.server.http.file.HttpVfs.Entry;
 
 /**
@@ -185,7 +186,7 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     private Entry getEntry(ServiceRequestContext ctx, HttpRequest req) {
-        final String path = ctx.mappedPath();
+        final String pathWithoutPrefix = ctx.pathWithoutPrefix();
 
         EnumSet<FileServiceContentEncoding> supportedEncodings =
                 EnumSet.noneOf(FileServiceContentEncoding.class);
@@ -205,13 +206,13 @@ public final class HttpFileService extends AbstractHttpService {
             }
         }
 
-        final Entry entry = getEntryWithSupportedEncodings(path, supportedEncodings);
+        final Entry entry = getEntryWithSupportedEncodings(pathWithoutPrefix, supportedEncodings);
 
         if (entry.lastModifiedMillis() == 0) {
-            if (path.charAt(path.length() - 1) == '/') {
+            if (pathWithoutPrefix.charAt(pathWithoutPrefix.length() - 1) == '/') {
                 // Try index.html if it was a directory access.
                 final Entry indexEntry = getEntryWithSupportedEncodings(
-                        path + "index.html", supportedEncodings);
+                        pathWithoutPrefix + "index.html", supportedEncodings);
                 if (indexEntry.lastModifiedMillis() != 0) {
                     return indexEntry;
                 }
@@ -352,9 +353,8 @@ public final class HttpFileService extends AbstractHttpService {
 
     /**
      * Content encodings supported by {@link HttpFileService}. Will generally support more formats than
-     * {@link com.linecorp.armeria.server.http.encoding.HttpEncodingService} because new formats can be
-     * added as soon as browsers and build tools support them, without having to implement on-the-fly
-     * compression.
+     * {@link HttpEncodingService} because new formats can be added as soon as browsers and build tools
+     * support them, without having to implement on-the-fly compression.
      */
     private enum FileServiceContentEncoding {
         // Order matters, we use the enum ordinal as the priority to pick an encoding in. Encodings should

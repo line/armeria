@@ -74,7 +74,7 @@ public class JettyServiceTest extends WebAppContainerTest {
                             .handler(newWebAppContext())
                             .configurator(s -> jettyBeans.addAll(s.getBeans()))
                             .build()
-                            .decorate(LoggingService::new));
+                            .decorate(LoggingService.newDecorator()));
 
             sb.serviceUnder(
                     "/default/",

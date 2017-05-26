@@ -19,8 +19,6 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.server.PathMapping.ofGlob;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Objects;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -78,7 +76,7 @@ public class GlobPathMappingTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testPathValidation() {
-        compile("**").apply("not/an/absolute/path");
+        compile("**").apply("not/an/absolute/path", null);
     }
 
     @Test
@@ -86,10 +84,15 @@ public class GlobPathMappingTest {
         assertThat(ofGlob("/foo/bar/**").loggerName()).isEqualTo("foo.bar.__");
     }
 
+    @Test
+    public void paramNames() throws Exception {
+        assertThat(ofGlob("/bar/baz/*").paramNames()).isEmpty();
+    }
+
     private static void pass(String glob, String... paths) {
         final GlobPathMapping pattern = compile(glob);
         for (String p: paths) {
-            if (pattern.apply(p) == null) {
+            if (!pattern.apply(p, null).isPresent()) {
                 Assert.fail('\'' + p + "' does not match '" + glob + "' or '" + pattern.asRegex() + "'.");
             }
         }
@@ -98,7 +101,7 @@ public class GlobPathMappingTest {
     private static void fail(String glob, String... paths) {
         final GlobPathMapping pattern = compile(glob);
         for (String p: paths) {
-            if (Objects.equals(pattern.apply(p), p)) {
+            if (pattern.apply(p, null).isPresent()) {
                 Assert.fail('\'' + p + "' matches '" + glob + "' or '" + pattern.asRegex() + "'.");
             }
         }

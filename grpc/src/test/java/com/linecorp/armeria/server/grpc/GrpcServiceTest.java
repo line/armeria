@@ -90,7 +90,7 @@ public class GrpcServiceTest {
 
     @Test
     public void pathMissingSlash() throws Exception {
-        when(ctx.mappedPath()).thenReturn("grpc.testing.TestService.UnaryCall");
+        when(ctx.pathWithoutPrefix()).thenReturn("grpc.testing.TestService.UnaryCall");
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "grpc.testing.TestService.UnaryCall")
@@ -104,7 +104,7 @@ public class GrpcServiceTest {
 
     @Test
     public void missingMethod() throws Exception {
-        when(ctx.mappedPath()).thenReturn("/grpc.testing.TestService/FooCall");
+        when(ctx.pathWithoutPrefix()).thenReturn("/grpc.testing.TestService/FooCall");
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")

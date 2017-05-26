@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.regex.Pattern;
@@ -125,7 +126,8 @@ public abstract class WebAppContainerTest {
     @Test
     public void japanesePath() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server().uri("/jsp/日本語/index.jsp")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(
+                    server().uri("/jsp/" + URLEncoder.encode("日本語", "UTF-8") + "/index.jsp")))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
                         .startsWith("text/html");

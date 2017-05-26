@@ -74,7 +74,7 @@ public class HttpAuthServiceTest {
             sb.serviceAt(
                     "/",
                     ok.decorate(HttpAuthService.newDecorator(authorizer))
-                      .decorate(LoggingService::new));
+                      .decorate(LoggingService.newDecorator()));
 
             // Auth with HTTP basic
             final Map<String, String> usernameToPassword = ImmutableMap.of("brown", "cony", "pangyo", "choco");
@@ -86,7 +86,7 @@ public class HttpAuthServiceTest {
             sb.serviceAt(
                     "/basic",
                     ok.decorate(new HttpAuthServiceBuilder().addBasicAuth(httpBasicAuthorizer).newDecorator())
-                      .decorate(LoggingService::new));
+                      .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth1a
             Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
@@ -94,7 +94,7 @@ public class HttpAuthServiceTest {
             sb.serviceAt(
                     "/oauth1a",
                     ok.decorate(new HttpAuthServiceBuilder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
-                      .decorate(LoggingService::new));
+                      .decorate(LoggingService.newDecorator()));
 
             // Auth with OAuth2
             Authorizer<OAuth2Token> oAuth2aAuthorizer = (ctx, token) ->
@@ -102,7 +102,7 @@ public class HttpAuthServiceTest {
             sb.serviceAt(
                     "/oauth2",
                     ok.decorate(new HttpAuthServiceBuilder().addOAuth2(oAuth2aAuthorizer).newDecorator())
-                      .decorate(LoggingService::new));
+                      .decorate(LoggingService.newDecorator()));
 
             // Auth with all predicates above!
             sb.serviceAt(
@@ -112,7 +112,7 @@ public class HttpAuthServiceTest {
                                                 .addOAuth1a(oAuth1aAuthorizer)
                                                 .addOAuth2(oAuth2aAuthorizer)
                                                 .build(ok)
-                                                .decorate(LoggingService::new));
+                                                .decorate(LoggingService.newDecorator()));
 
             // Authorizer fails with an exception.
             sb.serviceAt(
@@ -120,7 +120,7 @@ public class HttpAuthServiceTest {
                     ok.decorate(new HttpAuthServiceBuilder().add((ctx, data) -> {
                         throw new RuntimeException("bug!");
                     }).newDecorator())
-                      .decorate(LoggingService::new));
+                      .decorate(LoggingService.newDecorator()));
 
             // AuthService fails when building a success message.
             sb.serviceAt(
@@ -136,7 +136,7 @@ public class HttpAuthServiceTest {
                         protected HttpResponse onSuccess(ServiceRequestContext ctx, HttpRequest req) {
                             throw new RuntimeException("bug!");
                         }
-                    }).decorate(LoggingService::new));
+                    }).decorate(LoggingService.newDecorator()));
         }
     };
 

@@ -28,6 +28,7 @@ import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_CONTENT_LE
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_DIRECTION;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_METHOD;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_PATH;
+import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_QUERY;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_RPC_METHOD;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_RPC_PARAMS;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.RES_CONTENT_LENGTH;
@@ -124,6 +125,9 @@ final class RequestContextExporter {
         }
         if (builtIns.contains(REQ_PATH)) {
             exportPath(out, ctx);
+        }
+        if (builtIns.contains(REQ_QUERY)) {
+            exportQuery(out, ctx);
         }
         if (builtIns.contains(REQ_METHOD)) {
             exportMethod(out, ctx);
@@ -300,8 +304,12 @@ final class RequestContextExporter {
         out.put(REQ_PATH.mdcKey, ctx.path());
     }
 
+    private static void exportQuery(Map<String, String> out, RequestContext ctx) {
+        out.put(REQ_QUERY.mdcKey, ctx.query());
+    }
+
     private static void exportMethod(Map<String, String> out, RequestContext ctx) {
-        out.put(REQ_METHOD.mdcKey, ctx.method());
+        out.put(REQ_METHOD.mdcKey, ctx.method().name());
     }
 
     private static void exportRequestContentLength(Map<String, String> out, @Nullable RequestLog log) {

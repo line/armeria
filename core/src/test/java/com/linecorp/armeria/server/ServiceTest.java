@@ -62,7 +62,8 @@ public class ServiceTest {
         assertThat(outer.as(String.class)).isNotPresent();
 
         // Test if FooService.serviceAdded() is invoked.
-        final ServiceConfig cfg = new ServiceConfig(PathMapping.ofCatchAll(), outer, "foo");
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        final ServiceConfig cfg = new ServiceConfig(PathMapping.ofCatchAll(), (Service) outer, "foo");
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

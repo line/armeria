@@ -74,7 +74,7 @@ public class HttpFileServiceTest {
         try {
             sb.serviceUnder(
                     "/fs/",
-                    HttpFileService.forFileSystem(tmpDir.toPath()).decorate(LoggingService::new));
+                    HttpFileService.forFileSystem(tmpDir.toPath()).decorate(LoggingService.newDecorator()));
 
             sb.serviceUnder(
                     "/compressed/",
@@ -86,7 +86,7 @@ public class HttpFileServiceTest {
                     "/",
                     HttpFileService.forClassPath(baseResourceDir + "foo")
                                    .orElse(HttpFileService.forClassPath(baseResourceDir + "bar"))
-                                   .decorate(LoggingService::new));
+                                   .decorate(LoggingService.newDecorator()));
         } catch (Exception e) {
             throw new Error(e);
         }
@@ -146,6 +146,16 @@ public class HttpFileServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal();
              CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.txt")))) {
             assert200Ok(res, "text/plain", "bar");
+        }
+    }
+
+
+    @Test
+    public void testIndexHtml() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/")))) {
+                assert200Ok(res, "text/html", "<html><body></body></html>");
+            }
         }
     }
 
@@ -295,7 +305,7 @@ public class HttpFileServiceTest {
         DateFormatter.parseHttpDate(lastModified);
 
         // Ensure the content and its type are correct.
-        assertThat(EntityUtils.toString(res.getEntity()), is(expectedContent));
+        assertThat(EntityUtils.toString(res.getEntity()).trim(), is(expectedContent));
 
         if (expectedContentType != null) {
             assertThat(res.containsHeader(HttpHeaders.CONTENT_TYPE), is(true));

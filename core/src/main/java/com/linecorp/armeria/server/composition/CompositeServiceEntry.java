@@ -67,17 +67,6 @@ public final class CompositeServiceEntry<I extends Request, O extends Response> 
     }
 
     /**
-     * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound under the specified
-     * directory.
-     *
-     * @see PathMapping#ofPrefix(String, boolean)
-     */
-    public static <I extends Request, O extends Response>
-    CompositeServiceEntry<I, O> ofPrefix(String pathPrefix, Service<I, O> service, boolean stripPrefix) {
-        return new CompositeServiceEntry<>(PathMapping.ofPrefix(pathPrefix, stripPrefix), service);
-    }
-
-    /**
      * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at the specified exact path.
      *
      * @see PathMapping#ofExact(String)
@@ -94,6 +83,16 @@ public final class CompositeServiceEntry<I extends Request, O extends Response> 
     public static <I extends Request, O extends Response>
     CompositeServiceEntry<I, O> ofCatchAll(Service<I, O> service) {
         return new CompositeServiceEntry<>(PathMapping.ofCatchAll(), service);
+    }
+
+    /**
+     * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound at the specified path pattern.
+     *
+     * @see PathMapping#of(String)
+     */
+    public static <I extends Request, O extends Response>
+    CompositeServiceEntry<I, O> of(String pathPattern, Service<I, O> service) {
+        return new CompositeServiceEntry<>(PathMapping.of(pathPattern), service);
     }
 
     /**

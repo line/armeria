@@ -22,6 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -112,38 +115,51 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     /**
      * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
      *
+     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
+     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     *              {@code null} if query does not exist.
+     *
      * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
-    protected PathMapped<Service<? super I, ? extends O>> findService(String path) {
-        return serviceMapping.apply(path);
+    protected PathMapped<Service<? super I, ? extends O>> findService(String path, @Nullable String query) {
+        return serviceMapping.apply(path, query);
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        final PathMapped<Service<? super I, ? extends O>> mapped = findService(ctx.mappedPath());
+        final PathMapped<Service<? super I, ? extends O>> mapped = findService(ctx.pathWithoutPrefix(),
+                                                                               ctx.query());
         if (!mapped.isPresent()) {
             throw ResourceNotFoundException.get();
         }
 
-        final ServiceRequestContext newCtx = new CompositeServiceRequestContext(ctx, mapped.mappedPath());
-        try (SafeCloseable ignored = RequestContext.push(newCtx, false)) {
-            return mapped.value().serve(newCtx, req);
+        final Optional<String> childPrefix = mapped.mapping().prefix();
+        if (childPrefix.isPresent()) {
+            final PathMapping newMapping = PathMapping.ofPrefix(ctx.pathMapping().prefix().get() +
+                                                                childPrefix.get().substring(1));
+
+            final ServiceRequestContext newCtx = new CompositeServiceRequestContext(ctx, newMapping);
+            try (SafeCloseable ignored = RequestContext.push(newCtx, false)) {
+                return mapped.value().serve(newCtx, req);
+            }
+        } else {
+            return mapped.value().serve(ctx, req);
         }
     }
 
     private static final class CompositeServiceRequestContext extends ServiceRequestContextWrapper {
 
-        private final String mappedPath;
+        private final PathMapping pathMapping;
 
-        CompositeServiceRequestContext(ServiceRequestContext delegate, String mappedPath) {
+        CompositeServiceRequestContext(ServiceRequestContext delegate, PathMapping pathMapping) {
             super(delegate);
-            this.mappedPath = mappedPath;
+            this.pathMapping = pathMapping;
         }
 
         @Override
-        public String mappedPath() {
-            return mappedPath;
+        public PathMapping pathMapping() {
+            return pathMapping;
         }
     }
 }

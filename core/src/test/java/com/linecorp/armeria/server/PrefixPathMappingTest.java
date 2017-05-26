@@ -18,12 +18,32 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.PathMapping.ofPrefix;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assume.assumeTrue;
 
 import org.junit.Test;
 
 public class PrefixPathMappingTest {
+
     @Test
     public void testLoggerName() throws Exception {
         assertThat(ofPrefix("/foo/bar").loggerName()).isEqualTo("foo.bar");
+    }
+
+    @Test
+    public void equality() {
+        final PathMapping a = ofPrefix("/foo");
+        final PathMapping b = ofPrefix("/bar");
+        final PathMapping c = ofPrefix("/foo");
+
+        assumeTrue(a != c);
+        assertThat(a).isEqualTo(c);
+        assertThat(a).isNotEqualTo(b);
+        assertThat(a.hashCode()).isEqualTo(c.hashCode());
+        assertThat(a.hashCode()).isNotEqualTo(b.hashCode());
+    }
+
+    @Test
+    public void pathParams() {
+        assertThat(ofPrefix("/bar/baz").paramNames()).isEmpty();
     }
 }
