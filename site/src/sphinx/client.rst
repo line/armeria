@@ -9,5 +9,6 @@ Writing a client
     client-http
     client-retrofit
     client-thrift
+    client-grpc
     client-decorator
     client-custom-http-headers
