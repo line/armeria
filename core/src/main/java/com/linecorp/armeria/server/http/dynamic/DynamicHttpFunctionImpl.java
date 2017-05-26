@@ -27,8 +27,13 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -44,6 +49,7 @@ final class DynamicHttpFunctionImpl implements DynamicHttpFunction {
     private final Method method;
     private final List<ParameterEntry> parameterEntries;
     private final boolean isAsynchronous;
+    private final boolean aggregationRequired;
 
     DynamicHttpFunctionImpl(Object object, Method method) {
         this.object = requireNonNull(object, "object");
@@ -51,6 +57,8 @@ final class DynamicHttpFunctionImpl implements DynamicHttpFunction {
         parameterEntries = Methods.parameterEntries(method);
         isAsynchronous = HttpResponse.class.isAssignableFrom(method.getReturnType()) ||
                          CompletionStage.class.isAssignableFrom(method.getReturnType());
+        aggregationRequired = parameterEntries.stream().anyMatch(
+                entry -> entry.getType().isAssignableFrom(AggregatedHttpMessage.class));
     }
 
     /**
@@ -66,7 +74,8 @@ final class DynamicHttpFunctionImpl implements DynamicHttpFunction {
     /**
      * Returns array of parameters for method invocation.
      */
-    private Object[] parameters(ServiceRequestContext ctx, HttpRequest req, Map<String, String> args) {
+    private Object[] parameters(ServiceRequestContext ctx, HttpRequest req, Map<String, String> args,
+                                @Nullable AggregatedHttpMessage message) {
         Object[] parameters = new Object[parameterEntries.size()];
         for (int i = 0; i < parameterEntries.size(); ++i) {
             ParameterEntry entry = parameterEntries.get(i);
@@ -78,6 +87,8 @@ final class DynamicHttpFunctionImpl implements DynamicHttpFunction {
                 parameters[i] = ctx;
             } else if (entry.getType().isAssignableFrom(HttpRequest.class)) {
                 parameters[i] = req;
+            } else if (entry.getType().isAssignableFrom(AggregatedHttpMessage.class)) {
+                parameters[i] = message;
             }
         }
         return parameters;
@@ -85,16 +96,35 @@ final class DynamicHttpFunctionImpl implements DynamicHttpFunction {
 
     @Override
     public Object serve(ServiceRequestContext ctx, HttpRequest req, Map<String, String> args) throws Exception {
-        Object[] parameters = parameters(ctx, req, args);
-        if (isAsynchronous) {
-            return method.invoke(object, parameters);
-        }
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return method.invoke(object, parameters);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new IllegalStateException(e);
+        if (aggregationRequired) {
+            if (CompletionStage.class.isAssignableFrom(method.getReturnType())) {
+                return req.aggregate()
+                          .thenCompose(msg -> (CompletionStage<?>) invokeMethod(ctx, req, args, msg));
+            } else if (isAsynchronous) {
+                return req.aggregate()
+                          .thenApply(msg -> invokeMethod(ctx, req, args, msg));
+            } else {
+                return req.aggregate()
+                          .thenApplyAsync(msg -> invokeMethod(ctx, req, args, msg),
+                                          ctx.blockingTaskExecutor());
             }
-        }, ctx.blockingTaskExecutor());
+        }
+
+        if (isAsynchronous) {
+            return invokeMethod(ctx, req, args, null);
+        } else {
+            return CompletableFuture.supplyAsync(
+                    () -> invokeMethod(ctx, req, args, null), ctx.blockingTaskExecutor());
+        }
+    }
+
+    private Object invokeMethod(ServiceRequestContext ctx, HttpRequest req, Map<String, String> args,
+                                @Nullable AggregatedHttpMessage message) {
+        try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
+            Object[] parameters = parameters(ctx, req, args, message);
+            return method.invoke(object, parameters);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

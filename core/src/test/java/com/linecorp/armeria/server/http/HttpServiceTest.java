@@ -20,10 +20,15 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -32,6 +37,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -40,8 +46,12 @@ import org.junit.Test;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.DefaultHttpResponse;
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.http.HttpStatus;
@@ -54,6 +64,7 @@ import com.linecorp.armeria.server.http.TestConverters.NaiveNumberConverter;
 import com.linecorp.armeria.server.http.TestConverters.NaiveStringConverter;
 import com.linecorp.armeria.server.http.TestConverters.TypedNumberConverter;
 import com.linecorp.armeria.server.http.TestConverters.TypedStringConverter;
+import com.linecorp.armeria.server.http.TestConverters.UnformattedStringConverter;
 import com.linecorp.armeria.server.http.dynamic.Converter;
 import com.linecorp.armeria.server.http.dynamic.DynamicHttpService;
 import com.linecorp.armeria.server.http.dynamic.DynamicHttpServiceBuilder;
@@ -154,6 +165,7 @@ public class HttpServiceTest {
                             new DynamicHttpServiceBuilder()
                                     .addMappings(new SimpleDynamicService1())
                                     .addMappings(new SimpleDynamicService2())
+                                    .addMappings(new SimpleDynamicService3())
                                     .build()
                                     .orElse(new AbstractHttpService() {}));
         } catch (Exception e) {
@@ -231,15 +243,6 @@ public class HttpServiceTest {
             return req.path();
         }
 
-        private static void validateContextAndRequest(RequestContext ctx, Request req) {
-            if (RequestContext.current() != ctx) {
-                throw new RuntimeException("ServiceRequestContext instances are not same!");
-            }
-            if (RequestContext.current().request() != req) {
-                throw new RuntimeException("HttpRequest instances are not same!");
-            }
-        }
-
         // Throws an exception synchronously
         @Get
         @Path("/exception/:var")
@@ -310,6 +313,52 @@ public class HttpServiceTest {
         @Path("/no-path-param")
         public String noPathParam() {
             return "no-path-param";
+        }
+    }
+
+    // Aggregation Test
+    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    public static class SimpleDynamicService3 {
+        @Post
+        @Path("/a/string")
+        public String postString(AggregatedHttpMessage message, RequestContext ctx) {
+            validateContext(ctx);
+            return message.content().toStringUtf8();
+        }
+
+        @Post
+        @Path("/a/string-async1")
+        public CompletionStage<String> postStringAsync1(AggregatedHttpMessage message, RequestContext ctx) {
+            validateContext(ctx);
+            return CompletableFuture.supplyAsync(() -> message.content().toStringUtf8());
+        }
+
+        @Post
+        @Path("/a/string-async2")
+        public HttpResponse postStringAsync2(AggregatedHttpMessage message, RequestContext ctx) {
+            validateContext(ctx);
+            DefaultHttpResponse response = new DefaultHttpResponse();
+            response.write(HttpHeaders.of(HttpStatus.OK));
+            response.write(message.content());
+            response.close();
+            return response;
+        }
+
+        @Post
+        @Path("/a/string-aggregate-response1")
+        public AggregatedHttpMessage postStringAggregateResponse1(AggregatedHttpMessage message,
+                                                                  RequestContext ctx) {
+            validateContext(ctx);
+            return AggregatedHttpMessage.of(HttpHeaders.of(HttpStatus.OK), message.content());
+        }
+
+        @Post
+        @Path("/a/string-aggregate-response2")
+        public AggregatedHttpMessage postStringAggregateResponse2(HttpRequest req,
+                                                                  RequestContext ctx) {
+            validateContextAndRequest(ctx, req);
+            AggregatedHttpMessage message = req.aggregate().join();
+            return AggregatedHttpMessage.of(HttpHeaders.of(HttpStatus.OK), message.content());
         }
     }
 
@@ -487,6 +536,44 @@ public class HttpServiceTest {
     }
 
     @Test
+    public void testDynamicHttpService_aggregation() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpPost httpPost;
+
+            httpPost = newHttpPost("/dynamic4/a/string");
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()),
+                           is(EntityUtils.toString(httpPost.getEntity())));
+            }
+            httpPost = newHttpPost("/dynamic4/a/string-async1");
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()),
+                           is(EntityUtils.toString(httpPost.getEntity())));
+            }
+            httpPost = newHttpPost("/dynamic4/a/string-async2");
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()),
+                           is(EntityUtils.toString(httpPost.getEntity())));
+            }
+            httpPost = newHttpPost("/dynamic4/a/string-aggregate-response1");
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()),
+                           is(EntityUtils.toString(httpPost.getEntity())));
+            }
+            httpPost = newHttpPost("/dynamic4/a/string-aggregate-response2");
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()),
+                           is(EntityUtils.toString(httpPost.getEntity())));
+            }
+        }
+    }
+
+    @Test
     public void testContentLength() throws Exception {
         // Test if the server responds with the 'content-length' header
         // even if it is the last response of the connection.
@@ -519,5 +606,29 @@ public class HttpServiceTest {
 
     private static String newUri(String path) {
         return "http://127.0.0.1:" + httpPort + path;
+    }
+
+    private static HttpPost newHttpPost(String path) throws UnsupportedEncodingException {
+        HttpPost httpPost = new HttpPost(newUri(path));
+
+        List<NameValuePair> params = new ArrayList<>();
+        params.add(new BasicNameValuePair("username", "armeria"));
+        params.add(new BasicNameValuePair("password", "armeria"));
+        httpPost.setEntity(new UrlEncodedFormEntity(params));
+
+        return httpPost;
+    }
+
+    private static void validateContext(RequestContext ctx) {
+        if (RequestContext.current() != ctx) {
+            throw new RuntimeException("ServiceRequestContext instances are not same!");
+        }
+    }
+
+    private static void validateContextAndRequest(RequestContext ctx, Object req) {
+        validateContext(ctx);
+        if (RequestContext.current().request() != req) {
+            throw new RuntimeException("HttpRequest instances are not same!");
+        }
     }
 }
