@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.common.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.handler.codec.http.HttpStatusClass;
@@ -100,7 +101,7 @@ public class ServerTest {
                 protected void doPost(ServiceRequestContext ctx,
                                       HttpRequest req, HttpResponseWriter res) throws Exception {
 
-                    throw Exceptions.clearTrace(new Exception("bug!"));
+                    throw Exceptions.clearTrace(new AnticipatedException("bug!"));
                 }
             }.decorate(LoggingService.newDecorator());
 

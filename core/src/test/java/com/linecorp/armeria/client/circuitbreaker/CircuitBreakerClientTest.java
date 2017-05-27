@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.testing.common.AnticipatedException;
 
 import io.netty.channel.DefaultEventLoop;
 
@@ -152,7 +153,7 @@ public class CircuitBreakerClientTest {
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         CircuitBreakerMapping mapping = (ctx, req) -> {
-            throw Exceptions.clearTrace(new IllegalArgumentException("bug!"));
+            throw Exceptions.clearTrace(new AnticipatedException("bug!"));
         };
         CircuitBreakerClient<RpcRequest, RpcResponse> stub = new CircuitBreakerClient<>(delegate, mapping);
 

@@ -702,12 +702,10 @@ configure(javaProjects) {
                      dependsOn: tasks.publishToMavenLocal)
     }
 
-    // Print only interesting test results and progress, except when running from IntelliJ IDEA which has
-    // its own output listener.
+    // Print interesting test results, except when running from IntelliJ IDEA which has its own output listener.
     if (System.getProperty('idea.no.launcher') == null) {
         test {
             def buf = new StringBuilder()
-            def printedProgress = false
 
             // Record the test output.
             onOutput { TestDescriptor td, TestOutputEvent toe ->
@@ -716,16 +714,33 @@ configure(javaProjects) {
 
             // Print the test output when the test failed or the test output contains an Exception or an Error.
             afterTest { TestDescriptor td, TestResult tr ->
-                if (tr.resultType == TestResult.ResultType.FAILURE || buf =~ /(?:Exception|Error|Throwable|LEAK):/) {
-                    def simpleClassName = td.className.substring(td.className.lastIndexOf('.') + 1)
+                def printBuffer
+                if (tr.resultType == TestResult.ResultType.FAILURE) {
+                    printBuffer = true
+                } else {
+                    def lines = buf.readLines().findAll { it =~ /(?:Exception|Error|Throwable|LEAK):/ }
 
-                    // Add an empty line if the test progress dots were printed.
-                    if (printedProgress) {
-                        println()
-                        println()
-                        printedProgress = false
+                    // Ignore the expected exceptions.
+                    lines.removeIf { it.matches(/.*Anticipated(?:Exception|Error|Throwable):.*/) }
+
+                    // Ignore known false positives.
+                    lines.removeIf { it.contains('Only supported on Linux') }
+                    switch (td.className) {
+                        case 'com.linecorp.armeria.server.http.HttpServiceTest':
+                            lines.removeIf { it.contains('InvocationTargetException') }
+                            lines.removeIf { it.contains("Can't deserialize fourty-two to type int") }
+                            lines.removeIf { it.contains('For input string: "fourty-two"') }
+                            break
+                        case 'com.linecorp.armeria.client.zookeeper.EndpointGroupTest':
+                            lines.removeIf { it.contains('ServerCnxn$EndOfStreamException') }
+                            break
                     }
 
+                    printBuffer = !lines.isEmpty()
+                }
+
+                if (printBuffer) {
+                    def simpleClassName = td.className.substring(td.className.lastIndexOf('.') + 1)
                     def subject = "${simpleClassName}.${td.name}: ${tr.resultType}"
                     println subject
 
@@ -736,27 +751,9 @@ configure(javaProjects) {
                             println()
                         }
                     }
-                } else {
-                    // Print the progress dots.
-                    print '.'
-                    System.out.flush()
-                    printedProgress = true
                 }
 
                 buf.length = 0
-            }
-
-            afterSuite { TestDescriptor td, TestResult tr ->
-                if (printedProgress) {
-                    print ' '
-                    System.out.flush()
-                }
-            }
-
-            doLast {
-                if (printedProgress) {
-                    println()
-                }
             }
         }
     }

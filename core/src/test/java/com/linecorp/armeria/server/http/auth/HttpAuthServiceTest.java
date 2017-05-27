@@ -49,6 +49,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.http.HttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.common.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class HttpAuthServiceTest {
@@ -118,7 +119,7 @@ public class HttpAuthServiceTest {
             sb.serviceAt(
                     "/authorizer_exception",
                     ok.decorate(new HttpAuthServiceBuilder().add((ctx, data) -> {
-                        throw new RuntimeException("bug!");
+                        throw new AnticipatedException("bug!");
                     }).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
@@ -134,7 +135,7 @@ public class HttpAuthServiceTest {
 
                         @Override
                         protected HttpResponse onSuccess(ServiceRequestContext ctx, HttpRequest req) {
-                            throw new RuntimeException("bug!");
+                            throw new AnticipatedException("bug!");
                         }
                     }).decorate(LoggingService.newDecorator()));
         }
