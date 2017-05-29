@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
@@ -122,8 +120,13 @@ public class ArmeriaCallFactoryTest {
 
         @POST("/postForm")
         @FormUrlEncoded
-        CompletableFuture<Response<Void>> postForm(@Field("name") String name,
+        CompletableFuture<Response<Pojo>> postForm(@Field("name") String name,
                                                    @Field("age") int age);
+
+        @POST("/postForm")
+        @FormUrlEncoded
+        CompletableFuture<Response<Pojo>> postFormEncoded(@Field(value = "name", encoded = true) String name,
+                                                          @Field("age") int age);
 
         @POST("/postCustomContentType")
         CompletableFuture<Response<Void>> postCustomContentType(@Header("Content-Type") String contentType);
@@ -240,9 +243,9 @@ public class ArmeriaCallFactoryTest {
                           Map<String, List<String>> params = new QueryStringDecoder(
                                   aReq.content().toStringUtf8(), false)
                                   .parameters();
-                          assertThat(params).isEqualTo(ImmutableMap.of("name", ImmutableList.of("Cony"),
-                                                                       "age", ImmutableList.of("26")));
-                          res.respond(HttpStatus.OK);
+                          res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                      "{\"name\":\"" + params.get("name").get(0) + "\", " +
+                                      "\"age\":" + params.get("age").get(0) + '}');
                       }));
                   }
               })
@@ -309,6 +312,9 @@ public class ArmeriaCallFactoryTest {
     public void queryString_withSpecialCharacter() throws Exception {
         Pojo response = service.queryString("Foo+Bar", 33).get();
         assertThat(response).isEqualTo(new Pojo("Foo+Bar", 33));
+
+        response = service.queryString("Foo%2BBar", 33).get();
+        assertThat(response).isEqualTo(new Pojo("Foo%2BBar", 33));
     }
 
     @Test
@@ -327,9 +333,17 @@ public class ArmeriaCallFactoryTest {
     }
 
     @Test
+    public void form() throws Exception {
+        assertThat(service.postForm("Cony", 26).get().body()).isEqualTo(new Pojo("Cony", 26));
+        assertThat(service.postForm("Foo+Bar", 26).get().body()).isEqualTo(new Pojo("Foo+Bar", 26));
+        assertThat(service.postForm("Foo%2BBar", 26).get().body()).isEqualTo(new Pojo("Foo%2BBar", 26));
+    }
+
+    @Test
     public void formEncoded() throws Exception {
-        Response<Void> response = service.postForm("Cony", 26).get();
-        assertThat(response.isSuccessful()).isTrue();
+        assertThat(service.postFormEncoded("Cony", 26).get().body()).isEqualTo(new Pojo("Cony", 26));
+        assertThat(service.postFormEncoded("Foo+Bar", 26).get().body()).isEqualTo(new Pojo("Foo Bar", 26));
+        assertThat(service.postFormEncoded("Foo%2BBar", 26).get().body()).isEqualTo(new Pojo("Foo+Bar", 26));
     }
 
     @Test
@@ -379,7 +393,7 @@ public class ArmeriaCallFactoryTest {
 
     @Test
     public void respectsHttpClientUri() throws Exception {
-        Response<Void> response = service.postForm("Cony", 26).get();
+        Response<Pojo> response = service.postForm("Cony", 26).get();
         assertThat(response.raw().request().url()).isEqualTo(
                 new HttpUrl.Builder().scheme("http")
                                      .host("127.0.0.1")
@@ -399,7 +413,7 @@ public class ArmeriaCallFactoryTest {
                 .addCallAdapterFactory(Java8CallAdapterFactory.create())
                 .build()
                 .create(Service.class);
-        Response<Void> response = service.postForm("Cony", 26).get();
+        Response<Pojo> response = service.postForm("Cony", 26).get();
         // TODO(ide) Use the actual `host:port`. See https://github.com/line/armeria/issues/379
         assertThat(response.raw().request().url()).isEqualTo(
                 new HttpUrl.Builder().scheme("http")
