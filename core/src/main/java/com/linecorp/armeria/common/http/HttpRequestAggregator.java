@@ -30,28 +30,17 @@ final class HttpRequestAggregator extends HttpMessageAggregator {
     }
 
     @Override
-    public void onNext(HttpObject o) {
-        if (o instanceof HttpHeaders) {
-            trailingHeaders = (HttpHeaders) o;
-        } else {
-            add((HttpData) o);
-        }
+    protected void onHeaders(HttpHeaders headers) {
+        trailingHeaders = headers;
     }
 
     @Override
-    public void onError(Throwable t) {
-        clear();
-        future().completeExceptionally(t);
+    protected AggregatedHttpMessage onSuccess(HttpData content) {
+        return AggregatedHttpMessage.of(request.headers(), content, trailingHeaders);
     }
 
     @Override
-    protected void doClear() {
+    protected void onFailure() {
         trailingHeaders = HttpHeaders.EMPTY_HEADERS;
-    }
-
-    @Override
-    public void onComplete() {
-        final HttpData content = finish();
-        future().complete(AggregatedHttpMessage.of(request.headers(), content, trailingHeaders));
     }
 }

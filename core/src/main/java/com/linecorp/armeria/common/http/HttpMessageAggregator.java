@@ -19,11 +19,14 @@ package com.linecorp.armeria.common.http;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-abstract class HttpMessageAggregator implements Subscriber<HttpObject> {
+import com.linecorp.armeria.internal.http.ByteBufHttpData;
+
+abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
 
     private final CompletableFuture<AggregatedHttpMessage> future;
     private final List<HttpData> contentList = new ArrayList<>();
@@ -34,38 +37,71 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject> {
         this.future = future;
     }
 
-    protected final CompletableFuture<AggregatedHttpMessage> future() {
-        return future;
-    }
-
     @Override
-    public void onSubscribe(Subscription s) {
+    public final void onSubscribe(Subscription s) {
         subscription = s;
         s.request(Long.MAX_VALUE);
     }
 
-    protected final void add(HttpData data) {
-        final int dataLength = data.length();
-        if (dataLength > 0) {
-            if (contentLength > Integer.MAX_VALUE - dataLength) {
-                clear();
-                subscription.cancel();
-                throw new IllegalStateException("content length greater than Integer.MAX_VALUE");
-            }
+    /**
+     * Handled by {@link #accept(Void, Throwable)} instead,
+     * because this method is not invoked on cancellation and timeout.
+     */
+    @Override
+    public final void onError(Throwable throwable) {}
 
-            contentList.add(data);
-            contentLength += dataLength;
+    /**
+     * Handled by {@link #accept(Void, Throwable)} instead,
+     * because this method is not invoked on cancellation and timeout.
+     */
+    @Override
+    public final void onComplete() {}
+
+    @Override
+    public final void onNext(HttpObject o) {
+        if (o instanceof HttpHeaders) {
+            onHeaders((HttpHeaders) o);
+        } else {
+            onData((HttpData) o);
         }
     }
 
-    protected final void clear() {
-        doClear();
-        contentList.clear();
+    protected abstract void onHeaders(HttpHeaders headers);
+
+    private void onData(HttpData data) {
+        boolean added = false;
+        try {
+            if (future.isDone()) {
+                return;
+            }
+
+            final int dataLength = data.length();
+            if (dataLength > 0) {
+                final int allowedMaxDataLength = Integer.MAX_VALUE - contentLength;
+                if (dataLength > allowedMaxDataLength) {
+                    subscription.cancel();
+                    fail(new IllegalStateException("content length greater than Integer.MAX_VALUE"));
+                    return;
+                }
+
+                contentList.add(data);
+                contentLength += dataLength;
+                added = true;
+            }
+        } finally {
+            if (!added && data instanceof ByteBufHttpData) {
+                ((ByteBufHttpData) data).buf().release();
+            }
+        }
     }
 
-    protected void doClear() {}
+    @Override
+    public void accept(Void unused, Throwable cause) {
+        if (cause != null) {
+            fail(cause);
+            return;
+        }
 
-    protected final HttpData finish() {
         final HttpData content;
         if (contentLength == 0) {
             content = HttpData.EMPTY_DATA;
@@ -79,6 +115,18 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject> {
             }
             content = HttpData.of(merged);
         }
-        return content;
+
+        final AggregatedHttpMessage aggregated = onSuccess(content);
+        future.complete(aggregated);
     }
+
+    private void fail(Throwable cause) {
+        contentList.clear();
+        onFailure();
+        future.completeExceptionally(cause);
+    }
+
+    protected abstract AggregatedHttpMessage onSuccess(HttpData content);
+
+    protected abstract void onFailure();
 }

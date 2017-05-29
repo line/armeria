@@ -77,7 +77,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
-        subscribe(new HttpResponseAggregator(future));
+        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future);
+        closeFuture().whenComplete(aggregator);
+        subscribe(aggregator);
         return future;
     }
 
@@ -87,7 +89,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     default CompletableFuture<AggregatedHttpMessage> aggregate(Executor executor) {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
-        subscribe(new HttpResponseAggregator(future), executor);
+        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future);
+        closeFuture().whenCompleteAsync(aggregator, executor);
+        subscribe(aggregator, executor);
         return future;
     }
 }
