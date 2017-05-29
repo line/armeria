@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
 import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
@@ -111,6 +112,10 @@ public class ArmeriaCallFactoryTest {
         @GET("/queryString")
         CompletableFuture<Pojo> queryString(@Query("name") String name, @Query("age") int age);
 
+        @GET("/queryString")
+        CompletableFuture<Pojo> queryStringEncoded(@Query(value = "name", encoded = true) String name,
+                                                   @Query("age") int age);
+
         @POST("/post")
         @Headers("content-type: application/json; charset=UTF-8")
         CompletableFuture<Response<Void>> post(@Body Pojo pojo);
@@ -129,8 +134,11 @@ public class ArmeriaCallFactoryTest {
         @GET("pojo")
         CompletableFuture<Pojo> pojoNotRoot();
 
+        @GET("/pathWithName/{name}")
+        CompletableFuture<Pojo> customPath(@Path("name") String name, @Query("age") int age);
+
         @GET("{path}")
-        CompletableFuture<Pojo> customPath(@Path("path") String path);
+        CompletableFuture<Pojo> customPathEncoded(@Path(value = "path", encoded = true) String path);
     }
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -147,6 +155,21 @@ public class ArmeriaCallFactoryTest {
                                 "{\"name\":\"Cony\", \"age\":26}");
                 }
             })
+              .serviceUnder("/pathWithName", new AbstractHttpService() {
+
+                  @Override
+                  protected void doGet(ServiceRequestContext ctx,
+                                       HttpRequest req, HttpResponseWriter res) throws Exception {
+                      req.aggregate().handle(voidFunction((aReq, cause) -> {
+                          Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
+                                  .parameters();
+                          String fullPath = ArmeriaHttpUtil.splitPathAndQuery(req.path())[0];
+                          res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                      "{\"name\":\"" + fullPath.replace("/pathWithName/", "") + "\", " +
+                                      "\"age\":" + params.get("age").get(0) + '}');
+                      }));
+                  }
+              })
               .serviceAt("/nest/pojo", new AbstractHttpService() {
                   @Override
                   protected void doGet(ServiceRequestContext ctx,
@@ -280,6 +303,21 @@ public class ArmeriaCallFactoryTest {
     public void queryString() throws Exception {
         Pojo response = service.queryString("Cony", 26).get();
         assertThat(response).isEqualTo(new Pojo("Cony", 26));
+    }
+
+    @Test
+    public void queryString_withSpecialCharacter() throws Exception {
+        Pojo response = service.queryString("Foo+Bar", 33).get();
+        assertThat(response).isEqualTo(new Pojo("Foo+Bar", 33));
+    }
+
+    @Test
+    public void queryStringEncoded() throws Exception {
+        Pojo response = service.queryStringEncoded("Foo%2BBar", 33).get();
+        assertThat(response).isEqualTo(new Pojo("Foo+Bar", 33));
+
+        response = service.queryStringEncoded("Foo+Bar", 33).get();
+        assertThat(response).isEqualTo(new Pojo("Foo Bar", 33));
     }
 
     @Test
@@ -425,10 +463,18 @@ public class ArmeriaCallFactoryTest {
 
     @Test
     public void customPath() throws Exception {
-        assertThat(service.customPath("/nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
-        assertThat(service.customPath("nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
-        assertThat(service.customPath("/pojo").get()).isEqualTo(new Pojo("Cony", 26));
-        assertThat(service.customPath("pojo").get()).isEqualTo(new Pojo("Cony", 26));
+        assertThat(service.customPath("Foo", 23).get()).isEqualTo(new Pojo("Foo", 23));
+        assertThat(service.customPath("Foo+Bar", 24).get()).isEqualTo(new Pojo("Foo+Bar", 24));
+        assertThat(service.customPath("Foo+Bar/Hoge", 24).get()).isEqualTo(new Pojo("Foo+Bar%2FHoge", 24));
+        assertThat(service.customPath("Foo%2BBar", 24).get()).isEqualTo(new Pojo("Foo%252BBar", 24));
+    }
+
+    @Test
+    public void customPathEncoded() throws Exception {
+        assertThat(service.customPathEncoded("/nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
+        assertThat(service.customPathEncoded("nest/pojo").get()).isEqualTo(new Pojo("Leonard", 21));
+        assertThat(service.customPathEncoded("/pojo").get()).isEqualTo(new Pojo("Cony", 26));
+        assertThat(service.customPathEncoded("pojo").get()).isEqualTo(new Pojo("Cony", 26));
     }
 
     @Test

@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import okhttp3.Call;
 import okhttp3.Call.Factory;
 import okhttp3.Callback;
+import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -117,11 +118,12 @@ final class ArmeriaCallFactory implements Factory {
         }
 
         private static HttpResponse doCall(ArmeriaCallFactory callFactory, Request request) {
-            URI uri = request.url().uri();
+            HttpUrl httpUrl = request.url();
+            URI uri = httpUrl.uri();
             HttpClient httpClient = callFactory.getHttpClient(uri.getAuthority(), uri.getScheme());
-            StringBuilder uriBuilder = new StringBuilder(uri.getPath());
+            StringBuilder uriBuilder = new StringBuilder(httpUrl.encodedPath());
             if (uri.getQuery() != null) {
-                uriBuilder.append('?').append(uri.getQuery());
+                uriBuilder.append('?').append(httpUrl.encodedQuery());
             }
             final String uriString = uriBuilder.toString();
             final HttpHeaders headers;
