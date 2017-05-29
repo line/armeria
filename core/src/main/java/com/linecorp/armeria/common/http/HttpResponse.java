@@ -18,12 +18,15 @@ package com.linecorp.armeria.common.http;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Formatter;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -32,15 +35,111 @@ import com.linecorp.armeria.common.stream.StreamMessage;
  */
 public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
+    // Note: Ensure we provide the same set of `of()` methods with the `respond()` methods of
+    //       HttpResponseWriter for consistency.
+
     /**
-     * Creates a new instance from an existing {@link Publisher}.
+     * Creates a new HTTP response of the specified {@code statusCode} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     */
+    static HttpResponse of(int statusCode) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.respond(statusCode);
+        return res;
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     */
+    static HttpResponse of(HttpStatus status) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.respond(status);
+        return res;
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
+    static HttpResponse of(HttpStatus status, MediaType mediaType, String content) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.respond(status, mediaType, content);
+        return res;
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
+     * {@linkplain Locale#ENGLISH English locale}.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    static HttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.respond(status, mediaType, format, args);
+        return res;
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
+    static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.respond(status, mediaType, content);
+        return res;
+
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     * @param offset the start offset of {@code content}
+     * @param length the length of {@code content}
+     */
+    static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.respond(status, mediaType, content, offset, length);
+        return res;
+
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
+     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
+    static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.respond(status, mediaType, content);
+        return res;
+
+    }
+
+    /**
+     * Creates a new HTTP response whose stream is produced from an existing {@link Publisher}.
      */
     static HttpResponse of(Publisher<? extends HttpObject> publisher) {
         return new PublisherBasedHttpResponse(publisher);
     }
 
     /**
-     * Creates a new failed instance.
+     * Creates a new failed HTTP response.
      */
     static HttpResponse ofFailure(Throwable cause) {
         final DefaultHttpResponse res = new DefaultHttpResponse();
@@ -57,7 +156,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new instance that delegates to the {@link HttpResponse} produced by the specified
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
      * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
      * closed with the same cause as well.
      */

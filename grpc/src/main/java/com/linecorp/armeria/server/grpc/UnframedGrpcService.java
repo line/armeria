@@ -110,13 +110,10 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             return delegate().serve(ctx, req);
         }
 
-        DefaultHttpResponse res = new DefaultHttpResponse();
-
         if (method.getType() != MethodType.UNARY) {
-            res.respond(HttpStatus.BAD_REQUEST,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        "Only unary methods can be used with non-framed requests.");
-            return res;
+            return HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                   MediaType.PLAIN_TEXT_UTF_8,
+                                   "Only unary methods can be used with non-framed requests.");
         }
 
         HttpHeaders grpcHeaders = HttpHeaders.copyOf(clientHeaders);
@@ -127,23 +124,23 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         } else if (mediaType.is(MediaType.JSON_UTF_8)) {
             framedContentType = GrpcSerializationFormats.JSON.mediaType();
         } else {
-            res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        "Unsupported media type. Only application/protobuf is supported.");
-            return res;
+            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   MediaType.PLAIN_TEXT_UTF_8,
+                                   "Unsupported media type. Only application/protobuf is supported.");
         }
         grpcHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, framedContentType);
 
         if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
-            res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        "GRPC encoding is not supported for non-framed requests.");
+            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   MediaType.PLAIN_TEXT_UTF_8,
+                                   "GRPC encoding is not supported for non-framed requests.");
         }
 
         // All clients support no encoding, and we don't support GRPC encoding for non-framed requests, so just
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
 
+        final DefaultHttpResponse res = new DefaultHttpResponse();
         req.aggregate().whenCompleteAsync(
                 (clientRequest, t) -> {
                     if (t != null) {

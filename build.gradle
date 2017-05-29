@@ -726,9 +726,7 @@ configure(javaProjects) {
                     // Ignore known false positives.
                     lines.removeIf { it.contains('Only supported on Linux') }
                     switch (td.className) {
-                        case 'com.linecorp.armeria.server.http.HttpServiceTest':
-                            lines.removeIf { it.contains('InvocationTargetException') }
-                            lines.removeIf { it.contains("Can't deserialize fourty-two to type int") }
+                        case 'com.linecorp.armeria.server.AnnotatedServiceTest':
                             lines.removeIf { it.contains('For input string: "fourty-two"') }
                             break
                         case 'com.linecorp.armeria.client.zookeeper.EndpointGroupTest':

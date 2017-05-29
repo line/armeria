@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http;
+package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpData;

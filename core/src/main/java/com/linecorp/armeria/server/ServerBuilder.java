@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -36,10 +37,13 @@ import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLException;
 
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.server.http.dynamic.ResponseConverter;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -432,6 +436,78 @@ public final class ServerBuilder {
                                  String loggerName) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
+        return this;
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public ServerBuilder service(Object service) {
+        return service("/", service);
+    }
+
+    /**
+     * Binds the specified annotated service object.
+     */
+    public ServerBuilder service(
+            Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+        return service("/", service, decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public ServerBuilder service(Object service, Map<Class<?>, ResponseConverter> converters) {
+        return service("/", service, converters);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public ServerBuilder service(
+            Object service, Map<Class<?>, ResponseConverter> converters,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+        return service("/", service, converters, decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public ServerBuilder service(String pathPrefix, Object service) {
+        return service(pathPrefix, service, ImmutableMap.of(), Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public ServerBuilder service(
+            String pathPrefix, Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+        return service(pathPrefix, service, ImmutableMap.of(), decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public ServerBuilder service(String pathPrefix, Object service,
+                                 Map<Class<?>, ResponseConverter> converters) {
+        return service(pathPrefix, service, converters, Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public ServerBuilder service(
+            String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(pathPrefix, service, converters, decorator);
         return this;
     }
 

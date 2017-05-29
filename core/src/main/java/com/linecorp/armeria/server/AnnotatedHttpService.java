@@ -14,25 +14,29 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.server.http.dynamic;
+package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
-
-import javax.annotation.Nullable;
+import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.PathMappingResult;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.server.http.HttpService;
 
 /**
- * {@link HttpMethod}, {@link PathMapping} and their corresponding {@link DynamicHttpFunction} instance.
+ * {@link HttpMethod}, {@link PathMapping} and their corresponding {@link BiFunction}.
  */
-final class DynamicHttpFunctionEntry {
+final class AnnotatedHttpService implements HttpService {
+    // TODO(trustin): Allow binding multiple functions.
+    //                https://github.com/line/armeria/issues/579
 
     /**
      * EnumSet of HTTP Method, e.g., GET, POST, PUT, ...
@@ -45,48 +49,52 @@ final class DynamicHttpFunctionEntry {
     private final PathMapping pathMapping;
 
     /**
-     * {@link DynamicHttpFunction} instance that will be invoked with given {@link HttpMethod} and
-     * {@link PathMapping}.
+     * The {@link BiFunction} that will handle the request actually.
      */
-    private final DynamicHttpFunction function;
+    private final BiFunction<ServiceRequestContext, HttpRequest, Object> function;
 
     /**
      * Creates a new instance.
      */
-    DynamicHttpFunctionEntry(Set<HttpMethod> methods, PathMapping pathMapping,
-                             DynamicHttpFunction function) {
+    AnnotatedHttpService(Iterable<HttpMethod> methods, PathMapping pathMapping,
+                         BiFunction<ServiceRequestContext, HttpRequest, Object> function) {
         this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.function = requireNonNull(function, "function");
     }
 
     /**
-     * Returns whether it's mapping overlaps with given {@link DynamicHttpFunctionEntry} instance.
+     * Returns the {@link PathMapping} of this service.
      */
-    boolean overlaps(DynamicHttpFunctionEntry entry) {
+    PathMapping pathMapping() {
+        return pathMapping;
+    }
+
+    /**
+     * Returns whether it's mapping overlaps with given {@link AnnotatedHttpService} instance.
+     */
+    boolean overlaps(AnnotatedHttpService entry) {
         return false;
         // FIXME(trustin): Make the path overlap detection work again.
         //return !Sets.intersection(methods, entry.methods).isEmpty() &&
         //       pathMapping.skeleton().equals(entry.pathMapping.skeleton());
     }
 
-    /**
-     * Returns bound values and mapped function when given HTTP Method and {@link PathMapping} matches.
-     *
-     * @see MappedDynamicFunction
-     */
-    @Nullable
-    MappedDynamicFunction bind(HttpMethod method, String mappedPath) {
-        if (!methods.contains(method)) {
-            return null;
+    @Override
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (!methods.contains(ctx.method())) {
+            return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
 
-        final PathMappingResult result = pathMapping.apply(mappedPath, null);
-        if (!result.isPresent()) {
-            return null;
+        final Object ret = function.apply(ctx, req);
+        if (!(ret instanceof CompletionStage)) {
+            return HttpResponse.ofFailure(new IllegalStateException(
+                    "illegal return type: " + ret.getClass().getSimpleName()));
         }
 
-        return new MappedDynamicFunction(function, result.pathParams());
+        @SuppressWarnings("unchecked")
+        CompletionStage<HttpResponse> castStage = (CompletionStage<HttpResponse>) ret;
+        return HttpResponse.from(castStage);
     }
 
     @Override

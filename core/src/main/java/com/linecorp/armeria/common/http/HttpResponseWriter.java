@@ -32,6 +32,9 @@ import com.linecorp.armeria.common.stream.StreamWriter;
 public interface HttpResponseWriter extends StreamWriter<HttpObject> {
     // TODO(trustin): Add lots of convenience methods for easier response construction.
 
+    // Note: Ensure we provide the same set of `respond()` methods with the `of()` methods of
+    //       HttpResponse for consistency.
+
     /**
      * Writes the HTTP response of the specified {@code statusCode} and closes the stream if the
      * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).

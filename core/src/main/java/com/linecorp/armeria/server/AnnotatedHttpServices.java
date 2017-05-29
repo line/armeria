@@ -14,18 +14,14 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.server.http.dynamic;
+package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,16 +30,25 @@ import java.util.Set;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
+import com.linecorp.armeria.server.http.dynamic.Converter;
+import com.linecorp.armeria.server.http.dynamic.Converter.Unspecified;
+import com.linecorp.armeria.server.http.dynamic.Delete;
+import com.linecorp.armeria.server.http.dynamic.Get;
+import com.linecorp.armeria.server.http.dynamic.Head;
+import com.linecorp.armeria.server.http.dynamic.Options;
+import com.linecorp.armeria.server.http.dynamic.Patch;
+import com.linecorp.armeria.server.http.dynamic.Path;
+import com.linecorp.armeria.server.http.dynamic.Post;
+import com.linecorp.armeria.server.http.dynamic.Put;
+import com.linecorp.armeria.server.http.dynamic.ResponseConverter;
+import com.linecorp.armeria.server.http.dynamic.Trace;
 
 /**
- * Provides various utility functions for {@link Method} object, related to {@link DynamicHttpService}.
+ * Builds a list of {@link AnnotatedHttpService}s from a Java object.
  */
-final class Methods {
+final class AnnotatedHttpServices {
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -102,9 +107,9 @@ final class Methods {
     /**
      * Returns the {@link PathMapping} instance mapped to {@code method}.
      */
-    private static PathMapping pathMapping(Method method) {
+    private static PathMapping pathMapping(String pathPrefix, Method method) {
         Path mapping = method.getAnnotation(Path.class);
-        String mappedTo = mapping.value();
+        String mappedTo = ArmeriaHttpUtil.concatPaths(pathPrefix, mapping.value());
         return PathMapping.of(mappedTo);
     }
 
@@ -120,7 +125,7 @@ final class Methods {
         }
         if (converters.length == 1) {
             Converter converter = converters[0];
-            if (converter.target() != Object.class) {
+            if (converter.target() != Unspecified.class) {
                 throw new IllegalArgumentException(
                         "@Converter annotation can't be marked on a method with a target specified.");
             }
@@ -144,7 +149,7 @@ final class Methods {
         ImmutableMap.Builder<Class<?>, ResponseConverter> builder = ImmutableMap.builder();
         for (Converter converter : converters) {
             Class<?> target = converter.target();
-            if (target == Object.class) {
+            if (target == Unspecified.class) {
                 throw new IllegalArgumentException(
                         "@Converter annotation must have a target type specified.");
             }
@@ -159,79 +164,53 @@ final class Methods {
     }
 
     /**
-     * Returns the array of {@link ParameterEntry}, which holds the type and {@link PathParam} value.
-     */
-    static List<ParameterEntry> parameterEntries(Method method) {
-        boolean hasRequestMessage = false;
-        List<ParameterEntry> entries = new ArrayList<>();
-        for (Parameter p : method.getParameters()) {
-            final String name;
-
-            PathParam pathParam = p.getAnnotation(PathParam.class);
-            if (pathParam != null) {
-                name = p.getAnnotation(PathParam.class).value();
-            } else if (p.getType().isAssignableFrom(ServiceRequestContext.class)) {
-                name = null;
-            } else if (p.getType().isAssignableFrom(HttpRequest.class) ||
-                       p.getType().isAssignableFrom(AggregatedHttpMessage.class)) {
-                if (hasRequestMessage) {
-                    throw new IllegalArgumentException("Only one request message variable is allowed.");
-                }
-                name = null;
-                hasRequestMessage = true;
-            } else {
-                throw new IllegalArgumentException("Unsupported object type: " + p.getType());
-            }
-
-            entries.add(new ParameterEntry(p.getType(), name));
-        }
-        return Collections.unmodifiableList(entries);
-    }
-
-    /**
-     * Returns a {@link DynamicHttpFunctionEntry} instance defined to {@code method} of {@code object} using
+     * Returns a {@link AnnotatedHttpService} instance defined to {@code method} of {@code object} using
      * {@link Path} annotation.
      */
-    private static DynamicHttpFunctionEntry entry(Object object, Method method,
-                                                  Map<Class<?>, ResponseConverter> converters) {
-        Set<HttpMethod> methods = httpMethods(method);
+    private static AnnotatedHttpService build(String pathPrefix, Object object, Method method,
+                                              Map<Class<?>, ResponseConverter> converters) {
+
+        final Set<HttpMethod> methods = httpMethods(method);
         if (methods.isEmpty()) {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
-        PathMapping pathMapping = pathMapping(method);
-        DynamicHttpFunctionImpl function = new DynamicHttpFunctionImpl(object, method);
 
-        Set<String> parameterNames = function.pathParamNames();
-        Set<String> expectedParamNames = pathMapping.paramNames();
+        final PathMapping pathMapping = pathMapping(pathPrefix, method);
+        final AnnotatedHttpServiceMethod function = new AnnotatedHttpServiceMethod(object, method);
+
+        final Set<String> parameterNames = function.pathParamNames();
+        final Set<String> expectedParamNames = pathMapping.paramNames();
         if (!expectedParamNames.containsAll(parameterNames)) {
             Set<String> missing = Sets.difference(parameterNames, expectedParamNames);
             throw new IllegalArgumentException("Missing @PathParam exists: " + missing);
         }
 
-        ResponseConverter converter = converter(method);
+        final ResponseConverter converter = converter(method);
         if (converter != null) {
-            return new DynamicHttpFunctionEntry(methods, pathMapping,
-                                                DynamicHttpFunctions.of(function, converter));
-        } else {
-            Map<Class<?>, ResponseConverter> converterMap = new HashMap<>();
-            // Pre-defined converters
-            converterMap.putAll(converters);
-            // Converters given by @Converter annotation
-            converterMap.putAll(converters(method.getDeclaringClass()));
-            return new DynamicHttpFunctionEntry(methods, pathMapping,
-                                                DynamicHttpFunctions.of(function, converterMap));
+            return new AnnotatedHttpService(methods, pathMapping, function.withConverter(converter));
         }
+
+        final ImmutableMap<Class<?>, ResponseConverter> newConverters =
+                ImmutableMap.<Class<?>, ResponseConverter>builder()
+                        .putAll(converters) // Pre-defined converters
+                        .putAll(converters(method.getDeclaringClass())) // Converters given by @Converters
+                        .build();
+
+        return new AnnotatedHttpService(methods, pathMapping, function.withConverters(newConverters));
     }
 
     /**
-     * Returns the list of {@link DynamicHttpFunctionEntry} defined to {@code object} using {@link Path}
+     * Returns the list of {@link AnnotatedHttpService} defined to {@code object} using {@link Path}
      * annotation.
      */
-    static List<DynamicHttpFunctionEntry> entries(Object object, Map<Class<?>, ResponseConverter> converters) {
-        return requestMappingMethods(object).stream()
-                                            .map((Method method) -> entry(object, method, converters))
-                                            .collect(toImmutableList());
+    static List<AnnotatedHttpService> build(String pathPrefix, Object object,
+                                            Map<Class<?>, ResponseConverter> converters) {
+
+        final List<Method> methods = requestMappingMethods(object);
+        return methods.stream()
+                      .map((Method method) -> build(pathPrefix, object, method, converters))
+                      .collect(toImmutableList());
     }
 
-    private Methods() {}
+    private AnnotatedHttpServices() {}
 }
