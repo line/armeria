@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.common.http;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
-import com.google.common.base.MoreObjects;
 
 final class HttpResponseAggregator extends HttpMessageAggregator {
 
@@ -35,42 +35,29 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
     }
 
     @Override
-    public void onNext(HttpObject o) {
-        if (o instanceof HttpHeaders) {
-            final HttpHeaders headers = (HttpHeaders) o;
-            final HttpStatus status = headers.status();
-            if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-                if (informationals == null) {
-                    informationals = new ArrayList<>(2);
-                }
-                informationals.add(headers);
-            } else if (this.headers == null) {
-                this.headers = headers;
-            } else {
-                trailingHeaders = headers;
+    protected void onHeaders(HttpHeaders headers) {
+        final HttpStatus status = headers.status();
+        if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+            if (informationals == null) {
+                informationals = new ArrayList<>(2);
             }
+            informationals.add(headers);
+        } else if (this.headers == null) {
+            this.headers = headers;
         } else {
-            add((HttpData) o);
+            trailingHeaders = headers;
         }
     }
 
     @Override
-    public void onError(Throwable t) {
-        clear();
-        future().completeExceptionally(t);
+    protected AggregatedHttpMessage onSuccess(HttpData content) {
+        return AggregatedHttpMessage.of(firstNonNull(informationals, Collections.emptyList()),
+                                        headers, content, trailingHeaders);
     }
 
     @Override
-    protected void doClear() {
+    protected void onFailure() {
         headers = null;
         trailingHeaders = HttpHeaders.EMPTY_HEADERS;
-    }
-
-    @Override
-    public void onComplete() {
-        final HttpData content = finish();
-        future().complete(AggregatedHttpMessage.of(
-                MoreObjects.firstNonNull(informationals, Collections.emptyList()),
-                headers, content, trailingHeaders));
     }
 }
