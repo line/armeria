@@ -20,7 +20,10 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +34,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.server.PathMapping;
@@ -158,16 +162,30 @@ final class Methods {
      * Returns the array of {@link ParameterEntry}, which holds the type and {@link PathParam} value.
      */
     static List<ParameterEntry> parameterEntries(Method method) {
-        return Arrays.stream(method.getParameters())
-                     .map(p -> {
-                         if (p.getType().isAssignableFrom(ServiceRequestContext.class) ||
-                             p.getType().isAssignableFrom(HttpRequest.class)) {
-                             return new ParameterEntry(p.getType(), null);
-                         } else {
-                             return new ParameterEntry(p.getType(), p.getAnnotation(PathParam.class).value());
-                         }
-                     })
-                     .collect(toImmutableList());
+        boolean hasRequestMessage = false;
+        List<ParameterEntry> entries = new ArrayList<>();
+        for (Parameter p : method.getParameters()) {
+            final String name;
+
+            PathParam pathParam = p.getAnnotation(PathParam.class);
+            if (pathParam != null) {
+                name = p.getAnnotation(PathParam.class).value();
+            } else if (p.getType().isAssignableFrom(ServiceRequestContext.class)) {
+                name = null;
+            } else if (p.getType().isAssignableFrom(HttpRequest.class) ||
+                       p.getType().isAssignableFrom(AggregatedHttpMessage.class)) {
+                if (hasRequestMessage) {
+                    throw new IllegalArgumentException("Only one request message variable is allowed.");
+                }
+                name = null;
+                hasRequestMessage = true;
+            } else {
+                throw new IllegalArgumentException("Unsupported object type: " + p.getType());
+            }
+
+            entries.add(new ParameterEntry(p.getType(), name));
+        }
+        return Collections.unmodifiableList(entries);
     }
 
     /**

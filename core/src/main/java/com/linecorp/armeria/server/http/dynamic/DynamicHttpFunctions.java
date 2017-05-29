@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.internal.Types;
@@ -73,6 +75,8 @@ final class DynamicHttpFunctions {
     private static HttpResponse convert(Object object, Map<Class<?>, ResponseConverter> converters) {
         if (object instanceof HttpResponse) {
             return (HttpResponse) object;
+        } else if (object instanceof AggregatedHttpMessage) {
+            return convert((AggregatedHttpMessage) object);
         } else {
             ResponseConverter converter = converter(object.getClass(), converters);
             try {
@@ -91,6 +95,8 @@ final class DynamicHttpFunctions {
     private static HttpResponse convert(Object object, ResponseConverter converter) {
         if (object instanceof HttpResponse) {
             return (HttpResponse) object;
+        } else if (object instanceof AggregatedHttpMessage) {
+            return convert((AggregatedHttpMessage) object);
         } else {
             try {
                 return converter.convert(object);
@@ -98,6 +104,15 @@ final class DynamicHttpFunctions {
                 throw new IllegalStateException("Exception occurred during ResponseConverter#convert", e);
             }
         }
+    }
+
+    /**
+     * Converts {@link AggregatedHttpMessage} object into {@link HttpResponse}.
+     */
+    private static HttpResponse convert(AggregatedHttpMessage aggregatedMessage) {
+        DefaultHttpResponse response = new DefaultHttpResponse();
+        response.respond(aggregatedMessage);
+        return response;
     }
 
     /**

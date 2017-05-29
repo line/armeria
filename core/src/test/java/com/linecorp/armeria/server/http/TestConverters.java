@@ -111,5 +111,22 @@ final class TestConverters {
         }
     }
 
+    public static class UnformattedStringConverter implements ResponseConverter {
+        @Override
+        public HttpResponse convert(Object resObj) throws Exception {
+            final DefaultHttpResponse res = new DefaultHttpResponse();
+            final HttpData data = HttpData.ofUtf8(resObj.toString());
+            final long current = System.currentTimeMillis();
+            HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
+                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
+                                                     data.length())
+                                             .setTimeMillis(HttpHeaderNames.DATE, current);
+            res.write(headers);
+            res.write(data);
+            res.close();
+            return res;
+        }
+    }
+
     private TestConverters() {}
 }
