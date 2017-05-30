@@ -55,7 +55,7 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         final String[] pathAndQuery = splitPathAndQuery(concatPaths);
         if (pathAndQuery == null) {
             req.abort();
-            return HttpResponse.ofFailed(new IllegalArgumentException("invalid path: " + concatPaths));
+            return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + concatPaths));
         }
 
         return execute(eventLoop, req.method(), pathAndQuery[0], pathAndQuery[1], null, req, cause -> {

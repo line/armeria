@@ -75,7 +75,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         autoFillHeaders(ctx, endpoint, req);
         if (!sanitizePath(req)) {
             req.abort();
-            return HttpResponse.ofFailed(new IllegalArgumentException("invalid path: " + req.path()));
+            return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
         }
 
         final PoolKey poolKey = new PoolKey(

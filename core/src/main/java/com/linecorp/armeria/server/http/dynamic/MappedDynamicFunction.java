@@ -34,7 +34,7 @@ final class MappedDynamicFunction extends AbstractHttpService {
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Object ret = function.serve(ctx, req, args);
         if (!(ret instanceof CompletionStage)) {
-            return HttpResponse.ofFailed(new IllegalStateException(
+            return HttpResponse.ofFailure(new IllegalStateException(
                     "illegal return type: " + ret.getClass().getSimpleName()));
         }
 
