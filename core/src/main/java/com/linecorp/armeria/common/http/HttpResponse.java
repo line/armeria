@@ -42,10 +42,18 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     /**
      * Creates a new failed instance.
      */
-    static HttpResponse ofFailed(Throwable cause) {
+    static HttpResponse ofFailure(Throwable cause) {
         final DefaultHttpResponse res = new DefaultHttpResponse();
         res.close(cause);
         return res;
+    }
+
+    /**
+     * @deprecated Use {@link #ofFailure(Throwable)} instead.
+     */
+    @Deprecated
+    static HttpResponse ofFailed(Throwable cause) {
+        return ofFailure(cause);
     }
 
     /**
