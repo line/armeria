@@ -15,9 +15,13 @@
  */
 package com.linecorp.armeria.spring;
 
+import static net.javacrumbs.jsonunit.JsonMatchers.jsonPartMatches;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.is;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import javax.inject.Inject;
 
@@ -49,6 +53,9 @@ import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService;
+import com.linecorp.armeria.spring.test.thrift.main.HelloService.hello_args;
+
+import io.netty.util.AsciiString;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
@@ -76,7 +83,10 @@ public class ArmeriaAutoConfigurationTest {
             return new ThriftServiceRegistrationBean()
                     .setServiceName("helloService")
                     .setService(THttpService.of((HelloService.Iface) name -> "hello " + name))
-                    .setPath("/thrift");
+                    .setPath("/thrift")
+                    .setExampleRequests(Collections.singleton(new hello_args("nameVal")))
+                    .setExampleHeaders(Collections.singleton(HttpHeaders.of(
+                            AsciiString.of("x-additional-header"), "headerVal")));
         }
     }
 
@@ -114,6 +124,17 @@ public class ArmeriaAutoConfigurationTest {
                                                       HelloService.Iface.class);
 
         assertThat(client.hello("world")).isEqualTo("hello world");
+
+        HttpClient httpClient = Clients.newClient(newUrl("none+h1c"), HttpClient.class);
+        HttpResponse response =
+                httpClient.execute(HttpRequest.of(HttpHeaders.of(HttpMethod.GET,
+                                                                 "/internal/docs/specification.json")));
+
+        AggregatedHttpMessage msg = response.aggregate().get();
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(msg.content().toStringAscii()).matches(
+                jsonPartMatches("services[0].exampleHttpHeaders[0].x-additional-header",
+                                is("headerVal")));
     }
 
     @Test

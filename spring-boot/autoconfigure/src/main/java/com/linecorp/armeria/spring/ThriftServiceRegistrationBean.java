@@ -22,6 +22,7 @@ import javax.validation.constraints.NotNull;
 
 import org.apache.thrift.TBase;
 
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.docs.DocService;
 
@@ -56,6 +57,11 @@ public class ThriftServiceRegistrationBean {
      * in this thrift service.
      */
     private Collection<? extends TBase<?, ?>> exampleRequests = new ArrayList<>();
+
+    /**
+     * Example {@link HttpHeaders} being used in debug forms.
+     */
+    private Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
 
     /**
      * Returns the thrift {@link Service} that is registered to this bean.
@@ -114,6 +120,21 @@ public class ThriftServiceRegistrationBean {
      */
     public ThriftServiceRegistrationBean setExampleRequests(Collection<? extends TBase<?, ?>> exampleRequests) {
         this.exampleRequests = exampleRequests;
+        return this;
+    }
+
+    /**
+     * Returns example {@link HttpHeaders}.
+     */
+    public Collection<HttpHeaders> getExampleHeaders() {
+        return exampleHeaders;
+    }
+
+    /**
+     * Sets example {@link HttpHeaders}.
+     */
+    public ThriftServiceRegistrationBean setExampleHeaders(Collection<HttpHeaders> exampleHeaders) {
+        this.exampleHeaders = exampleHeaders;
         return this;
     }
 }

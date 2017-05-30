@@ -24,9 +24,13 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -47,6 +51,7 @@ import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
@@ -61,6 +66,7 @@ import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.http.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.http.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.netty.util.NetUtil;
@@ -108,6 +114,7 @@ public class ArmeriaAutoConfiguration {
         configurePorts(armeriaSettings, server);
 
         List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
+        Map<String, Collection<HttpHeaders>> docServiceHeaders = new HashMap<>();
         thriftServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
             @SuppressWarnings("unchecked")
             Service<HttpRequest, HttpResponse> service =
@@ -121,6 +128,13 @@ public class ArmeriaAutoConfiguration {
 
             server.serviceAt(bean.getPath(), service);
             docServiceRequests.addAll(bean.getExampleRequests());
+            bean.getService().as(THttpService.class).ifPresent(
+                    beanService -> beanService.entries().forEach((serviceName, entry) -> {
+                        for (Class<?> iface : entry.interfaces()) {
+                            docServiceHeaders.put(iface.getEnclosingClass().getName(),
+                                                  bean.getExampleHeaders());
+                        }
+                    }));
         }));
 
         httpServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
@@ -142,8 +156,12 @@ public class ArmeriaAutoConfiguration {
         }
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getDocsPath())) {
-            server.serviceUnder(armeriaSettings.getDocsPath(),
-                                new DocServiceBuilder().exampleRequest(docServiceRequests).build());
+            DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+            docServiceBuilder.exampleRequest(docServiceRequests);
+            for (Entry<String, Collection<HttpHeaders>> entry : docServiceHeaders.entrySet()) {
+                docServiceBuilder.exampleHttpHeaders(entry.getKey(), entry.getValue());
+            }
+            server.serviceUnder(armeriaSettings.getDocsPath(), docServiceBuilder.build());
         }
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getMetricsPath())) {
