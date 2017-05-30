@@ -41,7 +41,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link HttpRequest} with empty content.
+     * Creates a new {@link HttpRequest} with empty content.
      */
     static HttpRequest of(HttpHeaders headers) {
         // TODO(trustin): Use no-op Queue implementation for QueueBasedPublisher?
