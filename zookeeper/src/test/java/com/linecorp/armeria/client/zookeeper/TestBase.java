@@ -47,7 +47,9 @@ public class TestBase {
     @BeforeClass
     public static void start() {
         try {
-            zkInstance = ZKFactory.apply().withRootDir(ROOT_FOLDER.newFolder("zookeeper")).create();
+            if (zkInstance == null) {
+                zkInstance = ZKFactory.apply().withRootDir(ROOT_FOLDER.newFolder("zookeeper")).create();
+            }
             zkInstance.start().result(duration);
         } catch (Throwable throwable) {
             throw new IllegalStateException(throwable);
