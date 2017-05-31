@@ -25,11 +25,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UserClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
-import com.linecorp.armeria.common.http.HttpData;
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 
@@ -71,23 +67,6 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     HttpResponse execute(EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
-        final HttpHeaders headers = aggregatedReq.headers();
-        final DefaultHttpRequest req = new DefaultHttpRequest(headers);
-        final HttpData content = aggregatedReq.content();
-
-        // Add content if not empty.
-        if (!content.isEmpty()) {
-            headers.setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
-            req.write(content);
-        }
-
-        // Add trailing headers if not empty.
-        final HttpHeaders trailingHeaders = aggregatedReq.trailingHeaders();
-        if (!trailingHeaders.isEmpty()) {
-            req.write(trailingHeaders);
-        }
-
-        req.close();
-        return execute(eventLoop, req);
+        return execute(eventLoop, aggregatedReq.toHttpRequest());
     }
 }

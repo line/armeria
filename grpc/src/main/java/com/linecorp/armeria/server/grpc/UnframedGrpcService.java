@@ -237,7 +237,9 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                         // We also know that we don't support compression, so this is always a ByteBuffer.
                         HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
-                        res.respond(AggregatedHttpMessage.of(unframedHeaders, unframedContent));
+                        res.write(unframedHeaders);
+                        res.write(unframedContent);
+                        res.close();
                     }
 
                     @Override
