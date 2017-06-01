@@ -63,7 +63,7 @@ public class HttpClientPipeliningTest {
         protected void configure(ServerBuilder sb) throws Exception {
             // Bind a service that returns the remote address of the connection to determine
             // if the same connection was used to handle more than one request.
-            sb.serviceAt("/", new AbstractHttpService() {
+            sb.service("/", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx,
                                      HttpRequest req, HttpResponseWriter res) throws Exception {

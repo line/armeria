@@ -49,7 +49,7 @@ public class GracefulShutdownIntegrationTest {
             sb.gracefulShutdownTimeout(1000L, 2000L);
             sb.defaultRequestTimeoutMillis(0); // Disable RequestTimeoutException.
 
-            sb.serviceAt("/sleep", THttpService.of(
+            sb.service("/sleep", THttpService.of(
                     (AsyncIface) (milliseconds, resultHandler) ->
                             RequestContext.current().eventLoop().schedule(
                                     () -> resultHandler.onComplete(milliseconds), milliseconds, MILLISECONDS)));

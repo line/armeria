@@ -48,7 +48,7 @@ public class DropwizardMetricsIntegrationTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/helloservice", THttpService.of((Iface) name -> {
+            sb.service("/helloservice", THttpService.of((Iface) name -> {
                 if ("world".equals(name)) {
                     return "success";
                 }

@@ -63,9 +63,6 @@ SimpleDecoratingClient_ :
 
     ClientBuilder cb = new ClientBuilder(...);
     ...
-    // Using a method reference:
-    cb.decorator(HttpRequest.class, HttpResponse.class,
-                 AuditClient::new);
     // Using a lambda expression:
     cb.decorator(HttpRequest.class, HttpResponse.class,
                  delegate -> new AuditClient(delegate));

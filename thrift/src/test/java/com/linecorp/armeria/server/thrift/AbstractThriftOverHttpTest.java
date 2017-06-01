@@ -104,25 +104,25 @@ public abstract class AbstractThriftOverHttpTest {
             ssc = new SelfSignedCertificate("127.0.0.1");
             sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
 
-            sb.serviceAt("/hello", THttpService.of(
+            sb.service("/hello", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!')));
 
-            sb.serviceAt("/hellochild", THttpService.of(new HelloServiceChild()));
+            sb.service("/hellochild", THttpService.of(new HelloServiceChild()));
 
-            sb.serviceAt("/exception", THttpService.of(
+            sb.service("/exception", THttpService.of(
                     (AsyncIface) (name, resultHandler) ->
                             resultHandler.onError(new AnticipatedException(name))));
 
-            sb.serviceAt("/hellochild", THttpService.of(new HelloServiceChild()));
+            sb.service("/hellochild", THttpService.of(new HelloServiceChild()));
 
-            sb.serviceAt("/sleep", THttpService.of(
+            sb.service("/sleep", THttpService.of(
                     (SleepService.AsyncIface) (milliseconds, resultHandler) ->
                             RequestContext.current().eventLoop().schedule(
                                     () -> resultHandler.onComplete(milliseconds),
                                     milliseconds, TimeUnit.MILLISECONDS)));
 
             // Response larger than a h1 TLS record
-            sb.serviceAt("/large", THttpService.of(
+            sb.service("/large", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete(LARGER_THAN_TLS)));
 
             sb.decorator(LoggingService::new);

@@ -150,7 +150,7 @@ public class ArmeriaCallFactoryTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/pojo", new AbstractHttpService() {
+            sb.service("/pojo", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx,
                                      HttpRequest req, HttpResponseWriter res) throws Exception {
@@ -173,7 +173,7 @@ public class ArmeriaCallFactoryTest {
                       }));
                   }
               })
-              .serviceAt("/nest/pojo", new AbstractHttpService() {
+              .service("/nest/pojo", new AbstractHttpService() {
                   @Override
                   protected void doGet(ServiceRequestContext ctx,
                                        HttpRequest req, HttpResponseWriter res) throws Exception {
@@ -181,7 +181,7 @@ public class ArmeriaCallFactoryTest {
                                   "{\"name\":\"Leonard\", \"age\":21}");
                   }
               })
-              .serviceAt("/pojos", new AbstractHttpService() {
+              .service("/pojos", new AbstractHttpService() {
                   @Override
                   protected void doGet(ServiceRequestContext ctx,
                                        HttpRequest req, HttpResponseWriter res) throws Exception {
@@ -190,7 +190,7 @@ public class ArmeriaCallFactoryTest {
                                   "{\"name\":\"Leonard\", \"age\":21}]");
                   }
               })
-              .serviceAt("/queryString", new AbstractHttpService() {
+              .service("/queryString", new AbstractHttpService() {
                   @Override
                   protected void doGet(ServiceRequestContext ctx,
                                        HttpRequest req, HttpResponseWriter res) throws Exception {
@@ -203,7 +203,7 @@ public class ArmeriaCallFactoryTest {
                       }));
                   }
               })
-              .serviceAt("/post", new AbstractHttpService() {
+              .service("/post", new AbstractHttpService() {
                   @Override
                   protected void doPost(ServiceRequestContext ctx,
                                         HttpRequest req, HttpResponseWriter res) throws Exception {
@@ -229,7 +229,7 @@ public class ArmeriaCallFactoryTest {
                       }));
                   }
               })
-              .serviceAt("/postForm", new AbstractHttpService() {
+              .service("/postForm", new AbstractHttpService() {
                   @Override
                   protected void doPost(ServiceRequestContext ctx,
                                         HttpRequest req, HttpResponseWriter res) throws Exception {
@@ -249,7 +249,7 @@ public class ArmeriaCallFactoryTest {
                       }));
                   }
               })
-              .serviceAt("/postCustomContentType", new AbstractHttpService() {
+              .service("/postCustomContentType", new AbstractHttpService() {
                   @Override
                   protected void doPost(ServiceRequestContext ctx,
                                         HttpRequest req, HttpResponseWriter res) throws Exception {

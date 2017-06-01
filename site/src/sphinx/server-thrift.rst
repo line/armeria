@@ -70,7 +70,7 @@ to the `ServerBuilder`_:
 
     ServerBuilder sb = new ServerBuilder();
     ...
-    sb.serviceAt("/hello", THttpService.of(new MyHelloService()));
+    sb.service("/hello", THttpService.of(new MyHelloService()));
     ...
     Server server = sb.build();
     server.start();
@@ -109,8 +109,8 @@ To change the default serialization format from TBINARY to something else, speci
 
     ServerBuilder sb = new ServerBuilder();
     // Use TCOMACT as the default serialization format.
-    sb.serviceAt("/hello", THttpService.of(new MyHelloService(),
-                                           ThriftSerializationFormats.COMPACT));
+    sb.service("/hello", THttpService.of(new MyHelloService(),
+                                         ThriftSerializationFormats.COMPACT));
 
 You can also choose the list of allowed serialization formats:
 
@@ -119,9 +119,9 @@ You can also choose the list of allowed serialization formats:
     ServerBuilder sb = new ServerBuilder();
     // Use TBINARY as the default serialization format.
     // Allow TBINARY and TCOMPACT only.
-    sb.serviceAt("/hello", THttpService.of(new MyHelloService(),
-                                           ThriftSerializationFormats.BINARY,
-                                           ThriftSerializationFormats.COMPACT));
+    sb.service("/hello", THttpService.of(new MyHelloService(),
+                                         ThriftSerializationFormats.BINARY,
+                                         ThriftSerializationFormats.COMPACT));
 
 .. note::
    TTEXT is not designed for efficiency and is recommended to be only used for debugging.
@@ -140,7 +140,7 @@ Service multiplexing
     // Use MyHelloService for non-multiplexed requests.
     impls.put("", new MyHelloService());
 
-    sb.serviceAt("/thrift", THttpService.of(impls));
+    sb.service("/thrift", THttpService.of(impls));
 
 See also
 --------

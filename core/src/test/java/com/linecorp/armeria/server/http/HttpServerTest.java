@@ -158,7 +158,7 @@ public class HttpServerTest {
             SelfSignedCertificate ssc = new SelfSignedCertificate();
             sb.sslContext(HTTPS, ssc.certificate(), ssc.privateKey());
 
-            sb.serviceAt("/delay/{delay}", new AbstractHttpService() {
+            sb.service("/delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
@@ -167,7 +167,7 @@ public class HttpServerTest {
                 }
             });
 
-            sb.serviceAt("/informed_delay/{delay}", new AbstractHttpService() {
+            sb.service("/informed_delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
@@ -186,7 +186,7 @@ public class HttpServerTest {
                 }
             });
 
-            sb.serviceAt("/content_delay/{delay}", new AbstractHttpService() {
+            sb.service("/content_delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
@@ -227,7 +227,7 @@ public class HttpServerTest {
                 }
             });
 
-            sb.serviceAt("/echo", new AbstractHttpService() {
+            sb.service("/echo", new AbstractHttpService() {
                 @Override
                 protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.write(HttpHeaders.of(HttpStatus.OK));
@@ -261,8 +261,8 @@ public class HttpServerTest {
                 }
             });
 
-            sb.serviceAt("/count", new CountingService(false));
-            sb.serviceAt("/slow_count", new CountingService(true));
+            sb.service("/count", new CountingService(false));
+            sb.service("/slow_count", new CountingService(true));
 
             sb.serviceUnder("/zeroes", new AbstractHttpService() {
                 @Override
@@ -275,7 +275,7 @@ public class HttpServerTest {
                 }
             });
 
-            sb.serviceAt("/strings", new AbstractHttpService() {
+            sb.service("/strings", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain"));
@@ -287,7 +287,7 @@ public class HttpServerTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-            sb.serviceAt("/images", new AbstractHttpService() {
+            sb.service("/images", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "image/png"));
@@ -299,7 +299,7 @@ public class HttpServerTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-            sb.serviceAt("/small", new AbstractHttpService() {
+            sb.service("/small", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     String response = Strings.repeat("a", 1023);
@@ -311,7 +311,7 @@ public class HttpServerTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-            sb.serviceAt("/large", new AbstractHttpService() {
+            sb.service("/large", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     String response = Strings.repeat("a", 1024);
@@ -323,7 +323,7 @@ public class HttpServerTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-            sb.serviceAt("/sslsession", new AbstractHttpService() {
+            sb.service("/sslsession", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     if (ctx.sessionProtocol().isTls()) {
@@ -335,7 +335,7 @@ public class HttpServerTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-            sb.serviceAt("/headers", new AbstractHttpService() {
+            sb.service("/headers", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
@@ -347,7 +347,7 @@ public class HttpServerTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-            sb.serviceAt("/trailers", new AbstractHttpService() {
+            sb.service("/trailers", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
                         throws Exception {

@@ -91,7 +91,7 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
     }
 
     /**
-     * Returns the list of the {@link CompositeServiceEntry}s added via {@link #serviceAt(String, Service)},
+     * Returns the list of the {@link CompositeServiceEntry}s added via {@link #service(String, Service)},
      * {@link #serviceUnder(String, Service)}, {@link #service(PathMapping, Service)} and
      * {@link #service(CompositeServiceEntry)}.
      */
@@ -100,10 +100,11 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
     }
 
     /**
-     * Binds the specified {@link Service} at the specified exact path.
+     * @deprecated Use {@link #service(String, Service)} instead.
      */
-    protected T serviceAt(String exactPath, Service<? super I, ? extends O> service) {
-        return service(CompositeServiceEntry.ofExact(exactPath, service));
+    @Deprecated
+    protected T serviceAt(String pathPattern, Service<? super I, ? extends O> service) {
+        return service(pathPattern, service);
     }
 
     /**
@@ -111,6 +112,24 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
      */
     protected T serviceUnder(String pathPrefix, Service<? super I, ? extends O> service) {
         return service(CompositeServiceEntry.ofPrefix(pathPrefix, service));
+    }
+
+    /**
+     * Binds the specified {@link Service} at the specified path pattern. e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     *   <li>{@code exact:/foo/bar} (exact match)</li>
+     *   <li>{@code prefix:/files} (prefix match)</li>
+     *   <li><code>glob:/~&#42;/downloads/**</code> (glob pattern)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} (regular expression)</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified path pattern is invalid
+     */
+    protected T service(String pathPattern, Service<? super I, ? extends O> service) {
+        return service(CompositeServiceEntry.of(pathPattern, service));
     }
 
     /**

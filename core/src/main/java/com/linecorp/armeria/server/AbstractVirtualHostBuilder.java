@@ -200,16 +200,11 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Binds the specified {@link Service} at the the specified path pattern. e.g.
-     * <ul>
-     *   <li>{@code /login} (no path parameters)</li>
-     *   <li>{@code /users/{userId}} (curly-brace style)</li>
-     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
-     * </ul>
+     * @deprecated Use {@link #service(String, Service)} instead.
      */
+    @Deprecated
     public B serviceAt(String pathPattern, Service<? super HttpRequest, ? extends HttpResponse> service) {
-        service(PathMapping.of(pathPattern), service);
-        return self();
+        return service(pathPattern, service);
     }
 
     /**
@@ -217,6 +212,25 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      */
     public B serviceUnder(String pathPrefix, Service<? super HttpRequest, ? extends HttpResponse> service) {
         service(PathMapping.ofPrefix(pathPrefix), service);
+        return self();
+    }
+
+    /**
+     * Binds the specified {@link Service} at the the specified path pattern. e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     *   <li>{@code exact:/foo/bar} (exact match)</li>
+     *   <li>{@code prefix:/files} (prefix match)</li>
+     *   <li><code>glob:/~&#42;/downloads/**</code> (glob pattern)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} (regular expression)</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified path pattern is invalid
+     */
+    public B service(String pathPattern, Service<? super HttpRequest, ? extends HttpResponse> service) {
+        service(PathMapping.of(pathPattern), service);
         return self();
     }
 
@@ -243,66 +257,65 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
-    public B service(Object service) {
-        return service("/", service);
+    public B annotatedService(Object service) {
+        return annotatedService("/", service);
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
-    public B service(
+    public B annotatedService(
             Object service,
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
-        return service("/", service, decorator);
+        return annotatedService("/", service, decorator);
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
-    public B service(Object service, Map<Class<?>, ResponseConverter> converters) {
-        return service("/", service, converters);
+    public B annotatedService(Object service, Map<Class<?>, ResponseConverter> converters) {
+        return annotatedService("/", service, converters);
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
-    public B service(
+    public B annotatedService(
             Object service, Map<Class<?>, ResponseConverter> converters,
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
-        return service("/", service, converters, decorator);
-    }
-
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     */
-    public B service(String pathPrefix, Object service) {
-        return service(pathPrefix, service, ImmutableMap.of(), Function.identity());
+        return annotatedService("/", service, converters, decorator);
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
-    public B service(
+    public B annotatedService(String pathPrefix, Object service) {
+        return annotatedService(pathPrefix, service, ImmutableMap.of(), Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B annotatedService(
             String pathPrefix, Object service,
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
-        return service(pathPrefix, service, ImmutableMap.of(), decorator);
+        return annotatedService(pathPrefix, service, ImmutableMap.of(), decorator);
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
-    public B service(String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters) {
-        return service(pathPrefix, service, converters, Function.identity());
+    public B annotatedService(String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters) {
+        return annotatedService(pathPrefix, service, converters, Function.identity());
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
-    public B service(
+    public B annotatedService(
             String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {

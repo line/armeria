@@ -21,9 +21,13 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
 final class GlobPathMapping extends AbstractPathMapping {
+
+    static final String PREFIX = "glob:";
+    static final int PREFIX_LEN = PREFIX.length();
 
     private final String glob;
     private final Pattern pattern;
@@ -34,7 +38,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         this.glob = glob;
         pattern = globToRegex(glob);
         loggerName = loggerName(glob);
-        strVal = "glob:" + glob;
+        strVal = PREFIX + glob;
     }
 
     @Override
@@ -58,6 +62,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         return glob;
     }
 
+    @VisibleForTesting
     Pattern asRegex() {
         return pattern;
     }

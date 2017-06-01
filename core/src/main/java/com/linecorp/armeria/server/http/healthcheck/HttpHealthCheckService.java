@@ -46,8 +46,8 @@ import com.linecorp.armeria.server.http.HttpService;
  * <pre>{@code
  * Server server = new ServerBuilder()
  *         .defaultVirtualHost(new VirtualHostBuilder()
- *                 .serviceAt("/rpc", new ThriftService(myHandler))
- *                 .serviceAt("/health", new HttpHealthCheckService())
+ *                 .service("/rpc", new ThriftService(myHandler))
+ *                 .service("/health", new HttpHealthCheckService())
  *                 .build())
  *         .build();
  * }</pre>
@@ -61,8 +61,8 @@ import com.linecorp.armeria.server.http.HttpService;
  * SettableHealthChecker healthChecker = new SettableHealthChecker();
  * Server server = new ServerBuilder()
  *         .defaultVirtualHost(new VirtualHostBuilder()
- *                 .serviceAt("/rpc", new ThriftService(myHandler))
- *                 .serviceAt("/health", new HttpHealthCheckService(healthChecker))
+ *                 .service("/rpc", new ThriftService(myHandler))
+ *                 .service("/health", new HttpHealthCheckService(healthChecker))
  *                 .build())
  *         .build();
  * }</pre>

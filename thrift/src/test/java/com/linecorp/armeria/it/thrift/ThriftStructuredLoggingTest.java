@@ -80,7 +80,7 @@ public class ThriftStructuredLoggingTest {
         protected void configure(ServerBuilder sb) throws Exception {
             loggingService = new MockedStructuredLoggingService<>(
                     THttpService.of((HelloService.Iface) name -> "Hello " + name));
-            sb.serviceAt("/hello", loggingService);
+            sb.service("/hello", loggingService);
         }
     };
 

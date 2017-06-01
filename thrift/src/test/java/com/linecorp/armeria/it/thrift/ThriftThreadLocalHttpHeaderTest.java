@@ -67,7 +67,7 @@ public class ThriftThreadLocalHttpHeaderTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/hello", THttpService.of(helloService));
+            sb.service("/hello", THttpService.of(helloService));
         }
     };
 

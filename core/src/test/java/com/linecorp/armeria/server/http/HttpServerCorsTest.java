@@ -47,7 +47,7 @@ public class HttpServerCorsTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/cors", new AbstractHttpService() {
+            sb.service("/cors", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.respond(HttpStatus.OK);

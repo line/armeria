@@ -25,6 +25,9 @@ import com.google.common.collect.ImmutableSet;
 
 final class PrefixPathMapping extends AbstractPathMapping {
 
+    static final String PREFIX = "prefix:";
+    static final int PREFIX_LEN = PREFIX.length();
+
     private final String prefix;
     private final String loggerName;
     private final String metricName;
@@ -39,7 +42,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
         this.prefix = prefix;
         loggerName = loggerName(prefix);
         metricName = prefix + "**";
-        strVal = "prefix: " + prefix;
+        strVal = PREFIX + prefix;
     }
 
     @Override

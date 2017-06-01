@@ -49,7 +49,7 @@ public class TMultiplexedProtocolIntegrationTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt(
+            sb.service(
                     "/",
                     THttpService.of(ImmutableMap.of("", (Iface) name -> "none:" + name,
                                                     "foo", name -> "foo:" + name,

@@ -133,7 +133,7 @@ You can also use the builder pattern for client construction:
 
     HelloServiceBlockingStub helloService = new ClientBuilder("gproto+http://127.0.0.1:8080/")
             .defaultResponseTimeoutMillis(10000)
-            .decorator(HttpRequest.class, HttpResponse.class, LoggingClient::new)
+            .decorator(HttpRequest.class, HttpResponse.class, LoggingClient.newDecorator())
             .build(HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class or HelloServiceStub.class
 
     HelloRequest request = HelloRequest.newBuilder().setName("Armerian World").build();

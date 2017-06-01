@@ -21,7 +21,7 @@ First, add DocService_ to the ServerBuilder_:
     ServerBuilder sb = new ServerBuilder();
     sb.port(8080, "http");
     // Add some RPC services.
-    sb.serviceAt("/hello", THttpService.of(new MyHelloService());
+    sb.service("/hello", THttpService.of(new MyHelloService());
     // Add DocService.
     sb.serviceUnder("/docs", new DocService());
     Server server = sb.build();

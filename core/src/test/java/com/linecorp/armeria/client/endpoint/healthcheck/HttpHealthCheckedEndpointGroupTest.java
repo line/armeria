@@ -43,7 +43,7 @@ public class HttpHealthCheckedEndpointGroupTest {
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt(HEALTH_CHECK_PATH, new HttpHealthCheckService());
+            sb.service(HEALTH_CHECK_PATH, new HttpHealthCheckService());
         }
     }
 

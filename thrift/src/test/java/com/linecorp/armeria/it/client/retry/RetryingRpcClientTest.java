@@ -52,7 +52,7 @@ public class RetryingRpcClientTest {
     public final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/thrift", THttpService.of(serviceHandler));
+            sb.service("/thrift", THttpService.of(serviceHandler));
         }
     };
 

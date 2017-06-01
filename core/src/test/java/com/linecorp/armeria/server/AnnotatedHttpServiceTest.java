@@ -68,23 +68,27 @@ public class AnnotatedHttpServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             // Case 1, 2, and 3, with a converter map
-            sb.service("/dynamic1", new MyAnnotatedService1(),
-                       ImmutableMap.of(Integer.class, new NaiveIntConverter()),
-                       LoggingService.newDecorator());
+            sb.annotatedService("/1", new MyAnnotatedService1(),
+                                ImmutableMap.of(Integer.class, new NaiveIntConverter()),
+                                LoggingService.newDecorator());
 
             // Case 4, 5, and 6
-            sb.service("/dynamic2", new MyAnnotatedService2(),
+            sb.annotatedService("/2", new MyAnnotatedService2(),
                        service -> service.decorate(LoggingService.newDecorator()));
 
-            // Bind services under the same path prefix.
-            sb.service("/dynamic3", new MyAnnotatedService3(),
+            // Bind more than one service under the same path prefix.
+            sb.annotatedService("/3", new MyAnnotatedService3(),
                        service -> service.decorate(LoggingService.newDecorator()));
 
-            sb.service("/dynamic3", new MyAnnotatedService4(),
+            sb.annotatedService("/3", new MyAnnotatedService4(),
                        service -> service.decorate(LoggingService.newDecorator()));
 
-            sb.service("/dynamic3", new MyAnnotatedService5(),
+            sb.annotatedService("/3", new MyAnnotatedService5(),
                        service -> service.decorate(LoggingService.newDecorator()));
+
+            // Bind using non-default path mappings
+            sb.annotatedService("/4", new MyAnnotatedService6(),
+                                LoggingService.newDecorator());
         }
     };
 
@@ -275,117 +279,187 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    /**
+     * An annotated service that's used for testing non-default path mappings.
+     */
+    @Converter(target = String.class, value = TypedStringConverter.class)
+    public static class MyAnnotatedService6 {
+
+        @Get
+        @Path("exact:/exact")
+        public String exact(ServiceRequestContext ctx) {
+            return "exact:" + ctx.path();
+        }
+
+        @Get
+        @Path("prefix:/prefix")
+        public String prefix(ServiceRequestContext ctx) {
+            return "prefix:" + ctx.path() + ':' + ctx.pathWithoutPrefix();
+        }
+
+        @Get
+        @Path("glob:/glob1/*") // The pattern that starts with '/'
+        public String glob1(ServiceRequestContext ctx) {
+            return "glob1:" + ctx.path();
+        }
+
+        @Get
+        @Path("glob:glob2") // The pattern that does not start with '/'
+        public String glob2(ServiceRequestContext ctx) {
+            return "glob2:" + ctx.path();
+        }
+
+        @Get
+        @Path("regex:^/regex/(?<path>.*)$")
+        public String regex(ServiceRequestContext ctx, @PathParam("path") String path) {
+            return "regex:" + ctx.path() + ':' + path;
+        }
+    }
+
     @Test
     public void testDynamicHttpServices() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Run case 1.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic1/int/42")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/1/int/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 42"));
             }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic1/int-async/42")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/1/int-async/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 43"));
             }
             // Run case 2.
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/dynamic1/long/42")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/1/long/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
             }
             // Run case 3.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic1/string/blah")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/1/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("String: blah"));
             }
             // Run case 1 but illegal parameter.
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic1/int/fourty-two")))) {
+                         hc.execute(new HttpGet(rule.httpUri("/1/int/fourty-two")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
             }
             // Run case 2 but without parameter (non-existing url).
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/dynamic1/long/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/1/long/")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
             }
             // Run case 3 but with not-mapped HTTP method (Post).
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/dynamic1/string/blah")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/1/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
             }
             // Get a requested path as typed string from ServiceRequestContext or HttpRequest
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic1/path/ctx/async/1")))) {
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[/dynamic1/path/ctx/async/1]"));
+                         hc.execute(new HttpGet(rule.httpUri("/1/path/ctx/async/1")))) {
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[/1/path/ctx/async/1]"));
             }
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic1/path/req/async/1")))) {
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[/dynamic1/path/req/async/1]"));
+                         hc.execute(new HttpGet(rule.httpUri("/1/path/req/async/1")))) {
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[/1/path/req/async/1]"));
             }
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic1/path/ctx/sync/1")))) {
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[/dynamic1/path/ctx/sync/1]"));
+                         hc.execute(new HttpGet(rule.httpUri("/1/path/ctx/sync/1")))) {
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[/1/path/ctx/sync/1]"));
             }
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic1/path/req/sync/1")))) {
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[/dynamic1/path/req/sync/1]"));
+                         hc.execute(new HttpGet(rule.httpUri("/1/path/req/sync/1")))) {
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[/1/path/req/sync/1]"));
             }
             // Exceptions in business logic
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic1/exception/42")))) {
+                         hc.execute(new HttpGet(rule.httpUri("/1/exception/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
             }
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic1/exception-async/1")))) {
+                         hc.execute(new HttpGet(rule.httpUri("/1/exception-async/1")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
             }
 
             // Run case 4.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic2/int/42")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/2/int/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
             }
             // Run case 5.
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/dynamic2/long/42")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/2/long/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
             }
             // Run case 6.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic2/string/blah")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/2/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("String: blah"));
             }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic2/boolean/true")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/2/boolean/true")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("String[true]"));
             }
             // Run case 4 but illegal parameter.
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic2/int/fourty-two")))) {
+                         hc.execute(new HttpGet(rule.httpUri("/2/int/fourty-two")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
             }
             // Run case 5 but without parameter (non-existing url).
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/dynamic2/long/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/2/long/")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
             }
             // Run case 6 but with not-mapped HTTP method (Post).
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/dynamic2/string/blah")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/2/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
             }
 
             // Test the case where multiple annotated services are bound under the same path prefix.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic3/int/42")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/3/int/42")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
             }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic3/string/blah")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/3/string/blah")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("String[blah]"));
             }
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/dynamic3/no-path-param")))) {
+                         hc.execute(new HttpGet(rule.httpUri("/3/no-path-param")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("String[no-path-param]"));
             }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/dynamic3/undefined")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/3/undefined")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+            }
+        }
+    }
+
+    @Test
+    public void testNonDefaultPathMappings() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Exact pattern
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/exact")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[exact:/4/exact]"));
+            }
+
+            // Prefix pattern
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/prefix/foo")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[prefix:/4/prefix/foo:/foo]"));
+            }
+
+            // Glob pattern
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/glob1/bar")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob1:/4/glob1/bar]"));
+            }
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/baz/glob2")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob2:/4/baz/glob2]"));
+            }
+
+            // Regex pattern
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/regex/foo/bar")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[regex:/4/regex/foo/bar:foo/bar]"));
             }
         }
     }
@@ -395,31 +469,31 @@ public class AnnotatedHttpServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             HttpPost httpPost;
 
-            httpPost = newHttpPost("/dynamic3/a/string");
+            httpPost = newHttpPost("/3/a/string");
             try (CloseableHttpResponse res = hc.execute(httpPost)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()),
                            is(EntityUtils.toString(httpPost.getEntity())));
             }
-            httpPost = newHttpPost("/dynamic3/a/string-async1");
+            httpPost = newHttpPost("/3/a/string-async1");
             try (CloseableHttpResponse res = hc.execute(httpPost)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()),
                            is(EntityUtils.toString(httpPost.getEntity())));
             }
-            httpPost = newHttpPost("/dynamic3/a/string-async2");
+            httpPost = newHttpPost("/3/a/string-async2");
             try (CloseableHttpResponse res = hc.execute(httpPost)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()),
                            is(EntityUtils.toString(httpPost.getEntity())));
             }
-            httpPost = newHttpPost("/dynamic3/a/string-aggregate-response1");
+            httpPost = newHttpPost("/3/a/string-aggregate-response1");
             try (CloseableHttpResponse res = hc.execute(httpPost)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()),
                            is(EntityUtils.toString(httpPost.getEntity())));
             }
-            httpPost = newHttpPost("/dynamic3/a/string-aggregate-response2");
+            httpPost = newHttpPost("/3/a/string-aggregate-response2");
             try (CloseableHttpResponse res = hc.execute(httpPost)) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()),

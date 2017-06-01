@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
@@ -37,11 +36,33 @@ public interface PathMapping {
      *   <li>{@code /login} (no path parameters)</li>
      *   <li>{@code /users/{userId}} (curly-brace style)</li>
      *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     *   <li>{@code exact:/foo/bar} (exact match)</li>
+     *   <li>{@code prefix:/files} (prefix match)</li>
+     *   <li><code>glob:/~&#42;/downloads/**</code> (glob pattern)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} (regular expression)</li>
      * </ul>
+     *
+     * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     static PathMapping of(String pathPattern) {
-        ensureAbsolutePath(pathPattern, "pathPattern");
+        requireNonNull(pathPattern, "pathPattern");
 
+        if (pathPattern.startsWith(ExactPathMapping.PREFIX)) {
+            return ofExact(pathPattern.substring(ExactPathMapping.PREFIX_LEN));
+        }
+        if (pathPattern.startsWith(PrefixPathMapping.PREFIX)) {
+            return ofPrefix(pathPattern.substring(PrefixPathMapping.PREFIX_LEN));
+        }
+        if (pathPattern.startsWith(GlobPathMapping.PREFIX)) {
+            return ofGlob(pathPattern.substring(GlobPathMapping.PREFIX_LEN));
+        }
+        if (pathPattern.startsWith(RegexPathMapping.PREFIX)) {
+            return ofRegex(pathPattern.substring(RegexPathMapping.PREFIX_LEN));
+        }
+        if (!pathPattern.startsWith("/")) {
+            throw new IllegalArgumentException(
+                    "pathPattern: " + pathPattern + " (not an absolute path or a unknown pattern type)");
+        }
         if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
             return ofExact(pathPattern);
         }

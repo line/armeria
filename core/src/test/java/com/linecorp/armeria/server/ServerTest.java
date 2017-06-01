@@ -105,11 +105,11 @@ public class ServerTest {
                 }
             }.decorate(LoggingService.newDecorator());
 
-            sb.serviceAt("/", immediateResponseOnIoThread)
-              .serviceAt("/delayed", delayedResponseOnIoThread)
-              .serviceAt("/timeout", lazyResponseNotOnIoThread)
-              .serviceAt("/timeout-not", lazyResponseNotOnIoThread)
-              .serviceAt("/buggy", buggy);
+            sb.service("/", immediateResponseOnIoThread)
+              .service("/delayed", delayedResponseOnIoThread)
+              .service("/timeout", lazyResponseNotOnIoThread)
+              .service("/timeout-not", lazyResponseNotOnIoThread)
+              .service("/buggy", buggy);
 
             // Disable request timeout for '/timeout-not' only.
             final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =

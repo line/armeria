@@ -73,9 +73,9 @@ public class SniServerTest {
             final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
             final VirtualHostBuilder c = new VirtualHostBuilder("c.com");
 
-            a.serviceAt("/", new SniTestService("a.com"));
-            b.serviceAt("/", new SniTestService("b.com"));
-            c.serviceAt("/", new SniTestService("c.com"));
+            a.service("/", new SniTestService("a.com"));
+            b.service("/", new SniTestService("b.com"));
+            c.service("/", new SniTestService("c.com"));
 
             a.sslContext(HTTPS, sscA.certificateFile(), sscA.privateKeyFile());
             b.sslContext(HTTPS, sscB.certificateFile(), sscB.privateKeyFile());

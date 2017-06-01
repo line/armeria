@@ -181,7 +181,7 @@ public class HttpClientIntegrationTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, HTTP);
 
-            sb.serviceAt("/httptestbody", new AbstractHttpService() {
+            sb.service("/httptestbody", new AbstractHttpService() {
 
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req,
@@ -229,7 +229,7 @@ public class HttpClientIntegrationTest {
                 }
             });
 
-            sb.serviceAt("/not200", new AbstractHttpService() {
+            sb.service("/not200", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req,
                                      HttpResponseWriter res) {
@@ -237,7 +237,7 @@ public class HttpClientIntegrationTest {
                 }
             });
 
-            sb.serviceAt("/useragent", new AbstractHttpService() {
+            sb.service("/useragent", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     String ua = req.headers().get(HttpHeaderNames.USER_AGENT, "undefined");
@@ -245,14 +245,14 @@ public class HttpClientIntegrationTest {
                 }
             });
 
-            sb.serviceAt("/hello/world", new AbstractHttpService() {
+            sb.service("/hello/world", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "success");
                 }
             });
 
-            sb.serviceAt("/encoding", new AbstractHttpService() {
+            sb.service("/encoding", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
                         throws Exception {
@@ -263,7 +263,7 @@ public class HttpClientIntegrationTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-            sb.serviceAt("/encoding-toosmall", new AbstractHttpService() {
+            sb.service("/encoding-toosmall", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
                         throws Exception {
@@ -271,11 +271,11 @@ public class HttpClientIntegrationTest {
                 }
             }.decorate(HttpEncodingService.class));
 
-            sb.serviceAt("/pooled", new PooledContentService());
+            sb.service("/pooled", new PooledContentService());
 
-            sb.serviceAt("/pooled-aware", new PooledContentService().decorate(PoolAwareDecorator::new));
+            sb.service("/pooled-aware", new PooledContentService().decorate(PoolAwareDecorator::new));
 
-            sb.serviceAt("/pooled-unaware", new PooledContentService().decorate(PoolUnawareDecorator::new));
+            sb.service("/pooled-unaware", new PooledContentService().decorate(PoolUnawareDecorator::new));
         }
     };
 

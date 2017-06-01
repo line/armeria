@@ -144,12 +144,12 @@ public class PooledResponseBufferBenchmark {
     @Setup
     public void startServer() throws Exception {
         ServerBuilder sb = new ServerBuilder()
-                .port(0, HttpSessionProtocols.HTTP)
-                .serviceAt("/a", THttpService.of(
+                .port(0, HTTP)
+                .service("/a", THttpService.of(
                         (AsyncIface) (name, resultHandler) ->
                                 resultHandler.onComplete(RESPONSE))
                                                   .decorate(PooledDecoratingService::new))
-                .serviceAt("/b", THttpService.of(
+                .service("/b", THttpService.of(
                         (AsyncIface) (name, resultHandler) ->
                                 resultHandler.onComplete(RESPONSE))
                                              .decorate(UnpooledDecoratingService::new));

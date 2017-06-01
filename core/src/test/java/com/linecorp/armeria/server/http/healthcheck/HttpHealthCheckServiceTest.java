@@ -119,7 +119,7 @@ public class HttpHealthCheckServiceTest {
     public void testGet() throws Exception {
         final ServerBuilder builder = new ServerBuilder();
         builder.port(0, HTTP);
-        builder.serviceAt("/l7check", new HttpHealthCheckService());
+        builder.service("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {
             server.start().join();
@@ -144,7 +144,7 @@ public class HttpHealthCheckServiceTest {
     public void testHead() throws Exception {
         final ServerBuilder builder = new ServerBuilder();
         builder.port(0, HTTP);
-        builder.serviceAt("/l7check", new HttpHealthCheckService());
+        builder.service("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {
             server.start().join();
