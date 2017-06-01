@@ -62,7 +62,7 @@ public final class PrometheusMetricCollectingService
     }
 
     /**
-     * Returns a new {@link Service} decorator that tracks request stats using the Prometheus metrics  library.
+     * Returns a new {@link Service} decorator that tracks request stats using the Prometheus metrics library.
      *
      * @param <I> Request type
      * @param <O> Response type

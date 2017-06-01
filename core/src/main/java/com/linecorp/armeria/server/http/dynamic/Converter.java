@@ -39,10 +39,17 @@ public @interface Converter {
     /**
      * Target type to be converted.
      */
-    Class<?> target() default Object.class;
+    Class<?> target() default Unspecified.class;
 
     /**
      * The type of the {@link ResponseConverter} that will convert the object whose type is {@link #target()}.
      */
     Class<? extends ResponseConverter> value();
+
+    /**
+     * Indicates that {@link #target()} is not specified by a user.
+     */
+    final class Unspecified {
+        private Unspecified() {}
+    }
 }

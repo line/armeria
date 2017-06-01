@@ -178,9 +178,7 @@ public final class CorsService<I extends HttpRequest, O extends HttpResponse>
      * Return a "forbidden" response.
      */
     private static HttpResponse forbidden() {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(HttpStatus.FORBIDDEN);
-        return res;
+        return HttpResponse.of(HttpStatus.FORBIDDEN);
     }
 
     /**

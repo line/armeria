@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import javax.net.ssl.SSLException;
@@ -34,11 +35,14 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.util.NativeLibraries;
+import com.linecorp.armeria.server.http.dynamic.ResponseConverter;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -233,6 +237,84 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
                      Service<? super HttpRequest, ? extends HttpResponse> service,
                      String loggerName) {
         services.add(new ServiceConfig(pathMapping, service, loggerName));
+        return self();
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public B service(Object service) {
+        return service("/", service);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public B service(
+            Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+        return service("/", service, decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public B service(Object service, Map<Class<?>, ResponseConverter> converters) {
+        return service("/", service, converters);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public B service(
+            Object service, Map<Class<?>, ResponseConverter> converters,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+        return service("/", service, converters, decorator);
+    }
+
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B service(String pathPrefix, Object service) {
+        return service(pathPrefix, service, ImmutableMap.of(), Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B service(
+            String pathPrefix, Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+        return service(pathPrefix, service, ImmutableMap.of(), decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B service(String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters) {
+        return service(pathPrefix, service, converters, Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B service(
+            String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(converters, "converters");
+        requireNonNull(decorator, "decorator");
+
+        final List<AnnotatedHttpService> entries =
+                AnnotatedHttpServices.build(pathPrefix, service, converters);
+        entries.forEach(e -> service(e.pathMapping(), decorator.apply(e)));
         return self();
     }
 
