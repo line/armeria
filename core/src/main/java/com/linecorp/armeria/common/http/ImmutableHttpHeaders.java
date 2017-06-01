@@ -35,11 +35,6 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     }
 
     @Override
-    public Iterator<Entry<AsciiString, String>> iterator() {
-        return delegate.iterator();
-    }
-
-    @Override
     public HttpMethod method() {
         return delegate.method();
     }
@@ -560,6 +555,11 @@ final class ImmutableHttpHeaders implements HttpHeaders {
     @Override
     public HttpHeaders clear() {
         return unsupported();
+    }
+
+    @Override
+    public Iterator<Entry<AsciiString, String>> iterator() {
+        return delegate.iterator();
     }
 
     @Override

@@ -14,19 +14,21 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.dynamic;
+package com.linecorp.armeria.server.http.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.linecorp.armeria.common.http.HttpMethod;
-
 /**
- * Annotation for mapping {@link HttpMethod#GET} onto specific method.
+ * The containing annotation type for {@link Converter}.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface Get {
+@Target({ ElementType.TYPE, ElementType.METHOD })
+public @interface Converters {
+    /**
+     * An array of {@link Converter}s.
+     */
+    Converter[] value();
 }

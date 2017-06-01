@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.util.NativeLibraries;
-import com.linecorp.armeria.server.http.dynamic.ResponseConverter;
+import com.linecorp.armeria.server.http.annotation.ResponseConverter;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;

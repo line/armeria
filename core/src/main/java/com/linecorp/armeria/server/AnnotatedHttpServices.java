@@ -21,37 +21,44 @@ import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.server.http.dynamic.Converter;
-import com.linecorp.armeria.server.http.dynamic.Converter.Unspecified;
-import com.linecorp.armeria.server.http.dynamic.Delete;
-import com.linecorp.armeria.server.http.dynamic.Get;
-import com.linecorp.armeria.server.http.dynamic.Head;
-import com.linecorp.armeria.server.http.dynamic.Options;
-import com.linecorp.armeria.server.http.dynamic.Patch;
-import com.linecorp.armeria.server.http.dynamic.Path;
-import com.linecorp.armeria.server.http.dynamic.Post;
-import com.linecorp.armeria.server.http.dynamic.Put;
-import com.linecorp.armeria.server.http.dynamic.ResponseConverter;
-import com.linecorp.armeria.server.http.dynamic.Trace;
+import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.server.http.annotation.Converter;
+import com.linecorp.armeria.server.http.annotation.Converter.Unspecified;
+import com.linecorp.armeria.server.http.annotation.Delete;
+import com.linecorp.armeria.server.http.annotation.Get;
+import com.linecorp.armeria.server.http.annotation.Head;
+import com.linecorp.armeria.server.http.annotation.Options;
+import com.linecorp.armeria.server.http.annotation.Patch;
+import com.linecorp.armeria.server.http.annotation.Path;
+import com.linecorp.armeria.server.http.annotation.Post;
+import com.linecorp.armeria.server.http.annotation.Put;
+import com.linecorp.armeria.server.http.annotation.ResponseConverter;
+import com.linecorp.armeria.server.http.annotation.Trace;
 
 /**
  * Builds a list of {@link AnnotatedHttpService}s from a Java object.
  */
 final class AnnotatedHttpServices {
+    private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServices.class);
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -83,13 +90,14 @@ final class AnnotatedHttpServices {
      */
     private static List<Method> requestMappingMethods(Object object) {
         return Arrays.stream(object.getClass().getMethods())
-                     .filter(m -> m.getAnnotation(Path.class) != null)
+                     .filter(m -> m.getAnnotation(Path.class) != null ||
+                                  !httpMethodAnnotations(m).isEmpty())
                      .collect(toImmutableList());
     }
 
     /**
-     * Returns {@link EnumSet} instance of {@link HttpMethod} mapped to {@code method}. If no specific HTTP
-     * Method is mapped to given {@code method}, it is regarded as all HTTP Methods are mapped to on it.
+     * Returns {@link Set} of HTTP method annotations of a given method.
+     * The annotations are as follows.
      *
      * @see Options
      * @see Get
@@ -100,27 +108,42 @@ final class AnnotatedHttpServices {
      * @see Delete
      * @see Trace
      */
-    private static Set<HttpMethod> httpMethods(Method method) {
+    private static Set<Annotation> httpMethodAnnotations(Method method) {
         return Arrays.stream(method.getAnnotations())
-                     .map(annotation -> HTTP_METHOD_MAP.get(annotation.annotationType()))
-                     .filter(Objects::nonNull)
-                     .collect(toImmutableEnumSet());
+                     .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
+                     .collect(Collectors.toSet());
+    }
+
+    /**
+     * Returns {@link Set} of {@link HttpMethod}s mapped to HTTP method annotations.
+     *
+     * @see Options
+     * @see Get
+     * @see Head
+     * @see Post
+     * @see Put
+     * @see Patch
+     * @see Delete
+     * @see Trace
+     */
+    private static Set<HttpMethod> toHttpMethods(Set<Annotation> annotations) {
+        return annotations.stream()
+                          .map(annotation -> HTTP_METHOD_MAP.get(annotation.annotationType()))
+                          .filter(Objects::nonNull)
+                          .collect(toImmutableEnumSet());
     }
 
     /**
      * Returns the {@link PathMapping} instance mapped to {@code method}.
      */
-    private static PathMapping pathMapping(String pathPrefix, Method method) {
+    private static PathMapping pathMapping(String pathPrefix, Method method,
+                                           Set<Annotation> methodAnnotations) {
         pathPrefix = ensureAbsolutePath(pathPrefix, "pathPrefix");
         if (!pathPrefix.endsWith("/")) {
             pathPrefix += '/';
         }
 
-        final String pattern = method.getAnnotation(Path.class).value();
-        if (pattern == null) {
-            throw new NullPointerException("The value of @Path must be non-null.");
-        }
-
+        final String pattern = findPattern(method, methodAnnotations);
         final PathMapping mapping = PathMapping.of(pattern);
         if ("/".equals(pathPrefix)) {
             // pathPrefix is not specified or "/".
@@ -159,6 +182,39 @@ final class AnnotatedHttpServices {
 
         // Should never reach here because we validated the path pattern.
         throw new Error();
+    }
+
+    /**
+     * Returns a specified path pattern. The path pattern might be specified by {@link Path} or
+     * HTTP method annotations such as {@link Get} and {@link Post}.
+     */
+    private static String findPattern(Method method, Set<Annotation> methodAnnotations) {
+        String pattern = null;
+
+        Path path = method.getAnnotation(Path.class);
+        if (path != null) {
+            pattern = method.getAnnotation(Path.class).value();
+        }
+        for (Annotation a : methodAnnotations) {
+            try {
+                final String p = (String) a.getClass().getMethod("value").invoke(a);
+                if (DefaultValues.isUnspecified(p)) {
+                    continue;
+                }
+                if (pattern != null) {
+                    throw new IllegalArgumentException(
+                            "Only one path can be specified. (" + pattern + ", " + p + ")");
+                }
+                pattern = p;
+            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                logger.debug("Invoking annotation 'value' method failed: {}", e);
+            }
+        }
+        if (pattern == null || pattern.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "A path pattern should be specified by @Path or HTTP method annotations.");
+        }
+        return pattern;
     }
 
     /**
@@ -218,19 +274,24 @@ final class AnnotatedHttpServices {
     private static AnnotatedHttpService build(String pathPrefix, Object object, Method method,
                                               Map<Class<?>, ResponseConverter> converters) {
 
-        final Set<HttpMethod> methods = httpMethods(method);
+        final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
+        if (methodAnnotations.isEmpty()) {
+            throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
+        }
+
+        final Set<HttpMethod> methods = toHttpMethods(methodAnnotations);
         if (methods.isEmpty()) {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
 
-        final PathMapping pathMapping = pathMapping(pathPrefix, method);
-        final AnnotatedHttpServiceMethod function = new AnnotatedHttpServiceMethod(object, method);
+        final PathMapping pathMapping = pathMapping(pathPrefix, method, methodAnnotations);
+        final AnnotatedHttpServiceMethod function = new AnnotatedHttpServiceMethod(object, method, pathMapping);
 
         final Set<String> parameterNames = function.pathParamNames();
         final Set<String> expectedParamNames = pathMapping.paramNames();
         if (!expectedParamNames.containsAll(parameterNames)) {
             Set<String> missing = Sets.difference(parameterNames, expectedParamNames);
-            throw new IllegalArgumentException("Missing @PathParam exists: " + missing);
+            throw new IllegalArgumentException("Missing @Param exists: " + missing);
         }
 
         final ResponseConverter converter = converter(method);

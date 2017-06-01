@@ -14,22 +14,26 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.dynamic;
+package com.linecorp.armeria.server.http.annotation;
+
+import static com.linecorp.armeria.internal.DefaultValues.UNSPECIFIED;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.common.http.HttpMethod;
+
 /**
- * Annotation for mapping dynamic web requests onto specific method.
+ * Annotation for mapping {@link HttpMethod#TRACE} onto specific method.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface Path {
+public @interface Trace {
 
     /**
-     * Template of dynamic url.
+     * A path pattern for the annotated method.
      */
-    String value();
+    String value() default UNSPECIFIED;
 }

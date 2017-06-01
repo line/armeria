@@ -14,22 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.dynamic;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /**
- * Annotation for mapping dynamic web requests onto specific parameter.
+ * Dynamic HTTP service.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.PARAMETER)
-public @interface PathParam {
-
-    /**
-     * Variable name in {@link Path}.
-     */
-    String value();
-}
+package com.linecorp.armeria.server.http.annotation;
