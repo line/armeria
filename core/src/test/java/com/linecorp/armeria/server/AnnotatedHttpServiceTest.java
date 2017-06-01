@@ -306,7 +306,11 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("glob:glob2") // The pattern that does not start with '/'
         public String glob2(ServiceRequestContext ctx) {
-            return "glob2:" + ctx.path();
+            // When this method is bound with a prefix 'foo', the path mapping of this method will be:
+            // - /foo/**/glob2
+            // Even if the resulting path mapping contains '**', ctx.pathParams().size() must be 0
+            // because a user did not specify it.
+            return "glob2:" + ctx.path() + ':' + ctx.pathParams().size();
         }
 
         @Get
@@ -453,7 +457,7 @@ public class AnnotatedHttpServiceTest {
             }
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/baz/glob2")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob2:/4/baz/glob2]"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob2:/4/baz/glob2:0]"));
             }
 
             // Regex pattern

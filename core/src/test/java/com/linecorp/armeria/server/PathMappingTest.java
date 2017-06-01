@@ -56,7 +56,7 @@ public class PathMappingTest {
 
         m = PathMapping.of("glob:/home/*/files/**");
         assertThat(m).isInstanceOf(GlobPathMapping.class);
-        assertThat(((GlobPathMapping) m).asRegex().pattern()).isEqualTo("^/home/[^/]+/files/.*$");
+        assertThat(((GlobPathMapping) m).asRegex().pattern()).isEqualTo("^/home/([^/]+)/files/(.*)$");
 
         m = PathMapping.of("glob:foo");
         assertThat(m).isInstanceOf(GlobPathMapping.class);
