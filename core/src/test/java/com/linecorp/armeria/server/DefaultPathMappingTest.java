@@ -61,6 +61,17 @@ public class DefaultPathMappingTest {
     }
 
     @Test
+    public void testNumericPathParamNames() {
+        final DefaultPathMapping m = new DefaultPathMapping("/{0}/{1}/{2}");
+        assertThat(m.paramNames()).containsExactlyInAnyOrder("0", "1", "2");
+        assertThat(m.apply("/alice/bob/charlie", null).pathParams())
+                .containsEntry("0", "alice")
+                .containsEntry("1", "bob")
+                .containsEntry("2", "charlie")
+                .hasSize(3);
+    }
+
+    @Test
     public void testVariables() throws Exception {
         final DefaultPathMapping ppe =
                 new DefaultPathMapping("/service/{value}/test/:value2/something/{value3}");
