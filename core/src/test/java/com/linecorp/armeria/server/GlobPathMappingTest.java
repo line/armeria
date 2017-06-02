@@ -85,8 +85,40 @@ public class GlobPathMappingTest {
     }
 
     @Test
-    public void paramNames() throws Exception {
-        assertThat(ofGlob("/bar/baz/*").paramNames()).isEmpty();
+    public void params() throws Exception {
+        PathMapping m;
+
+        m = ofGlob("baz");
+        assertThat(m.paramNames()).isEmpty();
+        // Should not create a param for 'bar'
+        assertThat(m.apply("/bar/baz", null).pathParams()).isEmpty();
+
+        m = ofGlob("/bar/baz/*");
+        assertThat(m.paramNames()).containsExactly("0");
+        assertThat(m.apply("/bar/baz/qux", null).pathParams())
+                .containsEntry("0", "qux")
+                .hasSize(1);
+
+        m = ofGlob("/foo/**");
+        assertThat(m.paramNames()).containsExactly("0");
+        assertThat(m.apply("/foo/bar/baz", null).pathParams())
+                .containsEntry("0", "bar/baz")
+                .hasSize(1);
+        assertThat(m.apply("/foo/", null).pathParams())
+                .containsEntry("0", "")
+                .hasSize(1);
+
+        m = ofGlob("/**/*.js");
+        assertThat(m.paramNames()).containsExactlyInAnyOrder("0", "1");
+        assertThat(m.apply("/lib/jquery.min.js", null).pathParams())
+                .containsEntry("0", "lib")
+                .containsEntry("1", "jquery.min")
+                .hasSize(2);
+
+        assertThat(m.apply("/lodash.js", null).pathParams())
+                .containsEntry("0", "")
+                .containsEntry("1", "lodash")
+                .hasSize(2);
     }
 
     private static void pass(String glob, String... paths) {

@@ -142,12 +142,14 @@ final class AnnotatedHttpServices {
             if (glob.startsWith("/")) {
                 return PathMapping.ofGlob(concatPaths(pathPrefix, glob));
             } else {
-                return PathMapping.ofGlob(concatPaths(pathPrefix, "/**/" + glob));
+                // NB: We cannot use PathMapping.ofGlob(pathPrefix + "/**/" + glob) here
+                //     because that will extract '/**/' as a path parameter, which a user never specified.
+                return new PrefixAddingPathMapping(pathPrefix, mapping);
             }
         }
 
         if (pattern.startsWith(RegexPathMapping.PREFIX)) {
-            return new PrefixRegexPathMapping(pathPrefix, (RegexPathMapping) mapping);
+            return new PrefixAddingPathMapping(pathPrefix, mapping);
         }
 
         if (pattern.startsWith("/")) {
@@ -261,14 +263,17 @@ final class AnnotatedHttpServices {
     private AnnotatedHttpServices() {}
 
     /**
-     * A {@link PathMapping} implementation that combines path prefix and regex matching.
+     * A {@link PathMapping} implementation that combines path prefix and another {@link PathMapping}.
      */
-    private static final class PrefixRegexPathMapping extends AbstractPathMapping {
+    private static final class PrefixAddingPathMapping extends AbstractPathMapping {
 
         private final String pathPrefix;
-        private final RegexPathMapping mapping;
+        private final PathMapping mapping;
 
-        PrefixRegexPathMapping(String pathPrefix, RegexPathMapping mapping) {
+        PrefixAddingPathMapping(String pathPrefix, PathMapping mapping) {
+            assert mapping instanceof GlobPathMapping || mapping instanceof RegexPathMapping
+                    : "unexpected mapping type: " + mapping.getClass().getName();
+
             this.pathPrefix = pathPrefix;
             this.mapping = mapping;
         }
@@ -297,11 +302,11 @@ final class AnnotatedHttpServices {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof PrefixRegexPathMapping)) {
+            if (!(o instanceof PrefixAddingPathMapping)) {
                 return false;
             }
 
-            final PrefixRegexPathMapping that = (PrefixRegexPathMapping) o;
+            final PrefixAddingPathMapping that = (PrefixAddingPathMapping) o;
             return pathPrefix.equals(that.pathPrefix) && mapping.equals(that.mapping);
         }
 
