@@ -79,13 +79,13 @@ public class ThriftDynamicTimeoutTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             // Used for testing if changing the timeout dynamically works.
-            sb.serviceAt("/sleep", ThriftCallService.of(sleepService)
-                                                    .decorate(DynamicTimeoutService::new)
-                                                    .decorate(THttpService.newDecorator()));
+            sb.service("/sleep", ThriftCallService.of(sleepService)
+                                                  .decorate(DynamicTimeoutService::new)
+                                                  .decorate(THttpService.newDecorator()));
             // Used for testing if disabling the timeout dynamically works.
-            sb.serviceAt("/fakeSleep", ThriftCallService.of(fakeSleepService)
-                                                        .decorate(TimeoutDisablingService::new)
-                                                        .decorate(THttpService.newDecorator()));
+            sb.service("/fakeSleep", ThriftCallService.of(fakeSleepService)
+                                                      .decorate(TimeoutDisablingService::new)
+                                                      .decorate(THttpService.newDecorator()));
             sb.defaultRequestTimeout(Duration.ofSeconds(1));
         }
     };

@@ -24,10 +24,14 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 final class RegexPathMapping extends AbstractPathMapping {
+
+    static final String PREFIX = "regex:";
+    static final int PREFIX_LEN = PREFIX.length();
 
     private static final Pattern NAMED_GROUP_PATTERN = Pattern.compile("\\(\\?<([^>]+)>");
 
@@ -40,7 +44,7 @@ final class RegexPathMapping extends AbstractPathMapping {
         this.regex = requireNonNull(regex, "regex");
         paramNames = findParamNames(regex);
         loggerName = toLoggerName(regex);
-        strVal = "regex: " + regex.pattern();
+        strVal = PREFIX + regex.pattern();
     }
 
     private static Set<String> findParamNames(Pattern regex) {
@@ -106,6 +110,11 @@ final class RegexPathMapping extends AbstractPathMapping {
     @Override
     public String metricName() {
         return strVal;
+    }
+
+    @VisibleForTesting
+    Pattern asRegex() {
+        return regex;
     }
 
     @Override

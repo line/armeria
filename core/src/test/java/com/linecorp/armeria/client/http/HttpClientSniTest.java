@@ -77,8 +77,8 @@ public class HttpClientSniTest {
             final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
             final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
 
-            a.serviceAt("/", new SniTestService("a.com"));
-            b.serviceAt("/", new SniTestService("b.com"));
+            a.service("/", new SniTestService("a.com"));
+            b.service("/", new SniTestService("b.com"));
 
             a.sslContext(HTTPS, sscA.certificate(), sscA.privateKey());
             b.sslContext(HTTPS, sscB.certificate(), sscB.privateKey());

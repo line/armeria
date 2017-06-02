@@ -25,6 +25,9 @@ import com.google.common.collect.ImmutableSet;
 
 final class ExactPathMapping extends AbstractPathMapping {
 
+    static final String PREFIX = "exact:";
+    static final int PREFIX_LEN = PREFIX.length();
+
     private final String exactPath;
     private final String loggerName;
     private final Optional<String> exactPathOpt;
@@ -34,7 +37,7 @@ final class ExactPathMapping extends AbstractPathMapping {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
         loggerName = loggerName(exactPath);
-        strVal = "exact: " + exactPath;
+        strVal = PREFIX + exactPath;
     }
 
     @Override

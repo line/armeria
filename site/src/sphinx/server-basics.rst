@@ -57,7 +57,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     sb.port(8080, HTTP);
 
     // Add a simple 'Hello, world!' service.
-    sb.serviceAt("/", new AbstractHttpService() {
+    sb.service("/", new AbstractHttpService() {
         @Override
         protected void doGet(ServiceRequestContext ctx,
                              HttpRequest req, HttpResponseWriter res) {
@@ -65,27 +65,57 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
         }
     });
 
-    // Similar to the 'Hello, world!' service, but gets the name from the request path
-    sb.serviceUnder("/hello", new AbstractHttpService() {
+    // Using path variables:
+    sb.service("/greet/{name}", new AbstractHttpService() {
         @Override
         protected void doGet(ServiceRequestContext ctx,
                              HttpRequest req, HttpResponseWriter res) {
-            String path = ctx.mappedPath();  // Get the path without the prefix ('/hello')
-            String name = path.substring(1); // Strip the leading slash ('/')
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, " + name + '!');
+            String name = ctx.pathParam("name");
+            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
         }
-    }.decorate(LoggingService::new));
+    }.decorate(LoggingService.newDecorator()); // Enable logging
+
+    // Using an annotated service object:
+    sb.annotatedService(new Object() {
+        @Get
+        @Path("/greet2/{name}")
+        public HttpResponse greet(@PathParam("name") String name) {
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+        }
+    });
+
+    // Just in case your name contains a slash:
+    sb.serviceUnder("/greet3", new AbstractHttpService() {
+        @Override
+        protected void doGet(ServiceRequestContext ctx,
+                             HttpRequest req, HttpResponseWriter res) {
+            String path = ctx.pathWithoutPrefix();  // Get the path without the prefix ('/hello')
+            String name = path.substring(1); // Strip the leading slash ('/')
+            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+        }
+    });
+
+    // Using an annotated service object:
+    sb.annotatedService(new Object() {
+        @Get
+        @Path("regex:^/greet4/(?<name>.*)$")
+        public HttpResponse greet(@PathParam("name") String name) {
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+        }
+    });
 
     Server server = sb.build();
     CompletableFuture<Void> future = server.start();
     future.join();
 
-As described in the example, ``serviceAt()`` and ``serviceUnder()`` performs an exact match and a prefix match
+As described in the example, ``service()`` and ``serviceUnder()`` perform an exact match and a prefix match
 on a request path respectively. `ServerBuilder`_ also provides advanced path mapping such as regex and glob
 pattern matching.
 
 Also, we decorated the second service using LoggingService_, which logs all requests and responses. You might
 be interested in decorating a service using other decorators, for example to gather metrics.
+
+You can also use an arbitrary object that's annotated by the ``@Path`` annotation using ``annotatedService()``.
 
 
 SSL/TLS
@@ -115,14 +145,14 @@ Use ``ServerBuilder.withVirtualHost()`` to configure `a name-based virtual host`
     ServerBuilder sb = new ServerBuilder();
     // Configure foo.com.
     sb.withVirtualHost("foo.com")
-      .serviceAt(...)
+      .service(...)
       .sslContext(...)
       .and() // Configure *.bar.com.
       .withVirtualHost("*.bar.com")
-      .serviceAt(...)
+      .service(...)
       .sslContext(...)
       .and() // Configure the default virtual host.
-      .serviceAt(...)
+      .service(...)
       .sslContext(...);
     ...
 

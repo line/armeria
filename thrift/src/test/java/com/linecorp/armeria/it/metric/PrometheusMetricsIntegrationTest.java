@@ -72,17 +72,17 @@ public class PrometheusMetricsIntegrationTest {
                 throw new IllegalArgumentException("bad argument");
             });
 
-            sb.serviceAt("/thrift1", helloService.decorate(
+            sb.service("/thrift1", helloService.decorate(
                     PrometheusMetricCollectingService
                             .newDecorator(registry, MyMetricLabel.values(),
                                           log -> defaultMetricName(log, "HelloService1"))));
 
-            sb.serviceAt("/thrift2", helloService.decorate(
+            sb.service("/thrift2", helloService.decorate(
                     PrometheusMetricCollectingService
                             .newDecorator(registry, EnumSet.allOf(MyMetricLabel.class),
                                           log -> defaultMetricName(log, "HelloService2"))));
 
-            sb.serviceAt("/internal/prometheus/metrics",
+            sb.service("/internal/prometheus/metrics",
                          new PrometheusExporterHttpService(registry));
         }
     };

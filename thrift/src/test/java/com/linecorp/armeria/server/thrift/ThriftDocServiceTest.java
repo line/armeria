@@ -93,12 +93,12 @@ public class ThriftDocServiceTest {
             final THttpService hbaseService = THttpService.of(mock(Hbase.AsyncIface.class));
             final THttpService onewayHelloService = THttpService.of(mock(OnewayHelloService.AsyncIface.class));
 
-            sb.serviceAt("/", helloAndSleepService);
-            sb.serviceAt("/foo", fooService);
-            sb.serviceAt("/cassandra", cassandraService);
-            sb.serviceAt("/cassandra/debug", cassandraServiceDebug);
-            sb.serviceAt("/hbase", hbaseService);
-            sb.serviceAt("/oneway", onewayHelloService);
+            sb.service("/", helloAndSleepService);
+            sb.service("/foo", fooService);
+            sb.service("/cassandra", cassandraService);
+            sb.service("/cassandra/debug", cassandraServiceDebug);
+            sb.service("/hbase", hbaseService);
+            sb.service("/oneway", onewayHelloService);
 
             sb.serviceUnder(
                     "/docs/",

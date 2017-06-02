@@ -76,12 +76,10 @@ SimpleDecoratingService_ :
     }
 
     ServerBuilder sb = new ServerBuilder();
-    // Using a method reference:
-    sb.serviceUnder("/web", service.decorate(AuthService::new));
-    // Using reflection:
-    sb.serviceUnder("/web", service.decorate(AuthService.class));
     // Using a lambda expression:
     sb.serviceUnder("/web", service.decorate(delegate -> new AuthService(delegate)));
+    // Using reflection:
+    sb.serviceUnder("/web", service.decorate(AuthService.class));
 
 Extending DecoratingService_
 ----------------------------

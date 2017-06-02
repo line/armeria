@@ -63,11 +63,11 @@ public class HttpTracingIntegrationTest {
     public final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/foo", decorate("service/foo", THttpService.of(
+            sb.service("/foo", decorate("service/foo", THttpService.of(
                     (AsyncIface) (name, resultHandler) ->
                             barClient.hello("Miss. " + name, new DelegatingCallback(resultHandler)))));
 
-            sb.serviceAt("/bar", decorate("service/bar", THttpService.of(
+            sb.service("/bar", decorate("service/bar", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> {
                         if (name.startsWith("Miss. ")) {
                             name = "Ms. " + name.substring(6);
@@ -75,7 +75,7 @@ public class HttpTracingIntegrationTest {
                         quxClient.hello(name, new DelegatingCallback(resultHandler));
                     })));
 
-            sb.serviceAt("/qux", decorate("service/qux", THttpService.of(
+            sb.service("/qux", decorate("service/qux", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!'))));
         }
     };

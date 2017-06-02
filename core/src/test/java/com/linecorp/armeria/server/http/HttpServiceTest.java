@@ -46,7 +46,7 @@ public class HttpServiceTest {
     public static final ServerRule rule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt(
+            sb.service(
                     "/hello/{name}",
                     new AbstractHttpService() {
                         @Override
@@ -58,7 +58,7 @@ public class HttpServiceTest {
                         }
                     }.decorate(LoggingService.newDecorator()));
 
-            sb.serviceAt(
+            sb.service(
                     "/200",
                     new AbstractHttpService() {
                         @Override
@@ -76,7 +76,7 @@ public class HttpServiceTest {
                         }
                     }.decorate(LoggingService.newDecorator()));
 
-            sb.serviceAt(
+            sb.service(
                     "/204",
                     new AbstractHttpService() {
                         @Override

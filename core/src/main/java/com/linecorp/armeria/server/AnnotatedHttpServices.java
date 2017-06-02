@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -27,11 +29,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.http.dynamic.Converter;
 import com.linecorp.armeria.server.http.dynamic.Converter.Unspecified;
 import com.linecorp.armeria.server.http.dynamic.Delete;
@@ -108,9 +111,52 @@ final class AnnotatedHttpServices {
      * Returns the {@link PathMapping} instance mapped to {@code method}.
      */
     private static PathMapping pathMapping(String pathPrefix, Method method) {
-        Path mapping = method.getAnnotation(Path.class);
-        String mappedTo = ArmeriaHttpUtil.concatPaths(pathPrefix, mapping.value());
-        return PathMapping.of(mappedTo);
+        pathPrefix = ensureAbsolutePath(pathPrefix, "pathPrefix");
+        if (!pathPrefix.endsWith("/")) {
+            pathPrefix += '/';
+        }
+
+        final String pattern = method.getAnnotation(Path.class).value();
+        if (pattern == null) {
+            throw new NullPointerException("The value of @Path must be non-null.");
+        }
+
+        final PathMapping mapping = PathMapping.of(pattern);
+        if ("/".equals(pathPrefix)) {
+            // pathPrefix is not specified or "/".
+            return mapping;
+        }
+
+        if (pattern.startsWith(ExactPathMapping.PREFIX)) {
+            return PathMapping.ofExact(concatPaths(
+                    pathPrefix, pattern.substring(ExactPathMapping.PREFIX_LEN)));
+        }
+
+        if (pattern.startsWith(PrefixPathMapping.PREFIX)) {
+            return PathMapping.ofPrefix(concatPaths(
+                    pathPrefix, pattern.substring(PrefixPathMapping.PREFIX_LEN)));
+        }
+
+        if (pattern.startsWith(GlobPathMapping.PREFIX)) {
+            final String glob = pattern.substring(GlobPathMapping.PREFIX_LEN);
+            if (glob.startsWith("/")) {
+                return PathMapping.ofGlob(concatPaths(pathPrefix, glob));
+            } else {
+                return PathMapping.ofGlob(concatPaths(pathPrefix, "/**/" + glob));
+            }
+        }
+
+        if (pattern.startsWith(RegexPathMapping.PREFIX)) {
+            return new PrefixRegexPathMapping(pathPrefix, (RegexPathMapping) mapping);
+        }
+
+        if (pattern.startsWith("/")) {
+            // Default pattern
+            return PathMapping.of(concatPaths(pathPrefix, pattern));
+        }
+
+        // Should never reach here because we validated the path pattern.
+        throw new Error();
     }
 
     /**
@@ -213,4 +259,60 @@ final class AnnotatedHttpServices {
     }
 
     private AnnotatedHttpServices() {}
+
+    /**
+     * A {@link PathMapping} implementation that combines path prefix and regex matching.
+     */
+    private static final class PrefixRegexPathMapping extends AbstractPathMapping {
+
+        private final String pathPrefix;
+        private final RegexPathMapping mapping;
+
+        PrefixRegexPathMapping(String pathPrefix, RegexPathMapping mapping) {
+            this.pathPrefix = pathPrefix;
+            this.mapping = mapping;
+        }
+
+        @Override
+        protected PathMappingResult doApply(String path, @Nullable String query) {
+            if (!path.startsWith(pathPrefix)) {
+                return PathMappingResult.empty();
+            }
+
+            final PathMappingResult result = mapping.apply(path.substring(pathPrefix.length() - 1), query);
+            if (result.isPresent()) {
+                return PathMappingResult.of(path, query, result.pathParams());
+            } else {
+                return PathMappingResult.empty();
+            }
+        }
+
+        @Override
+        public Set<String> paramNames() {
+            return mapping.paramNames();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof PrefixRegexPathMapping)) {
+                return false;
+            }
+
+            final PrefixRegexPathMapping that = (PrefixRegexPathMapping) o;
+            return pathPrefix.equals(that.pathPrefix) && mapping.equals(that.mapping);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * pathPrefix.hashCode() + mapping.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return '[' + PrefixPathMapping.PREFIX + pathPrefix + ", " + mapping + ']';
+        }
+    }
 }

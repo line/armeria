@@ -72,7 +72,7 @@ public class HttpAuthServiceTest {
             Authorizer<HttpRequest> authorizer = (ctx, req) ->
                     CompletableFuture.supplyAsync(
                             () -> "unit test".equals(req.headers().get(HttpHeaderNames.AUTHORIZATION)));
-            sb.serviceAt(
+            sb.service(
                     "/",
                     ok.decorate(HttpAuthService.newDecorator(authorizer))
                       .decorate(LoggingService.newDecorator()));
@@ -84,7 +84,7 @@ public class HttpAuthServiceTest {
                 String password = token.password();
                 return completedFuture(password.equals(usernameToPassword.get(username)));
             };
-            sb.serviceAt(
+            sb.service(
                     "/basic",
                     ok.decorate(new HttpAuthServiceBuilder().addBasicAuth(httpBasicAuthorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
@@ -92,7 +92,7 @@ public class HttpAuthServiceTest {
             // Auth with OAuth1a
             Authorizer<OAuth1aToken> oAuth1aAuthorizer = (ctx, token) ->
                     completedFuture("dummy_signature".equals(token.signature()));
-            sb.serviceAt(
+            sb.service(
                     "/oauth1a",
                     ok.decorate(new HttpAuthServiceBuilder().addOAuth1a(oAuth1aAuthorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
@@ -100,13 +100,13 @@ public class HttpAuthServiceTest {
             // Auth with OAuth2
             Authorizer<OAuth2Token> oAuth2aAuthorizer = (ctx, token) ->
                     completedFuture("dummy_oauth2_token".equals(token.accessToken()));
-            sb.serviceAt(
+            sb.service(
                     "/oauth2",
                     ok.decorate(new HttpAuthServiceBuilder().addOAuth2(oAuth2aAuthorizer).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with all predicates above!
-            sb.serviceAt(
+            sb.service(
                     "/composite",
                     new HttpAuthServiceBuilder().add(authorizer)
                                                 .addBasicAuth(httpBasicAuthorizer)
@@ -116,7 +116,7 @@ public class HttpAuthServiceTest {
                                                 .decorate(LoggingService.newDecorator()));
 
             // Authorizer fails with an exception.
-            sb.serviceAt(
+            sb.service(
                     "/authorizer_exception",
                     ok.decorate(new HttpAuthServiceBuilder().add((ctx, data) -> {
                         throw new AnticipatedException("bug!");
@@ -124,7 +124,7 @@ public class HttpAuthServiceTest {
                       .decorate(LoggingService.newDecorator()));
 
             // AuthService fails when building a success message.
-            sb.serviceAt(
+            sb.service(
                     "/on_success_exception",
                     ok.decorate(service -> new HttpAuthService(service) {
                         @Override

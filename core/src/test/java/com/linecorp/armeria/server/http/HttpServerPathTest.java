@@ -46,7 +46,7 @@ public class HttpServerPathTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, HttpSessionProtocols.HTTP);
-            sb.serviceAt("/service/foo", new AbstractHttpService() {
+            sb.service("/service/foo", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.respond(HttpStatus.OK);

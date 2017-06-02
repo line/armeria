@@ -126,7 +126,7 @@ public class ArmeriaAutoConfiguration {
                                 metricRegistry, serviceMetricName(bean.getServiceName())));
             }
 
-            server.serviceAt(bean.getPath(), service);
+            server.service(bean.getPath(), service);
             docServiceRequests.addAll(bean.getExampleRequests());
             bean.getService().as(THttpService.class).ifPresent(
                     beanService -> beanService.entries().forEach((serviceName, entry) -> {
@@ -150,9 +150,9 @@ public class ArmeriaAutoConfiguration {
         }));
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getHealthCheckPath())) {
-            server.serviceAt(armeriaSettings.getHealthCheckPath(),
-                             new HttpHealthCheckService(healthCheckers.orElseGet(Collections::emptyList)
-                                                                      .toArray(EMPTY_HEALTH_CHECKERS)));
+            server.service(armeriaSettings.getHealthCheckPath(),
+                           new HttpHealthCheckService(healthCheckers.orElseGet(Collections::emptyList)
+                                                                    .toArray(EMPTY_HEALTH_CHECKERS)));
         }
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getDocsPath())) {
@@ -170,7 +170,7 @@ public class ArmeriaAutoConfiguration {
                     .registerModule(new MetricsModule(TimeUnit.SECONDS,
                                                       TimeUnit.MILLISECONDS,
                                                       true));
-            server.serviceAt(
+            server.service(
                     armeriaSettings.getMetricsPath(),
                     new AbstractHttpService() {
                         @Override

@@ -41,9 +41,9 @@ public class ThriftSerializationFormatsTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/hello", THttpService.of(HELLO_SERVICE))
-              .serviceAt("/hellobinaryonly", THttpService.ofFormats(HELLO_SERVICE, BINARY))
-              .serviceAt("/hellotextonly", THttpService.ofFormats(HELLO_SERVICE, TEXT));
+            sb.service("/hello", THttpService.of(HELLO_SERVICE))
+              .service("/hellobinaryonly", THttpService.ofFormats(HELLO_SERVICE, BINARY))
+              .service("/hellotextonly", THttpService.ofFormats(HELLO_SERVICE, TEXT));
         }
     };
 

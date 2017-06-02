@@ -199,7 +199,7 @@ public class ThriftOverHttpClientTest {
                     if (ENABLE_LOGGING_DECORATORS) {
                         service = service.decorate(LoggingService.newDecorator());
                     }
-                    sb.serviceAt(h.path(defaultSerializationFormat), service);
+                    sb.service(h.path(defaultSerializationFormat), service);
                 }
             }
         } catch (Exception e) {

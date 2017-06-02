@@ -21,7 +21,7 @@ package com.linecorp.armeria.server;
  * <h2>Example</h2>
  * <pre>{@code
  * VirtualHostBuilder vhb = new VirtualHostBuilder("*.example.com");
- * vhb.serviceAt("/foo", new FooService())
+ * vhb.service("/foo", new FooService())
  *    .serviceUnder("/bar/", new BarService())
  *    .service(PathMapping.ofRegex("^/baz/.*", new BazService());
  *

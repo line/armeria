@@ -66,8 +66,8 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         try {
             for (Endpoint endpoint : sampleEndpoints) {
                 ServerBuilder sb = new ServerBuilder();
-                Server server = sb.serviceAt("/", new EchoService()).port(endpoint.port(),
-                                                                          HttpSessionProtocols.HTTP).build();
+                Server server = sb.service("/", new EchoService()).port(endpoint.port(),
+                                                                        HttpSessionProtocols.HTTP).build();
                 ZooKeeperUpdatingListener listener;
                 listener = new ZooKeeperUpdatingListener(instance().connectString().get(), zNode,
                                                          sessionTimeout,

@@ -56,9 +56,9 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * // Add a port to listen
  * sb.port(8080, SessionProtocol.HTTP);
  * // Build and add a virtual host.
- * sb.virtualHost(new VirtualHostBuilder("*.foo.com").serviceAt(...).build());
+ * sb.virtualHost(new VirtualHostBuilder("*.foo.com").service(...).build());
  * // Add services to the default virtual host.
- * sb.serviceAt(...);
+ * sb.service(...);
  * sb.serviceUnder(...);
  * // Build a server.
  * Server s = sb.build();
@@ -70,10 +70,10 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * Server server =
  *      sb.port(8080, SessionProtocol.HTTP) // Add a port to listen
  *      .withDefaultVirtualHost() // Add services to the default virtual host.
- *          .serviceAt(...)
+ *          .service(...)
  *          .serviceUnder(...)
  *      .and().withVirtualHost("*.foo.com") // Add a another virtual host.
- *          .serviceAt(...)
+ *          .service(...)
  *          .serviceUnder(...)
  *      .and().build(); // Build a server.
  * }</pre>
@@ -381,22 +381,12 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified {@link Service} at the specified path pattern of the default {@link VirtualHost}.
-     * e.g.
-     * <ul>
-     *   <li>{@code /login} (no path parameters)</li>
-     *   <li>{@code /users/{userId}} (curly-brace style)</li>
-     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
-     * </ul>
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     * @deprecated Use {@link #service(String, Service)} instead.
      */
+    @Deprecated
     public ServerBuilder serviceAt(String pathPattern,
                                    Service<? super HttpRequest, ? extends HttpResponse> service) {
-        defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.serviceAt(pathPattern, service);
-        return this;
+        return service(pathPattern, service);
     }
 
     /**
@@ -409,6 +399,30 @@ public final class ServerBuilder {
                                       Service<? super HttpRequest, ? extends HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
+        return this;
+    }
+
+    /**
+     * Binds the specified {@link Service} at the specified path pattern of the default {@link VirtualHost}.
+     * e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     *   <li>{@code exact:/foo/bar} (exact match)</li>
+     *   <li>{@code prefix:/files} (prefix match)</li>
+     *   <li><code>glob:/~&#42;/downloads/**</code> (glob pattern)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} (regular expression)</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified path pattern is invalid
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder service(String pathPattern,
+                                 Service<? super HttpRequest, ? extends HttpResponse> service) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(pathPattern, service);
         return this;
     }
 
@@ -442,72 +456,72 @@ public final class ServerBuilder {
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
-    public ServerBuilder service(Object service) {
-        return service("/", service);
+    public ServerBuilder annotatedService(Object service) {
+        return annotatedService("/", service);
     }
 
     /**
      * Binds the specified annotated service object.
      */
-    public ServerBuilder service(
+    public ServerBuilder annotatedService(
             Object service,
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
-        return service("/", service, decorator);
+        return annotatedService("/", service, decorator);
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
-    public ServerBuilder service(Object service, Map<Class<?>, ResponseConverter> converters) {
-        return service("/", service, converters);
+    public ServerBuilder annotatedService(Object service, Map<Class<?>, ResponseConverter> converters) {
+        return annotatedService("/", service, converters);
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
-    public ServerBuilder service(
+    public ServerBuilder annotatedService(
             Object service, Map<Class<?>, ResponseConverter> converters,
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
-        return service("/", service, converters, decorator);
+        return annotatedService("/", service, converters, decorator);
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
-    public ServerBuilder service(String pathPrefix, Object service) {
-        return service(pathPrefix, service, ImmutableMap.of(), Function.identity());
+    public ServerBuilder annotatedService(String pathPrefix, Object service) {
+        return annotatedService(pathPrefix, service, ImmutableMap.of(), Function.identity());
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
-    public ServerBuilder service(
+    public ServerBuilder annotatedService(
             String pathPrefix, Object service,
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
-        return service(pathPrefix, service, ImmutableMap.of(), decorator);
+        return annotatedService(pathPrefix, service, ImmutableMap.of(), decorator);
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
-    public ServerBuilder service(String pathPrefix, Object service,
-                                 Map<Class<?>, ResponseConverter> converters) {
-        return service(pathPrefix, service, converters, Function.identity());
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Map<Class<?>, ResponseConverter> converters) {
+        return annotatedService(pathPrefix, service, converters, Function.identity());
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
-    public ServerBuilder service(
+    public ServerBuilder annotatedService(
             String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
 
         defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.service(pathPrefix, service, converters, decorator);
+        defaultVirtualHostBuilder.annotatedService(pathPrefix, service, converters, decorator);
         return this;
     }
 
@@ -526,7 +540,7 @@ public final class ServerBuilder {
      *     if other default {@link VirtualHost} builder methods have been invoked already, including:
      *     <ul>
      *       <li>{@link #sslContext(SslContext)}</li>
-     *       <li>{@link #serviceAt(String, Service)}</li>
+     *       <li>{@link #service(String, Service)}</li>
      *       <li>{@link #serviceUnder(String, Service)}</li>
      *       <li>{@link #service(PathMapping, Service)}</li>
      *     </ul>

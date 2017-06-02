@@ -111,7 +111,7 @@ public class StaticEndpointGroupIntegrationTest {
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceAt("/serverIp", THttpService.of(handler));
+            sb.service("/serverIp", THttpService.of(handler));
         }
     }
 }
