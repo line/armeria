@@ -181,6 +181,19 @@ public abstract class WebAppContainerTest {
                         "<p>bar is 2</p>" +
                         "</body></html>");
             }
+
+            // Send a query again with different values to make sure the query strings are not cached.
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet(server().uri("/jsp/query_string.jsp?foo=%33&bar=%34")))) {
+
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+                assertThat(actualContent).isEqualTo(
+                        "<html><body>" +
+                        "<p>foo is 3</p>" +
+                        "<p>bar is 4</p>" +
+                        "</body></html>");
+            }
         }
     }
 
@@ -201,6 +214,21 @@ public abstract class WebAppContainerTest {
                         "<html><body>" +
                         "<p>foo is 3</p>" +
                         "<p>bar is 4</p>" +
+                        "</body></html>");
+            }
+
+            // Send a query again with different values to make sure the query strings are not cached.
+            final HttpPost post2 = new HttpPost(server().uri("/jsp/query_string.jsp?foo=5"));
+            post2.setEntity(new UrlEncodedFormEntity(
+                    Collections.singletonList(new BasicNameValuePair("bar", "6")), StandardCharsets.UTF_8));
+
+            try (CloseableHttpResponse res = hc.execute(post2)) {
+                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
+                                                     .replaceAll("");
+                assertThat(actualContent).isEqualTo(
+                        "<html><body>" +
+                        "<p>foo is 5</p>" +
+                        "<p>bar is 6</p>" +
                         "</body></html>");
             }
         }
