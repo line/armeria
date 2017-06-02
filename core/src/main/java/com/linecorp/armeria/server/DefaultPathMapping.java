@@ -16,14 +16,13 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashSet;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.StringJoiner;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -65,6 +64,11 @@ final class DefaultPathMapping extends AbstractPathMapping {
     private final String skeleton;
 
     /**
+     * The names of the path parameters in the order of appearance.
+     */
+    private final String[] paramNameArray;
+
+    /**
      * The names of the path parameters this mapping will extract.
      */
     private final Set<String> paramNames;
@@ -88,34 +92,37 @@ final class DefaultPathMapping extends AbstractPathMapping {
             throw new IllegalArgumentException("pathPattern: " + pathPattern + " (invalid pattern)");
         }
 
-        StringJoiner patternJoiner = new StringJoiner("/");
-        StringJoiner skeletonJoiner = new StringJoiner("/");
-        Set<String> placeholders = new HashSet<>();
+        final StringJoiner patternJoiner = new StringJoiner("/");
+        final StringJoiner skeletonJoiner = new StringJoiner("/");
+        final List<String> paramNames = new ArrayList<>();
         for (String token : pathPattern.split("/")) {
-            String paramName = paramName(token);
-            if (paramName != null) {
-                if (!placeholders.contains(paramName)) {
-                    // If the given token appeared first time, add it to the set and
-                    // replace it to named group expression in regex.
-                    placeholders.add(paramName);
-                    patternJoiner.add(String.format("(?<%s>[^/]+)", paramName));
-                } else {
-                    // If the given token appeared before, replace it with a back-reference expression
-                    // in regex.
-                    patternJoiner.add(String.format("\\k<%s>", paramName));
-                }
-                skeletonJoiner.add("{}");
-            } else {
-                // If the given token is a constant, does not manipulate it.
+            final String paramName = paramName(token);
+            if (paramName == null) {
+                // If the given token is a constant, do not manipulate it.
                 patternJoiner.add(token);
                 skeletonJoiner.add(token);
+                continue;
             }
+
+            final int paramNameIdx = paramNames.indexOf(paramName);
+            if (paramNameIdx < 0) {
+                // If the given token appeared first time, add it to the set and
+                // replace it with a capturing group expression in regex.
+                paramNames.add(paramName);
+                patternJoiner.add("([^/]+)");
+            } else {
+                // If the given token appeared before, replace it with a back-reference expression
+                // in regex.
+                patternJoiner.add("\\" + (paramNameIdx + 1));
+            }
+            skeletonJoiner.add("{}");
         }
 
         this.pathPattern = pathPattern;
         pattern = Pattern.compile(patternJoiner.toString());
         skeleton = skeletonJoiner.toString();
-        paramNames = ImmutableSet.copyOf(placeholders);
+        paramNameArray = paramNames.toArray(new String[paramNames.size()]);
+        this.paramNames = ImmutableSet.copyOf(paramNames);
     }
 
     /**
@@ -158,15 +165,15 @@ final class DefaultPathMapping extends AbstractPathMapping {
             return PathMappingResult.empty();
         }
 
-        final Map<String, String> pathParams;
-        if (paramNames.isEmpty()) {
-            pathParams = ImmutableMap.of();
-        } else {
-            pathParams = paramNames.stream()
-                                   .collect(toImmutableMap(Function.identity(), matcher::group));
+        if (paramNameArray.length == 0) {
+            return PathMappingResult.of(path, query);
         }
 
-        return PathMappingResult.of(path, query, pathParams);
+        final ImmutableMap.Builder<String, String> pathParams = ImmutableMap.builder();
+        for (int i = 0; i < paramNameArray.length; i++) {
+            pathParams.put(paramNameArray[i], matcher.group(i + 1));
+        }
+        return PathMappingResult.of(path, query, pathParams.build());
     }
 
     @Override
@@ -180,12 +187,13 @@ final class DefaultPathMapping extends AbstractPathMapping {
 
         DefaultPathMapping that = (DefaultPathMapping) o;
 
-        return pattern.pattern().equals(that.pattern.pattern());
+        return skeleton.equals(that.skeleton) &&
+               Arrays.equals(paramNameArray, that.paramNameArray);
     }
 
     @Override
     public int hashCode() {
-        return pattern.pattern().hashCode();
+        return skeleton.hashCode() * 31 + Arrays.hashCode(paramNameArray);
     }
 
     @Override
