@@ -101,9 +101,9 @@ public class PathMappings<T> implements BiFunction<String, String, PathMapped<T>
     public PathMapped<T> apply(String path, @Nullable String query) {
         freeze();
 
-        // Look up the cache if the cache is available.
+        // Look up the cache if the cache is available and query string does not exist.
         final Map<String, PathMapped<T>> cache =
-                threadLocalCache != null ? threadLocalCache.get() : null;
+                query == null && threadLocalCache != null ? threadLocalCache.get() : null;
 
         if (cache != null) {
             final PathMapped<T> value = cache.get(path);
