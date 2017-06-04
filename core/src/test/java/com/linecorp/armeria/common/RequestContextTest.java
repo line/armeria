@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -25,7 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -157,19 +155,6 @@ public class RequestContextTest {
     }
 
     @Test
-    public void makeContextAwareCallable_timedOut() throws Exception {
-        NonWrappingRequestContext context = createContext();
-        AtomicBoolean called = new AtomicBoolean();
-        Callable<?> callable = context.makeContextAware(() -> {
-            called.set(true);
-            return "success";
-        });
-        context.setTimedOut();
-        assertThatThrownBy(callable::call).isInstanceOf(CancellationException.class);
-        assertThat(called.get()).isFalse();
-    }
-
-    @Test
     public void makeContextAwareRunnable() {
         RequestContext context = createContext();
         context.makeContextAware(() -> {
@@ -177,16 +162,6 @@ public class RequestContextTest {
             assertDepth(1);
         }).run();
         assertDepth(0);
-    }
-
-    @Test
-    public void makeContextAwareRunnable_timedOut() {
-        NonWrappingRequestContext context = createContext();
-        AtomicBoolean called = new AtomicBoolean();
-        Runnable runnable = context.makeContextAware(() -> called.set(true));
-        context.setTimedOut();
-        assertThatThrownBy(runnable::run).isInstanceOf(CancellationException.class);
-        assertThat(called.get()).isFalse();
     }
 
     @Test
@@ -202,24 +177,6 @@ public class RequestContextTest {
         promise.setSuccess("success");
     }
 
-    @Test(timeout = 10000)
-    @SuppressWarnings("deprecation")
-    public void makeContextAwareFutureListener_timedOut() throws Exception {
-        when(channel.eventLoop()).thenReturn(eventLoop);
-        NonWrappingRequestContext context = createContext();
-        Promise<String> promise = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE);
-        CountDownLatch latch = new CountDownLatch(1);
-        promise.addListener(context.makeContextAware((FutureListener<String>) f -> {
-            assertThatThrownBy(f::get).isInstanceOf(CancellationException.class);
-            latch.countDown();
-        }));
-        context.setTimedOut();
-        promise.setSuccess("success");
-
-        // The latch will not complete if the assertion in the FutureListener fails.
-        latch.await();
-    }
-
     @Test
     @SuppressWarnings("deprecation")
     public void makeContextAwareChannelFutureListener() {
@@ -231,24 +188,6 @@ public class RequestContextTest {
             assertThat(f.getNow()).isNull();
         }));
         promise.setSuccess(null);
-    }
-
-    @Test(timeout = 10000)
-    @SuppressWarnings("deprecation")
-    public void makeContextAwareChannelFutureListener_timedOut() throws Exception {
-        when(channel.eventLoop()).thenReturn(eventLoop);
-        NonWrappingRequestContext context = createContext();
-        ChannelPromise promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-        CountDownLatch latch = new CountDownLatch(1);
-        promise.addListener(context.makeContextAware((ChannelFutureListener) f -> {
-            assertThatThrownBy(f::get).isInstanceOf(CancellationException.class);
-            latch.countDown();
-        }));
-        context.setTimedOut();
-        promise.setSuccess(null);
-
-        // The latch will not complete if the assertion in the ChannelFutureListener fails.
-        latch.await();
     }
 
     @Test
@@ -265,20 +204,6 @@ public class RequestContextTest {
         originalFuture.complete("success");
         assertDepth(0);
         resultFuture.get(); // this will propagate assertions.
-    }
-
-    @Test
-    public void makeContextAwareCompletableFutureInSameThread_timedOut() throws Exception {
-        NonWrappingRequestContext context = createContext();
-        CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
-        AtomicBoolean called = new AtomicBoolean();
-        CompletableFuture<String> resultFuture =
-                contextAwareFuture.whenComplete((result, cause) -> called.set(true));
-        context.setTimedOut();
-        originalFuture.complete("success");
-        assertThat(called.get()).isFalse();
-        assertThatThrownBy(resultFuture::get).isInstanceOf(CancellationException.class);
     }
 
     @Test
@@ -423,6 +348,14 @@ public class RequestContextTest {
             assertThat(nested.get()).isFalse();
         }
         assertDepth(0);
+    }
+
+    @Test
+    public void timedOut() {
+        RequestContext ctx = createContext();
+        assertThat(ctx.isTimedOut()).isFalse();
+        ((AbstractRequestContext) ctx).setTimedOut();
+        assertThat(ctx.isTimedOut()).isTrue();
     }
 
     private void assertDepth(int expectedDepth) {

@@ -25,17 +25,12 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -65,7 +60,6 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final <T> Callable<T> makeContextAware(Callable<T> callable) {
         return () -> {
             try (SafeCloseable ignored = propagateContextIfNotPresent()) {
-                cancelIfTimedOut();
                 return callable.call();
             }
         };
@@ -75,7 +69,6 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final Runnable makeContextAware(Runnable runnable) {
         return () -> {
             try (SafeCloseable ignored = propagateContextIfNotPresent()) {
-                cancelIfTimedOut();
                 runnable.run();
             }
         };
@@ -85,7 +78,6 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final <T, R> Function<T, R> makeContextAware(Function<T, R> function) {
         return t -> {
             try (SafeCloseable ignored = propagateContextIfNotPresent()) {
-                cancelIfTimedOut();
                 return function.apply(t);
             }
         };
@@ -95,7 +87,6 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function) {
         return (t, u) -> {
             try (SafeCloseable ignored = propagateContextIfNotPresent()) {
-                cancelIfTimedOut();
                 return function.apply(t, u);
             }
         };
@@ -105,7 +96,6 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final <T> Consumer<T> makeContextAware(Consumer<T> action) {
         return t -> {
             try (SafeCloseable ignored = propagateContextIfNotPresent()) {
-                cancelIfTimedOut();
                 action.accept(t);
             }
         };
@@ -115,7 +105,6 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action) {
         return (t, u) -> {
             try (SafeCloseable ignored = propagateContextIfNotPresent()) {
-                cancelIfTimedOut();
                 action.accept(t, u);
             }
         };
@@ -123,19 +112,18 @@ public abstract class AbstractRequestContext implements RequestContext {
 
     @Override
     public final <T> FutureListener<T> makeContextAware(FutureListener<T> listener) {
-        return future -> invokeOperationComplete(listener, future, () -> new DefaultPromise<>(eventLoop()));
+        return future -> invokeOperationComplete(listener, future);
     }
 
     @Override
     public final ChannelFutureListener makeContextAware(ChannelFutureListener listener) {
-        return future -> invokeOperationComplete(
-                listener, future, () -> new DefaultChannelPromise(future.channel()));
+        return future -> invokeOperationComplete(listener, future);
     }
 
     @Override
     public final <T extends Future<?>> GenericFutureListener<T>
     makeContextAware(GenericFutureListener<T> listener) {
-        return future -> invokeOperationComplete(listener, future, null);
+        return future -> invokeOperationComplete(listener, future);
     }
 
     @Override
@@ -143,9 +131,7 @@ public abstract class AbstractRequestContext implements RequestContext {
         final CompletableFuture<T> future = new RequestContextAwareCompletableFuture<>(this);
         stage.whenComplete((result, cause) -> {
             try (SafeCloseable ignored = propagateContextIfNotPresent()) {
-                if (timedOut) {
-                    future.cancel(true);
-                } else if (cause != null) {
+                if (cause != null) {
                     future.completeExceptionally(cause);
                 } else {
                     future.complete(result);
@@ -160,6 +146,11 @@ public abstract class AbstractRequestContext implements RequestContext {
         return RequestContext.super.makeContextAware(future);
     }
 
+    @Override
+    public boolean isTimedOut() {
+        return timedOut;
+    }
+
     /**
      * Marks this {@link RequestContext} as having been timed out. Any callbacks created with
      * {code makeContextAware} that are run after this will be failed with {@link CancellationException}.
@@ -169,13 +160,8 @@ public abstract class AbstractRequestContext implements RequestContext {
     }
 
     private <T extends Future<?>> void invokeOperationComplete(
-            GenericFutureListener<T> listener, T future, @Nullable Supplier<T> futureCreator) throws Exception {
+            GenericFutureListener<T> listener, T future) throws Exception {
         try (SafeCloseable ignored = propagateContextIfNotPresent()) {
-            if (timedOut && futureCreator != null) {
-                T cancelledFuture = futureCreator.get();
-                cancelledFuture.cancel(true);
-                future = cancelledFuture;
-            }
             listener.operationComplete(future);
         }
     }
@@ -224,10 +210,4 @@ public abstract class AbstractRequestContext implements RequestContext {
         return super.equals(obj);
     }
 
-    private void cancelIfTimedOut() {
-        if (timedOut) {
-            throw Exceptions.isVerbose() ?
-                  new CancellationException(CANCELLATION_EXCEPTION.getMessage()) : CANCELLATION_EXCEPTION;
-        }
-    }
 }

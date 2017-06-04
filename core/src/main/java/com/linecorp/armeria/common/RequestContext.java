@@ -343,6 +343,12 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
+     * Returns whether this {@link RequestContext} has been timed-out (e.g., when the corresponding request
+     * passes a deadline).
+     */
+    boolean isTimedOut();
+
+    /**
      * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
      * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
      * should be restored by this callback.
