@@ -128,7 +128,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        final PathMapped<Service<? super I, ? extends O>> mapped = findService(ctx.pathWithoutPrefix(),
+        final PathMapped<Service<? super I, ? extends O>> mapped = findService(ctx.mappedPath(),
                                                                                ctx.query());
         if (!mapped.isPresent()) {
             throw ResourceNotFoundException.get();
@@ -139,7 +139,8 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
             final PathMapping newMapping = PathMapping.ofPrefix(ctx.pathMapping().prefix().get() +
                                                                 childPrefix.get().substring(1));
 
-            final ServiceRequestContext newCtx = new CompositeServiceRequestContext(ctx, newMapping);
+            final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
+                    ctx, newMapping, mapped.mappingResult().path());
             try (SafeCloseable ignored = RequestContext.push(newCtx, false)) {
                 return mapped.value().serve(newCtx, req);
             }
@@ -151,15 +152,23 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     private static final class CompositeServiceRequestContext extends ServiceRequestContextWrapper {
 
         private final PathMapping pathMapping;
+        private final String mappedPath;
 
-        CompositeServiceRequestContext(ServiceRequestContext delegate, PathMapping pathMapping) {
+        CompositeServiceRequestContext(ServiceRequestContext delegate, PathMapping pathMapping,
+                                       String mappedPath) {
             super(delegate);
             this.pathMapping = pathMapping;
+            this.mappedPath = mappedPath;
         }
 
         @Override
         public PathMapping pathMapping() {
             return pathMapping;
+        }
+
+        @Override
+        public String mappedPath() {
+            return mappedPath;
         }
     }
 }

@@ -294,7 +294,7 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("prefix:/prefix")
         public String prefix(ServiceRequestContext ctx) {
-            return "prefix:" + ctx.path() + ':' + ctx.pathWithoutPrefix();
+            return "prefix:" + ctx.path() + ':' + ctx.mappedPath();
         }
 
         @Get

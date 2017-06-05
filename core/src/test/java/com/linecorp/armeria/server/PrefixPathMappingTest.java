@@ -30,6 +30,13 @@ public class PrefixPathMappingTest {
     }
 
     @Test
+    public void mappingResult() {
+        final PathMapping a = ofPrefix("/foo");
+        PathMappingResult result = a.apply("/foo/bar/cat", "");
+        assertThat(result.path()).isEqualTo("/bar/cat");
+    }
+
+    @Test
     public void equality() {
         final PathMapping a = ofPrefix("/foo");
         final PathMapping b = ofPrefix("/bar");

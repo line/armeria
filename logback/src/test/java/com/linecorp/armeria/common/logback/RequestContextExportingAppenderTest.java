@@ -416,6 +416,7 @@ public class RequestContextExportingAppenderTest {
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
                 serviceConfig,
                 ch, HttpSessionProtocols.H2, req.method(),
+                path,
                 PathMappingResult.of(path, query, ImmutableMap.of()),
                 req, newSslSession());
 

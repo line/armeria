@@ -213,7 +213,7 @@ public class HttpServerTest {
                 protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.write(HttpHeaders.of(HttpStatus.OK)
                                          .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                 ctx.pathWithoutPrefix().length()));
+                                                 ctx.mappedPath().length()));
                     res.close();
                 }
 
@@ -221,8 +221,8 @@ public class HttpServerTest {
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     res.write(HttpHeaders.of(HttpStatus.OK)
                                          .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                 ctx.pathWithoutPrefix().length()));
-                    res.write(HttpData.ofAscii(ctx.pathWithoutPrefix()));
+                                                 ctx.mappedPath().length()));
+                    res.write(HttpData.ofAscii(ctx.mappedPath()));
                     res.close();
                 }
             });
@@ -267,7 +267,7 @@ public class HttpServerTest {
             sb.serviceUnder("/zeroes", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    final long length = Long.parseLong(ctx.pathWithoutPrefix().substring(1));
+                    final long length = Long.parseLong(ctx.mappedPath().substring(1));
                     res.write(HttpHeaders.of(HttpStatus.OK)
                                          .setLong(HttpHeaderNames.CONTENT_LENGTH, length));
 

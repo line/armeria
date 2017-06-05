@@ -32,8 +32,6 @@ import com.linecorp.armeria.common.http.HttpResponse;
 public class ServiceRequestContextWrapper
         extends RequestContextWrapper<ServiceRequestContext> implements ServiceRequestContext {
 
-    private String pathWithoutPrefix;
-
     /**
      * Creates a new instance.
      */
@@ -57,15 +55,6 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public String pathWithoutPrefix() {
-        if (pathWithoutPrefix == null) {
-            return pathWithoutPrefix = ServiceRequestContext.super.pathWithoutPrefix();
-        } else {
-            return pathWithoutPrefix;
-        }
-    }
-
-    @Override
     public Map<String, String> pathParams() {
         return delegate().pathParams();
     }
@@ -78,6 +67,11 @@ public class ServiceRequestContextWrapper
     @Override
     public ExecutorService blockingTaskExecutor() {
         return delegate().blockingTaskExecutor();
+    }
+
+    @Override
+    public String mappedPath() {
+        return delegate().mappedPath();
     }
 
     @Override

@@ -64,17 +64,6 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     /**
-     * Returns the path with its prefix removed. This method can be useful for a reusable service bound
-     * at various path prefixes.
-     *
-     * @return the path with its prefix removed, starting with '/'. If the {@link #pathMapping()} is not a
-     *         prefix-mapping, the same value with {@link #path()} will be returned.
-     */
-    default String pathWithoutPrefix() {
-        return pathMapping().prefix().map(s -> path().substring(s.length() - 1)).orElseGet(this::path);
-    }
-
-    /**
      * Returns the {@link Service} that is handling the current {@link Request}.
      */
     <T extends Service<? super HttpRequest, ? extends HttpResponse>> T service();
@@ -90,12 +79,10 @@ public interface ServiceRequestContext extends RequestContext {
     ExecutorService blockingTaskExecutor();
 
     /**
-     * @deprecated Use {@link #pathWithoutPrefix()} instead.
+     * Returns the path with its context path removed. This method can be useful for a reusable service bound
+     * at various path prefixes.
      */
-    @Deprecated
-    default String mappedPath() {
-        return pathWithoutPrefix();
-    }
+    String mappedPath();
 
     /**
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in

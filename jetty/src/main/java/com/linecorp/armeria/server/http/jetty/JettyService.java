@@ -322,7 +322,7 @@ public final class JettyService implements HttpService {
         uriBuf.append(aHeaders.path());
 
         final HttpURI uri = new HttpURI(uriBuf.toString());
-        uri.setPath(ctx.pathWithoutPrefix());
+        uri.setPath(ctx.mappedPath());
 
         // Convert HttpHeaders to HttpFields
         final HttpFields jHeaders = new HttpFields(aHeaders.size());

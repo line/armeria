@@ -281,7 +281,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, protocol, req.method(),
-                mappingResult, req, getSSLSession(channel));
+                path, mappingResult, req, getSSLSession(channel));
 
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();

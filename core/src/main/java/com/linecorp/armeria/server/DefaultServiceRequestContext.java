@@ -49,14 +49,13 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final Channel ch;
     private final ServiceConfig cfg;
-    private final Map<String, String> pathParams;
+    private final PathMappingResult pathMappingResult;
     private final SSLSession sslSession;
 
     private final DefaultRequestLog log;
     private final Logger logger;
 
     private ExecutorService blockingTaskExecutor;
-    private String pathWithoutPrefix;
 
     private long requestTimeoutMillis;
     private long maxRequestLength;
@@ -74,17 +73,17 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
-            HttpMethod method, PathMappingResult pathMappingResult, Object request,
+            HttpMethod method, String path, PathMappingResult pathMappingResult, Object request,
             @Nullable SSLSession sslSession) {
 
         super(sessionProtocol, method,
-              requireNonNull(pathMappingResult, "pathMappingResult").path(),
+              path,
               pathMappingResult.query(),
               request);
 
         this.ch = ch;
         this.cfg = cfg;
-        pathParams = pathMappingResult.pathParams();
+        this.pathMappingResult = pathMappingResult;
         this.sslSession = sslSession;
 
         log = new DefaultRequestLog(this);
@@ -128,17 +127,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public String pathWithoutPrefix() {
-        if (pathWithoutPrefix == null) {
-            return pathWithoutPrefix = ServiceRequestContext.super.pathWithoutPrefix();
-        } else {
-            return pathWithoutPrefix;
-        }
-    }
-
-    @Override
     public Map<String, String> pathParams() {
-        return pathParams;
+        return pathMappingResult.pathParams();
     }
 
     @Override
@@ -153,6 +143,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         }
 
         return blockingTaskExecutor = makeContextAware(server().config().blockingTaskExecutor());
+    }
+
+    @Override
+    public String mappedPath() {
+        return pathMappingResult.path();
     }
 
     @Override
