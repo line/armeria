@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.http.HttpStatusClass;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -54,6 +55,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
@@ -288,11 +290,13 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             ChannelHandlerContext ctx, int id, int streamId, HttpData data, boolean endStream) {
 
         if (id >= minClosedId) {
+            ReferenceCountUtil.safeRelease(data);
             return ctx.newFailedFuture(ClosedSessionException.get());
         }
 
         final int length = data.length();
         if (length == 0) {
+            ReferenceCountUtil.safeRelease(data);
             final HttpContent content = endStream ? LastHttpContent.EMPTY_LAST_CONTENT : EMPTY_CONTENT;
             final ChannelFuture future = write(ctx, id, content, endStream);
             ctx.flush();
@@ -300,60 +304,73 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         }
 
         try {
-            if (isTls && length > MAX_TLS_DATA_LENGTH) {
+            if (!isTls || length <= MAX_TLS_DATA_LENGTH) {
+                // Cleartext connection or data.length() <= MAX_TLS_DATA_LENGTH
+                return doWriteUnsplitData(ctx, id, data, endStream);
+            } else {
                 // TLS and data.length() > MAX_TLS_DATA_LENGTH
                 return doWriteSplitData(ctx, id, data, endStream);
-            } else {
-                // Cleartext connection or data.length() <= MAX_TLS_DATA_LENGTH
-                final ByteBuf buf = toByteBuf(ctx, data);
-                final HttpContent content;
-                if (endStream) {
-                    content = new DefaultLastHttpContent(buf);
-                } else {
-                    content = new DefaultHttpContent(buf);
-                }
-                ChannelFuture future = write(ctx, id, content, endStream);
-                ctx.flush();
-                return future;
             }
         } catch (Throwable t) {
             return ctx.newFailedFuture(t);
         }
     }
 
+    private ChannelFuture doWriteUnsplitData(ChannelHandlerContext ctx, int id, HttpData data,
+                                             boolean endStream) {
+        final ByteBuf buf = toByteBuf(ctx, data);
+        boolean handled = false;
+        try {
+            final HttpContent content;
+            if (endStream) {
+                content = new DefaultLastHttpContent(buf);
+            } else {
+                content = new DefaultHttpContent(buf);
+            }
+
+            final ChannelFuture future = write(ctx, id, content, endStream);
+            handled = true;
+            ctx.flush();
+            return future;
+        } finally {
+            if (!handled) {
+                ReferenceCountUtil.safeRelease(buf);
+            }
+        }
+    }
+
     private ChannelFuture doWriteSplitData(
             ChannelHandlerContext ctx, int id, HttpData data, boolean endStream) {
 
-        int offset = data.offset();
-        int remaining = data.length();
-        ChannelFuture lastFuture;
-        for (;;) {
-            // Ensure an HttpContent does not exceed the maximum length of a cleartext TLS record.
-            final int chunkSize = Math.min(MAX_TLS_DATA_LENGTH, remaining);
-            lastFuture = write(ctx, id, new DefaultHttpContent(dataChunk(data, offset, chunkSize)), false);
-            remaining -= chunkSize;
-            if (remaining == 0) {
-                break;
+        try {
+            int offset = data.offset();
+            int remaining = data.length();
+            ChannelFuture lastFuture;
+            for (;;) {
+                // Ensure an HttpContent does not exceed the maximum length of a cleartext TLS record.
+                final int chunkSize = Math.min(MAX_TLS_DATA_LENGTH, remaining);
+                lastFuture = write(ctx, id, new DefaultHttpContent(dataChunk(data, offset, chunkSize)), false);
+                remaining -= chunkSize;
+                if (remaining == 0) {
+                    break;
+                }
+                offset += chunkSize;
             }
-            offset += chunkSize;
+
+            if (endStream) {
+                lastFuture = write(ctx, id, LastHttpContent.EMPTY_LAST_CONTENT, true);
+            }
+
+            ctx.flush();
+            return lastFuture;
+        } finally {
+            ReferenceCountUtil.safeRelease(data);
         }
-
-        if (endStream) {
-            lastFuture = write(ctx, id, LastHttpContent.EMPTY_LAST_CONTENT, true);
-        }
-
-        ctx.flush();
-
-        if (data instanceof ByteBufHttpData) {
-            ((ByteBufHttpData) data).buf().release();
-        }
-
-        return lastFuture;
     }
 
-    private ByteBuf dataChunk(HttpData data, int offset, int chunkSize) {
-        if (data instanceof ByteBufHttpData) {
-            ByteBuf buf = ((ByteBufHttpData) data).buf();
+    private static ByteBuf dataChunk(HttpData data, int offset, int chunkSize) {
+        if (data instanceof ByteBufHolder) {
+            ByteBuf buf = ((ByteBufHolder) data).content();
             return buf.retainedSlice(offset, chunkSize);
         } else {
             return Unpooled.wrappedBuffer(data.array(), offset, chunkSize);
@@ -364,6 +381,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         if (id < currentId) {
             // Attempted to write something on a finished request/response; discard.
             // e.g. the request already timed out.
+            ReferenceCountUtil.safeRelease(obj);
             return ctx.newFailedFuture(ClosedPublisherException.get());
         }
 
@@ -436,7 +454,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
         minClosedId = Math.min(minClosedId, id);
         for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
-            final PendingWrites pendingWrites = this.pendingWritesMap.remove(i);
+            final PendingWrites pendingWrites = pendingWritesMap.remove(i);
             for (;;) {
                 final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
                 if (e == null) {

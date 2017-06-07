@@ -31,12 +31,14 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.http.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 
 /**
  * A {@link StreamMessage} which buffers the elements to be signaled into a {@link Queue}.
@@ -209,7 +211,16 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     @Override
     public boolean write(T obj) {
         requireNonNull(obj, "obj");
+        if (obj instanceof ReferenceCounted) {
+            ((ReferenceCounted) obj).touch();
+            if (!(obj instanceof ByteBufHolder) && !(obj instanceof ByteBuf)) {
+                throw new IllegalArgumentException(
+                        "can't publish a ReferenceCounted that's not a ByteBuf or a ByteBufHolder: " + obj);
+            }
+        }
+
         if (!isOpen()) {
+            ReferenceCountUtil.safeRelease(obj);
             return false;
         }
 
@@ -305,23 +316,44 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
             if (demand == Long.MAX_VALUE || demandUpdater.compareAndSet(this, demand, demand - 1)) {
                 @SuppressWarnings("unchecked")
-                final T o = (T) queue.remove();
+                T o = (T) queue.remove();
+                ReferenceCountUtil.touch(o);
                 onRemoval(o);
-                if (!subscription.withPooledObjects() && o instanceof ByteBufHttpData) {
-                    ByteBuf buf = ((ByteBufHttpData) o).buf();
-                    try {
-                        subscriber.onNext(HttpData.of(ByteBufUtil.getBytes(buf)));
-                    } finally {
-                        buf.release();
+                if (!subscription.withPooledObjects()) {
+                    if (o instanceof ByteBufHolder) {
+                        o = copyAndRelease((ByteBufHolder) o);
+                    } else if (o instanceof ByteBuf) {
+                        o = copyAndRelease((ByteBuf) o);
                     }
-                } else {
-                    subscriber.onNext(o);
                 }
+
+                subscriber.onNext(o);
                 return true;
             }
         }
 
         return false;
+    }
+
+    private T copyAndRelease(ByteBufHolder o) {
+        try {
+            final ByteBuf content = Unpooled.wrappedBuffer(ByteBufUtil.getBytes(o.content()));
+            @SuppressWarnings("unchecked")
+            final T copy = (T) o.replace(content);
+            return copy;
+        } finally {
+            ReferenceCountUtil.safeRelease(o);
+        }
+    }
+
+    private T copyAndRelease(ByteBuf o) {
+        try {
+            @SuppressWarnings("unchecked")
+            final T copy = (T) Unpooled.copiedBuffer(o);
+            return copy;
+        } finally {
+            ReferenceCountUtil.safeRelease(o);
+        }
     }
 
     private boolean notifyCompletableFuture(Queue<Object> queue) {
@@ -424,9 +456,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 T obj = (T) e;
                 onRemoval(obj);
             } finally {
-                if (e instanceof ByteBufHttpData) {
-                    ((ByteBufHttpData) e).buf().release();
-                }
+                ReferenceCountUtil.safeRelease(e);
             }
         }
     }
