@@ -92,7 +92,7 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                         }
                     })
                     .flatMap(f -> parseFile(f).entrySet().stream())
-                    .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+                    .collect(toImmutableMap(Entry::getKey, Entry::getValue, (entry, unused) -> entry));
     }
 
     private static Map<String, String> parseFile(FileDescriptorProto descriptor) {
