@@ -49,6 +49,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.util.ReferenceCountUtil;
 
 final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener,
                                               ChannelFutureListener {
@@ -208,6 +209,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 break;
             }
             case DONE:
+                ReferenceCountUtil.safeRelease(o);
                 return;
         }
 
