@@ -563,8 +563,7 @@ configure(javaProjects) {
                                         // Skip 'armeria-thrift-shaded' from armeria-spring-boot-autoconfigure's POM
                                         // so that a user can choose between 'armeria-thrift(-shaded)' and
                                         // 'armeria-thrift-0.9(-shaded).
-                                        if (currentArtifactId in ['armeria-spring-boot-autoconfigure', 
-                                                                  'armeria-spring-boot-autoconfigure-shaded'] &&
+                                        if (currentArtifactId.startsWith('armeria-spring-') &&
                                             dep instanceof ProjectDependency &&
                                             dep.dependencyProject.archivesBaseName in [
                                                 'armeria-thrift', 
