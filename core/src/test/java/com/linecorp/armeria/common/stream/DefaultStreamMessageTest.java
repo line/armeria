@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 import org.reactivestreams.Subscriber;
@@ -131,6 +132,73 @@ public class DefaultStreamMessageTest {
         m.close();
 
         assertThat(m.write(data)).isFalse();
+        assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    public void releaseWithZeroDemand() {
+        final DefaultStreamMessage<Object> m = new DefaultStreamMessage<>();
+        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
+        m.write(data);
+        m.subscribe(new Subscriber<Object>() {
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                // Cancel the subscription when the demand is 0.
+                subscription.cancel();
+            }
+
+            @Override
+            public void onNext(Object o) {
+                fail();
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                fail();
+            }
+
+            @Override
+            public void onComplete() {
+                fail();
+            }
+        }, true);
+
+        assertThat(m.isOpen()).isFalse();
+        assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    public void releaseWithZeroDemandAndClosedStream() {
+        final DefaultStreamMessage<Object> m = new DefaultStreamMessage<>();
+        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
+        m.write(data);
+        m.close();
+
+        m.subscribe(new Subscriber<Object>() {
+            private Subscription subscription;
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                // Cancel the subscription when the demand is 0.
+                subscription.cancel();
+            }
+
+            @Override
+            public void onNext(Object o) {
+                fail();
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                fail();
+            }
+
+            @Override
+            public void onComplete() {
+                fail();
+            }
+        }, true);
+
+        assertThat(m.isOpen()).isFalse();
         assertThat(data.refCnt()).isZero();
     }
 

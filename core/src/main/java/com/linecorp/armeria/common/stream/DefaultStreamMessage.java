@@ -369,7 +369,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     }
 
     private void notifySubscriberWithCloseEvent(Subscriber<Object> subscriber, CloseEvent o) {
-        setState(State.CLEANUP);
+        setState(State.OPEN, State.CLEANUP);
         try {
             final Throwable cause = o.cause();
             if (cause == null) {
@@ -407,7 +407,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
     @Override
     public void close() {
-        if (setState(State.CLOSED)) {
+        if (setState(State.OPEN, State.CLOSED)) {
             pushObject(SUCCESSFUL_CLOSE);
         }
     }
@@ -419,14 +419,14 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
         }
 
-        if (setState(State.CLOSED)) {
+        if (setState(State.OPEN, State.CLOSED)) {
             pushObject(new CloseEvent(cause));
         }
     }
 
-    private boolean setState(State state) {
-        assert state != State.OPEN : "state: " + state;
-        return stateUpdater.compareAndSet(this, State.OPEN, state);
+    private boolean setState(State oldState, State newState) {
+        assert newState != State.OPEN : "oldState: " + oldState + ", newState: " + newState;
+        return stateUpdater.compareAndSet(this, oldState, newState);
     }
 
     private void cleanup() {
@@ -515,15 +515,35 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
         @Override
         public void cancel() {
-            if (publisher.setState(State.CLEANUP)) {
+            if (publisher.setState(State.OPEN, State.CLEANUP)) {
                 final CloseEvent closeEvent =
                         Exceptions.isVerbose() ? new CloseEvent(CancelledSubscriptionException.get())
                                                : CANCELLED_CLOSE;
 
                 publisher.pushObject(closeEvent);
-            } else {
-                // Ensure the closeFuture is notified if not notified yet.
-                publisher.notifySubscriber();
+                return;
+            }
+
+            switch (publisher.state) {
+                case CLOSED:
+                    // close() has been called before cancel(). There's no need to push a CloseEvent,
+                    // but we need to ensure the closeFuture is notified and any pending objects are removed.
+                    if (publisher.setState(State.CLOSED, State.CLEANUP)) {
+                        final Executor executor = executor();
+                        if (executor != null) {
+                            executor.execute(publisher::cleanup);
+                        } else {
+                            publisher.cleanup();
+                        }
+                    } else {
+                        // Other thread set the state to CLEANUP already and will call cleanup().
+                    }
+                    break;
+                case CLEANUP:
+                    // Cleaned up already.
+                    break;
+                default: // OPEN: should never reach here.
+                    throw new Error();
             }
         }
 
