@@ -566,12 +566,11 @@ configure(javaProjects) {
                                         if (currentArtifactId.startsWith('armeria-spring-') &&
                                             dep instanceof ProjectDependency &&
                                             dep.dependencyProject.archivesBaseName in [
-                                                'armeria-thrift', 
+                                                'armeria-thrift',
                                                 'armeria-thrift-shaded']) {
                                             logger.info "Excluding ${dep.group}:${dep.name} so that a user can choose thrift library version."
                                             return
                                         }
-
 
                                         // Skip the shaded dependencies.
                                         if (isShaded &&
