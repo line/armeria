@@ -24,7 +24,7 @@ import java.util.function.BiConsumer;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.internal.http.ByteBufHttpData;
+import io.netty.util.ReferenceCountUtil;
 
 abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
 
@@ -89,8 +89,8 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
                 added = true;
             }
         } finally {
-            if (!added && data instanceof ByteBufHttpData) {
-                ((ByteBufHttpData) data).buf().release();
+            if (!added) {
+                ReferenceCountUtil.safeRelease(data);
             }
         }
     }

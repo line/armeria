@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.http;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.charset.Charset;
 
 import com.google.common.base.MoreObjects;
@@ -24,13 +26,14 @@ import com.linecorp.armeria.common.http.AbstractHttpData;
 import com.linecorp.armeria.common.http.HttpData;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 
 /**
  * A {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
  * general use.
  */
-public class ByteBufHttpData extends AbstractHttpData {
+public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
 
     private final ByteBuf buf;
     private final boolean endOfStream;
@@ -60,10 +63,6 @@ public class ByteBufHttpData extends AbstractHttpData {
         }
     }
 
-    public ByteBuf buf() {
-        return buf;
-    }
-
     @Override
     public int offset() {
         return buf.hasArray() ? buf.arrayOffset() : 0;
@@ -75,6 +74,84 @@ public class ByteBufHttpData extends AbstractHttpData {
     }
 
     @Override
+    public boolean isEmpty() {
+        buf.touch();
+        return super.isEmpty();
+    }
+
+    @Override
+    public int refCnt() {
+        return buf.refCnt();
+    }
+
+    @Override
+    public ByteBufHttpData retain() {
+        buf.retain();
+        return this;
+    }
+
+    @Override
+    public ByteBufHttpData retain(int increment) {
+        buf.retain(increment);
+        return this;
+    }
+
+    @Override
+    public ByteBufHttpData touch() {
+        buf.touch();
+        return this;
+    }
+
+    @Override
+    public ByteBufHttpData touch(Object hint) {
+        buf.touch(hint);
+        return this;
+    }
+
+    @Override
+    public boolean release() {
+        return buf.release();
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return buf.release(decrement);
+    }
+
+    @Override
+    public ByteBuf content() {
+        buf.touch();
+        return buf;
+    }
+
+    @Override
+    public ByteBufHttpData copy() {
+        return new ByteBufHttpData(buf.copy(), endOfStream);
+    }
+
+    @Override
+    public ByteBufHttpData duplicate() {
+        return new ByteBufHttpData(buf.duplicate(), endOfStream);
+    }
+
+    @Override
+    public ByteBufHttpData retainedDuplicate() {
+        return new ByteBufHttpData(buf.retainedDuplicate(), endOfStream);
+    }
+
+    @Override
+    public ByteBufHttpData replace(ByteBuf content) {
+        requireNonNull(content, "content");
+        content.touch();
+        return new ByteBufHttpData(content, endOfStream);
+    }
+
+    @Override
+    protected byte getByte(int index) {
+        return buf.getByte(index);
+    }
+
+    @Override
     public String toString(Charset charset) {
         return buf.toString(charset);
     }
@@ -83,10 +160,5 @@ public class ByteBufHttpData extends AbstractHttpData {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("buf", buf.toString()).toString();
-    }
-
-    @Override
-    protected byte getByte(int index) {
-        return buf.getByte(index);
     }
 }

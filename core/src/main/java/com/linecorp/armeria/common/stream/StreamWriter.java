@@ -36,12 +36,20 @@ public interface StreamWriter<T> {
     /**
      * Writes the specified object to the {@link StreamMessage}. The written object will be transferred to the
      * {@link Subscriber}.
+     *
+     * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
+     *         stream has been closed already.
+     *
+     * @throws IllegalArgumentException if the publication of the specified object has been rejected
      */
     boolean write(T o);
 
     /**
      * Writes the specified object {@link Supplier} to the {@link StreamMessage}. The object provided by the
      * {@link Supplier} will be transferred to the {@link Subscriber}.
+     *
+     * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
+     *         stream has been closed already.
      */
     boolean write(Supplier<? extends T> o);
 
