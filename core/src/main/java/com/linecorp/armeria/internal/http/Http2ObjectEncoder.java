@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Stream;
+import io.netty.util.ReferenceCountUtil;
 
 public final class Http2ObjectEncoder extends HttpObjectEncoder {
 
@@ -55,6 +56,7 @@ public final class Http2ObjectEncoder extends HttpObjectEncoder {
 
         final ChannelFuture future = validateStream(ctx, streamId);
         if (future != null) {
+            ReferenceCountUtil.safeRelease(data);
             return future;
         }
 

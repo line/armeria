@@ -80,7 +80,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
-        subscribe0(subscriber, null, withPooledObjects);
+        subscribe0(subscriber, null);
     }
 
     @Override
@@ -92,10 +92,10 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        subscribe0(subscriber, executor, withPooledObjects);
+        subscribe0(subscriber, executor);
     }
 
-    private void subscribe0(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
+    private void subscribe0(Subscriber<? super T> subscriber, Executor executor) {
         final SubscriberWrapper s = new SubscriberWrapper(this, subscriber, executor);
         if (!subscriberUpdater.compareAndSet(this, null, s)) {
             if (this.subscriber == ABORTED_SUBSCRIBER) {

@@ -96,6 +96,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -103,6 +104,8 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -190,6 +193,7 @@ public class HttpServerTest {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
+                    final boolean pooled = "pooled".equals(ctx.query());
 
                     res.write(HttpHeaders.of(HttpStatus.OK));
 
@@ -198,7 +202,16 @@ public class HttpServerTest {
                         final int finalI = i;
                         ctx.eventLoop().schedule(
                                 () -> {
-                                    res.write(HttpData.ofAscii(String.valueOf(finalI)));
+                                    final HttpData data;
+                                    if (pooled) {
+                                        final ByteBuf content = PooledByteBufAllocator.DEFAULT
+                                                                                      .buffer(1)
+                                                                                      .writeByte('0' + finalI);
+                                        data = new ByteBufHttpData(content, false);
+                                    } else {
+                                        data = HttpData.ofAscii(String.valueOf(finalI));
+                                    }
+                                    res.write(data);
                                     if (finalI == 9) {
                                         res.close();
                                     }
@@ -462,6 +475,25 @@ public class HttpServerTest {
     public void testTimeoutAfterPartialContent() throws Exception {
         serverRequestTimeoutMillis = 1000L;
         CompletableFuture<AggregatedHttpMessage> f = client().get("/content_delay/2000").aggregate();
+
+        // Because the service has written out the content partially, there's no way for the service
+        // to reply with '503 Service Unavailable', so it will just close the stream.
+        try {
+            f.get();
+            fail();
+        } catch (ExecutionException e) {
+            assertThat(e.getCause(), is(instanceOf(ClosedSessionException.class)));
+        }
+    }
+
+    /**
+     * Similar to {@link #testTimeoutAfterPartialContent()}, but tests the case where the service produces
+     * a pooled buffers.
+     */
+    @Test(timeout = 10000)
+    public void testTimeoutAfterPartialContentWithPooling() throws Exception {
+        serverRequestTimeoutMillis = 1000L;
+        CompletableFuture<AggregatedHttpMessage> f = client().get("/content_delay/2000?pooled").aggregate();
 
         // Because the service has written out the content partially, there's no way for the service
         // to reply with '503 Service Unavailable', so it will just close the stream.

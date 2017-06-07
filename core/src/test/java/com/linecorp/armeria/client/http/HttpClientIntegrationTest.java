@@ -74,7 +74,8 @@ import com.linecorp.armeria.server.http.encoding.HttpEncodingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.util.ReferenceCountUtil;
 
 public class HttpClientIntegrationTest {
 
@@ -137,12 +138,11 @@ public class HttpClientIntegrationTest {
 
                 @Override
                 public void onNext(HttpObject httpObject) {
-                    if (httpObject instanceof ByteBufHttpData) {
-                        ByteBuf buf = ((ByteBufHttpData) httpObject).buf();
+                    if (httpObject instanceof ByteBufHolder) {
                         try {
-                            decorated.write(HttpData.of(ByteBufUtil.getBytes(buf)));
+                            decorated.write(HttpData.of(((ByteBufHolder) httpObject).content()));
                         } finally {
-                            buf.release();
+                            ReferenceCountUtil.safeRelease(httpObject);
                         }
                     } else {
                         decorated.write(httpObject);
