@@ -24,12 +24,16 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * Handles a {@link Request} received by a {@link Server}.
  *
- * @param <I> the type of incoming {@link Request}
- * @param <O> the type of outgoing {@link Response}
+ * @param <I> the type of incoming {@link Request}. Must be {@link HttpRequest} or {@link RpcRequest}.
+ * @param <O> the type of outgoing {@link Response}. Must be {@link HttpResponse} or {@link RpcResponse}.
  */
 @FunctionalInterface
 public interface Service<I extends Request, O extends Response> {
@@ -106,7 +110,7 @@ public interface Service<I extends Request, O extends Response> {
     /**
      * Creates a new {@link Service} that decorates this {@link Service} with the specified {@code decorator}.
      */
-    default <T extends Service<? super I, ? extends O>,
+    default <T extends Service<I, O>,
              R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
     R decorate(Function<T, R> decorator) {
         @SuppressWarnings("unchecked")

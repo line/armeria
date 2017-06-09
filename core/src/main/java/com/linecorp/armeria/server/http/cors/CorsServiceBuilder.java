@@ -421,18 +421,17 @@ public final class CorsServiceBuilder {
      *
      * @return {@link CorsConfig} the configured CorsConfig instance.
      */
-    public <I extends HttpRequest, O extends HttpResponse>
-    CorsService<I, O> build(Service<? super I, ? extends O> delegate) {
-        return new CorsService<>(delegate, new CorsConfig(this));
+    public CorsService build(Service<HttpRequest, HttpResponse> delegate) {
+        return new CorsService(delegate, new CorsConfig(this));
     }
 
     /**
      * Creates a new decorator that decorates a {@link Service} with a new {@link CorsService}.
      */
     public <I extends HttpRequest, O extends HttpResponse>
-    Function<Service<? super I, ? extends O>, CorsService<I, O>> newDecorator() {
+    Function<Service<HttpRequest, HttpResponse>, CorsService> newDecorator() {
         final CorsConfig config = new CorsConfig(this);
-        return s -> new CorsService<>(s, config);
+        return s -> new CorsService(s, config);
     }
 
     @Override

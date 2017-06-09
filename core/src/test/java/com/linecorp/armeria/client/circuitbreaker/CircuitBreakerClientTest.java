@@ -365,7 +365,7 @@ public class CircuitBreakerClientTest {
         assertThat(future1.cause(), is(not(instanceOf(FailFastException.class))));
     }
 
-    private static void invoke(Function<Client<? super RpcRequest, ? extends RpcResponse>,
+    private static void invoke(Function<Client<RpcRequest, RpcResponse>,
                                         ? extends Client<RpcRequest, RpcResponse>> decorator) throws Exception {
 
         @SuppressWarnings("unchecked")
@@ -377,7 +377,7 @@ public class CircuitBreakerClientTest {
 
     private static void failFastInvocation(
             CircuitBreaker circuitBreaker,
-            Function<Client<? super RpcRequest, ? extends RpcResponse>,
+            Function<Client<RpcRequest, RpcResponse>,
                      ? extends Client<RpcRequest, RpcResponse>> decorator, int count) throws Exception {
 
         for (int i = 0; i < count; i++) {

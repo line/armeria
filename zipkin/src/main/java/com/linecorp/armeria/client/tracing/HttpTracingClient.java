@@ -48,12 +48,11 @@ public class HttpTracingClient extends AbstractTracingClient<HttpRequest, HttpRe
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Brave} instance.
      */
-    public static Function<Client<? super HttpRequest, ? extends HttpResponse>, HttpTracingClient>
-    newDecorator(Brave brave) {
+    public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(Brave brave) {
         return delegate -> new HttpTracingClient(delegate, brave);
     }
 
-    HttpTracingClient(Client<? super HttpRequest, ? extends HttpResponse> delegate, Brave brave) {
+    HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Brave brave) {
         super(delegate, brave);
     }
 

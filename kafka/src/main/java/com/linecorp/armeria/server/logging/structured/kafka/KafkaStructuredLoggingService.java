@@ -85,7 +85,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
     public static <I extends Request, O extends Response, L>
-    Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, L>> newDecorator(
+    Function<Service<I, O>, StructuredLoggingService<I, O, L>> newDecorator(
             Producer<byte[], L> producer, String topic,
             StructuredLogBuilder<L> logBuilder, KeySelector<L> keySelector) {
         return service -> new KafkaStructuredLoggingService<>(
@@ -105,7 +105,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
     public static <I extends Request, O extends Response, L>
-    Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, L>> newDecorator(
+    Function<Service<I, O>, StructuredLoggingService<I, O, L>> newDecorator(
             Producer<byte[], L> producer, String topic,
             StructuredLogBuilder<L> logBuilder) {
         return newDecorator(producer, topic, logBuilder, null);
@@ -125,7 +125,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
     public static <I extends Request, O extends Response, L>
-    Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, L>> newDecorator(
+    Function<Service<I, O>, StructuredLoggingService<I, O, L>> newDecorator(
             String bootstrapServers, String topic,
             StructuredLogBuilder<L> logBuilder, KeySelector<L> keySelector) {
         Producer<byte[], L> producer = new KafkaProducer<>(newDefaultConfig(bootstrapServers));
@@ -147,7 +147,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
     public static <I extends Request, O extends Response, L>
-    Function<Service<? super I, ? extends O>, StructuredLoggingService<I, O, L>>
+    Function<Service<I, O>, StructuredLoggingService<I, O, L>>
     newDecorator(String bootstrapServers, String topic, StructuredLogBuilder<L> logBuilder) {
         return newDecorator(bootstrapServers, topic, logBuilder, null);
     }

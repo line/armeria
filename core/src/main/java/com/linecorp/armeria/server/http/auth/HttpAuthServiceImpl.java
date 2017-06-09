@@ -40,14 +40,14 @@ final class HttpAuthServiceImpl extends HttpAuthService {
 
     private final List<? extends Authorizer<HttpRequest>> authorizers;
 
-    HttpAuthServiceImpl(Service<? super HttpRequest, ? extends HttpResponse> delegate,
+    HttpAuthServiceImpl(Service<HttpRequest, HttpResponse> delegate,
                         Iterable<? extends Authorizer<HttpRequest>> authorizers) {
         super(delegate);
         this.authorizers = ImmutableList.copyOf(authorizers);
     }
 
     @Override
-    public CompletionStage<Boolean> authorize(HttpRequest req, ServiceRequestContext ctx) {
+    protected CompletionStage<Boolean> authorize(HttpRequest req, ServiceRequestContext ctx) {
         CompletableFuture<Boolean> result = CompletableFuture.completedFuture(false);
         for (Authorizer<HttpRequest> authorizer : authorizers) {
             result = result.exceptionally(t -> {

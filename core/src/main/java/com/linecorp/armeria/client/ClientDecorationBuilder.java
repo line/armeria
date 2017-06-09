@@ -25,6 +25,10 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.ClientDecoration.Entry;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * Creates a new {@link ClientDecoration} using the builder pattern.
@@ -44,13 +48,19 @@ public final class ClientDecorationBuilder {
      * @param <I> the {@link Request} type of the {@link Client} being decorated
      * @param <O> the {@link Response} type of the {@link Client} being decorated
      */
-    public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
-            I extends Request, O extends Response>
+    public <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
     ClientDecorationBuilder add(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
 
         requireNonNull(requestType, "requestType");
         requireNonNull(responseType, "responseType");
         requireNonNull(decorator, "decorator");
+
+        if (!(requestType == HttpRequest.class && responseType == HttpResponse.class ||
+              requestType == RpcRequest.class && responseType == RpcResponse.class)) {
+            throw new IllegalArgumentException(
+                    "requestType and responseType must be HttpRequest and HttpResponse or " +
+                    "RpcRequest and RpcResponse: " + requestType.getName() + " and " + responseType.getName());
+        }
 
         entries.add(new Entry<>(requestType, responseType, decorator));
         return this;

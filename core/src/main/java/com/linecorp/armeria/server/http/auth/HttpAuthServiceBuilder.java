@@ -57,7 +57,7 @@ public final class HttpAuthServiceBuilder {
      * Adds an HTTP basic {@link Authorizer}.
      */
     public HttpAuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer) {
-        this.authorizers.add(
+        authorizers.add(
                 tokenAuthorizer(AuthTokenExtractors.BASIC, requireNonNull(authorizer, "authorizer")));
         return this;
     }
@@ -66,7 +66,7 @@ public final class HttpAuthServiceBuilder {
      * Adds an OAuth1a {@link Authorizer}.
      */
     public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer) {
-        this.authorizers.add(
+        authorizers.add(
                 tokenAuthorizer(AuthTokenExtractors.OAUTH1A, requireNonNull(authorizer, "authorizer")));
         return this;
     }
@@ -75,7 +75,7 @@ public final class HttpAuthServiceBuilder {
      * Adds an OAuth2 {@link Authorizer}.
      */
     public HttpAuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer) {
-        this.authorizers.add(
+        authorizers.add(
                 tokenAuthorizer(AuthTokenExtractors.OAUTH2, requireNonNull(authorizer, "authorizer")));
         return this;
     }
@@ -84,7 +84,7 @@ public final class HttpAuthServiceBuilder {
      * Creates a new {@link HttpAuthService} instance with the given {@code delegate} and all of the
      * authorization {@link Authorizer}s.
      */
-    public HttpAuthService build(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+    public HttpAuthService build(Service<HttpRequest, HttpResponse> delegate) {
         return new HttpAuthServiceImpl(requireNonNull(delegate, "delegate"), authorizers);
     }
 
@@ -92,11 +92,11 @@ public final class HttpAuthServiceBuilder {
      * Creates a new {@link HttpAuthService} {@link Service} decorator that supports all of the given
      * authorization {@link Authorizer}s.
      */
-    public Function<Service<? super HttpRequest, ? extends HttpResponse>, HttpAuthService> newDecorator() {
+    public Function<Service<HttpRequest, HttpResponse>, HttpAuthService> newDecorator() {
         return HttpAuthService.newDecorator(authorizers);
     }
 
-    private <T> Authorizer<HttpRequest> tokenAuthorizer(
+    private static <T> Authorizer<HttpRequest> tokenAuthorizer(
             Function<HttpHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
         return (ctx, req) -> {
             T token = tokenExtractor.apply(req.headers());

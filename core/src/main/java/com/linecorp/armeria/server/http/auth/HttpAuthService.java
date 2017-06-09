@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.http.auth;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
@@ -49,8 +51,8 @@ public abstract class HttpAuthService extends SimpleDecoratingService<HttpReques
      *
      * @param authorizers a list of {@link Authorizer}s.
      */
-    public static Function<Service<? super HttpRequest, ? extends HttpResponse>,
-            HttpAuthService> newDecorator(Iterable<? extends Authorizer<HttpRequest>> authorizers) {
+    public static Function<Service<HttpRequest, HttpResponse>, HttpAuthService> newDecorator(
+            Iterable<? extends Authorizer<HttpRequest>> authorizers) {
         return service -> new HttpAuthServiceImpl(service, authorizers);
     }
 
@@ -60,15 +62,16 @@ public abstract class HttpAuthService extends SimpleDecoratingService<HttpReques
      *
      * @param authorizers the array of {@link Authorizer}s.
      */
-    public static Function<Service<? super HttpRequest, ? extends HttpResponse>,
-            HttpAuthService> newDecorator(Authorizer<HttpRequest>... authorizers) {
-        return newDecorator(ImmutableList.copyOf(authorizers));
+    @SafeVarargs
+    public static Function<Service<HttpRequest, HttpResponse>, HttpAuthService>
+    newDecorator(Authorizer<HttpRequest>... authorizers) {
+        return newDecorator(ImmutableList.copyOf(requireNonNull(authorizers, "authorizers")));
     }
 
     /**
      * Creates a new instance that provides HTTP authorization functionality to {@code delegate}.
      */
-    protected HttpAuthService(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+    protected HttpAuthService(Service<HttpRequest, HttpResponse> delegate) {
         super(delegate);
     }
 

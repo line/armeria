@@ -52,7 +52,7 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
      * @param circuitBreaker The {@link CircuitBreaker} instance to be used
      */
     public static <I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    Function<Client<I, O>, CircuitBreakerClient<I, O>>
     newDecorator(CircuitBreaker circuitBreaker) {
         return newDecorator((ctx, req) -> circuitBreaker);
     }
@@ -61,7 +61,7 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
      * Creates a new decorator with the specified {@link CircuitBreakerMapping}.
      */
     public static <I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    Function<Client<I, O>, CircuitBreakerClient<I, O>>
     newDecorator(CircuitBreakerMapping mapping) {
         return delegate -> new CircuitBreakerClient<>(delegate, mapping);
     }
@@ -72,7 +72,7 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
      * @param factory A function that takes a method name and creates a new {@link CircuitBreaker}.
      */
     public static <I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    Function<Client<I, O>, CircuitBreakerClient<I, O>>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory) {
         return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.METHOD, factory));
     }
@@ -83,7 +83,7 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
      * @param factory A function that takes a host name and creates a new {@link CircuitBreaker}.
      */
     public static <I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    Function<Client<I, O>, CircuitBreakerClient<I, O>>
     newPerHostDecorator(Function<String, CircuitBreaker> factory) {
         return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST, factory));
     }
@@ -94,7 +94,7 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
      * @param factory A function that takes a host+method name and creates a new {@link CircuitBreaker}.
      */
     public static <I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, CircuitBreakerClient<I, O>>
+    Function<Client<I, O>, CircuitBreakerClient<I, O>>
     newPerHostAndMethodDecorator(Function<String, CircuitBreaker> factory) {
         return newDecorator(new KeyedCircuitBreakerMapping<>(KeySelector.HOST_AND_METHOD, factory));
     }

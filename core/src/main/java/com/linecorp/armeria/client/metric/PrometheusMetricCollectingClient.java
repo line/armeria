@@ -51,7 +51,7 @@ public final class PrometheusMetricCollectingClient<T extends MetricLabel<T>,
      * @return A client decorator function
      */
     public static <T extends MetricLabel<T>, I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, PrometheusMetricCollectingClient<T, I, O>>
+    Function<Client<I, O>, PrometheusMetricCollectingClient<T, I, O>>
     newDecorator(CollectorRegistry collectorRegistry,
                  T[] metricLabels,
                  Function<RequestLog, Map<T, String>> labelingFunction) {
@@ -73,7 +73,7 @@ public final class PrometheusMetricCollectingClient<T extends MetricLabel<T>,
      * @return A client decorator function
      */
     public static <T extends MetricLabel<T>, I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, PrometheusMetricCollectingClient<T, I, O>>
+    Function<Client<I, O>, PrometheusMetricCollectingClient<T, I, O>>
     newDecorator(CollectorRegistry collectorRegistry,
                  Iterable<T> metricLabels,
                  Function<RequestLog, Map<T, String>> labelingFunction) {

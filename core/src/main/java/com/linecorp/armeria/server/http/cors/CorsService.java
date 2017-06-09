@@ -28,8 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.FilteredHttpResponse;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
@@ -40,9 +38,9 @@ import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.http.HttpStatusClass;
-import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingService;
 
 import io.netty.util.AsciiString;
 
@@ -51,13 +49,9 @@ import io.netty.util.AsciiString;
  * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
  * (CORS)</a> support.
  *
- * @param <I> the {@link Request} type of the {@link Service} being decorated
- * @param <O> the {@link Response} type of the {@link Service} being decorated
- *
  * @see CorsServiceBuilder
  */
-public final class CorsService<I extends HttpRequest, O extends HttpResponse>
-        extends DecoratingService<I, O, I, HttpResponse> {
+public final class CorsService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(CorsService.class);
 
@@ -69,7 +63,7 @@ public final class CorsService<I extends HttpRequest, O extends HttpResponse>
     /**
      * Creates a new {@link CorsService} that decorates the specified {@code delegate} to add CORS support.
      */
-    public CorsService(Service<? super I, ? extends O> delegate, CorsConfig config) {
+    public CorsService(Service<HttpRequest, HttpResponse> delegate, CorsConfig config) {
         super(delegate);
         this.config = requireNonNull(config, "config");
     }
@@ -82,7 +76,7 @@ public final class CorsService<I extends HttpRequest, O extends HttpResponse>
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, I req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         // check if CORS preflight must be returned, or if
         // we need to forbid access because origin could not be validated
         if (config.isEnabled()) {

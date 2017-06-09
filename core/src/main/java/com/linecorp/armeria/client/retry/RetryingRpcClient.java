@@ -39,7 +39,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
-    public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
+    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy) {
         return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy,
                                                  Backoff::withoutDelay);
@@ -48,7 +48,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
-    public static Function<Client<? super RpcRequest, ? extends RpcResponse>, RetryingRpcClient>
+    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy,
                  Supplier<? extends Backoff> backoffSupplier) {
         return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy, backoffSupplier);
@@ -57,7 +57,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    public RetryingRpcClient(Client<? super RpcRequest, ? extends RpcResponse> delegate,
+    public RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
                              RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy,
                              Supplier<? extends Backoff> backoffSupplier) {
         super(delegate, retryStrategy, backoffSupplier);
