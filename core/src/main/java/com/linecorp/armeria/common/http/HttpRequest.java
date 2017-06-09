@@ -16,12 +16,20 @@
 
 package com.linecorp.armeria.common.http;
 
+import static com.linecorp.armeria.common.http.HttpHeaderNames.CONTENT_LENGTH;
+import static com.linecorp.armeria.common.http.HttpHeaderNames.CONTENT_TYPE;
+import static java.util.Objects.requireNonNull;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Formatter;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -33,21 +41,180 @@ import com.linecorp.armeria.common.stream.StreamMessage;
  */
 public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
+    // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
+    //       AggregatedHttpMessage for consistency.
+
+    /**
+     * Creates a new HTTP request with empty content and closes the stream.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     */
+    static HttpRequest of(HttpMethod method, String path) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        return of(HttpHeaders.of(method, path));
+    }
+
+    /**
+     * Creates a new HTTP request and closes the stream.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     */
+    static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String content) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(content, "content");
+        requireNonNull(mediaType, "mediaType");
+        return of(method, path,
+                  mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
+    }
+
+    /**
+     * Creates a new HTTP request and closes the stream. The content of the request is formatted by
+     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param format {@linkplain Formatter the format string} of the request content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String format, Object... args) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+        return of(method,
+                  path,
+                  mediaType,
+                  String.format(Locale.ENGLISH, format, args).getBytes(
+                          mediaType.charset().orElse(StandardCharsets.UTF_8)));
+    }
+
+    /**
+     * Creates a new HTTP request and closes the stream.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     */
+    static HttpRequest of(HttpMethod method, String path, MediaType mediaType, byte[] content) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(method, path, mediaType, HttpData.of(content));
+    }
+
+    /**
+     * Creates a new HTTP request and closes the stream.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     * @param offset the start offset of {@code content}
+     * @param length the length of {@code content}
+     */
+    static HttpRequest of(
+            HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(method, path, mediaType, HttpData.of(content, offset, length));
+    }
+
+    /**
+     * Creates a new HTTP request and closes the stream.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     */
+    static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(method, path, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+    }
+
+    /**
+     * Creates a new HTTP request and closes the stream.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     * @param trailingHeaders the trailing HTTP headers
+     */
+    static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content,
+                          HttpHeaders trailingHeaders) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
+
+        return of(HttpHeaders.of(method, path).setObject(CONTENT_TYPE, mediaType), content, trailingHeaders);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} with empty content and closes the stream.
+     */
+    static HttpRequest of(HttpHeaders headers) {
+        requireNonNull(headers, "headers");
+        return of(headers, HttpData.EMPTY_DATA);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} and closes the stream.
+     */
+    static HttpRequest of(HttpHeaders headers, HttpData content) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
+        return of(headers, content, HttpHeaders.EMPTY_HEADERS);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} and closes the stream.
+     */
+    static HttpRequest of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
+
+        if (content.isEmpty()) {
+            headers.remove(CONTENT_LENGTH);
+        } else {
+            headers.setInt(CONTENT_LENGTH, content.length());
+        }
+
+        final DefaultHttpRequest req = new DefaultHttpRequest(headers);
+        if (!content.isEmpty()) {
+            req.write(content);
+        }
+        if (!trailingHeaders.isEmpty()) {
+            req.write(trailingHeaders);
+        }
+        req.close();
+        return req;
+    }
+
     /**
      * Creates a new instance from an existing {@link HttpHeaders} and {@link Publisher}.
      */
     static HttpRequest of(HttpHeaders headers, Publisher<? extends HttpObject> publisher) {
+        requireNonNull(publisher, "publisher");
         return new PublisherBasedHttpRequest(headers, true, publisher);
-    }
-
-    /**
-     * Creates a new {@link HttpRequest} with empty content.
-     */
-    static HttpRequest of(HttpHeaders headers) {
-        // TODO(trustin): Use no-op Queue implementation for QueueBasedPublisher?
-        final DefaultHttpRequest req = new DefaultHttpRequest(headers);
-        req.close();
-        return req;
     }
 
     /**

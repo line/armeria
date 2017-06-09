@@ -30,7 +30,6 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -69,9 +68,7 @@ public class HttpTracingClientTest extends HttpTracingTestBase {
     }
 
     private static HttpRequest newRequest() {
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.POST, "/hello");
-        req.close();
-        return req;
+        return HttpRequest.of(HttpMethod.POST, "/hello");
     }
 
     private static ClientRequestContext newClientContext(HttpRequest req) {

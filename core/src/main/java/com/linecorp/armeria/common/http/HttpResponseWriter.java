@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.http;
 
 import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.isContentAlwaysEmpty;
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -33,7 +34,7 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
     // TODO(trustin): Add lots of convenience methods for easier response construction.
 
     // Note: Ensure we provide the same set of `respond()` methods with the `of()` methods of
-    //       HttpResponse for consistency.
+    //       HttpResponse and AggregatedHttpMessage for consistency.
 
     /**
      * Writes the HTTP response of the specified {@code statusCode} and closes the stream if the
@@ -60,23 +61,21 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
     }
 
     /**
-     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
      */
     default void respond(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(status, "status");
-        requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
         respond(status,
                 mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
     }
 
     /**
-     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream.
      * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
      * {@linkplain Locale#ENGLISH English locale}.
      *
@@ -96,20 +95,20 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
     }
 
     /**
-     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
      */
     default void respond(HttpStatus status, MediaType mediaType, byte[] content) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         respond(status, mediaType, HttpData.of(content));
     }
 
     /**
-     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -117,37 +116,58 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
      * @param length the length of {@code content}
      */
     default void respond(HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         respond(status, mediaType, HttpData.of(content, offset, length));
     }
 
     /**
-     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
      */
     default void respond(HttpStatus status, MediaType mediaType, HttpData content) {
         requireNonNull(status, "status");
-        requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        respond(status, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+    }
 
-        final int length = content.length();
+
+    /**
+     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     * @param trailingHeaders the trailing HTTP headers
+     */
+    default void respond(HttpStatus status, MediaType mediaType, HttpData content,
+                         HttpHeaders trailingHeaders) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
+
         final HttpHeaders headers =
                 HttpHeaders.of(status)
-                           .set(HttpHeaderNames.CONTENT_TYPE, mediaType.toString())
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, length);
+                           .setObject(HttpHeaderNames.CONTENT_TYPE, mediaType)
+                           .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
 
-        if (isContentAlwaysEmpty(status)) {
-            if (length != 0) {
-                throw new IllegalArgumentException(
-                        "A " + status + " response must have empty content: " + length + " byte(s)");
-            }
+        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
             write(headers);
         } else {
             write(headers);
-            write(content);
+            // Add content if not empty.
+            if (!content.isEmpty()) {
+                write(content);
+            }
+        }
+
+        // Add trailing headers if not empty.
+        if (!trailingHeaders.isEmpty()) {
+            write(trailingHeaders);
         }
 
         close();
@@ -157,34 +177,24 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
      * Writes the specified HTTP response and closes the stream.
      */
     default void respond(AggregatedHttpMessage res) {
+        requireNonNull(res, "res");
+
         final HttpHeaders headers = res.headers();
-        write(headers);
-
+        final HttpStatus status = headers.status();
         final HttpData content = res.content();
-        if (isContentAlwaysEmpty(headers.status())) {
+        final HttpHeaders trailingHeaders = res.trailingHeaders();
+
+        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+            write(headers);
+        } else {
+            write(headers);
+            // Add content if not empty.
             if (!content.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "A " + headers.status() + " response must have empty content: " +
-                        content.length() + " byte(s)");
+                write(content);
             }
-
-            if (!res.trailingHeaders().isEmpty()) {
-                throw new IllegalArgumentException(
-                        "A " + headers.status() + " response must not have trailing headers: " +
-                        res.trailingHeaders());
-            }
-
-            close();
-            return;
-        }
-
-        // Add content if not empty.
-        if (!content.isEmpty()) {
-            write(content);
         }
 
         // Add trailing headers if not empty.
-        final HttpHeaders trailingHeaders = res.trailingHeaders();
         if (!trailingHeaders.isEmpty()) {
             write(trailingHeaders);
         }

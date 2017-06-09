@@ -44,6 +44,7 @@ import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
+import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
@@ -282,6 +283,31 @@ public final class ArmeriaHttpUtil {
         }
 
         return false;
+    }
+
+    /**
+     * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
+     * be always empty (1xx, 204, 205 and 304 responses.)
+     *
+     * @throws IllegalArgumentException if the specified {@code content} or {@code trailingHeaders} are
+     *                                  non-empty when the content is always empty
+     */
+    public static boolean isContentAlwaysEmptyWithValidation(
+            HttpStatus status, HttpData content, HttpHeaders trailingHeaders) {
+        if (!isContentAlwaysEmpty(status)) {
+            return false;
+        }
+
+        if (!content.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "A " + status + " response must have empty content: " + content.length() + " byte(s)");
+        }
+        if (!trailingHeaders.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "A " + status + " response must not have trailing headers: " + trailingHeaders);
+        }
+
+        return true;
     }
 
     /**

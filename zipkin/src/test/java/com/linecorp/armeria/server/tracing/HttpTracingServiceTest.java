@@ -27,9 +27,9 @@ import org.junit.Test;
 import com.github.kristofa.brave.Brave;
 import com.github.kristofa.brave.TraceData;
 
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.tracing.HttpTracingTestBase;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -41,9 +41,8 @@ public class HttpTracingServiceTest extends HttpTracingTestBase {
 
     @Test
     public void testGetTraceData() {
-        final DefaultHttpRequest httpRequest =
-                new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/").add(traceHeaders()));
-        httpRequest.close();
+        final HttpRequest httpRequest = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
+                                                                  .add(traceHeaders()));
 
         ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         when(ctx.request()).thenReturn(httpRequest);
@@ -55,10 +54,7 @@ public class HttpTracingServiceTest extends HttpTracingTestBase {
 
     @Test
     public void testGetTraceDataIfRequestDoesNotContainTraceData() {
-        final DefaultHttpRequest httpRequest =
-                new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/").add(
-                        emptyHttpHeaders()));
-        httpRequest.close();
+        final HttpRequest httpRequest = HttpRequest.of(HttpMethod.GET, "/");
 
         ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         when(ctx.request()).thenReturn(httpRequest);
@@ -76,9 +72,8 @@ public class HttpTracingServiceTest extends HttpTracingTestBase {
     }
 
     private static void testGetTraceDataIfRequestIsNotSampled(HttpHeaders headers) {
-        final DefaultHttpRequest httpRequest =
-                new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/").add(headers));
-        httpRequest.close();
+        final HttpRequest httpRequest = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
+                                                                  .add(headers));
 
         ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         when(ctx.request()).thenReturn(httpRequest);
