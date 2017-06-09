@@ -42,8 +42,7 @@ public final class ClientDecoration {
      * @param <T> the type of the {@link Client} being decorated
      * @param <R> the type of the {@link Client} produced by the {@code decorator}
      */
-    public static <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
-                   I extends Request, O extends Response>
+    public static <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
     ClientDecoration of(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
         return new ClientDecorationBuilder().add(requestType, responseType, decorator).build();
     }

@@ -64,7 +64,7 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
      * @param metricNameFunc the function that transforms a {@link RequestLog} into a metric name
      */
     public static <I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, DropwizardMetricCollectingClient<I, O>> newDecorator(
+    Function<Client<I, O>, DropwizardMetricCollectingClient<I, O>> newDecorator(
             MetricRegistry metricRegistry,
             Function<? super RequestLog, String> metricNameFunc) {
 
@@ -81,7 +81,7 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
      * @param metricNamePrefix the prefix of the names of the metrics created by the returned decorator.
      */
     public static <I extends Request, O extends Response>
-    Function<Client<? super I, ? extends O>, DropwizardMetricCollectingClient<I, O>> newDecorator(
+    Function<Client<I, O>, DropwizardMetricCollectingClient<I, O>> newDecorator(
             MetricRegistry metricRegistry, String metricNamePrefix) {
 
         requireNonNull(metricNamePrefix, "metricNamePrefix");

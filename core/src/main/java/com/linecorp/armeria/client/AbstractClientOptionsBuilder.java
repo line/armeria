@@ -172,8 +172,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
      * @param <I> the {@link Request} type of the {@link Client} being decorated
      * @param <O> the {@link Response} type of the {@link Client} being decorated
      */
-    public <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
-            I extends Request, O extends Response>
+    public <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
     B decorator(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
         decoration.add(requestType, responseType, decorator);
         return self();

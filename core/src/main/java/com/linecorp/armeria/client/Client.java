@@ -18,6 +18,10 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * Sends a {@link Request} to a remote {@link Endpoint}.
@@ -27,8 +31,8 @@ import com.linecorp.armeria.common.Response;
  * a {@link Request}. A user is supposed to make his or her {@link Request} via the object returned by
  * a {@link ClientBuilder} or {@link Clients}, which usually does not implement this interface.
  *
- * @param <I> the type of the outgoing {@link Request}
- * @param <O> the type of the incoming {@link Response}
+ * @param <I> the type of outgoing {@link Response}. Must be {@link HttpResponse} or {@link RpcResponse}.
+ * @param <O> the type of incoming {@link Request}. Must be {@link HttpRequest} or {@link RpcRequest}.
  *
  * @see UserClient
  */

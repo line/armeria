@@ -46,12 +46,11 @@ public class HttpTracingService extends AbstractTracingService<HttpRequest, Http
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Brave} instance.
      */
-    public static Function<Service<? super HttpRequest, ? extends HttpResponse>,
-                           HttpTracingService> newDecorator(Brave brave) {
+    public static Function<Service<HttpRequest, HttpResponse>, HttpTracingService> newDecorator(Brave brave) {
         return service -> new HttpTracingService(service, brave);
     }
 
-    HttpTracingService(Service<? super HttpRequest, ? extends HttpResponse> delegate, Brave brave) {
+    HttpTracingService(Service<HttpRequest, HttpResponse> delegate, Brave brave) {
         super(delegate, brave);
     }
 

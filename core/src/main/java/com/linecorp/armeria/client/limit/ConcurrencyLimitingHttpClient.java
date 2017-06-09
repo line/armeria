@@ -36,13 +36,12 @@ import com.linecorp.armeria.common.http.HttpResponse;
  * }</pre>
  *
  */
-public final class ConcurrencyLimitingHttpClient
-        extends ConcurrencyLimitingClient<HttpRequest, HttpResponse> {
+public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClient<HttpRequest, HttpResponse> {
 
     /**
      * Creates a new {@link Client} decorator that limits the concurrent number of active HTTP requests.
      */
-    public static Function<Client<? super HttpRequest, ? extends HttpResponse>, ConcurrencyLimitingHttpClient>
+    public static Function<Client<HttpRequest, HttpResponse>, ConcurrencyLimitingHttpClient>
     newDecorator(int maxConcurrency) {
         validateMaxConcurrency(maxConcurrency);
         return delegate -> new ConcurrencyLimitingHttpClient(delegate, maxConcurrency);
@@ -51,19 +50,18 @@ public final class ConcurrencyLimitingHttpClient
     /**
      * Creates a new {@link Client} decorator that limits the concurrent number of active HTTP requests.
      */
-    public static Function<Client<? super HttpRequest, ? extends HttpResponse>, ConcurrencyLimitingHttpClient>
-    newDecorator(int maxConcurrency, long timeout, TimeUnit unit) {
+    public static Function<Client<HttpRequest, HttpResponse>, ConcurrencyLimitingHttpClient> newDecorator(
+            int maxConcurrency, long timeout, TimeUnit unit) {
         validateAll(maxConcurrency, timeout, unit);
         return delegate -> new ConcurrencyLimitingHttpClient(delegate, maxConcurrency, timeout, unit);
     }
 
 
-    private ConcurrencyLimitingHttpClient(Client<? super HttpRequest, ? extends HttpResponse> delegate,
-                                          int maxConcurrency) {
+    private ConcurrencyLimitingHttpClient(Client<HttpRequest, HttpResponse> delegate, int maxConcurrency) {
         super(delegate, maxConcurrency);
     }
 
-    private ConcurrencyLimitingHttpClient(Client<? super HttpRequest, ? extends HttpResponse> delegate,
+    private ConcurrencyLimitingHttpClient(Client<HttpRequest, HttpResponse> delegate,
                                           int maxConcurrency, long timeout, TimeUnit unit) {
         super(delegate, maxConcurrency, timeout, unit);
     }
