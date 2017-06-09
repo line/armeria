@@ -94,8 +94,8 @@ import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
-import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.InboundTrafficController;
+import com.linecorp.armeria.internal.TransportType;
 import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -106,13 +106,12 @@ import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 @RunWith(Parameterized.class)
@@ -126,8 +125,8 @@ public class HttpServerTest {
                     SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE),
                     SessionOption.IDLE_TIMEOUT.newValue(Duration.ofSeconds(3)),
                     SessionOption.EVENT_LOOP_GROUP.newValue(
-                            NativeLibraries.isEpollAvailable() ? new EpollEventLoopGroup(1)
-                                                               : new NioEventLoopGroup(1))));
+                            TransportType.detectTransportType().newEventLoopGroup(
+                                    1, type -> new DefaultThreadFactory(type.name())))));
 
     private static final long MAX_CONTENT_LENGTH = 65536;
     // Stream as much as twice of the heap. Stream less to avoid OOME when leak detection is enabled.
