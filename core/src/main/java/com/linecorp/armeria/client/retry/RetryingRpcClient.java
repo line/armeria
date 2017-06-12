@@ -41,8 +41,7 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy) {
-        return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy,
-                                                 Backoff::withoutDelay);
+        return newDecorator(retryRequestStrategy, Backoff::withoutDelay);
     }
 
     /**
@@ -55,12 +54,39 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     }
 
     /**
+     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+     */
+    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
+    newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy, int defaultMaxAttempts) {
+        return newDecorator(retryRequestStrategy, Backoff::withoutDelay, defaultMaxAttempts);
+    }
+
+    /**
+     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+     */
+    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
+    newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy,
+                 Supplier<? extends Backoff> backoffSupplier, int defaultMaxAttempts) {
+        return delegate ->
+                new RetryingRpcClient(delegate, retryRequestStrategy, backoffSupplier, defaultMaxAttempts);
+    }
+
+    /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     public RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
                              RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy,
                              Supplier<? extends Backoff> backoffSupplier) {
         super(delegate, retryStrategy, backoffSupplier);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     */
+    public RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
+                             RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy,
+                             Supplier<? extends Backoff> backoffSupplier, int defaultMaxAttempts) {
+        super(delegate, retryStrategy, backoffSupplier, defaultMaxAttempts);
     }
 
     @Override

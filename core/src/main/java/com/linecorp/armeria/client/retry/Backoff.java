@@ -16,7 +16,9 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.client.retry.FixedBackoff.NO_DELAY;
+import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
@@ -66,6 +68,21 @@ public interface Backoff {
      * @throws IllegalArgumentException if {@code numAttemptsSoFar} is equal to or less than {@code 0}
      */
     long nextIntervalMillis(int numAttemptsSoFar);
+
+
+    /**
+     * Undecorates this {@link Backoff} to find the {@link Backoff} which is an instance of the specified
+     * {@code backoffType}.
+     *
+     * @param backoffType the type of the desired {@link Backoff}
+     * @return the {@link Backoff} which is an instance of {@code backoffType} if this {@link Backoff}
+     *         decorated such a {@link Backoff}. {@link Optional#empty()} otherwise.
+     */
+    default <T> Optional<T> as(Class<T> backoffType) {
+        requireNonNull(backoffType, "backoffType");
+        return backoffType.isInstance(this) ? Optional.of(backoffType.cast(this))
+                                            : Optional.empty();
+    }
 
     /**
      * Returns a {@link Backoff} that provides an interval that increases using
