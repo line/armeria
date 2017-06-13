@@ -17,14 +17,20 @@
 package com.linecorp.armeria.common.http;
 
 import static com.linecorp.armeria.common.http.HttpHeaderNames.CONTENT_LENGTH;
+import static com.linecorp.armeria.common.http.HttpHeaderNames.CONTENT_TYPE;
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.isContentAlwaysEmpty;
+import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Formatter;
 import java.util.List;
+import java.util.Locale;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
+import com.linecorp.armeria.common.MediaType;
 
 /**
  * A complete HTTP message whose content is readily available as a single {@link HttpData}. It can be an
@@ -33,6 +39,9 @@ import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
  */
 public interface AggregatedHttpMessage {
 
+    // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
+    //       HttpRequest for consistency.
+
     /**
      * Creates a new HTTP request with empty content.
      *
@@ -40,6 +49,8 @@ public interface AggregatedHttpMessage {
      * @param path the path of the request
      */
     static AggregatedHttpMessage of(HttpMethod method, String path) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
         return of(HttpHeaders.of(method, path));
     }
 
@@ -48,10 +59,40 @@ public interface AggregatedHttpMessage {
      *
      * @param method the HTTP method of the request
      * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
      */
-    static AggregatedHttpMessage of(HttpMethod method, String path, HttpData content) {
-        return of(HttpHeaders.of(method, path), content);
+    static AggregatedHttpMessage of(HttpMethod method, String path, MediaType mediaType, String content) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(content, "content");
+        requireNonNull(mediaType, "mediaType");
+        return of(method, path,
+                  mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
+    }
+
+    /**
+     * Creates a new HTTP request. The content of the request is formatted by
+     * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param format {@linkplain Formatter the format string} of the request content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    static AggregatedHttpMessage of(HttpMethod method, String path, MediaType mediaType,
+                                    String format, Object... args) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+        return of(method,
+                  path,
+                  mediaType,
+                  String.format(Locale.ENGLISH, format, args).getBytes(
+                          mediaType.charset().orElse(StandardCharsets.UTF_8)));
     }
 
     /**
@@ -59,16 +100,76 @@ public interface AggregatedHttpMessage {
      *
      * @param method the HTTP method of the request
      * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
-     * @param trailingHeaders the trailing HTTP headers
      */
-    static AggregatedHttpMessage of(HttpMethod method, String path,
-                                    HttpData content, HttpHeaders trailingHeaders) {
-        return of(HttpHeaders.of(method, path), content, trailingHeaders);
+    static AggregatedHttpMessage of(HttpMethod method, String path, MediaType mediaType, byte[] content) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(method, path, mediaType, HttpData.of(content));
     }
 
     /**
-     * Creates a new HTTP response with empty content.
+     * Creates a new HTTP request.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     * @param offset the start offset of {@code content}
+     * @param length the length of {@code content}
+     */
+    static AggregatedHttpMessage of(
+            HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(method, path, mediaType, HttpData.of(content, offset, length));
+    }
+
+    /**
+     * Creates a new HTTP request.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     */
+    static AggregatedHttpMessage of(HttpMethod method, String path, MediaType mediaType, HttpData content) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(method, path, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+    }
+
+    /**
+     * Creates a new HTTP request.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param mediaType the {@link MediaType} of the request content
+     * @param content the content of the request
+     * @param trailingHeaders the trailing HTTP headers
+     */
+    static AggregatedHttpMessage of(HttpMethod method, String path, MediaType mediaType,
+                                    HttpData content, HttpHeaders trailingHeaders) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
+        return of(HttpHeaders.of(method, path).setObject(CONTENT_TYPE, mediaType), content, trailingHeaders);
+    }
+
+    // Note: Ensure we provide the same set of `of()` methods with the `of()` and `respond()` methods of
+    //       HttpResponse and HttpResponseWriter for consistency.
+
+    /**
+     * Creates a new HTTP response.
      *
      * @param statusCode the HTTP status code
      */
@@ -77,33 +178,115 @@ public interface AggregatedHttpMessage {
     }
 
     /**
-     * Creates a new HTTP response with empty content.
+     * Creates a new HTTP response.
      *
      * @param status the HTTP status
      */
     static AggregatedHttpMessage of(HttpStatus status) {
-        return of(HttpHeaders.of(status));
+        requireNonNull(status, "status");
+        if (isContentAlwaysEmpty(status)) {
+            return of(HttpHeaders.of(status));
+        } else {
+            return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
+        }
     }
 
     /**
-     * Creates a new HTTP response.
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
-     * @param status the HTTP status
-     * @param content the content of the HTTP response
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
      */
-    static AggregatedHttpMessage of(HttpStatus status, HttpData content) {
-        return of(HttpHeaders.of(status), content);
+    static AggregatedHttpMessage of(HttpStatus status, MediaType mediaType, String content) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(status,
+                  mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
     }
 
     /**
-     * Creates a new HTTP response.
+     * Creates a new HTTP response of the specified {@link HttpStatus}. The content of the response is
+     * formatted by {@link String#format(Locale, String, Object...)} with
+     * {@linkplain Locale#ENGLISH English locale}.
      *
-     * @param status the HTTP status
-     * @param content the content of the HTTP response
+     * @param mediaType the {@link MediaType} of the response content
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    static AggregatedHttpMessage of(HttpStatus status, MediaType mediaType, String format, Object... args) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+        return of(status,
+                  mediaType,
+                  String.format(Locale.ENGLISH, format, args).getBytes(
+                          mediaType.charset().orElse(StandardCharsets.UTF_8)));
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
+    static AggregatedHttpMessage of(HttpStatus status, MediaType mediaType, byte[] content) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(status, mediaType, HttpData.of(content));
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     * @param offset the start offset of {@code content}
+     * @param length the length of {@code content}
+     */
+    static AggregatedHttpMessage of(
+            HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(status, mediaType, HttpData.of(content, offset, length));
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     */
+    static AggregatedHttpMessage of(HttpStatus status, MediaType mediaType, HttpData content) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        return of(status, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+    }
+
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
      * @param trailingHeaders the trailing HTTP headers
      */
-    static AggregatedHttpMessage of(HttpStatus status, HttpData content, HttpHeaders trailingHeaders) {
-        return of(HttpHeaders.of(status), content, trailingHeaders);
+    static AggregatedHttpMessage of(HttpStatus status, MediaType mediaType, HttpData content,
+                                    HttpHeaders trailingHeaders) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
+
+        final HttpHeaders headers =
+                HttpHeaders.of(status)
+                           .setObject(CONTENT_TYPE, mediaType)
+                           .setInt(CONTENT_LENGTH, content.length());
+
+        return of(headers, content, trailingHeaders);
     }
 
     /**
@@ -112,6 +295,7 @@ public interface AggregatedHttpMessage {
      * @param headers the HTTP headers
      */
     static AggregatedHttpMessage of(HttpHeaders headers) {
+        requireNonNull(headers, "headers");
         return of(headers, HttpData.EMPTY_DATA, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -122,6 +306,8 @@ public interface AggregatedHttpMessage {
      * @param content the content of the HTTP message
      */
     static AggregatedHttpMessage of(HttpHeaders headers, HttpData content) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
         return of(headers, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -133,6 +319,9 @@ public interface AggregatedHttpMessage {
      * @param trailingHeaders the trailing HTTP headers
      */
     static AggregatedHttpMessage of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
         return of(Collections.emptyList(), headers, content, trailingHeaders);
     }
 
@@ -155,9 +344,10 @@ public interface AggregatedHttpMessage {
         // Set the 'content-length' header if possible.
         final HttpStatus status = headers.status();
         if (status != null) { // Response
-            // But do not overwrite the 'content-length' header because a response to a HEAD request
-            // will have no content even if it has non-zero content-length header.
-            if (!ArmeriaHttpUtil.isContentAlwaysEmpty(status) && !headers.contains(CONTENT_LENGTH)) {
+            if (!isContentAlwaysEmptyWithValidation(status, content, trailingHeaders) &&
+                !headers.contains(CONTENT_LENGTH)) {
+                // But do not overwrite the 'content-length' header because a response to a HEAD request
+                // will have no content even if it has non-zero content-length header.
                 headers.setInt(CONTENT_LENGTH, content.length());
             }
         } else { // Request

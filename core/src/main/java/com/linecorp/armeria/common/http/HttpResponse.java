@@ -35,8 +35,8 @@ import com.linecorp.armeria.common.stream.StreamMessage;
  */
 public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
-    // Note: Ensure we provide the same set of `of()` methods with the `respond()` methods of
-    //       HttpResponseWriter for consistency.
+    // Note: Ensure we provide the same set of `of()` methods with the `of()` and `respond()` methods of
+    //       HttpResponseWriter and AggregatedHttpMessage for consistency.
 
     /**
      * Creates a new HTTP response of the specified {@code statusCode} and closes the stream if the
@@ -59,8 +59,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -72,8 +71,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
      * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
      * {@linkplain Locale#ENGLISH English locale}.
      *
@@ -88,8 +86,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -98,12 +95,10 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final DefaultHttpResponse res = new DefaultHttpResponse();
         res.respond(status, mediaType, content);
         return res;
-
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -118,8 +113,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -128,7 +122,20 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final DefaultHttpResponse res = new DefaultHttpResponse();
         res.respond(status, mediaType, content);
         return res;
+    }
 
+    /**
+     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param content the content of the response
+     * @param trailingHeaders the trailing HTTP headers
+     */
+    static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
+                           HttpHeaders trailingHeaders) {
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        res.respond(status, mediaType, content, trailingHeaders);
+        return res;
     }
 
     /**

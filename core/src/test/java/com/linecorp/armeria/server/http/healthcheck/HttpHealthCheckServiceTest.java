@@ -36,9 +36,8 @@ import org.mockito.junit.MockitoRule;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.server.Server;
@@ -79,12 +78,11 @@ public class HttpHealthCheckServiceTest {
         when(health2.isHealthy()).thenReturn(true);
         when(health3.isHealthy()).thenReturn(true);
 
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/"));
-        req.close();
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
 
         assertEquals(HttpStatus.OK, res.status());
-        assertEquals("ok", res.content().toStringAscii());
+        assertEquals("ok", res.content().toStringUtf8());
     }
 
     @Test
@@ -107,12 +105,11 @@ public class HttpHealthCheckServiceTest {
     }
 
     private void assertNotOk() throws Exception {
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/"));
-        req.close();
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, res.status());
-        assertEquals("not ok", res.content().toStringAscii());
+        assertEquals("not ok", res.content().toStringUtf8());
     }
 
     @Test
@@ -133,7 +130,10 @@ public class HttpHealthCheckServiceTest {
 
                 // Should not be chunked.
                 assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo(
-                        "HTTP/1.1 200 OK\r\ncontent-length: 2\r\n\r\nok");
+                        "HTTP/1.1 200 OK\r\n" +
+                        "content-type: text/plain; charset=utf-8\r\n" +
+                        "content-length: 2\r\n\r\n" +
+                        "ok");
             }
         } finally {
             server.stop();
@@ -158,7 +158,9 @@ public class HttpHealthCheckServiceTest {
 
                 // Should neither be chunked nor have content.
                 assertThat(new String(ByteStreams.toByteArray(in))).isEqualTo(
-                        "HTTP/1.1 200 OK\r\ncontent-length: 2\r\n\r\n");
+                        "HTTP/1.1 200 OK\r\n" +
+                        "content-type: text/plain; charset=utf-8\r\n" +
+                        "content-length: 2\r\n\r\n");
             }
         } finally {
             server.stop();

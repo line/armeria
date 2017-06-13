@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.common.http;
 
+import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
+import static com.linecorp.armeria.common.http.HttpHeaderNames.CONTENT_LENGTH;
+import static com.linecorp.armeria.common.http.HttpHeaderNames.CONTENT_MD5;
+import static com.linecorp.armeria.common.http.HttpHeaderNames.CONTENT_TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -37,13 +41,14 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpRequest() throws Exception {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
-                HttpMethod.POST, "/foo", HttpData.of(StandardCharsets.US_ASCII, "bar"));
+                HttpMethod.POST, "/foo", PLAIN_TEXT_UTF_8, "bar");
         final HttpRequest req = aReq.toHttpRequest();
         final List<HttpObject> unaggregated = unaggregate(req);
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.POST, "/foo")
-                                                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 3));
-        assertThat(unaggregated).containsExactly(HttpData.of(StandardCharsets.US_ASCII, "bar"));
+                                                       .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                                                       .setInt(CONTENT_LENGTH, 3));
+        assertThat(unaggregated).containsExactly(HttpData.of(StandardCharsets.UTF_8, "bar"));
     }
 
     @Test
@@ -59,16 +64,17 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpRequestWithTrailingHeaders() throws Exception {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
-                HttpMethod.PUT, "/baz", HttpData.of(StandardCharsets.US_ASCII, "bar"),
-                HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
+                HttpMethod.PUT, "/baz", PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bar"),
+                HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
         final HttpRequest req = aReq.toHttpRequest();
         final List<HttpObject> unaggregated = unaggregate(req);
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.PUT, "/baz")
-                                                       .setInt(HttpHeaderNames.CONTENT_LENGTH, 3));
+                                                       .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                                                       .setInt(CONTENT_LENGTH, 3));
         assertThat(unaggregated).containsExactly(
-                HttpData.of(StandardCharsets.US_ASCII, "bar"),
-                HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
+                HttpData.of(StandardCharsets.UTF_8, "bar"),
+                HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
     }
 
     @Test
@@ -93,40 +99,44 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpResponse() throws Exception {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(
-                HttpStatus.OK, HttpData.of(StandardCharsets.US_ASCII, "alice"));
+                HttpStatus.OK, PLAIN_TEXT_UTF_8, "alice");
         final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> unaggregated = unaggregate(res);
 
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 5),
-                HttpData.of(StandardCharsets.US_ASCII, "alice"));
+                           .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                           .setInt(CONTENT_LENGTH, 5),
+                HttpData.of(StandardCharsets.UTF_8, "alice"));
     }
 
     @Test
     public void toHttpResponseWithoutContent() throws Exception {
-        final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(HttpStatus.OK);
+        final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(HttpStatus.OK, PLAIN_TEXT_UTF_8,
+                                                                    HttpData.EMPTY_DATA);
         final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> unaggregated = unaggregate(res);
 
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+                           .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                           .setInt(CONTENT_LENGTH, 0));
     }
 
     @Test
     public void toHttpResponseWithTrailingHeaders() throws Exception {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(
-                HttpStatus.OK, HttpData.of(StandardCharsets.US_ASCII, "bob"),
-                HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+                HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bob"),
+                HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
         final HttpResponse res = aRes.toHttpResponse();
         final List<HttpObject> unaggregated = unaggregate(res);
 
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 3),
-                HttpData.of(StandardCharsets.US_ASCII, "bob"),
-                HttpHeaders.of(HttpHeaderNames.CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+                           .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                           .setInt(CONTENT_LENGTH, 3),
+                HttpData.of(StandardCharsets.UTF_8, "bob"),
+                HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
     }
 
     @Test
@@ -141,7 +151,7 @@ public class DefaultAggregatedHttpMessageTest {
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.CONTINUE),
                 HttpHeaders.of(HttpStatus.OK)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 0));
+                           .setInt(CONTENT_LENGTH, 0));
     }
 
     @Test

@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -69,8 +70,8 @@ import com.linecorp.armeria.server.http.HttpService;
  */
 public class HttpHealthCheckService extends AbstractHttpService {
 
-    private static final HttpData RES_OK = HttpData.ofAscii("ok");
-    private static final HttpData RES_NOT_OK = HttpData.ofAscii("not ok");
+    private static final HttpData RES_OK = HttpData.ofUtf8("ok");
+    private static final HttpData RES_NOT_OK = HttpData.ofUtf8("not ok");
 
     private final List<HealthChecker> healthCheckers;
     private final ServerListener serverHealthUpdater;
@@ -96,7 +97,7 @@ public class HttpHealthCheckService extends AbstractHttpService {
     protected AggregatedHttpMessage newHealthyResponse(
             @SuppressWarnings("UnusedParameters") ServiceRequestContext ctx) {
 
-        return AggregatedHttpMessage.of(HttpStatus.OK, RES_OK);
+        return AggregatedHttpMessage.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, RES_OK);
     }
 
     /**
@@ -105,7 +106,7 @@ public class HttpHealthCheckService extends AbstractHttpService {
     protected AggregatedHttpMessage newUnhealthyResponse(
             @SuppressWarnings("UnusedParameters") ServiceRequestContext ctx) {
 
-        return AggregatedHttpMessage.of(HttpStatus.SERVICE_UNAVAILABLE, RES_NOT_OK);
+        return AggregatedHttpMessage.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.PLAIN_TEXT_UTF_8, RES_NOT_OK);
     }
 
     @Override
