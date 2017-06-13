@@ -79,7 +79,7 @@ import io.netty.buffer.ByteBuf;
  *
  * @see ThriftProtocolFactories
  */
-public class THttpService extends AbstractHttpService {
+public final class THttpService extends AbstractHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(THttpService.class);
 
@@ -665,7 +665,6 @@ public class THttpService extends AbstractHttpService {
         } else {
             content = encodeException(ctx, rpcRes, serializationFormat, seqId, func.name(), cause);
         }
-
 
         respond(serializationFormat, content, httpRes);
     }
