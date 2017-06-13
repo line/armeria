@@ -121,6 +121,7 @@ configure(javaProjects) {
     // Add the 'managedDependencies' DSL which allows us to add dependencies without versions and exclusions.
     project.metaClass.managedDependencies = { Closure action ->
         def addManagedDependency = { String scope, String name ->
+            def dependencyManagement = rootProject.ext.dependencyManagement
             def components = name.split(':')
             if (components.length != 2 && components.length != 3) {
                 throw new IllegalDependencyNotation(name)
@@ -129,21 +130,34 @@ configure(javaProjects) {
             def groupId = components[0]
             def artifactId = components[1]
             def classifier = components.length == 3 ? components[2] : null
-            if (!rootProject.ext.dependencyManagement[groupId] ||
-                !rootProject.ext.dependencyManagement[groupId][artifactId]) {
+            if (!dependencyManagement[groupId] ||
+                !dependencyManagement[groupId][artifactId]) {
                 throw new UnknownDomainObjectException("unknown dependency: ${name}")
             }
 
-            def props = rootProject.ext.dependencyManagement[groupId][artifactId]
-            project.dependencies."$scope"(group: groupId, name: artifactId,
-                    version: props.version, classifier: classifier) {
-                if (props.exclusions) {
-                    props.exclusions.each {
-                        def exclusionComponents = it.split(':')
+            // Add a dependency.
+            def version = dependencyManagement[groupId][artifactId].version
+            Dependency dep;
+            if (classifier == null) {
+                dep = project.dependencies.add(scope, "$groupId:$artifactId:$version")
+            } else {
+                dep = project.dependencies.add(scope, "$groupId:$artifactId:$version:$classifier")
+            }
+
+            project.configurations.detachedConfiguration(dep).resolvedConfiguration.resolvedArtifacts.each {
+                def moduleId = it.moduleVersion.id
+                if (!dependencyManagement[moduleId.group] ||
+                    !dependencyManagement[moduleId.group][moduleId.name]) {
+                    return
+                }
+                def exclusions = dependencyManagement[moduleId.group][moduleId.name].exclusions
+                if (exclusions) {
+                    exclusions.each { String exclusion ->
+                        def exclusionComponents = exclusion.split(':')
                         if (exclusionComponents.length != 2) {
-                            throw new IllegalDependencyNotation(it)
+                            throw new IllegalDependencyNotation(exclusion)
                         }
-                        exclude group: exclusionComponents[0], module: exclusionComponents[1]
+                        dep.exclude group: exclusionComponents[0], module: exclusionComponents[1]
                     }
                 }
             }

@@ -1,8 +1,8 @@
 ch.qos.logback:
-  logback-classic: { version: '1.2.2' }
+  logback-classic: { version: '1.2.3' }
 
 com.fasterxml.jackson.core:
-  jackson-annotations: { version: &JACKSON_VERSION '2.8.8' }
+  jackson-annotations: { version: &JACKSON_VERSION '2.8.9' }
   jackson-core: { version: *JACKSON_VERSION }
   jackson-databind: { version: *JACKSON_VERSION }
 
@@ -10,15 +10,22 @@ com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
-  guava: { version: &GUAVA_VERSION '21.0' }
+  guava:
+    version: &GUAVA_VERSION '22.0'
+    exclusions:
+    - com.google.code.findbugs:jsr305
+    - com.google.errorprone:error_prone_annotations
+    - com.google.j2objc:j2objc-annotations
+    - org.codehaus.mojo:animal-sniffer-annotations
   guava-testlib:
     version: *GUAVA_VERSION
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
+    - com.google.j2objc:j2objc-annotations
 
 com.puppycrawl.tools:
-  checkstyle: { version: '7.7' }
+  checkstyle: { version: '7.8.1' }
 
 com.ryantenney.metrics:
   metrics-spring: { version: '3.1.3' }
@@ -27,7 +34,7 @@ com.spotify:
   completable-futures: { version: '0.3.0' }
 
 com.squareup.retrofit2:
-  retrofit: { version: &RETROFIT2_VERSION '2.2.0' }
+  retrofit: { version: &RETROFIT2_VERSION '2.3.0' }
   adapter-java8: { version: *RETROFIT2_VERSION }
   converter-jackson: { version: *RETROFIT2_VERSION }
 
@@ -39,36 +46,38 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.3.0'
+    version: &GRPC_VERSION '1.4.0'
     exclusions:
     - com.google.code.findbugs:jsr305
+    - com.google.errorprone:error_prone_annotations
   grpc-interop-testing:
     version: *GRPC_VERSION
     exclusions:
-    - io.netty:netty-codec-http2
+    - io.grpc:grpc-netty
     - com.google.guava:guava-jdk5
+    - io.netty:netty-tcnative-boringssl-static
   grpc-okhttp: { version: *GRPC_VERSION }
   grpc-protobuf: { version: *GRPC_VERSION }
   grpc-stub: { version: *GRPC_VERSION }
   grpc-testing: { version: *GRPC_VERSION }
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.11.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.12.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.1.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.3.Final' }
 
 io.prometheus:
-  simpleclient_common: { version: 0.0.22 }
+  simpleclient_common: { version: 0.0.23 }
 
 io.zipkin.brave:
   brave-core: { version: &BRAVE_VERSION '4.2.0' }
   brave-http: { version: *BRAVE_VERSION }
 
 it.unimi.dsi:
-  fastutil: { version: '7.2.0' }
+  fastutil: { version: '7.2.1' }
 
 javax.inject:
   javax.inject: { version: '1' }
@@ -80,13 +89,16 @@ junit:
   junit: { version: '4.12' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '1.22.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '1.23.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 org.apache.hbase:
   hbase-shaded-client:
-    version: '1.2.5'
+    version: '1.2.6'
     exclusions:
+    - com.github.stephenc.findbugs:findbugs-annotations
+    - commons-logging:commons-logging
+    - log4j:log4j
     - org.slf4j:slf4j-log4j12
 
 org.apache.httpcomponents:
@@ -106,7 +118,7 @@ org.apache.thrift:
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.14' }
+  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.15' }
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
@@ -114,19 +126,19 @@ org.apache.zookeeper:
   zookeeper: { version: '3.4.10' }
 
 org.assertj:
-  assertj-core: { version: '3.6.2' }
+  assertj-core: { version: '3.8.0' }
 
 org.awaitility:
   awaitility: { version: '3.0.0' }
 
 org.curioswitch.curiostack:
-  protobuf-jackson: { version: '0.1.0' }
+  protobuf-jackson: { version: '0.1.1' }
 
 org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.4.v20170414' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.6.v20170531' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations: { version: *JETTY_VERSION }
   jetty-server: { version: *JETTY_VERSION  }
@@ -148,7 +160,7 @@ org.javassist:
   javassist: { version: '3.21.0-GA' }
 
 org.mockito:
-  mockito-core: { version: '2.7.22' }
+  mockito-core: { version: '2.8.9' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.6' }
@@ -167,7 +179,7 @@ org.slf4j:
   slf4j-api: { version: *SLF4J_VERSION }
 
 org.springframework.boot:
-  spring-boot: { version: &SPRING_BOOT_VERSION '1.5.2.RELEASE' }
+  spring-boot: { version: &SPRING_BOOT_VERSION '1.5.4.RELEASE' }
   spring-boot-autoconfigure: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-logging: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
