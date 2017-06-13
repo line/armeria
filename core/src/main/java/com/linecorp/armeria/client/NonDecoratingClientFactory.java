@@ -25,21 +25,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.util.NativeLibraries;
+import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollDatagramChannel;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollSocketChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
@@ -49,10 +41,6 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * A skeletal {@link ClientFactory} that does not decorate other {@link ClientFactory}.
  */
 public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
-
-    private enum TransportType {
-        NIO, EPOLL
-    }
 
     private final EventLoopGroup eventLoopGroup;
     private final boolean closeEventLoopGroup;
@@ -82,16 +70,8 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
      * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
      */
     protected NonDecoratingClientFactory(SessionOptions options, boolean useDaemonThreads) {
-        this(options, type -> {
-            switch (type) {
-                case NIO:
-                    return new DefaultThreadFactory("armeria-client-nio", useDaemonThreads);
-                case EPOLL:
-                    return new DefaultThreadFactory("armeria-client-epoll", useDaemonThreads);
-                default:
-                    throw new Error();
-            }
-        });
+        this(options, type -> new DefaultThreadFactory("armeria-client-" + type.lowerCasedName(),
+                                                       useDaemonThreads));
     }
 
     private NonDecoratingClientFactory(SessionOptions options,
@@ -102,16 +82,17 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
 
         final Bootstrap baseBootstrap = new Bootstrap();
 
+        final TransportType transportType = TransportType.detectTransportType();
         final Optional<EventLoopGroup> eventLoopOption = options.eventLoopGroup();
         if (eventLoopOption.isPresent()) {
             eventLoopGroup = eventLoopOption.get();
             closeEventLoopGroup = false;
         } else {
-            eventLoopGroup = createGroup(threadFactoryFactory);
+            eventLoopGroup = transportType.newEventLoopGroup(0, threadFactoryFactory);
             closeEventLoopGroup = true;
         }
 
-        baseBootstrap.channel(channelType(eventLoopGroup));
+        baseBootstrap.channel(TransportType.socketChannelType(eventLoopGroup));
         baseBootstrap.resolver(addressResolverGroup(options, eventLoopGroup));
 
         baseBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
@@ -127,42 +108,15 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
 
         return options.addressResolverGroup().orElseGet(
                 () -> new DnsAddressResolverGroup(
-                        datagramChannelType(eventLoopGroup),
+                        TransportType.datagramChannelType(eventLoopGroup),
                         // TODO(trustin): Use DnsServerAddressStreamProviders.platformDefault()
                         //                once Netty fixes its bug: https://github.com/netty/netty/issues/6736
                         DefaultDnsServerAddressStreamProvider.INSTANCE));
     }
 
-    private static Class<? extends SocketChannel> channelType(EventLoopGroup eventLoopGroup) {
-        if (eventLoopGroup instanceof NioEventLoopGroup) {
-            return NioSocketChannel.class;
-        }
-        if (eventLoopGroup instanceof EpollEventLoopGroup) {
-            return EpollSocketChannel.class;
-        }
-        throw unsupportedEventLoopType(eventLoopGroup);
-    }
-
-    private static Class<? extends DatagramChannel> datagramChannelType(EventLoopGroup eventLoopGroup) {
-        if (eventLoopGroup instanceof NioEventLoopGroup) {
-            return NioDatagramChannel.class;
-        }
-        if (eventLoopGroup instanceof EpollEventLoopGroup) {
-            return EpollDatagramChannel.class;
-        }
-        throw unsupportedEventLoopType(eventLoopGroup);
-    }
-
     private static IllegalStateException unsupportedEventLoopType(EventLoopGroup eventLoopGroup) {
         return new IllegalStateException("unsupported event loop type: " +
                                          eventLoopGroup.getClass().getName());
-    }
-
-    @SuppressWarnings("checkstyle:operatorwrap")
-    private static EventLoopGroup createGroup(Function<TransportType, ThreadFactory> threadFactoryFactory) {
-        return NativeLibraries.isEpollAvailable()
-               ? new EpollEventLoopGroup(0, threadFactoryFactory.apply(TransportType.EPOLL))
-               : new NioEventLoopGroup(0, threadFactoryFactory.apply(TransportType.NIO));
     }
 
     @Override
