@@ -16,18 +16,9 @@
 
 package com.linecorp.armeria.server.grpc.interop;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.security.cert.CertificateException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,12 +27,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
+import com.squareup.okhttp.ConnectionSpec;
 
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -49,37 +38,25 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.ManagedChannel;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-import io.grpc.netty.GrpcSslContexts;
-import io.grpc.netty.NettyChannelBuilder;
-import io.grpc.stub.StreamObserver;
+import io.grpc.internal.GrpcUtil;
+import io.grpc.okhttp.NegotiationType;
+import io.grpc.okhttp.OkHttpChannelBuilder;
+import io.grpc.okhttp.internal.Platform;
 import io.grpc.testing.TestUtils;
 import io.grpc.testing.integration.AbstractInteropTest;
-import io.grpc.testing.integration.Messages.EchoStatus;
-import io.grpc.testing.integration.Messages.Payload;
-import io.grpc.testing.integration.Messages.PayloadType;
-import io.grpc.testing.integration.Messages.ResponseParameters;
-import io.grpc.testing.integration.Messages.SimpleRequest;
-import io.grpc.testing.integration.Messages.StreamingOutputCallRequest;
-import io.grpc.testing.integration.Messages.StreamingOutputCallResponse;
 import io.grpc.testing.integration.TestServiceGrpc;
-import io.grpc.testing.integration.TestServiceGrpc.TestServiceStub;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
-import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
- * Interop test based on grpc-interop-testing. Should provide reasonable confidence in armeria's
- * handling of the grpc protocol.
+ * Interop test based on grpc-interop-testing. Should provide reasonable confidence in Armeria's
+ * handling of the gRPC protocol.
  */
-@Ignore // TODO(trustin): Unignore once GRPC upgrades to Netty 4.1.10
 public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     private static final ApplicationProtocolConfig ALPN = new ApplicationProtocolConfig(
@@ -90,6 +67,8 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     private static final AtomicReference<ServiceRequestContext> ctxCapture = new AtomicReference<>();
 
+    private static SelfSignedCertificate ssc;
+
     /** Starts the server with HTTPS. */
     @BeforeClass
     public static void startServer() {
@@ -97,14 +76,13 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         SLF4JBridgeHandler.install();
 
         try {
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            ssc = new SelfSignedCertificate("example.com");
             ServerBuilder sb = new ServerBuilder()
                     .port(0, HttpSessionProtocols.HTTPS)
                     .defaultMaxRequestLength(16 * 1024 * 1024)
                     .sslContext(
                             SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                              .applicationProtocolConfig(ALPN)
-                                             .clientAuth(ClientAuth.REQUIRE)
                                              .trustManager(TestUtils.loadCert("ca.pem"))
                                              .ciphers(TestUtils.preferredTestCiphers(),
                                                     SupportedCipherSuiteFilter.INSTANCE)
@@ -117,7 +95,13 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     @AfterClass
     public static void stopServer() {
-        stopStaticServer();
+        try {
+            stopStaticServer();
+        } finally {
+            if (ssc != null) {
+                ssc.delete();
+            }
+        }
     }
 
     @After
@@ -128,25 +112,26 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     @Override
     protected ManagedChannel createChannel() {
         try {
-            // Use reflection to access package-private method.
-            Method getPort = AbstractInteropTest.class.getDeclaredMethod("getPort");
-            getPort.setAccessible(true);
-            return NettyChannelBuilder
-                    .forAddress("localhost", (int) getPort.invoke(this))
-                    .flowControlWindow(65 * 1024)
+            final int port = getPortViaReflection();
+            return OkHttpChannelBuilder
+                    .forAddress("localhost", port)
+                    .negotiationType(NegotiationType.TLS)
                     .maxInboundMessageSize(16 * 1024 * 1024)
-                    .sslContext(GrpcSslContexts
-                                        .forClient()
-                                        .keyManager(TestUtils.loadCert("client.pem"),
-                                                    TestUtils.loadCert("client.key"))
-                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                                        .ciphers(TestUtils.preferredTestCiphers(),
-                                                 SupportedCipherSuiteFilter.INSTANCE)
-                                        .build())
+                    .connectionSpec(ConnectionSpec.MODERN_TLS)
+                    .overrideAuthority(GrpcUtil.authorityFromHostAndPort("example.com", port))
+                    .sslSocketFactory(TestUtils.newSslSocketFactoryForCa(
+                            Platform.get().getProvider(), ssc.certificate()))
                     .build();
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    private int getPortViaReflection() throws Exception {
+        // Use reflection to access package-private method.
+        Method getPort = AbstractInteropTest.class.getDeclaredMethod("getPort");
+        getPort.setAccessible(true);
+        return (int) getPort.invoke(this);
     }
 
     @Override
@@ -154,20 +139,23 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         return false;
     }
 
-    @Test
-    @Override
     @Ignore
-    // TODO(anuraag): Enable after adding support in ServiceRequestContext to define custom timeout handling.
-    public void deadlineExceededServerStreaming() {
-
+    @Override
+    public void exchangeMetadataUnaryCall() throws Exception {
+        // Disable Metadata tests, which armeria does not support.
     }
 
-    @Test(timeout = 10000)
+    @Ignore
+    @Override
+    public void exchangeMetadataStreamingCall() throws Exception {
+        // Disable Metadata tests, which armeria does not support.
+    }
+
+    @Override
     public void sendsTimeoutHeader() {
         long configuredTimeoutMinutes = 100;
         TestServiceGrpc.TestServiceBlockingStub stub =
-                TestServiceGrpc.newBlockingStub(channel)
-                               .withDeadlineAfter(configuredTimeoutMinutes, TimeUnit.MINUTES);
+                blockingStub.withDeadlineAfter(configuredTimeoutMinutes, TimeUnit.MINUTES);
         stub.emptyCall(EMPTY);
         long transferredTimeoutMinutes = TimeUnit.MILLISECONDS.toMinutes(
                 ctxCapture.get().requestTimeoutMillis());
@@ -178,268 +166,27 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                 configuredTimeoutMinutes - transferredTimeoutMinutes <= 1);
     }
 
-    // Several tests copied due to Mockito version mismatch (timeout() was moved).
-
     @Override
-    @Test(timeout = 10000)
-    public void pingPong() throws Exception {
-        final List<StreamingOutputCallRequest> requests = Arrays.asList(
-                StreamingOutputCallRequest.newBuilder()
-                                          .addResponseParameters(ResponseParameters.newBuilder()
-                                                                                   .setSize(31415))
-                                          .setPayload(Payload.newBuilder()
-                                                             .setBody(ByteString.copyFrom(new byte[27182])))
-                                          .build(),
-                StreamingOutputCallRequest.newBuilder()
-                                          .addResponseParameters(ResponseParameters.newBuilder()
-                                                                                   .setSize(9))
-                                          .setPayload(Payload.newBuilder()
-                                                             .setBody(ByteString.copyFrom(new byte[8])))
-                                          .build(),
-                StreamingOutputCallRequest.newBuilder()
-                                          .addResponseParameters(ResponseParameters.newBuilder()
-                                                                                   .setSize(2653))
-                                          .setPayload(Payload.newBuilder()
-                                                             .setBody(ByteString.copyFrom(new byte[1828])))
-                                          .build(),
-                StreamingOutputCallRequest.newBuilder()
-                                          .addResponseParameters(ResponseParameters.newBuilder()
-                                                                                   .setSize(58979))
-                                          .setPayload(Payload.newBuilder()
-                                                             .setBody(ByteString.copyFrom(new byte[45904])))
-                                          .build());
-        final List<StreamingOutputCallResponse> goldenResponses = Arrays.asList(
-                StreamingOutputCallResponse.newBuilder()
-                                           .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
-                                                              .setBody(ByteString.copyFrom(new byte[31415])))
-                                           .build(),
-                StreamingOutputCallResponse.newBuilder()
-                                           .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
-                                                              .setBody(ByteString.copyFrom(new byte[9])))
-                                           .build(),
-                StreamingOutputCallResponse.newBuilder()
-                                           .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
-                                                              .setBody(ByteString.copyFrom(new byte[2653])))
-                                           .build(),
-                StreamingOutputCallResponse.newBuilder()
-                                           .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
-                                                              .setBody(ByteString.copyFrom(new byte[58979])))
-                                           .build());
-
-        @SuppressWarnings("unchecked")
-        StreamObserver<StreamingOutputCallResponse> responseObserver = mock(StreamObserver.class);
-        StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(responseObserver);
-        for (int i = 0; i < requests.size(); i++) {
-            requestObserver.onNext(requests.get(i));
-            verify(responseObserver, timeout(operationTimeoutMillis())).onNext(goldenResponses.get(i));
-            verifyNoMoreInteractions(responseObserver);
-        }
-        requestObserver.onCompleted();
-        verify(responseObserver, timeout(operationTimeoutMillis())).onCompleted();
-        verifyNoMoreInteractions(responseObserver);
-    }
-
-    @Test(timeout = 10000)
-    public void statusCodeAndMessage() throws Exception {
-        int errorCode = 2;
-        String errorMessage = "test status message";
-        EchoStatus responseStatus = EchoStatus.newBuilder()
-                                              .setCode(errorCode)
-                                              .setMessage(errorMessage)
-                                              .build();
-        SimpleRequest simpleRequest = SimpleRequest.newBuilder()
-                                                   .setResponseStatus(responseStatus)
-                                                   .build();
-        StreamingOutputCallRequest streamingRequest =
-                StreamingOutputCallRequest.newBuilder()
-                                          .setResponseStatus(responseStatus)
-                                          .build();
-
-        // Test UnaryCall
-        try {
-            blockingStub.unaryCall(simpleRequest);
-            fail();
-        } catch (StatusRuntimeException e) {
-            assertEquals(Status.UNKNOWN.getCode(), e.getStatus().getCode());
-            assertEquals(errorMessage, e.getStatus().getDescription());
-        }
-
-        // Test FullDuplexCall
-        @SuppressWarnings("unchecked")
-        StreamObserver<StreamingOutputCallResponse> responseObserver =
-                mock(StreamObserver.class);
-        StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(responseObserver);
-        requestObserver.onNext(streamingRequest);
-        requestObserver.onCompleted();
-
-        ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
-        verify(responseObserver, timeout(operationTimeoutMillis())).onError(captor.capture());
-        assertEquals(Status.UNKNOWN.getCode(), Status.fromThrowable(captor.getValue()).getCode());
-        assertEquals(errorMessage, Status.fromThrowable(captor.getValue()).getDescription());
-        verifyNoMoreInteractions(responseObserver);
-    }
-
-    // Disable Metadata tests, which armeria does not support.
     @Ignore
-    @Override
-    @Test
-    public void exchangeMetadataUnaryCall() throws Exception {}
-
-    @Ignore
-    @Override
-    @Test
-    public void exchangeMetadataStreamingCall() throws Exception {}
-
-    @Ignore
-    @Override
-    @Test
-    public void customMetadata() throws Exception {}
+    // TODO(anuraag): Enable after adding support in ServiceRequestContext to define custom timeout handling.
+    public void deadlineExceededServerStreaming() {}
 
     // FIXME: This doesn't work yet and may require some complicated changes. Armeria should continue to accept
     // requests after a channel is gracefully closed but doesn't appear to (maybe because it supports both
     // HTTP1, which has no concept of graceful shutdown, and HTTP2).
     @Ignore
     @Override
-    @Test(timeout = 10000)
-    public void gracefulShutdown() throws Exception {
-        final List<StreamingOutputCallRequest> requests = Arrays.asList(
-                StreamingOutputCallRequest.newBuilder()
-                                          .addResponseParameters(ResponseParameters.newBuilder()
-                                                                                   .setSize(3))
-                                          .setPayload(Payload.newBuilder()
-                                                             .setBody(ByteString.copyFrom(new byte[2])))
-                                          .build(),
-                StreamingOutputCallRequest.newBuilder()
-                                          .addResponseParameters(ResponseParameters.newBuilder()
-                                                                                   .setSize(1))
-                                          .setPayload(Payload.newBuilder()
-                                                             .setBody(ByteString.copyFrom(new byte[7])))
-                                          .build(),
-                StreamingOutputCallRequest.newBuilder()
-                                          .addResponseParameters(ResponseParameters.newBuilder()
-                                                                                   .setSize(4))
-                                          .setPayload(Payload.newBuilder()
-                                                             .setBody(ByteString.copyFrom(new byte[1])))
-                                          .build());
-        final List<StreamingOutputCallResponse> goldenResponses = Arrays.asList(
-                StreamingOutputCallResponse.newBuilder()
-                                           .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
-                                                              .setBody(ByteString.copyFrom(new byte[3])))
-                                           .build(),
-                StreamingOutputCallResponse.newBuilder()
-                                           .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
-                                                              .setBody(ByteString.copyFrom(new byte[1])))
-                                           .build(),
-                StreamingOutputCallResponse.newBuilder()
-                                           .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
-                                                              .setBody(ByteString.copyFrom(new byte[4])))
-                                           .build());
+    public void gracefulShutdown() throws Exception {}
 
-        @SuppressWarnings("unchecked")
-        StreamObserver<StreamingOutputCallResponse> responseObserver = mock(StreamObserver.class);
-        StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(responseObserver);
-        requestObserver.onNext(requests.get(0));
-        verify(responseObserver, timeout(operationTimeoutMillis())).onNext(goldenResponses.get(0));
-        // Initiate graceful shutdown.
-        channel.shutdown();
-        requestObserver.onNext(requests.get(1));
-        verify(responseObserver, timeout(operationTimeoutMillis())).onNext(goldenResponses.get(1));
-        // The previous ping-pong could have raced with the shutdown, but this one certainly shouldn't.
-        requestObserver.onNext(requests.get(2));
-        verify(responseObserver, timeout(operationTimeoutMillis())).onNext(goldenResponses.get(2));
-        requestObserver.onCompleted();
-        verify(responseObserver, timeout(operationTimeoutMillis())).onCompleted();
-        verifyNoMoreInteractions(responseObserver);
+    @Ignore
+    @Override
+    public void customMetadata() throws Exception {
+        // Disable Metadata tests, which armeria does not support.
     }
 
+    @Ignore
     @Override
-    @Test(timeout = 10000)
-    public void timeoutOnSleepingServer() {
-        TestServiceStub stub = TestServiceGrpc.newStub(channel)
-                                              .withDeadlineAfter(1, TimeUnit.MILLISECONDS);
-        @SuppressWarnings("unchecked")
-        StreamObserver<StreamingOutputCallResponse> responseObserver = mock(StreamObserver.class);
-        StreamObserver<StreamingOutputCallRequest> requestObserver
-                = stub.fullDuplexCall(responseObserver);
-
-        try {
-            requestObserver.onNext(StreamingOutputCallRequest.newBuilder()
-                                                             .setPayload(Payload.newBuilder()
-                                                                                .setBody(ByteString.copyFrom(
-                                                                                        new byte[27182])))
-                                                             .build());
-        } catch (IllegalStateException expected) {
-            // This can happen if the stream has already been terminated due to deadline exceeded.
-        }
-
-        ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
-        verify(responseObserver, timeout(operationTimeoutMillis())).onError(captor.capture());
-        assertEquals(Status.DEADLINE_EXCEEDED.getCode(),
-                     Status.fromThrowable(captor.getValue()).getCode());
-        verifyNoMoreInteractions(responseObserver);
-    }
-
-    @Override
-    @Test(timeout = 10000)
-    public void cancelAfterFirstResponse() throws Exception {
-        final StreamingOutputCallRequest request = StreamingOutputCallRequest
-                .newBuilder()
-                .addResponseParameters(
-                        ResponseParameters
-                                .newBuilder()
-                                .setSize(31415))
-                .setPayload(Payload.newBuilder()
-                                   .setBody(
-                                           ByteString
-                                                   .copyFrom(
-                                                           new byte[27182])))
-                .build();
-        final StreamingOutputCallResponse goldenResponse = StreamingOutputCallResponse
-                .newBuilder()
-                .setPayload(
-                        Payload.newBuilder()
-                               .setType(
-                                       PayloadType.COMPRESSABLE)
-                               .setBody(
-                                       ByteString
-                                               .copyFrom(
-                                                       new byte[31415])))
-                .build();
-
-        @SuppressWarnings("unchecked")
-        StreamObserver<StreamingOutputCallResponse> responseObserver = mock(StreamObserver.class);
-        StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(responseObserver);
-        requestObserver.onNext(request);
-        verify(responseObserver, timeout(operationTimeoutMillis())).onNext(goldenResponse);
-        verifyNoMoreInteractions(responseObserver);
-
-        requestObserver.onError(new RuntimeException());
-        ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
-        verify(responseObserver, timeout(operationTimeoutMillis())).onError(captor.capture());
-        assertEquals(Status.Code.CANCELLED, Status.fromThrowable(captor.getValue()).getCode());
-        verifyNoMoreInteractions(responseObserver);
-    }
-
-    @Override
-    @Test(timeout = 10000)
-    public void emptyStream() throws Exception {
-        @SuppressWarnings("unchecked")
-        StreamObserver<StreamingOutputCallResponse> responseObserver = mock(StreamObserver.class);
-        StreamObserver<StreamingOutputCallRequest> requestObserver
-                = asyncStub.fullDuplexCall(responseObserver);
-        requestObserver.onCompleted();
-        verify(responseObserver, timeout(operationTimeoutMillis())).onCompleted();
-        verifyNoMoreInteractions(responseObserver);
+    public void statusCodeAndMessage() throws Exception {
+        // TODO(trustin): Unignore once gRPC upgrades to a newer version of Mockito.
     }
 }

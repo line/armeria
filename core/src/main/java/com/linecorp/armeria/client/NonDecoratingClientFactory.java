@@ -33,8 +33,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsAddressResolverGroup;
+import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
@@ -109,14 +109,7 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
         return options.addressResolverGroup().orElseGet(
                 () -> new DnsAddressResolverGroup(
                         TransportType.datagramChannelType(eventLoopGroup),
-                        // TODO(trustin): Use DnsServerAddressStreamProviders.platformDefault()
-                        //                once Netty fixes its bug: https://github.com/netty/netty/issues/6736
-                        DefaultDnsServerAddressStreamProvider.INSTANCE));
-    }
-
-    private static IllegalStateException unsupportedEventLoopType(EventLoopGroup eventLoopGroup) {
-        return new IllegalStateException("unsupported event loop type: " +
-                                         eventLoopGroup.getClass().getName());
+                        DnsServerAddressStreamProviders.platformDefault()));
     }
 
     @Override
