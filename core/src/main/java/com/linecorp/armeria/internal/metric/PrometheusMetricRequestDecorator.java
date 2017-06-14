@@ -142,7 +142,7 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
     }
 
     private final Function<RequestLog, Map<T, String>> labelingFunction;
-    private final MetricAdapter<T> metricAdapter;
+    private final MetricFacade<T> metricFacade;
 
     private PrometheusMetricRequestDecorator(
             CollectorRegistry collectorRegistry,
@@ -159,7 +159,7 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
         requireNonNull(prefix, "prefix");
 
         this.labelingFunction = labelingFunction;
-        metricAdapter = new MetricAdapter<>(collectorRegistry, metricLabelsCopy, prefix, HELP_STRING);
+        metricFacade = new MetricFacade<>(collectorRegistry, metricLabelsCopy, prefix, HELP_STRING);
     }
 
     @SuppressWarnings({ "unchecked", "SuspiciousArrayCast" })
@@ -179,16 +179,16 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
         ctx.log().addListener(
                 log -> {
                     final String[] values = getLabelValues(log);
-                    metricAdapter.incActiveRequests(values);
+                    metricFacade.incActiveRequests(values);
                 }, RequestLogAvailability.REQUEST_ENVELOPE, RequestLogAvailability.REQUEST_CONTENT);
 
         ctx.log().addListener(
                 log -> {
                     final String[] values = getLabelValues(log);
-                    metricAdapter.requestBytes(values, log);
+                    metricFacade.requestBytes(values, log);
                     if (log.requestCause() != null) {
-                        metricAdapter.failure(values)
-                                     .decActiveRequests(values);
+                        metricFacade.failure(values)
+                                    .decActiveRequests(values);
                     }
                 }, RequestLogAvailability.REQUEST_END);
 
@@ -198,14 +198,14 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
                         return;
                     }
                     final String[] values = getLabelValues(log);
-                    metricAdapter.seconds(values, TimeUnit.NANOSECONDS.toSeconds(log.totalDurationNanos()))
-                                 .responseBytes(values, log)
-                                 .decActiveRequests(values);
+                    metricFacade.seconds(values, TimeUnit.NANOSECONDS.toSeconds(log.totalDurationNanos()))
+                                .responseBytes(values, log)
+                                .decActiveRequests(values);
 
                     if (isSuccess(log)) {
-                        metricAdapter.success(values);
+                        metricFacade.success(values);
                     } else {
-                        metricAdapter.failure(values);
+                        metricFacade.failure(values);
                     }
                 }, RequestLogAvailability.COMPLETE);
         return function.apply(ctx, req);
@@ -254,7 +254,7 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
         O apply(C c, I i) throws Exception;
     }
 
-    private static final class MetricAdapter<T extends MetricLabel<T>> {
+    private static final class MetricFacade<T extends MetricLabel<T>> {
 
         private final Summary timer;
         private final Counter success;
@@ -263,10 +263,10 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
         private final Summary requestBytes;
         private final Summary responseBytes;
 
-        private MetricAdapter(CollectorRegistry collectorRegistry,
-                              T[] metricLabels,
-                              String namePrefix,
-                              String help) {
+        private MetricFacade(CollectorRegistry collectorRegistry,
+                             T[] metricLabels,
+                             String namePrefix,
+                             String help) {
             requireNonNull(collectorRegistry, "collectorRegistry");
             requireNonNull(metricLabels, "metricLabels");
             requireNonNull(namePrefix, "namePrefix");
@@ -308,37 +308,37 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
                           .create();
         }
 
-        private MetricAdapter<T> seconds(String[] values, double seconds) throws Exception {
+        private MetricFacade<T> seconds(String[] values, double seconds) throws Exception {
             timer.labels(values).observe(seconds);
             return this;
         }
 
-        private MetricAdapter<T> success(String[] values) {
+        private MetricFacade<T> success(String[] values) {
             success.labels(values).inc();
             return this;
         }
 
-        private MetricAdapter<T> failure(String[] values) {
+        private MetricFacade<T> failure(String[] values) {
             failure.labels(values).inc();
             return this;
         }
 
-        private MetricAdapter<T> incActiveRequests(String[] values) {
+        private MetricFacade<T> incActiveRequests(String[] values) {
             activeRequests.labels(values).inc();
             return this;
         }
 
-        private MetricAdapter<T> decActiveRequests(String[] values) {
+        private MetricFacade<T> decActiveRequests(String[] values) {
             activeRequests.labels(values).dec();
             return this;
         }
 
-        private MetricAdapter<T> requestBytes(String[] values, RequestLog log) {
+        private MetricFacade<T> requestBytes(String[] values, RequestLog log) {
             requestBytes.labels(values).observe(log.requestLength());
             return this;
         }
 
-        private MetricAdapter<T> responseBytes(String[] values, RequestLog log) {
+        private MetricFacade<T> responseBytes(String[] values, RequestLog log) {
             responseBytes.labels(values).observe(log.responseLength());
             return this;
         }
