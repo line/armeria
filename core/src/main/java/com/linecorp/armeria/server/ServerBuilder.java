@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.server.http.dynamic.ResponseConverter;
+import com.linecorp.armeria.server.http.annotation.ResponseConverter;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.DefaultThreadFactory;

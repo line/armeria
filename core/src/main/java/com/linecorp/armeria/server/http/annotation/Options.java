@@ -14,7 +14,26 @@
  * under the License.
  */
 
+package com.linecorp.armeria.server.http.annotation;
+
+import static com.linecorp.armeria.internal.DefaultValues.UNSPECIFIED;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import com.linecorp.armeria.common.http.HttpMethod;
+
 /**
- * Dynamic HTTP service.
+ * Annotation for mapping {@link HttpMethod#OPTIONS} onto specific method.
  */
-package com.linecorp.armeria.server.http.dynamic;
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface Options {
+
+    /**
+     * A path pattern for the annotated method.
+     */
+    String value() default UNSPECIFIED;
+}

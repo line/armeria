@@ -14,18 +14,26 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.dynamic;
+package com.linecorp.armeria.server.http.annotation;
 
-import com.linecorp.armeria.common.http.HttpResponse;
+import static com.linecorp.armeria.internal.DefaultValues.UNSPECIFIED;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import com.linecorp.armeria.common.http.HttpMethod;
 
 /**
- * Converts given object into {@link HttpResponse}.
+ * Annotation for mapping {@link HttpMethod#POST} onto specific method.
  */
-@FunctionalInterface
-public interface ResponseConverter {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface Post {
 
     /**
-     * Returns {@link HttpResponse} instance corresponds to the given {@code resObj}.
+     * A path pattern for the annotated method.
      */
-    HttpResponse convert(Object resObj) throws Exception;
+    String value() default UNSPECIFIED;
 }

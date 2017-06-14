@@ -19,7 +19,8 @@ package com.linecorp.armeria.server;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +34,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -44,6 +46,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpParameters;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
@@ -52,11 +55,12 @@ import com.linecorp.armeria.server.TestConverters.NaiveStringConverter;
 import com.linecorp.armeria.server.TestConverters.TypedNumberConverter;
 import com.linecorp.armeria.server.TestConverters.TypedStringConverter;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
-import com.linecorp.armeria.server.http.dynamic.Converter;
-import com.linecorp.armeria.server.http.dynamic.Get;
-import com.linecorp.armeria.server.http.dynamic.Path;
-import com.linecorp.armeria.server.http.dynamic.PathParam;
-import com.linecorp.armeria.server.http.dynamic.Post;
+import com.linecorp.armeria.server.http.annotation.Converter;
+import com.linecorp.armeria.server.http.annotation.Get;
+import com.linecorp.armeria.server.http.annotation.Optional;
+import com.linecorp.armeria.server.http.annotation.Param;
+import com.linecorp.armeria.server.http.annotation.Path;
+import com.linecorp.armeria.server.http.annotation.Post;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.common.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -74,20 +78,23 @@ public class AnnotatedHttpServiceTest {
 
             // Case 4, 5, and 6
             sb.annotatedService("/2", new MyAnnotatedService2(),
-                       service -> service.decorate(LoggingService.newDecorator()));
+                                LoggingService.newDecorator());
 
             // Bind more than one service under the same path prefix.
             sb.annotatedService("/3", new MyAnnotatedService3(),
-                       service -> service.decorate(LoggingService.newDecorator()));
+                                LoggingService.newDecorator());
 
             sb.annotatedService("/3", new MyAnnotatedService4(),
-                       service -> service.decorate(LoggingService.newDecorator()));
+                                LoggingService.newDecorator());
 
             sb.annotatedService("/3", new MyAnnotatedService5(),
-                       service -> service.decorate(LoggingService.newDecorator()));
+                                LoggingService.newDecorator());
 
             // Bind using non-default path mappings
-            sb.annotatedService("/4", new MyAnnotatedService6(),
+            sb.annotatedService("/6", new MyAnnotatedService6(),
+                                LoggingService.newDecorator());
+
+            sb.annotatedService("/7", new MyAnnotatedService7(),
                                 LoggingService.newDecorator());
         }
     };
@@ -98,14 +105,14 @@ public class AnnotatedHttpServiceTest {
         // Case 1: returns Integer type and handled by builder-default Integer -> HttpResponse converter.
         @Get
         @Path("/int/:var")
-        public int returnInt(@PathParam("var") int var) {
+        public int returnInt(@Param("var") int var) {
             return var;
         }
 
         // Case 2: returns Long type and handled by class-default Number -> HttpResponse converter.
         @Post
         @Path("/long/{var}")
-        public CompletionStage<Long> returnLong(@PathParam("var") long var) {
+        public CompletionStage<Long> returnLong(@Param("var") long var) {
             return CompletableFuture.supplyAsync(() -> var);
         }
 
@@ -113,20 +120,20 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/string/:var")
         @Converter(NaiveStringConverter.class)
-        public CompletionStage<String> returnString(@PathParam("var") String var) {
+        public CompletionStage<String> returnString(@Param("var") String var) {
             return CompletableFuture.supplyAsync(() -> var);
         }
 
         // Asynchronously returns Integer type and handled by builder-default Integer -> HttpResponse converter.
         @Get
         @Path("/int-async/:var")
-        public CompletableFuture<Integer> returnIntAsync(@PathParam("var") int var) {
+        public CompletableFuture<Integer> returnIntAsync(@Param("var") int var) {
             return CompletableFuture.completedFuture(var).thenApply(n -> n + 1);
         }
 
         @Get
         @Path("/path/ctx/async/:var")
-        public static CompletableFuture<String> returnPathCtxAsync(@PathParam("var") int var,
+        public static CompletableFuture<String> returnPathCtxAsync(@Param("var") int var,
                                                                    ServiceRequestContext ctx,
                                                                    Request req) {
             validateContextAndRequest(ctx, req);
@@ -135,7 +142,7 @@ public class AnnotatedHttpServiceTest {
 
         @Get
         @Path("/path/req/async/:var")
-        public static CompletableFuture<String> returnPathReqAsync(@PathParam("var") int var,
+        public static CompletableFuture<String> returnPathReqAsync(@Param("var") int var,
                                                                    HttpRequest req,
                                                                    ServiceRequestContext ctx) {
             validateContextAndRequest(ctx, req);
@@ -144,7 +151,7 @@ public class AnnotatedHttpServiceTest {
 
         @Get
         @Path("/path/ctx/sync/:var")
-        public static String returnPathCtxSync(@PathParam("var") int var,
+        public static String returnPathCtxSync(@Param("var") int var,
                                                RequestContext ctx,
                                                Request req) {
             validateContextAndRequest(ctx, req);
@@ -153,7 +160,7 @@ public class AnnotatedHttpServiceTest {
 
         @Get
         @Path("/path/req/sync/:var")
-        public static String returnPathReqSync(@PathParam("var") int var,
+        public static String returnPathReqSync(@Param("var") int var,
                                                HttpRequest req,
                                                RequestContext ctx) {
             validateContextAndRequest(ctx, req);
@@ -163,14 +170,14 @@ public class AnnotatedHttpServiceTest {
         // Throws an exception synchronously
         @Get
         @Path("/exception/:var")
-        public int exception(@PathParam("var") int var) {
+        public int exception(@Param("var") int var) {
             throw new AnticipatedException("bad var!");
         }
 
         // Throws an exception asynchronously
         @Get
         @Path("/exception-async/:var")
-        public CompletableFuture<Integer> exceptionAsync(@PathParam("var") int var) {
+        public CompletableFuture<Integer> exceptionAsync(@Param("var") int var) {
             CompletableFuture<Integer> future = new CompletableFuture<>();
             future.completeExceptionally(new AnticipatedException("bad var!"));
             return future;
@@ -183,14 +190,14 @@ public class AnnotatedHttpServiceTest {
         // Case 4: returns Integer type and handled by class-default Number -> HttpResponse converter.
         @Get
         @Path("/int/{var}")
-        public CompletionStage<Integer> returnInt(@PathParam("var") int var) {
+        public CompletionStage<Integer> returnInt(@Param("var") int var) {
             return CompletableFuture.supplyAsync(() -> var);
         }
 
         // Case 5: returns Long type and handled by class-default Number -> HttpResponse converter.
         @Post
         @Path("/long/:var")
-        public Long returnLong(@PathParam("var") long var) {
+        public Long returnLong(@Param("var") long var) {
             return var;
         }
 
@@ -198,13 +205,13 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/string/{var}")
         @Converter(NaiveStringConverter.class)
-        public String returnString(@PathParam("var") String var) {
+        public String returnString(@Param("var") String var) {
             return var;
         }
 
         @Get
         @Path("/boolean/{var}")
-        public String returnBoolean(@PathParam("var") boolean var) {
+        public String returnBoolean(@Param("var") boolean var) {
             return Boolean.toString(var);
         }
     }
@@ -213,7 +220,7 @@ public class AnnotatedHttpServiceTest {
     public static class MyAnnotatedService3 {
         @Get
         @Path("/int/{var}")
-        public CompletionStage<Integer> returnInt(@PathParam("var") int var) {
+        public CompletionStage<Integer> returnInt(@Param("var") int var) {
             return CompletableFuture.supplyAsync(() -> var);
         }
     }
@@ -222,7 +229,7 @@ public class AnnotatedHttpServiceTest {
     public static class MyAnnotatedService4 {
         @Get
         @Path("/string/{var}")
-        public String returnString(@PathParam("var") String var) {
+        public String returnString(@Param("var") String var) {
             return var;
         }
 
@@ -315,13 +322,76 @@ public class AnnotatedHttpServiceTest {
 
         @Get
         @Path("regex:^/regex/(?<path>.*)$")
-        public String regex(ServiceRequestContext ctx, @PathParam("path") String path) {
+        public String regex(ServiceRequestContext ctx, @Param("path") String path) {
             return "regex:" + ctx.path() + ':' + path;
         }
     }
 
+    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    public static class MyAnnotatedService7 {
+
+        @Get("/param/get")
+        public String paramGet(RequestContext ctx,
+                               @Param("username") String username,
+                               @Param("password") String password) {
+            validateContext(ctx);
+            return username + "/" + password;
+        }
+
+        @Post("/param/post")
+        public String paramPost(RequestContext ctx,
+                                @Param("username") String username,
+                                @Param("password") String password) {
+            validateContext(ctx);
+            return username + "/" + password;
+        }
+
+        @Get
+        @Path("/map/get")
+        public String mapGet(RequestContext ctx, HttpParameters parameters) {
+            validateContext(ctx);
+            return parameters.get("username") + "/" + parameters.get("password");
+        }
+
+        @Post
+        @Path("/map/post")
+        public String mapPost(RequestContext ctx, HttpParameters parameters) {
+            validateContext(ctx);
+            return parameters.get("username") + "/" + parameters.get("password");
+        }
+
+        @Get
+        @Path("/param/default1")
+        public String paramDefault1(RequestContext ctx,
+                                    @Param("username") @Optional("hello") String username,
+                                    @Param("password") @Optional("world") String password,
+                                    @Param("extra") @Optional String extra) {
+            // "extra" might be null because there is no default value specified.
+            validateContext(ctx);
+            return username + "/" + password + "/" + (extra != null ? extra : "(null)");
+        }
+
+        @Get
+        @Path("/param/default2")
+        public String paramDefault2(RequestContext ctx,
+                                    @Param("username") @Optional("hello") String username,
+                                    @Param("password") String password) {
+            validateContext(ctx);
+            return username + "/" + password;
+        }
+
+        @Get
+        @Path("/param/precedence/{username}")
+        public String paramPrecedence(RequestContext ctx,
+                                      @Param("username") String username,
+                                      @Param("password") String password) {
+            validateContext(ctx);
+            return username + "/" + password;
+        }
+    }
+
     @Test
-    public void testDynamicHttpServices() throws Exception {
+    public void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Run case 1.
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/1/int/42")))) {
@@ -345,7 +415,7 @@ public class AnnotatedHttpServiceTest {
             // Run case 1 but illegal parameter.
             try (CloseableHttpResponse res =
                          hc.execute(new HttpGet(rule.httpUri("/1/int/fourty-two")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 400 Bad Request"));
             }
             // Run case 2 but without parameter (non-existing url).
             try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/1/long/")))) {
@@ -404,7 +474,7 @@ public class AnnotatedHttpServiceTest {
             // Run case 4 but illegal parameter.
             try (CloseableHttpResponse res =
                          hc.execute(new HttpGet(rule.httpUri("/2/int/fourty-two")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 400 Bad Request"));
             }
             // Run case 5 but without parameter (non-existing url).
             try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/2/long/")))) {
@@ -439,37 +509,37 @@ public class AnnotatedHttpServiceTest {
     public void testNonDefaultPathMappings() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Exact pattern
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/exact")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/exact")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[exact:/4/exact]"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[exact:/6/exact]"));
             }
 
             // Prefix pattern
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/prefix/foo")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/prefix/foo")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[prefix:/4/prefix/foo:/foo]"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[prefix:/6/prefix/foo:/foo]"));
             }
 
             // Glob pattern
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/glob1/bar")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/glob1/bar")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob1:/4/glob1/bar]"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob1:/6/glob1/bar]"));
             }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/baz/glob2")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/baz/glob2")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob2:/4/baz/glob2:0]"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob2:/6/baz/glob2:0]"));
             }
 
             // Regex pattern
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/4/regex/foo/bar")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/regex/foo/bar")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[regex:/4/regex/foo/bar:foo/bar]"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("String[regex:/6/regex/foo/bar:foo/bar]"));
             }
         }
     }
 
     @Test
-    public void testDynamicHttpService_aggregation() throws Exception {
+    public void testAggregation() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             HttpPost httpPost;
 
@@ -506,13 +576,84 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    private static HttpPost newHttpPost(String path) throws UnsupportedEncodingException {
+    @Test
+    public void testParam() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpPost httpPost;
+
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet(rule.httpUri("/7/param/get?username=line1&password=armeria1")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("line1/armeria1"));
+            }
+
+            httpPost = newHttpPost("/7/param/post", "line2", "armeria2", StandardCharsets.UTF_8);
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("line2/armeria2"));
+            }
+
+            httpPost = newHttpPost("/7/param/post", "안녕하세요", "こんにちは", StandardCharsets.UTF_8);
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity(), StandardCharsets.UTF_8), is("안녕하세요/こんにちは"));
+            }
+
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet(rule.httpUri("/7/map/get?username=line3&password=armeria3")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("line3/armeria3"));
+            }
+
+            httpPost = newHttpPost("/7/map/post", "line4", "armeria4");
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("line4/armeria4"));
+            }
+
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet(rule.httpUri("/7/param/default1")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("hello/world/(null)"));
+            }
+
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet(rule.httpUri("/7/param/default1?extra=people")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("hello/world/people"));
+            }
+
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet(rule.httpUri("/7/param/default2")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 400 Bad Request"));
+            }
+
+            // Precedence test. (path variable > query string parameter)
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(
+                    rule.httpUri("/7/param/precedence/line5?username=dot&password=armeria5")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("line5/armeria5"));
+            }
+        }
+    }
+
+    private static HttpPost newHttpPost(String path) {
+        return newHttpPost(path, "armeria", "armeria");
+    }
+
+    private static HttpPost newHttpPost(String path,
+                                        String username, String password) {
+        // HTTP.DEF_CONTENT_CHARSET = ISO-8859-1
+        return newHttpPost(path, username, password, HTTP.DEF_CONTENT_CHARSET);
+    }
+
+    private static HttpPost newHttpPost(String path, String username, String password, Charset charset) {
         HttpPost httpPost = new HttpPost(rule.httpUri(path));
 
         List<NameValuePair> params = new ArrayList<>();
-        params.add(new BasicNameValuePair("username", "armeria"));
-        params.add(new BasicNameValuePair("password", "armeria"));
-        httpPost.setEntity(new UrlEncodedFormEntity(params));
+        params.add(new BasicNameValuePair("username", username));
+        params.add(new BasicNameValuePair("password", password));
+        httpPost.setEntity(new UrlEncodedFormEntity(params, charset));
 
         return httpPost;
     }

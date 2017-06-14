@@ -77,9 +77,8 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
 
     // Using an annotated service object:
     sb.annotatedService(new Object() {
-        @Get
-        @Path("/greet2/{name}")
-        public HttpResponse greet(@PathParam("name") String name) {
+        @Get("/greet2/{name}")
+        public HttpResponse greet(@Param("name") String name) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
         }
     });
@@ -97,10 +96,28 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
 
     // Using an annotated service object:
     sb.annotatedService(new Object() {
-        @Get
-        @Path("regex:^/greet4/(?<name>.*)$")
-        public HttpResponse greet(@PathParam("name") String name) {
+        @Get("regex:^/greet4/(?<name>.*)$")
+        public HttpResponse greet(@Param("name") String name) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
+        }
+    });
+
+    // Using a query parameter (e.g. /greet5?name=alice) on an annotated service object:
+    sb.annotatedService(new Object() {
+        @Get("/greet5")
+        public HttpResponse greet(@Param("name") String name,
+                                  @Param("title") @Optional("Mr.") String title) {
+            // "Mr." is used by default if there is no title parameter in the request.
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s %s!", title, name);
+        }
+    });
+
+    // Getting a map of query parameters on an annotated service object:
+    sb.annotatedService(new Object() {
+        @Get("/greet6")
+        public HttpResponse greet(HttpParameters parameters) {
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!",
+                                   parameters.get("name");
         }
     });
 

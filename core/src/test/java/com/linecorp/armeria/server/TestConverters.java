@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.server.http.dynamic.ResponseConverter;
+import com.linecorp.armeria.server.http.annotation.ResponseConverter;
 
 final class TestConverters {
 

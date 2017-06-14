@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.http.dynamic;
+package com.linecorp.armeria.server.http.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
