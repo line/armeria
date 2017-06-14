@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
@@ -33,12 +34,16 @@ import org.mockito.junit.MockitoRule;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpStatus;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
 
 public class HttpStreamReaderTest {
 
+    private static final HttpHeaders HEADERS = HttpHeaders.of(HttpStatus.OK);
+    private static final HttpHeaders TRAILERS = HttpHeaders.of().set(GrpcHeaderNames.GRPC_STATUS, "2");
     private static final HttpData DATA = HttpData.ofUtf8("foobarbaz");
 
     @Rule
@@ -68,10 +73,39 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void subscribe_hasServerRequests() {
+    public void subscribe_hasServerRequests_subscribeFirst() {
         when(deframer.isStalled()).thenReturn(true);
         reader.onSubscribe(subscription);
+        verifyZeroInteractions(subscription);
+        reader.request(1);
         verify(subscription).request(1);
+        verifyNoMoreInteractions(subscription);
+    }
+
+    @Test
+    public void subscribe_hasServerRequests_requestFirst() {
+        when(deframer.isStalled()).thenReturn(true);
+        reader.request(1);
+        reader.onSubscribe(subscription);
+        verify(subscription).request(1);
+        verifyNoMoreInteractions(subscription);
+    }
+
+    @Test
+    public void onHeaders() {
+        reader.onSubscribe(subscription);
+        verifyZeroInteractions(subscription);
+        when(deframer.isStalled()).thenReturn(true);
+        reader.onNext(HEADERS);
+        verify(subscription).request(1);
+    }
+
+    @Test
+    public void onTrailers() {
+        reader.onSubscribe(subscription);
+        when(deframer.isStalled()).thenReturn(true);
+        reader.onNext(TRAILERS);
+        verifyZeroInteractions(subscription);
     }
 
     @Test

@@ -51,6 +51,8 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
     @Nullable
     private Subscription subscription;
 
+    private int deferredInitialMessageRequest;
+
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
                             ArmeriaMessageDeframer deframer,
                             TransportStatusListener transportStatusListener) {
@@ -59,16 +61,23 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
     }
 
-    // Must be called from an IO thread.
+    // Must be called from the IO thread.
     public void request(int numMessages) {
+        if (subscription == null) {
+            deferredInitialMessageRequest += numMessages;
+            return;
+        }
         deframer.request(numMessages);
         requestHttpFrame();
     }
 
+    // Must be called from the IO thread.
     @Override
     public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
-        requestHttpFrame();
+        if (deferredInitialMessageRequest > 0) {
+            request(deferredInitialMessageRequest);
+        }
     }
 
     @Override
@@ -103,6 +112,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
                 }
                 deframer.decompressor(decompressor);
             }
+            requestHttpFrame();
             return;
         }
         HttpData data = (HttpData) obj;
@@ -146,7 +156,8 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
     }
 
     private void requestHttpFrame() {
-        if (subscription != null && deframer.isStalled()) {
+        assert subscription != null;
+        if (deframer.isStalled()) {
             subscription.request(1);
         }
     }
