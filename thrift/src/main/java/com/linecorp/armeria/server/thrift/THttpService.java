@@ -79,7 +79,7 @@ import io.netty.buffer.ByteBuf;
  *
  * @see ThriftProtocolFactories
  */
-public class THttpService extends AbstractHttpService {
+public final class THttpService extends AbstractHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(THttpService.class);
 
@@ -341,8 +341,7 @@ public class THttpService extends AbstractHttpService {
         return delegate -> new THttpService(delegate, allowedSerializationFormatArray);
     }
 
-    // TODO(trustin): Make this method private once we remove ThriftService.
-    static SerializationFormat[] newAllowedSerializationFormats(
+    private static SerializationFormat[] newAllowedSerializationFormats(
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
@@ -360,9 +359,8 @@ public class THttpService extends AbstractHttpService {
     private final Set<SerializationFormat> allowedSerializationFormats;
     private final ThriftCallService thriftService;
 
-    // TODO(trustin): Make this contructor private once we remove ThriftService.
-    THttpService(Service<RpcRequest, RpcResponse> delegate,
-                 SerializationFormat[] allowedSerializationFormatArray) {
+    private THttpService(Service<RpcRequest, RpcResponse> delegate,
+                         SerializationFormat[] allowedSerializationFormatArray) {
 
         requireNonNull(delegate, "delegate");
 
@@ -375,8 +373,8 @@ public class THttpService extends AbstractHttpService {
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
         return delegate.as(ThriftCallService.class).orElseThrow(
-                    () -> new IllegalStateException("service being decorated is not a ThriftService: " +
-                                                    delegate));
+                () -> new IllegalStateException("service being decorated is not a ThriftCallService: " +
+                                                delegate));
     }
 
     /**
@@ -667,7 +665,6 @@ public class THttpService extends AbstractHttpService {
         } else {
             content = encodeException(ctx, rpcRes, serializationFormat, seqId, func.name(), cause);
         }
-
 
         respond(serializationFormat, content, httpRes);
     }

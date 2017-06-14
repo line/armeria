@@ -43,7 +43,7 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  * MetricRegistry metricRegistry = new MetricRegistry();
  * serverBuilder.service(
  *         "/service",
- *         ThriftService.of(handler).decorate(
+ *         THttpService.of(handler).decorate(
  *                 DropwizardMetricCollectingService.newDecorator(metricRegistry, "services")));
  * }
  * </pre>
