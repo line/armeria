@@ -446,6 +446,8 @@ configure(javaProjects) {
         javadoc {
             options {
                 quiet()
+                encoding = 'UTF-8'
+                docEncoding = 'UTF-8'
                 addBooleanOption('Xdoclint:all').value = true
                 addBooleanOption('Xdoclint:-missing').value = true
             }
