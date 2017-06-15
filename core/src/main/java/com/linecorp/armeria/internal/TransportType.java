@@ -1,12 +1,12 @@
 package com.linecorp.armeria.internal;
 
-import static com.linecorp.armeria.common.util.NativeLibraries.isEpollAvailable;
-
 import java.util.concurrent.ThreadFactory;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.google.common.base.Ascii;
+
+import com.linecorp.armeria.common.Flags;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -50,7 +50,7 @@ public enum TransportType {
     }
 
     /**
-     * Returns the {@link ServerChannel} class that is avaiable for this transport type.
+     * Returns the {@link ServerChannel} class that is available for this transport type.
      */
     public Class<? extends ServerChannel> serverChannelClass() {
         return serverChannelClass;
@@ -69,7 +69,7 @@ public enum TransportType {
      * Returns the available {@link TransportType}.
      */
     public static TransportType detectTransportType() {
-        if (isEpollAvailable()) {
+        if (Flags.useEpoll()) {
             return EPOLL;
         } else {
             return NIO;

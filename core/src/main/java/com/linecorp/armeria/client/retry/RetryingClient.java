@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -38,30 +39,6 @@ public abstract class RetryingClient<I extends Request, O extends Response>
 
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
 
-    private static final int FALLBACK_DEFAULT_DEFAULT_MAX_ATTEMPTS = 5;
-    private static final int DEFAULT_DEFAULT_MAX_ATTEMPTS;
-
-    static {
-        String value = System.getProperty("com.linecorp.armeria.defaultBackoffMaxAttempts",
-                                          String.valueOf(FALLBACK_DEFAULT_DEFAULT_MAX_ATTEMPTS));
-        int defaultDefaultMaxAttempts;
-        try {
-            defaultDefaultMaxAttempts = Integer.parseInt(value);
-            if (defaultDefaultMaxAttempts <= 0) {
-                logger.warn("The input: {}, for defaultBackoffMaxAttempts should be greater than 0." +
-                            " Therefore, it's set to the default value.",
-                            defaultDefaultMaxAttempts);
-                defaultDefaultMaxAttempts = FALLBACK_DEFAULT_DEFAULT_MAX_ATTEMPTS;
-            }
-        } catch (Exception ignored) {
-            logger.warn("The input: {}, for defaultBackoffMaxAttempts should be an integer value." +
-                        " Therefore, it's set to the default value.", value);
-            defaultDefaultMaxAttempts = FALLBACK_DEFAULT_DEFAULT_MAX_ATTEMPTS;
-        }
-        logger.info("defaultBackoffMaxAttempts: {}", defaultDefaultMaxAttempts);
-        DEFAULT_DEFAULT_MAX_ATTEMPTS = defaultDefaultMaxAttempts;
-    }
-
     private final Supplier<? extends Backoff> backoffSupplier;
     private final RetryRequestStrategy<I, O> retryStrategy;
     private final int defaultMaxAttempts;
@@ -72,7 +49,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     protected RetryingClient(Client<? super I, ? extends O> delegate,
                              RetryRequestStrategy<I, O> retryStrategy,
                              Supplier<? extends Backoff> backoffSupplier) {
-        this(delegate, retryStrategy, backoffSupplier, DEFAULT_DEFAULT_MAX_ATTEMPTS);
+        this(delegate, retryStrategy, backoffSupplier, Flags.defaultBackoffMaxAttempts());
     }
 
     /**

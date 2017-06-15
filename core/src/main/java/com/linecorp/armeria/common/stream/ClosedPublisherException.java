@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -31,10 +32,10 @@ public final class ClosedPublisherException extends RuntimeException {
 
     /**
      * Returns a {@link ClosedPublisherException} which may be a singleton or a new instance, depending on
-     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static ClosedPublisherException get() {
-        return Exceptions.isVerbose() ? new ClosedPublisherException() : INSTANCE;
+        return Flags.verboseExceptions() ? new ClosedPublisherException() : INSTANCE;
     }
 
     private ClosedPublisherException() {}

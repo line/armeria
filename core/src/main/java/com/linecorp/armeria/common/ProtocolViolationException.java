@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.util.Exceptions;
-
 /**
  * A {@link RuntimeException} raised when a remote peer violated the current {@link SessionProtocol}.
  */
@@ -61,7 +59,7 @@ public class ProtocolViolationException extends RuntimeException {
 
     @Override
     public Throwable fillInStackTrace() {
-        if (Exceptions.isVerbose()) {
+        if (Flags.verboseExceptions()) {
             super.fillInStackTrace();
         }
         return this;

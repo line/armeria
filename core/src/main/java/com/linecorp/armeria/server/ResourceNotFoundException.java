@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -29,10 +30,10 @@ public final class ResourceNotFoundException extends RuntimeException {
 
     /**
      * Returns a {@link ResourceNotFoundException} which may be a singleton or a new instance, depending on
-     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static ResourceNotFoundException get() {
-        return Exceptions.isVerbose() ? new ResourceNotFoundException() : INSTANCE;
+        return Flags.verboseExceptions() ? new ResourceNotFoundException() : INSTANCE;
     }
 
     /**
