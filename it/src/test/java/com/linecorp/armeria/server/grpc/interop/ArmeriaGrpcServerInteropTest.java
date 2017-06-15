@@ -171,6 +171,11 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     // TODO(anuraag): Enable after adding support in ServiceRequestContext to define custom timeout handling.
     public void deadlineExceededServerStreaming() {}
 
+    @Override
+    @Ignore
+    // TODO(anuraag): Enable after adding support in ServiceRequestContext to define custom timeout handling.
+    public void deadlineExceeded() {}
+
     // FIXME: This doesn't work yet and may require some complicated changes. Armeria should continue to accept
     // requests after a channel is gracefully closed but doesn't appear to (maybe because it supports both
     // HTTP1, which has no concept of graceful shutdown, and HTTP2).
