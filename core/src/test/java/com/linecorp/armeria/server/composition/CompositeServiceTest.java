@@ -132,7 +132,7 @@ public class CompositeServiceTest {
         @Override
         protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
             res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
-                        "%s:%s:%s", name, ctx.path(), ctx.pathWithoutPrefix());
+                        "%s:%s:%s", name, ctx.path(), ctx.mappedPath());
         }
     }
 }

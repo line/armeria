@@ -29,20 +29,22 @@ final class PrefixPathMapping extends AbstractPathMapping {
     static final int PREFIX_LEN = PREFIX.length();
 
     private final String prefix;
+    private final boolean stripPrefix;
     private final String loggerName;
     private final String metricName;
     private final String strVal;
 
-    PrefixPathMapping(String prefix) {
+    PrefixPathMapping(String prefix, boolean stripPrefix) {
         prefix = ensureAbsolutePath(prefix, "prefix");
         if (!prefix.endsWith("/")) {
             prefix += '/';
         }
 
         this.prefix = prefix;
+        this.stripPrefix = stripPrefix;
         loggerName = loggerName(prefix);
         metricName = prefix + "**";
-        strVal = PREFIX + prefix;
+        strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
     @Override
@@ -51,7 +53,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
             return PathMappingResult.empty();
         }
 
-        return PathMappingResult.of(path, query);
+        return PathMappingResult.of(stripPrefix ? path.substring(prefix.length() - 1) : path, query);
     }
 
     @Override
@@ -71,7 +73,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
     @Override
     public int hashCode() {
-        return prefix.hashCode();
+        return stripPrefix ? prefix.hashCode() : -prefix.hashCode();
     }
 
     @Override
@@ -85,7 +87,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
         }
 
         final PrefixPathMapping that = (PrefixPathMapping) obj;
-        return prefix.equals(that.prefix);
+        return stripPrefix == that.stripPrefix && prefix.equals(that.prefix);
     }
 
     @Override

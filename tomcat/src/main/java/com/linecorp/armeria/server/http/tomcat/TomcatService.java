@@ -411,7 +411,7 @@ public final class TomcatService implements HttpService {
 
     @Nullable
     private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage req) {
-        final String mappedPath = ctx.pathWithoutPrefix();
+        final String mappedPath = ctx.mappedPath();
         final Request coyoteReq = new Request();
 
         coyoteReq.scheme().setString(req.scheme());

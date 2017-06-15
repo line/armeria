@@ -106,16 +106,39 @@ public interface PathMapping {
 
     /**
      * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
-     * under the specified directory prefix.
+     * under the specified directory prefix. It also removes the specified directory prefix from the matched
+     * path so that {@link ServiceRequestContext#path()} does not have the specified directory prefix.
+     * For example, when {@code pathPrefix} is {@code "/foo/"}:
+     * <ul>
+     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
+     *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
+     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
+     * </ul>
+     * This method is a shortcut to {@link #ofPrefix(String, boolean) ofPrefix(pathPrefix, true)}.
      */
     static PathMapping ofPrefix(String pathPrefix) {
+        return ofPrefix(pathPrefix, true);
+    }
+
+    /**
+     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
+     * under the specified directory prefix. When {@code stripPrefix} is {@code true}, it also removes the
+     * specified directory prefix from the matched path so that {@link ServiceRequestContext#path()}
+     * does not have the specified directory prefix. For example, when {@code pathPrefix} is {@code "/foo/"}:
+     * <ul>
+     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
+     *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
+     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
+     * </ul>
+     */
+    static PathMapping ofPrefix(String pathPrefix, boolean stripPrefix) {
         requireNonNull(pathPrefix, "pathPrefix");
         if ("/".equals(pathPrefix)) {
             // Every path starts with '/'.
             return ofCatchAll();
         }
 
-        return new PrefixPathMapping(pathPrefix);
+        return new PrefixPathMapping(pathPrefix, stripPrefix);
     }
 
     /**
