@@ -17,6 +17,8 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.Optional;
+
 import com.google.common.base.MoreObjects;
 
 /**
@@ -36,6 +38,12 @@ public class BackoffWrapper implements Backoff {
 
     protected Backoff delegate() {
         return delegate;
+    }
+
+    @Override
+    public final <T> Optional<T> as(Class<T> backoffType) {
+        final Optional<T> result = Backoff.super.as(backoffType);
+        return result.isPresent() ? result : delegate.as(backoffType);
     }
 
     @Override

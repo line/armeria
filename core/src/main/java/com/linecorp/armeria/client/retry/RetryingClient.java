@@ -19,6 +19,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
@@ -32,8 +35,36 @@ import com.linecorp.armeria.common.Response;
  */
 public abstract class RetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
+
+    private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
+
+    private static final int FALLBACK_DEFAULT_DEFAULT_MAX_ATTEMPTS = 5;
+    private static final int DEFAULT_DEFAULT_MAX_ATTEMPTS;
+
+    static {
+        String value = System.getProperty("com.linecorp.armeria.defaultBackoffMaxAttempts",
+                                          String.valueOf(FALLBACK_DEFAULT_DEFAULT_MAX_ATTEMPTS));
+        int defaultDefaultMaxAttempts;
+        try {
+            defaultDefaultMaxAttempts = Integer.parseInt(value);
+            if (defaultDefaultMaxAttempts <= 0) {
+                logger.warn("The input: {}, for defaultBackoffMaxAttempts should be greater than 0." +
+                            " Therefore, it's set to the default value.",
+                            defaultDefaultMaxAttempts);
+                defaultDefaultMaxAttempts = FALLBACK_DEFAULT_DEFAULT_MAX_ATTEMPTS;
+            }
+        } catch (Exception ignored) {
+            logger.warn("The input: {}, for defaultBackoffMaxAttempts should be an integer value." +
+                        " Therefore, it's set to the default value.", value);
+            defaultDefaultMaxAttempts = FALLBACK_DEFAULT_DEFAULT_MAX_ATTEMPTS;
+        }
+        logger.info("defaultBackoffMaxAttempts: {}", defaultDefaultMaxAttempts);
+        DEFAULT_DEFAULT_MAX_ATTEMPTS = defaultDefaultMaxAttempts;
+    }
+
     private final Supplier<? extends Backoff> backoffSupplier;
     private final RetryRequestStrategy<I, O> retryStrategy;
+    private final int defaultMaxAttempts;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
@@ -41,13 +72,34 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     protected RetryingClient(Client<? super I, ? extends O> delegate,
                              RetryRequestStrategy<I, O> retryStrategy,
                              Supplier<? extends Backoff> backoffSupplier) {
+        this(delegate, retryStrategy, backoffSupplier, DEFAULT_DEFAULT_MAX_ATTEMPTS);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     */
+    protected RetryingClient(Client<? super I, ? extends O> delegate,
+                             RetryRequestStrategy<I, O> retryStrategy,
+                             Supplier<? extends Backoff> backoffSupplier,
+                             int defaultMaxAttempts) {
         super(delegate);
         this.backoffSupplier = requireNonNull(backoffSupplier, "backoffSupplier");
         this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
+        this.defaultMaxAttempts = defaultMaxAttempts;
     }
 
+    /**
+     * Creates a new {@link Backoff} instance.
+     * If the created instance does not have {@link AttemptLimitingBackoff}, it will be wrapped with
+     * the instance of {@link AttemptLimitingBackoff}.
+     * @return the {@link Backoff} which is wrapped by {@link AttemptLimitingBackoff} if it doesn't have
+     */
     protected Backoff newBackoff() {
-        return backoffSupplier.get();
+        Backoff backoff = backoffSupplier.get();
+        if (!backoff.as(AttemptLimitingBackoff.class).isPresent()) {
+            backoff = backoff.withMaxAttempts(defaultMaxAttempts);
+        }
+        return backoff;
     }
 
     protected RetryRequestStrategy<I, O> retryStrategy() {
