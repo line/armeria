@@ -20,6 +20,9 @@ tasks.compileJava.source "${rootProject.projectDir}/thrift/src/main/java"
 tasks.processResources.from "${rootProject.projectDir}/thrift/src/main/resources"
 tasks.compileTestJava.source "${rootProject.projectDir}/thrift/src/test/java"
 tasks.processTestResources.from "${rootProject.projectDir}/thrift/src/test/resources"
+tasks.sourceJar.from "${rootProject.projectDir}/thrift/src/main/java"
+tasks.sourceJar.from "${rootProject.projectDir}/thrift/src/main/resources"
+tasks.javadoc.source "${rootProject.projectDir}/thrift/src/main/java"
 
 // Use the old compiler.
 project.ext.thriftPath = "${rootProject.projectDir}/gradle/thrift-0.9/thrift.${osdetector.classifier}"
