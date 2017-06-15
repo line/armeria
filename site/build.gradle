@@ -1,7 +1,6 @@
 import net.davidecavestro.gradle.jxr.JxrLog
 import org.apache.maven.jxr.JXR
 
-import java.time.LocalDateTime
 import java.util.stream.Collectors
 
 buildscript {
@@ -19,11 +18,6 @@ buildscript {
 apply plugin: 'base'
 apply plugin: 'kr.motd.sphinx'
 
-ext.copyrightFooter =
-        '&copy; Copyright ' + "${project.property('inceptionYear')}&ndash;${LocalDateTime.now().year} " +
-        '<a href="http://linecorp.com/en/">LINE Corporation</a>. ' +
-        'All rights reserved.'
-
 sphinx {
     group = 'Documentation'
     description = 'Generates the Sphinx web site.'
@@ -40,59 +34,6 @@ task javadoc(type: Javadoc,
     javadocProjects.each { source it.sourceSets.main.java.srcDirs }
     classpath = javadocProjects.inject(project.files()) { result, project ->
         result.from(project.sourceSets.main.runtimeClasspath)
-    }
-
-    options {
-        def title = "Armeria ${project.version} API reference"
-        docTitle = title
-        windowTitle = title
-        bottom = project.ext.copyrightFooter +
-                 '<script>' + // Open an external link in a new tab/window.
-                 'for(var i in document.links) {' +
-                 '  var l = document.links[i];' +
-                 '  if (l.href.indexOf("http") === 0) {' +
-                 '    l.target = "_blank";' +
-                 '  }' +
-                 '}' +
-                 '</script>'
-
-        encoding = 'UTF-8'
-        docEncoding = 'UTF-8'
-        breakIterator = true
-        version = false
-        author = false
-        keyWords = false
-        quiet()
-        stylesheetFile = project.file("${project.projectDir}/src/apidocs/stylesheet.css")
-
-        // Enable all lints except the missing tag warnings
-        addBooleanOption('Xdoclint:all').value = true
-        addBooleanOption('Xdoclint:-missing').value = true
-
-        // Exclude the machine-generate or internal-only classes
-        exclude '**/Tomcat*ProtocolHandler.java'
-        exclude '**/internal/**'
-        exclude '**/thrift/v1/**'
-
-        // Groups
-        group 'Server', 'com.linecorp.armeria.server*'
-        group 'Client', 'com.linecorp.armeria.client*'
-        group 'Common', 'com.linecorp.armeria.common*'
-
-        // External Javadoc links
-        links 'http://www.slf4j.org/api/',
-              'https://netty.io/4.1/api/',
-              'https://developers.google.com/protocol-buffers/docs/reference/java/',
-              'https://people.apache.org/~thejas/thrift-0.9/javadoc/',
-              'http://logback.qos.ch/apidocs/'
-
-        // Add --allow-script-in-comments if available (since 1.8.0_121)
-        try {
-            if (Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl')
-                     .newInstance().optionLength('--allow-script-in-comments') > 0) {
-                addBooleanOption('-allow-script-in-comments').value = true
-            }
-        } catch (ignored) {}
     }
 }
 
@@ -120,7 +61,7 @@ task xref(group: 'Documentation',
         jxr.log = new JxrLog(logger: logger)
 
         def title = "Armeria ${project.version} cross-reference"
-        jxr.xref(sourceDirs, 'templates', title, title, project.ext.copyrightFooter)
+        jxr.xref(sourceDirs, 'templates', title, title, rootProject.ext.copyrightFooter)
         ant.copy(file: "${project.projectDir}/src/xref/stylesheet.css", todir: jxr.dest)
     }
 }

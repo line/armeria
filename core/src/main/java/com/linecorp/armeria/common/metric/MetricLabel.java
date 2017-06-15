@@ -23,7 +23,7 @@ import io.prometheus.client.Collector;
  *
  * <p>Example:
  * <pre>{@code
- * public enum MyMetricLabel implements MetricLabel&lt;MyMetricLabel&gt; {
+ * public enum MyMetricLabel implements MetricLabel<MyMetricLabel> {
  *     path,
  *     handler,
  *     method,

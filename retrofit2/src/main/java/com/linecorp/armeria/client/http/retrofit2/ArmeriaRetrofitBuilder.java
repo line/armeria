@@ -52,7 +52,7 @@ import retrofit2.Retrofit.Builder;
  *     .build();
  *
  * MyApi api = retrofit.create(MyApi.class);
- * Response&lt;User&gt; user = api.getUser().execute();
+ * Response<User> user = api.getUser().execute();
  * }</pre>
  *
  * <p>{@link ArmeriaRetrofitBuilder} even supports {@link EndpointGroup}, so you can create {@link Retrofit}
@@ -66,7 +66,7 @@ import retrofit2.Retrofit.Builder;
  * Retrofit retrofit = new ArmeriaRetrofitBuilder()
  *     .baseUrl("http://group:foo/")
  *     .build();
- * } </pre>
+ * }</pre>
  */
 public final class ArmeriaRetrofitBuilder {
 

@@ -165,22 +165,22 @@ public final class Server implements AutoCloseable {
      * of this {@link Server} changes. This method is useful when you want to initialize/destroy the resources
      * associated with a {@link Service}:
      * <pre>{@code
-     * public class MyService extends SimpleService {
-     *     &#64;Override
-     *     public void serviceAdded(Server server) {
-     *         server.addListener(new ServerListenerAdapter() {
-     *             &#64;Override
-     *             public void serverStarting() {
-     *                 ... initialize ...
-     *             }
-     *
-     *             &#64;Override
-     *             public void serverStopped() {
-     *                 ... destroy ...
-     *             }
-     *         }
-     *     }
-     * }
+     * > public class MyService extends SimpleService {
+     * >     @Override
+     * >     public void serviceAdded(Server server) {
+     * >         server.addListener(new ServerListenerAdapter() {
+     * >             @Override
+     * >             public void serverStarting() {
+     * >                 ... initialize ...
+     * >             }
+     * >
+     * >             @Override
+     * >             public void serverStopped() {
+     * >                 ... destroy ...
+     * >             }
+     * >         }
+     * >     }
+     * > }
      * }</pre>
      */
     public void addListener(ServerListener listener) {

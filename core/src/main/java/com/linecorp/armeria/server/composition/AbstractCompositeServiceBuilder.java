@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.Service;
  * A skeletal builder implementation for {@link AbstractCompositeService} and its subclasses.
  * Extend this class to implement your own {@link Service} builder. e.g.
  * <pre>{@code
- * public class MyServiceBuilder extends AbstractCompositeServiceBuilder&lt;MyServiceBuilder&gt; {
+ * public class MyServiceBuilder extends AbstractCompositeServiceBuilder<MyServiceBuilder> {
  *
  *     private int propertyA;
  *     private String propertyB;
@@ -57,7 +57,7 @@ import com.linecorp.armeria.server.Service;
  * }
  *
  * public class MyService extends AbstractCompositeService {
- *     MyService(Iterable&lt;CompositeServiceEntry&gt; services) {
+ *     MyService(Iterable<CompositeServiceEntry> services) {
  *         super(services);
  *         ...
  *     }

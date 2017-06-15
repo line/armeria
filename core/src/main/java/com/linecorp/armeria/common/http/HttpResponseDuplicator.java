@@ -27,26 +27,25 @@ import com.linecorp.armeria.common.stream.StreamMessageWrapper;
 /**
  * Allows subscribing to a {@link HttpResponse} multiple times by duplicating the stream.
  *
- * <pre><code>
- * final HttpResponse originalRes = ...
- * final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(originalRes);
- *
- * final HttpResponse dupRes1 = resDuplicator.duplicateStream();
- * final HttpResponse dupRes2 = resDuplicator.duplicateStream();
- *
- * dupRes1.subscribe(new FooHeaderSubscriber() {
- *    {@literal @}Override
- *     public void onNext(Object o) {
- *     ...
- *     // Do something according to the header's status.
- *     }
- * });
- *
- * dupRes2.aggregate().handle((aRes, cause){@literal ->} {
- *     // Do something with the message.
- * });
- *
- * }</code></pre>
+ * <pre>{@code
+ * > final HttpResponse originalRes = ...
+ * > final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(originalRes);
+ * >
+ * > final HttpResponse dupRes1 = resDuplicator.duplicateStream();
+ * > final HttpResponse dupRes2 = resDuplicator.duplicateStream();
+ * >
+ * > dupRes1.subscribe(new FooHeaderSubscriber() {
+ * >     @Override
+ * >     public void onNext(Object o) {
+ * >     ...
+ * >     // Do something according to the header's status.
+ * >     }
+ * > });
+ * >
+ * > dupRes2.aggregate().handle((aRes, cause) -> {
+ * >     // Do something with the message.
+ * > });
+ * }</pre>
  */
 public class HttpResponseDuplicator
         extends AbstractStreamMessageDuplicator<HttpObject, HttpResponse> {

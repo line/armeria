@@ -1,0 +1,7 @@
+org.apache.thrift
+org.apache.thrift.async
+org.apache.thrift.meta_data
+org.apache.thrift.protocol
+org.apache.thrift.scheme
+org.apache.thrift.server
+org.apache.thrift.transport

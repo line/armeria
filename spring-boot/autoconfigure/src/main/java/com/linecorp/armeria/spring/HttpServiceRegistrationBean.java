@@ -24,13 +24,13 @@ import com.linecorp.armeria.server.Service;
  * A bean with information for registering a http service. It enables dropwizard
  * monitoring of the service automatically.
  * <pre>{@code
- * {@literal @}Bean
- *     public HttpServiceRegistrationBean okService() {
- *         return new HttpServiceRegistrationBean()
- *             .setServiceName("okService")
- *             .setService(new OkService())
- *             .setPathMapping(PathMapping.ofExact("/ok"));
- *     }
+ * > @Bean
+ * > public HttpServiceRegistrationBean okService() {
+ * >     return new HttpServiceRegistrationBean()
+ * >             .setServiceName("okService")
+ * >             .setService(new OkService())
+ * >             .setPathMapping(PathMapping.ofExact("/ok"));
+ * > }
  * }</pre>
  */
 public class HttpServiceRegistrationBean {
