@@ -37,11 +37,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
-import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.server.http.annotation.ResponseConverter;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -191,7 +191,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final SslContextBuilder builder = SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword);
 
-        builder.sslProvider(NativeLibraries.isOpenSslAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
+        builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
         builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
         builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
 

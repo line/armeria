@@ -31,6 +31,7 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
@@ -517,8 +518,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         public void cancel() {
             if (publisher.setState(State.OPEN, State.CLEANUP)) {
                 final CloseEvent closeEvent =
-                        Exceptions.isVerbose() ? new CloseEvent(CancelledSubscriptionException.get())
-                                               : CANCELLED_CLOSE;
+                        Flags.verboseExceptions() ? new CloseEvent(CancelledSubscriptionException.get())
+                                                  : CANCELLED_CLOSE;
 
                 publisher.pushObject(closeEvent);
                 return;

@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -34,10 +35,10 @@ public final class CancelledSubscriptionException extends RuntimeException {
 
     /**
      * Returns a {@link CancelledSubscriptionException} which may be a singleton or a new instance, depending
-     * on whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * on whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static CancelledSubscriptionException get() {
-        return Exceptions.isVerbose() ? new CancelledSubscriptionException() : INSTANCE;
+        return Flags.verboseExceptions() ? new CancelledSubscriptionException() : INSTANCE;
     }
 
     private CancelledSubscriptionException() {}

@@ -33,11 +33,9 @@ import java.util.function.Function;
 
 import javax.net.ssl.TrustManagerFactory;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.netty.channel.EventLoopGroup;
@@ -48,23 +46,13 @@ import io.netty.resolver.AddressResolverGroup;
  */
 public final class SessionOptions extends AbstractOptions {
 
-    private static final Logger logger = LoggerFactory.getLogger(SessionOptions.class);
-
     private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofMillis(3200);
     private static final Duration DEFAULT_IDLE_TIMEOUT = Duration.ofSeconds(10);
-    private static final Boolean DEFAULT_USE_HTTP2_PREFACE =
-            "true".equals(System.getProperty("com.linecorp.armeria.defaultUseHttp2Preface", "false"));
-    private static final Boolean DEFAULT_USE_HTTP1_PIPELINING =
-            "true".equals(System.getProperty("com.linecorp.armeria.defaultUseHttp1Pipelining", "true"));
-
-    static {
-        logger.info("defaultUseHttp2Preface: {}", DEFAULT_USE_HTTP2_PREFACE);
-    }
 
     private static final SessionOptionValue<?>[] DEFAULT_OPTION_VALUES = {
             CONNECT_TIMEOUT.newValue(DEFAULT_CONNECTION_TIMEOUT),
             IDLE_TIMEOUT.newValue(DEFAULT_IDLE_TIMEOUT),
-            USE_HTTP2_PREFACE.newValue(DEFAULT_USE_HTTP2_PREFACE)
+            USE_HTTP2_PREFACE.newValue(Flags.defaultUseHttp2Preface())
     };
 
     /**
@@ -269,13 +257,13 @@ public final class SessionOptions extends AbstractOptions {
      * Returns whether {@link SessionOption#USE_HTTP2_PREFACE} is enabled or not.
      */
     public boolean useHttp2Preface() {
-        return getOrElse(USE_HTTP2_PREFACE, DEFAULT_USE_HTTP2_PREFACE);
+        return getOrElse(USE_HTTP2_PREFACE, Flags.defaultUseHttp2Preface());
     }
 
     /**
      * Returns whether {@link SessionOption#USE_HTTP1_PIPELINING} is enabled or not.
      */
     public boolean useHttp1Pipelining() {
-        return getOrElse(USE_HTTP1_PIPELINING, DEFAULT_USE_HTTP1_PIPELINING);
+        return getOrElse(USE_HTTP1_PIPELINING, Flags.defaultUseHttp1Pipelining());
     }
 }

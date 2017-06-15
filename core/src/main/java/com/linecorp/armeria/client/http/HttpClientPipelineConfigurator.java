@@ -41,11 +41,11 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.NativeLibraries;
 import com.linecorp.armeria.internal.FlushConsolidationHandler;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
@@ -137,7 +137,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 final SslContextBuilder builder = SslContextBuilder.forClient();
 
                 builder.sslProvider(
-                        NativeLibraries.isOpenSslAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
+                        Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
                 options.trustManagerFactory().ifPresent(builder::trustManager);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED ||

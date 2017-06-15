@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -31,10 +32,10 @@ public final class ServiceUnavailableException extends RuntimeException {
 
     /**
      * Returns a {@link ServiceUnavailableException} which may be a singleton or a new instance, depending on
-     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static ServiceUnavailableException get() {
-        return Exceptions.isVerbose() ? new ServiceUnavailableException() : INSTANCE;
+        return Flags.verboseExceptions() ? new ServiceUnavailableException() : INSTANCE;
     }
 
     /**

@@ -16,77 +16,37 @@
 
 package com.linecorp.armeria.common.util;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import io.netty.channel.epoll.Epoll;
-import io.netty.handler.ssl.OpenSsl;
+import com.linecorp.armeria.common.Flags;
 
 /**
  * Reports the availability of the native libraries used by Armeria.
+ *
+ * @deprecated Use {@link Flags} instead.
  */
+@Deprecated
 public final class NativeLibraries {
 
-    private static final Logger logger = LoggerFactory.getLogger(NativeLibraries.class);
-    private static final AtomicBoolean reported = new AtomicBoolean();
-
-    private static final boolean USE_EPOLL =
-            !"false".equals(System.getProperty("com.linecorp.armeria.useEpoll", "true"));
-
-    private static final boolean USE_OPENSSL =
-            !"false".equals(System.getProperty("com.linecorp.armeria.useOpenSsl", "true"));
+    /**
+     * @deprecated This method will be removed without a replacement, because the information about
+     *             the availability of the native libraries are now logged automatically by {@link Flags}.
+     */
+    @Deprecated
+    public static void report() {}
 
     /**
-     * Logs the availability of the native libraries used by Armeria. This method does nothing if it was
-     * called once before.
+     * @deprecated Use {@link Flags#useEpoll()} instead.
      */
-    public static void report() {
-        if (!reported.compareAndSet(false, true)) {
-            return;
-        }
-
-        if (USE_EPOLL) {
-            logger.info("/dev/epoll: " +
-                        (Epoll.isAvailable() ? "yes"
-                                             : "no (" + filterCause(Epoll.unavailabilityCause()) + ')'));
-        } else {
-            logger.info("/dev/epoll: disabled");
-        }
-
-        if (USE_OPENSSL) {
-            logger.info("OpenSSL: " +
-                        (OpenSsl.isAvailable() ? "yes (" + OpenSsl.versionString() + ", " +
-                                                           OpenSsl.version() + ')'
-                                               : "no (" + filterCause(OpenSsl.unavailabilityCause()) + ')'));
-        } else {
-            logger.info("OpenSSL: disabled");
-        }
-    }
-
-    private static Throwable filterCause(Throwable cause) {
-        if (cause instanceof ExceptionInInitializerError) {
-            return cause.getCause();
-        }
-
-        return cause;
-    }
-
-    /**
-     * Returns {@code true} if JNI-based {@code /dev/epoll} transport is available.
-     */
+    @Deprecated
     public static boolean isEpollAvailable() {
-        report();
-        return USE_EPOLL && Epoll.isAvailable();
+        return Flags.useEpoll();
     }
 
     /**
-     * Returns {@code true} if JNI-based OpenSSL/BoringSSL/LibreSSL transport is available.
+     * @deprecated Use {@link Flags#useOpenSsl()} instead.
      */
+    @Deprecated
     public static boolean isOpenSslAvailable() {
-        report();
-        return USE_OPENSSL && OpenSsl.isAvailable();
+        return Flags.useOpenSsl();
     }
 
     private NativeLibraries() {}

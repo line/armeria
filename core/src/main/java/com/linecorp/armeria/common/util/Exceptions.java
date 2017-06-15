@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Throwables;
 
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
@@ -52,23 +53,12 @@ public final class Exceptions {
 
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
-    private static final boolean VERBOSE =
-            "true".equals(System.getProperty("com.linecorp.armeria.verboseExceptions", "false"));
-
-    static {
-        logger.info("com.linecorp.armeria.verboseExceptions: {}", VERBOSE);
-    }
-
     /**
-     * Returns whether the verbose mode is enabled. When enabled, the exceptions frequently thrown by Armeria
-     * will have full stack trace. When disabled, such exceptions will have empty stack trace to eliminate the
-     * cost of capturing the stack trace.
-     *
-     * <p>The verbose mode is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.verboseExceptions=true} JVM option to enable it.
+     * @deprecated Use {@link Flags#verboseExceptions()} instead.
      */
+    @Deprecated
     public static boolean isVerbose() {
-        return VERBOSE;
+        return Flags.verboseExceptions();
     }
 
     /**
@@ -135,7 +125,7 @@ public final class Exceptions {
      * </ul>
      */
     public static boolean isExpected(Throwable cause) {
-        if (VERBOSE) {
+        if (Flags.verboseExceptions()) {
             return true;
         }
 
