@@ -132,9 +132,9 @@ public final class CorsServiceBuilder {
      *
      * <p>Please note, that cookie support needs to be enabled on the client side as well.
      * The client needs to opt-in to send cookies by calling:
-     * <pre>
+     * <pre>{@code
      * xhr.withCredentials = true;
-     * </pre>
+     * }</pre>
      *
      * <p>The default value for 'withCredentials' is false in which case no cookies are sent.
      * Setting this to true will included cookies in cross origin requests.
@@ -183,9 +183,9 @@ public final class CorsServiceBuilder {
      *
      * <p>During a simple CORS request, only certain response headers are made available by the
      * browser, for example using:
-     * <pre>
+     * <pre>{@code
      * xhr.getResponseHeader("Content-Type");
-     * </pre>
+     * }</pre>
      *
      * <p>The headers that are available by default are:
      * <ul>
@@ -220,9 +220,9 @@ public final class CorsServiceBuilder {
      *
      * <p>During a simple CORS request, only certain response headers are made available by the
      * browser, for example using:
-     * <pre>
+     * <pre>{@code
      * xhr.getResponseHeader("Content-Type");
-     * </pre>
+     * }</pre>
      *
      * <p>The headers that are available by default are:
      * <ul>
@@ -274,9 +274,9 @@ public final class CorsServiceBuilder {
      * response header.
      *
      * <p>If a client specifies headers on the request, for example by calling:
-     * <pre>
+     * <pre>{@code
      * xhr.setRequestHeader('My-Custom-Header', "SomeValue");
-     * </pre>
+     * }</pre>
      * the server will receive the above header name in the 'Access-Control-Request-Headers' of the
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server
@@ -302,9 +302,9 @@ public final class CorsServiceBuilder {
      * response header.
      *
      * <p>If a client specifies headers on the request, for example by calling:
-     * <pre>
+     * <pre>{@code
      * xhr.setRequestHeader('My-Custom-Header', "SomeValue");
-     * </pre>
+     * }</pre>
      * the server will receive the above header name in the 'Access-Control-Request-Headers' of the
      * preflight request. The server will then decide if it allows this header to be sent for the
      * real request (remember that a preflight is not the real request but a request asking the server

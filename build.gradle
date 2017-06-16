@@ -3,6 +3,8 @@ import com.github.jengelman.gradle.plugins.shadow.internal.ZipCompressor
 import org.apache.tools.zip.ZipOutputStream
 import org.yaml.snakeyaml.Yaml
 
+import java.time.LocalDateTime
+
 buildscript {
     repositories {
         mavenCentral()
@@ -53,6 +55,11 @@ ext {
             ['it.unimi.dsi:fastutil', 'it.unimi.dsi.fastutil', "${shadedPackage}.fastutil"],
             ['org.reflections:reflections', 'org.reflections', "${shadedPackage}.reflections"]
     ]
+
+    copyrightFooter =
+            '&copy; Copyright ' + "${project.property('inceptionYear')}&ndash;${LocalDateTime.now().year} " +
+            '<a href="http://linecorp.com/en/">LINE Corporation</a>. ' +
+            'All rights reserved.'
 }
 
 // Print the build time summary to the console
@@ -457,16 +464,6 @@ configure(javaProjects) {
         }
 
         // Generate a javadoc JAR.
-        javadoc {
-            options {
-                quiet()
-                encoding = 'UTF-8'
-                docEncoding = 'UTF-8'
-                addBooleanOption('Xdoclint:all').value = true
-                addBooleanOption('Xdoclint:-missing').value = true
-            }
-        }
-
         task javadocJar(type: Jar, dependsOn: tasks.javadoc) {
             classifier = 'javadoc'
             from javadoc.destinationDir
@@ -781,6 +778,146 @@ configure(javaProjects) {
 
                 buf.length = 0
             }
+        }
+    }
+}
+
+// Configure the Javadoc tasks of all projects.
+allprojects {
+    tasks.withType(Javadoc) {
+        options {
+            def title = "Armeria ${project.version} API reference"
+            docTitle = title
+            windowTitle = title
+            bottom = rootProject.ext.copyrightFooter + '''
+            <script>
+            // Open an external link in a new tab/window.
+            for(var i in document.links) {
+              var l = document.links[i];
+              if (l.href && l.href.indexOf("http") === 0) {
+                l.target = "_blank";
+              }
+            }
+            </script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+            <script>
+            // Trim and syntax-highlight the code snippets.
+            function trimLines(lines) {
+              var leadingSpaces = 65536;
+              for (var j in lines) {
+                lines[j] = lines[j].trimRight();
+                if (lines[j].length == 0) {
+                  continue;
+                }
+
+                leadingSpaces = Math.min(leadingSpaces, Math.max(0, lines[j].search(/[^ ]/)));
+              }
+
+              for (var j in lines) {
+                lines[j] = lines[j].substring(leadingSpaces);
+              }
+
+              while (lines.length > 0 && lines[0].length == 0) {
+                lines.shift();
+              }
+
+              while (lines.length > 0 && lines[lines.length - 1].length == 0) {
+                lines.pop();
+              }
+            }
+
+            var hasHljs = typeof hljs !== "undefined";
+            if (hasHljs) {
+              hljs.configure({
+                languages: [ "java", "xml", "json", "yaml", "shell" ]
+              });
+            }
+
+            var allPres = document.getElementsByTagName("PRE");
+            for (var i in allPres) {
+              if (typeof allPres[i].children === "undefined") {
+                continue;
+              }
+
+              var children = allPres[i].children;
+              if (children.length !== 1) {
+                continue;
+              }
+
+              var child = children[0];
+              if (child.tagName.toUpperCase() !== "CODE") {
+                continue;
+              }
+
+              var lines = child.textContent.split("\\n");
+              trimLines(lines);
+              for (var j in lines) {
+                lines[j] = lines[j].replace(/^> ?/, "");
+              }
+              trimLines(lines);
+              child.textContent = lines.join("\\n");
+
+              if (hasHljs) {
+                hljs.highlightBlock(child);
+              }
+            }
+            </script>'''.readLines().stream()
+                        .map({ line -> line.trim() })
+                        .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
+                        .collect().join('')
+
+            encoding = 'UTF-8'
+            docEncoding = 'UTF-8'
+            breakIterator = true
+            version = false
+            author = false
+            keyWords = false
+            quiet()
+            stylesheetFile = project.file("${rootProject.projectDir}/site/src/apidocs/stylesheet.css")
+
+            // Enable all lints except the missing tag warnings
+            addBooleanOption('Xdoclint:all').value = true
+            addBooleanOption('Xdoclint:-missing').value = true
+
+            // Groups
+            group 'Server', 'com.linecorp.armeria.server*'
+            group 'Client', 'com.linecorp.armeria.client*'
+            group 'Common', 'com.linecorp.armeria.common*'
+
+            // Exclude the machine-generated or internal-only classes
+            exclude '**/Tomcat*ProtocolHandler.java'
+            exclude '**/internal/**'
+            exclude '**/thrift/v1/**'
+
+            // External Javadoc links
+            def addOfflineLink = { String name, String url ->
+                linksOffline url, "${rootProject.projectDir}/site/src/apidocs/package-lists/${name}"
+            }
+
+            addOfflineLink 'dropwizard-metrics', 'http://metrics.dropwizard.io/3.2.2/apidocs/'
+            addOfflineLink 'grpc', 'http://www.grpc.io/grpc-java/javadoc/'
+            addOfflineLink 'jackson-databind', 'https://fasterxml.github.io/jackson-databind/javadoc/2.8/'
+            addOfflineLink 'java', 'https://docs.oracle.com/javase/8/docs/api/'
+            addOfflineLink 'jetty', 'http://download.eclipse.org/jetty/stable-9/apidocs/'
+            addOfflineLink 'kafka', 'https://kafka.apache.org/0100/javadoc/'
+            addOfflineLink 'logback', 'http://logback.qos.ch/apidocs/'
+            addOfflineLink 'netty', 'https://netty.io/4.1/api/'
+            addOfflineLink 'prometheus', 'https://prometheus.io/client_java/'
+            addOfflineLink 'protobuf', 'https://developers.google.com/protocol-buffers/docs/reference/java/'
+            addOfflineLink 'retrofit', 'http://square.github.io/retrofit/2.x/retrofit/'
+            addOfflineLink 'slf4j', 'https://www.slf4j.org/api/'
+            addOfflineLink 'spring', 'https://docs.spring.io/spring/docs/current/javadoc-api/'
+            addOfflineLink 'spring-metrics', 'http://metrics.ryantenney.com/docs/'
+            addOfflineLink 'thrift', 'https://people.apache.org/~thejas/thrift-0.9/javadoc/'
+            addOfflineLink 'tomcat', 'https://tomcat.apache.org/tomcat-8.5-doc/api/'
+
+            // Add --allow-script-in-comments if available (since 1.8.0_121)
+            try {
+                if (Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl')
+                        .newInstance().optionLength('--allow-script-in-comments') > 0) {
+                    addBooleanOption('-allow-script-in-comments').value = true
+                }
+            } catch (ignored) {}
         }
     }
 }

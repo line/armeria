@@ -173,9 +173,9 @@ public final class CorsConfig {
      *
      * <p>Please note that cookie support needs to be enabled on the client side as well.
      * The client needs to opt-in to send cookies by calling:
-     * <pre>
+     * <pre>{@code
      * xhr.withCredentials = true;
-     * </pre>
+     * }</pre>
      *
      * <p>The default value for 'withCredentials' is false in which case no cookies are sent.
      * Setting this to true will included cookies in cross origin requests.
@@ -228,9 +228,9 @@ public final class CorsConfig {
      *
      * <p>During a simple CORS request only certain response headers are made available by the
      * browser, for example using:
-     * <pre>
+     * <pre>{@code
      * xhr.getResponseHeader("Content-Type");
-     * </pre>
+     * }</pre>
      * The headers that are available by default are:
      * <ul>
      * <li>Cache-Control</li>

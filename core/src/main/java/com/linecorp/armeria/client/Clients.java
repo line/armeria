@@ -198,7 +198,7 @@ public final class Clients {
      * <pre>{@code
      * HttpClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
      *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
-     *     builder.decorator(...);   // Add a decorator.
+     *     builder.decorator(...);  // Add a decorator.
      *     builder.httpHeader(...); // Add an HTTP header.
      *     return builder.build();
      * });

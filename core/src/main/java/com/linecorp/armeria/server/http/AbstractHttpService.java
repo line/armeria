@@ -50,19 +50,19 @@ public abstract class AbstractHttpService implements HttpService {
     /**
      * Serves the specified {@link HttpRequest} by delegating it to the matching {@code 'doMETHOD()'} method.
      * Override this method to perform an action for the requests of any HTTP methods:
-     * <pre><code>
-     * public class MyHttpService extends AbstractHttpService {
-     *     private final Map&lt;HttpMethod, AtomicInteger&gt; handledRequests = new ConcurrentHashMap&lt;&gt;();
-     *
-     *     &#64;Override
-     *     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-     *         final HttpResponse res = super.serve(ctx, req);
-     *         handledRequests.computeIfAbsent(
-     *                 req.method(), method -&gt; new AtomicInteger()).incrementAndGet();
-     *         return res;
-     *     }
-     * }
-     * </code></pre>
+     * <pre>{@code
+     * > public class MyHttpService extends AbstractHttpService {
+     * >     private final Map<HttpMethod, AtomicInteger> handledRequests = new ConcurrentHashMap<>();
+     * >
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+     * >         final HttpResponse res = super.serve(ctx, req);
+     * >         handledRequests.computeIfAbsent(
+     * >                 req.method(), method -> new AtomicInteger()).incrementAndGet();
+     * >         return res;
+     * >     }
+     * > }
+     * }</pre>
      */
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {

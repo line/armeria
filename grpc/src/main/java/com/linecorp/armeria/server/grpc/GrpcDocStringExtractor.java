@@ -49,7 +49,6 @@ import com.linecorp.armeria.server.docs.DocStringExtractor;
  *
  * <p>For example, to generate a descriptor set in gradle:
  * <pre>{@code
- *
  * protobuf {
  *     generateProtoTasks {
  *         all().each { task ->
@@ -61,7 +60,6 @@ import com.linecorp.armeria.server.docs.DocStringExtractor;
  *         }
  *     }
  * }
- *
  * }</pre>
  */
 final class GrpcDocStringExtractor extends DocStringExtractor {
