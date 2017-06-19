@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
 import com.linecorp.armeria.common.logback.HelloService.hello_result;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -422,9 +423,8 @@ public class RequestContextExportingAppenderTest {
                 new DummyPathMappingContext(virtualHost, "server.com", path, query, req.headers());
 
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
-                serviceConfig, ch, SessionProtocol.H2, mappingCtx,
-                PathMappingResult.of(path, query, ImmutableMap.of()),
-                req, newSslSession());
+                serviceConfig, ch, new Metrics(), SessionProtocol.H2, mappingCtx,
+                PathMappingResult.of(path, query, ImmutableMap.of()), req, newSslSession());
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;
@@ -533,9 +533,8 @@ public class RequestContextExportingAppenderTest {
                                                           .authority("server.com:8080"));
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), SessionProtocol.H2,
-                Endpoint.of("server.com", 8080),
-                req.method(), path, query, null,
+                mock(EventLoop.class), new Metrics(), SessionProtocol.H2,
+                Endpoint.of("server.com", 8080), req.method(), path, query, null,
                 ClientOptions.DEFAULT, req) {
 
             @Nullable

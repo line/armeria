@@ -26,15 +26,15 @@ import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.Metrics;
 
 import io.netty.channel.EventLoop;
 
 final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements HttpClient {
 
-    DefaultHttpClient(ClientBuilderParams params,
-                      Client<HttpRequest, HttpResponse> delegate,
-                      SessionProtocol sessionProtocol, Endpoint endpoint) {
-        super(params, delegate, sessionProtocol, endpoint);
+    DefaultHttpClient(ClientBuilderParams params, Client<HttpRequest, HttpResponse> delegate,
+                      Metrics metrics, SessionProtocol sessionProtocol, Endpoint endpoint) {
+        super(params, delegate, metrics, sessionProtocol, endpoint);
     }
 
     @Override

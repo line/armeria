@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.TransportType;
 
@@ -77,6 +78,7 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListenerImpl connectionPoolListener;
+    private final Metrics metrics;
 
     private final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> pools = new MapMaker().weakKeys()
                                                                                             .makeMap();
@@ -93,7 +95,7 @@ final class HttpClientFactory extends AbstractClientFactory {
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
             long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
-            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener, Metrics metrics) {
 
         final Bootstrap baseBootstrap = new Bootstrap();
         baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
@@ -113,6 +115,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.useHttp2Preface = useHttp2Preface;
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.connectionPoolListener = new ConnectionPoolListenerImpl(connectionPoolListener);
+        this.metrics = metrics;
 
         clientDelegate = new HttpClientDelegate(this);
         eventLoopScheduler = new EventLoopScheduler(workerGroup);
@@ -167,6 +170,11 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public Metrics metrics() {
+        return metrics;
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
 
@@ -203,7 +211,7 @@ final class HttpClientFactory extends AbstractClientFactory {
                                             Client<HttpRequest, HttpResponse> delegate) {
         return new DefaultHttpClient(
                 new DefaultClientBuilderParams(this, uri, HttpClient.class, options),
-                delegate, scheme.sessionProtocol(), endpoint);
+                delegate, metrics, scheme.sessionProtocol(), endpoint);
     }
 
     private static void validateClientType(Class<?> clientType) {

@@ -27,6 +27,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableSet;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.channel.ChannelOption;
@@ -81,9 +84,6 @@ public final class ClientFactoryBuilder {
             ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
             EpollChannelOption.EPOLL_MODE);
 
-    private static final String MESSAGE_MUTUALLY_EXCLUSIVE =
-            "eventLoopGroup() and useDaemonThreads/numWorkerThreads() are mutually exclusive.";
-
     // Netty-related properties:
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnClose;
@@ -98,6 +98,11 @@ public final class ClientFactoryBuilder {
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
     private KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener = DEFAULT_CONNECTION_POOL_LISTENER;
+    /**
+     * Lazily instantiated by {@link #build()}.
+     */
+    @Nullable
+    private Metrics metrics;
 
     /**
      * Creates a new instance.
@@ -224,20 +229,29 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the {@link Metrics} which collects various stats.
+     */
+    public ClientFactoryBuilder metrics(Metrics metrics) {
+        this.metrics = requireNonNull(metrics, "metrics");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
+        final Metrics metrics = this.metrics != null ? this.metrics : new Metrics();
         return new DefaultClientFactory(new HttpClientFactory(
                 workerGroup, shutdownWorkerGroupOnClose, socketOptions, sslContextCustomizer,
                 addressResolverGroupFactory, idleTimeoutMillis, useHttp2Preface, useHttp1Pipelining,
-                connectionPoolListener));
+                connectionPoolListener, metrics));
     }
 
     @Override
     public String toString() {
         return toString(this, workerGroup, shutdownWorkerGroupOnClose, socketOptions,
                         sslContextCustomizer, addressResolverGroupFactory, idleTimeoutMillis,
-                        useHttp2Preface, useHttp1Pipelining, connectionPoolListener);
+                        useHttp2Preface, useHttp1Pipelining, connectionPoolListener, metrics);
     }
 
     static String toString(
@@ -250,9 +264,10 @@ public final class ClientFactoryBuilder {
             long idleTimeoutMillis,
             boolean useHttp2Preface,
             boolean useHttp1Pipelining,
-            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener,
+            Metrics metrics) {
 
-        final ToStringHelper helper = MoreObjects.toStringHelper(self);
+        final ToStringHelper helper = MoreObjects.toStringHelper(self).omitNullValues();
         helper.add("workerGroup", workerGroup + " (shutdownOnClose=" + shutdownWorkerGroupOnClose + ')')
               .add("socketOptions", socketOptions)
               .add("idleTimeoutMillis", idleTimeoutMillis)
@@ -270,6 +285,8 @@ public final class ClientFactoryBuilder {
         if (addressResolverGroupFactory != DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY) {
             helper.add("addressResolverGroupFactory", addressResolverGroupFactory);
         }
+
+        helper.add("metrics", metrics);
 
         return helper.toString();
     }

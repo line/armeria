@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.ChannelUtil;
@@ -167,6 +168,13 @@ public final class Server implements AutoCloseable {
      */
     public Optional<ServerPort> activePort() {
         return Optional.ofNullable(primaryActivePort);
+    }
+
+    /**
+     * Returns the {@link Metrics} that collects various stats.
+     */
+    public Metrics metrics() {
+        return config().metrics();
     }
 
     /**

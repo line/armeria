@@ -1,11 +1,11 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,7 +14,16 @@
  * under the License.
  */
 
+package com.linecorp.armeria.common.metric;
+
 /**
- * Metrics monitoring for {@link com.linecorp.armeria.client.circuitbreaker.CircuitBreaker}.
+ * A {@link Metric} that represents a single integer value. Note that {@link Gauge} represents both
+ * instantaneous and cumulative values unlike other metric libraries. {@link #unit()} tells whether
+ * a metric is cumulative or not instead.
  */
-package com.linecorp.armeria.client.circuitbreaker.metrics;
+public interface Gauge extends Metric {
+    /**
+     * Returns the value.
+     */
+    long value();
+}

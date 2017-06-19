@@ -17,26 +17,20 @@ package com.linecorp.armeria.spring;
 
 import static java.util.Objects.requireNonNull;
 
-import com.codahale.metrics.MetricRegistry;
+import com.linecorp.armeria.common.metric.MetricKey;
+import com.linecorp.armeria.common.metric.MetricKeyFunction;
 
 /**
- * Generates the name of a service/client metric.
+ * Provides the default {@link MetricKeyFunction} implementation.
  */
-final class MetricNames {
+final class MetricKeyFunctions {
 
     /**
-     * Returns the name of the service metric.
+     * Returns the {@link MetricKey} of a service metric.
      */
-    static String serviceMetricName(String serviceName) {
-        return MetricRegistry.name("server", requireNonNull(serviceName, "serviceName"));
+    static MetricKeyFunction serviceMetricKeyFunction(String serviceName) {
+        return MetricKeyFunction.ofLabellessDefault("server", requireNonNull(serviceName, "serviceName"));
     }
 
-    /**
-     * Returns the name of the client metric.
-     */
-    static String clientMetricName(String serviceName) {
-        return MetricRegistry.name("client", requireNonNull(serviceName, "serviceName"));
-    }
-
-    private MetricNames() {}
+    private MetricKeyFunctions() {}
 }

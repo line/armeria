@@ -32,6 +32,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import com.google.common.collect.ImmutableMap;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.netty.channel.EventLoopGroup;
@@ -105,6 +107,11 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+    /**
+     * Instantiated lazily by {@link #build()}.
+     */
+    @Nullable
+    private Metrics metrics;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -283,6 +290,14 @@ public final class ServerBuilder {
      */
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return this;
+    }
+
+    /**
+     * Sets the {@link Metrics} that collects various stats.
+     */
+    public ServerBuilder metrics(Metrics metrics) {
+        this.metrics = requireNonNull(metrics, "metrics");
         return this;
     }
 
@@ -609,11 +624,13 @@ public final class ServerBuilder {
             virtualHosts = this.virtualHosts;
         }
 
+        final Metrics metrics = this.metrics != null ? this.metrics : new Metrics();
+
         final Server server = new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix));
+                blockingTaskExecutor, metrics, serviceLoggerPrefix));
         serverListeners.forEach(server::addListener);
         return server;
     }
@@ -624,6 +641,6 @@ public final class ServerBuilder {
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix);
+                blockingTaskExecutor, metrics, serviceLoggerPrefix);
     }
 }

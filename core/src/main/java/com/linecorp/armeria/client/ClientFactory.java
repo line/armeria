@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
@@ -87,6 +88,11 @@ public interface ClientFactory extends AutoCloseable {
      * so that {@link ClientFactory} utilizes {@link EventLoop}s efficiently.
      */
     ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint);
+
+    /**
+     * Returns the {@link Metrics} that collects various stats.
+     */
+    Metrics metrics();
 
     /**
      * Creates a new client that connects to the specified {@code uri}.

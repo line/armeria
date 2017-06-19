@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.RouteCache.wrap;
+import static com.linecorp.armeria.server.RouteCache.wrapCompositeServiceRouter;
+import static com.linecorp.armeria.server.RouteCache.wrapVirtualHostRouter;
 import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
@@ -50,25 +51,20 @@ public final class Routers {
      * It consists of several router implementations which use one of Trie and List. It also includes
      * cache mechanism to improve its performance.
      */
-    public static Router<ServiceConfig> ofServiceConfig(Iterable<ServiceConfig> configs) {
+    public static Router<ServiceConfig> ofVirtualHost(Iterable<ServiceConfig> configs) {
         requireNonNull(configs, "configs");
-        return wrap(defaultRouter(configs, ServiceConfig::pathMapping));
+        return wrapVirtualHostRouter(defaultRouter(configs, ServiceConfig::pathMapping));
     }
 
     /**
      * Returns the default implementation of the {@link Router} to find a {@link CompositeServiceEntry}.
      */
-    public static <I extends Request, O extends Response> Router<Service<I, O>> ofCompositeServiceEntry(
-            Object caller, List<CompositeServiceEntry<I, O>> entries) {
-        requireNonNull(caller, "caller");
+    public static <I extends Request, O extends Response> Router<Service<I, O>> ofCompositeService(
+            List<CompositeServiceEntry<I, O>> entries) {
         requireNonNull(entries, "entries");
 
-        // We need to make a different cache name for every composite service instances.
-        // Also, empty simple name might be returned if this instance is anonymous.
-        final String cacheName = caller.getClass().getSimpleName() + '@' + caller.hashCode();
-
         final Router<CompositeServiceEntry<I, O>> delegate =
-                wrap(cacheName, defaultRouter(entries, CompositeServiceEntry::pathMapping));
+                wrapCompositeServiceRouter(defaultRouter(entries, CompositeServiceEntry::pathMapping));
         return new CompositeRouter<>(delegate, result ->
                 result.isPresent() ? PathMapped.of(result.mapping(), result.mappingResult(),
                                                    result.value().service())
@@ -139,11 +135,12 @@ public final class Routers {
             router = new SequentialRouter<>(values, pathMappingResolver);
         }
 
-        logger.info("Router created for {} services: {}", values.size(), router);
         if (logger.isDebugEnabled()) {
+            logger.debug("Router created for {} service(s): {}",
+                         values.size(), router.getClass().getSimpleName());
             values.forEach(c -> {
                 final PathMapping mapping = pathMappingResolver.apply(c);
-                logger.debug("metric: {}, complexity: {}", mapping.metricName(), mapping.complexity());
+                logger.debug("metricName: {}, complexity: {}", mapping.metricName(), mapping.complexity());
             });
         }
         values.clear();

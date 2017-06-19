@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 final class CatchAllPathMapping extends AbstractPathMapping {
@@ -27,6 +29,7 @@ final class CatchAllPathMapping extends AbstractPathMapping {
 
     private static final Optional<String> PREFIX_PATH_OPT = Optional.of("/");
     private static final String LOGGER_NAME = loggerName("/"); // "__ROOT__"
+    private static final List<String> METRIC_NAME = ImmutableList.of("catch-all");
 
     private CatchAllPathMapping() {}
 
@@ -46,8 +49,8 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricName() {
-        return "/**";
+    public List<String> metricName() {
+        return METRIC_NAME;
     }
 
     @Override

@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -52,6 +53,7 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
 
     private final ClientBuilderParams params;
     private final Client<I, O> delegate;
+    private final Metrics metrics;
     private final SessionProtocol sessionProtocol;
     private final Endpoint endpoint;
 
@@ -60,13 +62,15 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      *
      * @param params the parameters used for constructing the client
      * @param delegate the {@link Client} that will process {@link Request}s
+     * @param metrics the {@link Metrics} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the {@link Client}
      * @param endpoint the {@link Endpoint} of the {@link Client}
      */
-    protected UserClient(ClientBuilderParams params,
-                         Client<I, O> delegate, SessionProtocol sessionProtocol, Endpoint endpoint) {
+    protected UserClient(ClientBuilderParams params, Client<I, O> delegate, Metrics metrics,
+                         SessionProtocol sessionProtocol, Endpoint endpoint) {
         this.params = params;
         this.delegate = delegate;
+        this.metrics = metrics;
         this.sessionProtocol = sessionProtocol;
         this.endpoint = endpoint;
     }
@@ -150,12 +154,12 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
         if (eventLoop == null) {
             final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
             ctx = new DefaultClientRequestContext(
-                    releasableEventLoop.get(), sessionProtocol, endpoint,
+                    releasableEventLoop.get(), metrics, sessionProtocol, endpoint,
                     method, path, query, fragment, options(), req);
             ctx.log().addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
         } else {
-            ctx = new DefaultClientRequestContext(
-                    eventLoop, sessionProtocol, endpoint, method, path, query, fragment, options(), req);
+            ctx = new DefaultClientRequestContext(eventLoop, metrics, sessionProtocol, endpoint,
+                                                  method, path, query, fragment, options(), req);
         }
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {

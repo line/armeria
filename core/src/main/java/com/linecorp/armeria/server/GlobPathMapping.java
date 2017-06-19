@@ -18,11 +18,13 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -53,7 +55,7 @@ final class GlobPathMapping extends AbstractPathMapping {
     private final int numParams;
     private final Set<String> paramNames;
     private final String loggerName;
-    private final String metricName;
+    private final List<String> metricName;
     private final String strVal;
 
     GlobPathMapping(String glob) {
@@ -75,7 +77,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         // when generating logger and metric names.
         final String aGlob = glob.startsWith("/") ? glob : "/**/" + glob;
         loggerName = loggerName(aGlob);
-        metricName = aGlob;
+        metricName = ImmutableList.of(PREFIX + aGlob);
     }
 
     @Override
@@ -109,7 +111,7 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricName() {
+    public List<String> metricName() {
         return metricName;
     }
 

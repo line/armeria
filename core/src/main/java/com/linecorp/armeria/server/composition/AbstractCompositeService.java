@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.composition;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -23,10 +24,12 @@ import java.util.List;
 import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.metric.MetricKey;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
@@ -34,6 +37,7 @@ import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.Routers;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCallbackInvoker;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -46,9 +50,9 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
  * <pre>{@code
  * public class MyService extends AbstractCompositeService<HttpRequest, HttpResponse> {
  *     public MyService() {
- *         super(CompositeServiceEntry.ofPrefix("/foo/"), new FooService()),
- *               CompositeServiceEntry.ofPrefix("/bar/"), new BarService()),
- *               CompositeServiceEntry.ofCatchAll(), new OtherService()));
+ *         super(CompositeServiceEntry.ofPrefix("/foo/", new FooService()),
+ *               CompositeServiceEntry.ofPrefix("/bar/", new BarService()),
+ *               CompositeServiceEntry.ofCatchAll(new OtherService()));
  *     }
  * }
  * }</pre>
@@ -62,7 +66,8 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
 public abstract class AbstractCompositeService<I extends Request, O extends Response> implements Service<I, O> {
 
     private final List<CompositeServiceEntry<I, O>> services;
-    private final Router<Service<I, O>> router;
+    private Server server;
+    private Router<Service<I, O>> router;
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
@@ -79,11 +84,20 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         requireNonNull(services, "services");
 
         this.services = ImmutableList.copyOf(services);
-        router = Routers.ofCompositeServiceEntry(this, this.services);
     }
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
+        checkState(server == null, "cannot be added to more than one server");
+        server = cfg.server();
+        router = Routers.ofCompositeService(services);
+
+        final MetricKey metricKey = new MetricKey(
+                ImmutableList.of("router", "compositeServiceCache"),
+                ImmutableMap.of("hostnamePattern", cfg.virtualHost().hostnamePattern(),
+                                "pathMapping", String.join(",", cfg.pathMapping().metricName())));
+
+        router.registerMetrics(server.metrics(), metricKey);
         for (CompositeServiceEntry<I, O> e : services()) {
             ServiceCallbackInvoker.invokeServiceAdded(cfg, e.service());
         }

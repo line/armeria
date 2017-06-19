@@ -28,6 +28,7 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.Metrics;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
@@ -108,6 +109,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public RequestLogBuilder logBuilder() {
         return delegate().logBuilder();
+    }
+
+    @Override
+    public Metrics metrics() {
+        return delegate().metrics();
     }
 
     @Override

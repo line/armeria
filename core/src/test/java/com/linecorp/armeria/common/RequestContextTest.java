@@ -50,6 +50,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.Channel;
@@ -406,7 +407,8 @@ public class RequestContextTest {
 
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
-            super(SessionProtocol.HTTP, HttpMethod.GET, "/", null, new DefaultHttpRequest());
+            super(new Metrics(), SessionProtocol.HTTP,
+                  HttpMethod.GET, "/", null, new DefaultHttpRequest());
         }
 
         @Override
