@@ -31,6 +31,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 public class DefaultHttpClientTest {
 
     @SuppressWarnings("unchecked")
@@ -46,6 +48,7 @@ public class DefaultHttpClientTest {
                                                                                  ClientOptions.DEFAULT);
         DefaultHttpClient defaultHttpClient = new DefaultHttpClient(clientBuilderParams,
                                                                     mockClientDelegate,
+                                                                    new SimpleMeterRegistry(),
                                                                     SessionProtocol.of("http"),
                                                                     Endpoint.of("127.0.0.1"));
 

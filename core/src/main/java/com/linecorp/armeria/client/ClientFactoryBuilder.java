@@ -27,6 +27,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableSet;
@@ -38,6 +40,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.internal.TransportType;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
@@ -81,9 +85,6 @@ public final class ClientFactoryBuilder {
             ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
             EpollChannelOption.EPOLL_MODE);
 
-    private static final String MESSAGE_MUTUALLY_EXCLUSIVE =
-            "eventLoopGroup() and useDaemonThreads/numWorkerThreads() are mutually exclusive.";
-
     // Netty-related properties:
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnClose;
@@ -98,6 +99,8 @@ public final class ClientFactoryBuilder {
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
     private KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener = DEFAULT_CONNECTION_POOL_LISTENER;
+    @Nullable
+    private MeterRegistry meterRegistry;
 
     /**
      * Creates a new instance.
@@ -224,20 +227,30 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the {@link MeterRegistry} which collects various stats.
+     */
+    public ClientFactoryBuilder meterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
+        final MeterRegistry meterRegistry = this.meterRegistry != null ? this.meterRegistry
+                                                                       : new SimpleMeterRegistry();
         return new DefaultClientFactory(new HttpClientFactory(
                 workerGroup, shutdownWorkerGroupOnClose, socketOptions, sslContextCustomizer,
                 addressResolverGroupFactory, idleTimeoutMillis, useHttp2Preface, useHttp1Pipelining,
-                connectionPoolListener));
+                connectionPoolListener, meterRegistry));
     }
 
     @Override
     public String toString() {
         return toString(this, workerGroup, shutdownWorkerGroupOnClose, socketOptions,
                         sslContextCustomizer, addressResolverGroupFactory, idleTimeoutMillis,
-                        useHttp2Preface, useHttp1Pipelining, connectionPoolListener);
+                        useHttp2Preface, useHttp1Pipelining, connectionPoolListener, meterRegistry);
     }
 
     static String toString(
@@ -250,9 +263,10 @@ public final class ClientFactoryBuilder {
             long idleTimeoutMillis,
             boolean useHttp2Preface,
             boolean useHttp1Pipelining,
-            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener,
+            MeterRegistry meterRegistry) {
 
-        final ToStringHelper helper = MoreObjects.toStringHelper(self);
+        final ToStringHelper helper = MoreObjects.toStringHelper(self).omitNullValues();
         helper.add("workerGroup", workerGroup + " (shutdownOnClose=" + shutdownWorkerGroupOnClose + ')')
               .add("socketOptions", socketOptions)
               .add("idleTimeoutMillis", idleTimeoutMillis)
@@ -270,6 +284,8 @@ public final class ClientFactoryBuilder {
         if (addressResolverGroupFactory != DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY) {
             helper.add("addressResolverGroupFactory", addressResolverGroupFactory);
         }
+
+        helper.add("meterRegistry", meterRegistry);
 
         return helper.toString();
     }

@@ -18,6 +18,9 @@ package com.linecorp.armeria.server;
 
 import java.io.OutputStream;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.util.MeterId;
+
 /**
  * Finds a mapping that matches a given {@link PathMappingContext}.
  */
@@ -30,6 +33,15 @@ public interface Router<V> {
      *         {@link PathMapped#empty()} if there's no match.
      */
     PathMapped<V> find(PathMappingContext mappingCtx);
+
+    /**
+     * Registers the stats of this {@link Router} to the specified {@link MeterRegistry}.
+     *
+     * @return whether the stats of this {@link Router} has been registered
+     */
+    default boolean registerMetrics(MeterRegistry registry, MeterId id) {
+        return false;
+    }
 
     /**
      * Dumps the content of this {@link Router}.

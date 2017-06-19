@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFutureListener;
@@ -223,6 +225,11 @@ public interface RequestContext extends AttributeMap {
     RequestLogBuilder logBuilder();
 
     /**
+     * Returns the {@link MeterRegistry} that collects various stats.
+     */
+    MeterRegistry meterRegistry();
+
+    /**
      * Returns all {@link Attribute}s set in this context.
      */
     Iterator<Attribute<?>> attrs();
@@ -236,7 +243,7 @@ public interface RequestContext extends AttributeMap {
      * Returns the {@link ByteBufAllocator} for this {@link RequestContext}. Any buffers created by this
      * {@link ByteBufAllocator} must be
      * <a href="http://netty.io/wiki/reference-counted-objects.html">reference-counted</a>. If you don't know
-     * what this means, you should probably use {@code byte[]} or {@link java.nio.ByteBuffer} directly instead
+     * what this means, you should probably use {@code byte[]} or {@link ByteBuffer} directly instead
      * of calling this method.
      */
     default ByteBufAllocator alloc() {

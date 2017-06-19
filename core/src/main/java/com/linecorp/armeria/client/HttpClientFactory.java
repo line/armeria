@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.TransportType;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
@@ -77,6 +79,7 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListenerImpl connectionPoolListener;
+    private MeterRegistry meterRegistry;
 
     private final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> pools = new MapMaker().weakKeys()
                                                                                             .makeMap();
@@ -93,7 +96,7 @@ final class HttpClientFactory extends AbstractClientFactory {
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
             long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
-            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener, MeterRegistry meterRegistry) {
 
         final Bootstrap baseBootstrap = new Bootstrap();
         baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
@@ -113,6 +116,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.useHttp2Preface = useHttp2Preface;
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.connectionPoolListener = new ConnectionPoolListenerImpl(connectionPoolListener);
+        this.meterRegistry = meterRegistry;
 
         clientDelegate = new HttpClientDelegate(this);
         eventLoopScheduler = new EventLoopScheduler(workerGroup);
@@ -167,6 +171,16 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public MeterRegistry meterRegistry() {
+        return meterRegistry;
+    }
+
+    @Override
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
 
@@ -203,7 +217,7 @@ final class HttpClientFactory extends AbstractClientFactory {
                                             Client<HttpRequest, HttpResponse> delegate) {
         return new DefaultHttpClient(
                 new DefaultClientBuilderParams(this, uri, HttpClient.class, options),
-                delegate, scheme.sessionProtocol(), endpoint);
+                delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
     }
 
     private static void validateClientType(Class<?> clientType) {

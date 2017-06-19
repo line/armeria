@@ -53,6 +53,7 @@ import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.internal.TransportType;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -168,6 +169,13 @@ public final class Server implements AutoCloseable {
      */
     public Optional<ServerPort> activePort() {
         return Optional.ofNullable(primaryActivePort);
+    }
+
+    /**
+     * Returns the {@link MeterRegistry} that collects various stats.
+     */
+    public MeterRegistry meterRegistry() {
+        return config().meterRegistry();
     }
 
     /**

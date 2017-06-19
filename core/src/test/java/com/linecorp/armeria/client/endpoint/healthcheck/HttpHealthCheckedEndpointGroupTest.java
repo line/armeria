@@ -16,20 +16,21 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.testing.server.ServerRule;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 
 public class HttpHealthCheckedEndpointGroupTest {
 
@@ -47,7 +48,7 @@ public class HttpHealthCheckedEndpointGroupTest {
         }
     }
 
-    private final MetricRegistry metricRegistry = new MetricRegistry();
+    private final MeterRegistry registry = new PrometheusMeterRegistry();
 
     @Rule
     public final ServerRule serverOne = new HealthCheckServerRule();
@@ -59,80 +60,87 @@ public class HttpHealthCheckedEndpointGroupTest {
     public void endpoints() throws Exception {
         serverOne.start();
         serverTwo.start();
-        HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
-                new StaticEndpointGroup(
-                        Endpoint.of("127.0.0.1", serverOne.httpPort()),
-                        Endpoint.of("127.0.0.1", serverTwo.httpPort())),
+
+        final int portOne = serverOne.httpPort();
+        final int portTwo = serverTwo.httpPort();
+        final HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
+                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
+                                        Endpoint.of("127.0.0.1", portTwo)),
                 HEALTH_CHECK_PATH);
-        metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
+
+        endpointGroup.newMeterBinder(registry, "foo").bindTo(registry);
 
         await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints()).containsExactly(
-                        Endpoint.of("127.0.0.1", serverOne.httpPort()),
-                        Endpoint.of("127.0.0.1", serverTwo.httpPort())));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.all.count").getValue())
-                .isEqualTo(2);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
-                .isEqualTo(2);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.endpoints").getValue())
-                .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.httpPort(),
-                                           "127.0.0.1:" + serverTwo.httpPort()));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
-                .isEqualTo(ImmutableSet.of());
+                        Endpoint.of("127.0.0.1", portOne),
+                        Endpoint.of("127.0.0.1", portTwo)));
+        assertThat(measure(registry, "armeria_client_endpoint_group_count",
+                           "name", "foo", "state", "healthy")).isEqualTo(2);
+        assertThat(measure(registry, "armeria_client_endpoint_group_count",
+                           "name", "foo", "state", "unhealthy")).isZero();
+        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
+                           "name", "foo", "authority", "127.0.0.1:" + portOne)).isOne();
+        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
+                           "name", "foo", "authority", "127.0.0.1:" + portTwo)).isOne();
 
         serverTwo.stop().get();
         await().untilAsserted(
-                () -> assertThat(
-                        metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
-                        .isEqualTo(1));
+                () -> assertThat(endpointGroup.endpoints()).containsExactly(
+                        Endpoint.of("127.0.0.1", portOne)));
+        assertThat(measure(registry, "armeria_client_endpoint_group_count",
+                           "name", "foo", "state", "healthy")).isOne();
+        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
+                           "name", "foo", "authority", "127.0.0.1:" + portTwo)).isZero();
     }
 
     @Test
     public void endpoints_containsUnhealthyServer() throws Exception {
         serverOne.start();
-        HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
-                new StaticEndpointGroup(
-                        Endpoint.of("127.0.0.1", serverOne.httpPort()),
-                        Endpoint.of("127.0.0.1", 2345)),
+
+        final int portOne = serverOne.httpPort();
+        final int portTwo = 65535;
+        final HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
+                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
+                                        Endpoint.of("127.0.0.1", portTwo)),
                 HEALTH_CHECK_PATH);
 
-        metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
+        endpointGroup.newMeterBinder(registry, "bar").bindTo(registry);
 
         await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints())
-                        .containsOnly(Endpoint.of("127.0.0.1", serverOne.httpPort())));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.all.count").getValue())
-                .isEqualTo(2);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
-                .isEqualTo(1);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.endpoints").getValue())
-                .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.httpPort()));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
-                .isEqualTo(ImmutableSet.of("127.0.0.1:2345"));
+                        .containsOnly(Endpoint.of("127.0.0.1", portOne)));
+        assertThat(measure(registry, "armeria_client_endpoint_group_count",
+                           "name", "bar", "state", "healthy")).isOne();
+        assertThat(measure(registry, "armeria_client_endpoint_group_count",
+                           "name", "bar", "state", "unhealthy")).isOne();
+        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
+                           "name", "bar", "authority", "127.0.0.1:" + portOne)).isOne();
+        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
+                           "name", "bar", "authority", "127.0.0.1:" + portTwo)).isZero();
     }
 
     @Test
     public void endpoints_duplicateEntries() throws Exception {
         serverOne.start();
-        HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
-                new StaticEndpointGroup(
-                        Endpoint.of("127.0.0.1", serverOne.httpPort()),
-                        Endpoint.of("127.0.0.1", serverOne.httpPort()),
-                        Endpoint.of("127.0.0.1", serverOne.httpPort())),
+
+        final int portOne = serverOne.httpPort();
+        final HealthCheckedEndpointGroup endpointGroup = HttpHealthCheckedEndpointGroup.of(
+                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
+                                        Endpoint.of("127.0.0.1", portOne),
+                                        Endpoint.of("127.0.0.1", portOne)),
                 HEALTH_CHECK_PATH);
 
-        metricRegistry.registerAll(endpointGroup.newMetricSet("metric"));
+        endpointGroup.newMeterBinder(registry, "baz").bindTo(registry);
 
         await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints())
-                        .containsOnly(Endpoint.of("127.0.0.1", serverOne.httpPort())));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.all.count").getValue())
-                .isEqualTo(3);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.count").getValue())
-                .isEqualTo(3);
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.healthy.endpoints").getValue())
-                .isEqualTo(ImmutableSet.of("127.0.0.1:" + serverOne.httpPort()));
-        assertThat(metricRegistry.getGauges().get("endpointHealth.metric.unhealthy.endpoints").getValue())
-                .isEqualTo(ImmutableSet.of());
+                        .containsOnly(Endpoint.of("127.0.0.1", portOne)));
+
+        assertThat(measure(registry, "armeria_client_endpoint_group_count",
+                           "name", "baz", "state", "healthy")).isEqualTo(3);
+        assertThat(measure(registry, "armeria_client_endpoint_group_count",
+                           "name", "baz", "state", "unhealthy")).isZero();
+        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
+                           "name", "baz", "authority", "127.0.0.1:" + portOne)).isOne();
     }
 }

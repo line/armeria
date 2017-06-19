@@ -35,6 +35,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
@@ -99,6 +100,16 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @Override
     public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
         return httpClientFactory.acquireEventLoop(endpoint);
+    }
+
+    @Override
+    public MeterRegistry meterRegistry() {
+        return httpClientFactory.meterRegistry();
+    }
+
+    @Override
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        httpClientFactory.setMeterRegistry(meterRegistry);
     }
 
     @Override

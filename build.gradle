@@ -48,7 +48,6 @@ ext {
     relocations = [
             // "groupId:artifactId", "original package name", "relocated package name"
             ['com.github.ben-manes.caffeine:caffeine', 'com.github.benmanes.caffeine', "${shadedPackage}.caffeine"],
-            ['io.prometheus:simpleclient_caffeine', 'io.prometheus.client.cache.caffeine', "${shadedPackage}.prometheus_caffeine"],
             ['com.google.guava:guava', 'com.google.common', "${shadedPackage}.guava"],
             ['com.google.guava:guava', 'com.google.thirdparty.publicsuffix', "${shadedPackage}.publicsuffix"],
             ['com.spotify:completable-futures', 'com.spotify.futures', "${shadedPackage}.futures"],

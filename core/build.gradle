@@ -16,8 +16,8 @@ managedDependencies {
         compile "com.fasterxml.jackson.core:$it"
     }
 
-    // Metrics
-    compile 'io.dropwizard.metrics:metrics-core'
+    // Micrometer
+    compile 'io.micrometer:micrometer-core'
 
     // Netty
     [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
@@ -28,7 +28,6 @@ managedDependencies {
     runtime 'org.javassist:javassist'
 
     // Prometheus
-    compile 'io.prometheus:simpleclient_caffeine'
     compile 'io.prometheus:simpleclient_common'
 
     // Reactive Streams

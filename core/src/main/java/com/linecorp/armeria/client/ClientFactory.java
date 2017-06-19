@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
@@ -87,6 +88,19 @@ public interface ClientFactory extends AutoCloseable {
      * so that {@link ClientFactory} utilizes {@link EventLoop}s efficiently.
      */
     ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint);
+
+    /**
+     * Returns the {@link MeterRegistry} that collects various stats.
+     */
+    MeterRegistry meterRegistry();
+
+    /**
+     * Sets the {@link MeterRegistry} that collects various stats. Note that this method is intended to be
+     * used during the initialization phase of an application, so that the application gets a chance to
+     * switch to the preferred {@link MeterRegistry} implementation. Invoking this method after this factory
+     * started to export stats to the old {@link MeterRegistry} may result in undocumented behavior.
+     */
+    void setMeterRegistry(MeterRegistry meterRegistry);
 
     /**
      * Creates a new client that connects to the specified {@code uri}.

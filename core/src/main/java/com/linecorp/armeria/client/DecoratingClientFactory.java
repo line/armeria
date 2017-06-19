@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
@@ -68,6 +69,16 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     @Override
     public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
         return delegate().acquireEventLoop(endpoint);
+    }
+
+    @Override
+    public MeterRegistry meterRegistry() {
+        return delegate().meterRegistry();
+    }
+
+    @Override
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        delegate().setMeterRegistry(meterRegistry);
     }
 
     @Override

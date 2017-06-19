@@ -29,6 +29,7 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
@@ -108,6 +109,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public RequestLogBuilder logBuilder() {
         return delegate().logBuilder();
+    }
+
+    @Override
+    public MeterRegistry meterRegistry() {
+        return delegate().meterRegistry();
     }
 
     @Override

@@ -27,14 +27,14 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 
 final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements HttpClient {
 
-    DefaultHttpClient(ClientBuilderParams params,
-                      Client<HttpRequest, HttpResponse> delegate,
-                      SessionProtocol sessionProtocol, Endpoint endpoint) {
-        super(params, delegate, sessionProtocol, endpoint);
+    DefaultHttpClient(ClientBuilderParams params, Client<HttpRequest, HttpResponse> delegate,
+                      MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
+        super(params, delegate, meterRegistry, sessionProtocol, endpoint);
     }
 
     @Override

@@ -49,6 +49,7 @@ import io.grpc.ClientCall;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.MethodDescriptor;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 
 /**
@@ -65,6 +66,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     private final ClientBuilderParams params;
     private final Client<HttpRequest, HttpResponse> httpClient;
 
+    private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
     private final Endpoint endpoint;
     private final SerializationFormat serializationFormat;
@@ -72,12 +74,14 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
 
     ArmeriaChannel(ClientBuilderParams params,
                    Client<HttpRequest, HttpResponse> httpClient,
+                   MeterRegistry meterRegistry,
                    SessionProtocol sessionProtocol,
                    Endpoint endpoint,
                    SerializationFormat serializationFormat,
                    @Nullable MessageMarshaller jsonMarshaller) {
         this.params = params;
         this.httpClient = httpClient;
+        this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
         this.endpoint = endpoint;
         this.serializationFormat = serializationFormat;
@@ -143,6 +147,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
         final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint);
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop.get(),
+                meterRegistry,
                 sessionProtocol,
                 endpoint,
                 method,

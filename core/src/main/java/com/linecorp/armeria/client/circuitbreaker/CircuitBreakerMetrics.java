@@ -1,0 +1,85 @@
+/*
+ * Copyright 2017 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.client.circuitbreaker;
+
+import static com.linecorp.armeria.client.circuitbreaker.CircuitState.CLOSED;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitState.HALF_OPEN;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitState.OPEN;
+import static com.linecorp.armeria.common.metric.MeterRegistryUtil.name;
+import static com.linecorp.armeria.common.metric.MeterRegistryUtil.tags;
+import static com.linecorp.armeria.common.metric.MeterUnit.NONE;
+import static com.linecorp.armeria.common.metric.MeterUnit.NONE_TOTAL;
+import static java.util.Objects.requireNonNull;
+
+import java.util.concurrent.atomic.AtomicReference;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.util.MeterId;
+
+/**
+ * Provides {@link CircuitBreaker} stats.
+ */
+final class CircuitBreakerMetrics {
+
+    private final AtomicReference<EventCount> latestEventCount = new AtomicReference<>(EventCount.ZERO);
+    private final Counter transitionsToClosed;
+    private final Counter transitionsToOpen;
+    private final Counter transitionsToHalfOpen;
+    private final Counter rejectedRequests;
+
+    CircuitBreakerMetrics(MeterRegistry parent, MeterId id) {
+        requireNonNull(parent, "parent");
+        requireNonNull(id, "id");
+
+        final String requests = name(parent, NONE, id, "requests");
+        parent.gauge(requests, tags(id, "result", "success"),
+                     latestEventCount, lec -> lec.get().success());
+        parent.gauge(requests, tags(id, "result", "failure"),
+                     latestEventCount, lec -> lec.get().failure());
+
+        final String transitions = name(parent, NONE_TOTAL, id, "transitions");
+        transitionsToClosed = parent.counter(transitions, tags(id, "state", CLOSED.name()));
+        transitionsToOpen = parent.counter(transitions, tags(id, "state", OPEN.name()));
+        transitionsToHalfOpen = parent.counter(transitions, tags(id, "state", HALF_OPEN.name()));
+        rejectedRequests = parent.counter(name(parent, NONE_TOTAL, id, "rejectedRequests"), id.getTags());
+    }
+
+    void onStateChanged(CircuitState state) {
+        switch (state) {
+            case CLOSED:
+                transitionsToClosed.increment();
+                break;
+            case OPEN:
+                transitionsToOpen.increment();
+                break;
+            case HALF_OPEN:
+                transitionsToHalfOpen.increment();
+                break;
+            default:
+                throw new Error("unknown circuit state: " + state);
+        }
+    }
+
+    void onCountUpdated(EventCount count) {
+        latestEventCount.set(count);
+    }
+
+    void onRequestRejected() {
+        rejectedRequests.increment();
+    }
+}

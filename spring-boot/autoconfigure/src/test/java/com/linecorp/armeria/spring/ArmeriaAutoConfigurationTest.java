@@ -56,6 +56,7 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguratio
 import com.linecorp.armeria.spring.test.thrift.main.HelloService;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService.hello_args;
 
+import io.micrometer.spring.export.prometheus.EnablePrometheusMetrics;
 import io.netty.util.AsciiString;
 
 /**
@@ -66,6 +67,7 @@ import io.netty.util.AsciiString;
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
+@EnablePrometheusMetrics
 public class ArmeriaAutoConfigurationTest {
 
     @SpringBootApplication
@@ -170,5 +172,14 @@ public class ArmeriaAutoConfigurationTest {
         assertThat(ports.stream().filter(p -> p.protocol() == SessionProtocol.HTTP)).hasSize(3);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isLoopbackAddress())).hasSize(1);
+    }
+
+    @Test
+    public void testMetrics() throws Exception {
+        final String metricReport = HttpClient.of(newUrl("http"))
+                                              .get("/internal/metrics")
+                                              .aggregate().join()
+                                              .content().toStringUtf8();
+        assertThat(metricReport).contains("# TYPE jvm_gc_live_data_size gauge");
     }
 }
