@@ -55,7 +55,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             new KeyedChannelPoolHandlerAdapter<>();
 
     private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
-            ch -> ch.eventLoop().newSucceededFuture(HttpSession.get(ch).isActive());
+            ch -> ch.eventLoop().newSucceededFuture(ch.isActive() && HttpSession.get(ch).isActive());
 
     final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> map = new ConcurrentHashMap<>();
 

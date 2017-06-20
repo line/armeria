@@ -25,30 +25,30 @@ import java.util.function.Supplier;
 import com.google.common.base.MoreObjects;
 
 final class RandomBackoff extends AbstractBackoff {
-    private final LongSupplier nextInterval;
-    private final long minIntervalMillis;
-    private final long maxIntervalMillis;
+    private final LongSupplier nextDelay;
+    private final long minDelayMillis;
+    private final long maxDelayMillis;
 
-    RandomBackoff(long minIntervalMillis, long maxIntervalMillis, Supplier<Random> randomSupplier) {
-        checkArgument(minIntervalMillis >= 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
-        checkArgument(minIntervalMillis <= maxIntervalMillis, "maxIntervalMillis: %s (expected: >= %s)",
-                      maxIntervalMillis, minIntervalMillis);
+    RandomBackoff(long minDelayMillis, long maxDelayMillis, Supplier<Random> randomSupplier) {
+        checkArgument(minDelayMillis >= 0, "minDelayMillis: %s (expected: >= 0)", minDelayMillis);
+        checkArgument(minDelayMillis <= maxDelayMillis, "maxDelayMillis: %s (expected: >= %s)",
+                      maxDelayMillis, minDelayMillis);
         requireNonNull(randomSupplier, "randomSupplier");
 
-        this.minIntervalMillis = minIntervalMillis;
-        this.maxIntervalMillis = maxIntervalMillis;
+        this.minDelayMillis = minDelayMillis;
+        this.maxDelayMillis = maxDelayMillis;
 
-        final long bound = maxIntervalMillis - minIntervalMillis + 1;
-        if (minIntervalMillis == maxIntervalMillis) {
-            nextInterval = () -> minIntervalMillis;
+        final long bound = maxDelayMillis - minDelayMillis + 1;
+        if (minDelayMillis == maxDelayMillis) {
+            nextDelay = () -> minDelayMillis;
         } else {
-            nextInterval = () -> nextLong(randomSupplier.get(), bound) + minIntervalMillis;
+            nextDelay = () -> nextLong(randomSupplier.get(), bound) + minDelayMillis;
         }
     }
 
     @Override
-    protected long doNextIntervalMillis(int numAttemptsSoFar) {
-        return nextInterval.getAsLong();
+    protected long doNextDelayMillis(int numAttemptsSoFar) {
+        return nextDelay.getAsLong();
     }
 
     static long nextLong(Random random, long bound) {
@@ -71,8 +71,8 @@ final class RandomBackoff extends AbstractBackoff {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("minIntervalMillis", minIntervalMillis)
-                          .add("maxIntervalMillis", maxIntervalMillis)
+                          .add("minDelayMillis", minDelayMillis)
+                          .add("maxDelayMillis", maxDelayMillis)
                           .toString();
     }
 }

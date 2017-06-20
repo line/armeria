@@ -22,22 +22,22 @@ import com.google.common.base.MoreObjects;
 final class FixedBackoff extends AbstractBackoff {
     static final Backoff NO_DELAY = new FixedBackoff(0);
 
-    private final long intervalMillis;
+    private final long delayMillis;
 
-    FixedBackoff(long intervalMillis) {
-        checkArgument(intervalMillis >= 0, "intervalMillis: %s (expected: >= 0)", intervalMillis);
-        this.intervalMillis = intervalMillis;
+    FixedBackoff(long delayMillis) {
+        checkArgument(delayMillis >= 0, "delayMillis: %s (expected: >= 0)", delayMillis);
+        this.delayMillis = delayMillis;
     }
 
     @Override
-    protected long doNextIntervalMillis(int numAttemptsSoFar) {
-        return intervalMillis;
+    protected long doNextDelayMillis(int numAttemptsSoFar) {
+        return delayMillis;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("intervalMillis", intervalMillis)
+                          .add("delayMillis", delayMillis)
                           .toString();
     }
 }

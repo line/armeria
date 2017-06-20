@@ -47,15 +47,15 @@ final class JitterAddingBackoff extends BackoffWrapper {
     }
 
     @Override
-    public long nextIntervalMillis(int numAttemptsSoFar) {
+    public long nextDelayMillis(int numAttemptsSoFar) {
         validateNumAttemptsSoFar(numAttemptsSoFar);
-        final long nextIntervalMillis = delegate().nextIntervalMillis(numAttemptsSoFar);
-        if (nextIntervalMillis < 0) {
-            return nextIntervalMillis;
+        final long nextDelayMillis = delegate().nextDelayMillis(numAttemptsSoFar);
+        if (nextDelayMillis < 0) {
+            return nextDelayMillis;
         }
 
         final long jitterMillis = RandomBackoff.nextLong(randomSupplier.get(), bound) + minJitterMillis;
-        return Math.max(0, saturatedAdd(nextIntervalMillis, jitterMillis));
+        return Math.max(0, saturatedAdd(nextDelayMillis, jitterMillis));
     }
 
     @Override

@@ -20,28 +20,29 @@ import static com.google.common.base.Preconditions.checkArgument;
 import com.google.common.base.MoreObjects;
 
 final class ExponentialBackoff extends AbstractBackoff {
-    private long currentIntervalMillis;
-    private final long maxIntervalMillis;
+    private long currentDelayMillis;
+    private final long maxDelayMillis;
     private final double multiplier;
 
-    ExponentialBackoff(long minIntervalMillis, long maxIntervalMillis, double multiplier) {
+    ExponentialBackoff(long initialDelayMillis, long maxDelayMillis, double multiplier) {
         checkArgument(multiplier > 1.0, "multiplier: %s (expected: > 1.0)", multiplier);
-        checkArgument(minIntervalMillis >= 0, "minIntervalMillis: %s (expected: >= 0)", minIntervalMillis);
-        checkArgument(minIntervalMillis <= maxIntervalMillis, "maxIntervalMillis: %s (expected: >= %s)",
-                      maxIntervalMillis, minIntervalMillis);
-        currentIntervalMillis = minIntervalMillis;
-        this.maxIntervalMillis = maxIntervalMillis;
+        checkArgument(initialDelayMillis >= 0,
+                      "initialDelayMillis: %s (expected: >= 0)", initialDelayMillis);
+        checkArgument(initialDelayMillis <= maxDelayMillis, "maxDelayMillis: %s (expected: >= %s)",
+                      maxDelayMillis, initialDelayMillis);
+        currentDelayMillis = initialDelayMillis;
+        this.maxDelayMillis = maxDelayMillis;
         this.multiplier = multiplier;
     }
 
     @Override
-    protected long doNextIntervalMillis(int numAttemptsSoFar) {
-        if (currentIntervalMillis >= maxIntervalMillis) {
-            return maxIntervalMillis;
+    protected long doNextDelayMillis(int numAttemptsSoFar) {
+        if (currentDelayMillis >= maxDelayMillis) {
+            return maxDelayMillis;
         }
-        long nextInterval = currentIntervalMillis;
-        currentIntervalMillis = saturatedMultiply(currentIntervalMillis, multiplier);
-        return nextInterval;
+        long nextDelay = currentDelayMillis;
+        currentDelayMillis = saturatedMultiply(currentDelayMillis, multiplier);
+        return nextDelay;
     }
 
     private static long saturatedMultiply(long left, double right) {
@@ -52,8 +53,8 @@ final class ExponentialBackoff extends AbstractBackoff {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("currentIntervalMillis", currentIntervalMillis)
-                          .add("maxIntervalMillis", maxIntervalMillis)
+                          .add("currentDelayMillis", currentDelayMillis)
+                          .add("maxDelayMillis", maxDelayMillis)
                           .add("multiplier", multiplier)
                           .toString();
     }

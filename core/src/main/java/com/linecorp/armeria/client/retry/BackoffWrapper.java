@@ -32,8 +32,8 @@ public class BackoffWrapper implements Backoff {
     }
 
     @Override
-    public long nextIntervalMillis(int numAttemptsSoFar) {
-        return delegate.nextIntervalMillis(numAttemptsSoFar);
+    public long nextDelayMillis(int numAttemptsSoFar) {
+        return delegate.nextDelayMillis(numAttemptsSoFar);
     }
 
     protected Backoff delegate() {

@@ -26,66 +26,38 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.EventLoop;
 
 /**
  * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.
  */
-public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
-    private static final RetryException RETRY_EXCEPTION = Exceptions.clearTrace(new RetryException());
+public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
 
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
-    newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy) {
-        return newDecorator(retryRequestStrategy, Backoff::withoutDelay);
+    newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy) {
+        return new RetryingRpcClientBuilder(retryStrategy).newDecorator();
     }
 
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
-    newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy,
+    newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
                  Supplier<? extends Backoff> backoffSupplier) {
-        return delegate -> new RetryingRpcClient(delegate, retryRequestStrategy, backoffSupplier);
-    }
-
-    /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
-     */
-    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
-    newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy, int defaultMaxAttempts) {
-        return newDecorator(retryRequestStrategy, Backoff::withoutDelay, defaultMaxAttempts);
-    }
-
-    /**
-     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
-     */
-    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
-    newDecorator(RetryRequestStrategy<RpcRequest, RpcResponse> retryRequestStrategy,
-                 Supplier<? extends Backoff> backoffSupplier, int defaultMaxAttempts) {
-        return delegate ->
-                new RetryingRpcClient(delegate, retryRequestStrategy, backoffSupplier, defaultMaxAttempts);
+        return new RetryingRpcClientBuilder(retryStrategy)
+                .backoffSupplier(backoffSupplier).newDecorator();
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    public RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
-                             RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy,
-                             Supplier<? extends Backoff> backoffSupplier) {
-        super(delegate, retryStrategy, backoffSupplier);
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    public RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
-                             RetryRequestStrategy<RpcRequest, RpcResponse> retryStrategy,
-                             Supplier<? extends Backoff> backoffSupplier, int defaultMaxAttempts) {
+    RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
+                      RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
+                      Supplier<? extends Backoff> backoffSupplier, int defaultMaxAttempts) {
         super(delegate, retryStrategy, backoffSupplier, defaultMaxAttempts);
     }
 
@@ -106,39 +78,44 @@ public class RetryingRpcClient extends RetryingClient<RpcRequest, RpcResponse> {
     private void retry(int currentAttemptNo, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
                        Supplier<RpcResponse> action, DefaultRpcResponse responseFuture) {
         RpcResponse response = action.get();
-        response.handle(voidFunction((result, thrown) -> {
-            final Throwable exception;
-            if (thrown != null) {
-                if (!retryStrategy().shouldRetry(req, thrown)) {
-                    responseFuture.completeExceptionally(thrown);
-                    return;
-                }
-                exception = thrown;
-            } else if (retryStrategy().shouldRetry(req, response)) {
-                exception = RETRY_EXCEPTION;
+        retryStrategy().shouldRetry(req, response).handle(voidFunction((retry, unused) -> {
+            if (retry != null && retry) {
+                retry0(currentAttemptNo, backoff, ctx, req,
+                       action, responseFuture, RetryGiveUpException.get());
             } else {
-                responseFuture.complete(result);
-                return;
-            }
-
-            long nextInterval = backoff.nextIntervalMillis(currentAttemptNo);
-            if (nextInterval < 0) {
-                responseFuture.completeExceptionally(exception);
-            } else {
-                EventLoop eventLoop = ctx.contextAwareEventLoop();
-                if (nextInterval <= 0) {
-                    eventLoop.submit(() -> retry(currentAttemptNo + 1, backoff, ctx, req, action,
-                                                 responseFuture));
-                } else {
-                    eventLoop.schedule(
-                            () -> retry(currentAttemptNo + 1, backoff, ctx, req, action, responseFuture),
-                            nextInterval, TimeUnit.MILLISECONDS);
-                }
+                response.handle(voidFunction((result, thrown) -> {
+                    final Throwable exception;
+                    if (thrown != null) {
+                        if (!retryStrategy().shouldRetry(req, thrown)) {
+                            responseFuture.completeExceptionally(thrown);
+                            return;
+                        }
+                        exception = thrown;
+                    } else {
+                        responseFuture.complete(result);
+                        return;
+                    }
+                    retry0(currentAttemptNo, backoff, ctx, req, action, responseFuture, exception);
+                }));
             }
         }));
     }
 
-    private static final class RetryException extends RuntimeException {
-        private static final long serialVersionUID = -3816065469543230534L;
+    private void retry0(int currentAttemptNo, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
+                        Supplier<RpcResponse> action, DefaultRpcResponse responseFuture, Throwable exception) {
+        long nextDelay = backoff.nextDelayMillis(currentAttemptNo);
+        if (nextDelay < 0) {
+            responseFuture.completeExceptionally(exception);
+        } else {
+            EventLoop eventLoop = ctx.contextAwareEventLoop();
+            if (nextDelay <= 0) {
+                eventLoop.submit(() -> retry(currentAttemptNo + 1, backoff, ctx, req, action,
+                                             responseFuture));
+            } else {
+                eventLoop.schedule(
+                        () -> retry(currentAttemptNo + 1, backoff, ctx, req, action, responseFuture),
+                        nextDelay, TimeUnit.MILLISECONDS);
+            }
+        }
     }
 }

@@ -30,12 +30,12 @@ final class AttemptLimitingBackoff extends BackoffWrapper {
     }
 
     @Override
-    public long nextIntervalMillis(int numAttemptsSoFar) {
+    public long nextDelayMillis(int numAttemptsSoFar) {
         validateNumAttemptsSoFar(numAttemptsSoFar);
         if (numAttemptsSoFar >= maxAttempts) {
             return -1;
         }
-        return super.nextIntervalMillis(numAttemptsSoFar);
+        return super.nextDelayMillis(numAttemptsSoFar);
     }
 
     @Override
