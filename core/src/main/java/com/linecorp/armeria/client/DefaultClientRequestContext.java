@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -80,13 +79,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         responseTimeoutMillis = options.defaultResponseTimeoutMillis();
         maxResponseLength = options.defaultMaxResponseLength();
 
-        if (HttpSessionProtocols.isHttp(sessionProtocol)) {
-            final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
-            if (!headers.isEmpty()) {
-                final HttpHeaders headersCopy = new DefaultHttpHeaders(true, headers.size());
-                headersCopy.set(headers);
-                attr(HTTP_HEADERS).set(headersCopy);
-            }
+        final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
+        if (!headers.isEmpty()) {
+            final HttpHeaders headersCopy = new DefaultHttpHeaders(true, headers.size());
+            headersCopy.set(headers);
+            attr(HTTP_HEADERS).set(headersCopy);
         }
     }
 

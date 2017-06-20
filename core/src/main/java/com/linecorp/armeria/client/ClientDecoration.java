@@ -77,8 +77,7 @@ public final class ClientDecoration {
             }
 
             @SuppressWarnings("unchecked")
-            final Function<Client<? super I, ? extends O>, Client<I, O>> decorator =
-                    ((Entry<I, O>) e).decorator();
+            final Function<Client<I, O>, Client<I, O>> decorator = ((Entry<I, O>) e).decorator();
             client = decorator.apply(client);
         }
 
@@ -88,16 +87,16 @@ public final class ClientDecoration {
     static final class Entry<I extends Request, O extends Response> {
         private final Class<I> requestType;
         private final Class<O> responseType;
-        private final Function<Client<? super I, ? extends O>, Client<I, O>> decorator;
+        private final Function<Client<I, O>, Client<I, O>> decorator;
 
         Entry(Class<I> requestType, Class<O> responseType,
-              Function<? extends Client<? super I, ? extends O>, ? extends Client<I, O>> decorator) {
+              Function<? extends Client<I, O>, ? extends Client<I, O>> decorator) {
             this.requestType = requestType;
             this.responseType = responseType;
 
             @SuppressWarnings("unchecked")
-            Function<Client<? super I, ? extends O>, Client<I, O>> castDecorator =
-                    (Function<Client<? super I, ? extends O>, Client<I, O>>) decorator;
+            Function<Client<I, O>, Client<I, O>> castDecorator =
+                    (Function<Client<I, O>, Client<I, O>>) decorator;
             this.decorator = castDecorator;
         }
 
@@ -109,7 +108,7 @@ public final class ClientDecoration {
             return responseType;
         }
 
-        Function<Client<? super I, ? extends O>, Client<I, O>> decorator() {
+        Function<Client<I, O>, Client<I, O>> decorator() {
             return decorator;
         }
 

@@ -61,25 +61,25 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
  */
 public abstract class AbstractCompositeService<I extends Request, O extends Response> implements Service<I, O> {
 
-    private final List<CompositeServiceEntry<? super I, ? extends O>> services;
-    private final PathMappings<Service<? super I, ? extends O>> serviceMapping = new PathMappings<>();
+    private final List<CompositeServiceEntry<I, O>> services;
+    private final PathMappings<Service<I, O>> serviceMapping = new PathMappings<>();
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
      */
     @SafeVarargs
-    protected AbstractCompositeService(CompositeServiceEntry<? super I, ? extends O>... services) {
+    protected AbstractCompositeService(CompositeServiceEntry<I, O>... services) {
         this(Arrays.asList(requireNonNull(services, "services")));
     }
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
      */
-    protected AbstractCompositeService(Iterable<CompositeServiceEntry<? super I, ? extends O>> services) {
+    protected AbstractCompositeService(Iterable<CompositeServiceEntry<I, O>> services) {
         requireNonNull(services, "services");
 
-        final List<CompositeServiceEntry<? super I, ? extends O>> servicesCopy = new ArrayList<>();
-        for (CompositeServiceEntry<? super I, ? extends O> e : services) {
+        final List<CompositeServiceEntry<I, O>> servicesCopy = new ArrayList<>();
+        for (CompositeServiceEntry<I, O> e : services) {
             servicesCopy.add(e);
             serviceMapping.add(e.pathMapping(), e.service());
         }
@@ -91,7 +91,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
-        for (CompositeServiceEntry<? super I, ? extends O> e : services()) {
+        for (CompositeServiceEntry<I, O> e : services()) {
             ServiceCallbackInvoker.invokeServiceAdded(cfg, e.service());
         }
     }
@@ -99,7 +99,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     /**
      * Returns the list of {@link CompositeServiceEntry}s added to this composite {@link Service}.
      */
-    protected List<CompositeServiceEntry<? super I, ? extends O>> services() {
+    protected List<CompositeServiceEntry<I, O>> services() {
         return services;
     }
 
@@ -108,7 +108,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
      * {@link Service} added first is {@code 0}, and so on.
      */
     @SuppressWarnings("unchecked")
-    protected <T extends Service<? super I, ? extends O>> T serviceAt(int index) {
+    protected <T extends Service<I, O>> T serviceAt(int index) {
         return (T) services().get(index).service();
     }
 
@@ -122,14 +122,13 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
      * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
-    protected PathMapped<Service<? super I, ? extends O>> findService(String path, @Nullable String query) {
+    protected PathMapped<Service<I, O>> findService(String path, @Nullable String query) {
         return serviceMapping.apply(path, query);
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        final PathMapped<Service<? super I, ? extends O>> mapped = findService(ctx.mappedPath(),
-                                                                               ctx.query());
+        final PathMapped<Service<I, O>> mapped = findService(ctx.mappedPath(), ctx.query());
         if (!mapped.isPresent()) {
             throw ResourceNotFoundException.get();
         }

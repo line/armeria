@@ -53,11 +53,11 @@ import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaderNames;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
 import com.linecorp.armeria.common.logback.HelloService.hello_result;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -342,12 +342,11 @@ public class RequestContextExportingAppenderTest {
             final RequestLogBuilder log = ctx.logBuilder();
             log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
-            log.requestEnvelope(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
+            log.requestHeaders(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
             log.requestContent(RPC_REQ, THRIFT_CALL);
             log.endRequest();
-            log.statusCode(200);
             log.responseLength(128);
-            log.responseEnvelope(HttpHeaders.of(HttpHeaderNames.DATE, "some-date"));
+            log.responseHeaders(HttpHeaders.of(200).set(HttpHeaderNames.DATE, "some-date"));
             log.responseContent(RPC_RES, THRIFT_REPLY);
             log.endResponse();
 
@@ -415,7 +414,7 @@ public class RequestContextExportingAppenderTest {
 
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
                 serviceConfig,
-                ch, HttpSessionProtocols.H2, req.method(),
+                ch, SessionProtocol.H2, req.method(),
                 path,
                 PathMappingResult.of(path, query, ImmutableMap.of()),
                 req, newSslSession());
@@ -475,12 +474,11 @@ public class RequestContextExportingAppenderTest {
             final RequestLogBuilder log = ctx.logBuilder();
             log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
-            log.requestEnvelope(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
+            log.requestHeaders(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
             log.requestContent(RPC_REQ, THRIFT_CALL);
             log.endRequest();
-            log.statusCode(200);
             log.responseLength(128);
-            log.responseEnvelope(HttpHeaders.of(HttpHeaderNames.DATE, "some-date"));
+            log.responseHeaders(HttpHeaders.of(200).set(HttpHeaderNames.DATE, "some-date"));
             log.responseContent(RPC_RES, THRIFT_REPLY);
             log.endResponse();
 
@@ -528,7 +526,7 @@ public class RequestContextExportingAppenderTest {
                                                           .authority("server.com:8080"));
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), HttpSessionProtocols.H2,
+                mock(EventLoop.class), SessionProtocol.H2,
                 Endpoint.of("server.com", 8080),
                 req.method(), path, query, null,
                 ClientOptions.DEFAULT, req) {
@@ -540,8 +538,7 @@ public class RequestContextExportingAppenderTest {
             }
         };
 
-        ctx.logBuilder().startRequest(
-                ch, ctx.sessionProtocol(), "some-host.server.com", ctx.method(), ctx.path(), ctx.query());
+        ctx.logBuilder().startRequest(ch, ctx.sessionProtocol(), "some-host.server.com");
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;

@@ -173,8 +173,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 final int statusCode = status.code();
-                logBuilder().statusCode(statusCode);
-                logBuilder().responseEnvelope(headers);
+                logBuilder().responseHeaders(headers);
 
                 if (req.method() == HttpMethod.HEAD) {
                     // HEAD responses always close the stream with the initial headers, even if not explicitly
@@ -301,8 +300,15 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     }
 
     private void failAndRespond(Throwable cause, HttpStatus status, Http2Error error) {
-        final State state = this.state;
-        logBuilder().statusCode(status.code());
+        final HttpData content = status.toHttpData();
+        final HttpHeaders headers =
+                HttpHeaders.of(status)
+                           .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
+                           .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+
+        logBuilder().responseHeaders(headers);
+
+        final State state = this.state; // Keep the state before calling fail() because it updates state.
         fail(cause);
 
         final int id = req.id();
@@ -310,14 +316,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
         if (wroteNothing(state)) {
             // Did not write anything yet; we can send an error response instead of resetting the stream.
-            final HttpData content = status.toHttpData();
-            responseEncoder.writeHeaders(
-                    ctx, id, streamId,
-                    HttpHeaders.of(status)
-                               .set(HttpHeaderNames.CONTENT_TYPE,
-                                    MediaType.PLAIN_TEXT_UTF_8.toString())
-                               .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length()),
-                    false);
+            responseEncoder.writeHeaders(ctx, id, streamId, headers, false);
             responseEncoder.writeData(ctx, id, streamId, content, true);
         } else {
             // Wrote something already; we have to reset/cancel the stream.

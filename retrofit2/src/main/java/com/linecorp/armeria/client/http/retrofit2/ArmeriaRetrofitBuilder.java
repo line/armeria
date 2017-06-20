@@ -32,7 +32,6 @@ import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 
 import okhttp3.HttpUrl;
 import retrofit2.Call;
@@ -103,7 +102,7 @@ public final class ArmeriaRetrofitBuilder {
     public ArmeriaRetrofitBuilder baseUrl(String baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
         URI uri = URI.create(baseUrl);
-        checkArgument(HttpSessionProtocols.isHttp(SessionProtocol.of(uri.getScheme())),
+        checkArgument(SessionProtocol.find(uri.getScheme()).isPresent(),
                       "baseUrl must have an HTTP scheme: %s", baseUrl);
         String path = uri.getPath();
         if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {

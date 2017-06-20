@@ -69,7 +69,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
      */
-    public LoggingClient(Client<? super I, ? extends O> delegate) {
+    public LoggingClient(Client<I, O> delegate) {
         this(delegate, LogLevel.INFO);
     }
 
@@ -77,7 +77,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
      * {@link LogLevel}.
      */
-    public LoggingClient(Client<? super I, ? extends O> delegate, LogLevel level) {
+    public LoggingClient(Client<I, O> delegate, LogLevel level) {
         super(delegate);
         this.level = requireNonNull(level, "level");
     }

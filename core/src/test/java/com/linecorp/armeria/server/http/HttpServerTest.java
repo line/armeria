@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.server.http;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.H1;
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
+import static com.linecorp.armeria.common.SessionProtocol.H2;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;

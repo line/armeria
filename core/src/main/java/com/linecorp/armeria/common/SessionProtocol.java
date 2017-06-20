@@ -17,93 +17,52 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Map;
 import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.Set;
 
 import com.google.common.base.Ascii;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-import com.google.common.collect.ImmutableBiMap;
-
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.
  */
-public final class SessionProtocol implements Comparable<SessionProtocol> {
+public enum SessionProtocol {
+    /**
+     * HTTP - over TLS, HTTP/2 preferred.
+     */
+    HTTPS("https", true, false, 443),
+    /**
+     * HTTP - cleartext, HTTP/2 preferred.
+     */
+    HTTP("http", false, false, 80),
+    /**
+     * HTTP/1 - over TLS.
+     */
+    H1("h1", true, false, 443),
+    /**
+     * HTTP/1 - cleartext.
+     */
+    H1C("h1c", false, false, 80),
+    /**
+     * HTTP/2 - over TLS.
+     */
+    H2("h2", true, true, 443),
+    /**
+     * HTTP/2 - cleartext.
+     */
+    H2C("h2c", false, true, 80);
 
-    private static final BiMap<String, SessionProtocol> uriTextToProtocols;
-    private static final Set<SessionProtocol> values;
+    private static final Map<String, SessionProtocol> uriTextToProtocols;
 
     static {
-        // Load all session protocols from the providers.
-        final BiMap<String, SessionProtocol> mutableUriTextToProtocols = HashBiMap.create();
-        ServiceLoader.load(SessionProtocolProvider.class, SessionProtocolProvider.class.getClassLoader())
-                     .forEach(provider -> provider.entries().forEach(e -> {
-                         checkState(!mutableUriTextToProtocols.containsKey(e.uriText),
-                                    "session protocol registered already: ", e.uriText);
+        final ImmutableMap.Builder<String, SessionProtocol> builder = ImmutableMap.builder();
+        for (SessionProtocol e : values()) {
+            builder.put(e.uriText(), e);
+        }
 
-                         mutableUriTextToProtocols.put(e.uriText,
-                                 new SessionProtocol(e.uriText, e.useTls, e.isMultiplex, e.defaultPort));
-                     }));
-
-        uriTextToProtocols = ImmutableBiMap.copyOf(mutableUriTextToProtocols);
-        values = uriTextToProtocols.values();
-    }
-
-    /**
-     * @deprecated Use {@link HttpSessionProtocols#HTTPS} instead.
-     */
-    @Deprecated
-    public static final SessionProtocol HTTPS = HttpSessionProtocols.HTTPS;
-
-    /**
-     * @deprecated Use {@link HttpSessionProtocols#HTTP}.
-     */
-    @Deprecated
-    public static final SessionProtocol HTTP = HttpSessionProtocols.HTTP;
-
-    /**
-     * @deprecated Use {@link HttpSessionProtocols#H1}.
-     */
-    @Deprecated
-    public static final SessionProtocol H1 = HttpSessionProtocols.H1;
-
-    /**
-     * @deprecated Use {@link HttpSessionProtocols#H1C}.
-     */
-    @Deprecated
-    public static final SessionProtocol H1C = HttpSessionProtocols.H1C;
-
-    /**
-     * @deprecated Use {@link HttpSessionProtocols#H2}.
-     */
-    @Deprecated
-    public static final SessionProtocol H2 = HttpSessionProtocols.H2;
-
-    /**
-     * @deprecated Use {@link HttpSessionProtocols#H2C}.
-     */
-    @Deprecated
-    public static final SessionProtocol H2C = HttpSessionProtocols.H2C;
-
-    /**
-     * @deprecated Use {@link HttpSessionProtocols#values()}.
-     */
-    @Deprecated
-    public static Set<SessionProtocol> ofHttp() {
-        return HttpSessionProtocols.values();
-    }
-
-    /**
-     * Returns all available {@link SessionProtocol}s.
-     */
-    public static Set<SessionProtocol> values() {
-        return values;
+        uriTextToProtocols = builder.build();
     }
 
     /**
@@ -131,7 +90,7 @@ public final class SessionProtocol implements Comparable<SessionProtocol> {
     private final boolean isMultiplex;
     private final int defaultPort;
 
-    private SessionProtocol(String uriText, boolean useTls, boolean isMultiplex, int defaultPort) {
+    SessionProtocol(String uriText, boolean useTls, boolean isMultiplex, int defaultPort) {
         this.useTls = useTls;
         this.uriText = uriText;
         this.isMultiplex = isMultiplex;
@@ -165,21 +124,6 @@ public final class SessionProtocol implements Comparable<SessionProtocol> {
      */
     public int defaultPort() {
         return defaultPort;
-    }
-
-    @Override
-    public int hashCode() {
-        return System.identityHashCode(this);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return this == obj;
-    }
-
-    @Override
-    public int compareTo(SessionProtocol o) {
-        return uriText.compareTo(o.uriText);
     }
 
     @Override

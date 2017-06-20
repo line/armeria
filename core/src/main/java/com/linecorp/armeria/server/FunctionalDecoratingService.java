@@ -30,13 +30,13 @@ import com.linecorp.armeria.common.Response;
 final class FunctionalDecoratingService<I extends Request, O extends Response>
         extends SimpleDecoratingService<I, O> {
 
-    private final DecoratingServiceFunction<? super I, ? extends O> function;
+    private final DecoratingServiceFunction<I, O> function;
 
     /**
      * Creates a new instance with the specified function.
      */
-    FunctionalDecoratingService(Service<? super I, ? extends O> delegate,
-                                DecoratingServiceFunction<? super I, ? extends O> function) {
+    FunctionalDecoratingService(Service<I, O> delegate,
+                                DecoratingServiceFunction<I, O> function) {
         super(delegate);
         this.function = requireNonNull(function, "function");
     }

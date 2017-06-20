@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 
 import io.grpc.Channel;
@@ -57,14 +56,11 @@ import io.grpc.stub.AbstractStub;
 public class GrpcClientFactory extends DecoratingClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
-            HttpSessionProtocols
-                    .values()
-                    .stream()
-                    .flatMap(p -> GrpcSerializationFormats
-                            .values()
-                            .stream()
-                            .map(f -> Scheme.of(f, p)))
-                    .collect(toImmutableSet());
+            Arrays.stream(SessionProtocol.values())
+                  .flatMap(p -> GrpcSerializationFormats.values()
+                                                        .stream()
+                                                        .map(f -> Scheme.of(f, p)))
+                  .collect(toImmutableSet());
 
     /**
      * Creates a new instance from the specified {@link ClientFactory} that supports HTTP, such as
@@ -155,7 +151,7 @@ public class GrpcClientFactory extends DecoratingClientFactory {
     private static ClientFactory validate(ClientFactory httpClientFactory) {
         requireNonNull(httpClientFactory, "httpClientFactory");
 
-        for (SessionProtocol p : HttpSessionProtocols.values()) {
+        for (SessionProtocol p : SessionProtocol.values()) {
             if (!httpClientFactory.supportedSchemes().contains(Scheme.of(SerializationFormat.NONE, p))) {
                 throw new IllegalArgumentException(p.uriText() + " not supported by: " + httpClientFactory);
             }

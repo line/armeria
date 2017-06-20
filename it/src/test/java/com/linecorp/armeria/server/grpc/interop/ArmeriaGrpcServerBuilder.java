@@ -27,7 +27,7 @@ import javax.net.ssl.SSLException;
 
 import com.google.instrumentation.stats.StatsContextFactory;
 
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
@@ -54,7 +54,7 @@ public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaG
     @Override
     public ArmeriaGrpcServerBuilder useTransportSecurity(File certChain, File privateKey) {
         try {
-            armeriaServerBuilder.sslContext(HttpSessionProtocols.HTTPS, certChain, privateKey);
+            armeriaServerBuilder.sslContext(SessionProtocol.HTTPS, certChain, privateKey);
         } catch (SSLException e) {
             throw new IllegalArgumentException(e);
         }

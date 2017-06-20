@@ -35,7 +35,7 @@ public abstract class SimpleDecoratingService<I extends Request, O extends Respo
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected SimpleDecoratingService(Service<? super I, ? extends O> delegate) {
+    protected SimpleDecoratingService(Service<I, O> delegate) {
         super(delegate);
     }
 }

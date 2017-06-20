@@ -58,7 +58,7 @@ public abstract class AbstractTracingClient<I extends Request, O extends Respons
     /**
      * Creates a new instance.
      */
-    protected AbstractTracingClient(Client<? super I, ? extends O> delegate, Brave brave) {
+    protected AbstractTracingClient(Client<I, O> delegate, Brave brave) {
         super(delegate);
         clientInterceptor = new ClientTracingInterceptor(brave);
     }

@@ -41,7 +41,6 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.http.annotation.ResponseConverter;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -185,7 +184,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
             SessionProtocol protocol,
             File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
 
-        if (requireNonNull(protocol, "protocol") != HttpSessionProtocols.HTTPS) {
+        if (requireNonNull(protocol, "protocol") != SessionProtocol.HTTPS) {
             throw new IllegalArgumentException("unsupported protocol: " + protocol);
         }
 
@@ -203,14 +202,14 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * @deprecated Use {@link #service(String, Service)} instead.
      */
     @Deprecated
-    public B serviceAt(String pathPattern, Service<? super HttpRequest, ? extends HttpResponse> service) {
+    public B serviceAt(String pathPattern, Service<HttpRequest, HttpResponse> service) {
         return service(pathPattern, service);
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory.
      */
-    public B serviceUnder(String pathPrefix, Service<? super HttpRequest, ? extends HttpResponse> service) {
+    public B serviceUnder(String pathPrefix, Service<HttpRequest, HttpResponse> service) {
         service(PathMapping.ofPrefix(pathPrefix), service);
         return self();
     }
@@ -229,7 +228,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B service(String pathPattern, Service<? super HttpRequest, ? extends HttpResponse> service) {
+    public B service(String pathPattern, Service<HttpRequest, HttpResponse> service) {
         service(PathMapping.of(pathPattern), service);
         return self();
     }
@@ -237,7 +236,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    public B service(PathMapping pathMapping, Service<? super HttpRequest, ? extends HttpResponse> service) {
+    public B service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service) {
         services.add(new ServiceConfig(pathMapping, service, null));
         return self();
     }
@@ -247,9 +246,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      *             {@code armeria-logback}.
      */
     @Deprecated
-    public B service(PathMapping pathMapping,
-                     Service<? super HttpRequest, ? extends HttpResponse> service,
-                     String loggerName) {
+    public B service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service, String loggerName) {
         services.add(new ServiceConfig(pathMapping, service, loggerName));
         return self();
     }
@@ -267,7 +264,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     public B annotatedService(
             Object service,
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
         return annotatedService("/", service, decorator);
     }
 
@@ -284,7 +281,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     public B annotatedService(
             Object service, Map<Class<?>, ResponseConverter> converters,
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
         return annotatedService("/", service, converters, decorator);
     }
 
@@ -301,7 +298,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     public B annotatedService(
             String pathPrefix, Object service,
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
         return annotatedService(pathPrefix, service, ImmutableMap.of(), decorator);
     }
 
@@ -318,7 +315,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     public B annotatedService(
             String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
 
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
@@ -338,13 +335,12 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
-    @SuppressWarnings("unchecked")
-    public <T extends Service<T_I, T_O>, T_I extends HttpRequest, T_O extends HttpResponse,
-            R extends Service<R_I, R_O>, R_I extends HttpRequest, R_O extends HttpResponse>
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     B decorator(Function<T, R> decorator) {
 
         requireNonNull(decorator, "decorator");
 
+        @SuppressWarnings("unchecked")
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
                 (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
 

@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Arrays;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
@@ -31,6 +33,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpStatus;
 
 import io.netty.channel.Channel;
 
@@ -140,6 +143,35 @@ public interface RequestLog {
     RequestContext context();
 
     /**
+     * Returns the method of the {@link Request}. This method is a shortcut to {@code context().method()}.
+     * This method returns non-{@code null} regardless the current {@link RequestLogAvailability}.
+     */
+    default HttpMethod method() {
+        return context().method();
+    }
+
+    /**
+     * Returns the absolute path part of the {@link Request} URI, excluding the query part,
+     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * This method is a shortcut to {@code context().path()}.
+     * This method returns non-{@code null} regardless the current {@link RequestLogAvailability}.
+     */
+    default String path() {
+        return context().path();
+    }
+
+    /**
+     * Returns the query part of the {@link Request} URI, without the leading {@code '?'},
+     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * This method is a shortcut to {@code context().query()}.
+     * This method returns non-{@code null} regardless the current {@link RequestLogAvailability}.
+     */
+    @Nullable
+    default String query() {
+        return context().query();
+    }
+
+    /**
      * Returns the time when the processing of the request started, in millis since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
@@ -166,6 +198,7 @@ public interface RequestLog {
      * @return the cause. {@code null} if the request was processed completely.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    @Nullable
     Throwable requestCause();
 
     /**
@@ -195,6 +228,7 @@ public interface RequestLog {
      * @return the cause. {@code null} if the response was processed completely.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    @Nullable
     Throwable responseCause();
 
     /**
@@ -210,8 +244,12 @@ public interface RequestLog {
     /**
      * Returns the Netty {@link Channel} which handled the {@link Request}.
      *
+     * @return the Netty {@link Channel}. {@code null} if the {@link Request} has failed even before
+     *         a {@link Request} is assigned to a {@link Channel}.
+     *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    @Nullable
     Channel channel();
 
     /**
@@ -238,47 +276,41 @@ public interface RequestLog {
     /**
      * Returns the host name of the {@link Request}.
      *
+     * @return the host name. {@code null} if the {@link Request} has failed even before it is started.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    @Nullable
     String host();
 
     /**
-     * Returns the method of the {@link Request}.
+     * Returns the status of the {@link Response}.
      *
+     * @return the {@link HttpStatus}. {@code null} if the {@link Response} has failed even before receiving
+     *         its first non-informational headers.
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    HttpMethod method();
+    @Nullable
+    default HttpStatus status() {
+        return responseHeaders().status();
+    }
 
     /**
-     * Returns the absolute path part of the {@link Request} URI, excluding the query part,
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * Returns the status code of the {@link Response}.
      *
-     * @throws RequestLogAvailabilityException if this property is not available yet
+     * @return the integer value of the {@link #status()}.
+     *         {@code -1} if {@link #status()} returns {@code null}.
      */
-    String path();
+    default int statusCode() {
+        final HttpStatus status = status();
+        return status != null ? status.code() : -1;
+    }
 
     /**
-     * Returns the query part of the {@link Request} URI, without the leading {@code '?'},
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * Returns the {@link HttpHeaders} of the {@link Request}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    String query();
-
-    /**
-     * Returns the status code specific to the {@link Response} of the current {@link SessionProtocol}.
-     *
-     * @throws RequestLogAvailabilityException if this property is not available yet
-     */
-    int statusCode();
-
-    /**
-     * Returns the {@link SessionProtocol}-level envelope object of the {@link Request}.
-     *
-     * @return {@link HttpHeaders} for HTTP, or {@code null} for others
-     * @throws RequestLogAvailabilityException if this property is not available yet
-     */
-    Object requestEnvelope();
+    HttpHeaders requestHeaders();
 
     /**
      * Returns the high-level content object of the {@link Request}, which is specific
@@ -287,6 +319,7 @@ public interface RequestLog {
      * @return {@link RpcRequest} for RPC, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    @Nullable
     Object requestContent();
 
     /**
@@ -296,15 +329,15 @@ public interface RequestLog {
      * @return {@code ThriftCall} for Thrift, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    @Nullable
     Object rawRequestContent();
 
     /**
-     * Returns the {@link SessionProtocol}-level envelope object of the {@link Response}.
+     * Returns the non-informational status {@link HttpHeaders} of the {@link Response}.
      *
-     * @return {@link HttpHeaders} for HTTP, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    Object responseEnvelope();
+    HttpHeaders responseHeaders();
 
     /**
      * Returns the high-level content object of the {@link Response}, which is specific
@@ -313,6 +346,7 @@ public interface RequestLog {
      * @return {@link RpcResponse} for RPC, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    @Nullable
     Object responseContent();
 
     /**
@@ -322,6 +356,7 @@ public interface RequestLog {
      * @return {@code ThriftReply} for Thrift, or {@code null} for others
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
+    @Nullable
     Object rawResponseContent();
 
     /**

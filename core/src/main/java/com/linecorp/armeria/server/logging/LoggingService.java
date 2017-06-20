@@ -66,7 +66,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
      */
-    public LoggingService(Service<? super I, ? extends O> delegate) {
+    public LoggingService(Service<I, O> delegate) {
         this(delegate, LogLevel.INFO);
     }
 
@@ -74,7 +74,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
      * {@link LogLevel}.
      */
-    public LoggingService(Service<? super I, ? extends O> delegate, LogLevel level) {
+    public LoggingService(Service<I, O> delegate, LogLevel level) {
         super(delegate);
         this.level = requireNonNull(level, "level");
     }

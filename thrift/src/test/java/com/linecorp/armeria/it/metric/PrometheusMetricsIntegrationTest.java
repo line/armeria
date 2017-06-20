@@ -250,7 +250,7 @@ public class PrometheusMetricsIntegrationTest {
 
     private static SortedMap<MyMetricLabel, String> defaultMetricName(RequestLog log, String serviceName) {
         final RequestContext ctx = log.context();
-        final Object requestEnvelope = log.requestEnvelope();
+        final Object requestEnvelope = log.requestHeaders();
         final Object requestContent = log.requestContent();
 
         final String path;

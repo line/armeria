@@ -65,7 +65,7 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
      * @param delegate the delegate {@link Client}
      * @param maxConcurrency the maximum number of concurrent active requests. {@code 0} to disable the limit.
      */
-    protected ConcurrencyLimitingClient(Client<? super I, ? extends O> delegate, int maxConcurrency) {
+    protected ConcurrencyLimitingClient(Client<I, O> delegate, int maxConcurrency) {
         this(delegate, maxConcurrency, DEFAULT_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
@@ -78,7 +78,7 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
      * @param timeout the amount of time until this decorator fails the request if the request was not
      *                delegated to the {@code delegate} before then
      */
-    protected ConcurrencyLimitingClient(Client<? super I, ? extends O> delegate,
+    protected ConcurrencyLimitingClient(Client<I, O> delegate,
                                         int maxConcurrency, long timeout, TimeUnit unit) {
         super(delegate);
 

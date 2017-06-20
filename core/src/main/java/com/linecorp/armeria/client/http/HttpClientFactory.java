@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.http;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
 
@@ -32,9 +33,9 @@ import com.linecorp.armeria.client.NonDecoratingClientFactory;
 import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 
 import io.netty.bootstrap.Bootstrap;
 
@@ -44,9 +45,9 @@ import io.netty.bootstrap.Bootstrap;
 public class HttpClientFactory extends NonDecoratingClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
-            HttpSessionProtocols.values().stream()
-                                .map(p -> Scheme.of(SerializationFormat.NONE, p))
-                                .collect(toImmutableSet());
+            Arrays.stream(SessionProtocol.values())
+                  .map(p -> Scheme.of(SerializationFormat.NONE, p))
+                  .collect(toImmutableSet());
 
     /**
      * Creates a new instance with the default {@link SessionOptions}.

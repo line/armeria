@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -108,7 +108,7 @@ public class TracingClientTest {
                 new DefaultEventLoop(), H2C, Endpoint.of("localhost", 8080),
                 HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT, req);
 
-        ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost", HttpMethod.POST, "/", null);
+        ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost");
         ctx.logBuilder().endRequest();
 
         @SuppressWarnings("unchecked")

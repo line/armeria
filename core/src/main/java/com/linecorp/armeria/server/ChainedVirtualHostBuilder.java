@@ -40,8 +40,6 @@ public final class ChainedVirtualHostBuilder extends AbstractVirtualHostBuilder<
      * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}.
      */
     ChainedVirtualHostBuilder(ServerBuilder serverBuilder) {
-        super();
-
         requireNonNull(serverBuilder, "serverBuilder");
         this.serverBuilder = serverBuilder;
     }

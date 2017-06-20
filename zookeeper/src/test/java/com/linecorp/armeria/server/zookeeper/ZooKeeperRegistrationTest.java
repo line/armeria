@@ -32,11 +32,11 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.TestBase;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
@@ -67,7 +67,7 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
             for (Endpoint endpoint : sampleEndpoints) {
                 ServerBuilder sb = new ServerBuilder();
                 Server server = sb.service("/", new EchoService()).port(endpoint.port(),
-                                                                        HttpSessionProtocols.HTTP).build();
+                                                                        SessionProtocol.HTTP).build();
                 ZooKeeperUpdatingListener listener;
                 listener = new ZooKeeperUpdatingListener(instance().connectString().get(), zNode,
                                                          sessionTimeout,

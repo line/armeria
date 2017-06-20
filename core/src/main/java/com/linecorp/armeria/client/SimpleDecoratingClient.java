@@ -33,7 +33,7 @@ public abstract class SimpleDecoratingClient<I extends Request, O extends Respon
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected SimpleDecoratingClient(Client<? super I, ? extends O> delegate) {
+    protected SimpleDecoratingClient(Client<I, O> delegate) {
         super(delegate);
     }
 }

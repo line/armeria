@@ -19,14 +19,13 @@ package com.linecorp.armeria.common.logging;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.COMPLETE;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_CONTENT;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_END;
-import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_ENVELOPE;
+import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_HEADERS;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_START;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_CONTENT;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_END;
-import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_ENVELOPE;
+import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_HEADERS;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONSE_START;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.SCHEME;
-import static com.linecorp.armeria.common.logging.RequestLogAvailability.STATUS_CODE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -35,12 +34,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
@@ -87,13 +88,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private SessionProtocol sessionProtocol;
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
     private String host;
-    private HttpMethod method;
-    private String path;
-    private String query;
-    private int statusCode = -1;
 
-    private Object requestEnvelope;
-    private Object responseEnvelope;
+    private HttpHeaders requestHeaders = HttpHeaders.EMPTY_HEADERS;
+    private HttpHeaders responseHeaders = HttpHeaders.EMPTY_HEADERS;
     private Object requestContent;
     private Object rawRequestContent;
     private Object responseContent;
@@ -207,15 +204,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void startRequest(Channel channel, SessionProtocol sessionProtocol,
-                             String host, HttpMethod method, String path, String query) {
-
-        startRequest0(channel, sessionProtocol, host, method, path, query, true);
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol, String host) {
+        requireNonNull(channel, "channel");
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        requireNonNull(host, "host");
+        startRequest0(channel, sessionProtocol, host, true);
     }
 
     private void startRequest0(Channel channel, SessionProtocol sessionProtocol,
-                               String host, HttpMethod method, String path, String query,
-                               boolean updateAvailability) {
+                               String host, boolean updateAvailability) {
 
         if (isAvailabilityAlreadyUpdated(REQUEST_START)) {
             return;
@@ -226,9 +223,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.channel = channel;
         this.sessionProtocol = sessionProtocol;
         this.host = host;
-        this.method = method;
-        this.path = path;
-        this.query = query;
 
         if (updateAvailability) {
             updateAvailability(REQUEST_START);
@@ -269,24 +263,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public String host() {
         ensureAvailability(REQUEST_START);
         return host;
-    }
-
-    @Override
-    public HttpMethod method() {
-        ensureAvailability(REQUEST_START);
-        return method;
-    }
-
-    @Override
-    public String path() {
-        ensureAvailability(REQUEST_START);
-        return path;
-    }
-
-    @Override
-    public String query() {
-        ensureAvailability(REQUEST_START);
-        return query;
     }
 
     @Override
@@ -344,19 +320,19 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public Object requestEnvelope() {
-        ensureAvailability(REQUEST_ENVELOPE);
-        return requestEnvelope;
+    public HttpHeaders requestHeaders() {
+        ensureAvailability(REQUEST_HEADERS);
+        return requestHeaders;
     }
 
     @Override
-    public void requestEnvelope(Object requestEnvelope) {
-        if (isAvailabilityAlreadyUpdated(REQUEST_ENVELOPE)) {
+    public void requestHeaders(HttpHeaders requestHeaders) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_HEADERS)) {
             return;
         }
 
-        this.requestEnvelope = requestEnvelope;
-        updateAvailability(REQUEST_ENVELOPE);
+        this.requestHeaders = requireNonNull(requestHeaders, "requestHeaders");
+        updateAvailability(REQUEST_HEADERS);
     }
 
     @Override
@@ -366,7 +342,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void requestContent(Object requestContent, Object rawRequestContent) {
+    public void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent) {
         if (isAvailabilityAlreadyUpdated(REQUEST_CONTENT)) {
             return;
         }
@@ -412,7 +388,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return;
         }
 
-        startRequest0(null, null, null, null, null, null, false);
+        startRequest0(null, context().sessionProtocol(), null, false);
         requestEndTimeNanos = System.nanoTime();
         this.requestCause = requestCause;
         updateAvailability(flags);
@@ -454,22 +430,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public int statusCode() {
-        ensureAvailability(STATUS_CODE);
-        return statusCode;
-    }
-
-    @Override
-    public void statusCode(int statusCode) {
-        if (isAvailabilityAlreadyUpdated(STATUS_CODE)) {
-            return;
-        }
-
-        this.statusCode = statusCode;
-        updateAvailability(STATUS_CODE);
-    }
-
-    @Override
     public long responseLength() {
         ensureAvailability(RESPONSE_END);
         return responseLength;
@@ -502,19 +462,19 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public Object responseEnvelope() {
-        ensureAvailability(RESPONSE_ENVELOPE);
-        return responseEnvelope;
+    public HttpHeaders responseHeaders() {
+        ensureAvailability(RESPONSE_HEADERS);
+        return responseHeaders;
     }
 
     @Override
-    public void responseEnvelope(Object responseEnvelope) {
-        if (isAvailabilityAlreadyUpdated(RESPONSE_ENVELOPE)) {
+    public void responseHeaders(HttpHeaders responseHeaders) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_HEADERS)) {
             return;
         }
 
-        this.responseEnvelope = responseEnvelope;
-        updateAvailability(RESPONSE_ENVELOPE);
+        this.responseHeaders = requireNonNull(responseHeaders, "responseHeaders");
+        updateAvailability(RESPONSE_HEADERS);
     }
 
     @Override
@@ -524,7 +484,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void responseContent(Object responseContent, Object rawResponseContent) {
+    public void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_CONTENT)) {
             return;
         }
@@ -652,11 +612,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final String req = toStringRequestOnly();
         final String res = toStringResponseOnly();
         final StringBuilder buf = new StringBuilder(5 + req.length() + 6 + res.length() + 1);
-        return buf.append("{req=")  // 5
+        return buf.append("{req=")  // 5 chars
                   .append(req)
-                  .append(", res=") // 6
+                  .append(", res=") // 6 chars
                   .append(res)
-                  .append('}')      // 1
+                  .append('}')      // 1 char
                   .toString();
     }
 
@@ -692,12 +652,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                    .append(sessionProtocol.uriText());
             }
 
-            buf.append(", host=").append(host)
-               .append(", method=").append(method)
-               .append(", path=").append(path);
+            buf.append(", host=").append(host);
 
-            if (isAvailable(flags, REQUEST_ENVELOPE) && requestEnvelope != null) {
-                buf.append(", envelope=").append(requestEnvelope);
+            if (isAvailable(flags, REQUEST_HEADERS) && requestHeaders != null) {
+                buf.append(", headers=").append(requestHeaders);
             }
 
             if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
@@ -739,12 +697,8 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 }
             }
 
-            if (isAvailable(flags, STATUS_CODE)) {
-                buf.append(", statusCode=").append(statusCode);
-            }
-
-            if (isAvailable(flags, RESPONSE_ENVELOPE) && responseEnvelope != null) {
-                buf.append(", envelope=").append(responseEnvelope);
+            if (isAvailable(flags, RESPONSE_HEADERS) && responseHeaders != null) {
+                buf.append(", headers=").append(responseHeaders);
             }
 
             if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {

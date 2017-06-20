@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.testing.server;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;

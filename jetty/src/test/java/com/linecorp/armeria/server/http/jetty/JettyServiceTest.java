@@ -46,7 +46,7 @@ import org.eclipse.jetty.webapp.WebAppContext;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -62,9 +62,9 @@ public class JettyServiceTest extends WebAppContainerTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.port(0, HttpSessionProtocols.HTTP);
-            sb.port(0, HttpSessionProtocols.HTTPS);
-            sb.sslContext(HttpSessionProtocols.HTTPS,
+            sb.port(0, SessionProtocol.HTTP);
+            sb.port(0, SessionProtocol.HTTPS);
+            sb.sslContext(SessionProtocol.HTTPS,
                           certificate.certificateFile(),
                           certificate.privateKeyFile());
 

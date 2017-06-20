@@ -171,7 +171,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
     private final KeySelector<L> keySelector;
     private final boolean needToCloseProducer;
 
-    KafkaStructuredLoggingService(Service<? super I, ? extends O> delegate,
+    KafkaStructuredLoggingService(Service<I, O> delegate,
                                   StructuredLogBuilder<L> logBuilder,
                                   Producer<byte[], L> producer,
                                   String topic,

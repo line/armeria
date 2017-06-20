@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.REQUEST_MESSAGE;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -262,7 +262,7 @@ public class GrpcServiceServerTest {
     @Test
     public void error_noMessage() throws Exception {
         StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
-                () -> blockingClient.errorNoMessage(GrpcTestUtil.REQUEST_MESSAGE));
+                () -> blockingClient.errorNoMessage(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isNull();
     }
@@ -270,7 +270,7 @@ public class GrpcServiceServerTest {
     @Test
     public void error_withMessage() throws Exception {
         StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
-                () -> blockingClient.errorWithMessage(GrpcTestUtil.REQUEST_MESSAGE));
+                () -> blockingClient.errorWithMessage(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
     }
@@ -278,7 +278,7 @@ public class GrpcServiceServerTest {
     @Test
     public void error_thrown_unary() throws Exception {
         StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
-                () -> blockingClient.unaryThrowsError(GrpcTestUtil.REQUEST_MESSAGE));
+                () -> blockingClient.unaryThrowsError(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("call aborted");
     }
@@ -287,7 +287,7 @@ public class GrpcServiceServerTest {
     public void error_thrown_streamMessage() throws Exception {
         StreamRecorder<SimpleResponse> response = StreamRecorder.create();
         StreamObserver<SimpleRequest> request = streamingClient.streamThrowsError(response);
-        request.onNext(GrpcTestUtil.REQUEST_MESSAGE);
+        request.onNext(REQUEST_MESSAGE);
         response.awaitCompletion();
         StatusRuntimeException t = (StatusRuntimeException) response.getError();
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
@@ -308,9 +308,9 @@ public class GrpcServiceServerTest {
     public void requestContextSet() throws Exception {
         StreamRecorder<SimpleResponse> response = StreamRecorder.create();
         StreamObserver<SimpleRequest> request = streamingClient.checkRequestContext(response);
-        request.onNext(GrpcTestUtil.REQUEST_MESSAGE);
-        request.onNext(GrpcTestUtil.REQUEST_MESSAGE);
-        request.onNext(GrpcTestUtil.REQUEST_MESSAGE);
+        request.onNext(REQUEST_MESSAGE);
+        request.onNext(REQUEST_MESSAGE);
+        request.onNext(REQUEST_MESSAGE);
         request.onCompleted();
         response.awaitCompletion();
         assertThat(response.getValues())
@@ -483,7 +483,7 @@ public class GrpcServiceServerTest {
         assertThat(response.content().array()).containsExactly(
                 Bytes.concat(
                         GrpcTestUtil.uncompressedFrame(
-                                GrpcTestUtil.protoByteBuf(GrpcTestUtil.RESPONSE_MESSAGE)),
+                                GrpcTestUtil.protoByteBuf(RESPONSE_MESSAGE)),
                         serializedTrailers));
     }
 
@@ -502,8 +502,8 @@ public class GrpcServiceServerTest {
                                        }
                                    })
                         .build(UnitTestServiceBlockingStub.class);
-        SimpleResponse response = jsonStub.staticUnaryCall(GrpcTestUtil.REQUEST_MESSAGE);
-        assertThat(response).isEqualTo(GrpcTestUtil.RESPONSE_MESSAGE);
+        SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
+        assertThat(response).isEqualTo(RESPONSE_MESSAGE);
         assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("application/grpc+json");
     }
 }

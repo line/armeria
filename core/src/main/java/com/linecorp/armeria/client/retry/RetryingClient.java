@@ -19,9 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Supplier;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Flags;
@@ -37,8 +34,6 @@ import com.linecorp.armeria.common.Response;
 public abstract class RetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
-
     private final Supplier<? extends Backoff> backoffSupplier;
     private final RetryRequestStrategy<I, O> retryStrategy;
     private final int defaultMaxAttempts;
@@ -46,7 +41,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected RetryingClient(Client<? super I, ? extends O> delegate,
+    protected RetryingClient(Client<I, O> delegate,
                              RetryRequestStrategy<I, O> retryStrategy,
                              Supplier<? extends Backoff> backoffSupplier) {
         this(delegate, retryStrategy, backoffSupplier, Flags.defaultBackoffMaxAttempts());
@@ -55,7 +50,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected RetryingClient(Client<? super I, ? extends O> delegate,
+    protected RetryingClient(Client<I, O> delegate,
                              RetryRequestStrategy<I, O> retryStrategy,
                              Supplier<? extends Backoff> backoffSupplier,
                              int defaultMaxAttempts) {

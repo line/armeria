@@ -18,15 +18,14 @@ package com.linecorp.armeria.common.logging;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpHeaders;
 
 import io.netty.channel.Channel;
 
 final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
-    public void startRequest(Channel ch, SessionProtocol sessionProtocol,
-                             String host, HttpMethod method, String path, String query) {}
+    public void startRequest(Channel ch, SessionProtocol sessionProtocol, String host) {}
 
     @Override
     public void serializationFormat(SerializationFormat serializationFormat) {}
@@ -38,7 +37,7 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void requestLength(long requestLength) {}
 
     @Override
-    public void requestEnvelope(Object requestEnvelope) {}
+    public void requestHeaders(HttpHeaders requestHeaders) {}
 
     @Override
     public void requestContent(Object requestContent, Object rawRequestContent) {}
@@ -61,16 +60,13 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void startResponse() {}
 
     @Override
-    public void statusCode(int statusCode) {}
-
-    @Override
     public void increaseResponseLength(long deltaBytes) {}
 
     @Override
     public void responseLength(long responseLength) {}
 
     @Override
-    public void responseEnvelope(Object responseEnvelope) {}
+    public void responseHeaders(HttpHeaders responseHeaders) {}
 
     @Override
     public void responseContent(Object responseContent, Object rawResponseContent) {}

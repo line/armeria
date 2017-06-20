@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -82,7 +81,7 @@ public class ArmeriaAutoConfiguration {
     private static final HealthChecker[] EMPTY_HEALTH_CHECKERS = new HealthChecker[0];
 
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
-                                                       .setProtocol(HttpSessionProtocols.HTTP);
+                                                       .setProtocol(SessionProtocol.HTTP);
 
     /**
      * Create a {@link Server} bean.

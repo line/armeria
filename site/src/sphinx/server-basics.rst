@@ -28,7 +28,7 @@ To serve anything, you need to specify which TCP/IP port you want to bind onto:
 
 .. code-block:: java
 
-    import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+    import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 
     ServerBuilder sb = new ServerBuilder();
     // Configure an HTTP port.
@@ -142,7 +142,7 @@ You can also add an HTTPS port with your certificate and its private key files:
 
 .. code-block:: java
 
-    import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+    import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 
     ServerBuilder sb = new ServerBuilder();
     sb.port(8443, HTTPS)

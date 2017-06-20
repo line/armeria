@@ -59,7 +59,7 @@ public class SampledLoggingService<I extends Request, O extends Response> extend
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
      * {@link LogLevel}.
      */
-    public SampledLoggingService(Service<? super I, ? extends O> delegate, LogLevel level,
+    public SampledLoggingService(Service<I, O> delegate, LogLevel level,
                                  boolean logRequest, boolean logResponse, float logSamplingRate) {
         super(delegate, level);
         this.logRequest = logRequest;
