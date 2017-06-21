@@ -138,6 +138,7 @@ class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
                 builder.sslProvider(
                         Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
+                options.sslContextCustomizer().ifPresent(c -> c.accept(builder));
                 options.trustManagerFactory().ifPresent(builder::trustManager);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED ||

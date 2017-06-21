@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.SessionOption.CONNECT_TIMEOUT;
 import static com.linecorp.armeria.client.SessionOption.EVENT_LOOP_GROUP;
 import static com.linecorp.armeria.client.SessionOption.IDLE_TIMEOUT;
 import static com.linecorp.armeria.client.SessionOption.POOL_HANDLER_DECORATOR;
+import static com.linecorp.armeria.client.SessionOption.SSL_CONTEXT_CUSTOMIZER;
 import static com.linecorp.armeria.client.SessionOption.TRUST_MANAGER_FACTORY;
 import static com.linecorp.armeria.client.SessionOption.USE_HTTP1_PIPELINING;
 import static com.linecorp.armeria.client.SessionOption.USE_HTTP2_PREFACE;
@@ -29,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.net.ssl.TrustManagerFactory;
@@ -39,6 +41,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
 /**
@@ -214,9 +217,19 @@ public final class SessionOptions extends AbstractOptions {
 
     /**
      * Returns the {@link SessionOption#TRUST_MANAGER_FACTORY} if non-default was specified.
+     *
+     * @deprecated Use {@link SessionOptions#sslContextCustomizer()} instead.
      */
+    @Deprecated
     public Optional<TrustManagerFactory> trustManagerFactory() {
         return get(TRUST_MANAGER_FACTORY);
+    }
+
+    /**
+     * Returns the {@link SessionOption#SSL_CONTEXT_CUSTOMIZER} if non-default was specified.
+     */
+    public Optional<Consumer<SslContextBuilder>> sslContextCustomizer() {
+        return get(SSL_CONTEXT_CUSTOMIZER);
     }
 
     /**

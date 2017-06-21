@@ -30,9 +30,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Consumer;
 import java.util.function.Function;
-
-import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -85,6 +84,7 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.TimeService;
 
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
@@ -252,8 +252,9 @@ public class ThriftOverHttpClientTest {
                           .filter(p -> p.protocol() == HTTPS).findAny().get().localAddress()
                           .getPort();
 
-        final SessionOptionValue<TrustManagerFactory> trustManagerFactoryOptVal =
-                SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE);
+        final SessionOptionValue<Consumer<SslContextBuilder>> sslContextCustomizerOptVal =
+                SessionOption.SSL_CONTEXT_CUSTOMIZER.newValue(
+                        b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
 
         final SessionOptionValue<Function<KeyedChannelPoolHandler<PoolKey>,
                                           KeyedChannelPoolHandler<PoolKey>>> poolHandlerDecoratorOptVal =
@@ -263,13 +264,13 @@ public class ThriftOverHttpClientTest {
 
         clientFactoryWithUseHttp2Preface = new THttpClientFactory(
                 new HttpClientFactory(SessionOptions.of(
-                        trustManagerFactoryOptVal,
+                        sslContextCustomizerOptVal,
                         poolHandlerDecoratorOptVal,
                         SessionOption.USE_HTTP2_PREFACE.newValue(true))));
 
         clientFactoryWithoutUseHttp2Preface = new THttpClientFactory(
                 new HttpClientFactory(SessionOptions.of(
-                        trustManagerFactoryOptVal,
+                        sslContextCustomizerOptVal,
                         poolHandlerDecoratorOptVal,
                         SessionOption.USE_HTTP2_PREFACE.newValue(false))));
 

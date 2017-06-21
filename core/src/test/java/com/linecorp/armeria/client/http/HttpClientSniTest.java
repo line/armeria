@@ -98,7 +98,8 @@ public class HttpClientSniTest {
                           .filter(p -> p.protocol() == HTTPS).findAny().get().localAddress()
                           .getPort();
         clientFactory = new HttpClientFactory(SessionOptions.of(
-                SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE),
+                SessionOption.SSL_CONTEXT_CUSTOMIZER.newValue(
+                        b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)),
                 SessionOption.ADDRESS_RESOLVER_GROUP.newValue(new DummyAddressResolverGroup())));
     }
 
