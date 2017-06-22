@@ -118,10 +118,18 @@ public final class ServerBuilder {
     }
 
     private static final class DefaultBlockingTaskExecutorHolder {
-        static final Executor INSTANCE = new ThreadPoolExecutor(
-                0, DEFAULT_MAX_BLOCKING_TASK_THREADS,
-                60, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-                new DefaultThreadFactory("armeria-blocking-tasks", true));
+        static final Executor INSTANCE;
+
+        static {
+            // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
+            final ThreadPoolExecutor instance = new ThreadPoolExecutor(
+                    DEFAULT_MAX_BLOCKING_TASK_THREADS, DEFAULT_MAX_BLOCKING_TASK_THREADS,
+                    60, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
+                    new DefaultThreadFactory("armeria-blocking-tasks", true));
+
+            instance.allowCoreThreadTimeOut(true);
+            INSTANCE = instance;
+        }
     }
 
     private final List<ServerPort> ports = new ArrayList<>();
