@@ -180,8 +180,13 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
     private void subscribe0(SubscriptionImpl subscription) {
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
-            throw new IllegalStateException(
-                    "subscribed by other subscriber already: " + this.subscription.subscriber());
+            final Subscriber<?> oldSubscriber = this.subscription.subscriber();
+            if (oldSubscriber == AbortingSubscriber.INSTANCE) {
+                throw new IllegalStateException("cannot subscribe to an aborted publisher");
+            } else {
+                throw new IllegalStateException(
+                        "subscribed by other subscriber already: " + oldSubscriber);
+            }
         }
 
         final Executor executor = subscription.executor();
