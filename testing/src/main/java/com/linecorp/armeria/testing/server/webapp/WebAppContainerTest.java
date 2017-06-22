@@ -149,7 +149,8 @@ public abstract class WebAppContainerTest {
     public void https() throws Exception {
         ClientFactory clientFactory =
                 new HttpClientFactory(SessionOptions.of(
-                        SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE)));
+                        SessionOption.SSL_CONTEXT_CUSTOMIZER.newValue(
+                                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))));
         HttpClient client = clientFactory.newClient(server().httpsUri(NONE, "/"), HttpClient.class);
         AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
         final String actualContent = CR_OR_LF.matcher(response.content().toStringUtf8())

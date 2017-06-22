@@ -122,7 +122,8 @@ public class HttpServerTest {
     // TODO(trustin): Add SessionOption.NUM_WORKER_THREADS
     private static final ClientFactory clientFactory =
             new HttpClientFactory(SessionOptions.of(
-                    SessionOption.TRUST_MANAGER_FACTORY.newValue(InsecureTrustManagerFactory.INSTANCE),
+                    SessionOption.SSL_CONTEXT_CUSTOMIZER.newValue(
+                            b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)),
                     SessionOption.IDLE_TIMEOUT.newValue(Duration.ofSeconds(3)),
                     SessionOption.EVENT_LOOP_GROUP.newValue(
                             TransportType.detectTransportType().newEventLoopGroup(

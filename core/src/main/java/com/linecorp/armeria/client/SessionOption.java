@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.net.ssl.TrustManagerFactory;
@@ -29,6 +30,7 @@ import com.linecorp.armeria.common.util.AbstractOption;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.ConstantPool;
 
@@ -60,9 +62,20 @@ public final class SessionOption<T> extends AbstractOption<T> {
 
     /**
      * The {@link TrustManagerFactory} of a TLS connection.
+     *
+     * @deprecated Use {@link SessionOption#SSL_CONTEXT_CUSTOMIZER} instead.
      */
+    @Deprecated
     public static final SessionOption<TrustManagerFactory> TRUST_MANAGER_FACTORY =
             valueOf("TRUST_MANAGER_FACTORY");
+
+    /**
+     * A {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be applied
+     * to this session. For example, use {@link SslContextBuilder#trustManager} to configure a custom server CA
+     * or {@link SslContextBuilder#keyManager} to configure a client certificate for SSL authorization.
+     */
+    public static final SessionOption<Consumer<SslContextBuilder>> SSL_CONTEXT_CUSTOMIZER =
+            valueOf("SSL_CONTEXT_CUSTOMIZER");
 
     /**
      * The {@link AddressResolverGroup} to use to resolve remote addresses into {@link InetSocketAddress}es.

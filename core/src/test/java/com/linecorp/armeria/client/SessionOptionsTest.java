@@ -18,7 +18,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.SessionOption.CONNECT_TIMEOUT;
 import static com.linecorp.armeria.client.SessionOption.EVENT_LOOP_GROUP;
 import static com.linecorp.armeria.client.SessionOption.IDLE_TIMEOUT;
-import static com.linecorp.armeria.client.SessionOption.TRUST_MANAGER_FACTORY;
+import static com.linecorp.armeria.client.SessionOption.SSL_CONTEXT_CUSTOMIZER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -55,7 +55,7 @@ public class SessionOptionsTest {
                 CONNECT_TIMEOUT.newValue(connectionTimeout),
                 IDLE_TIMEOUT.newValue(idleTimeout),
                 EVENT_LOOP_GROUP.newValue(eventLoop),
-                TRUST_MANAGER_FACTORY.newValue(trustManagerFactory)
+                SSL_CONTEXT_CUSTOMIZER.newValue(b -> b.trustManager(trustManagerFactory))
         );
 
         assertThat(options.get(CONNECT_TIMEOUT),is(Optional.of(connectionTimeout)));
