@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.apache.thrift.TBase;
 import org.slf4j.Logger;
@@ -93,7 +94,8 @@ public class ArmeriaAutoConfiguration {
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<ArmeriaServerConfigurator>> armeriaServiceInitializers,
             Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
-            Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans)
+            Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
+            Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans)
             throws InterruptedException {
         if (!armeriaServiceInitializers.isPresent() &&
             !thriftServiceRegistrationBeans.isPresent() &&
@@ -115,10 +117,7 @@ public class ArmeriaAutoConfiguration {
         List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
         Map<String, Collection<HttpHeaders>> docServiceHeaders = new HashMap<>();
         thriftServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
-            @SuppressWarnings("unchecked")
-            Service<HttpRequest, HttpResponse> service =
-                    (Service<HttpRequest, HttpResponse>) bean.getService();
-
+            Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (armeriaSettings.isEnableDropwizardMetrics()) {
                 service = service.decorate(
                         DropwizardMetricCollectingService.newDecorator(
@@ -137,15 +136,23 @@ public class ArmeriaAutoConfiguration {
         }));
 
         httpServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
-            @SuppressWarnings("unchecked")
-            Service<HttpRequest, HttpResponse> service =
-                    (Service<HttpRequest, HttpResponse>) bean.getService();
+            Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (armeriaSettings.isEnableDropwizardMetrics()) {
                 service = service.decorate(
                         DropwizardMetricCollectingService.newDecorator(
                                 metricRegistry, serviceMetricName(bean.getServiceName())));
             }
             server.service(bean.getPathMapping(), service);
+        }));
+
+        annotatedServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator = bean.getDecorator();
+            if (armeriaSettings.isEnableDropwizardMetrics()) {
+                decorator = decorator.andThen(DropwizardMetricCollectingService.newDecorator(
+                        metricRegistry, serviceMetricName(bean.getServiceName())));
+            }
+            server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator);
         }));
 
         if (!Strings.isNullOrEmpty(armeriaSettings.getHealthCheckPath())) {

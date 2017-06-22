@@ -17,12 +17,15 @@ package com.linecorp.armeria.spring;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.function.Function;
 
 import javax.validation.constraints.NotNull;
 
 import org.apache.thrift.TBase;
 
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.docs.DocService;
 
@@ -37,11 +40,12 @@ public class ThriftServiceRegistrationBean {
      * The thrift service to register.
      */
     @NotNull
-    private Service<?, ?> service;
+    private Service<HttpRequest, HttpResponse> service;
 
     /**
      * The url path to register the service at. If not specified, defaults to {@code /api}.
      */
+    @NotNull
     private String path = "/api";
 
     /**
@@ -52,28 +56,38 @@ public class ThriftServiceRegistrationBean {
     private String serviceName;
 
     /**
+     * The decorator of the service.
+     */
+    @NotNull
+    private Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
+
+    /**
      * Sample requests to populate debug forms in {@link DocService}.
      * This should be a list of request objects (e.g., methodName_args) which correspond to methods
      * in this thrift service.
      */
+    @NotNull
     private Collection<? extends TBase<?, ?>> exampleRequests = new ArrayList<>();
 
     /**
      * Example {@link HttpHeaders} being used in debug forms.
      */
+    @NotNull
     private Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
 
     /**
      * Returns the thrift {@link Service} that is registered to this bean.
      */
-    public Service<?, ?> getService() {
+    @NotNull
+    public Service<HttpRequest, HttpResponse> getService() {
         return service;
     }
 
     /**
      * Register the thrift {@link Service} to this bean.
      */
-    public ThriftServiceRegistrationBean setService(Service<?, ?> service) {
+    public ThriftServiceRegistrationBean setService(@NotNull Service<HttpRequest, HttpResponse> service) {
         this.service = service;
         return this;
     }
@@ -81,6 +95,7 @@ public class ThriftServiceRegistrationBean {
     /**
      * Returns the url path this service map to.
      */
+    @NotNull
     public String getPath() {
         return path;
     }
@@ -88,7 +103,7 @@ public class ThriftServiceRegistrationBean {
     /**
      * Register the url path this service map to.
      */
-    public ThriftServiceRegistrationBean setPath(String path) {
+    public ThriftServiceRegistrationBean setPath(@NotNull String path) {
         this.path = path;
         return this;
     }
@@ -96,6 +111,7 @@ public class ThriftServiceRegistrationBean {
     /**
      * Returns the service name to use in monitoring.
      */
+    @NotNull
     public String getServiceName() {
         return serviceName;
     }
@@ -103,14 +119,34 @@ public class ThriftServiceRegistrationBean {
     /**
      * Register the service name to use in monitoring.
      */
-    public ThriftServiceRegistrationBean setServiceName(String serviceName) {
+    public ThriftServiceRegistrationBean setServiceName(@NotNull String serviceName) {
         this.serviceName = serviceName;
+        return this;
+    }
+
+    /**
+     * Returns the decorator of the service.
+     */
+    @NotNull
+    public Function<Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>> getDecorator() {
+        return decorator;
+    }
+
+    /**
+     * Sets the decorator of the service.
+     */
+    public ThriftServiceRegistrationBean setDecorator(
+            @NotNull Function<Service<HttpRequest, HttpResponse>,
+                              ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        this.decorator = decorator;
         return this;
     }
 
     /**
      * Returns sample requests of {@link #getService()}.
      */
+    @NotNull
     public Collection<? extends TBase<?, ?>> getExampleRequests() {
         return exampleRequests;
     }
@@ -118,7 +154,8 @@ public class ThriftServiceRegistrationBean {
     /**
      * Sets sample requests for {@link #getService()}.
      */
-    public ThriftServiceRegistrationBean setExampleRequests(Collection<? extends TBase<?, ?>> exampleRequests) {
+    public ThriftServiceRegistrationBean setExampleRequests(
+            @NotNull Collection<? extends TBase<?, ?>> exampleRequests) {
         this.exampleRequests = exampleRequests;
         return this;
     }
@@ -126,6 +163,7 @@ public class ThriftServiceRegistrationBean {
     /**
      * Returns example {@link HttpHeaders}.
      */
+    @NotNull
     public Collection<HttpHeaders> getExampleHeaders() {
         return exampleHeaders;
     }
@@ -133,7 +171,7 @@ public class ThriftServiceRegistrationBean {
     /**
      * Sets example {@link HttpHeaders}.
      */
-    public ThriftServiceRegistrationBean setExampleHeaders(Collection<HttpHeaders> exampleHeaders) {
+    public ThriftServiceRegistrationBean setExampleHeaders(@NotNull Collection<HttpHeaders> exampleHeaders) {
         this.exampleHeaders = exampleHeaders;
         return this;
     }
