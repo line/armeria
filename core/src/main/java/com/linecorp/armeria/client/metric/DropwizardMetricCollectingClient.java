@@ -91,7 +91,7 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
     private static String defaultMetricName(RequestLog log, String metricNamePrefix) {
         String methodName = null;
 
-        final Object envelope = log.requestEnvelope();
+        final Object envelope = log.requestHeaders();
         final Object content = log.requestContent();
         if (envelope instanceof HttpHeaders) {
             methodName = ((HttpHeaders) envelope).method().name();
@@ -112,7 +112,7 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
 
     @SuppressWarnings("unchecked")
     DropwizardMetricCollectingClient(
-            Client<? super I, ? extends O> delegate,
+            Client<I, O> delegate,
             MetricRegistry metricRegistry,
             Function<? super RequestLog, String> metricNameFunc) {
         super(delegate);
@@ -123,7 +123,7 @@ public final class DropwizardMetricCollectingClient<I extends Request, O extends
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         ctx.log().addListener(collector::onRequestStart,
-                              RequestLogAvailability.REQUEST_ENVELOPE,
+                              RequestLogAvailability.REQUEST_HEADERS,
                               RequestLogAvailability.REQUEST_CONTENT);
         ctx.log().addListener(collector::onRequestEnd,
                               RequestLogAvailability.REQUEST_END);

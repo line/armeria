@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;

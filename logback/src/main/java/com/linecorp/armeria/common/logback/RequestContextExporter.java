@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -221,8 +222,8 @@ final class RequestContextExporter {
 
     private static void exportAuthority(Map<String, String> out, RequestContext ctx, @Nullable RequestLog log) {
         final Set<RequestLogAvailability> availabilities = log.availabilities();
-        if (availabilities.contains(RequestLogAvailability.REQUEST_ENVELOPE)) {
-            final Object envelope = log.requestEnvelope();
+        if (availabilities.contains(RequestLogAvailability.REQUEST_HEADERS)) {
+            final Object envelope = log.requestHeaders();
             if (envelope instanceof HttpHeaders) {
                 final String authority = getAuthority(ctx, (HttpHeaders) envelope);
                 if (authority != null) {
@@ -319,8 +320,9 @@ final class RequestContextExporter {
     }
 
     private static void exportStatusCode(Map<String, String> out, @Nullable RequestLog log) {
-        if (log.isAvailable(RequestLogAvailability.STATUS_CODE)) {
-            out.put(RES_STATUS_CODE.mdcKey, String.valueOf(log.statusCode()));
+        if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+            final HttpStatus status = log.status();
+            out.put(RES_STATUS_CODE.mdcKey, status != null ? status.codeAsText() : "-1");
         }
     }
 
@@ -411,11 +413,11 @@ final class RequestContextExporter {
     }
 
     private void exportHttpRequestHeaders(Map<String, String> out, RequestContext ctx, RequestLog log) {
-        if (!log.isAvailable(RequestLogAvailability.REQUEST_ENVELOPE)) {
+        if (!log.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
             return;
         }
 
-        final Object requestEnvelope = log.requestEnvelope();
+        final Object requestEnvelope = log.requestHeaders();
         final HttpHeaders headers;
         if (requestEnvelope instanceof HttpHeaders) {
             headers = (HttpHeaders) requestEnvelope;
@@ -429,11 +431,11 @@ final class RequestContextExporter {
     }
 
     private void exportHttpResponseHeaders(Map<String, String> out, RequestLog log) {
-        if (!log.isAvailable(RequestLogAvailability.RESPONSE_ENVELOPE)) {
+        if (!log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
             return;
         }
 
-        final Object responseEnvelope = log.responseEnvelope();
+        final Object responseEnvelope = log.responseHeaders();
         if (responseEnvelope instanceof HttpHeaders) {
             exportHttpHeaders(out, (HttpHeaders) responseEnvelope, httpResHeaders);
         }

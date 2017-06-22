@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.metric.MetricLabel;
@@ -180,7 +179,7 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
                 log -> {
                     final String[] values = getLabelValues(log);
                     metricFacade.incActiveRequests(values);
-                }, RequestLogAvailability.REQUEST_ENVELOPE, RequestLogAvailability.REQUEST_CONTENT);
+                }, RequestLogAvailability.REQUEST_HEADERS, RequestLogAvailability.REQUEST_CONTENT);
 
         ctx.log().addListener(
                 log -> {
@@ -236,17 +235,8 @@ public final class PrometheusMetricRequestDecorator<T extends MetricLabel<T>,
             return false;
         }
 
-        if (HttpSessionProtocols.isHttp(log.sessionProtocol())) {
-            if (log.statusCode() >= 400) {
-                return false;
-            }
-        } else {
-            if (log.statusCode() != 0) {
-                return false;
-            }
-        }
-
-        return true;
+        final int statusCode = log.statusCode();
+        return statusCode >= 100 && statusCode < 400;
     }
 
     @FunctionalInterface

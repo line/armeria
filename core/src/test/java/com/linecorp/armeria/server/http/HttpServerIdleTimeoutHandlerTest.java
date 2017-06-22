@@ -25,7 +25,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -111,7 +110,7 @@ public class HttpServerIdleTimeoutHandlerTest {
 
         @Override
         public SessionProtocol protocol() {
-            return HttpSessionProtocols.H2C;
+            return SessionProtocol.H2C;
         }
 
         @Override

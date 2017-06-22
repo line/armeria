@@ -165,8 +165,7 @@ abstract class HttpResponseDecoder {
                 final HttpHeaders headers = (HttpHeaders) o;
                 final HttpStatus status = headers.status();
                 if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
-                    logBuilder.statusCode(status.code());
-                    logBuilder.responseEnvelope(headers);
+                    logBuilder.responseHeaders(headers);
                 }
             } else if (o instanceof HttpData) {
                 logBuilder.increaseResponseLength(((HttpData) o).length());

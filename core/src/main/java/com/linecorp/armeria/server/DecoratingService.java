@@ -37,12 +37,12 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
                                         R_I extends Request, R_O extends Response>
         implements Service<R_I, R_O> {
 
-    private final Service<? super T_I, ? extends T_O> delegate;
+    private final Service<T_I, T_O> delegate;
 
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected DecoratingService(Service<? super T_I, ? extends T_O> delegate) {
+    protected DecoratingService(Service<T_I, T_O> delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
@@ -50,7 +50,7 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
      * Returns the {@link Service} being decorated.
      */
     @SuppressWarnings("unchecked")
-    protected final <T extends Service<? super T_I, ? extends T_O>> T delegate() {
+    protected final <T extends Service<T_I, T_O>> T delegate() {
         return (T) delegate;
     }
 

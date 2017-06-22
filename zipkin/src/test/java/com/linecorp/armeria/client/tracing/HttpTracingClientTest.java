@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;

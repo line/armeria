@@ -127,7 +127,7 @@ public interface Service<I extends Request, O extends Response> {
      * Creates a new {@link Service} that decorates this {@link Service} with the specified
      * {@link DecoratingServiceFunction}.
      */
-    default Service<I, O> decorate(DecoratingServiceFunction<? super I, ? extends O> function) {
+    default Service<I, O> decorate(DecoratingServiceFunction<I, O> function) {
         return new FunctionalDecoratingService<>(this, function);
     }
 }

@@ -84,7 +84,7 @@ public final class PrometheusMetricCollectingService
 
     private final PrometheusMetricRequestDecorator<T, I, O> requestDecorator;
 
-    private PrometheusMetricCollectingService(Service<? super I, ? extends O> delegate,
+    private PrometheusMetricCollectingService(Service<I, O> delegate,
                                               PrometheusMetricRequestDecorator<T, I, O> requestDecorator) {
         super(delegate);
         this.requestDecorator = requestDecorator;

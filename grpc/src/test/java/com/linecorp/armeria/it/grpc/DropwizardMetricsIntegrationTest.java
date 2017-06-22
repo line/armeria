@@ -33,10 +33,10 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.metric.DropwizardMetricCollectingClient;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -70,7 +70,7 @@ public class DropwizardMetricsIntegrationTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.port(0, HttpSessionProtocols.HTTP);
+            sb.port(0, SessionProtocol.HTTP);
             sb.serviceUnder("/", new GrpcServiceBuilder()
                          .addService(new TestServiceImpl())
                          .enableUnframedRequests(true)

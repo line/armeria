@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.http.DefaultHttpResponse;
 import com.linecorp.armeria.common.http.HttpObject;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -66,8 +65,7 @@ public class PooledResponseBufferBenchmark {
     private static final class PooledDecoratingService
             extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
-        private PooledDecoratingService(
-                Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+        private PooledDecoratingService(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);
         }
 
@@ -103,8 +101,7 @@ public class PooledResponseBufferBenchmark {
     private static final class UnpooledDecoratingService
             extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
-        private UnpooledDecoratingService(
-                Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+        private UnpooledDecoratingService(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);
         }
 

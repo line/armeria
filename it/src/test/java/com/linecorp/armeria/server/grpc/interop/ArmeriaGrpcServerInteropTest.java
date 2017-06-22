@@ -32,7 +32,7 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.ConnectionSpec;
 
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
@@ -78,7 +78,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         try {
             ssc = new SelfSignedCertificate("example.com");
             ServerBuilder sb = new ServerBuilder()
-                    .port(0, HttpSessionProtocols.HTTPS)
+                    .port(0, SessionProtocol.HTTPS)
                     .defaultMaxRequestLength(16 * 1024 * 1024)
                     .sslContext(
                             SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())

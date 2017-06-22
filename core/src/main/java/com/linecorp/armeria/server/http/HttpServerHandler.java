@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.server.http;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
+import static com.linecorp.armeria.common.SessionProtocol.H1;
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
+import static com.linecorp.armeria.common.SessionProtocol.H2;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
@@ -276,7 +275,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // Decode the request and create a new invocation context from it to perform an invocation.
         final PathMappingResult mappingResult = mapped.mappingResult();
         final ServiceConfig serviceCfg = mapped.value();
-        final Service<Request, HttpResponse> service = serviceCfg.service();
+        final Service<HttpRequest, HttpResponse> service = serviceCfg.service();
 
         final Channel channel = ctx.channel();
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(

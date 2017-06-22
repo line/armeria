@@ -51,7 +51,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
-        ctx.logBuilder().requestEnvelope(headers());
+        ctx.logBuilder().requestHeaders(headers());
     }
 
     int id() {

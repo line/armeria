@@ -33,25 +33,25 @@ public final class SimpleCompositeServiceBuilder<I extends Request, O extends Re
 
     @Override
     public SimpleCompositeServiceBuilder<I, O> serviceAt(
-            String pathPattern, Service<? super I, ? extends O> service) {
+            String pathPattern, Service<I, O> service) {
         return super.serviceAt(pathPattern, service);
     }
 
     @Override
     public SimpleCompositeServiceBuilder<I, O> serviceUnder(
-            String pathPrefix, Service<? super I, ? extends O>  service) {
+            String pathPrefix, Service<I, O>  service) {
         return super.serviceUnder(pathPrefix, service);
     }
 
     @Override
     public SimpleCompositeServiceBuilder<I, O> service(
-            String pathPattern, Service<? super I, ? extends O> service) {
+            String pathPattern, Service<I, O> service) {
         return super.service(pathPattern, service);
     }
 
     @Override
     public SimpleCompositeServiceBuilder<I, O> service(
-            PathMapping pathMapping, Service<? super I, ? extends O>  service) {
+            PathMapping pathMapping, Service<I, O>  service) {
         return super.service(pathMapping, service);
     }
 

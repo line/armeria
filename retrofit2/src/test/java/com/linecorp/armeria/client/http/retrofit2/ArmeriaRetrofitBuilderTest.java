@@ -18,26 +18,11 @@ package com.linecorp.armeria.client.http.retrofit2;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
-import java.util.Set;
-
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableSet;
-
-import com.linecorp.armeria.common.SessionProtocolProvider;
 
 import retrofit2.Retrofit;
 
 public class ArmeriaRetrofitBuilderTest {
-
-    public static final class FooProtocolProvider extends SessionProtocolProvider {
-
-        @Override
-        protected Set<Entry> entries() {
-            return ImmutableSet.of(
-                    new Entry("foo", false, false, 9999));
-        }
-    }
 
     @Test
     public void build() throws Exception {

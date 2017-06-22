@@ -17,8 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;

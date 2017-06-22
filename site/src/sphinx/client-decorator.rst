@@ -50,7 +50,7 @@ SimpleDecoratingClient_ :
 .. code-block:: java
 
     public class AuditClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
-        public AuditClient(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+        public AuditClient(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);
         }
 

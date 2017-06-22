@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.common.logging;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.http.HttpHeaders;
 
 import io.netty.channel.Channel;
 
@@ -43,13 +45,9 @@ public interface RequestLogBuilder {
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
      *   <li>{@link RequestLog#host()}</li>
-     *   <li>{@link RequestLog#method()}</li>
-     *   <li>{@link RequestLog#path()}</li>
-     *   <li>{@link RequestLog#query()}</li>
      * </ul>
      */
-    void startRequest(Channel channel, SessionProtocol sessionProtocol,
-                      String host, HttpMethod method, String path, String query);
+    void startRequest(Channel channel, SessionProtocol sessionProtocol, String host);
 
     /**
      * Sets the {@link SerializationFormat}.
@@ -67,14 +65,14 @@ public interface RequestLogBuilder {
     void requestLength(long requestLength);
 
     /**
-     * Sets the {@link RequestLog#requestEnvelope()}.
+     * Sets the {@link RequestLog#requestHeaders()}.
      */
-    void requestEnvelope(Object requestEnvelope);
+    void requestHeaders(HttpHeaders requestHeaders);
 
     /**
      * Sets the {@link RequestLog#requestContent()} and the {@link RequestLog#rawRequestContent()}.
      */
-    void requestContent(Object requestContent, Object rawRequestContent);
+    void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
 
     /**
      * Allows the {@link #requestContent(Object, Object)} called after {@link #endRequest()}.
@@ -109,11 +107,6 @@ public interface RequestLogBuilder {
     void startResponse();
 
     /**
-     * Sets the status code specific to the current {@link SessionProtocol}.
-     */
-    void statusCode(int statusCode);
-
-    /**
      * Increases the {@link RequestLog#responseLength()} by {@code deltaBytes}.
      */
     void increaseResponseLength(long deltaBytes);
@@ -124,14 +117,14 @@ public interface RequestLogBuilder {
     void responseLength(long responseLength);
 
     /**
-     * Sets the {@link RequestLog#responseEnvelope()}.
+     * Sets the {@link RequestLog#responseHeaders()}.
      */
-    void responseEnvelope(Object responseEnvelope);
+    void responseHeaders(HttpHeaders responseHeaders);
 
     /**
      * Sets the {@link RequestLog#responseContent()} and the {@link RequestLog#rawResponseContent()}.
      */
-    void responseContent(Object responseContent, Object rawResponseContent);
+    void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent);
 
     /**
      * Allows the {@link #responseContent(Object, Object)} called after {@link #endResponse()}.

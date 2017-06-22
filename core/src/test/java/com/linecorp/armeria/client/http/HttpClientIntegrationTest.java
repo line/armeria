@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.http;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -85,8 +85,7 @@ public class HttpClientIntegrationTest {
 
     private static final class PoolUnawareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
-        private PoolUnawareDecorator(
-                Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+        private PoolUnawareDecorator(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);
         }
 
@@ -121,8 +120,7 @@ public class HttpClientIntegrationTest {
 
     private static final class PoolAwareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
-        private PoolAwareDecorator(
-                Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+        private PoolAwareDecorator(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);
         }
 

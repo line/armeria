@@ -90,7 +90,7 @@ public class ServiceTest {
     }
 
     public static class FooServiceDecorator extends SimpleDecoratingService<RpcRequest, RpcResponse> {
-        public FooServiceDecorator(Service<? super RpcRequest, ? extends RpcResponse> delegate) {
+        public FooServiceDecorator(Service<RpcRequest, RpcResponse> delegate) {
             super(delegate);
         }
 
@@ -101,7 +101,7 @@ public class ServiceTest {
     }
 
     public static class BadFooServiceDecorator extends FooServiceDecorator {
-        public BadFooServiceDecorator(Service<? super RpcRequest, ? extends RpcResponse> delegate,
+        public BadFooServiceDecorator(Service<RpcRequest, RpcResponse> delegate,
                                       @SuppressWarnings("unused") Object unused) {
             super(delegate);
         }

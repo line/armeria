@@ -101,7 +101,7 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
 
     private final CircuitBreakerMapping mapping;
 
-    CircuitBreakerClient(Client<? super I, ? extends O> delegate, CircuitBreakerMapping mapping) {
+    CircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping) {
         super(delegate);
         this.mapping = requireNonNull(mapping, "mapping");
     }

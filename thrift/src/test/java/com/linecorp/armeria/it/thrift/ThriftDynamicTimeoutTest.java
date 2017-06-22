@@ -122,7 +122,7 @@ public class ThriftDynamicTimeoutTest {
 
     private static final class DynamicTimeoutService extends SimpleDecoratingService<RpcRequest, RpcResponse> {
 
-        DynamicTimeoutService(Service<? super RpcRequest, ? extends RpcResponse> delegate) {
+        DynamicTimeoutService(Service<RpcRequest, RpcResponse> delegate) {
             super(delegate);
         }
 
@@ -138,7 +138,7 @@ public class ThriftDynamicTimeoutTest {
     private static final class TimeoutDisablingService
             extends SimpleDecoratingService<RpcRequest, RpcResponse> {
 
-        TimeoutDisablingService(Service<? super RpcRequest, ? extends RpcResponse> delegate) {
+        TimeoutDisablingService(Service<RpcRequest, RpcResponse> delegate) {
             super(delegate);
         }
 
@@ -152,7 +152,7 @@ public class ThriftDynamicTimeoutTest {
     private static final class DynamicTimeoutClient
             extends SimpleDecoratingClient<RpcRequest, RpcResponse> {
 
-        DynamicTimeoutClient(Client<? super RpcRequest, ? extends RpcResponse> delegate) {
+        DynamicTimeoutClient(Client<RpcRequest, RpcResponse> delegate) {
             super(delegate);
         }
 
@@ -167,7 +167,7 @@ public class ThriftDynamicTimeoutTest {
     private static final class TimeoutDisablingClient
             extends SimpleDecoratingClient<RpcRequest, RpcResponse> {
 
-        TimeoutDisablingClient(Client<? super RpcRequest, ? extends RpcResponse> delegate) {
+        TimeoutDisablingClient(Client<RpcRequest, RpcResponse> delegate) {
             super(delegate);
         }
 

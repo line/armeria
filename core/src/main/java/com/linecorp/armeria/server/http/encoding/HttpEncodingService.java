@@ -55,7 +55,7 @@ public class HttpEncodingService
      * Encoding will be applied when the client supports it, the response content type is a common web
      * text format, and the response either has variable content length or a length greater than 1024.
      */
-    public HttpEncodingService(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+    public HttpEncodingService(Service<HttpRequest, HttpResponse> delegate) {
         this(delegate, DEFAULT_ENCODABLE_CONTENT_TYPE_PREDICATE,
              DEFAULT_MIN_BYTES_TO_FORCE_CHUNKED_AND_ENCODING);
     }
@@ -66,7 +66,7 @@ public class HttpEncodingService
      * {@code encodableContentTypePredicate} and the response either has variable content length or a length
      * greater than {@code minBytesToForceChunkedAndEncoding}.
      */
-    public HttpEncodingService(Service<? super HttpRequest, ? extends HttpResponse> delegate,
+    public HttpEncodingService(Service<HttpRequest, HttpResponse> delegate,
                                Predicate<MediaType> encodableContentTypePredicate,
                                int minBytesToForceChunkedAndEncoding) {
         super(delegate);

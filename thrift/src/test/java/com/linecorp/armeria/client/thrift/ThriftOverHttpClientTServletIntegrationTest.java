@@ -15,9 +15,9 @@
  */
 package com.linecorp.armeria.client.thrift;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

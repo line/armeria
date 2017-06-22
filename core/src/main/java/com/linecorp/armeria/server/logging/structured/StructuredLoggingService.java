@@ -50,8 +50,7 @@ public abstract class StructuredLoggingService<I extends Request, O extends Resp
      * @param logBuilder an instance of {@link StructuredLogBuilder} which is used to construct an entry of
      *        structured log
      */
-    protected StructuredLoggingService(Service<? super I, ? extends O> delegate,
-                                       StructuredLogBuilder<L> logBuilder) {
+    protected StructuredLoggingService(Service<I, O> delegate, StructuredLogBuilder<L> logBuilder) {
         super(delegate);
         this.logBuilder = requireNonNull(logBuilder, "logBuilder");
     }

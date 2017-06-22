@@ -73,8 +73,8 @@ import com.linecorp.armeria.server.Service;
 public abstract class AbstractCompositeServiceBuilder<T extends AbstractCompositeServiceBuilder<T, I, O>,
                                                       I extends Request, O extends Response> {
 
-    private final List<CompositeServiceEntry<? super I, ? extends O>> services = new ArrayList<>();
-    private final List<CompositeServiceEntry<? super I, ? extends O>> unmodifiableServices =
+    private final List<CompositeServiceEntry<I, O>> services = new ArrayList<>();
+    private final List<CompositeServiceEntry<I, O>> unmodifiableServices =
             Collections.unmodifiableList(services);
 
     /**
@@ -95,7 +95,7 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
      * {@link #serviceUnder(String, Service)}, {@link #service(PathMapping, Service)} and
      * {@link #service(CompositeServiceEntry)}.
      */
-    protected final List<CompositeServiceEntry<? super I, ? extends O>> services() {
+    protected final List<CompositeServiceEntry<I, O>> services() {
         return unmodifiableServices;
     }
 
@@ -103,14 +103,14 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
      * @deprecated Use {@link #service(String, Service)} instead.
      */
     @Deprecated
-    protected T serviceAt(String pathPattern, Service<? super I, ? extends O> service) {
+    protected T serviceAt(String pathPattern, Service<I, O> service) {
         return service(pathPattern, service);
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    protected T serviceUnder(String pathPrefix, Service<? super I, ? extends O> service) {
+    protected T serviceUnder(String pathPrefix, Service<I, O> service) {
         return service(CompositeServiceEntry.ofPrefix(pathPrefix, service));
     }
 
@@ -128,25 +128,23 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    protected T service(String pathPattern, Service<? super I, ? extends O> service) {
+    protected T service(String pathPattern, Service<I, O> service) {
         return service(CompositeServiceEntry.of(pathPattern, service));
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    protected T service(PathMapping pathMapping, Service<? super I, ? extends O> service) {
+    protected T service(PathMapping pathMapping, Service<I, O> service) {
         return service(CompositeServiceEntry.of(pathMapping, service));
     }
 
     /**
      * Binds the specified {@link CompositeServiceEntry}.
      */
-    protected T service(CompositeServiceEntry<? super I, ? extends O> entry) {
+    protected T service(CompositeServiceEntry<I, O> entry) {
         requireNonNull(entry, "entry");
-        @SuppressWarnings("unchecked")
-        CompositeServiceEntry<I, O> cast = (CompositeServiceEntry<I, O>) entry;
-        services.add(cast);
+        services.add(entry);
         return self();
     }
 

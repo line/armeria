@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -510,7 +510,7 @@ public class ThriftOverHttpClientTest {
 
         final RequestLog log = requestLogs.take();
 
-        assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
         assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
@@ -525,7 +525,7 @@ public class ThriftOverHttpClientTest {
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
         assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
 
@@ -549,7 +549,7 @@ public class ThriftOverHttpClientTest {
 
         final RequestLog log = requestLogs.take();
 
-        assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
         assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
@@ -564,7 +564,7 @@ public class ThriftOverHttpClientTest {
         assertThat(rawRequest.args()).isInstanceOf(OnewayHelloService.hello_args.class);
         assertThat(((OnewayHelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
         assertThat(log.rawResponseContent()).isNull();
 
@@ -582,7 +582,7 @@ public class ThriftOverHttpClientTest {
 
         final RequestLog log = requestLogs.take();
 
-        assertThat(log.requestEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
         assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
@@ -597,7 +597,7 @@ public class ThriftOverHttpClientTest {
         assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
         assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        assertThat(log.responseEnvelope()).isInstanceOf(HttpHeaders.class);
+        assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
         assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
 

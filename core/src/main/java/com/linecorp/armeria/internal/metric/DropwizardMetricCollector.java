@@ -25,7 +25,6 @@ import java.util.function.Function;
 import com.codahale.metrics.MetricRegistry;
 
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
@@ -85,14 +84,9 @@ public final class DropwizardMetricCollector {
             return false;
         }
 
-        if (HttpSessionProtocols.isHttp(log.sessionProtocol())) {
-            if (log.statusCode() >= 400) {
-                return false;
-            }
-        } else {
-            if (log.statusCode() != 0) {
-                return false;
-            }
+        final int statusCode = log.statusCode();
+        if (statusCode < 100 || statusCode >= 400) {
+            return false;
         }
 
         final Object responseContent = log.responseContent();

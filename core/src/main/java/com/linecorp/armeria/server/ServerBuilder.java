@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
@@ -384,8 +384,7 @@ public final class ServerBuilder {
      * @deprecated Use {@link #service(String, Service)} instead.
      */
     @Deprecated
-    public ServerBuilder serviceAt(String pathPattern,
-                                   Service<? super HttpRequest, ? extends HttpResponse> service) {
+    public ServerBuilder serviceAt(String pathPattern, Service<HttpRequest, HttpResponse> service) {
         return service(pathPattern, service);
     }
 
@@ -395,8 +394,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceUnder(String pathPrefix,
-                                      Service<? super HttpRequest, ? extends HttpResponse> service) {
+    public ServerBuilder serviceUnder(String pathPrefix, Service<HttpRequest, HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
         return this;
@@ -419,8 +417,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(String pathPattern,
-                                 Service<? super HttpRequest, ? extends HttpResponse> service) {
+    public ServerBuilder service(String pathPattern, Service<HttpRequest, HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathPattern, service);
         return this;
@@ -433,8 +430,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(PathMapping pathMapping,
-                                 Service<? super HttpRequest, ? extends HttpResponse> service) {
+    public ServerBuilder service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service);
         return this;
@@ -445,8 +441,7 @@ public final class ServerBuilder {
      *             {@code armeria-logback}.
      */
     @Deprecated
-    public ServerBuilder service(PathMapping pathMapping,
-                                 Service<? super HttpRequest, ? extends HttpResponse> service,
+    public ServerBuilder service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service,
                                  String loggerName) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
@@ -466,7 +461,7 @@ public final class ServerBuilder {
     public ServerBuilder annotatedService(
             Object service,
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
         return annotatedService("/", service, decorator);
     }
 
@@ -483,7 +478,7 @@ public final class ServerBuilder {
     public ServerBuilder annotatedService(
             Object service, Map<Class<?>, ResponseConverter> converters,
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
         return annotatedService("/", service, converters, decorator);
     }
 
@@ -500,7 +495,7 @@ public final class ServerBuilder {
     public ServerBuilder annotatedService(
             String pathPrefix, Object service,
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
         return annotatedService(pathPrefix, service, ImmutableMap.of(), decorator);
     }
 
@@ -518,7 +513,7 @@ public final class ServerBuilder {
     public ServerBuilder annotatedService(
             String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
             Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<? super HttpRequest, ? extends HttpResponse>> decorator) {
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
 
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.annotatedService(pathPrefix, service, converters, decorator);
@@ -612,8 +607,7 @@ public final class ServerBuilder {
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
-    public <T extends Service<T_I, T_O>, T_I extends HttpRequest, T_O extends HttpResponse,
-            R extends Service<R_I, R_O>, R_I extends HttpRequest, R_O extends HttpResponse>
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     ServerBuilder decorator(Function<T, R> decorator) {
 
         requireNonNull(decorator, "decorator");

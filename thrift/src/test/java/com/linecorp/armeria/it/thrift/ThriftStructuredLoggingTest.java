@@ -72,7 +72,7 @@ public class ThriftStructuredLoggingTest {
         }
     }
 
-    private static MockedStructuredLoggingService<? super HttpRequest, ? extends HttpResponse> loggingService;
+    private static MockedStructuredLoggingService<HttpRequest, HttpResponse> loggingService;
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {

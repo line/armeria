@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 
 /**
@@ -51,7 +50,7 @@ public class THttpClientFactory extends DecoratingClientFactory {
 
     static {
         final ImmutableSet.Builder<Scheme> builder = ImmutableSet.builder();
-        for (SessionProtocol p : HttpSessionProtocols.values()) {
+        for (SessionProtocol p : SessionProtocol.values()) {
             for (SerializationFormat f : ThriftSerializationFormats.values()) {
                 builder.add(Scheme.of(f, p));
             }
@@ -72,7 +71,7 @@ public class THttpClientFactory extends DecoratingClientFactory {
     private static ClientFactory validate(ClientFactory httpClientFactory) {
         requireNonNull(httpClientFactory, "httpClientFactory");
 
-        for (SessionProtocol p : HttpSessionProtocols.values()) {
+        for (SessionProtocol p : SessionProtocol.values()) {
             if (!httpClientFactory.supportedSchemes().contains(Scheme.of(SerializationFormat.NONE, p))) {
                 throw new IllegalArgumentException(p.uriText() + " not supported by: " + httpClientFactory);
             }

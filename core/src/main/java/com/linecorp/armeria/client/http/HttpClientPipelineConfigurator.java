@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.client.http;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H1C;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.H2C;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTP;
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.H1;
+import static com.linecorp.armeria.common.SessionProtocol.H1C;
+import static com.linecorp.armeria.common.SessionProtocol.H2;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
 import static java.util.Objects.requireNonNull;
 

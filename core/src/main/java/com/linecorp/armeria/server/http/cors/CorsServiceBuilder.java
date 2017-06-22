@@ -428,8 +428,7 @@ public final class CorsServiceBuilder {
     /**
      * Creates a new decorator that decorates a {@link Service} with a new {@link CorsService}.
      */
-    public <I extends HttpRequest, O extends HttpResponse>
-    Function<Service<HttpRequest, HttpResponse>, CorsService> newDecorator() {
+    public Function<Service<HttpRequest, HttpResponse>, CorsService> newDecorator() {
         final CorsConfig config = new CorsConfig(this);
         return s -> new CorsService(s, config);
     }

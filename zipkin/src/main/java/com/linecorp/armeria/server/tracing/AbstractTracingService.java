@@ -55,7 +55,7 @@ public abstract class AbstractTracingService<I extends Request, O extends Respon
     /**
      * Creates a new instance.
      */
-    protected AbstractTracingService(Service<? super I, ? extends O> delegate, Brave brave) {
+    protected AbstractTracingService(Service<I, O> delegate, Brave brave) {
         super(delegate);
         serverInterceptor = new ServerTracingInterceptor(brave);
     }

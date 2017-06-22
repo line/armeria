@@ -37,13 +37,13 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.http.HttpClient;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
@@ -140,7 +140,7 @@ public class ArmeriaAutoConfigurationTest {
     @Test
     public void testPortConfiguration() throws Exception {
         final Collection<ServerPort> ports = server.activePorts().values();
-        assertThat(ports.stream().filter(p -> p.protocol() == HttpSessionProtocols.HTTP)).hasSize(3);
+        assertThat(ports.stream().filter(p -> p.protocol() == SessionProtocol.HTTP)).hasSize(3);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isAnyLocalAddress())).hasSize(2);
         assertThat(ports.stream().filter(p -> p.localAddress().getAddress().isLoopbackAddress())).hasSize(1);
     }

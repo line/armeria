@@ -30,8 +30,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 public class DropwizardMetricCollectorTest {
@@ -47,7 +47,7 @@ public class DropwizardMetricCollectorTest {
 
         final RequestLog requestLog = mock(RequestLog.class);
 
-        when(requestLog.sessionProtocol()).thenReturn(HttpSessionProtocols.HTTP);
+        when(requestLog.sessionProtocol()).thenReturn(SessionProtocol.HTTP);
         when(requestLog.serializationFormat()).thenReturn(SerializationFormat.NONE);
         when(requestLog.path()).thenReturn("/bar");
         when(requestLog.method()).thenReturn(HttpMethod.GET);

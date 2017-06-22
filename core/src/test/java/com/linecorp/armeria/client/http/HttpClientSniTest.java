@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.http;
 
-import static com.linecorp.armeria.common.http.HttpSessionProtocols.HTTPS;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.junit.Assert.assertEquals;
 
 import java.net.InetAddress;

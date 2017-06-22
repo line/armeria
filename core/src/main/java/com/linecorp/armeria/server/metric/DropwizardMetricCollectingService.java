@@ -94,7 +94,7 @@ public final class DropwizardMetricCollectingService<I extends Request, O extend
     private static String defaultMetricName(RequestLog log, String metricNamePrefix) {
 
         final ServiceRequestContext ctx = (ServiceRequestContext) log.context();
-        final Object requestEnvelope = log.requestEnvelope();
+        final Object requestEnvelope = log.requestHeaders();
         final Object requestContent = log.requestContent();
 
         String pathAsMetricName = null;
@@ -122,7 +122,7 @@ public final class DropwizardMetricCollectingService<I extends Request, O extend
 
     @SuppressWarnings("unchecked")
     DropwizardMetricCollectingService(
-            Service<? super I, ? extends O> delegate,
+            Service<I, O> delegate,
             MetricRegistry metricRegistry,
             Function<? super RequestLog, String> metricNameFunc) {
 
@@ -135,7 +135,7 @@ public final class DropwizardMetricCollectingService<I extends Request, O extend
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         ctx.log().addListener(collector::onRequestStart,
-                              RequestLogAvailability.REQUEST_ENVELOPE,
+                              RequestLogAvailability.REQUEST_HEADERS,
                               RequestLogAvailability.REQUEST_CONTENT);
         ctx.log().addListener(collector::onRequestEnd,
                               RequestLogAvailability.REQUEST_END);

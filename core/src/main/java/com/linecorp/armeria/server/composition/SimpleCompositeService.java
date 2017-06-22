@@ -39,29 +39,29 @@ public class SimpleCompositeService<I extends Request, O extends Response>
      * Creates a new instance that is composed of the specified entries.
      */
     @SafeVarargs
-    public SimpleCompositeService(CompositeServiceEntry<? super I, ? extends O>... services) {
+    public SimpleCompositeService(CompositeServiceEntry<I, O>... services) {
         super(services);
     }
 
     /**
      * Creates a new instance that is composed of the specified entries.
      */
-    public SimpleCompositeService(Iterable<CompositeServiceEntry<? super I, ? extends O>> services) {
+    public SimpleCompositeService(Iterable<CompositeServiceEntry<I, O>> services) {
         super(services);
     }
 
     @Override
-    public List<CompositeServiceEntry<? super I, ? extends O>> services() {
+    public List<CompositeServiceEntry<I, O>> services() {
         return super.services();
     }
 
     @Override
-    public <T extends Service<? super I, ? extends O>> T serviceAt(int index) {
+    public <T extends Service<I, O>> T serviceAt(int index) {
         return super.serviceAt(index);
     }
 
     @Override
-    public PathMapped<Service<? super I, ? extends O>> findService(String path, @Nullable String query) {
+    public PathMapped<Service<I, O>> findService(String path, @Nullable String query) {
         return super.findService(path, query);
     }
 }

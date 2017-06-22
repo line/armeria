@@ -57,7 +57,7 @@ SimpleDecoratingService_ :
 .. code-block:: java
 
     public class AuthService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
-        public AuthService(Service<? super HttpRequest, ? extends HttpResponse> delegate) {
+        public AuthService(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);
         }
 

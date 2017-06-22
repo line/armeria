@@ -18,61 +18,71 @@ package com.linecorp.armeria.common.http;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.EnumSet;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
- * HTTP-related {@link SessionProtocol} instances.
+ * @deprecated Use {@link SessionProtocol} instead.
  */
+@Deprecated
 public final class HttpSessionProtocols {
 
     /**
-     * HTTP - over TLS, HTTP/2 preferred.
+     * @deprecated Use {@link SessionProtocol#HTTPS} instead.
      */
-    public static final SessionProtocol HTTPS = SessionProtocol.of("https");
+    @Deprecated
+    public static final SessionProtocol HTTPS = SessionProtocol.HTTPS;
 
     /**
-     * HTTP - cleartext, HTTP/2 preferred.
+     * @deprecated Use {@link SessionProtocol#HTTP} instead.
      */
-    public static final SessionProtocol HTTP = SessionProtocol.of("http");
+    @Deprecated
+    public static final SessionProtocol HTTP = SessionProtocol.HTTP;
 
     /**
-     * HTTP/1 - over TLS.
+     * @deprecated Use {@link SessionProtocol#H1} instead.
      */
-    public static final SessionProtocol H1 = SessionProtocol.of("h1");
+    @Deprecated
+    public static final SessionProtocol H1 = SessionProtocol.H1;
 
     /**
-     * HTTP/1 - cleartext.
+     * @deprecated Use {@link SessionProtocol#H1C} instead.
      */
-    public static final SessionProtocol H1C = SessionProtocol.of("h1c");
+    @Deprecated
+    public static final SessionProtocol H1C = SessionProtocol.H1C;
 
     /**
-     * HTTP/2 - over TLS.
+     * @deprecated Use {@link SessionProtocol#H2} instead.
      */
-    public static final SessionProtocol H2 = SessionProtocol.of("h2");
+    @Deprecated
+    public static final SessionProtocol H2 = SessionProtocol.H2;
 
     /**
-     * HTTP/2 - cleartext.
+     * @deprecated Use {@link SessionProtocol#H2C} instead.
      */
-    public static final SessionProtocol H2C = SessionProtocol.of("h2c");
+    @Deprecated
+    public static final SessionProtocol H2C = SessionProtocol.H2C;
 
-    private static final Set<SessionProtocol> HTTP_PROTOCOLS = ImmutableSet.of(HTTPS, HTTP, H1, H1C, H2, H2C);
+    private static final Set<SessionProtocol> HTTP_PROTOCOLS = EnumSet.allOf(SessionProtocol.class);
 
     /**
-     * Returns the set of all known HTTP {@link SessionProtocol}s.
+     * @deprecated Use {@link SessionProtocol#values()} instead.
      */
+    @Deprecated
     public static Set<SessionProtocol> values() {
         return HTTP_PROTOCOLS;
     }
 
     /**
-     * Returns whether the specified {@link SessionProtocol} is HTTP.
+     * @deprecated This method will be removed without a replacement, because we do not support other
+     *             protocols than HTTP.
      */
+    @Deprecated
     public static boolean isHttp(SessionProtocol protocol) {
-        return values().contains(requireNonNull(protocol, "protocol"));
+        requireNonNull(protocol, "protocol");
+        return true;
     }
 
     private HttpSessionProtocols() {}
