@@ -85,8 +85,8 @@ public class GracefulShutdownIntegrationTest {
         final long stopTime = System.nanoTime();
 
         // .. which should be on par with the baseline.
-        assertThat(stopTime - startTime).isBetween(baselineNanos - MILLISECONDS.toNanos(300),
-                                                   baselineNanos + MILLISECONDS.toNanos(300));
+        assertThat(stopTime - startTime).isBetween(baselineNanos - MILLISECONDS.toNanos(400),
+                                                   baselineNanos + MILLISECONDS.toNanos(400));
     }
 
     @Test(timeout = 20000L)
@@ -116,8 +116,8 @@ public class GracefulShutdownIntegrationTest {
         assertTrue(completed.get());
 
         // Should take 500 more milliseconds than the baseline.
-        assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(200),
-                                                   baselineNanos + MILLISECONDS.toNanos(800));
+        assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(100),
+                                                   baselineNanos + MILLISECONDS.toNanos(900));
     }
 
     @Test(timeout = 20000L)
@@ -153,8 +153,8 @@ public class GracefulShutdownIntegrationTest {
 
         // Should take 1 more second than the baseline, because the long sleep will trigger shutdown timeout.
         final long stopTime = System.nanoTime();
-        assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(700),
-                                                   baselineNanos + MILLISECONDS.toNanos(1300));
+        assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(600),
+                                                   baselineNanos + MILLISECONDS.toNanos(1400));
     }
 
     @Test(timeout = 20000)
@@ -182,8 +182,8 @@ public class GracefulShutdownIntegrationTest {
 
         // Should take 1 more second than the baseline, because the requests will extend the quiet period
         // until the shutdown timeout is triggered.
-        assertThat(stopFuture.join()).isBetween(baselineNanos + MILLISECONDS.toNanos(700),
-                                                baselineNanos + MILLISECONDS.toNanos(1300));
+        assertThat(stopFuture.join()).isBetween(baselineNanos + MILLISECONDS.toNanos(600),
+                                                baselineNanos + MILLISECONDS.toNanos(1400));
     }
 
     private static SleepService.Iface newClient() throws Exception {
