@@ -27,12 +27,16 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.http.HttpData;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Flags;
 import io.netty.handler.codec.http2.Http2FrameListener;
@@ -46,10 +50,38 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private static final Logger logger = LoggerFactory.getLogger(Http2ResponseDecoder.class);
 
     private final Http2Connection conn;
+    private final Http2ConnectionEncoder encoder;
 
-    Http2ResponseDecoder(Http2Connection conn, Channel channel) {
+    Http2ResponseDecoder(Http2Connection conn, Channel channel, Http2ConnectionEncoder encoder) {
         super(channel);
         this.conn = conn;
+        this.encoder = encoder;
+    }
+
+    @Override
+    HttpResponseWrapper addResponse(
+            int id, HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
+            long responseTimeoutMillis, long maxContentLength) {
+
+        final HttpResponseWrapper resWrapper =
+                super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
+
+        resWrapper.closeFuture().whenCompleteAsync((unused, cause) -> {
+            if (cause != null) {
+                // We are not closing the connection but just send a RST_STREAM,
+                // so we have to remove the response manually.
+                removeResponse(id);
+
+                // Reset the stream.
+                final int streamId = idToStreamId(id);
+                if (conn.streamMayHaveExisted(streamId)) {
+                    final ChannelHandlerContext ctx = channel().pipeline().lastContext();
+                    encoder.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.newPromise());
+                    ctx.flush();
+                }
+            }
+        }, channel().eventLoop());
+        return resWrapper;
     }
 
     @Override
@@ -84,8 +116,16 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
-        HttpResponseWrapper res = getResponse(id(streamId), endOfStream);
+        HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
+            if (conn.streamMayHaveExisted(streamId)) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("{} Received a late HEADERS frame for a closed stream: {}",
+                                 ctx.channel(), streamId);
+                }
+                return;
+            }
+
             throw connectionError(PROTOCOL_ERROR, "received a HEADERS frame for an unknown stream: %d",
                                   streamId);
         }
@@ -117,13 +157,21 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
 
-        final HttpResponseWrapper res = getResponse(id(streamId), endOfStream);
+        final int dataLength = data.readableBytes();
+        final HttpResponseWrapper res = getResponse(streamIdToId(streamId), endOfStream);
         if (res == null) {
+            if (conn.streamMayHaveExisted(streamId)) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("{} Received a late DATA frame for a closed stream: {}",
+                                 ctx.channel(), streamId);
+                }
+                return dataLength + padding;
+            }
+
             throw connectionError(PROTOCOL_ERROR, "received a DATA frame for an unknown stream: %d",
                                   streamId);
         }
 
-        final int dataLength = data.readableBytes();
         final long maxContentLength = res.maxContentLength();
         if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
             res.close(ContentTooLargeException.get());
@@ -149,7 +197,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-        final HttpResponseWrapper res = removeResponse(id(streamId));
+        final HttpResponseWrapper res = removeResponse(streamIdToId(streamId));
         if (res == null) {
             if (conn.streamMayHaveExisted(streamId)) {
                 if (logger.isDebugEnabled()) {
@@ -190,7 +238,11 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
 
-    private static int id(int streamId) {
+    private static int streamIdToId(int streamId) {
         return streamId - 1 >>> 1;
+    }
+
+    private static int idToStreamId(int id) {
+        return (id << 1) + 1;
     }
 }
