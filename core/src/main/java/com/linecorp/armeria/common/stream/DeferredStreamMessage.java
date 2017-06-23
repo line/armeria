@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.CompletionActions;
 
 /**

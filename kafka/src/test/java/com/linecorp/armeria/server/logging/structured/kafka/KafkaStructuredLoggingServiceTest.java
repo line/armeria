@@ -33,8 +33,8 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
 
 public class KafkaStructuredLoggingServiceTest {

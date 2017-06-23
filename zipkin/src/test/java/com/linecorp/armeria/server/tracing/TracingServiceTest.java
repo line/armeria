@@ -39,9 +39,9 @@ import com.github.kristofa.brave.Sampler;
 import com.github.kristofa.brave.SpanId;
 import com.github.kristofa.brave.TraceData;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.tracing.HelloService;

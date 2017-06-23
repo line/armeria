@@ -22,8 +22,8 @@ import java.util.Optional;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.util.AsciiString;
 

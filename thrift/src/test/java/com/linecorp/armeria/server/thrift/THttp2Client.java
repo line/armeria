@@ -27,7 +27,7 @@ import org.apache.thrift.transport.TMemoryInputTransport;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import com.linecorp.armeria.internal.http.Http1ClientCodec;
+import com.linecorp.armeria.internal.Http1ClientCodec;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;

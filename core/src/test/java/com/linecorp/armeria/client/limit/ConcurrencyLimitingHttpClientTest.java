@@ -31,10 +31,10 @@ import org.junit.Test;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.common.http.DefaultHttpResponse;
-import com.linecorp.armeria.common.http.DeferredHttpResponse;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.DefaultHttpResponse;
+import com.linecorp.armeria.common.DeferredHttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 
 import io.netty.channel.DefaultEventLoop;

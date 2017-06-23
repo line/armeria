@@ -35,7 +35,6 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;

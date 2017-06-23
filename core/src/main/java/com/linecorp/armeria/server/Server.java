@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.internal.TransportType;
-import com.linecorp.armeria.server.http.HttpServerPipelineConfigurator;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;

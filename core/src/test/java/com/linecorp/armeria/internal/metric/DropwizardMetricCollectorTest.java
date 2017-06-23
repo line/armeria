@@ -29,9 +29,9 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 public class DropwizardMetricCollectorTest {

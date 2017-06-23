@@ -88,8 +88,8 @@ when building a DocService_ with a DocServiceBuilder_:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.http.HttpHeaders;
-    import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+    import com.linecorp.armeria.common.HttpHeaders;
+    import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
 
     ServerBuilder sb = new ServerBuilder();
     ...

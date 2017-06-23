@@ -26,7 +26,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 
 /**
  * Builds a new {@link DocService}.

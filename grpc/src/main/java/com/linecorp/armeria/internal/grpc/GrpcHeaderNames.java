@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.grpc;
 
-import com.linecorp.armeria.common.http.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaderNames;
 
 import io.netty.util.AsciiString;
 

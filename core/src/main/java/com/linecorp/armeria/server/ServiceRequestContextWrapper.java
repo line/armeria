@@ -22,9 +22,9 @@ import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContextWrapper;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * Wraps an existing {@link ServiceRequestContext}.

@@ -41,7 +41,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;

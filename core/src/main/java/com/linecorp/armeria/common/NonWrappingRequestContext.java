@@ -28,7 +28,6 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.netty.channel.Channel;

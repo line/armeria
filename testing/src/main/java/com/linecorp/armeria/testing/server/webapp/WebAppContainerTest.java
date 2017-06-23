@@ -40,11 +40,11 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpClientFactory;
 import com.linecorp.armeria.client.SessionOption;
 import com.linecorp.armeria.client.SessionOptions;
-import com.linecorp.armeria.client.http.HttpClient;
-import com.linecorp.armeria.client.http.HttpClientFactory;
-import com.linecorp.armeria.common.http.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;

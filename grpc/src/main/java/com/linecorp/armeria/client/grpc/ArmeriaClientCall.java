@@ -31,13 +31,13 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.DefaultHttpRequest;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
-import com.linecorp.armeria.common.http.HttpData;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;

@@ -33,10 +33,10 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.metric.DropwizardMetricCollectingClient;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;

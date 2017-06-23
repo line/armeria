@@ -40,7 +40,7 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;

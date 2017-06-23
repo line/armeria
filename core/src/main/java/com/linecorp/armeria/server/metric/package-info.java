@@ -15,6 +15,6 @@
  */
 
 /**
- * Metric-collecting service decorators.
+ * Metric-collecting service decorators and exporters.
  */
 package com.linecorp.armeria.server.metric;

@@ -32,18 +32,18 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.TestBase;
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
+import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.http.AbstractHttpService;
 
 import junitextensions.OptionAssert;
 import zookeeperjunit.CloseableZooKeeper;

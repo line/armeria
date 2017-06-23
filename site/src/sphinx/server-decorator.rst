@@ -29,9 +29,9 @@ service. It enables you to write a decorating service with a single lambda expre
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.http.DefaultHttpResponse;
-    import com.linecorp.armeria.common.http.HttpStatus;
-    import com.linecorp.armeria.server.http.HttpService;
+    import com.linecorp.armeria.common.HttpResponse;
+    import com.linecorp.armeria.common.HttpStatus;
+    import com.linecorp.armeria.server.HttpService;
 
     ServerBuilder sb = new ServerBuilder();
     HttpService service = ...;
@@ -39,9 +39,7 @@ service. It enables you to write a decorating service with a single lambda expre
                     service.decorate((delegate, ctx, req) -> {
                         if (!authenticate(req)) {
                             // Authentication failed; fail the request.
-                            DefaultHttpResponse res = new DefaultHttpResponse();
-                            res.respond(HttpStatus.UNAUTHORIZED);
-                            return res;
+                            return HttpResponse.of(HttpStatus.UNAUTHORIZED);
                         }
 
                         // Authenticated; pass the request to the actual service.
@@ -65,9 +63,8 @@ SimpleDecoratingService_ :
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             if (!authenticate(req)) {
                 // Authentication failed; fail the request.
-                DefaultHttpResponse res = new DefaultHttpResponse();
-                res.respond(HttpStatus.UNAUTHORIZED);
-                return res;
+                return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+
             }
 
             Service<HttpRequest, HttpResponse> delegate = delegate();

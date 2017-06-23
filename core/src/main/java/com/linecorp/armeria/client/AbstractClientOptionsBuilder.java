@@ -23,10 +23,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.http.DefaultHttpHeaders;
-import com.linecorp.armeria.common.http.HttpHeaders;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;

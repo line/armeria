@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.common.logging;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpHeaders;
 
 import io.netty.channel.Channel;
 

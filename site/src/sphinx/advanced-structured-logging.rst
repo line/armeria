@@ -79,12 +79,12 @@ To get notified when a certain set of properties are available, you can add a li
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.http.HttpRequest;
-    import com.linecorp.armeria.common.http.HttpResponse;
+    import com.linecorp.armeria.common.HttpRequest;
+    import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.common.logging.RequestLog;
     import com.linecorp.armeria.common.logging.RequestLogAvailability;
     import com.linecorp.armeria.server.ServiceRequestContext;
-    import com.linecorp.armeria.server.http.AbstractHttpService;
+    import com.linecorp.armeria.server.AbstractHttpService;
 
     public class MyService extends AbstractHttpService {
         @Override
@@ -112,11 +112,11 @@ and other log listeners get the information sooner:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.common.HttpRequest;
+    import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.common.SerializationFormat;
-    import com.linecorp.armeria.common.http.HttpRequest;
-    import com.linecorp.armeria.common.http.HttpResponse;
     import com.linecorp.armeria.server.ServiceRequestContext;
-    import com.linecorp.armeria.server.http.HttpService;
+    import com.linecorp.armeria.server.HttpService;
 
     public class MyService implements HttpService {
         @Override
@@ -132,9 +132,9 @@ automatically for you:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.http.HttpResponseWriter;
+    import com.linecorp.armeria.common.HttpResponseWriter;
     import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
-    import com.linecorp.armeria.server.http.AbstractHttpService;
+    import com.linecorp.armeria.server.AbstractHttpService;
 
     public class MyService extenda AbstractHttpService {
         @Override

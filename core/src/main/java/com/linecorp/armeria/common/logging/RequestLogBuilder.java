@@ -18,11 +18,11 @@ package com.linecorp.armeria.common.logging;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpHeaders;
 
 import io.netty.channel.Channel;
 

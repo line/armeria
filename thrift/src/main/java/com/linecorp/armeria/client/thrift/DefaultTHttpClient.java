@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.splitPathAndQuery;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
@@ -27,10 +27,10 @@ import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UserClient;
 import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpMethod;
 
 final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
 

@@ -40,7 +40,7 @@ import org.apache.thrift.transport.TTransportException;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 

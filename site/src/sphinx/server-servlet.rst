@@ -1,10 +1,10 @@
 .. _Apache Tomcat: http://tomcat.apache.org/
 .. _Jetty: http://www.eclipse.org/jetty/
-.. _JettyService: apidocs/index.html?com/linecorp/armeria/server/http/jetty/JettyService.html
-.. _JettyServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/http/jetty/JettyServiceBuilder.html
+.. _JettyService: apidocs/index.html?com/linecorp/armeria/server/jetty/JettyService.html
+.. _JettyServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/jetty/JettyServiceBuilder.html
 .. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html
-.. _TomcatService: apidocs/index.html?com/linecorp/armeria/server/http/tomcat/TomcatService.html
-.. _TomcatServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/http/tomcat/TomcatServiceBuilder.html
+.. _TomcatService: apidocs/index.html?com/linecorp/armeria/server/tomcat/TomcatService.html
+.. _TomcatServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/tomcat/TomcatServiceBuilder.html
 
 .. _server-servlet:
 
@@ -25,7 +25,7 @@ Add a TomcatService_ to a ServerBuilder_:
 .. code-block:: java
 
     import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.http.tomcat.TomcatService;
+    import com.linecorp.armeria.server.tomcat.TomcatService;
 
     ServerBuilder sb = new ServerBuilder();
 
@@ -50,8 +50,7 @@ Unlike Apache Tomcat, you need more dependencies and bootstrap code due to its m
 .. code-block:: java
 
     import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.http.jetty.JettyServiceBuilder;
-    import com.linecorp.armeria.server.http.jetty.JettyServiceBuilder;
+    import com.linecorp.armeria.server.jetty.JettyServiceBuilder;
 
     import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
     import org.eclipse.jetty.apache.jsp.JettyJasperInitializer

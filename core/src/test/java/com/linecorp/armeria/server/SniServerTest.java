@@ -35,11 +35,10 @@ import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.server.ServerRule;
 

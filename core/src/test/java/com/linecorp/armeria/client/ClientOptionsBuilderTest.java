@@ -25,12 +25,12 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientDecoration.Entry;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
 
 public class ClientOptionsBuilderTest {
     @Test

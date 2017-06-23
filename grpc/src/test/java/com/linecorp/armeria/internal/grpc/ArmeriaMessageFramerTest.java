@@ -28,7 +28,7 @@ import org.junit.Test;
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 

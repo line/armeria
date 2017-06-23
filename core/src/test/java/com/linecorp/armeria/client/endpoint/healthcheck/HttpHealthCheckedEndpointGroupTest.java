@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.http.healthcheck.HttpHealthCheckService;
+import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class HttpHealthCheckedEndpointGroupTest {

@@ -23,6 +23,9 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
@@ -31,9 +34,6 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.HttpStatus;
 
 import io.netty.channel.Channel;
 

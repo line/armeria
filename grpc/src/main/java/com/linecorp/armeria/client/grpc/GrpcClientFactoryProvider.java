@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryProvider;
+import com.linecorp.armeria.client.HttpClientFactory;
 import com.linecorp.armeria.client.SessionOptions;
-import com.linecorp.armeria.client.http.HttpClientFactory;
 
 /**
  * {@link ClientFactoryProvider} that creates a {@link GrpcClientFactory}.

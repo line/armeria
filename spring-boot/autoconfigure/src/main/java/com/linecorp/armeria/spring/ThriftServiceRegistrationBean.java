@@ -23,9 +23,9 @@ import javax.validation.constraints.NotNull;
 
 import org.apache.thrift.TBase;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.docs.DocService;
 

@@ -21,16 +21,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.DefaultHttpRequest;
+import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
-import com.linecorp.armeria.common.http.DefaultHttpResponse;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
 
 public class ClientDecorationBuilderTest {
 

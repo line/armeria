@@ -18,7 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
-import static com.linecorp.armeria.internal.http.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
 
 import java.lang.annotation.Annotation;
@@ -39,20 +39,20 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.common.http.HttpMethod;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.internal.DefaultValues;
-import com.linecorp.armeria.server.http.annotation.Converter;
-import com.linecorp.armeria.server.http.annotation.Converter.Unspecified;
-import com.linecorp.armeria.server.http.annotation.Delete;
-import com.linecorp.armeria.server.http.annotation.Get;
-import com.linecorp.armeria.server.http.annotation.Head;
-import com.linecorp.armeria.server.http.annotation.Options;
-import com.linecorp.armeria.server.http.annotation.Patch;
-import com.linecorp.armeria.server.http.annotation.Path;
-import com.linecorp.armeria.server.http.annotation.Post;
-import com.linecorp.armeria.server.http.annotation.Put;
-import com.linecorp.armeria.server.http.annotation.ResponseConverter;
-import com.linecorp.armeria.server.http.annotation.Trace;
+import com.linecorp.armeria.server.annotation.Converter;
+import com.linecorp.armeria.server.annotation.Converter.Unspecified;
+import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Head;
+import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Patch;
+import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.Trace;
 
 /**
  * Builds a list of {@link AnnotatedHttpService}s from a Java object.

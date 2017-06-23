@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.common.http.HttpParameters.EMPTY_PARAMETERS;
+import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.InvocationTargetException;
@@ -36,21 +36,21 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpParameters;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpParameters;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.Types;
-import com.linecorp.armeria.server.http.annotation.Optional;
-import com.linecorp.armeria.server.http.annotation.Param;
-import com.linecorp.armeria.server.http.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.Optional;
+import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpUtil;

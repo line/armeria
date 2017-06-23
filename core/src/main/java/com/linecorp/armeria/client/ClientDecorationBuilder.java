@@ -23,12 +23,12 @@ import java.util.List;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientDecoration.Entry;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * Creates a new {@link ClientDecoration} using the builder pattern.

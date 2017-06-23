@@ -23,10 +23,10 @@ import java.util.function.Function;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.metric.DropwizardMetricCollector;

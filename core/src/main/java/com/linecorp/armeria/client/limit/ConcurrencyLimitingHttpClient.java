@@ -21,9 +21,9 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.http.DeferredHttpResponse;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.DeferredHttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * A {@link Client} decorator that limits the concurrent number of active HTTP requests.

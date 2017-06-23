@@ -42,8 +42,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;

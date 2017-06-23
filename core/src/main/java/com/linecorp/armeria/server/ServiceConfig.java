@@ -23,8 +23,8 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * A {@link Service} and its {@link PathMapping} and {@link VirtualHost}.

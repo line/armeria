@@ -33,12 +33,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Queues;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.common.http.FilteredHttpResponse;
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpObject;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.grpc.testing.Messages;
 import com.linecorp.armeria.grpc.testing.Messages.PayloadType;
 import com.linecorp.armeria.grpc.testing.Messages.ResponseParameters;

@@ -27,9 +27,9 @@ import org.junit.Test;
 import com.github.kristofa.brave.Brave;
 import com.github.kristofa.brave.TraceData;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.tracing.HttpTracingTestBase;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;

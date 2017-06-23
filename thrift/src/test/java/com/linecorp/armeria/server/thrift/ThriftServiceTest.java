@@ -50,12 +50,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.linecorp.armeria.common.DefaultHttpRequest;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
-import com.linecorp.armeria.common.http.HttpData;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;

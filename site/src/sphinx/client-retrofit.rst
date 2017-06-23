@@ -1,6 +1,6 @@
 .. _`an API gateway`: http://microservices.io/patterns/apigateway.html
-.. _`ArmeriaRetrofit`: apidocs/index.html?com/linecorp/armeria/client/http/retrofit2/ArmeriaRetrofit.html
-.. _`com.linecorp.armeria.client.http.retrofit2`: apidocs/index.html?com/linecorp/armeria/client/http/retrofit2/package-summary.html
+.. _`ArmeriaRetrofit`: apidocs/index.html?com/linecorp/armeria/client/retrofit2/ArmeriaRetrofit.html
+.. _`com.linecorp.armeria.client.retrofit2`: apidocs/index.html?com/linecorp/armeria/client/retrofit2/package-summary.html
 .. _`Netty`: https://netty.io/
 .. _`OkHttp`: http://square.github.io/okhttp/
 .. _`Retrofit`: http://square.github.io/retrofit/
@@ -28,7 +28,7 @@ The integration is done by creating an ``HttpClient`` that connects to the desir
 .. code-block:: java
 
     import com.linecorp.armeria.client.Clients;
-    import com.linecorp.armeria.client.http.HttpClient;
+    import com.linecorp.armeria.client.HttpClient;
 
     import retrofit2.Retrofit;
     import retrofit2.adapter.java8.Java8CallAdapterFactory;
@@ -52,4 +52,4 @@ The integration is done by creating an ``HttpClient`` that connects to the desir
     MyService service = retrofit.create(MyService.class);
     UserInfo userInfo = service.getUserInfo("foo").get();
 
-For more information, please refer to the API documentation of the `com.linecorp.armeria.client.http.retrofit2`_ package.
+For more information, please refer to the API documentation of the `com.linecorp.armeria.client.retrofit2`_ package.

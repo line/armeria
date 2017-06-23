@@ -31,10 +31,10 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;

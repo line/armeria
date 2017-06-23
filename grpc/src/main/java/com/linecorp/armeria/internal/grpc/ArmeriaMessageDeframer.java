@@ -59,7 +59,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.HttpData;
 
 import io.grpc.Codec;
 import io.grpc.Codec.Identity;

@@ -7,8 +7,8 @@ import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.TRACE_I
 
 import com.github.kristofa.brave.SpanId;
 
-import com.linecorp.armeria.common.http.DefaultHttpHeaders;
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.util.AsciiString;
 

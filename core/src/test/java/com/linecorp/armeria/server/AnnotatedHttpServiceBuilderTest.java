@@ -20,10 +20,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.server.http.annotation.Get;
-import com.linecorp.armeria.server.http.annotation.Options;
-import com.linecorp.armeria.server.http.annotation.Path;
-import com.linecorp.armeria.server.http.annotation.Post;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.server.annotation.Post;
 
 public class AnnotatedHttpServiceBuilderTest {
 

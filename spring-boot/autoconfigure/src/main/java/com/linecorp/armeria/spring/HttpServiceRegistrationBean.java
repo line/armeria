@@ -19,8 +19,8 @@ import java.util.function.Function;
 
 import javax.validation.constraints.NotNull;
 
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 
