@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 
@@ -35,11 +36,14 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
 public class THttpClientBadSeqIdTest {
 
-    @Test(timeout = 10000L)
+    @Test(timeout = 30000L)
     public void badSeqId() throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
+            ss.setSoTimeout(5000);
+
             final THttpClient client = Clients.newClient(
                     "ttext+h1c://127.0.0.1:" + ss.getLocalPort(), THttpClient.class);
+
             final RpcResponse res = client.execute("/", HelloService.Iface.class, "hello", "trustin");
             assertThat(res.isDone()).isFalse();
 
@@ -67,6 +71,11 @@ public class THttpClientBadSeqIdTest {
                 while (sin.read() >= 0) {
                     continue;
                 }
+            } catch (SocketTimeoutException expected) {
+                // A connection was not accepted; Wait for the response to raise the cause.
+                res.join();
+                // Should not reach here because .join() will fail, but for completeness:
+                throw expected;
             }
 
             assertThatThrownBy(res::get)
