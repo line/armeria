@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.AggregatedHttpMessage;
 import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
@@ -50,6 +49,8 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.http.AbstractHttpService;
+import com.linecorp.armeria.server.http.annotation.Get;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService;
@@ -75,7 +76,17 @@ public class ArmeriaAutoConfigurationTest {
             return new HttpServiceRegistrationBean()
                     .setServiceName("okService")
                     .setService(new OkService())
-                    .setPathMapping(PathMapping.ofExact("/ok"));
+                    .setPathMapping(PathMapping.ofExact("/ok"))
+                    .setDecorator(LoggingService.newDecorator());
+        }
+
+        @Bean
+        public AnnotatedServiceRegistrationBean annotatedService() {
+            return new AnnotatedServiceRegistrationBean()
+                    .setServiceName("annotatedService")
+                    .setService(new AnnotatedService())
+                    .setPathPrefix("/annotated")
+                    .setDecorator(LoggingService.newDecorator());
         }
 
         @Bean
@@ -84,6 +95,7 @@ public class ArmeriaAutoConfigurationTest {
                     .setServiceName("helloService")
                     .setService(THttpService.of((HelloService.Iface) name -> "hello " + name))
                     .setPath("/thrift")
+                    .setDecorator(LoggingService.newDecorator())
                     .setExampleRequests(Collections.singleton(new hello_args("nameVal")))
                     .setExampleHeaders(Collections.singleton(HttpHeaders.of(
                             AsciiString.of("x-additional-header"), "headerVal")));
@@ -98,6 +110,13 @@ public class ArmeriaAutoConfigurationTest {
         }
     }
 
+    public static class AnnotatedService {
+        @Get("/get")
+        public AggregatedHttpMessage get() {
+            return AggregatedHttpMessage.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "annotated");
+        }
+    }
+
     @Inject
     private Server server;
 
@@ -108,14 +127,24 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testHttpServiceRegistrationBean() throws Exception {
-        final int port = server.activePort().get().localAddress().getPort();
         HttpClient client = Clients.newClient(newUrl("none+h1c"), HttpClient.class);
 
-        HttpResponse response = client.execute(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/ok")));
+        HttpResponse response = client.get("/ok");
 
         AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.content().array()).isEqualTo("ok".getBytes());
+        assertThat(msg.content().toStringUtf8()).isEqualTo("ok");
+    }
+
+    @Test
+    public void testAnnotatedServiceRegistrationBean() throws Exception {
+        HttpClient client = Clients.newClient(newUrl("none+h1c"), HttpClient.class);
+
+        HttpResponse response = client.get("/annotated/get");
+
+        AggregatedHttpMessage msg = response.aggregate().get();
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.content().toStringUtf8()).isEqualTo("annotated");
     }
 
     @Test
@@ -126,13 +155,11 @@ public class ArmeriaAutoConfigurationTest {
         assertThat(client.hello("world")).isEqualTo("hello world");
 
         HttpClient httpClient = Clients.newClient(newUrl("none+h1c"), HttpClient.class);
-        HttpResponse response =
-                httpClient.execute(HttpRequest.of(HttpHeaders.of(HttpMethod.GET,
-                                                                 "/internal/docs/specification.json")));
+        HttpResponse response = httpClient.get("/internal/docs/specification.json");
 
         AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(msg.content().toStringAscii()).matches(
+        assertThatJson(msg.content().toStringUtf8()).matches(
                 jsonPartMatches("services[0].exampleHttpHeaders[0].x-additional-header",
                                 is("headerVal")));
     }

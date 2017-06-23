@@ -15,8 +15,12 @@
  */
 package com.linecorp.armeria.spring;
 
-import javax.annotation.Nonnull;
+import java.util.function.Function;
 
+import javax.validation.constraints.NotNull;
+
+import com.linecorp.armeria.common.http.HttpRequest;
+import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 
@@ -29,7 +33,8 @@ import com.linecorp.armeria.server.Service;
  * >     return new HttpServiceRegistrationBean()
  * >             .setServiceName("okService")
  * >             .setService(new OkService())
- * >             .setPathMapping(PathMapping.ofExact("/ok"));
+ * >             .setPathMapping(PathMapping.ofExact("/ok"))
+ * >             .setDecorator(LoggingService.newDecorator());
  * > }
  * }</pre>
  */
@@ -38,33 +43,40 @@ public class HttpServiceRegistrationBean {
     /**
      * The http service to register.
      */
-    @Nonnull
-    private Service<?, ?> service;
+    @NotNull
+    private Service<HttpRequest, HttpResponse> service;
 
     /**
      * The pathMapping for the http service. For example, {@code PathMapping.ofPrefix("/foobar")}.
      */
-    @Nonnull
+    @NotNull
     private PathMapping pathMapping;
 
     /**
      * A service name to use in monitoring.
      */
-    @Nonnull
+    @NotNull
     private String serviceName;
+
+    /**
+     * The decorator of the HTTP service.
+     */
+    @NotNull
+    private Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
 
     /**
      * Returns the http {@link Service} registered to this bean.
      */
-    @Nonnull
-    public Service<?, ?> getService() {
+    @NotNull
+    public Service<HttpRequest, HttpResponse> getService() {
         return service;
     }
 
     /**
      * Register a http {@link Service}.
      */
-    public HttpServiceRegistrationBean setService(@Nonnull Service<?, ?> service) {
+    public HttpServiceRegistrationBean setService(@NotNull Service<HttpRequest, HttpResponse> service) {
         this.service = service;
         return this;
     }
@@ -72,6 +84,7 @@ public class HttpServiceRegistrationBean {
     /**
      * Returns the {@link PathMapping} that this service map to.
      */
+    @NotNull
     public PathMapping getPathMapping() {
         return pathMapping;
     }
@@ -79,15 +92,22 @@ public class HttpServiceRegistrationBean {
     /**
      * Sets a {@link PathMapping} that this service map to.
      */
-    public HttpServiceRegistrationBean setPathMapping(PathMapping pathMapping) {
+    public HttpServiceRegistrationBean setPathMapping(@NotNull PathMapping pathMapping) {
         this.pathMapping = pathMapping;
         return this;
     }
 
     /**
+     * Sets the path pattern of the service.
+     */
+    public HttpServiceRegistrationBean setPathPattern(@NotNull String pathPattern) {
+        return setPathMapping(PathMapping.of(pathPattern));
+    }
+
+    /**
      * Returns this service name to use in monitoring.
      */
-    @Nonnull
+    @NotNull
     public String getServiceName() {
         return serviceName;
     }
@@ -95,8 +115,27 @@ public class HttpServiceRegistrationBean {
     /**
      * Sets service name to use in monitoring.
      */
-    public HttpServiceRegistrationBean setServiceName(@Nonnull String serviceName) {
+    public HttpServiceRegistrationBean setServiceName(@NotNull String serviceName) {
         this.serviceName = serviceName;
+        return this;
+    }
+
+    /**
+     * Returns the decorator of the HTTP service.
+     */
+    @NotNull
+    public Function<Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>> getDecorator() {
+        return decorator;
+    }
+
+    /**
+     * Sets the decorator of the HTTP service.
+     */
+    public HttpServiceRegistrationBean setDecorator(
+            @NotNull Function<Service<HttpRequest, HttpResponse>,
+                              ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        this.decorator = decorator;
         return this;
     }
 }
