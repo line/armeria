@@ -47,18 +47,24 @@ abstract class HttpResponseDecoder {
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseDecoder.class);
 
     private final IntObjectMap<HttpResponseWrapper> responses = new IntObjectHashMap<>();
+    private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
     private boolean disconnectWhenFinished;
 
     HttpResponseDecoder(Channel channel) {
+        this.channel = channel;
         inboundTrafficController = new InboundTrafficController(channel);
+    }
+
+    final Channel channel() {
+        return channel;
     }
 
     final InboundTrafficController inboundTrafficController() {
         return inboundTrafficController;
     }
 
-    final HttpResponseWrapper addResponse(
+    HttpResponseWrapper addResponse(
             int id, HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
             long responseTimeoutMillis, long maxContentLength) {
 
@@ -123,6 +129,10 @@ abstract class HttpResponseDecoder {
             this.maxContentLength = maxContentLength;
         }
 
+        CompletableFuture<Void> closeFuture() {
+            return delegate.closeFuture();
+        }
+
         void scheduleTimeout(ChannelHandlerContext ctx) {
             if (responseTimeoutFuture != null || responseTimeoutMillis <= 0 || !isOpen()) {
                 // No need to schedule a response timeout if:
@@ -146,6 +156,10 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void run() {
+            if (request != null) {
+                request.abort();
+            }
+
             final ResponseTimeoutException cause = ResponseTimeoutException.get();
             delegate.close(cause);
             logBuilder.endResponse(cause);
