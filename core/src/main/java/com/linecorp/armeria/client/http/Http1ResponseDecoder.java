@@ -22,7 +22,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.http.HttpResponseWriter;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.http.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBuf;
@@ -57,6 +59,25 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     Http1ResponseDecoder(Channel channel) {
         super(channel);
+    }
+
+    @Override
+    HttpResponseWrapper addResponse(
+            int id, HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
+            long responseTimeoutMillis, long maxContentLength) {
+
+        final HttpResponseWrapper resWrapper =
+                super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
+
+        resWrapper.closeFuture().whenComplete((unused, cause) -> {
+            if (cause != null) {
+                // Disconnect when the response has been closed with an exception because there's no way
+                // to recover from it in HTTP/1.
+                channel().close();
+            }
+        });
+
+        return resWrapper;
     }
 
     @Override
