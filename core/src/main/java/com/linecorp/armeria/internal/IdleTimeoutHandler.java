@@ -46,7 +46,7 @@ public abstract class IdleTimeoutHandler extends IdleStateHandler {
 
         if (!hasRequestsInProgress(ctx)) {
             logger.debug("{} Closing an idle {} connection", ctx.channel(), name);
-            ctx.close();
+            ctx.channel().close();
         }
     }
 

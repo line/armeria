@@ -318,7 +318,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final long idleTimeoutMillis = options.idleTimeoutMillis();
         if (idleTimeoutMillis > 0) {
-            addBeforeSessionHandler(pipeline, new HttpClientIdleTimeoutHandler(idleTimeoutMillis));
+            pipeline.addFirst(new HttpClientIdleTimeoutHandler(idleTimeoutMillis));
         }
 
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));

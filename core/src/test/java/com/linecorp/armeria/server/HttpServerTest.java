@@ -112,7 +112,6 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 
 @RunWith(Parameterized.class)
 public class HttpServerTest {
-
     private static final Logger logger = LoggerFactory.getLogger(HttpServerTest.class);
 
     // TODO(trustin): Add SessionOption.NUM_WORKER_THREADS
@@ -384,6 +383,7 @@ public class HttpServerTest {
             sb.decorator(decorator);
 
             sb.defaultMaxRequestLength(MAX_CONTENT_LENGTH);
+            sb.idleTimeout(Duration.ofSeconds(5));
         }
     };
 
@@ -707,6 +707,28 @@ public class HttpServerTest {
         assertThat(InboundTrafficController.numDeferredReads(), is(greaterThan(oldNumDeferredReads)));
     }
 
+    @Test(timeout = 30000)
+    public void testStreamRequestLongerThanTimeout() throws Exception {
+        // Disable timeouts and length limits so that test does not fail due to slow transfer.
+        clientWriteTimeoutMillis = 0;
+        clientResponseTimeoutMillis = 0;
+        clientMaxResponseLength = 0;
+        serverRequestTimeoutMillis = 0;
+
+        DefaultHttpRequest request = new DefaultHttpRequest(HttpMethod.POST, "/echo");
+        HttpResponse response = client().execute(request);
+        request.write(HttpData.ofUtf8("a"));
+        Thread.sleep(2000);
+        request.write(HttpData.ofUtf8("b"));
+        Thread.sleep(2000);
+        request.write(HttpData.ofUtf8("c"));
+        Thread.sleep(2000);
+        request.write(HttpData.ofUtf8("d"));
+        Thread.sleep(2000);
+        request.write(HttpData.ofUtf8("e"));
+        request.close();
+        assertThat(response.aggregate().get().content().toStringUtf8(), is("abcde"));
+    }
 
     private void runStreamingResponseTest(boolean slowClient) throws InterruptedException, ExecutionException {
         // Disable timeouts and length limits so that test does not fail due to slow transfer.
