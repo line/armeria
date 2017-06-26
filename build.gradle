@@ -729,7 +729,7 @@ configure(javaProjects) {
 
     // Print interesting test results, except when running from IntelliJ IDEA which has its own output listener.
     if (System.getProperty('idea.no.launcher') == null) {
-        test {
+        tasks.withType(Test) {
             def buf = new StringBuilder()
 
             // Record the test output.
