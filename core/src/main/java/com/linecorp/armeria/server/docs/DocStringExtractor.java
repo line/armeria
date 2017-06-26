@@ -51,7 +51,7 @@ public abstract class DocStringExtractor {
     private final String path;
 
     protected DocStringExtractor(String defaultPath, String pathPropertyName) {
-        this.path = computePath(defaultPath, pathPropertyName);
+        path = computePath(defaultPath, pathPropertyName);
     }
 
     /**
@@ -67,7 +67,7 @@ public abstract class DocStringExtractor {
                 .filterInputsBy(new FilterBuilder().includePackage(path))
                 .setUrls(ClasspathHelper.forPackage(path))
                 .addClassLoader(classLoader)
-                .addScanners(new ResourcesScanner());
+                .setScanners(new ResourcesScanner());
         if (configuration.getUrls() == null || configuration.getUrls().isEmpty()) {
             return Collections.emptyMap();
         }
