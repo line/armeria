@@ -112,7 +112,7 @@ public final class HttpServerPipelineConfigurator extends ChannelInitializer<Cha
 
     private void configureRequestCountingHandlers(ChannelPipeline p) {
         if (config.idleTimeoutMillis() > 0) {
-            p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis()));
+            p.addLast(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis()));
         }
     }
 
