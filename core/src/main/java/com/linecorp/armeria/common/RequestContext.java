@@ -100,7 +100,7 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-finally} block:
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
      * try (SafeCloseable ignored = RequestContext.push(ctx)) {
      *     ...
@@ -118,7 +118,7 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-finally} block:
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
      * try (PushHandle ignored = RequestContext.push(ctx, true)) {
      *     ...
