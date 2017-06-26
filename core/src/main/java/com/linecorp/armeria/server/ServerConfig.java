@@ -339,7 +339,7 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the idle timeout of a connection in milliseconds.
+     * Returns the idle timeout of a connection in milliseconds for keep-alive.
      */
     public long idleTimeoutMillis() {
         return idleTimeoutMillis;
