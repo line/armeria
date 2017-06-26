@@ -18,7 +18,7 @@ package com.linecorp.armeria.internal;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.server.http.annotation.Optional;
+import com.linecorp.armeria.server.annotation.Optional;
 
 /**
  * Holds the default values used in annotation attributes.

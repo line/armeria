@@ -23,10 +23,10 @@ import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own

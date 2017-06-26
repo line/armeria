@@ -21,13 +21,13 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.DefaultHttpHeaders;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpMethod;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.EventLoop;

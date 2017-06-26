@@ -22,9 +22,8 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.server.http.HttpService;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 
 public class ChainedVirtualHostBuilderTest {
 

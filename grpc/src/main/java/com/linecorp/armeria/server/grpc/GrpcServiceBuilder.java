@@ -26,13 +26,14 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.encoding.HttpEncodingService;
 
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
@@ -159,7 +160,7 @@ public final class GrpcServiceBuilder {
      *     <li>Only unary methods (single request, single response) are supported.</li>
      *     <li>
      *         Message compression is not supported.
-     *         {@link com.linecorp.armeria.server.http.encoding.HttpEncodingService} should be used instead for
+     *         {@link HttpEncodingService} should be used instead for
      *         transport level encoding.
      *     </li>
      * </ul>

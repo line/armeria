@@ -39,11 +39,11 @@ import javax.net.ssl.SSLException;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.server.http.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.concurrent.DefaultThreadFactory;

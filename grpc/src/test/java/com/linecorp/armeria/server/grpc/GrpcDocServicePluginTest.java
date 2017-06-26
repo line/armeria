@@ -29,8 +29,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.ReconnectInfo;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;

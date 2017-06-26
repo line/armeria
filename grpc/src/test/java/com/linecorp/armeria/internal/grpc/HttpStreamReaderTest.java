@@ -33,9 +33,9 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.http.HttpData;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;

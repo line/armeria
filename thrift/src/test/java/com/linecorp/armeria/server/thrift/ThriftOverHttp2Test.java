@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.thrift;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 

@@ -29,10 +29,10 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.thrift.THttpClientFactory;
-import com.linecorp.armeria.common.http.DefaultHttpResponse;
-import com.linecorp.armeria.common.http.HttpObject;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.DefaultHttpResponse;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;

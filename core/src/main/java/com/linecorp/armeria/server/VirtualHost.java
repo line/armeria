@@ -30,8 +30,8 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;

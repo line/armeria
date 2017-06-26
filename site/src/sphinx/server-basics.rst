@@ -45,13 +45,13 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
 
 .. code-block:: java
 
+    import com.linecorp.armeria.common.HttpRequest;
+    import com.linecorp.armeria.common.HttpResponseWriter;
+    import com.linecorp.armeria.common.HttpStatus;
     import com.linecorp.armeria.common.MediaType;
-    import com.linecorp.armeria.common.http.HttpRequest;
-    import com.linecorp.armeria.common.http.HttpResponseWriter;
-    import com.linecorp.armeria.common.http.HttpStatus;
 
     import com.linecorp.armeria.server.ServiceRequestContext;
-    import com.linecorp.armeria.server.http.AbstractHttpService;
+    import com.linecorp.armeria.server.AbstractHttpService;
 
     ServerBuilder sb = new ServerBuilder();
     sb.port(8080, HTTP);

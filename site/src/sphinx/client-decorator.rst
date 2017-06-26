@@ -28,8 +28,8 @@ client. It enables you to write a decorating client with a single lambda express
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.http.HttpRequest;
-    import com.linecorp.armeria.common.http.HttpResponse;
+    import com.linecorp.armeria.common.HttpRequest;
+    import com.linecorp.armeria.common.HttpResponse;
 
     ClientBuilder cb = new ClientBuilder(...);
     ...

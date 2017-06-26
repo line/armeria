@@ -12,7 +12,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.linecorp.armeria.common.http.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.logback.RequestContextExporter.ExportEntry;
 
 import io.netty.util.AsciiString;

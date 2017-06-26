@@ -21,27 +21,28 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.DefaultHttpRequest;
+import com.linecorp.armeria.common.DefaultHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
-import com.linecorp.armeria.common.http.DefaultHttpResponse;
-import com.linecorp.armeria.common.http.HttpData;
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
-import com.linecorp.armeria.internal.http.ByteBufHttpData;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.encoding.HttpEncodingService;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
@@ -59,7 +60,7 @@ import io.netty.buffer.ByteBuf;
  *     <li>Only unary methods (single request, single response) are supported.</li>
  *     <li>
  *         Message compression is not supported.
- *         {@link com.linecorp.armeria.server.http.encoding.HttpEncodingService} should be used instead for
+ *         {@link HttpEncodingService} should be used instead for
  *         transport level encoding.
  *     </li>
  * </ul>

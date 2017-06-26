@@ -1,1 +1,1 @@
-com.linecorp.armeria.client.http.HttpClientFactoryProvider
+com.linecorp.armeria.client.HttpClientFactoryProvider

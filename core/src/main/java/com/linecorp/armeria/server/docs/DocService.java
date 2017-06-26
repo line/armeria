@@ -38,10 +38,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -49,9 +50,8 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
-import com.linecorp.armeria.server.http.HttpService;
-import com.linecorp.armeria.server.http.file.HttpFileService;
-import com.linecorp.armeria.server.http.file.HttpVfs;
+import com.linecorp.armeria.server.file.HttpFileService;
+import com.linecorp.armeria.server.file.HttpVfs;
 
 /**
  * An {@link HttpService} that provides information about the {@link Service}s running in a

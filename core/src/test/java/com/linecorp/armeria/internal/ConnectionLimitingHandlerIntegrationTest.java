@@ -29,8 +29,8 @@ import java.net.SocketException;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class ConnectionLimitingHandlerIntegrationTest {

@@ -19,7 +19,6 @@ package com.linecorp.armeria.common;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**

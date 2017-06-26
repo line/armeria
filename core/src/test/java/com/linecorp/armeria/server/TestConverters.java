@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.http.DefaultHttpResponse;
-import com.linecorp.armeria.common.http.HttpData;
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.server.http.annotation.ResponseConverter;
+import com.linecorp.armeria.common.DefaultHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 final class TestConverters {
 

@@ -25,11 +25,10 @@ import java.util.function.BiFunction;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.server.http.HttpService;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 
 /**
  * {@link HttpMethod}, {@link PathMapping} and their corresponding {@link BiFunction}.

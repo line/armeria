@@ -23,7 +23,7 @@ import java.net.URI;
 import java.util.Optional;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.AsciiString;
@@ -260,7 +260,7 @@ public final class Clients {
      * made from the current thread. Use the `try-resources-finally` block with the returned
      * {@link SafeCloseable} to unset the thread-local variable automatically:
      * <pre>{@code
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      *
      * try (SafeCloseable ignored = withHttpHeader(AUTHORIZATION, myCredential)) {
      *     client.executeSomething(..);
@@ -268,8 +268,8 @@ public final class Clients {
      * }</pre>
      * You can also nest the header manipulation:
      * <pre>{@code
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
      * try (SafeCloseable ignored = withHttpHeader(USER_AGENT, myAgent)) {
      *     for (String secret : secrets) {
@@ -294,8 +294,8 @@ public final class Clients {
      * headers are sent by the client call made from the current thread. Use the `try-resources-finally` block
      * with the returned {@link SafeCloseable} to unset the thread-local variable automatically:
      * <pre>{@code
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
      * try (SafeCloseable ignored = withHttpHeaders(headers -> {
      *     headers.set(HttpHeaders.AUTHORIZATION, myCredential)
@@ -306,8 +306,8 @@ public final class Clients {
      * }</pre>
      * You can also nest the header manipulation:
      * <pre>{@code
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
      * try (SafeCloseable ignored = withHttpHeaders(h -> h.set(USER_AGENT, myAgent)) {
      *     for (String secret : secrets) {

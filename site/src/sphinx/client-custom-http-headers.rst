@@ -15,7 +15,7 @@ Using ``Clients.withHttpHeaders()``
 
 .. code-block:: java
 
-    import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+    import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
     import com.linecorp.armeria.common.util.SafeCloseable
     import com.linecorp.armeria.client.Clients;
 
@@ -39,7 +39,7 @@ You can also nest ``withHttpHeader(s)``. The following example will send both ``
 
 .. code-block:: java
 
-    import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+    import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
 
     try (SafeClosedble ignored1 = Clients.withHttpHeader(USER_AGENT, myUserAgent)) {
         for (String cred : credentials) {
@@ -56,8 +56,8 @@ which is more efficient:
 
 .. code-block:: java
 
-    import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
-    import com.linecorp.armeria.common.http.HttpHeaders;
+    import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+    import com.linecorp.armeria.common.HttpHeaders;
     import com.linecorp.armeria.client.ClientBuilder;
     import com.linecorp.armeria.client.ClientOption;
 

@@ -70,8 +70,8 @@ You can also use the builder pattern for client construction:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.http.HttpRequest;
-    import com.linecorp.armeria.common.http.HttpResponse;
+    import com.linecorp.armeria.common.HttpRequest;
+    import com.linecorp.armeria.common.HttpResponse;
 
     HelloService.Iface helloService = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
             .defaultResponseTimeoutMillis(10000)

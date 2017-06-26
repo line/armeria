@@ -31,10 +31,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.DefaultHttpHeaders;
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.util.AbstractOptions;
 
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;

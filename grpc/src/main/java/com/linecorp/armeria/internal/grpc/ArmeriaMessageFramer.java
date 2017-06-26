@@ -52,7 +52,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import com.linecorp.armeria.common.http.HttpData;
+import com.linecorp.armeria.common.HttpData;
 
 import io.grpc.Codec;
 import io.grpc.Compressor;
