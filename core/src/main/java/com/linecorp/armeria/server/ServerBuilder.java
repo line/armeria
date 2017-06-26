@@ -236,7 +236,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the idle timeout of a connection in milliseconds.
+     * Sets the idle timeout of a connection in milliseconds for keep-alive.
      *
      * @param idleTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
@@ -245,7 +245,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the idle timeout of a connection.
+     * Sets the idle timeout of a connection for keep-alive.
      *
      * @param idleTimeout the timeout. {@code 0} disables the timeout.
      */
