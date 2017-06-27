@@ -98,13 +98,15 @@ public class HttpClientPipeliningTest {
         // Ensure only a single event loop is used so that there's only one connection pool.
         // Note: Each event loop has its own connection pool.
         eventLoopGroup = new NioEventLoopGroup(1);
-        factoryWithPipelining = new AllInOneClientFactory(
-                SessionOptions.of(SessionOption.EVENT_LOOP_GROUP.newValue(eventLoopGroup),
-                                  SessionOption.USE_HTTP1_PIPELINING.newValue(true)));
+        factoryWithPipelining = new ClientFactoryBuilder()
+                .eventLoopGroup(eventLoopGroup)
+                .useHttp1Pipelining(true)
+                .build();
 
-        factoryWithoutPipelining = new AllInOneClientFactory(
-                SessionOptions.of(SessionOption.EVENT_LOOP_GROUP.newValue(eventLoopGroup),
-                                  SessionOption.USE_HTTP1_PIPELINING.newValue(false)));
+        factoryWithoutPipelining = new ClientFactoryBuilder()
+                .eventLoopGroup(eventLoopGroup)
+                .useHttp1Pipelining(false)
+                .build();
     }
 
     @AfterClass

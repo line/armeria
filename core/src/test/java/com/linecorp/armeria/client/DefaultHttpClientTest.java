@@ -40,7 +40,7 @@ public class DefaultHttpClientTest {
         String requestPath = "world/test?q1=foo";
 
         Client<HttpRequest, HttpResponse> mockClientDelegate = mock(Client.class);
-        ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(new HttpClientFactory(),
+        ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(ClientFactory.DEFAULT,
                                                                                  new URI(clientUriPath),
                                                                                  HttpClient.class,
                                                                                  ClientOptions.DEFAULT);

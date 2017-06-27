@@ -359,7 +359,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Creates a new {@link VirtualHost}.
+     * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
+     * added to this builder.
      */
     protected VirtualHost build() {
         final VirtualHost virtualHost = new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);

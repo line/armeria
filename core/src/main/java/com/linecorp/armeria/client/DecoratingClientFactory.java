@@ -55,11 +55,6 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public SessionOptions options() {
-        return delegate().options();
-    }
-
-    @Override
     public EventLoopGroup eventLoopGroup() {
         return delegate().eventLoopGroup();
     }

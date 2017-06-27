@@ -416,16 +416,15 @@ public final class CorsServiceBuilder {
     }
 
     /**
-     * Builds a {@link CorsConfig} with settings specified by previous method calls.
-     *
-     * @return {@link CorsConfig} the configured CorsConfig instance.
+     * Returns a newly-created {@link CorsService} based on the properties of this builder.
      */
     public CorsService build(Service<HttpRequest, HttpResponse> delegate) {
         return new CorsService(delegate, new CorsConfig(this));
     }
 
     /**
-     * Creates a new decorator that decorates a {@link Service} with a new {@link CorsService}.
+     * Returns a newly-created decorator that decorates a {@link Service} with a new {@link CorsService}
+     * based on the properties of this builder.
      */
     public Function<Service<HttpRequest, HttpResponse>, CorsService> newDecorator() {
         final CorsConfig config = new CorsConfig(this);

@@ -81,16 +81,15 @@ public final class HttpAuthServiceBuilder {
     }
 
     /**
-     * Creates a new {@link HttpAuthService} instance with the given {@code delegate} and all of the
-     * authorization {@link Authorizer}s.
+     * Returns a newly-created {@link HttpAuthService} based on the {@link Authorizer}s added to this builder.
      */
     public HttpAuthService build(Service<HttpRequest, HttpResponse> delegate) {
         return new HttpAuthServiceImpl(requireNonNull(delegate, "delegate"), authorizers);
     }
 
     /**
-     * Creates a new {@link HttpAuthService} {@link Service} decorator that supports all of the given
-     * authorization {@link Authorizer}s.
+     * Returns a newly-created decorator that decorates a {@link Service} with a new {@link HttpAuthService}
+     * based on the {@link Authorizer}s added to this builder.
      */
     public Function<Service<HttpRequest, HttpResponse>, HttpAuthService> newDecorator() {
         return HttpAuthService.newDecorator(authorizers);

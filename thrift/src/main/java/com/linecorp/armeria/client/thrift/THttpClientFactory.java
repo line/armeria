@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.thrift;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Proxy;
 import java.net.URI;
@@ -31,7 +30,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.DefaultClientBuilderParams;
-import com.linecorp.armeria.client.HttpClientFactory;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
@@ -44,7 +42,7 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 /**
  * A {@link DecoratingClientFactory} that creates a Thrift-over-HTTP client.
  */
-public class THttpClientFactory extends DecoratingClientFactory {
+final class THttpClientFactory extends DecoratingClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES;
 
@@ -59,25 +57,12 @@ public class THttpClientFactory extends DecoratingClientFactory {
     }
 
     /**
-     * Creates a new instance from the specified {@link ClientFactory} that supports HTTP, such as
-     * {@link HttpClientFactory}.
+     * Creates a new instance from the specified {@link ClientFactory} that supports the "none+http" scheme.
      *
      * @throws IllegalArgumentException if the specified {@link ClientFactory} does not support HTTP
      */
-    public THttpClientFactory(ClientFactory httpClientFactory) {
-        super(validate(httpClientFactory));
-    }
-
-    private static ClientFactory validate(ClientFactory httpClientFactory) {
-        requireNonNull(httpClientFactory, "httpClientFactory");
-
-        for (SessionProtocol p : SessionProtocol.values()) {
-            if (!httpClientFactory.supportedSchemes().contains(Scheme.of(SerializationFormat.NONE, p))) {
-                throw new IllegalArgumentException(p.uriText() + " not supported by: " + httpClientFactory);
-            }
-        }
-
-        return httpClientFactory;
+    THttpClientFactory(ClientFactory httpClientFactory) {
+        super(httpClientFactory);
     }
 
     @Override

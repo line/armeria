@@ -21,18 +21,18 @@ import static java.util.Objects.requireNonNull;
 import io.netty.channel.Channel;
 
 /**
- * A {@link KeyedChannelPoolHandler} that decorates an existing {@link KeyedChannelPoolHandler}.
+ * A {@link KeyedChannelPoolHandler} that wraps an existing {@link KeyedChannelPoolHandler}.
  *
  * @param <K> the key type
  */
-public class DecoratingKeyedChannelPoolHandler<K> implements KeyedChannelPoolHandler<K> {
+public class KeyedChannelPoolHandlerWrapper<K> implements KeyedChannelPoolHandler<K> {
 
     private final KeyedChannelPoolHandler<K> delegate;
 
     /**
-     * Creates a new decorator with the specified {@code delegate}.
+     * Creates a new instance with the specified {@code delegate}.
      */
-    protected DecoratingKeyedChannelPoolHandler(KeyedChannelPoolHandler<K> delegate) {
+    protected KeyedChannelPoolHandlerWrapper(KeyedChannelPoolHandler<K> delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 

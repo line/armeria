@@ -228,7 +228,7 @@ public final class CircuitBreakerBuilder {
     }
 
     /**
-     * Builds a {@link CircuitBreaker} instance.
+     * Returns a newly-created {@link CircuitBreaker} based on the properties of this builder.
      */
     public CircuitBreaker build() {
         if (counterSlidingWindow.compareTo(counterUpdateInterval) <= 0) {

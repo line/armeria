@@ -205,7 +205,7 @@ public final class JettyServiceBuilder {
     }
 
     /**
-     * Creates a new {@link JettyService}.
+     * Returns a newly-created {@link JettyService} based on the properties of this builder.
      */
     public JettyService build() {
         return JettyService.forConfig(new JettyServiceConfig(

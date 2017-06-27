@@ -16,28 +16,15 @@
 
 package com.linecorp.armeria.client.grpc;
 
-import java.util.Map;
-import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryProvider;
-import com.linecorp.armeria.client.HttpClientFactory;
-import com.linecorp.armeria.client.SessionOptions;
 
 /**
  * {@link ClientFactoryProvider} that creates a {@link GrpcClientFactory}.
  */
-public class GrpcClientFactoryProvider implements ClientFactoryProvider {
-
+public final class GrpcClientFactoryProvider implements ClientFactoryProvider {
     @Override
-    public ClientFactory newFactory(SessionOptions options, Map<Class<?>, ClientFactory> dependencies) {
-        return new GrpcClientFactory(dependencies.get(HttpClientFactory.class));
-    }
-
-    @Override
-    public Set<Class<? extends ClientFactory>> dependencies() {
-        return ImmutableSet.of(HttpClientFactory.class);
+    public ClientFactory newFactory(ClientFactory httpClientFactory) {
+        return new GrpcClientFactory(httpClientFactory);
     }
 }

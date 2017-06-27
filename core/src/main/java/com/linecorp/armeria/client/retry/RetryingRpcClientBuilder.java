@@ -37,9 +37,7 @@ public class RetryingRpcClientBuilder
     }
 
     /**
-     * Builds a {@link RetryingRpcClient} with settings specified by previous method calls.
-     *
-     * @return {@link RetryingRpcClient} the decorating {@link RetryingClient} instance.
+     * Returns a newly-created {@link RetryingRpcClient} based on the properties of this builder.
      */
     @Override
     public RetryingRpcClient build(Client<RpcRequest, RpcResponse> delegate) {
@@ -47,7 +45,8 @@ public class RetryingRpcClientBuilder
     }
 
     /**
-     * Creates a new decorator that decorates a {@link Client} with a new {@link RetryingRpcClient}.
+     * Returns a newly-created decorator that decorates a {@link Client} with a new {@link RetryingRpcClient}
+     * based on the properties of this builder.
      */
     @Override
     public Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient> newDecorator() {

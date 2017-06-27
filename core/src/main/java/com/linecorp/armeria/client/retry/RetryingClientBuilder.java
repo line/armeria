@@ -92,14 +92,13 @@ public abstract class RetryingClientBuilder<
     }
 
     /**
-     * Builds a {@link U} with settings specified by previous method calls.
-     *
-     * @return {@link U} the decorating {@link RetryingClient} instance.
+     * Returns a newly-created {@link RetryingClient} based on the properties of this builder.
      */
     abstract U build(Client<I, O> delegate);
 
     /**
-     * Creates a new decorator that decorates a {@link Client} with a new {@link RetryingClient}.
+     * Returns a newly-created decorator that decorates a {@link Client} with a new {@link RetryingClient}
+     * based on the properties of this builder.
      */
     abstract Function<Client<I, O>, U> newDecorator();
 

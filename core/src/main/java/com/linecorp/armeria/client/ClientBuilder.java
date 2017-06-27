@@ -73,7 +73,8 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     /**
-     * Creates a new client which implements the specified {@code clientType}.
+     * Returns a newly-created client which implements the specified {@code clientType}, based on the
+     * properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
      *                                  {@link #ClientBuilder(String)} or the specified {@code clientType} is

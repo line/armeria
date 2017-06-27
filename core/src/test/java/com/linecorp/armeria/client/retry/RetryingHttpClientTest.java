@@ -32,11 +32,8 @@ import org.junit.rules.Timeout;
 import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientFactory;
-import com.linecorp.armeria.client.SessionOption;
-import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -227,11 +224,12 @@ public class RetryingHttpClientTest {
     public void retryAfterOneYear() throws Exception {
         final RetryStrategy<HttpRequest, HttpResponse> strategy =
                 RetryStrategy.onStatus(HttpStatus.SERVICE_UNAVAILABLE);
-        final ClientFactory factory = new HttpClientFactory(
-                SessionOptions.of(SessionOption.IDLE_TIMEOUT.newValue(Duration.ofSeconds(5))));
+
         final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
-                .factory(factory)
-                .defaultResponseTimeoutMillis(Duration.ofSeconds(5).toMillis())
+                .factory(new ClientFactoryBuilder().useDaemonThreads(true)
+                                                   .idleTimeout(Duration.ofSeconds(5))
+                                                   .build())
+                .defaultResponseTimeout(Duration.ofSeconds(5))
                 .decorator(HttpRequest.class, HttpResponse.class,
                            new RetryingHttpClientBuilder(strategy)
                                    .backoffSupplier(() -> Backoff.withoutDelay().withMaxAttempts(5))

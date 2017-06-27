@@ -39,6 +39,7 @@ import javax.net.ssl.SSLException;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -81,14 +82,9 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  */
 public final class ServerBuilder {
 
-    private static final int DEFAULT_NUM_BOSSES = 1;
-    private static final int DEFAULT_NUM_WORKERS;
-
     // Use Integer.MAX_VALUE not to limit open connections by default.
     private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
 
-    // Use slightly greater value than the client default so that clients close the connection more often.
-    private static final long DEFAULT_IDLE_TIMEOUT_MILLIS = Duration.ofSeconds(15).toMillis();
     private static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
     private static final long DEFAULT_DEFAULT_MAX_REQUEST_LENGTH = 10 * 1024 * 1024; // 10 MB
     // Defaults to no graceful shutdown.
@@ -96,22 +92,6 @@ public final class ServerBuilder {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int DEFAULT_MAX_BLOCKING_TASK_THREADS = 200; // from Tomcat's maxThreads.
     private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
-
-    static {
-        String value = System.getProperty("io.netty.eventLoopThreads", "0");
-        final int fallbackDefaultNumWorkers = Runtime.getRuntime().availableProcessors() * 2;
-        int defaultNumWorkers;
-        try {
-            defaultNumWorkers = Integer.parseInt(value);
-            if (defaultNumWorkers <= 0) {
-                defaultNumWorkers = fallbackDefaultNumWorkers;
-            }
-        } catch (Exception ignored) {
-            defaultNumWorkers = fallbackDefaultNumWorkers;
-        }
-
-        DEFAULT_NUM_WORKERS = defaultNumWorkers;
-    }
 
     private static Executor defaultBlockingTaskExecutor() {
         return DefaultBlockingTaskExecutorHolder.INSTANCE;
@@ -140,11 +120,10 @@ public final class ServerBuilder {
     private boolean updatedDefaultVirtualHostBuilder;
 
     private VirtualHost defaultVirtualHost;
-    private int numBosses = DEFAULT_NUM_BOSSES;
-    private int numWorkers = DEFAULT_NUM_WORKERS;
+    private int numBosses = Flags.defaultNumServerBosses();
+    private int numWorkers = Flags.defaultNumServerWorkers();
     private int maxNumConnections = DEFAULT_MAX_NUM_CONNECTIONS;
-    @SuppressWarnings("RedundantFieldInitialization")
-    private long idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT_MILLIS;
+    private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS;
     private long defaultMaxRequestLength = DEFAULT_DEFAULT_MAX_REQUEST_LENGTH;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
@@ -634,7 +613,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Creates a new {@link Server} with the configuration properties set so far.
+     * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
         Executor blockingTaskExecutor = this.blockingTaskExecutor;

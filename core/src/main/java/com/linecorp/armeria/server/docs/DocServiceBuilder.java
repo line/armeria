@@ -308,7 +308,7 @@ public final class DocServiceBuilder {
     }
 
     /**
-     * Creates a new {@link DocService}.
+     * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
         return new DocService(exampleHttpHeaders, exampleRequests);

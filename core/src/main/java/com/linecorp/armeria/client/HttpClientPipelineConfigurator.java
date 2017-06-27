@@ -23,7 +23,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
-import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -110,12 +109,14 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         HTTP2_REQUIRED
     }
 
+    private final HttpClientFactory clientFactory;
     private final SslContext sslCtx;
     private final HttpPreference httpPreference;
-    private final SessionOptions options;
     private InetSocketAddress remoteAddress;
 
-    HttpClientPipelineConfigurator(SessionProtocol sessionProtocol, SessionOptions options) {
+    HttpClientPipelineConfigurator(HttpClientFactory clientFactory, SessionProtocol sessionProtocol) {
+        this.clientFactory = clientFactory;
+
         if (sessionProtocol == HTTP || sessionProtocol == HTTPS) {
             httpPreference = HttpPreference.HTTP2_PREFERRED;
         } else if (sessionProtocol == H1 || sessionProtocol == H1C) {
@@ -127,16 +128,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             throw new Error();
         }
 
-        this.options = requireNonNull(options, "options");
-
         if (sessionProtocol.isTls()) {
             try {
                 final SslContextBuilder builder = SslContextBuilder.forClient();
 
                 builder.sslProvider(
                         Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
-                options.sslContextCustomizer().ifPresent(c -> c.accept(builder));
-                options.trustManagerFactory().ifPresent(builder::trustManager);
+                clientFactory.sslContextCustomizer().accept(builder);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED ||
                     httpPreference == HttpPreference.HTTP2_PREFERRED) {
@@ -275,7 +273,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         if (attemptUpgrade) {
             final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch);
-            if (options.useHttp2Preface()) {
+            if (clientFactory.useHttp2Preface()) {
                 pipeline.addLast(new DowngradeHandler());
                 pipeline.addLast(http2Handler);
             } else {
@@ -316,7 +314,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             addBeforeSessionHandler(pipeline, new Http1ResponseDecoder(pipeline.channel()));
         }
 
-        final long idleTimeoutMillis = options.idleTimeoutMillis();
+        final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
         if (idleTimeoutMillis > 0) {
             pipeline.addFirst(new HttpClientIdleTimeoutHandler(idleTimeoutMillis));
         }
@@ -580,7 +578,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 new Http2ClientConnectionHandler(decoder, encoder, new Http2Settings(), listener);
 
         // Setup post build options
-        handler.gracefulShutdownTimeoutMillis(options.idleTimeoutMillis());
+        handler.gracefulShutdownTimeoutMillis(clientFactory.idleTimeoutMillis());
 
         return handler;
     }

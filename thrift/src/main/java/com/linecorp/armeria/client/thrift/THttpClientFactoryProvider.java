@@ -16,27 +16,15 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import java.util.Map;
-import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryProvider;
-import com.linecorp.armeria.client.HttpClientFactory;
-import com.linecorp.armeria.client.SessionOptions;
 
 /**
  * {@link ClientFactoryProvider} that creates a {@link THttpClientFactory}.
  */
 public final class THttpClientFactoryProvider implements ClientFactoryProvider {
     @Override
-    public ClientFactory newFactory(SessionOptions options, Map<Class<?>, ClientFactory> dependencies) {
-        return new THttpClientFactory(dependencies.get(HttpClientFactory.class));
-    }
-
-    @Override
-    public Set<Class<? extends ClientFactory>> dependencies() {
-        return ImmutableSet.of(HttpClientFactory.class);
+    public ClientFactory newFactory(ClientFactory httpClientFactory) {
+        return new THttpClientFactory(httpClientFactory);
     }
 }

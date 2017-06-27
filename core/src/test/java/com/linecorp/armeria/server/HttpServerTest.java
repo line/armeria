@@ -73,10 +73,8 @@ import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientFactory;
-import com.linecorp.armeria.client.SessionOption;
-import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.DefaultHttpRequest;
@@ -96,7 +94,6 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
-import com.linecorp.armeria.internal.TransportType;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -107,22 +104,17 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
 @RunWith(Parameterized.class)
 public class HttpServerTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerTest.class);
 
-    // TODO(trustin): Add SessionOption.NUM_WORKER_THREADS
-    private static final ClientFactory clientFactory =
-            new HttpClientFactory(SessionOptions.of(
-                    SessionOption.SSL_CONTEXT_CUSTOMIZER.newValue(
-                            b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)),
-                    SessionOption.IDLE_TIMEOUT.newValue(Duration.ofSeconds(3)),
-                    SessionOption.EVENT_LOOP_GROUP.newValue(
-                            TransportType.detectTransportType().newEventLoopGroup(
-                                    1, type -> new DefaultThreadFactory(type.name())))));
+    private static final ClientFactory clientFactory = new ClientFactoryBuilder()
+            .numWorkers(1)
+            .idleTimeout(Duration.ofSeconds(3))
+            .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+            .build();
 
     private static final long MAX_CONTENT_LENGTH = 65536;
     // Stream as much as twice of the heap. Stream less to avoid OOME when leak detection is enabled.
