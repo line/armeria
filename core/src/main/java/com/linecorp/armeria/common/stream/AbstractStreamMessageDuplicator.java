@@ -19,9 +19,11 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -38,7 +40,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ConcurrentSet;
 
 /**
  * Allows subscribing to a {@link StreamMessage} multiple times by duplicating the stream.
@@ -125,7 +126,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private static final AtomicLongFieldUpdater<StreamMessageProcessor> requestedDemandUpdater =
                 AtomicLongFieldUpdater.newUpdater(StreamMessageProcessor.class, "requestedDemand");
 
-        private final Set<DownstreamSubscription> downstreamSubscriptions = new ConcurrentSet<>();
+        private final Set<DownstreamSubscription> downstreamSubscriptions =
+                Collections.newSetFromMap(new ConcurrentHashMap<>());
 
         private final List<T> contentList = new ArrayList<>();
 

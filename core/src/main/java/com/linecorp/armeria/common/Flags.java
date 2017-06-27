@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.SessionOption;
+import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 
 import io.netty.channel.epoll.Epoll;
@@ -55,6 +56,11 @@ public final class Flags {
     private static final int DEFAULT_BACKOFF_MAX_ATTEMPTS = getInt("defaultBackoffMaxAttempts",
                                                                    DEFAULT_DEFAULT_BACKOFF_MAX_ATTEMPTS,
                                                                    value -> value > 0);
+
+    private static final int DEFAULT_DEFAULT_EXPONENTIAL_BACKOFF_INITIAL_DELAY_MILLIS = 1000;
+    private static final int DEFAULT_EXPONENTIAL_BACKOFF_INITIAL_DELAY_MILLIS =
+            getInt("defaultExponentialBackoffInitialDelayMillis",
+                   DEFAULT_DEFAULT_EXPONENTIAL_BACKOFF_INITIAL_DELAY_MILLIS, value -> value >= 0);
 
     static {
         if (!Epoll.isAvailable()) {
@@ -142,6 +148,20 @@ public final class Flags {
      */
     public static int defaultBackoffMaxAttempts() {
         return DEFAULT_BACKOFF_MAX_ATTEMPTS;
+    }
+
+    /**
+     * Returns the default value of the {@code initialDelayMillis} parameter when instantiating
+     * a {@link Backoff} using {@link Backoff#exponential(long, long)}. Note that this value
+     * has effect only if a user did not specify the {@code defaultExponentialBackoffInitialDelayMillis}
+     * in the constructor call.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_DEFAULT_EXPONENTIAL_BACKOFF_INITIAL_DELAY_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultExponentialBackoffInitialDelayMillis=<integer>}
+     * to override the default value.
+     */
+    public static int defaultExponentialBackoffInitialDelayMillis() {
+        return DEFAULT_EXPONENTIAL_BACKOFF_INITIAL_DELAY_MILLIS;
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {

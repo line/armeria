@@ -21,7 +21,6 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -35,28 +34,17 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
     private final Supplier<? extends Backoff> backoffSupplier;
-    private final RetryRequestStrategy<I, O> retryStrategy;
+    private final RetryStrategy<I, O> retryStrategy;
     private final int defaultMaxAttempts;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected RetryingClient(Client<I, O> delegate,
-                             RetryRequestStrategy<I, O> retryStrategy,
-                             Supplier<? extends Backoff> backoffSupplier) {
-        this(delegate, retryStrategy, backoffSupplier, Flags.defaultBackoffMaxAttempts());
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    protected RetryingClient(Client<I, O> delegate,
-                             RetryRequestStrategy<I, O> retryStrategy,
-                             Supplier<? extends Backoff> backoffSupplier,
-                             int defaultMaxAttempts) {
+    protected RetryingClient(Client<I, O> delegate, RetryStrategy<I, O> retryStrategy,
+                             Supplier<? extends Backoff> backoffSupplier, int defaultMaxAttempts) {
         super(delegate);
-        this.backoffSupplier = requireNonNull(backoffSupplier, "backoffSupplier");
         this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
+        this.backoffSupplier = requireNonNull(backoffSupplier, "backoffSupplier");
         this.defaultMaxAttempts = defaultMaxAttempts;
     }
 
@@ -74,7 +62,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         return backoff;
     }
 
-    protected RetryRequestStrategy<I, O> retryStrategy() {
+    protected RetryStrategy<I, O> retryStrategy() {
         return retryStrategy;
     }
 }

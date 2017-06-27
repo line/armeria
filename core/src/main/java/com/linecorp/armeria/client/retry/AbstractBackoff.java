@@ -28,13 +28,13 @@ public abstract class AbstractBackoff implements Backoff {
     }
 
     @Override
-    public final long nextIntervalMillis(int numAttemptsSoFar) {
+    public final long nextDelayMillis(int numAttemptsSoFar) {
         validateNumAttemptsSoFar(numAttemptsSoFar);
-        return doNextIntervalMillis(numAttemptsSoFar);
+        return doNextDelayMillis(numAttemptsSoFar);
     }
 
     /**
-     * Invoked by {@link #nextIntervalMillis(int)} after {@code numAttemptsSoFar} is validated.
+     * Invoked by {@link #nextDelayMillis(int)} after {@code numAttemptsSoFar} is validated.
      */
-    protected abstract long doNextIntervalMillis(int numAttemptsSoFar);
+    protected abstract long doNextDelayMillis(int numAttemptsSoFar);
 }

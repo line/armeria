@@ -31,8 +31,8 @@ import com.linecorp.armeria.common.RpcResponse;
  * a {@link Request}. A user is supposed to make his or her {@link Request} via the object returned by
  * a {@link ClientBuilder} or {@link Clients}, which usually does not implement this interface.
  *
- * @param <I> the type of outgoing {@link Response}. Must be {@link HttpResponse} or {@link RpcResponse}.
- * @param <O> the type of incoming {@link Request}. Must be {@link HttpRequest} or {@link RpcRequest}.
+ * @param <I> the type of outgoing {@link Request}. Must be {@link HttpRequest} or {@link RpcRequest}.
+ * @param <O> the type of incoming {@link Response}. Must be {@link HttpResponse} or {@link RpcResponse}.
  *
  * @see UserClient
  */

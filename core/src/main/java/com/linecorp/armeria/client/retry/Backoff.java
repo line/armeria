@@ -36,24 +36,24 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff} that waits a fixed interval between attempts.
+     * Returns a {@link Backoff} that waits a fixed delay between attempts.
      */
-    static Backoff fixed(long intervalMillis) {
-        return new FixedBackoff(intervalMillis);
+    static Backoff fixed(long delayMillis) {
+        return new FixedBackoff(delayMillis);
     }
 
     /**
      * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
      */
-    static Backoff exponential(long minIntervalMillis, long maxIntervalMillis) {
-        return exponential(minIntervalMillis, maxIntervalMillis, 2.0);
+    static Backoff exponential(long initialDelayMillis, long maxDelayMillis) {
+        return exponential(initialDelayMillis, maxDelayMillis, 2.0);
     }
 
     /**
      * Returns a {@link Backoff} that waits an exponentially-increasing amount of time between attempts.
      */
-    static Backoff exponential(long minIntervalMillis, long maxIntervalMillis, double multiplier) {
-        return new ExponentialBackoff(minIntervalMillis, maxIntervalMillis, multiplier);
+    static Backoff exponential(long initialDelayMillis, long maxDelayMillis, double multiplier) {
+        return new ExponentialBackoff(initialDelayMillis, maxDelayMillis, multiplier);
     }
 
     /**
@@ -67,8 +67,7 @@ public interface Backoff {
      *
      * @throws IllegalArgumentException if {@code numAttemptsSoFar} is equal to or less than {@code 0}
      */
-    long nextIntervalMillis(int numAttemptsSoFar);
-
+    long nextDelayMillis(int numAttemptsSoFar);
 
     /**
      * Undecorates this {@link Backoff} to find the {@link Backoff} which is an instance of the specified
@@ -85,7 +84,7 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff} that provides an interval that increases using
+     * Returns a {@link Backoff} that provides a delay that increases using
      * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
      */
     default Backoff withJitter(long minJitterMillis, long maxJitterMillis) {
@@ -93,7 +92,7 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff} that provides an interval that increases using
+     * Returns a {@link Backoff} that provides a delay that increases using
      * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
      */
     default Backoff withJitter(long minJitterMillis, long maxJitterMillis, Supplier<Random> randomSupplier) {

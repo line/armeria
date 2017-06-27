@@ -24,26 +24,26 @@ import org.junit.Test;
 
 public class RandomBackoffTest {
     @Test
-    public void nextIntervalMillis() throws Exception {
+    public void nextDelayMillis() throws Exception {
         Random r = new Random(1);
         Backoff backoff = new RandomBackoff(10, 100, () -> r);
-        assertThat(backoff.nextIntervalMillis(1)).isEqualTo(18);
-        assertThat(backoff.nextIntervalMillis(1)).isEqualTo(93);
-        assertThat(backoff.nextIntervalMillis(1)).isEqualTo(12);
-        assertThat(backoff.nextIntervalMillis(1)).isEqualTo(95);
+        assertThat(backoff.nextDelayMillis(1)).isEqualTo(18);
+        assertThat(backoff.nextDelayMillis(1)).isEqualTo(93);
+        assertThat(backoff.nextDelayMillis(1)).isEqualTo(12);
+        assertThat(backoff.nextDelayMillis(1)).isEqualTo(95);
     }
 
     @Test
     public void validation() {
-        // Negative minIntervalMillis
+        // Negative minDelayMillis
         assertThatThrownBy(() -> new RandomBackoff(-1, 1, Random::new))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        // minIntervalMillis > maxIntervalMillis
+        // minDelayMillis > maxDelayMillis
         assertThatThrownBy(() -> new RandomBackoff(2, 1, Random::new))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        // Should not fail for 0-interval:
+        // Should not fail for 0-delay:
         new RandomBackoff(0, 0, Random::new);
     }
 }
