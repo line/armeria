@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Configuration;
 
 import com.codahale.metrics.Gauge;
@@ -43,7 +43,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 
 @Configuration
-@ConditionalOnMissingBean(MetricRegistry.class)
+@ConditionalOnBean(MetricRegistry.class)
 public class MonitoringConfiguration extends MetricsConfigurerAdapter {
     @Override
     public void configureReporters(MetricRegistry registry) {
