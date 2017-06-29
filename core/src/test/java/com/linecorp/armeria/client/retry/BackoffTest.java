@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.retry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.util.Random;
+
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Client;
@@ -60,22 +62,11 @@ public class BackoffTest {
 
     @Test
     public void withJitter() throws Exception {
-        int maxAttempts = 200;
-        Backoff backoff = Backoff.fixed(1000).withJitter(0.3).withMaxAttempts(maxAttempts);
-
-        for (int i = 1; i < maxAttempts; i++) {
-            assertThat(backoff.nextDelayMillis(i)).isBetween(700L, 1300L);
-        }
-    }
-
-    @Test
-    public void withMinMaxJitter() throws Exception {
-        int maxAttempts = 200;
-        Backoff backoff = Backoff.fixed(1000).withJitter(-0.4, 0.2).withMaxAttempts(maxAttempts);
-
-        for (int i = 1; i < maxAttempts; i++) {
-            assertThat(backoff.nextDelayMillis(i)).isBetween(600L, 1200L);
-        }
+        Random random = new Random(1);
+        Backoff backoff = Backoff.fixed(1000).withJitter(-0.3, 0.3, () -> random);
+        assertThat(backoff.nextDelayMillis(1)).isEqualTo(1240);
+        assertThat(backoff.nextDelayMillis(2)).isEqualTo(771);
+        assertThat(backoff.nextDelayMillis(3)).isEqualTo(803);
     }
 
     @Test
