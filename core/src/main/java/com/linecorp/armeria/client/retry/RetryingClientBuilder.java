@@ -48,7 +48,7 @@ public abstract class RetryingClientBuilder<
     Supplier<? extends Backoff> backoffSupplier = () -> Backoff
             .exponential(Flags.defaultExponentialBackoffInitialDelayMillis(),
                          ClientOptions.DEFAULT.defaultResponseTimeoutMillis())
-            .withJitter(0, 100)
+            .withJitter(0.3)
             .withMaxAttempts(Flags.defaultBackoffMaxAttempts());
     int defaultMaxAttempts = Flags.defaultBackoffMaxAttempts();
 
