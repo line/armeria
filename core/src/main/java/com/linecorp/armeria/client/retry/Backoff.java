@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.retry.FixedBackoff.NO_DELAY;
 import static java.util.Objects.requireNonNull;
 
@@ -84,19 +85,64 @@ public interface Backoff {
     }
 
     /**
-     * Returns a {@link Backoff} that provides a delay that increases using
+     * Returns a {@link Backoff} that adds a random jitter value to the original delay using
      * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
+     * The {@code jitterRate} is used to calculate the lower and upper bound of the ultimate delay.
+     * The lower bound will be {@code ((1 - jitterRate) * originalDelay)} and the upper bound will be
+     * {@code ((1 + jitterRate) * originalDelay)}. For example, if the delay returned by
+     * {@link Backoff#exponential(long, long)} is 1000 milliseconds and the provided jitter value is 0.3,
+     * the ultimate backoff delay will be chosen between 1000 * (1 - 0.3) and 1000 * (1 + 0.3)
+     * by {@link ThreadLocalRandom}. The rate value should be between 0.0 and 1.0.
+     *
+     * @param jitterRate the rate that used to calculate the lower and upper bound of the backoff delay
+     * @throws IllegalArgumentException if {@code jitterRate} is a negative value or greater than 1.0
      */
-    default Backoff withJitter(long minJitterMillis, long maxJitterMillis) {
-        return withJitter(minJitterMillis, maxJitterMillis, ThreadLocalRandom::current);
+    default Backoff withJitter(double jitterRate) {
+        checkArgument(0.0 <= jitterRate && jitterRate <= 1.0,
+                      "jitterRate: %s (expected: >= 0.0 and <= 1.0)", jitterRate);
+        return withJitter(-jitterRate, jitterRate, ThreadLocalRandom::current);
     }
 
     /**
-     * Returns a {@link Backoff} that provides a delay that increases using
+     * Returns a {@link Backoff} that adds a random jitter value to the original delay using
      * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
+     * The {@code minJitterRate} and {@code maxJitterRate} is used to calculate the lower and upper bound
+     * of the ultimate delay. The lower bound will be {@code ((1 - minJitterRate) * originalDelay)} and the
+     * upper bound will be {@code ((1 + maxJitterRate) * originalDelay)}. For example, if the delay
+     * returned by {@link Backoff#exponential(long, long)} is 1000 milliseconds and the {@code minJitterRate}
+     * is -0.2, {@code maxJitterRate} is 0.3, the ultimate backoff delay will be chosen between
+     * 1000 * (1 - 0.2) and 1000 * (1 + 0.3) by {@link ThreadLocalRandom}.
+     * The rate values should be between -1.0 and 1.0.
+     *
+     * @param minJitterRate the rate that used to calculate the lower bound of the backoff delay
+     * @param maxJitterRate the rate that used to calculate the upper bound of the backoff delay
+     * @throws IllegalArgumentException if {@code minJitterRate} is greater than {@code maxJitterRate} or if the
+     *                                  {@code minJitterRate} and {@code maxJitterRate} values are not in
+     *                                  between -1.0 and 1.0
      */
-    default Backoff withJitter(long minJitterMillis, long maxJitterMillis, Supplier<Random> randomSupplier) {
-        return new JitterAddingBackoff(this, minJitterMillis, maxJitterMillis, randomSupplier);
+    default Backoff withJitter(double minJitterRate, double maxJitterRate) {
+        return withJitter(minJitterRate, maxJitterRate, ThreadLocalRandom::current);
+    }
+
+    /**
+     * Returns a {@link Backoff} that adds a random jitter value to the original delay using
+     * <a href="https://www.awsarchitectureblog.com/2015/03/backoff.html">full jitter</a> strategy.
+     * The {@code minJitterRate} and {@code maxJitterRate} is used to calculate the lower and upper bound
+     * of the ultimate delay. The lower bound will be {@code ((1 - minJitterRate) * originalDelay)} and the
+     * upper bound will be {@code ((1 + maxJitterRate) * originalDelay)}. For example, if the delay
+     * returned by {@link Backoff#exponential(long, long)} is 1000 milliseconds and the {@code minJitterRate}
+     * is -0.2, {@code maxJitterRate} is 0.3, the ultimate backoff delay will be chosen between
+     * 1000 * (1 - 0.2) and 1000 * (1 + 0.3). The rate values should be between -1.0 and 1.0.
+     *
+     * @param minJitterRate  the rate that used to calculate the lower bound of the backoff delay
+     * @param maxJitterRate  the rate that used to calculate the upper bound of the backoff delay
+     * @param randomSupplier the supplier that provides {@link Random} in order to calculate the ultimate delay
+     * @throws IllegalArgumentException if {@code minJitterRate} is greater than {@code maxJitterRate} or if the
+     *                                  {@code minJitterRate} and {@code maxJitterRate} values are not in
+     *                                  between -1.0 and 1.0
+     */
+    default Backoff withJitter(double minJitterRate, double maxJitterRate, Supplier<Random> randomSupplier) {
+        return new JitterAddingBackoff(this, minJitterRate, maxJitterRate, randomSupplier);
     }
 
     /**

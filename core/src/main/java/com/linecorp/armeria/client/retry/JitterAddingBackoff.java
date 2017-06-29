@@ -27,23 +27,24 @@ import com.google.common.base.MoreObjects;
 
 final class JitterAddingBackoff extends BackoffWrapper {
     private final Supplier<Random> randomSupplier;
-    private final long bound;
-    private final long minJitterMillis;
-    private final long maxJitterMillis;
+    private final double minJitterRate;
+    private final double maxJitterRate;
 
-    JitterAddingBackoff(Backoff delegate, long minJitterMillis, long maxJitterMillis,
+    JitterAddingBackoff(Backoff delegate, double minJitterRate, double maxJitterRate,
                         Supplier<Random> randomSupplier) {
         super(delegate);
 
         this.randomSupplier = requireNonNull(randomSupplier, "randomSupplier");
-        this.minJitterMillis = Math.min(minJitterMillis, maxJitterMillis);
-        this.maxJitterMillis = Math.max(minJitterMillis, maxJitterMillis);
+        checkArgument(-1.0 <= minJitterRate && minJitterRate <= 1.0,
+                      "minJitterRate: %s (expected: >= -1.0 and <= 1.0)", minJitterRate);
+        checkArgument(-1.0 <= maxJitterRate && maxJitterRate <= 1.0,
+                      "maxJitterRate: %s (expected: >= -1.0 and <= 1.0)", maxJitterRate);
+        checkArgument(minJitterRate <= maxJitterRate,
+                      "maxJitterRate: %s needs to be greater than or equal to minJitterRate: %s",
+                      maxJitterRate, minJitterRate);
 
-        if (minJitterMillis < 0) {
-            checkArgument(maxJitterMillis < Long.MAX_VALUE + minJitterMillis,
-                          "maxJitterMillis - minJitterMillis must be less than Long.MAX_VALUE.");
-        }
-        bound = maxJitterMillis - minJitterMillis + 1;
+        this.minJitterRate = minJitterRate;
+        this.maxJitterRate = maxJitterRate;
     }
 
     @Override
@@ -54,16 +55,19 @@ final class JitterAddingBackoff extends BackoffWrapper {
             return nextDelayMillis;
         }
 
-        final long jitterMillis = RandomBackoff.nextLong(randomSupplier.get(), bound) + minJitterMillis;
-        return Math.max(0, saturatedAdd(nextDelayMillis, jitterMillis));
+        final long minJitter = (long) (nextDelayMillis * (1 + minJitterRate));
+        final long maxJitter = (long) (nextDelayMillis * (1 + maxJitterRate));
+        final long bound = maxJitter - minJitter + 1;
+        final long millis = RandomBackoff.nextLong(randomSupplier.get(), bound);
+        return Math.max(0, saturatedAdd(minJitter, millis));
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("delegate", delegate())
-                          .add("minJitterMillis", minJitterMillis)
-                          .add("maxJitterMillis", maxJitterMillis)
+                          .add("minJitterRate", minJitterRate)
+                          .add("maxJitterRate", maxJitterRate)
                           .toString();
     }
 }
