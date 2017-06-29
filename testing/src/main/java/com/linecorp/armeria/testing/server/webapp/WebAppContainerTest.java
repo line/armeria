@@ -40,10 +40,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientFactory;
-import com.linecorp.armeria.client.SessionOption;
-import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
@@ -147,10 +145,9 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void https() throws Exception {
-        ClientFactory clientFactory =
-                new HttpClientFactory(SessionOptions.of(
-                        SessionOption.SSL_CONTEXT_CUSTOMIZER.newValue(
-                                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))));
+        ClientFactory clientFactory = new ClientFactoryBuilder()
+                .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                .build();
         HttpClient client = clientFactory.newClient(server().httpsUri(NONE, "/"), HttpClient.class);
         AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
         final String actualContent = CR_OR_LF.matcher(response.content().toStringUtf8())

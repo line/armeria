@@ -27,8 +27,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.thrift.THttpClientFactory;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -156,10 +155,10 @@ public class PooledResponseBufferBenchmark {
         ServerPort httpPort = server.activePorts().values().stream()
                                     .filter(p1 -> p1.protocol() == HTTP).findAny()
                                     .get();
-        pooledClient = new THttpClientFactory(ClientFactory.DEFAULT).newClient(
+        pooledClient = Clients.newClient(
                 "tbinary+http://127.0.0.1:" + httpPort.localAddress().getPort() + "/a",
                 HelloService.Iface.class);
-        unpooledClient = new THttpClientFactory(ClientFactory.DEFAULT).newClient(
+        unpooledClient = Clients.newClient(
                 "tbinary+http://127.0.0.1:" + httpPort.localAddress().getPort() + "/b",
                 HelloService.Iface.class);
     }

@@ -88,8 +88,7 @@ public final class ClientDecorationBuilder {
     }
 
     /**
-     * Creates a new {@link ClientDecoration} with the decorators added so far via
-     * {@link #add(Class, Class, Function)}.
+     * Returns a newly-created {@link ClientDecoration} based on the decorators added to this builder.
      */
     public ClientDecoration build() {
         return new ClientDecoration(entries);

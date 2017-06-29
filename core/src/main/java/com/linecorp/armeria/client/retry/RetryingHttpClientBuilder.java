@@ -53,9 +53,7 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
     }
 
     /**
-     * Builds a {@link RetryingHttpClient} with settings specified by previous method calls.
-     *
-     * @return {@link RetryingHttpClient} the decorating {@link RetryingClient} instance.
+     * Returns a newly-created {@link RetryingHttpClient} based on the properties of this builder.
      */
     @Override
     public RetryingHttpClient build(Client<HttpRequest, HttpResponse> delegate) {
@@ -64,7 +62,8 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
     }
 
     /**
-     * Creates a new decorator that decorates a {@link Client} with a new {@link RetryingHttpClient}.
+     * Returns a newly-created decorator that decorates a {@link Client} with a new {@link RetryingHttpClient}
+     * based on the properties of this builder.
      */
     @Override
     public Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient> newDecorator() {

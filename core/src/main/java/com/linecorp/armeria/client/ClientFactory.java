@@ -51,7 +51,7 @@ public interface ClientFactory extends AutoCloseable {
     /**
      * The default {@link ClientFactory} implementation.
      */
-    ClientFactory DEFAULT = new AllInOneClientFactory(true);
+    ClientFactory DEFAULT = new ClientFactoryBuilder().useDaemonThreads(true).build();
 
     /**
      * Closes the default {@link ClientFactory}.
@@ -59,18 +59,13 @@ public interface ClientFactory extends AutoCloseable {
     static void closeDefault() {
         LoggerFactory.getLogger(ClientFactory.class).debug(
                 "Closing the default {}", ClientFactory.class.getSimpleName());
-        ((AllInOneClientFactory) DEFAULT).doClose();
+        ((DefaultClientFactory) DEFAULT).doClose();
     }
 
     /**
      * Returns the {@link Scheme}s supported by this {@link ClientFactory}.
      */
     Set<Scheme> supportedSchemes();
-
-    /**
-     * Returns the session-layer options of the connections created by this {@link ClientFactory}.
-     */
-    SessionOptions options();
 
     /**
      * Returns the {@link EventLoopGroup} being used by this {@link ClientFactory}. Can be used to, e.g.,

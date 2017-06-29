@@ -116,7 +116,7 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
-     * Creates a new {@link HttpFileService}.
+     * Returns a newly-created {@link HttpFileService} based on the properties of this builder.
      */
     public HttpFileService build() {
         return new HttpFileService(new HttpFileServiceConfig(

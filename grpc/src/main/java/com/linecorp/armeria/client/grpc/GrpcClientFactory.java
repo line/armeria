@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -38,7 +37,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.DefaultClientBuilderParams;
-import com.linecorp.armeria.client.HttpClientFactory;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Scheme;
@@ -54,7 +52,7 @@ import io.grpc.stub.AbstractStub;
 /**
  * A {@link DecoratingClientFactory} that creates a GRPC client.
  */
-public class GrpcClientFactory extends DecoratingClientFactory {
+final class GrpcClientFactory extends DecoratingClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
@@ -64,13 +62,12 @@ public class GrpcClientFactory extends DecoratingClientFactory {
                   .collect(toImmutableSet());
 
     /**
-     * Creates a new instance from the specified {@link ClientFactory} that supports HTTP, such as
-     * {@link HttpClientFactory}.
+     * Creates a new instance from the specified {@link ClientFactory} that supports the "none+http" scheme.
      *
      * @throws IllegalArgumentException if the specified {@link ClientFactory} does not support HTTP
      */
-    public GrpcClientFactory(ClientFactory httpClientFactory) {
-        super(validate(httpClientFactory));
+    GrpcClientFactory(ClientFactory httpClientFactory) {
+        super(httpClientFactory);
     }
 
     @Override
@@ -100,7 +97,7 @@ public class GrpcClientFactory extends DecoratingClientFactory {
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Client type not a GRPC client stub class, " +
                                                "should be something like ServiceNameGrpc.ServiceNameXXStub: " +
-                                               clientType);
+                                               clientType, e);
         }
         final Method createClientMethod;
         if (newStubMethod.getReturnType() == clientType) {
@@ -146,31 +143,19 @@ public class GrpcClientFactory extends DecoratingClientFactory {
         if (!(stub.getChannel() instanceof ArmeriaChannel)) {
             return Optional.empty();
         }
-        return Optional.of((ArmeriaChannel) stub.getChannel());
-    }
-
-    private static ClientFactory validate(ClientFactory httpClientFactory) {
-        requireNonNull(httpClientFactory, "httpClientFactory");
-
-        for (SessionProtocol p : SessionProtocol.values()) {
-            if (!httpClientFactory.supportedSchemes().contains(Scheme.of(SerializationFormat.NONE, p))) {
-                throw new IllegalArgumentException(p.uriText() + " not supported by: " + httpClientFactory);
-            }
-        }
-
-        return httpClientFactory;
+        return Optional.of((ClientBuilderParams) stub.getChannel());
     }
 
     private static List<MethodDescriptor<?, ?>> stubMethods(Class<?> stubClass) {
         return Arrays.stream(stubClass.getDeclaredFields())
-                     .filter(field -> ((field.getModifiers() & Modifier.PUBLIC) != 0) &&
-                                      ((field.getModifiers() & Modifier.STATIC) != 0) &&
+                     .filter(field -> (field.getModifiers() & Modifier.PUBLIC) != 0 &&
+                                      (field.getModifiers() & Modifier.STATIC) != 0 &&
                                       MethodDescriptor.class.isAssignableFrom(field.getType()))
                      .map(field -> {
                          try {
                              return (MethodDescriptor<?, ?>) field.get(null);
                          } catch (IllegalAccessException e) {
-                             throw new IllegalStateException("Modifier is public so can't happen.");
+                             throw new IllegalStateException("Modifier is public so can't happen.", e);
                          }
                      })
                      .collect(toImmutableList());

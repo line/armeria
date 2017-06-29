@@ -35,7 +35,7 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder<Cli
     }
 
     /**
-     * Creates a new {@link ClientOptions}.
+     * Returns a newly-created {@link ClientOptions} based on the {@link ClientOptionValue}s of this builder.
      */
     public ClientOptions build() {
         return buildOptions();

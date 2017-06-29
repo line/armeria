@@ -25,6 +25,14 @@ import io.netty.channel.Channel;
 public interface KeyedChannelPoolHandler<K> {
 
     /**
+     * Returns an instance that does nothing.
+     */
+    @SuppressWarnings("unchecked")
+    static <K> KeyedChannelPoolHandler<K> noop() {
+        return (KeyedChannelPoolHandler<K>) KeyedChannelPoolHandlerAdapter.NOOP;
+    }
+
+    /**
      * Invoked when the specified {@code channel} has been created for the specified {@code key}.
      */
     void channelCreated(K key, Channel ch) throws Exception;

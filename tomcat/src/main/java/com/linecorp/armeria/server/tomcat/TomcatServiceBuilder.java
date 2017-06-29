@@ -297,7 +297,7 @@ public final class TomcatServiceBuilder {
     }
 
     /**
-     * Creates a new {@link TomcatService}.
+     * Returns a newly-created {@link TomcatService} based on the properties of this builder.
      */
     public TomcatService build() {
         // Create a temporary directory and use it if baseDir is not set.

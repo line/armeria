@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
+import com.linecorp.armeria.common.SerializationFormat;
 
 /**
  * Creates a new {@link ClientFactory} dynamically via Java SPI (Service Provider Interface).
@@ -27,16 +25,9 @@ import java.util.Set;
 public interface ClientFactoryProvider {
     /**
      * Creates a new {@link ClientFactory}.
+     *
+     * @param httpClientFactory the core {@link ClientFactory} which is capable of handling the
+     *                          {@link SerializationFormat#NONE "none"} serialization format.
      */
-    ClientFactory newFactory(SessionOptions options, Map<Class<?>, ClientFactory> dependencies);
-
-    /**
-     * Returns the type of the {@link ClientFactory} required for this provider to create a new
-     * {@link ClientFactory}. The {@link Map} which is given when
-     * {@link #newFactory(SessionOptions, Map)} is invoked will contain the entries
-     * for the classes returned by this method and their respective instances.
-     */
-    default Set<Class<? extends ClientFactory>> dependencies() {
-        return Collections.emptySet();
-    }
+    ClientFactory newFactory(ClientFactory httpClientFactory);
 }

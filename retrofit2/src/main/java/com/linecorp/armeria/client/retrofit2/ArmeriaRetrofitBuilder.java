@@ -169,7 +169,7 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Creates a new {@link Retrofit} instance using the configured values.
+     * Returns a newly-created {@link Retrofit} based on the properties of this builder.
      */
     public Retrofit build() {
         checkState(baseUrl != null, "baseUrl not set");

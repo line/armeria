@@ -18,59 +18,133 @@ package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
+import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFactory;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
  * A {@link ClientFactory} that creates an HTTP client.
  */
-public final class HttpClientFactory extends NonDecoratingClientFactory {
+final class HttpClientFactory extends AbstractClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
                   .map(p -> Scheme.of(SerializationFormat.NONE, p))
                   .collect(toImmutableSet());
 
-    /**
-     * Creates a new instance with the default {@link SessionOptions}.
-     */
-    public HttpClientFactory() {
-        this(false);
+    private final EventLoopGroup eventLoopGroup;
+    private final boolean closeEventLoopGroup;
+    private final Bootstrap baseBootstrap;
+    private final Consumer<? super SslContextBuilder> sslContextCustomizer;
+    private final long idleTimeoutMillis;
+    private final boolean useHttp2Preface;
+    private final boolean useHttp1Pipelining;
+    private final KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener;
+
+    // FIXME(trustin): Reuse idle connections instead of creating a new connection for every event loop.
+    //                 Currently, when a client makes an invocation from a non-I/O thread, it simply chooses
+    //                 an event loop using eventLoopGroup.next(). This makes the client factory to create as
+    //                 many connections as the number of event loops. We don't really do this when there's an
+    //                 idle connection established already regardless of its event loop.
+    private final Supplier<EventLoop> eventLoopSupplier =
+            () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
+
+    HttpClientFactory(
+            @Nullable EventLoopGroup eventLoopGroup,
+            boolean useDaemonThreads,
+            int numWorkers,
+            Map<ChannelOption<?>, Object> socketOptions,
+            Consumer<? super SslContextBuilder> sslContextCustomizer,
+            Function<? super EventLoopGroup,
+                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
+            long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
+            KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+
+
+        final Bootstrap baseBootstrap = new Bootstrap();
+
+        final TransportType transportType = TransportType.detectTransportType();
+        if (eventLoopGroup != null) {
+            this.eventLoopGroup = eventLoopGroup;
+            closeEventLoopGroup = false;
+        } else {
+            this.eventLoopGroup = eventLoopGroup = transportType.newEventLoopGroup(
+                    numWorkers,
+                    type -> new DefaultThreadFactory("armeria-client-" + type.lowerCasedName(),
+                                                     useDaemonThreads));
+            closeEventLoopGroup = true;
+        }
+
+        baseBootstrap.channel(TransportType.socketChannelType(eventLoopGroup));
+        baseBootstrap.resolver(addressResolverGroupFactory.apply(eventLoopGroup));
+
+        socketOptions.forEach((option, value) -> {
+            @SuppressWarnings("unchecked")
+            final ChannelOption<Object> castOption = (ChannelOption<Object>) option;
+            baseBootstrap.option(castOption, value);
+        });
+
+        this.baseBootstrap = baseBootstrap;
+        this.sslContextCustomizer = sslContextCustomizer;
+        this.idleTimeoutMillis = idleTimeoutMillis;
+        this.useHttp2Preface = useHttp2Preface;
+        this.useHttp1Pipelining = useHttp1Pipelining;
+        this.connectionPoolListener = connectionPoolListener;
     }
 
     /**
-     * Creates a new instance with the default {@link SessionOptions}.
-     *
-     * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
+     * Returns a new {@link Bootstrap} whose {@link ChannelFactory}, {@link AddressResolverGroup} and
+     * socket options are pre-configured.
      */
-    public HttpClientFactory(boolean useDaemonThreads) {
-        this(SessionOptions.DEFAULT, useDaemonThreads);
+    Bootstrap newBootstrap() {
+        return baseBootstrap.clone();
     }
 
-    /**
-     * Creates a new instance with the specified {@link SessionOptions}.
-     */
-    public HttpClientFactory(SessionOptions options) {
-        this(options, false);
+    Consumer<? super SslContextBuilder> sslContextCustomizer() {
+        return sslContextCustomizer;
     }
 
-    /**
-     * Creates a new instance with the specified {@link SessionOptions}.
-     *
-     * @param useDaemonThreads whether to create I/O event loop threads as daemon threads
-     */
-    public HttpClientFactory(SessionOptions options, boolean useDaemonThreads) {
-        super(options, useDaemonThreads);
+    long idleTimeoutMillis() {
+        return idleTimeoutMillis;
+    }
+
+    boolean useHttp2Preface() {
+        return useHttp2Preface;
+    }
+
+    boolean useHttp1Pipelining() {
+        return useHttp1Pipelining;
+    }
+
+    KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener() {
+        return connectionPoolListener;
     }
 
     @Override
@@ -79,8 +153,13 @@ public final class HttpClientFactory extends NonDecoratingClientFactory {
     }
 
     @Override
-    protected Bootstrap newBootstrap() {
-        return super.newBootstrap();
+    public EventLoopGroup eventLoopGroup() {
+        return eventLoopGroup;
+    }
+
+    @Override
+    public Supplier<EventLoop> eventLoopSupplier() {
+        return eventLoopSupplier;
     }
 
     @Override
@@ -129,6 +208,13 @@ public final class HttpClientFactory extends NonDecoratingClientFactory {
                     "clientType: " + clientType +
                     " (expected: " + HttpClient.class.getSimpleName() + " or " +
                     Client.class.getSimpleName() + ')');
+        }
+    }
+
+    @Override
+    public void close() {
+        if (closeEventLoopGroup) {
+            eventLoopGroup.shutdownGracefully().syncUninterruptibly();
         }
     }
 }

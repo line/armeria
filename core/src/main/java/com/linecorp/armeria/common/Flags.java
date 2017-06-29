@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import java.util.function.IntPredicate;
+import java.util.function.LongPredicate;
 import java.util.function.Predicate;
 
 import javax.net.ssl.SSLEngine;
@@ -26,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.client.SessionOption;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 
@@ -42,6 +43,8 @@ public final class Flags {
 
     private static final String PREFIX = "com.linecorp.armeria.";
 
+    private static final int NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
+
     private static final boolean VERBOSE_EXCEPTION = getBoolean("verboseExceptions", false);
 
     private static final boolean USE_EPOLL = getBoolean("useEpoll", Epoll.isAvailable(),
@@ -49,13 +52,43 @@ public final class Flags {
     private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
                                                           value -> OpenSsl.isAvailable() || !value);
 
+    private static final int DEFAULT_DEFAULT_NUM_SERVER_BOSSES = 1;
+    private static final int DEFAULT_NUM_SERVER_BOSSES =
+            getInt("numServerBosses", DEFAULT_DEFAULT_NUM_SERVER_BOSSES, value -> value > 0);
+
+    private static final int DEFAULT_DEFAULT_NUM_SERVER_WORKERS = NUM_CPU_CORES * 2;
+    private static final int DEFAULT_NUM_SERVER_WORKERS =
+            getInt("numServerWorkers", DEFAULT_DEFAULT_NUM_SERVER_WORKERS, value -> value > 0);
+
+    private static final int DEFAULT_DEFAULT_NUM_CLIENT_WORKERS = NUM_CPU_CORES * 2;
+    private static final int DEFAULT_NUM_CLIENT_WORKERS =
+            getInt("numClientWorkers", DEFAULT_DEFAULT_NUM_CLIENT_WORKERS, value -> value > 0);
+
+    private static final long DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
+    private static final long DEFAULT_CONNECT_TIMEOUT_MILLIS =
+            getLong("defaultConnectTimeoutMillis",
+                    DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS,
+                    value -> value > 0);
+
+    // Use slightly greater value than the client-side default so that clients close the connection more often.
+    private static final long DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
+    private static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS =
+            getLong("defaultServerIdleTimeoutMillis",
+                    DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS = 10000; // 10 seconds
+    private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
+            getLong("defaultClientIdleTimeoutMillis",
+                    DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
+                    value -> value >= 0);
+
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", true);
 
     private static final int DEFAULT_DEFAULT_BACKOFF_MAX_ATTEMPTS = 5;
-    private static final int DEFAULT_BACKOFF_MAX_ATTEMPTS = getInt("defaultBackoffMaxAttempts",
-                                                                   DEFAULT_DEFAULT_BACKOFF_MAX_ATTEMPTS,
-                                                                   value -> value > 0);
+    private static final int DEFAULT_BACKOFF_MAX_ATTEMPTS =
+            getInt("defaultBackoffMaxAttempts", DEFAULT_DEFAULT_BACKOFF_MAX_ATTEMPTS, value -> value > 0);
 
     private static final int DEFAULT_DEFAULT_EXPONENTIAL_BACKOFF_INITIAL_DELAY_MILLIS = 1000;
     private static final int DEFAULT_EXPONENTIAL_BACKOFF_INITIAL_DELAY_MILLIS =
@@ -117,8 +150,74 @@ public final class Flags {
     }
 
     /**
-     * Returns the default value of the {@link SessionOption#USE_HTTP2_PREFACE} option. Note that this value
-     * has effect only if a user did not specify the {@link SessionOption#USE_HTTP2_PREFACE} option.
+     * Returns the default number of server-side boss I/O threads.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_NUM_SERVER_BOSSES}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultNumServerBosses=<integer>} to override the default value.
+     */
+    public static int defaultNumServerBosses() {
+        return DEFAULT_NUM_SERVER_BOSSES;
+    }
+
+    /**
+     * Returns the default number of server-side boss I/O threads.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultNumServerWorkers=<integer>} to override the default value.
+     */
+    public static int defaultNumServerWorkers() {
+        return DEFAULT_NUM_SERVER_WORKERS;
+    }
+
+    /**
+     * Returns the default number of server-side boss I/O threads.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultNumClientWorkers=<integer>} to override the default value.
+     */
+    public static int defaultNumClientWorkers() {
+        return DEFAULT_NUM_CLIENT_WORKERS;
+    }
+
+    /**
+     * Returns the default timeout of a socket connection attempt in milliseconds.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>} to override the default value.
+     */
+    public static long defaultConnectTimeoutMillis() {
+        return DEFAULT_CONNECT_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default server-side idle timeout of a connection for keep-alive in milliseconds.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} to override the default value.
+     */
+    public static long defaultServerIdleTimeoutMillis() {
+        return DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side idle timeout of a connection for keep-alive in milliseconds.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} to override the default value.
+     */
+    public static long defaultClientIdleTimeoutMillis() {
+        return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default value of the {@link ClientFactoryBuilder#useHttp2Preface(boolean)} option.
+     * Note that this value has effect only if a user did not specify it.
      *
      * <p>This flag is disabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=true} to enable it.
@@ -128,8 +227,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the default value of the {@link SessionOption#USE_HTTP1_PIPELINING} option. Note that this value
-     * has effect only if a user did not specify the {@link SessionOption#USE_HTTP1_PIPELINING} option.
+     * Returns the default value of the {@link ClientFactoryBuilder#useHttp1Pipelining(boolean)} option.
+     * Note that this value has effect only if a user did not specify it.
      *
      * <p>This flag is enabled by default. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=false} to disable it.
@@ -186,6 +285,17 @@ public final class Flags {
         return Integer.parseInt(getNormalized(name, String.valueOf(defaultValue), value -> {
             try {
                 return validator.test(Integer.parseInt(value));
+            } catch (Exception e) {
+                // null or non-integer
+                return false;
+            }
+        }));
+    }
+
+    private static long getLong(String name, long defaultValue, LongPredicate validator) {
+        return Long.parseLong(getNormalized(name, String.valueOf(defaultValue), value -> {
+            try {
+                return validator.test(Long.parseLong(value));
             } catch (Exception e) {
                 // null or non-integer
                 return false;

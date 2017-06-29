@@ -45,7 +45,7 @@ public class HttpClientTimeoutTest {
 
     @BeforeClass
     public static void init() {
-        factory = new HttpClientFactory(SessionOptions.of(SessionOption.USE_HTTP2_PREFACE.newValue(true)));
+        factory = new ClientFactoryBuilder().useHttp2Preface(true).build();
     }
 
     @AfterClass

@@ -31,7 +31,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -45,14 +44,11 @@ import org.junit.runners.Parameterized;
 
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.HttpClientFactory;
-import com.linecorp.armeria.client.SessionOption;
-import com.linecorp.armeria.client.SessionOptionValue;
-import com.linecorp.armeria.client.SessionOptions;
 import com.linecorp.armeria.client.logging.KeyedChannelPoolLoggingHandler;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
@@ -252,27 +248,24 @@ public class ThriftOverHttpClientTest {
                           .filter(p -> p.protocol() == HTTPS).findAny().get().localAddress()
                           .getPort();
 
-        final SessionOptionValue<Consumer<SslContextBuilder>> sslContextCustomizerOptVal =
-                SessionOption.SSL_CONTEXT_CUSTOMIZER.newValue(
-                        b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+        final Consumer<SslContextBuilder> sslContextCustomizer =
+                b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE);
 
-        final SessionOptionValue<Function<KeyedChannelPoolHandler<PoolKey>,
-                                          KeyedChannelPoolHandler<PoolKey>>> poolHandlerDecoratorOptVal =
-                SessionOption.POOL_HANDLER_DECORATOR.newValue(
-                        ENABLE_LOGGING_DECORATORS ? KeyedChannelPoolLoggingHandler::new
-                                                  : Function.identity());
+        final KeyedChannelPoolHandler<PoolKey> connectionPoolListener =
+                ENABLE_LOGGING_DECORATORS ? new KeyedChannelPoolLoggingHandler()
+                                          : KeyedChannelPoolHandler.noop();
 
-        clientFactoryWithUseHttp2Preface = new THttpClientFactory(
-                new HttpClientFactory(SessionOptions.of(
-                        sslContextCustomizerOptVal,
-                        poolHandlerDecoratorOptVal,
-                        SessionOption.USE_HTTP2_PREFACE.newValue(true))));
+        clientFactoryWithUseHttp2Preface = new ClientFactoryBuilder()
+                .sslContextCustomizer(sslContextCustomizer)
+                .connectionPoolListener(connectionPoolListener)
+                .useHttp2Preface(true)
+                .build();
 
-        clientFactoryWithoutUseHttp2Preface = new THttpClientFactory(
-                new HttpClientFactory(SessionOptions.of(
-                        sslContextCustomizerOptVal,
-                        poolHandlerDecoratorOptVal,
-                        SessionOption.USE_HTTP2_PREFACE.newValue(false))));
+        clientFactoryWithoutUseHttp2Preface = new ClientFactoryBuilder()
+                .sslContextCustomizer(sslContextCustomizer)
+                .connectionPoolListener(connectionPoolListener)
+                .useHttp2Preface(false)
+                .build();
 
         final ClientDecorationBuilder decoBuilder = new ClientDecorationBuilder();
         decoBuilder.add(RpcRequest.class, RpcResponse.class, (delegate, ctx, req) -> {

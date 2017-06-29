@@ -26,6 +26,13 @@ import io.netty.channel.Channel;
  */
 public class KeyedChannelPoolHandlerAdapter<K> implements KeyedChannelPoolHandler<K> {
 
+    static final KeyedChannelPoolHandlerAdapter<Object> NOOP = new KeyedChannelPoolHandlerAdapter<Object>() {};
+
+    /**
+     * Creates a new instance.
+     */
+    protected KeyedChannelPoolHandlerAdapter() {}
+
     @Override
     public void channelReleased(K key, Channel ch) throws Exception {}
 

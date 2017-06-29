@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
@@ -34,23 +32,27 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
-    private final Bootstrap baseBootstrap;
+    private final HttpClientFactory clientFactory;
     private final EventLoop eventLoop;
+    private final Bootstrap baseBootstrap;
+    private final int connectTimeoutMillis;
     private final Map<SessionProtocol, Bootstrap> bootstrapMap;
-    private final SessionOptions options;
 
-    HttpSessionChannelFactory(Bootstrap bootstrap, SessionOptions options) {
-        baseBootstrap = requireNonNull(bootstrap);
-        eventLoop = (EventLoop) bootstrap.config().group();
-
+    HttpSessionChannelFactory(HttpClientFactory clientFactory, EventLoop eventLoop) {
+        this.clientFactory = clientFactory;
+        this.eventLoop = eventLoop;
+        baseBootstrap = clientFactory.newBootstrap();
+        baseBootstrap.group(eventLoop);
+        connectTimeoutMillis = (Integer) baseBootstrap.config().options()
+                                                      .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         bootstrapMap = Collections.synchronizedMap(new EnumMap<>(SessionProtocol.class));
-        this.options = options;
     }
 
     @Override
@@ -89,7 +91,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new HttpClientPipelineConfigurator(sp, options));
+                    ch.pipeline().addLast(new HttpClientPipelineConfigurator(clientFactory, sp));
                 }
             });
             return bs;
@@ -109,7 +111,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
                     protocol, "connection established, but session creation timed out: " + ch))) {
                 ch.close();
             }
-        }, options.connectTimeoutMillis(), TimeUnit.MILLISECONDS);
+        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
 
         ch.pipeline().addLast(new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture));
     }

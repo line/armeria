@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.pool.DefaultKeyedChannelPool;
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
-import com.linecorp.armeria.client.pool.KeyedChannelPoolHandlerAdapter;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -39,7 +38,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelHealthChecker;
@@ -50,9 +48,6 @@ import io.netty.util.concurrent.FutureListener;
 final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
-
-    private static final KeyedChannelPoolHandlerAdapter<PoolKey> NOOP_POOL_HANDLER =
-            new KeyedChannelPoolHandlerAdapter<>();
 
     private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
             ch -> ch.eventLoop().newSucceededFuture(ch.isActive() && HttpSession.get(ch).isActive());
@@ -171,16 +166,12 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
 
         return map.computeIfAbsent(eventLoop, e -> {
-            final Bootstrap bootstrap = factory.newBootstrap();
-            final SessionOptions options = factory.options();
-
-            bootstrap.group(eventLoop);
-
             Function<PoolKey, Future<Channel>> channelFactory =
-                    new HttpSessionChannelFactory(bootstrap, options);
+                    new HttpSessionChannelFactory(factory, eventLoop);
 
+            @SuppressWarnings("unchecked")
             final KeyedChannelPoolHandler<PoolKey> handler =
-                    options.poolHandlerDecorator().apply(NOOP_POOL_HANDLER);
+                    (KeyedChannelPoolHandler<PoolKey>) factory.connectionPoolListener();
 
             final KeyedChannelPool<PoolKey> newPool = new DefaultKeyedChannelPool<>(
                     eventLoop, channelFactory, POOL_HEALTH_CHECKER, handler, true);
@@ -222,7 +213,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                     // If pipelining is enabled, return as soon as the request is fully sent.
                     // If pipelining is disabled, return after the response is fully received.
                     final CompletableFuture<Void> closeFuture =
-                            factory.options().useHttp1Pipelining() ? req.closeFuture() : res.closeFuture();
+                            factory.useHttp1Pipelining() ? req.closeFuture() : res.closeFuture();
                     closeFuture.whenComplete((ret, cause) -> release(pool, poolKey, channel));
                 }
             }

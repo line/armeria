@@ -15,12 +15,13 @@
  */
 package com.linecorp.armeria.client.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.pool.DecoratingKeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.util.TextFormatter;
@@ -32,7 +33,7 @@ import io.netty.util.AttributeKey;
 /**
  * Decorates a {@link KeyedChannelPoolHandler} to log the connection pool events.
  */
-public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHandler<PoolKey> {
+public class KeyedChannelPoolLoggingHandler implements KeyedChannelPoolHandler<PoolKey> {
     private static final Logger logger = LoggerFactory.getLogger(KeyedChannelPoolLoggingHandler.class);
 
     private static final AttributeKey<ChannelStat> STAT =
@@ -103,71 +104,40 @@ public class KeyedChannelPoolLoggingHandler extends DecoratingKeyedChannelPoolHa
         }
     }
 
-    private static void logFailure(String name, PoolKey key, Channel ch, Throwable cause) {
-        logger.error("{} exception handling {}() from {}", ch, name, key, cause);
-    }
-
     /**
-     * Creates a new instance that decorates the specified {@code handler}.
+     * Creates a new instance with a {@linkplain Ticker#systemTicker() system ticker}.
      */
-    public KeyedChannelPoolLoggingHandler(
-            KeyedChannelPoolHandler<PoolKey> handler) {
-        this(handler, Ticker.systemTicker());
+    public KeyedChannelPoolLoggingHandler() {
+        this(Ticker.systemTicker());
     }
 
     /**
-     * Creates a new instance that decorates the specified {@code handler}.
+     * Creates a new instance with an alternative {@link Ticker}.
      *
      * @param ticker an alternative {@link Ticker}
      */
-    public KeyedChannelPoolLoggingHandler(
-            KeyedChannelPoolHandler<PoolKey> handler, Ticker ticker) {
-        super(handler);
-        this.ticker = ticker;
+    public KeyedChannelPoolLoggingHandler(Ticker ticker) {
+        this.ticker = requireNonNull(ticker, "ticker");
     }
 
     @Override
     public void channelReleased(PoolKey key, Channel ch) throws Exception {
-        try {
-            super.channelReleased(key, ch);
-        } catch (Exception e) {
-            logFailure("channelReleased", key, ch, e);
-        } finally {
-            logInfo(key, ch, EventType.RELEASED);
-        }
+        logInfo(key, ch, EventType.RELEASED);
     }
 
     @Override
     public void channelAcquired(PoolKey key, Channel ch) throws Exception {
-        try {
-            super.channelAcquired(key, ch);
-        } catch (Exception e) {
-            logFailure("channelAcquired", key, ch, e);
-        } finally {
-            logInfo(key, ch, EventType.ACQUIRED);
-        }
+        logInfo(key, ch, EventType.ACQUIRED);
     }
 
     @Override
     public void channelCreated(PoolKey key, Channel ch) throws Exception {
-        try {
-            super.channelCreated(key, ch);
-        } catch (Exception e) {
-            logFailure("channelCreated", key, ch, e);
-        } finally {
-            logInfo(key, ch, EventType.CREATED);
-        }
+        logInfo(key, ch, EventType.CREATED);
     }
 
     @Override
     public void channelClosed(PoolKey key, Channel ch) throws Exception {
-        try {
-            super.channelClosed(key, ch);
-        } catch (Exception e) {
-            logFailure("channelClosed", key, ch, e);
-        } finally {
-            logInfo(key, ch, EventType.CLOSED);
-        }
+        logInfo(key, ch, EventType.CLOSED);
     }
 
     private void logInfo(PoolKey key, Channel ch, EventType eventType) {

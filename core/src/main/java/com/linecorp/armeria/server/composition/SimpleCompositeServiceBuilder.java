@@ -56,8 +56,8 @@ public final class SimpleCompositeServiceBuilder<I extends Request, O extends Re
     }
 
     /**
-     * Creates a new {@link SimpleCompositeService} with the {@link Service}s added by the {@code service*()}
-     * methods.
+     * Returns a newly-created {@link SimpleCompositeService} based on the {@link Service}s adde to this
+     * builder.
      */
     public SimpleCompositeService<I, O> build() {
         return new SimpleCompositeService<>(services());
