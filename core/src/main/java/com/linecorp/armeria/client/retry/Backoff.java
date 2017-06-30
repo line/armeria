@@ -58,6 +58,54 @@ public interface Backoff {
     }
 
     /**
+     * Returns a {@link Backoff} that computes backoff delay which is a random value between
+     * {@code minDelayMillis} and {@code maxDelayMillis} chosen by {@link ThreadLocalRandom}.
+     */
+    static Backoff random(long minDelayMillis, long maxDelayMillis) {
+        return random(minDelayMillis, maxDelayMillis, ThreadLocalRandom::current);
+    }
+
+    /**
+     * Returns a {@link Backoff} that computes backoff delay which is a random value between
+     * {@code minDelayMillis} and {@code maxDelayMillis}.
+     */
+    static Backoff random(long minDelayMillis, long maxDelayMillis, Supplier<Random> randomSupplier) {
+        return new RandomBackoff(minDelayMillis, maxDelayMillis, randomSupplier);
+    }
+
+    /**
+     * Creates a new {@link Backoff} that computes backoff delay using one of
+     * {@link #exponential(long, long, double)}, {@link #fixed(long)} and {@link #random(long, long)} chaining
+     * with {@link #withJitter(double, double)} and {@link #withMaxAttempts(int)} from the
+     * {@code specification}. This is the format for the {@code specification}:
+     * <ul>
+     *   <li>{@code exponential=[initialDelayMillis:maxDelayMillis:multiplier]} is for
+     *       {@link Backoff#exponential(long, long, double)} (multiplier will be 2.0 if it's omitted)</li>
+     *   <li>{@code fixed=[delayMillis]} is for {@link Backoff#fixed(long)}</li>
+     *   <li>{@code random=[minDelayMillis:maxDelayMillis]} is for {@link Backoff#random(long, long)}</li>
+     *   <li>{@code jitter=[minJitterRate:maxJitterRate]} is for {@link Backoff#withJitter(double, double)}
+     *       (if only one jitter value is specified, it will be used for {@link Backoff#withJitter(double)}</li>
+     *   <li>{@code maxAttempts=[maxAttempts]} is for {@link Backoff#withMaxAttempts(int)}</li>
+     * </ul>
+     * The order of options does not matter, and the {@code specification} needs at least one option.
+     * If you don't specify the base option exponential backoff will be used. If you only specify
+     * a base option, jitter and maxAttempts will be set by default values.
+     * These are a few examples:
+     * <ul>
+     *   <li>{@code exponential=200:10000:2.0,jitter=0.2,maxAttempts=10} (default)</li>
+     *   <li>{@code exponential=200:10000,jitter=0.2,maxAttempts=50} (multiplier omitted)</li>
+     *   <li>{@code fixed=100,jitter=-0.5:0.2,maxAttempts=10} (fixed backoff with jitter variation)</li>
+     *   <li>{@code random=200:1000} (jitter and maxAttempts will be set by default values)</li>
+     * </ul>
+     *
+     * @param specification the specification used to create the {@link Backoff}
+     */
+    static Backoff of(String specification) {
+        BackoffSpec backoffSpec = BackoffSpec.parse(specification);
+        return backoffSpec.build();
+    }
+
+    /**
      * Returns the number of milliseconds to wait for before attempting a retry.
      *
      * @param numAttemptsSoFar the number of attempts made by a client so far, including the first attempt and
