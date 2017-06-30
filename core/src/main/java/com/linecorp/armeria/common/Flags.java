@@ -52,17 +52,13 @@ public final class Flags {
     private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
                                                           value -> OpenSsl.isAvailable() || !value);
 
-    private static final int DEFAULT_DEFAULT_NUM_SERVER_BOSSES = 1;
-    private static final int DEFAULT_NUM_SERVER_BOSSES =
-            getInt("numServerBosses", DEFAULT_DEFAULT_NUM_SERVER_BOSSES, value -> value > 0);
+    private static final int DEFAULT_NUM_COMMON_BOSSES = 1;
+    private static final int NUM_COMMON_BOSSES =
+            getInt("numCommonBosses", DEFAULT_NUM_COMMON_BOSSES, value -> value > 0);
 
-    private static final int DEFAULT_DEFAULT_NUM_SERVER_WORKERS = NUM_CPU_CORES * 2;
-    private static final int DEFAULT_NUM_SERVER_WORKERS =
-            getInt("numServerWorkers", DEFAULT_DEFAULT_NUM_SERVER_WORKERS, value -> value > 0);
-
-    private static final int DEFAULT_DEFAULT_NUM_CLIENT_WORKERS = NUM_CPU_CORES * 2;
-    private static final int DEFAULT_NUM_CLIENT_WORKERS =
-            getInt("numClientWorkers", DEFAULT_DEFAULT_NUM_CLIENT_WORKERS, value -> value > 0);
+    private static final int DEFAULT_NUM_COMMON_WORKERS = NUM_CPU_CORES * 2;
+    private static final int NUM_COMMON_WORKERS =
+            getInt("numCommonWorkers", DEFAULT_NUM_COMMON_WORKERS, value -> value > 0);
 
     private static final long DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     private static final long DEFAULT_CONNECT_TIMEOUT_MILLIS =
@@ -150,36 +146,24 @@ public final class Flags {
     }
 
     /**
-     * Returns the default number of server-side boss I/O threads.
-     * Note that this value has effect only if a user did not specify it.
+     * Returns the default number of {@linkplain CommonPools#bossGroup() common boss group} threads.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_NUM_SERVER_BOSSES}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultNumServerBosses=<integer>} to override the default value.
+     * <p>The default value of this flag is {@value #DEFAULT_NUM_COMMON_BOSSES}. Specify the
+     * {@code -Dcom.linecorp.armeria.numCommonBosses=<integer>} to override the default value.
      */
-    public static int defaultNumServerBosses() {
-        return DEFAULT_NUM_SERVER_BOSSES;
+    public static int numCommonBosses() {
+        return NUM_COMMON_BOSSES;
     }
 
     /**
-     * Returns the default number of server-side boss I/O threads.
+     * Returns the default number of {@linkplain CommonPools#workerGroup() common worker group} threads.
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultNumServerWorkers=<integer>} to override the default value.
+     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} to override the default value.
      */
-    public static int defaultNumServerWorkers() {
-        return DEFAULT_NUM_SERVER_WORKERS;
-    }
-
-    /**
-     * Returns the default number of server-side boss I/O threads.
-     * Note that this value has effect only if a user did not specify it.
-     *
-     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultNumClientWorkers=<integer>} to override the default value.
-     */
-    public static int defaultNumClientWorkers() {
-        return DEFAULT_NUM_CLIENT_WORKERS;
+    public static int numCommonWorkers() {
+        return NUM_COMMON_WORKERS;
     }
 
     /**

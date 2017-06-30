@@ -23,7 +23,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
 import org.apache.thrift.protocol.TMessageType;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.junit.MockitoJUnit;
@@ -72,10 +71,10 @@ public class ThriftStructuredLoggingTest {
         }
     }
 
-    private static MockedStructuredLoggingService<HttpRequest, HttpResponse> loggingService;
+    private MockedStructuredLoggingService<HttpRequest, HttpResponse> loggingService;
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @Rule
+    public final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             loggingService = new MockedStructuredLoggingService<>(
@@ -84,8 +83,7 @@ public class ThriftStructuredLoggingTest {
         }
     };
 
-    private static HelloService.Iface newClient() throws Exception {
-        server.start();
+    private HelloService.Iface newClient() throws Exception {
         String uri = server.uri(BINARY, "/hello");
         return Clients.newClient(uri, HelloService.Iface.class);
     }
@@ -122,6 +120,6 @@ public class ThriftStructuredLoggingTest {
     @Test(timeout = 10000)
     public void testWriterClosed() throws Exception {
         server.stop().join();
-        assertThat(loggingService.closed).isEqualTo(1);
+        assertThat(loggingService.closed).isOne();
     }
 }

@@ -29,9 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,6 +36,7 @@ import javax.net.ssl.SSLException;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -46,8 +44,8 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
  * Builds a new {@link Server} and its {@link ServerConfig}.
@@ -90,27 +88,7 @@ public final class ServerBuilder {
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
-    private static final int DEFAULT_MAX_BLOCKING_TASK_THREADS = 200; // from Tomcat's maxThreads.
     private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
-
-    private static Executor defaultBlockingTaskExecutor() {
-        return DefaultBlockingTaskExecutorHolder.INSTANCE;
-    }
-
-    private static final class DefaultBlockingTaskExecutorHolder {
-        static final Executor INSTANCE;
-
-        static {
-            // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
-            final ThreadPoolExecutor instance = new ThreadPoolExecutor(
-                    DEFAULT_MAX_BLOCKING_TASK_THREADS, DEFAULT_MAX_BLOCKING_TASK_THREADS,
-                    60, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-                    new DefaultThreadFactory("armeria-blocking-tasks", true));
-
-            instance.allowCoreThreadTimeOut(true);
-            INSTANCE = instance;
-        }
-    }
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<ServerListener> serverListeners = new ArrayList<>();
@@ -120,15 +98,17 @@ public final class ServerBuilder {
     private boolean updatedDefaultVirtualHostBuilder;
 
     private VirtualHost defaultVirtualHost;
-    private int numBosses = Flags.defaultNumServerBosses();
-    private int numWorkers = Flags.defaultNumServerWorkers();
+    private EventLoopGroup bossGroup = CommonPools.bossGroup();
+    private boolean shutdownBossGroupOnStop;
+    private EventLoopGroup workerGroup = CommonPools.workerGroup();
+    private boolean shutdownWorkerGroupOnStop;
     private int maxNumConnections = DEFAULT_MAX_NUM_CONNECTIONS;
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS;
     private long defaultMaxRequestLength = DEFAULT_DEFAULT_MAX_REQUEST_LENGTH;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
-    private Executor blockingTaskExecutor;
+    private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -190,19 +170,29 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the number of boss threads.
+     * Sets the boss {@link EventLoopGroup} which is responsible for accepting incoming connections.
+     * If not set, {@linkplain CommonPools#bossGroup() the common boss group} is used.
+     *
+     * @param shutdownOnStop whether to shut down the boss {@link EventLoopGroup}
+     *                       when the {@link Server} stops
      */
-    public ServerBuilder numBosses(int numBosses) {
-        this.numBosses = ServerConfig.validateNumBosses(numBosses);
+    public ServerBuilder bossGroup(EventLoopGroup bossGroup, boolean shutdownOnStop) {
+        this.bossGroup = requireNonNull(bossGroup, "bossGroup");
+        shutdownBossGroupOnStop = shutdownOnStop;
         return this;
     }
 
     /**
-     * Sets the number of worker threads that performs socket I/O and runs
+     * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
+     * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
+     *
+     * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
+     *                       when the {@link Server} stops
      */
-    public ServerBuilder numWorkers(int numWorkers) {
-        this.numWorkers = ServerConfig.validateNumWorkers(numWorkers);
+    public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
+        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        shutdownWorkerGroupOnStop = shutdownOnStop;
         return this;
     }
 
@@ -240,8 +230,7 @@ public final class ServerBuilder {
      * @param defaultRequestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public ServerBuilder defaultRequestTimeoutMillis(long defaultRequestTimeoutMillis) {
-        validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
-        this.defaultRequestTimeoutMillis = defaultRequestTimeoutMillis;
+        this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         return this;
     }
 
@@ -262,8 +251,7 @@ public final class ServerBuilder {
      *  @param defaultMaxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
     public ServerBuilder defaultMaxRequestLength(long defaultMaxRequestLength) {
-        validateDefaultMaxRequestLength(defaultMaxRequestLength);
-        this.defaultMaxRequestLength = defaultMaxRequestLength;
+        this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
         return this;
     }
 
@@ -308,7 +296,7 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link Executor} dedicated to the execution of blocking tasks or invocations.
-     * If not set, the global default thread pool is used instead.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
      */
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
@@ -616,11 +604,6 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        Executor blockingTaskExecutor = this.blockingTaskExecutor;
-        if (blockingTaskExecutor == null) {
-            blockingTaskExecutor = defaultBlockingTaskExecutor();
-        }
-
         final List<ServerPort> ports =
                 !this.ports.isEmpty() ? this.ports
                                       : Collections.singletonList(new ServerPort(0, HTTP));
@@ -644,7 +627,8 @@ public final class ServerBuilder {
         }
 
         Server server = new Server(new ServerConfig(
-                ports, defaultVirtualHost, virtualHosts, numBosses, numWorkers,
+                ports, defaultVirtualHost, virtualHosts,
+                bossGroup, shutdownBossGroupOnStop, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix));
@@ -656,7 +640,8 @@ public final class ServerBuilder {
     public String toString() {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts,
-                numWorkers, maxNumConnections, idleTimeoutMillis,
+                bossGroup, shutdownBossGroupOnStop, workerGroup, shutdownWorkerGroupOnStop,
+                maxNumConnections, idleTimeoutMillis,
                 defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix);

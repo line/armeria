@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.internal;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,6 +44,8 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionLimitingHandler.class);
 
+    private final Set<Channel> childChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<Channel> unmodifiableChildChannels = Collections.unmodifiableSet(childChannels);
     private final int maxNumConnections;
     private final AtomicInteger numConnections = new AtomicInteger();
 
@@ -58,7 +63,11 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
 
         int conn = numConnections.incrementAndGet();
         if (conn > 0 && conn <= maxNumConnections) {
-            child.closeFuture().addListener(future -> numConnections.decrementAndGet());
+            childChannels.add(child);
+            child.closeFuture().addListener(future -> {
+                childChannels.remove(child);
+                numConnections.decrementAndGet();
+            });
             super.channelRead(ctx, msg);
         } else {
             numConnections.decrementAndGet();
@@ -97,6 +106,13 @@ public final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapte
      */
     public int numConnections() {
         return numConnections.get();
+    }
+
+    /**
+     * Returns the immutable set of child {@link Channel}s.
+     */
+    public Set<Channel> children() {
+        return unmodifiableChildChannels;
     }
 
     /**

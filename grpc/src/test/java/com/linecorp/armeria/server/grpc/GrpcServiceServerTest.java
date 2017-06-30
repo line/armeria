@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -207,7 +208,7 @@ public class GrpcServiceServerTest {
     public static ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.numWorkers(1);
+            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.port(0, HTTP);
             sb.defaultMaxRequestLength(0);
 

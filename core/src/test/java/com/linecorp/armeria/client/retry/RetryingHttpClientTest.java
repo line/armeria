@@ -226,8 +226,7 @@ public class RetryingHttpClientTest {
                 RetryStrategy.onStatus(HttpStatus.SERVICE_UNAVAILABLE);
 
         final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
-                .factory(new ClientFactoryBuilder().useDaemonThreads(true)
-                                                   .idleTimeout(Duration.ofSeconds(5))
+                .factory(new ClientFactoryBuilder().idleTimeout(Duration.ofSeconds(5))
                                                    .build())
                 .defaultResponseTimeout(Duration.ofSeconds(5))
                 .decorator(HttpRequest.class, HttpResponse.class,

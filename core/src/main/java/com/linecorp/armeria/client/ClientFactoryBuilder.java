@@ -27,15 +27,15 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.channel.ChannelOption;
@@ -85,11 +85,8 @@ public final class ClientFactoryBuilder {
             "eventLoopGroup() and useDaemonThreads/numWorkerThreads() are mutually exclusive.";
 
     // Netty-related properties:
-    private Boolean eventLoopGroupSet;
-    @Nullable
-    private EventLoopGroup eventLoopGroup; // Created and managed by ClientFactory if null.
-    private boolean useDaemonThreads;
-    private int numWorkers = Flags.defaultNumClientWorkers();
+    private EventLoopGroup workerGroup = CommonPools.workerGroup();
+    private boolean shutdownWorkerGroupOnClose;
     private final Map<ChannelOption<?>, Object> socketOptions = new HashMap<>();
     private Consumer<? super SslContextBuilder> sslContextCustomizer = DEFAULT_SSL_CONTEXT_CUSTOMIZER;
     private Function<? super EventLoopGroup,
@@ -111,45 +108,17 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Configures the {@link ClientFactory} built by this builder to use the specified {@link EventLoopGroup}.
-     * Note that the specified {@link EventLoopGroup} will not be shut down when the {@link ClientFactory}
-     * is closed.
+     * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
+     * {@link Client#execute(ClientRequestContext, Request)}.
+     * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
+     *
+     * @param shutdownOnClose whether to shut down the worker {@link EventLoopGroup}
+     *                        when the {@link ClientFactory} is closed
      */
-    public ClientFactoryBuilder eventLoopGroup(EventLoopGroup eventLoopGroup) {
-        if (Boolean.FALSE.equals(eventLoopGroupSet)) {
-            throw new IllegalStateException(MESSAGE_MUTUALLY_EXCLUSIVE);
-        }
-
-        this.eventLoopGroup = requireNonNull(eventLoopGroup, "eventLoopGroup");
-        eventLoopGroupSet = true;
+    public ClientFactoryBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnClose) {
+        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        shutdownWorkerGroupOnClose = shutdownOnClose;
         return this;
-    }
-
-    /**
-     * Sets whether the {@link EventLoopGroup} created by the {@link ClientFactory} uses daemon threads or not.
-     */
-    public ClientFactoryBuilder useDaemonThreads(boolean useDaemonThreads) {
-        ensureEventLoopGroupNotSet();
-        this.useDaemonThreads = useDaemonThreads;
-        eventLoopGroupSet = false;
-        return this;
-    }
-
-    /**
-     * Sets the number of {@link EventLoopGroup} worker threads created by the {@link ClientFactory}.
-     */
-    public ClientFactoryBuilder numWorkers(int numWorkers) {
-        ensureEventLoopGroupNotSet();
-        checkArgument(numWorkers > 0, "numWorkers: %s (expected: > 0)", numWorkers);
-        this.numWorkers = numWorkers;
-        eventLoopGroupSet = false;
-        return this;
-    }
-
-    private void ensureEventLoopGroupNotSet() {
-        if (Boolean.TRUE.equals(eventLoopGroupSet)) {
-            throw new IllegalStateException(MESSAGE_MUTUALLY_EXCLUSIVE);
-        }
     }
 
     /**
@@ -259,23 +228,21 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactory build() {
         return new DefaultClientFactory(new HttpClientFactory(
-                eventLoopGroup, useDaemonThreads, numWorkers, socketOptions, sslContextCustomizer,
+                workerGroup, shutdownWorkerGroupOnClose, socketOptions, sslContextCustomizer,
                 addressResolverGroupFactory, idleTimeoutMillis, useHttp2Preface, useHttp1Pipelining,
                 connectionPoolListener));
     }
 
     @Override
     public String toString() {
-        return toString(this, eventLoopGroup, useDaemonThreads, numWorkers, socketOptions,
+        return toString(this, workerGroup, shutdownWorkerGroupOnClose, socketOptions,
                         sslContextCustomizer, addressResolverGroupFactory, idleTimeoutMillis,
                         useHttp2Preface, useHttp1Pipelining, connectionPoolListener);
     }
 
     static String toString(
             ClientFactoryBuilder self,
-            @Nullable EventLoopGroup eventLoopGroup,
-            boolean useDaemonThreads,
-            int numWorkers,
+            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnClose,
             Map<ChannelOption<?>, Object> socketOptions,
             Consumer<? super SslContextBuilder> sslContextCustomizer,
             Function<? super EventLoopGroup,
@@ -286,16 +253,8 @@ public final class ClientFactoryBuilder {
             KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
 
         final ToStringHelper helper = MoreObjects.toStringHelper(self);
-        if (eventLoopGroup != null) {
-            helper.add("eventLoopGroup", eventLoopGroup);
-        } else {
-            helper.add("useDaemonThreads", useDaemonThreads);
-            if (numWorkers != 0) {
-                helper.add("numWorkers", numWorkers);
-            }
-        }
-
-        helper.add("socketOptions", socketOptions)
+        helper.add("workerGroup", workerGroup + " (shutdownOnClose=" + shutdownWorkerGroupOnClose + ')')
+              .add("socketOptions", socketOptions)
               .add("idleTimeoutMillis", idleTimeoutMillis)
               .add("useHttp2Preface", useHttp2Preface)
               .add("useHttp1Pipelining", useHttp1Pipelining);

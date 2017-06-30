@@ -15,10 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
@@ -82,7 +79,7 @@ public class ServerTest {
                         Thread.sleep(processDelayMillis);
                         super.echo(aReq, res);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        res.close(e);
                     }
                 }
             }.decorate(LoggingService.newDecorator());
@@ -139,9 +136,9 @@ public class ServerTest {
     @Test
     public void testStartStop() throws Exception {
         final Server server = ServerTest.server.server();
-        assertThat(server.activePorts().size(), is(1));
+        assertThat(server.activePorts()).hasSize(1);
         server.stop().get();
-        assertThat(server.activePorts().size(), is(0));
+        assertThat(server.activePorts()).isEmpty();
     }
 
     @Test
@@ -160,8 +157,8 @@ public class ServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Hello, world!"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, world!");
             }
         }
     }
@@ -173,8 +170,8 @@ public class ServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()),
-                           is(not(HttpStatusClass.SUCCESS)));
+                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()))
+                        .isNotEqualTo(HttpStatusClass.SUCCESS);
             }
         }
     }
@@ -186,8 +183,8 @@ public class ServerTest {
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()),
-                           is(HttpStatusClass.SUCCESS));
+                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()))
+                        .isEqualTo(HttpStatusClass.SUCCESS);
             }
         }
     }
@@ -204,7 +201,7 @@ public class ServerTest {
             }
             long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - connectedNanos, TimeUnit.NANOSECONDS);
-            assertThat(elapsedTimeMillis, is(greaterThanOrEqualTo(idleTimeoutMillis)));
+            assertThat(elapsedTimeMillis).isGreaterThanOrEqualTo(idleTimeoutMillis);
         }
     }
 
@@ -227,7 +224,7 @@ public class ServerTest {
 
             long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - lastWriteNanos, TimeUnit.NANOSECONDS);
-            assertThat(elapsedTimeMillis, is(greaterThanOrEqualTo(idleTimeoutMillis)));
+            assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
     }
 
@@ -263,7 +260,7 @@ public class ServerTest {
 
             long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - lastWriteNanos, TimeUnit.NANOSECONDS);
-            assertThat(elapsedTimeMillis, is(greaterThanOrEqualTo(idleTimeoutMillis)));
+            assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
     }
 
@@ -296,7 +293,7 @@ public class ServerTest {
             BufferedReader in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream(), StandardCharsets.US_ASCII));
 
-            assertThat(in.readLine(), is(expectedStatusLine));
+            assertThat(in.readLine()).isEqualTo(expectedStatusLine);
             // Read till the end of the connection.
             List<String> headers = new ArrayList<>();
             for (;;) {

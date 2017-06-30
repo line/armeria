@@ -39,7 +39,7 @@ import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http2.Http2Exception;
 
 /**
- * Provides the methods that are useful for handling exceptions.
+ * Provides methods that are useful for handling exceptions.
  */
 public final class Exceptions {
 
