@@ -99,12 +99,12 @@ public class HttpClientPipeliningTest {
         // Note: Each event loop has its own connection pool.
         eventLoopGroup = new NioEventLoopGroup(1);
         factoryWithPipelining = new ClientFactoryBuilder()
-                .eventLoopGroup(eventLoopGroup)
+                .workerGroup(eventLoopGroup, false)
                 .useHttp1Pipelining(true)
                 .build();
 
         factoryWithoutPipelining = new ClientFactoryBuilder()
-                .eventLoopGroup(eventLoopGroup)
+                .workerGroup(eventLoopGroup, false)
                 .useHttp1Pipelining(false)
                 .build();
     }

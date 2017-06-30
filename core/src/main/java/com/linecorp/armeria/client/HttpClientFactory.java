@@ -21,14 +21,15 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
@@ -38,16 +39,17 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
  * A {@link ClientFactory} that creates an HTTP client.
@@ -59,14 +61,14 @@ final class HttpClientFactory extends AbstractClientFactory {
                   .map(p -> Scheme.of(SerializationFormat.NONE, p))
                   .collect(toImmutableSet());
 
-    private final EventLoopGroup eventLoopGroup;
-    private final boolean closeEventLoopGroup;
+    private final EventLoopGroup workerGroup;
+    private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap baseBootstrap;
     private final Consumer<? super SslContextBuilder> sslContextCustomizer;
     private final long idleTimeoutMillis;
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
-    private final KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener;
+    private final ConnectionPoolListenerImpl connectionPoolListener;
 
     // FIXME(trustin): Reuse idle connections instead of creating a new connection for every event loop.
     //                 Currently, when a client makes an invocation from a non-I/O thread, it simply chooses
@@ -77,9 +79,7 @@ final class HttpClientFactory extends AbstractClientFactory {
             () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
 
     HttpClientFactory(
-            @Nullable EventLoopGroup eventLoopGroup,
-            boolean useDaemonThreads,
-            int numWorkers,
+            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnClose,
             Map<ChannelOption<?>, Object> socketOptions,
             Consumer<? super SslContextBuilder> sslContextCustomizer,
             Function<? super EventLoopGroup,
@@ -89,21 +89,8 @@ final class HttpClientFactory extends AbstractClientFactory {
 
 
         final Bootstrap baseBootstrap = new Bootstrap();
-
-        final TransportType transportType = TransportType.detectTransportType();
-        if (eventLoopGroup != null) {
-            this.eventLoopGroup = eventLoopGroup;
-            closeEventLoopGroup = false;
-        } else {
-            this.eventLoopGroup = eventLoopGroup = transportType.newEventLoopGroup(
-                    numWorkers,
-                    type -> new DefaultThreadFactory("armeria-client-" + type.lowerCasedName(),
-                                                     useDaemonThreads));
-            closeEventLoopGroup = true;
-        }
-
-        baseBootstrap.channel(TransportType.socketChannelType(eventLoopGroup));
-        baseBootstrap.resolver(addressResolverGroupFactory.apply(eventLoopGroup));
+        baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
+        baseBootstrap.resolver(addressResolverGroupFactory.apply(workerGroup));
 
         socketOptions.forEach((option, value) -> {
             @SuppressWarnings("unchecked")
@@ -111,12 +98,14 @@ final class HttpClientFactory extends AbstractClientFactory {
             baseBootstrap.option(castOption, value);
         });
 
+        this.workerGroup = workerGroup;
+        this.shutdownWorkerGroupOnClose = shutdownWorkerGroupOnClose;
         this.baseBootstrap = baseBootstrap;
         this.sslContextCustomizer = sslContextCustomizer;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.useHttp2Preface = useHttp2Preface;
         this.useHttp1Pipelining = useHttp1Pipelining;
-        this.connectionPoolListener = connectionPoolListener;
+        this.connectionPoolListener = new ConnectionPoolListenerImpl(connectionPoolListener);
     }
 
     /**
@@ -154,7 +143,7 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     @Override
     public EventLoopGroup eventLoopGroup() {
-        return eventLoopGroup;
+        return workerGroup;
     }
 
     @Override
@@ -213,8 +202,52 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     @Override
     public void close() {
-        if (closeEventLoopGroup) {
-            eventLoopGroup.shutdownGracefully().syncUninterruptibly();
+        connectionPoolListener.close().join();
+        if (shutdownWorkerGroupOnClose) {
+            workerGroup.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    private static final class ConnectionPoolListenerImpl implements KeyedChannelPoolHandler<PoolKey> {
+
+        private final KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener;
+        private final Set<Channel> channels = Collections.newSetFromMap(new ConcurrentHashMap<>());
+        private volatile boolean closed;
+
+        ConnectionPoolListenerImpl(KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
+            this.connectionPoolListener = connectionPoolListener;
+        }
+
+        @Override
+        public void channelCreated(PoolKey key, Channel ch) throws Exception {
+            if (closed) {
+                ch.close();
+                return;
+            }
+
+            channels.add(ch);
+            connectionPoolListener.channelCreated(key, ch);
+        }
+
+        @Override
+        public void channelAcquired(PoolKey key, Channel ch) throws Exception {
+            connectionPoolListener.channelAcquired(key, ch);
+        }
+
+        @Override
+        public void channelReleased(PoolKey key, Channel ch) throws Exception {
+            connectionPoolListener.channelReleased(key, ch);
+        }
+
+        @Override
+        public void channelClosed(PoolKey key, Channel ch) throws Exception {
+            channels.remove(ch);
+            connectionPoolListener.channelClosed(key, ch);
+        }
+
+        CompletableFuture<Void> close() {
+            closed = true;
+            return ChannelUtil.close(channels);
         }
     }
 }

@@ -29,6 +29,7 @@ import java.net.SocketException;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -41,7 +42,7 @@ public class ConnectionLimitingHandlerIntegrationTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.numWorkers(1);
+            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.port(0, HTTP);
             sb.maxNumConnections(2);
             sb.serviceUnder("/", new AbstractHttpService() {});
@@ -56,7 +57,7 @@ public class ConnectionLimitingHandlerIntegrationTest {
             try (Socket s2 = newSocketAndTest()) {
                 assertThat(server.server().numConnections()).isEqualTo(2);
 
-                assertThatThrownBy(this::newSocketAndTest)
+                assertThatThrownBy(ConnectionLimitingHandlerIntegrationTest::newSocketAndTest)
                         .isInstanceOf(SocketException.class);
 
                 assertThat(server.server().numConnections()).isEqualTo(2);
@@ -70,7 +71,7 @@ public class ConnectionLimitingHandlerIntegrationTest {
         }
     }
 
-    private Socket newSocketAndTest() throws IOException {
+    private static Socket newSocketAndTest() throws IOException {
         Socket socket = new Socket(LOOPBACK, server.httpPort());
 
         // Test this socket is opened or not.

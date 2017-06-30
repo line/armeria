@@ -51,9 +51,9 @@ import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.PayloadType;
 import com.linecorp.armeria.grpc.testing.Messages.ResponseParameters;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -91,14 +91,14 @@ public class GrpcClientTest {
 
     private static final Empty EMPTY = Empty.getDefaultInstance();
 
-    private static AtomicReference<HttpHeaders> CLIENT_HEADERS_CAPTURE = new AtomicReference<>();
-    private static AtomicReference<HttpHeaders> SERVER_TRAILERS_CAPTURE = new AtomicReference<>();
+    private static final AtomicReference<HttpHeaders> CLIENT_HEADERS_CAPTURE = new AtomicReference<>();
+    private static final AtomicReference<HttpHeaders> SERVER_TRAILERS_CAPTURE = new AtomicReference<>();
 
     @ClassRule
     public static ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.numWorkers(1);
+            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.port(0, HTTP);
             sb.defaultMaxRequestLength(MAX_MESSAGE_SIZE);
 
@@ -302,7 +302,7 @@ public class GrpcClientTest {
                                                               .setBody(ByteString.copyFrom(new byte[58979])))
                                            .build());
 
-        final ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<Object>(5);
+        final ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<>(5);
         StreamObserver<StreamingOutputCallRequest> requestObserver
                 = asyncStub.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
             @Override
@@ -432,8 +432,7 @@ public class GrpcClientTest {
         StreamObserver<StreamingOutputCallRequest> requestStream = asyncStub.halfDuplexCall(recorder);
 
         final int numRequests = 10;
-        List<StreamingOutputCallRequest> requests =
-                new ArrayList<StreamingOutputCallRequest>(numRequests);
+        List<StreamingOutputCallRequest> requests = new ArrayList<>(numRequests);
         for (int ix = numRequests; ix > 0; --ix) {
             requests.add(request);
             requestStream.onNext(request);
@@ -464,18 +463,18 @@ public class GrpcClientTest {
         final List<StreamingOutputCallResponse> goldenResponses = Arrays.asList(
                 StreamingOutputCallResponse.newBuilder()
                                            .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
+                                                              .setType(COMPRESSABLE)
                                                               .setBody(ByteString.copyFrom(new byte[100000])))
                                            .build(),
                 StreamingOutputCallResponse.newBuilder()
                                            .setPayload(Payload.newBuilder()
-                                                              .setType(PayloadType.COMPRESSABLE)
+                                                              .setType(COMPRESSABLE)
                                                               .setBody(ByteString.copyFrom(new byte[100001])))
                                            .build());
 
         long start = System.nanoTime();
 
-        final ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<Object>(10);
+        final ArrayBlockingQueue<Object> queue = new ArrayBlockingQueue<>(10);
         ClientCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
                 asyncStub.getChannel().newCall(TestServiceGrpc.METHOD_STREAMING_OUTPUT_CALL,
                                                CallOptions.DEFAULT);
@@ -507,7 +506,7 @@ public class GrpcClientTest {
         // resolution (like on Windows) or be using a testing, in-process transport where message
         // handling is instantaneous. In both cases, firstCallDuration may be 0, so round up sleep time
         // to at least 1ms.
-        assertThat(queue.poll(Math.max(firstCallDuration * 4, 1 * 1000 * 1000), TimeUnit.NANOSECONDS)).isNull();
+        assertThat(queue.poll(Math.max(firstCallDuration * 4, 1_000_000), TimeUnit.NANOSECONDS)).isNull();
 
         // Make sure that everything still completes.
         call.request(1);
@@ -521,15 +520,15 @@ public class GrpcClientTest {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setPayload(Payload.newBuilder()
-                                                .setType(PayloadType.COMPRESSABLE)
+                                                .setType(COMPRESSABLE)
                                                 .setBody(ByteString.copyFrom(new byte[unaryPayloadLength()])))
                              .setResponseSize(10)
-                             .setResponseType(PayloadType.COMPRESSABLE)
+                             .setResponseType(COMPRESSABLE)
                              .build();
         final SimpleResponse goldenResponse =
                 SimpleResponse.newBuilder()
                               .setPayload(Payload.newBuilder()
-                                                 .setType(PayloadType.COMPRESSABLE)
+                                                 .setType(COMPRESSABLE)
                                                  .setBody(ByteString.copyFrom(new byte[10])))
                               .build();
         assertThat(blockingStub.unaryCall(request)).isEqualTo(goldenResponse);
@@ -540,12 +539,12 @@ public class GrpcClientTest {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
                              .setResponseSize(unaryPayloadLength())
-                             .setResponseType(PayloadType.COMPRESSABLE)
+                             .setResponseType(COMPRESSABLE)
                              .build();
         final SimpleResponse goldenResponse =
                 SimpleResponse.newBuilder()
                               .setPayload(Payload.newBuilder()
-                                                 .setType(PayloadType.COMPRESSABLE)
+                                                 .setType(COMPRESSABLE)
                                                  .setBody(ByteString.copyFrom(new byte[unaryPayloadLength()])))
                               .build();
         assertThat(blockingStub.unaryCall(request)).isEqualTo(goldenResponse);
@@ -673,7 +672,7 @@ public class GrpcClientTest {
                                                                           .setIntervalUs(20000);
         StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
-                                          .setResponseType(PayloadType.COMPRESSABLE)
+                                          .setResponseType(COMPRESSABLE)
                                           .addResponseParameters(responseParameters)
                                           .addResponseParameters(responseParameters)
                                           .addResponseParameters(responseParameters)
@@ -891,12 +890,12 @@ public class GrpcClientTest {
         }
     }
 
-    private int unaryPayloadLength() {
+    private static int unaryPayloadLength() {
         // 10MiB.
         return 10485760;
     }
 
-    private int operationTimeoutMillis() {
+    private static int operationTimeoutMillis() {
         return 5000;
     }
 }

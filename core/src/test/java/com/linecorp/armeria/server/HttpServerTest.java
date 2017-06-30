@@ -92,6 +92,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.StreamWriter;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
@@ -99,6 +100,7 @@ import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
@@ -110,8 +112,10 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 public class HttpServerTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerTest.class);
 
+    private static final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(1);
+
     private static final ClientFactory clientFactory = new ClientFactoryBuilder()
-            .numWorkers(1)
+            .workerGroup(workerGroup, false) // Will be shut down by the Server.
             .idleTimeout(Duration.ofSeconds(3))
             .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
             .build();
@@ -141,7 +145,7 @@ public class HttpServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
 
-            sb.numWorkers(1);
+            sb.workerGroup(workerGroup, true);
             sb.port(0, HTTP);
             sb.port(0, HTTPS);
 

@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -51,8 +52,10 @@ public final class ServerConfig {
     private final DomainNameMapping<VirtualHost> virtualHostMapping;
     private final List<ServiceConfig> services;
 
-    private final int numBosses;
-    private final int numWorkers;
+    private final EventLoopGroup bossGroup;
+    private final boolean shutdownBossGroupOnStop;
+    private final EventLoopGroup workerGroup;
+    private final boolean shutdownWorkerGroupOnStop;
     private final int maxNumConnections;
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
@@ -70,9 +73,10 @@ public final class ServerConfig {
     ServerConfig(
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
-            int numBosses, int numWorkers, int maxNumConnections,
-            long idleTimeoutMillis, long defaultRequestTimeoutMillis,
-            long defaultMaxRequestLength,
+            EventLoopGroup bossGroup, boolean shutdownBossGroupOnStop,
+            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
+            int maxNumConnections, long idleTimeoutMillis,
+            long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, String serviceLoggerPrefix) {
 
@@ -81,8 +85,10 @@ public final class ServerConfig {
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
 
         // Set the primitive properties.
-        this.numBosses = validateNumBosses(numBosses);
-        this.numWorkers = validateNumWorkers(numWorkers);
+        this.bossGroup = requireNonNull(bossGroup, "bossGroup");
+        this.shutdownBossGroupOnStop = shutdownBossGroupOnStop;
+        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        this.shutdownWorkerGroupOnStop = shutdownWorkerGroupOnStop;
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
@@ -150,20 +156,6 @@ public final class ServerConfig {
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
-    }
-
-    static int validateNumBosses(int numBosses) {
-        if (numBosses <= 0) {
-            throw new IllegalArgumentException("numBosses: " + numBosses + " (expected: > 0)");
-        }
-        return numBosses;
-    }
-
-    static int validateNumWorkers(int numWorkers) {
-        if (numWorkers <= 0) {
-            throw new IllegalArgumentException("numWorkers: " + numWorkers + " (expected: > 0)");
-        }
-        return numWorkers;
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -317,18 +309,32 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the number of boss threads.
+     * Returns the boss {@link EventLoopGroup} which is responsible for accepting incoming connections.
      */
-    public int numBosses() {
-        return numBosses;
+    public EventLoopGroup bossGroup() {
+        return bossGroup;
     }
 
     /**
-     * Returns the number of worker threads that perform socket I/O and run
+     * Returns whether the boss {@link EventLoopGroup} is shut down when the {@link Server} stops.
+     */
+    public boolean shutdownBossGroupOnStop() {
+        return shutdownBossGroupOnStop;
+    }
+
+    /**
+     * Returns the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
      */
-    public int numWorkers() {
-        return numWorkers;
+    public EventLoopGroup workerGroup() {
+        return workerGroup;
+    }
+
+    /**
+     * Returns whether the worker {@link EventLoopGroup} is shut down when the {@link Server} stops.
+     */
+    public boolean shutdownWorkerGroupOnStop() {
+        return shutdownWorkerGroupOnStop;
     }
 
     /**
@@ -399,8 +405,10 @@ public final class ServerConfig {
         if (strVal == null) {
             this.strVal = strVal = toString(
                     getClass(), ports(), null, virtualHosts(),
-                    numWorkers(), maxNumConnections(),
-                    idleTimeoutMillis(), defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                    bossGroup(), shutdownBossGroupOnStop(),
+                    workerGroup(), shutdownWorkerGroupOnStop(),
+                    maxNumConnections(), idleTimeoutMillis(),
+                    defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), serviceLoggerPrefix());
         }
@@ -411,7 +419,9 @@ public final class ServerConfig {
     static String toString(
             Class<?> type,
             Iterable<ServerPort> ports, VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
-            int numWorkers, int maxNumConnections, long idleTimeoutMillis,
+            EventLoopGroup bossGroup, boolean shutdownBossGroupOnStop,
+            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
+            int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, String serviceLoggerPrefix) {
@@ -458,9 +468,15 @@ public final class ServerConfig {
                                             defaultVirtualHost.serviceConfigs()));
         }
 
-        buf.append("], numWorkers: ");
-        buf.append(numWorkers);
-        buf.append(", maxNumConnections: ");
+        buf.append("], bossGroup: ");
+        buf.append(bossGroup);
+        buf.append(" (shutdownOnStop=");
+        buf.append(shutdownBossGroupOnStop);
+        buf.append("), workerGroup: ");
+        buf.append(workerGroup);
+        buf.append(" (shutdownOnStop=");
+        buf.append(shutdownWorkerGroupOnStop);
+        buf.append("), maxNumConnections: ");
         buf.append(maxNumConnections);
         buf.append(", idleTimeout: ");
         buf.append(idleTimeoutMillis);

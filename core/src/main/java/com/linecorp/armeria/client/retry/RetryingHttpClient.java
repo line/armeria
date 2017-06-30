@@ -84,7 +84,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         final DefaultHttpResponse res = new DefaultHttpResponse();
         final Backoff backoff = newBackoff();
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req);
-        retry(1, backoff, ctx, reqDuplicator, (newReq) -> {
+        retry(1, backoff, ctx, reqDuplicator, newReq -> {
             try {
                 return delegate().execute(ctx, newReq);
             } catch (Exception e) {
@@ -132,7 +132,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                        }));
     }
 
-    private long getRetryAfterMillis(HttpResponse res) {
+    private static long getRetryAfterMillis(HttpResponse res) {
         final HttpHeaders headers = getHttpHeaders(res);
         long millisAfter = -1;
         String value = headers.get(HttpHeaderNames.RETRY_AFTER);
@@ -153,7 +153,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         return millisAfter;
     }
 
-    private HttpHeaders getHttpHeaders(HttpResponse res) {
+    private static HttpHeaders getHttpHeaders(HttpResponse res) {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
         res.closeFuture().whenComplete(subscriber);

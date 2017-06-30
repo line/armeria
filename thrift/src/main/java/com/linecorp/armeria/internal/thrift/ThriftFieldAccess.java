@@ -22,7 +22,7 @@ import org.apache.thrift.TBase;
 import org.apache.thrift.TFieldIdEnum;
 
 /**
- * Provides the access to a Thrift field.
+ * Provides access to a Thrift field.
  */
 public final class ThriftFieldAccess {
 

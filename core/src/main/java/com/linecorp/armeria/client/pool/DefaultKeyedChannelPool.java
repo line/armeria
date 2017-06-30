@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
@@ -140,7 +141,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                 channel.attr(KeyedChannelPoolUtil.POOL).set(this);
                 channelPoolHandler.channelCreated(key, channel);
                 channel.closeFuture().addListener(f -> channelPoolHandler.channelClosed(key, channel));
-                promise.setSuccess(channel);
+                if (channel.isActive()) {
+                    promise.setSuccess(channel);
+                } else {
+                    promise.setFailure(ClosedSessionException.get());
+                }
             } else {
                 promise.setFailure(future.cause());
             }
