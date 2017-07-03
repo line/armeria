@@ -36,6 +36,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
@@ -326,10 +327,13 @@ final class AnnotatedHttpServices {
     /**
      * A {@link PathMapping} implementation that combines path prefix and another {@link PathMapping}.
      */
-    private static final class PrefixAddingPathMapping extends AbstractPathMapping {
+    @VisibleForTesting
+    static final class PrefixAddingPathMapping extends AbstractPathMapping {
 
         private final String pathPrefix;
         private final PathMapping mapping;
+        private final String loggerName;
+        private final String metricName;
 
         PrefixAddingPathMapping(String pathPrefix, PathMapping mapping) {
             assert mapping instanceof GlobPathMapping || mapping instanceof RegexPathMapping
@@ -337,6 +341,8 @@ final class AnnotatedHttpServices {
 
             this.pathPrefix = pathPrefix;
             this.mapping = mapping;
+            loggerName = loggerName(pathPrefix) + '.' + mapping.loggerName();
+            metricName = pathPrefix + mapping.metricName();
         }
 
         @Override
@@ -356,6 +362,16 @@ final class AnnotatedHttpServices {
         @Override
         public Set<String> paramNames() {
             return mapping.paramNames();
+        }
+
+        @Override
+        public String loggerName() {
+            return loggerName;
+        }
+
+        @Override
+        public String metricName() {
+            return metricName;
         }
 
         @Override

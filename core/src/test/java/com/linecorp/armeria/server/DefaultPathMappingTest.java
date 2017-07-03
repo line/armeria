@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.PathMapping.of;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -126,5 +127,15 @@ public class DefaultPathMappingTest {
         assertThat(ppe.hashCode()).isEqualTo(ppe2.hashCode());
         assertThat(ppe.hashCode()).isNotEqualTo(ppe3.hashCode());
         assertThat(ppe2.hashCode()).isNotEqualTo(ppe3.hashCode());
+    }
+
+    @Test
+    public void testLoggerName() {
+        assertThat(of("/service/{value}").loggerName()).isEqualTo("service._value_");
+    }
+
+    @Test
+    public void testMetricName() {
+        assertThat(of("/service/{value}").metricName()).isEqualTo("/service/{value}");
     }
 }
