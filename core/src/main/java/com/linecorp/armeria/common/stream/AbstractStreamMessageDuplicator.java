@@ -81,8 +81,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * this factory with.
      */
     public U duplicateStream() {
-        if (!processor.isOpen()) {
-            throw new IllegalStateException("This factory has been closed already.");
+        if (!processor.isDuplicable()) {
+            throw new IllegalStateException("This duplicator has been closed already.");
         }
         return doDuplicateStream(new ChildStreamMessage<>(processor));
     }
@@ -111,7 +111,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             /**
              * The initial state. Will enter {@link #CLOSED}.
              */
-            OPEN,
+            DUPLICABLE,
             /**
               * {@link AbstractStreamMessageDuplicator#close()} has been called.
              */
@@ -126,6 +126,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private static final AtomicLongFieldUpdater<StreamMessageProcessor> requestedDemandUpdater =
                 AtomicLongFieldUpdater.newUpdater(StreamMessageProcessor.class, "requestedDemand");
 
+        private final StreamMessage<? extends T> upstream;
+
         private final Set<DownstreamSubscription> downstreamSubscriptions =
                 Collections.newSetFromMap(new ConcurrentHashMap<>());
 
@@ -136,11 +138,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private volatile Subscription upstreamSubscription;
         private volatile boolean upstreamCompleted;
         private volatile int upstreamOffset;
-        private volatile State state = State.OPEN;
+        private volatile State state = State.DUPLICABLE;
 
         private Throwable upstreamCause;
 
         StreamMessageProcessor(StreamMessage<? extends T> upstream) {
+            this.upstream = upstream;
             upstream.subscribe(this, true);
             notifyDownstreamWhenUpstreamCompleted(upstream);
         }
@@ -197,14 +200,14 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         public void onComplete() {}
 
         void subscribe(DownstreamSubscription subscription) {
-            if (state == State.OPEN) {
+            if (state == State.DUPLICABLE) {
                 downstreamSubscriptions.add(subscription);
                 if (state == State.CLOSED) {
                     downstreamSubscriptions.remove(subscription);
                     throw new IllegalStateException("This factory has been closed already.");
                 }
             } else {
-                throw new IllegalStateException("This factory has been closed already.");
+                throw new IllegalStateException("This duplicator has been closed already.");
             }
 
             final Subscriber<Object> subscriber = subscription.subscriber();
@@ -368,12 +371,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
         }
 
-        boolean isOpen() {
-            return state == State.OPEN;
+        boolean isDuplicable() {
+            return state == State.DUPLICABLE;
         }
 
         void close() {
-            if (stateUpdater.compareAndSet(this, State.OPEN, State.CLOSED)) {
+            if (stateUpdater.compareAndSet(this, State.DUPLICABLE, State.CLOSED)) {
                 state = State.CLOSED;
                 final Subscription upstream = this.upstreamSubscription;
                 if (upstream != null) {
@@ -418,12 +421,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public boolean isOpen() {
-            return !closeFuture.isDone();
+            return processor.upstream.isOpen();
         }
 
         @Override
         public boolean isEmpty() {
-            return !isOpen() && processor.upstreamOffset == 0;
+            return processor.upstream.isEmpty();
         }
 
         @Override

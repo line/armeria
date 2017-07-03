@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -80,12 +80,13 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     @Override
-    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+    protected HttpResponse doExecute(
+            ClientRequestContext ctx, HttpRequest req, Backoff backoff) throws Exception {
         final DefaultHttpResponse res = new DefaultHttpResponse();
-        final Backoff backoff = newBackoff();
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req);
         retry(1, backoff, ctx, reqDuplicator, newReq -> {
             try {
+                resetResponseTimeout(ctx);
                 return delegate().execute(ctx, newReq);
             } catch (Exception e) {
                 return HttpResponse.ofFailure(e);
@@ -147,19 +148,20 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                 final Long later = headers.getTimeMillis(HttpHeaderNames.RETRY_AFTER);
                 millisAfter = later - System.currentTimeMillis();
             } catch (Exception ignored) {
-                logger.debug("The retryAfter: {}, from the server is neither a http date nor a second.", value);
+                logger.debug("The retryAfter: {}, from the server is neither an http date nor a second.",
+                             value);
             }
         }
         return millisAfter;
     }
 
     private static HttpHeaders getHttpHeaders(HttpResponse res) {
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
         res.closeFuture().whenComplete(subscriber);
         res.subscribe(subscriber);
         // Neither blocks here nor throws an exception because it already has headers.
-        return future.join().headers();
+        return future.join();
     }
 
     private void retry0(int currentAttemptNo, Backoff backoff, ClientRequestContext ctx,
@@ -170,7 +172,13 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             rootResponse.close(exception);
         } else {
             final EventLoop eventLoop = ctx.contextAwareEventLoop();
-            nextDelay = Math.min(Math.max(nextDelay, millisAfter), ctx.responseTimeoutMillis());
+            nextDelay = Math.max(nextDelay, millisAfter);
+            try {
+                nextDelay = getNextDelay(nextDelay, ctx);
+            } catch (ResponseTimeoutException e) {
+                rootResponse.close(e);
+                return;
+            }
             if (nextDelay <= 0) {
                 eventLoop.submit(() -> retry(currentAttemptNo + 1, backoff, ctx,
                                              rootReqDuplicator, action,

@@ -145,6 +145,16 @@ abstract class HttpResponseDecoder {
                     this, responseTimeoutMillis, TimeUnit.MILLISECONDS);
         }
 
+        boolean cancelTimeout() {
+            final ScheduledFuture<?> responseTimeoutFuture = this.responseTimeoutFuture;
+            if (responseTimeoutFuture == null) {
+                return true;
+            }
+
+            this.responseTimeoutFuture = null;
+            return responseTimeoutFuture.cancel(false);
+        }
+
         long maxContentLength() {
             return maxContentLength;
         }
@@ -222,16 +232,6 @@ abstract class HttpResponseDecoder {
                     logger.warn("Unexpected exception:", cause);
                 }
             }
-        }
-
-        private boolean cancelTimeout() {
-            final ScheduledFuture<?> responseTimeoutFuture = this.responseTimeoutFuture;
-            if (responseTimeoutFuture == null) {
-                return true;
-            }
-
-            this.responseTimeoutFuture = null;
-            return responseTimeoutFuture.cancel(false);
         }
 
         @Override
