@@ -162,6 +162,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString CONTENT_BASE = new AsciiString("content-base");
     /**
+     * {@code "content-disposition"}.
+     */
+    public static final AsciiString CONTENT_DISPOSITION = new AsciiString("content-disposition");
+    /**
      * {@code "content-encoding"}.
      */
     public static final AsciiString CONTENT_ENCODING = new AsciiString("content-encoding");
@@ -178,14 +182,6 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString CONTENT_LOCATION = new AsciiString("content-location");
     /**
-     * {@code "content-transfer-encoding"}.
-     */
-    public static final AsciiString CONTENT_TRANSFER_ENCODING = new AsciiString("content-transfer-encoding");
-    /**
-     * {@code "content-disposition"}.
-     */
-    public static final AsciiString CONTENT_DISPOSITION = new AsciiString("content-disposition");
-    /**
      * {@code "content-md5"}.
      */
     public static final AsciiString CONTENT_MD5 = new AsciiString("content-md5");
@@ -193,6 +189,14 @@ public final class HttpHeaderNames {
      * {@code "content-range"}.
      */
     public static final AsciiString CONTENT_RANGE = new AsciiString("content-range");
+    /**
+     * {@code "content-security-policy"}.
+     */
+    public static final AsciiString CONTENT_SECURITY_POLICY = new AsciiString("content-security-policy");
+    /**
+     * {@code "content-transfer-encoding"}.
+     */
+    public static final AsciiString CONTENT_TRANSFER_ENCODING = new AsciiString("content-transfer-encoding");
     /**
      * {@code "content-type"}.
      */
@@ -246,9 +250,9 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString IF_UNMODIFIED_SINCE = new AsciiString("if-unmodified-since");
     /**
-     * @deprecated Use {@link #CONNECTION} instead.
-     *
      * {@code "keep-alive"}
+     *
+     * @deprecated Use {@link #CONNECTION} instead.
      */
     @Deprecated
     public static final AsciiString KEEP_ALIVE = new AsciiString("keep-alive");
@@ -281,9 +285,9 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString PROXY_AUTHORIZATION = new AsciiString("proxy-authorization");
     /**
-     * @deprecated Use {@link #CONNECTION} instead.
-     *
      * {@code "proxy-connection"}
+     *
+     * @deprecated Use {@link #CONNECTION} instead.
      */
     @Deprecated
     public static final AsciiString PROXY_CONNECTION = new AsciiString("proxy-connection");
@@ -395,6 +399,10 @@ public final class HttpHeaderNames {
      * {@code "www-authenticate"}.
      */
     public static final AsciiString WWW_AUTHENTICATE = new AsciiString("www-authenticate");
+    /**
+     * {@code "x-frame-options"}.
+     */
+    public static final AsciiString X_FRAME_OPTIONS = new AsciiString("x-frame-options");
 
     private static final Map<String, AsciiString> map;
 
