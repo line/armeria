@@ -30,6 +30,11 @@ public class PrefixPathMappingTest {
     }
 
     @Test
+    public void testMetricName() throws Exception {
+        assertThat(ofPrefix("/foo/bar").metricName()).isEqualTo("/foo/bar/**");
+    }
+
+    @Test
     public void mappingResult() {
         final PathMapping a = ofPrefix("/foo");
         PathMappingResult result = a.apply("/foo/bar/cat", "");

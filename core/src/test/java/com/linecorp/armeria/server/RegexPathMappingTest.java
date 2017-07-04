@@ -28,6 +28,11 @@ public class RegexPathMappingTest {
     }
 
     @Test
+    public void testMetricName() throws Exception {
+        assertThat(ofRegex("foo/bar").metricName()).isEqualTo("/regex:foo/bar");
+    }
+
+    @Test
     public void basic() {
         final PathMapping mapping = ofRegex("foo");
         final PathMappingResult result = mapping.apply("/barfoobar", null);

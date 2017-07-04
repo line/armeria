@@ -49,4 +49,9 @@ public class ExactPathMappingTest {
     public void testLoggerName() throws Exception {
         assertThat(ofExact("/foo/bar").loggerName()).isEqualTo("foo.bar");
     }
+
+    @Test
+    public void testMetricName() throws Exception {
+        assertThat(ofExact("/foo/bar").metricName()).isEqualTo("/foo/bar");
+    }
 }

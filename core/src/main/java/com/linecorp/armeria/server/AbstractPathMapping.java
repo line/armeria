@@ -78,7 +78,10 @@ public abstract class AbstractPathMapping implements PathMapping {
         if ("/".equals(normalized)) {
             return "__ROOT__";
         }
-        normalized = normalized.substring(1); // Strip the first slash.
+
+        if (normalized.startsWith("/")) {
+            normalized = normalized.substring(1); // Strip the first slash.
+        }
 
         final int end;
         if (normalized.endsWith("/")) {

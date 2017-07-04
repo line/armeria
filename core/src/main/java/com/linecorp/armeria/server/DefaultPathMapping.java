@@ -73,6 +73,9 @@ final class DefaultPathMapping extends AbstractPathMapping {
      */
     private final Set<String> paramNames;
 
+    private final String loggerName;
+    private final String metricName;
+
     /**
      * Create a {@link DefaultPathMapping} instance from given {@code pathPattern}.
      *
@@ -123,6 +126,9 @@ final class DefaultPathMapping extends AbstractPathMapping {
         skeleton = skeletonJoiner.toString();
         paramNameArray = paramNames.toArray(new String[paramNames.size()]);
         this.paramNames = ImmutableSet.copyOf(paramNames);
+
+        loggerName = loggerName(pathPattern);
+        metricName = pathPattern;
     }
 
     /**
@@ -156,6 +162,16 @@ final class DefaultPathMapping extends AbstractPathMapping {
     @Override
     public Set<String> paramNames() {
         return paramNames;
+    }
+
+    @Override
+    public String loggerName() {
+        return loggerName;
+    }
+
+    @Override
+    public String metricName() {
+        return metricName;
     }
 
     @Override

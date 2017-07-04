@@ -82,6 +82,13 @@ public class GlobPathMappingTest {
     @Test
     public void testLoggerName() throws Exception {
         assertThat(ofGlob("/foo/bar/**").loggerName()).isEqualTo("foo.bar.__");
+        assertThat(ofGlob("foo").loggerName()).isEqualTo("__.foo");
+    }
+
+    @Test
+    public void testMetricName() throws Exception {
+        assertThat(ofGlob("/foo/bar/**").metricName()).isEqualTo("/foo/bar/**");
+        assertThat(ofGlob("foo").metricName()).isEqualTo("/**/foo");
     }
 
     @Test
