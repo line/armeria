@@ -1,6 +1,8 @@
 # Build output
+/build
 /*/build
 /*/*/build
+/out
 /*/out
 /*/*/out
 **/src/main/gen-java
