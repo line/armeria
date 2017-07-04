@@ -89,20 +89,28 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Returns a {@link CompletableFuture} that completes when this publisher is complete,
-     * either successfully or exceptionally.
+     * either successfully or exceptionally, including cancellation and abortion.
      */
     CompletableFuture<Void> closeFuture();
 
     /**
-     * Requests to start streaming data to the specified {@link Subscriber}.
-     *
-     * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
+     * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
+     * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     * </ul>
      */
     @Override
     void subscribe(Subscriber<? super T> s);
 
     /**
-     * Requests to start streaming data to the specified {@link Subscriber}.
+     * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
+     * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     * </ul>
      *
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
      *                          as is, without making a copy. If you don't know what this means, use
@@ -113,25 +121,35 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
-     * {@link Executor}.
-     *
-     * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
+     * {@link Executor}. If there is a problem subscribing, {@link Subscriber#onError(Throwable)} will be
+     * invoked with one of the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     * </ul>
      */
     void subscribe(Subscriber<? super T> s, Executor executor);
 
     /**
      * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
-     * {@link Executor}.
+     * {@link Executor}. If there is a problem subscribing, {@link Subscriber#onError(Throwable)} will be
+     * invoked with one of the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     * </ul>
      *
      * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
      *                          as is, without making a copy. If you don't know what this means, use
      *                          {@link StreamMessage#subscribe(Subscriber)}.
-     * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
      */
     void subscribe(Subscriber<? super T> s, Executor executor, boolean withPooledObjects);
 
     /**
-     * Cancels the {@link Subscription} if any and closes this publisher.
+     * Closes this publisher with {@link AbortedStreamException} and prevents further subscription.
+     * A {@link Subscriber} that attempts to subscribe to an aborted stream will be notified with
+     * an {@link AbortedStreamException} via {@link Subscriber#onError(Throwable)}. Calling this method
+     * on a closed or aborted stream has no effect.
      */
     void abort();
 }

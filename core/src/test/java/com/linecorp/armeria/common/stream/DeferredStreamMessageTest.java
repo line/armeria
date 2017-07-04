@@ -19,8 +19,9 @@ package com.linecorp.armeria.common.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
@@ -57,7 +58,7 @@ public class DeferredStreamMessageTest {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         m.abort();
         assertAborted(m);
-        assertThatThrownBy(() -> m.subscribe(mock(Subscriber.class))).isInstanceOf(IllegalStateException.class);
+        assertFailedSubscription(m, AbortedStreamException.class);
     }
 
     @Test
@@ -96,7 +97,7 @@ public class DeferredStreamMessageTest {
         verify(subscriber).onSubscribe(any());
 
         m.abort();
-        verify(subscriber, never()).onError(any());
+        verify(subscriber, times(1)).onError(isA(AbortedStreamException.class));
 
         assertAborted(m);
         assertAborted(d);
@@ -110,7 +111,7 @@ public class DeferredStreamMessageTest {
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
         m.subscribe(subscriber);
-        assertThatThrownBy(() -> m.subscribe(mock(Subscriber.class))).isInstanceOf(IllegalStateException.class);
+        assertFailedSubscription(m, IllegalStateException.class);
 
         m.delegate(d);
         verify(subscriber).onSubscribe(any());
@@ -129,7 +130,7 @@ public class DeferredStreamMessageTest {
         m.subscribe(subscriber);
         verify(subscriber).onSubscribe(any());
 
-        assertThatThrownBy(() -> m.subscribe(mock(Subscriber.class))).isInstanceOf(IllegalStateException.class);
+        assertFailedSubscription(m, IllegalStateException.class);
     }
 
     private static void assertAborted(StreamMessage<?> m) {
@@ -137,7 +138,14 @@ public class DeferredStreamMessageTest {
         assertThat(m.isEmpty()).isTrue();
         assertThat(m.closeFuture()).isCompletedExceptionally();
         assertThatThrownBy(() -> m.closeFuture().get())
-                .hasCauseInstanceOf(CancelledSubscriptionException.class);
+                .hasCauseInstanceOf(AbortedStreamException.class);
+    }
+
+    private static void assertFailedSubscription(StreamMessage<?> m, Class<? extends Throwable> causeType) {
+        @SuppressWarnings("unchecked")
+        final Subscriber<Object> subscriber = mock(Subscriber.class);
+        m.subscribe(subscriber);
+        verify(subscriber, times(1)).onError(isA(causeType));
     }
 
     @Test

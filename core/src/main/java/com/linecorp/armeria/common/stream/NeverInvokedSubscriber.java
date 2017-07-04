@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,28 +19,32 @@ package com.linecorp.armeria.common.stream;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-final class AbortingSubscriber<T> implements Subscriber<T> {
+final class NeverInvokedSubscriber<T> implements Subscriber<T> {
 
-    private static final AbortingSubscriber<Object> INSTANCE = new AbortingSubscriber<>();
+    private static final NeverInvokedSubscriber<Object> INSTANCE = new NeverInvokedSubscriber<>();
 
     @SuppressWarnings("unchecked")
-    static <T> AbortingSubscriber<T> get() {
-        return (AbortingSubscriber<T>) INSTANCE;
+    static <T> NeverInvokedSubscriber<T> get() {
+        return (NeverInvokedSubscriber<T>) INSTANCE;
     }
-
-    private AbortingSubscriber() {}
 
     @Override
     public void onSubscribe(Subscription s) {
-        s.cancel();
+        throw new IllegalStateException("onSubscribe(" + s + ')');
     }
 
     @Override
-    public void onNext(T o) {}
+    public void onNext(T t) {
+        throw new IllegalStateException("onNext(" + t + ')');
+    }
 
     @Override
-    public void onError(Throwable cause) {}
+    public void onError(Throwable t) {
+        throw new IllegalStateException("onError(" + t + ')', t);
+    }
 
     @Override
-    public void onComplete() {}
+    public void onComplete() {
+        throw new IllegalStateException("onComplete()");
+    }
 }

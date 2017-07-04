@@ -29,8 +29,28 @@ managedDependencies {
 
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'
+    testCompile 'org.reactivestreams:reactive-streams-tck'
 }
 
+// Run the test cases based on reactive-streams-tck
+task testNg(type: Test,
+            group: 'Verification',
+            description: 'Runs the TestNG unit tests.') {
+    useTestNG()
+    testClassesDir = tasks.test.testClassesDir
+    classpath = tasks.test.classpath
+    scanForTestClasses = false
+}
+tasks.test.finalizedBy tasks.testNg
+tasks.check.dependsOn tasks.testNg
+
+jacocoTestReport {
+    // Include the coverage data from the TestNG test cases.
+    executionData file("${project.buildDir}/jacoco/testNg.exec")
+}
+
+// Task 'shadedJar' produces a very large JAR. Rename it to '*-untrimmed-*.jar' and
+// let the task 'trimShadedJar' produce the trimmed JAR from it.
 tasks.shadedJar.baseName = "${tasks.jar.baseName}-untrimmed"
 
 task trimShadedJar(type: ProGuardTask,

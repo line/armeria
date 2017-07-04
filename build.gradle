@@ -4,6 +4,7 @@ import org.apache.tools.zip.ZipOutputStream
 import org.yaml.snakeyaml.Yaml
 
 import java.time.LocalDateTime
+import java.util.stream.Streams
 
 buildscript {
     repositories {
@@ -123,6 +124,8 @@ configure(javaProjects) {
                 }
             }
         }
+
+        jacocoEnabled = project.hasProperty('coverage')
     }
 
     // Add the 'managedDependencies' DSL which allows us to add dependencies without versions and exclusions.
@@ -254,18 +257,18 @@ configure(javaProjects) {
     }
 
     // Enable JaCoCo test coverage when '-Pcoverage' option is specified.
-    def jacocoEnabled = project.hasProperty('coverage')
-
-    test {
+    tasks.withType(Test) {
         jacoco {
-            enabled = jacocoEnabled
+            enabled = project.ext.jacocoEnabled
             append = false
         }
     }
 
     jacocoTestReport {
         reports {
-            xml.enabled jacocoEnabled
+            csv.enabled false
+            xml.enabled true
+            html.enabled true
         }
 
         afterEvaluate {
@@ -277,8 +280,10 @@ configure(javaProjects) {
         }
     }
 
-    if (jacocoEnabled) {
-        tasks.test.finalizedBy(jacocoTestReport)
+    if (project.ext.jacocoEnabled) {
+        tasks.withType(Test) {
+            finalizedBy tasks.jacocoTestReport
+        }
     }
 
     // Require Java 8 to build the project.
@@ -758,11 +763,18 @@ configure(javaProjects) {
                     // Ignore known false positives.
                     lines.removeIf { it.contains('Only supported on Linux') }
                     switch (td.className) {
-                        case 'com.linecorp.armeria.server.AnnotatedServiceTest':
-                            lines.removeIf { it.contains('For input string: "fourty-two"') }
-                            break
                         case 'com.linecorp.armeria.client.zookeeper.EndpointGroupTest':
                             lines.removeIf { it.contains('ServerCnxn$EndOfStreamException') }
+                            break
+                        case 'com.linecorp.armeria.common.stream.StreamMessageDuplicatorTest':
+                            if (td.name.contains('abort')) {
+                                lines.removeIf {
+                                    it.contains('com.linecorp.armeria.common.stream.AbortedStreamException')
+                                }
+                            }
+                            break
+                        case 'com.linecorp.armeria.server.AnnotatedServiceTest':
+                            lines.removeIf { it.contains('For input string: "fourty-two"') }
                             break
                         case 'com.linecorp.armeria.server.zookeeper.ZooKeeperRegistrationTest':
                             lines.removeIf { it.contains('ServerCnxn$EndOfStreamException') }
