@@ -25,15 +25,18 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 /**
- * The result returned by {@link PathMapping#apply(String, String)}.
+ * The result returned by {@link PathMapping#apply(PathMappingContext)}.
  */
 public final class PathMappingResult {
 
-    private static final PathMappingResult EMPTY = new PathMappingResult(null, null, null);
+    static final int LOWEST_SCORE = Integer.MIN_VALUE;
+    static final int HIGHEST_SCORE = Integer.MAX_VALUE;
+
+    private static final PathMappingResult EMPTY = new PathMappingResult(null, null, null, LOWEST_SCORE);
 
     /**
      * The {@link PathMappingResult} whose {@link #isPresent()} returns {@code false}. It is returned by
-     * {@link PathMapping#apply(String, String)} when the specified path did not match.
+     * {@link PathMapping#apply(PathMappingContext)} when the specified path did not match.
      */
     public static PathMappingResult empty() {
         return EMPTY;
@@ -50,23 +53,35 @@ public final class PathMappingResult {
      * Creates a new instance with the specified {@code path}, {@code query} and the extracted path parameters.
      */
     public static PathMappingResult of(String path, @Nullable String query, Map<String, String> pathParams) {
+        return of(path, query, pathParams, LOWEST_SCORE);
+    }
+
+    /**
+     * Creates a new instance with the specified {@code path}, {@code query}, the extracted path parameters
+     * and the score.
+     */
+    public static PathMappingResult of(String path, @Nullable String query,
+                                       Map<String, String> pathParams, int score) {
         requireNonNull(path, "path");
         requireNonNull(pathParams, "pathParams");
-        return new PathMappingResult(path, query, pathParams);
+        return new PathMappingResult(path, query, pathParams, score);
     }
 
     private final String path;
     private final String query;
     private final Map<String, String> pathParams;
 
+    private int score;
+
     private PathMappingResult(@Nullable String path, @Nullable String query,
-                              @Nullable Map<String, String> pathParams) {
+                              @Nullable Map<String, String> pathParams, int score) {
         assert path == null && query == null && pathParams == null ||
                path != null && pathParams != null;
 
         this.path = path;
         this.query = query;
         this.pathParams = pathParams != null ? ImmutableMap.copyOf(pathParams) : null;
+        this.score = score;
     }
 
     /**
@@ -108,6 +123,38 @@ public final class PathMappingResult {
         return pathParams;
     }
 
+    /**
+     * Returns the score of this result.
+     * {@link Integer#MAX_VALUE} is the highest score of the result, and {@link Integer#MIN_VALUE} is the
+     * lowest score of the result.
+     */
+    public int score() {
+        ensurePresence();
+        return score;
+    }
+
+    /**
+     * Returns that whether the score of this result is the highest or not.
+     */
+    public boolean isHighestScore() {
+        return HIGHEST_SCORE == score();
+    }
+
+    /**
+     * Returns that whether the score of this result is the lowest or not.
+     */
+    public boolean isLowestScore() {
+        return LOWEST_SCORE == score();
+    }
+
+    /**
+     * Sets the new score of this result.
+     */
+    public void setScore(int score) {
+        ensurePresence();
+        this.score = score;
+    }
+
     private void ensurePresence() {
         if (!isPresent()) {
             throw new IllegalStateException("mapping unavailable");
@@ -121,6 +168,7 @@ public final class PathMappingResult {
                               .add("path", path)
                               .add("query", query)
                               .add("pathParams", pathParams)
+                              .add("score", score)
                               .toString();
         } else {
             return getClass().getSimpleName() + "{<empty>}";

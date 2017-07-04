@@ -29,7 +29,6 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
@@ -49,6 +48,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final Channel ch;
     private final ServiceConfig cfg;
+    private final PathMappingContext pathMappingContext;
     private final PathMappingResult pathMappingResult;
     private final SSLSession sslSession;
 
@@ -75,16 +75,15 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, PathMappingResult pathMappingResult, Object request,
+            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Object request,
             @Nullable SSLSession sslSession) {
 
-        super(sessionProtocol, method,
-              path,
-              pathMappingResult.query(),
-              request);
+        super(sessionProtocol, pathMappingContext.method(), pathMappingContext.path(),
+              pathMappingResult.query(), request);
 
         this.ch = ch;
         this.cfg = cfg;
+        this.pathMappingContext = pathMappingContext;
         this.pathMappingResult = pathMappingResult;
         this.sslSession = sslSession;
 
@@ -125,6 +124,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public PathMapping pathMapping() {
         return cfg.pathMapping();
+    }
+
+    @Override
+    public PathMappingContext pathMappingContext() {
+        return pathMappingContext;
     }
 
     @Override

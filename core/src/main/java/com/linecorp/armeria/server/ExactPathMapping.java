@@ -19,8 +19,6 @@ package com.linecorp.armeria.server;
 import java.util.Optional;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 
 final class ExactPathMapping extends AbstractPathMapping {
@@ -41,9 +39,9 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
-        return exactPath.equals(path) ? PathMappingResult.of(path, query)
-                                      : PathMappingResult.empty();
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        return exactPath.equals(mappingCtx.path()) ? PathMappingResult.of(mappingCtx.path(), mappingCtx.query())
+                                                   : PathMappingResult.empty();
     }
 
     @Override

@@ -212,7 +212,7 @@ public final class ServerConfig {
                 h.defaultHostname(), "*", sslCtx,
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
-                 .collect(Collectors.toList()));
+                 .collect(Collectors.toList()), h.producibleMediaTypes());
     }
 
     /**

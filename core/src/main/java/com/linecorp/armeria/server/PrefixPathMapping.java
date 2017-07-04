@@ -19,8 +19,6 @@ package com.linecorp.armeria.server;
 import java.util.Optional;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 
 final class PrefixPathMapping extends AbstractPathMapping {
@@ -48,12 +46,14 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final String path = mappingCtx.path();
         if (!path.startsWith(prefix)) {
             return PathMappingResult.empty();
         }
 
-        return PathMappingResult.of(stripPrefix ? path.substring(prefix.length() - 1) : path, query);
+        return PathMappingResult.of(stripPrefix ? path.substring(prefix.length() - 1) : path,
+                                    mappingCtx.query());
     }
 
     @Override

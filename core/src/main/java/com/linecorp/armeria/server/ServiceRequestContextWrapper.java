@@ -55,6 +55,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public PathMappingContext pathMappingContext() {
+        return delegate().pathMappingContext();
+    }
+
+    @Override
     public Map<String, String> pathParams() {
         return delegate().pathParams();
     }

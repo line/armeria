@@ -19,8 +19,6 @@ package com.linecorp.armeria.server;
 import java.util.Optional;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 
 final class CatchAllPathMapping extends AbstractPathMapping {
@@ -33,8 +31,8 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     private CatchAllPathMapping() {}
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
-        return PathMappingResult.of(path, query);
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
     }
 
     @Override
