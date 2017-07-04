@@ -29,9 +29,9 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
@@ -49,6 +49,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final Channel ch;
     private final ServiceConfig cfg;
+    private final PathMappingContext pathMappingContext;
     private final PathMappingResult pathMappingResult;
     private final SSLSession sslSession;
 
@@ -75,16 +76,17 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, PathMappingResult pathMappingResult, Object request,
+            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Object request,
             @Nullable SSLSession sslSession) {
 
-        super(sessionProtocol, method,
-              path,
-              pathMappingResult.query(),
+        super(sessionProtocol,
+              requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
+              requireNonNull(pathMappingResult, "pathMappingResult").query(),
               request);
 
-        this.ch = ch;
-        this.cfg = cfg;
+        this.ch = requireNonNull(ch, "ch");
+        this.cfg = requireNonNull(cfg, "cfg");
+        this.pathMappingContext = pathMappingContext;
         this.pathMappingResult = pathMappingResult;
         this.sslSession = sslSession;
 
@@ -128,6 +130,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
+    public PathMappingContext pathMappingContext() {
+        return pathMappingContext;
+    }
+
+    @Override
     public Map<String, String> pathParams() {
         return pathMappingResult.pathParams();
     }
@@ -149,6 +156,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public String mappedPath() {
         return pathMappingResult.path();
+    }
+
+    @Nullable
+    @Override
+    public MediaType negotiatedProduceType() {
+        return pathMappingResult.negotiatedProduceType();
     }
 
     @Override

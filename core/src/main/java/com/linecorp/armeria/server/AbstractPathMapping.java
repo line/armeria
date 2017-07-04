@@ -20,20 +20,19 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
-import javax.annotation.Nullable;
-
 /**
- * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(String, String)}.
+ * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(PathMappingContext)}.
  */
 public abstract class AbstractPathMapping implements PathMapping {
 
     /**
      * {@inheritDoc} This method performs sanity checks on the specified {@code path} and calls
-     * {@link #doApply(String, String)}.
+     * {@link #doApply(PathMappingContext)}.
      */
     @Override
-    public final PathMappingResult apply(String path, @Nullable String query) {
-        return doApply(ensureAbsolutePath(path, "path"), query);
+    public final PathMappingResult apply(PathMappingContext mappingCtx) {
+        ensureAbsolutePath(mappingCtx.path(), "path");
+        return doApply(mappingCtx);
     }
 
     /**
@@ -53,16 +52,15 @@ public abstract class AbstractPathMapping implements PathMapping {
     }
 
     /**
-     * Invoked by {@link #apply(String, String)} to perform the actual path matching and path parameter
+     * Invoked by {@link #apply(PathMappingContext)} to perform the actual path matching and path parameter
      * extraction.
      *
-     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
-     *              {@code null} if query does not exist.
+     * @param mappingCtx a context to find the {@link Service}
+     *
      * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
      *         {@link PathMappingResult#empty()} if not matches.
      */
-    protected abstract PathMappingResult doApply(String path, @Nullable String query);
+    protected abstract PathMappingResult doApply(PathMappingContext mappingCtx);
 
     @Override
     public String loggerName() {

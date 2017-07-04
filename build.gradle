@@ -2,7 +2,6 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.yaml.snakeyaml.Yaml
 
 import java.time.LocalDateTime
-import java.util.stream.Streams
 
 buildscript {
     repositories {
@@ -48,6 +47,8 @@ ext {
     shadedPackage = 'com.linecorp.armeria.internal.shaded'
     relocations = [
             // "groupId:artifactId", "original package name", "relocated package name"
+            ['com.github.ben-manes.caffeine:caffeine', 'com.github.benmanes.caffeine', "${shadedPackage}.caffeine"],
+            ['io.prometheus:simpleclient_caffeine', 'io.prometheus.client.cache.caffeine', "${shadedPackage}.prometheus_caffeine"],
             ['com.google.guava:guava', 'com.google.common', "${shadedPackage}.guava"],
             ['com.google.guava:guava', 'com.google.thirdparty.publicsuffix', "${shadedPackage}.publicsuffix"],
             ['com.spotify:completable-futures', 'com.spotify.futures', "${shadedPackage}.futures"],
@@ -916,6 +917,7 @@ allprojects {
                 linksOffline url, "${rootProject.projectDir}/site/src/apidocs/package-lists/${name}"
             }
 
+            addOfflineLink 'caffeine', 'http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.5.3/'
             addOfflineLink 'dropwizard-metrics', 'http://metrics.dropwizard.io/3.2.2/apidocs/'
             addOfflineLink 'grpc', 'http://www.grpc.io/grpc-java/javadoc/'
             addOfflineLink 'jackson-databind', 'https://fasterxml.github.io/jackson-databind/javadoc/2.8/'

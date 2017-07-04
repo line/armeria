@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.Optional;
 import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.Predicate;
@@ -25,10 +26,15 @@ import javax.net.ssl.SSLEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.server.PathMappingContext;
+import com.linecorp.armeria.server.ServiceConfig;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
@@ -96,6 +102,14 @@ public final class Flags {
                 }
             });
 
+    private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
+    private static final Optional<String> ROUTE_CACHE_SPEC =
+            caffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
+
+    private static final String DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC = "maximumSize=256";
+    private static final Optional<String> COMPOSITE_SERVICE_CACHE_SPEC =
+            caffeineSpec("compositeServiceCache", DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC);
+
     static {
         if (!Epoll.isAvailable()) {
             final Throwable cause = filterCause(Epoll.unavailabilityCause());
@@ -155,7 +169,7 @@ public final class Flags {
      * Note that this value has effect only if a user did not specify a worker group.
      *
      * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} to override the default value.
+     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
      */
     public static int numCommonWorkers() {
         return NUM_COMMON_WORKERS;
@@ -166,7 +180,8 @@ public final class Flags {
      * threads. Note that this value has effect only if a user did not specify a blocking task executor.
      *
      * <p>The default value of this flag is {@value #DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<integer>} to override the default value.
+     * {@code -Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<integer>} JVM option to override
+     * the default value.
      */
     public static int numCommonBlockingTaskThreads() {
         return NUM_COMMON_BLOCKING_TASK_THREADS;
@@ -177,7 +192,8 @@ public final class Flags {
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>} to override the default value.
+     * {@code -Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>} JVM option to override
+     * the default value.
      */
     public static long defaultConnectTimeoutMillis() {
         return DEFAULT_CONNECT_TIMEOUT_MILLIS;
@@ -188,7 +204,8 @@ public final class Flags {
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} to override the default value.
+     * {@code -Dcom.linecorp.armeria.defaultServerIdleTimeoutMillis=<integer>} JVM option to override
+     * the default value.
      */
     public static long defaultServerIdleTimeoutMillis() {
         return DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS;
@@ -199,7 +216,8 @@ public final class Flags {
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} to override the default value.
+     * {@code -Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>} JVM option to override
+     * the default value.
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
@@ -210,7 +228,7 @@ public final class Flags {
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=true} to enable it.
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2Preface=true} JVM option to enable it.
      */
     public static boolean defaultUseHttp2Preface() {
         return DEFAULT_USE_HTTP2_PREFACE;
@@ -221,7 +239,7 @@ public final class Flags {
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>This flag is enabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=false} to disable it.
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=false} JVM option to disable it.
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
@@ -233,10 +251,53 @@ public final class Flags {
      * {@code defaultBackoffSpec} in the constructor call.
      *
      * <p>The default value of this flag is {@value DEFAULT_DEFAULT_BACKOFF_SPEC}. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultBackoffSpec=<spec>} to override the default value.
+     * {@code -Dcom.linecorp.armeria.defaultBackoffSpec=<spec>} JVM option to override the default value.
      */
     public static String defaultBackoffSpec() {
         return DEFAULT_BACKOFF_SPEC;
+    }
+
+    /**
+     * Returns the value of the {@code routeCache} parameter. It would be used to create a Caffeine
+     * {@link Cache} instance using {@link Caffeine#from(String)} for routing a request. The {@link Cache}
+     * would hold the mappings of {@link PathMappingContext} and the designated {@link ServiceConfig}
+     * for a request to improve server performance.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_ROUTE_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.routeCache=<spec>} JVM option to override the default value.
+     * Also, specify {@code -Dcom.linecorp.armeria.routeCache=off} JVM option to disable it.
+     */
+    public static Optional<String> routeCacheSpec() {
+        return ROUTE_CACHE_SPEC;
+    }
+
+    /**
+     * Returns the value of the {@code compositeServiceCache} parameter. It would be used to create a
+     * Caffeine {@link Cache} instance using {@link Caffeine#from(String)} for routing a request.
+     * The {@link Cache} would hold the mappings of {@link PathMappingContext} and the designated
+     * {@link ServiceConfig} for a request to improve server performance.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.compositeServiceCache=<spec>} JVM option to override the default value.
+     * Also, specify {@code -Dcom.linecorp.armeria.compositeServiceCache=off} JVM option to disable it.
+     */
+    public static Optional<String> compositeServiceCacheSpec() {
+        return COMPOSITE_SERVICE_CACHE_SPEC;
+    }
+
+    private static Optional<String> caffeineSpec(String name, String defaultValue) {
+        final String spec = get(name, defaultValue, value -> {
+            try {
+                if (!"off".equals(value)) {
+                    CaffeineSpec.parse(value);
+                }
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        });
+        return "off".equals(spec) ? Optional.empty()
+                                  : Optional.of(spec);
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {
@@ -277,6 +338,23 @@ public final class Flags {
                 return false;
             }
         }));
+    }
+
+    private static String get(String name, String defaultValue, Predicate<String> validator) {
+        final String fullName = PREFIX + name;
+        final String value = System.getProperty(fullName);
+        if (value == null) {
+            logger.info("{}: {} (default)", fullName, defaultValue);
+            return defaultValue;
+        }
+
+        if (validator.test(value)) {
+            logger.info("{}: {}", fullName, value);
+            return value;
+        }
+
+        logger.info("{}: {} (default instead of: {})", fullName, defaultValue, value);
+        return defaultValue;
     }
 
     private static String getNormalized(String name, String defaultValue, Predicate<String> validator) {

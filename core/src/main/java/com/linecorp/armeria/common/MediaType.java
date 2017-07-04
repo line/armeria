@@ -115,6 +115,7 @@ public final class MediaType {
     private static final String VIDEO_TYPE = "video";
 
     private static final String WILDCARD = "*";
+    private static final String Q = "q";
 
     private static final Map<MediaType, MediaType> KNOWN_TYPES = Maps.newHashMap();
 
@@ -594,9 +595,25 @@ public final class MediaType {
         return withParameter(CHARSET_ATTRIBUTE, charset.name());
     }
 
-    /** Returns true if either the type or subtype is the wildcard. */
+    /**
+     * Returns {@code true} if either the type or subtype is the wildcard.
+     */
     public boolean hasWildcard() {
         return WILDCARD.equals(type) || WILDCARD.equals(subtype);
+    }
+
+    /**
+     * Returns the number of wildcards of this {@link MediaType}.
+     */
+    public int numWildcards() {
+        int numWildcards = 0;
+        if (WILDCARD.equals(type())) {
+            numWildcards++;
+        }
+        if (WILDCARD.equals(subtype())) {
+            numWildcards++;
+        }
+        return numWildcards;
     }
 
     /**
@@ -629,6 +646,53 @@ public final class MediaType {
         return (mediaTypeRange.type.equals(WILDCARD) || mediaTypeRange.type.equals(type)) &&
                (mediaTypeRange.subtype.equals(WILDCARD) || mediaTypeRange.subtype.equals(subtype)) &&
                parameters.entries().containsAll(mediaTypeRange.parameters.entries());
+    }
+
+    /**
+     * Returns {@code true} if this {@link MediaType} belongs to the given {@link MediaType}.
+     * Similar to what {@link MediaType#is(MediaType)} does except that this one compares the parameters
+     * case-insensitively and excludes 'q' parameter.
+     */
+    public boolean belongsTo(MediaType mediaTypeRange) {
+        return (mediaTypeRange.type.equals(WILDCARD) || mediaTypeRange.type.equals(type)) &&
+               (mediaTypeRange.subtype.equals(WILDCARD) || mediaTypeRange.subtype.equals(subtype)) &&
+               containsAllParameters(mediaTypeRange.parameters(), parameters());
+    }
+
+    /**
+     * Returns the quality factor of this {@link MediaType}. If it is not specified,
+     * {@code defaultValueIfNotSpecified} will be returned.
+     */
+    public float qualityFactor(float defaultValueIfNotSpecified) {
+        // Find 'q' or 'Q'.
+        final List<String> qValues = parameters().get(Q);
+        if (qValues == null || qValues.isEmpty()) {
+            // qvalue does not exist.
+            return defaultValueIfNotSpecified;
+        }
+
+        try {
+            // Parse the qvalue. Make sure it's within the range of [0, 1].
+            return Math.max(Math.min(Float.parseFloat(qValues.get(0)), 1.0f), 0.0f);
+        } catch (NumberFormatException e) {
+            // The range with a malformed qvalue gets the lowest possible preference.
+            return 0.0f;
+        }
+    }
+
+    /**
+     * Returns the quality factor of this {@link MediaType}. If it is not specified,
+     * {@code 1.0f} will be returned.
+     */
+    public float qualityFactor() {
+        return qualityFactor(1.0f);
+    }
+
+    /**
+     * Returns a name of this {@link MediaType} only consisting of the type and the sub type.
+     */
+    public String nameWithoutParameters() {
+        return type() + '/' + subtype();
     }
 
     /**
@@ -870,5 +934,60 @@ public final class MediaType {
             escaped.append(ch);
         }
         return escaped.append('"').toString();
+    }
+
+    /**
+     * Returns {@code true} if {@code actualParameters} contains all entries of {@code expectedParameters}.
+     * Note that this method does <b>not</b> require {@code actualParameters} to contain <b>only</b> the
+     * entries of {@code expectedParameters}. i.e. {@code actualParameters} can contain an entry that's
+     * non-existent in {@code expectedParameters}.
+     */
+    private static boolean containsAllParameters(Map<String, List<String>> expectedParameters,
+                                                 Map<String, List<String>> actualParameters) {
+        if (expectedParameters.isEmpty()) {
+            return true;
+        }
+
+        for (Entry<String, List<String>> requiredEntry : expectedParameters.entrySet()) {
+            final String expectedName = requiredEntry.getKey();
+            final List<String> expectedValues = requiredEntry.getValue();
+            if (Q.equals(expectedName)) {
+                continue;
+            }
+
+            final List<String> actualValues = actualParameters.get(expectedName);
+
+            assert !expectedValues.isEmpty();
+            if (actualValues == null || actualValues.isEmpty()) {
+                // Does not contain any required values.
+                return false;
+            }
+
+            if (!containsAllValues(expectedValues, actualValues)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean containsAllValues(List<String> expectedValues, List<String> actualValues) {
+        final int numRequiredValues = expectedValues.size();
+        for (int i = 0; i < numRequiredValues; i++) {
+            if (!containsValue(expectedValues.get(i), actualValues)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean containsValue(String expectedValue, List<String> actualValues) {
+        final int numActualValues = actualValues.size();
+        for (int i = 0; i < numActualValues; i++) {
+            if (Ascii.equalsIgnoreCase(expectedValue, actualValues.get(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

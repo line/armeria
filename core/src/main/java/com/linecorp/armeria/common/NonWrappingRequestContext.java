@@ -59,12 +59,13 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * @param request the request associated with this context
      */
     protected NonWrappingRequestContext(
-            SessionProtocol sessionProtocol, HttpMethod method, String path, String query, Object request) {
-        this.sessionProtocol = sessionProtocol;
-        this.method = method;
-        this.path = path;
+            SessionProtocol sessionProtocol, HttpMethod method, String path, @Nullable String query,
+            Object request) {
+        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
+        this.method = requireNonNull(method, "method");
+        this.path = requireNonNull(path, "path");
         this.query = query;
-        this.request = request;
+        this.request = requireNonNull(request, "request");
     }
 
     @Override

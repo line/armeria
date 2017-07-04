@@ -22,8 +22,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -81,14 +79,14 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
-        final Matcher m = pattern.matcher(path);
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final Matcher m = pattern.matcher(mappingCtx.path());
         if (!m.matches()) {
             return PathMappingResult.empty();
         }
 
         if (numParams == 0) {
-            return PathMappingResult.of(path, query);
+            return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
         }
 
         final ImmutableMap.Builder<String, String> params = ImmutableMap.builder();
@@ -97,7 +95,7 @@ final class GlobPathMapping extends AbstractPathMapping {
             params.put(int2str(i - 1), value);
         }
 
-        return PathMappingResult.of(path, query, params.build());
+        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(), params.build());
     }
 
     @Override

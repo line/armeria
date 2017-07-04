@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 
 /**
- * A value mapped by {@link PathMappings}.
+ * A value mapped by {@link Router}.
  *
  * @param <T> the type of the mapped value
  */
@@ -42,7 +42,7 @@ public final class PathMapped<T> {
     /**
      * Creates a new {@link PathMapped} with the specified {@code mappedPath} and {@code value}.
      *
-     * @param mappingResult the result of {@link PathMapping#apply(String, String)}
+     * @param mappingResult the result of {@link PathMapping#apply(PathMappingContext)}
      * @param value  the value
      */
     static <T> PathMapped<T> of(PathMapping mapping, PathMappingResult mappingResult, T value) {
@@ -72,7 +72,7 @@ public final class PathMapped<T> {
     }
 
     /**
-     * Returns {@code true} if and only if {@link PathMappings} found a matching value.
+     * Returns {@code true} if and only if {@link Router} found a matching value.
      */
     public boolean isPresent() {
         return mapping != null;
