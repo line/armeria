@@ -230,7 +230,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     @Override
     public void onComplete() {
-        if (!cancelTimeout()) {
+        if (!cancelTimeout() && reqCtx.requestTimeoutHandler() == null) {
+            // We have already returned a failed response due to a timeout.
             return;
         }
 
