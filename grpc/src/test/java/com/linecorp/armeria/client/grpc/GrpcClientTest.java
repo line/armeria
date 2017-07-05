@@ -656,12 +656,8 @@ public class GrpcClientTest {
                                           .build();
         Throwable t = catchThrowable(() -> stub.streamingOutputCall(request).next());
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
-        // (anuraag): As GRPC supports handling timeouts in the server or client due to the grpc-timeout
-        // header, it's not guaranteed which is the source of this error.
-        // Until https://github.com/line/armeria/issues/521 a servTODOer side timeout will not have the correct
-        // status so we don't verify it for now.
-        //assertThat(((StatusRuntimeException) t).getStatus().getCode())
-        //.isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
+        assertThat(((StatusRuntimeException) t).getStatus().getCode())
+                .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
     }
 
     @Test(timeout = 10000)
@@ -686,13 +682,10 @@ public class GrpcClientTest {
                         ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(30L));
         stub.streamingOutputCall(request, recorder);
         recorder.awaitCompletion();
-        // TODO(anuraag): As GRPC supports handling timeouts in the server or client due to the grpc-timeout
-        // header, it's not guaranteed which is the source of this error.
-        // Until https://github.com/line/armeria/issues/521 a server side timeout will not have the correct
-        // status so we don't verify it for now.
+
         assertThat(recorder.getError()).isNotNull();
-        //assertThat(Status.fromThrowable(recorder.getError()).getCode())
-        //.isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
+        assertThat(Status.fromThrowable(recorder.getError()).getCode())
+                .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
     }
 
     // NB: It's unclear when anyone would set a negative timeout, and trying to set the negative timeout
