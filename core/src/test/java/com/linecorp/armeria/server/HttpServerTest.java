@@ -733,9 +733,7 @@ public class HttpServerTest {
         clientMaxResponseLength = 0;
         serverRequestTimeoutMillis = 0;
 
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.GET,
-                                                              "/zeroes/" + STREAMING_CONTENT_LENGTH);
-        final HttpResponse res = client().execute(req);
+        final HttpResponse res = client().get("/zeroes/" + STREAMING_CONTENT_LENGTH);
         final AtomicReference<HttpStatus> status = new AtomicReference<>();
 
         final StreamConsumer consumer = new StreamConsumer(GlobalEventExecutor.INSTANCE, slowClient) {
