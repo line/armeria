@@ -96,7 +96,9 @@ public abstract class HttpAuthService extends SimpleDecoratingService<HttpReques
      */
     protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable cause)
             throws Exception {
-        logger.warn("Unexpected exception during authorization:", cause);
+        if (cause != null) {
+            logger.warn("Unexpected exception during authorization.", cause);
+        }
         final DefaultHttpResponse res = new DefaultHttpResponse();
         res.respond(HttpStatus.UNAUTHORIZED);
         return res;
