@@ -19,8 +19,13 @@ package com.linecorp.armeria.client.http;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.net.URI;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
+
+import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -30,6 +35,11 @@ import com.linecorp.armeria.client.DefaultClientBuilderParams;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.NonDecoratingClientFactory;
 import com.linecorp.armeria.client.SessionOptions;
+import com.linecorp.armeria.client.pool.DefaultKeyedChannelPool;
+import com.linecorp.armeria.client.pool.KeyedChannelPool;
+import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
+import com.linecorp.armeria.client.pool.KeyedChannelPoolHandlerAdapter;
+import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.http.HttpRequest;
@@ -37,6 +47,10 @@ import com.linecorp.armeria.common.http.HttpResponse;
 import com.linecorp.armeria.common.http.HttpSessionProtocols;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
+import io.netty.channel.pool.ChannelHealthChecker;
+import io.netty.util.concurrent.Future;
 
 /**
  * A {@link ClientFactory} that creates an HTTP client.
@@ -47,6 +61,16 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
             HttpSessionProtocols.values().stream()
                                 .map(p -> Scheme.of(SerializationFormat.NONE, p))
                                 .collect(toImmutableSet());
+
+    private static final KeyedChannelPoolHandlerAdapter<PoolKey> NOOP_POOL_HANDLER =
+            new KeyedChannelPoolHandlerAdapter<>();
+
+    private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
+            ch -> ch.eventLoop().newSucceededFuture(ch.isActive() && HttpSession.get(ch).isActive());
+
+    private final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> pools = new MapMaker().weakKeys()
+                                                                                            .makeMap();
+    private final HttpClientDelegate clientDelegate;
 
     /**
      * Creates a new instance with the default {@link SessionOptions}.
@@ -78,16 +102,12 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
      */
     public HttpClientFactory(SessionOptions options, boolean useDaemonThreads) {
         super(options, useDaemonThreads);
+        clientDelegate = new HttpClientDelegate(this);
     }
 
     @Override
     public Set<Scheme> supportedSchemes() {
         return SUPPORTED_SCHEMES;
-    }
-
-    @Override
-    protected Bootstrap newBootstrap() {
-        return super.newBootstrap();
     }
 
     @Override
@@ -97,7 +117,7 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
         validateClientType(clientType);
 
         final Client<HttpRequest, HttpResponse> delegate = options.decoration().decorate(
-                HttpRequest.class, HttpResponse.class, new HttpClientDelegate(this));
+                HttpRequest.class, HttpResponse.class, clientDelegate);
 
         if (clientType == Client.class) {
             @SuppressWarnings("unchecked")
@@ -137,5 +157,37 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
                     " (expected: " + HttpClient.class.getSimpleName() + " or " +
                     Client.class.getSimpleName() + ')');
         }
+    }
+
+    @Override
+    public void close() {
+        for (Iterator<KeyedChannelPool<PoolKey>> i = pools.values().iterator(); i.hasNext();) {
+            i.next().close();
+            i.remove();
+        }
+        super.close();
+    }
+
+    KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {
+        KeyedChannelPool<PoolKey> pool = pools.get(eventLoop);
+        if (pool != null) {
+            return pool;
+        }
+
+        return pools.computeIfAbsent(eventLoop, e -> {
+            final Bootstrap bootstrap = newBootstrap();
+            final SessionOptions options = options();
+
+            bootstrap.group(eventLoop);
+
+            Function<PoolKey, Future<Channel>> channelFactory =
+                    new HttpSessionChannelFactory(bootstrap, options);
+
+            final KeyedChannelPoolHandler<PoolKey> handler =
+                    options.poolHandlerDecorator().apply(NOOP_POOL_HANDLER);
+
+            return new DefaultKeyedChannelPool<>(
+                    eventLoop, channelFactory, POOL_HEALTH_CHECKER, handler, true);
+        });
     }
 }
