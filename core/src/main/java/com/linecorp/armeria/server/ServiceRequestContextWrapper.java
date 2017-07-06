@@ -95,6 +95,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
+        delegate().setRequestTimeoutHandler(requestTimeoutHandler);
+    }
+
+    @Override
     public long maxRequestLength() {
         return delegate().maxRequestLength();
     }

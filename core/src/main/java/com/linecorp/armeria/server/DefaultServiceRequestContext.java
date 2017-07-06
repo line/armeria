@@ -58,6 +58,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private ExecutorService blockingTaskExecutor;
 
     private long requestTimeoutMillis;
+    @Nullable
+    private Runnable requestTimeoutHandler;
     private long maxRequestLength;
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
 
@@ -192,6 +194,16 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public void setRequestTimeout(Duration requestTimeout) {
         setRequestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
+    }
+
+    @Nullable
+    public Runnable requestTimeoutHandler() {
+        return requestTimeoutHandler;
+    }
+
+    @Override
+    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
+        this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
     }
 
     @Override

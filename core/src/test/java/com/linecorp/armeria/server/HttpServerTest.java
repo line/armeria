@@ -161,6 +161,17 @@ public class HttpServerTest {
                 }
             });
 
+            sb.service("/delay-custom/{delay}", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+                    ctx.setRequestTimeoutHandler(
+                            () -> res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "timed out"));
+                    final long delayMillis = Long.parseLong(ctx.pathParam("delay"));
+                    ctx.eventLoop().schedule(() -> res.respond(HttpStatus.OK),
+                                             delayMillis, TimeUnit.MILLISECONDS);
+                }
+            });
+
             sb.service("/informed_delay/{delay}", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
@@ -445,6 +456,16 @@ public class HttpServerTest {
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
         assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
         assertThat(requestLogs.take().statusCode(), is(503));
+    }
+
+    @Test(timeout = 10000)
+    public void testTimeout_customHandler() throws Exception {
+        serverRequestTimeoutMillis = 100L;
+        final AggregatedHttpMessage res = client().get("/delay-custom/2000").aggregate().get();
+        assertThat(res.headers().status(), is(HttpStatus.OK));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.content().toStringUtf8(), is("timed out"));
+        assertThat(requestLogs.take().statusCode(), is(200));
     }
 
     @Test(timeout = 10000)

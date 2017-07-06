@@ -119,8 +119,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private void onTimeout() {
         if (state != State.DONE) {
             reqCtx.setTimedOut();
-            failAndRespond(RequestTimeoutException.get(),
-                           HttpStatus.SERVICE_UNAVAILABLE, Http2Error.INTERNAL_ERROR);
+            Runnable requestTimeoutHandler = reqCtx.requestTimeoutHandler();
+            if (requestTimeoutHandler != null) {
+                requestTimeoutHandler.run();
+            } else {
+                failAndRespond(RequestTimeoutException.get(),
+                               HttpStatus.SERVICE_UNAVAILABLE, Http2Error.INTERNAL_ERROR);
+            }
         }
     }
 
@@ -225,7 +230,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     @Override
     public void onComplete() {
-        if (!cancelTimeout()) {
+        if (!cancelTimeout() && reqCtx.requestTimeoutHandler() == null) {
+            // We have already returned a failed response due to a timeout.
             return;
         }
 

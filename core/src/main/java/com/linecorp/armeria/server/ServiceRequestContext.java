@@ -25,6 +25,8 @@ import org.slf4j.Logger;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 
@@ -108,6 +110,22 @@ public interface ServiceRequestContext extends RequestContext {
      * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
      */
     void setRequestTimeout(Duration requestTimeout);
+
+    /**
+     * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
+     * e.g., by calling {@link HttpResponseWriter#respond(int)}. If not set, the response will be closed with
+     * {@link HttpStatus#SERVICE_UNAVAILABLE}.
+     *
+     * <p>For example,
+     * <pre>{@code
+     *   DefaultHttpResponse res = new DefaultHttpResponse();
+     *   ctx.setRequestTimeoutHandler(() -> {
+     *      res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Request timed out.");
+     *   });
+     *   ...
+     * }</pre>
+     */
+    void setRequestTimeoutHandler(Runnable requestTimeoutHandler);
 
     /**
      * Returns the maximum length of the current {@link Request}.
