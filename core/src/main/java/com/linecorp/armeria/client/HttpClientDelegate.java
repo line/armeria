@@ -20,16 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.pool.DefaultKeyedChannelPool;
 import com.linecorp.armeria.client.pool.KeyedChannelPool;
-import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -40,19 +35,12 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpClientDelegate.class);
-
-    private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
-            ch -> ch.eventLoop().newSucceededFuture(ch.isActive() && HttpSession.get(ch).isActive());
-
-    final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> map = new ConcurrentHashMap<>();
 
     private final HttpClientFactory factory;
 
@@ -74,7 +62,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                 ctx.sessionProtocol());
 
         final EventLoop eventLoop = ctx.eventLoop();
-        final Future<Channel> channelFuture = pool(eventLoop).acquire(poolKey);
+        final Future<Channel> channelFuture = factory.pool(eventLoop).acquire(poolKey);
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         if (channelFuture.isDone()) {
@@ -159,32 +147,6 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         return true;
     }
 
-    private KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {
-        KeyedChannelPool<PoolKey> pool = map.get(eventLoop);
-        if (pool != null) {
-            return pool;
-        }
-
-        return map.computeIfAbsent(eventLoop, e -> {
-            Function<PoolKey, Future<Channel>> channelFactory =
-                    new HttpSessionChannelFactory(factory, eventLoop);
-
-            @SuppressWarnings("unchecked")
-            final KeyedChannelPoolHandler<PoolKey> handler =
-                    (KeyedChannelPoolHandler<PoolKey>) factory.connectionPoolListener();
-
-            final KeyedChannelPool<PoolKey> newPool = new DefaultKeyedChannelPool<>(
-                    eventLoop, channelFactory, POOL_HEALTH_CHECKER, handler, true);
-
-            eventLoop.terminationFuture().addListener((FutureListener<Object>) f -> {
-                map.remove(eventLoop);
-                newPool.close();
-            });
-
-            return newPool;
-        });
-    }
-
     void invoke0(Channel channel, ClientRequestContext ctx,
                  HttpRequest req, DecodedHttpResponse res, PoolKey poolKey) {
         final KeyedChannelPool<PoolKey> pool = KeyedChannelPool.findPool(channel);
@@ -230,9 +192,5 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         } catch (Throwable t) {
             logger.warn("Failed to return a Channel to the pool: {}", channel, t);
         }
-    }
-
-    void close() {
-        map.values().forEach(KeyedChannelPool::close);
     }
 }

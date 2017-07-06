@@ -21,16 +21,19 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.google.common.collect.MapMaker;
+
+import com.linecorp.armeria.client.pool.DefaultKeyedChannelPool;
+import com.linecorp.armeria.client.pool.KeyedChannelPool;
 import com.linecorp.armeria.client.pool.KeyedChannelPoolHandler;
 import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.HttpRequest;
@@ -39,7 +42,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.Bootstrap;
@@ -48,8 +50,10 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.concurrent.Future;
 
 /**
  * A {@link ClientFactory} that creates an HTTP client.
@@ -61,6 +65,9 @@ final class HttpClientFactory extends AbstractClientFactory {
                   .map(p -> Scheme.of(SerializationFormat.NONE, p))
                   .collect(toImmutableSet());
 
+    private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
+            ch -> ch.eventLoop().newSucceededFuture(ch.isActive() && HttpSession.get(ch).isActive());
+
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap baseBootstrap;
@@ -69,6 +76,10 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListenerImpl connectionPoolListener;
+
+    private final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> pools = new MapMaker().weakKeys()
+                                                                                            .makeMap();
+    private final HttpClientDelegate clientDelegate;
 
     // FIXME(trustin): Reuse idle connections instead of creating a new connection for every event loop.
     //                 Currently, when a client makes an invocation from a non-I/O thread, it simply chooses
@@ -106,6 +117,8 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.useHttp2Preface = useHttp2Preface;
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.connectionPoolListener = new ConnectionPoolListenerImpl(connectionPoolListener);
+
+        clientDelegate = new HttpClientDelegate(this);
     }
 
     /**
@@ -158,7 +171,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         validateClientType(clientType);
 
         final Client<HttpRequest, HttpResponse> delegate = options.decoration().decorate(
-                HttpRequest.class, HttpResponse.class, new HttpClientDelegate(this));
+                HttpRequest.class, HttpResponse.class, clientDelegate);
 
         if (clientType == Client.class) {
             @SuppressWarnings("unchecked")
@@ -202,16 +215,41 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     @Override
     public void close() {
-        connectionPoolListener.close().join();
+        connectionPoolListener.setClosed();
+
+        for (Iterator<KeyedChannelPool<PoolKey>> i = pools.values().iterator(); i.hasNext();) {
+            i.next().close();
+            i.remove();
+        }
+
         if (shutdownWorkerGroupOnClose) {
             workerGroup.shutdownGracefully().syncUninterruptibly();
         }
     }
 
+
+    KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {
+        KeyedChannelPool<PoolKey> pool = pools.get(eventLoop);
+        if (pool != null) {
+            return pool;
+        }
+
+        return pools.computeIfAbsent(eventLoop, e -> {
+            Function<PoolKey, Future<Channel>> channelFactory =
+                    new HttpSessionChannelFactory(this, eventLoop);
+
+            @SuppressWarnings("unchecked")
+            final KeyedChannelPoolHandler<PoolKey> handler =
+                    (KeyedChannelPoolHandler<PoolKey>) connectionPoolListener();
+
+            return new DefaultKeyedChannelPool<>(
+                    eventLoop, channelFactory, POOL_HEALTH_CHECKER, handler, true);
+        });
+    }
+
     private static final class ConnectionPoolListenerImpl implements KeyedChannelPoolHandler<PoolKey> {
 
         private final KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener;
-        private final Set<Channel> channels = Collections.newSetFromMap(new ConcurrentHashMap<>());
         private volatile boolean closed;
 
         ConnectionPoolListenerImpl(KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
@@ -225,7 +263,6 @@ final class HttpClientFactory extends AbstractClientFactory {
                 return;
             }
 
-            channels.add(ch);
             connectionPoolListener.channelCreated(key, ch);
         }
 
@@ -241,13 +278,11 @@ final class HttpClientFactory extends AbstractClientFactory {
 
         @Override
         public void channelClosed(PoolKey key, Channel ch) throws Exception {
-            channels.remove(ch);
             connectionPoolListener.channelClosed(key, ch);
         }
 
-        CompletableFuture<Void> close() {
+        void setClosed() {
             closed = true;
-            return ChannelUtil.close(channels);
         }
     }
 }
