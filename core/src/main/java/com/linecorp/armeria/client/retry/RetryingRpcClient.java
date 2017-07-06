@@ -23,6 +23,7 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -62,11 +63,12 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     }
 
     @Override
-    public RpcResponse execute(ClientRequestContext ctx, RpcRequest req) throws Exception {
-        DefaultRpcResponse responseFuture = new DefaultRpcResponse();
-        Backoff backoff = newBackoff();
+    protected RpcResponse doExecute(
+            ClientRequestContext ctx, RpcRequest req, Backoff backoff) throws Exception {
+        final DefaultRpcResponse responseFuture = new DefaultRpcResponse();
         retry(1, backoff, ctx, req, () -> {
             try {
+                resetResponseTimeout(ctx);
                 return delegate().execute(ctx, req);
             } catch (Exception e) {
                 return new DefaultRpcResponse(e);
@@ -112,6 +114,12 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 eventLoop.submit(() -> retry(currentAttemptNo + 1, backoff, ctx, req, action,
                                              responseFuture));
             } else {
+                try {
+                    nextDelay = getNextDelay(nextDelay, ctx);
+                } catch (ResponseTimeoutException e) {
+                    responseFuture.completeExceptionally(e);
+                    return;
+                }
                 eventLoop.schedule(
                         () -> retry(currentAttemptNo + 1, backoff, ctx, req, action, responseFuture),
                         nextDelay, TimeUnit.MILLISECONDS);

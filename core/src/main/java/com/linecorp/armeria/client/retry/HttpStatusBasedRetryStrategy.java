@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -59,15 +59,20 @@ final class HttpStatusBasedRetryStrategy implements RetryStrategy<HttpRequest, H
 
     @Override
     public CompletableFuture<Boolean> shouldRetry(HttpRequest request, HttpResponse response) {
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
         response.closeFuture().whenComplete(subscriber);
         response.subscribe(subscriber);
 
-        return future.handle((message, unused) ->
-                                     message != null && retryStatuses.stream().anyMatch(retryStatus -> {
-                                         final HttpStatus resStatus = message.headers().status();
-                                         return resStatus != null && resStatus.code() == retryStatus.code();
-                                     }));
+        return future.handle((headers, unused) -> {
+            if (headers != null) {
+                final HttpStatus resStatus = headers.status();
+                if (resStatus != null) {
+                    return retryStatuses.stream().anyMatch(
+                            retryStatus -> resStatus.code() == retryStatus.code());
+                }
+            }
+            return false;
+        });
     }
 }

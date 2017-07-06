@@ -67,6 +67,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
         resWrapper.closeFuture().whenCompleteAsync((unused, cause) -> {
+            // Ensure that the scheduled timeout is not executed.
+            resWrapper.cancelTimeout();
             if (cause != null) {
                 // We are not closing the connection but just send a RST_STREAM,
                 // so we have to remove the response manually.

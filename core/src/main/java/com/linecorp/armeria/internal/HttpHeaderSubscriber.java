@@ -18,9 +18,6 @@ package com.linecorp.armeria.internal;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
@@ -28,7 +25,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
@@ -43,15 +39,14 @@ import com.linecorp.armeria.common.HttpStatusClass;
 public final class HttpHeaderSubscriber
         implements Subscriber<HttpObject>, BiConsumer<Void, Throwable> {
 
-    private final CompletableFuture<AggregatedHttpMessage> future;
-    private List<HttpHeaders> informationals;
+    private final CompletableFuture<HttpHeaders> future;
     private Subscription subscription;
     private HttpHeaders headers;
 
     /**
      * Create a instance that subscribes until it receives {@link HttpHeaders}.
      */
-    public HttpHeaderSubscriber(CompletableFuture<AggregatedHttpMessage> future) {
+    public HttpHeaderSubscriber(CompletableFuture<HttpHeaders> future) {
         this.future = future;
     }
 
@@ -66,12 +61,7 @@ public final class HttpHeaderSubscriber
         if (o instanceof HttpHeaders) {
             final HttpHeaders headers = (HttpHeaders) o;
             final HttpStatus status = headers.status();
-            if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-                if (informationals == null) {
-                    informationals = new ArrayList<>(2);
-                }
-                informationals.add(headers);
-            } else if (this.headers == null) {
+            if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL && this.headers == null) {
                 this.headers = headers;
                 subscription.cancel();
             }
@@ -86,8 +76,6 @@ public final class HttpHeaderSubscriber
 
     @Override
     public void accept(Void aVoid, Throwable throwable) {
-        future.complete(AggregatedHttpMessage.of(firstNonNull(informationals, Collections.emptyList()),
-                                                 firstNonNull(headers, HttpHeaders.EMPTY_HEADERS),
-                                                 HttpData.EMPTY_DATA, HttpHeaders.EMPTY_HEADERS));
+        future.complete(firstNonNull(headers, HttpHeaders.EMPTY_HEADERS));
     }
 }
