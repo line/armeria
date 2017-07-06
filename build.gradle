@@ -486,15 +486,22 @@ configure(javaProjects) {
         publishing {
             repositories {
                 maven {
-                    if (project.ext.isReleaseVersion()) {
+                    if (project.hasProperty('publish.url')) {
+                        url project.findProperty('publish.url')
+                    } else if (project.ext.isReleaseVersion()) {
                         url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
                     } else {
                         url 'https://oss.sonatype.org/content/repositories/snapshots/'
                     }
 
                     credentials {
-                        username = project.findProperty('ossrhUsername')
-                        password = project.findProperty('ossrhPassword')
+                        String usernameProperty = project.hasProperty('publish.usernameProperty') ?
+                                project.findProperty('publish.usernameProperty') : 'ossrhUsername'
+                        String passwordProperty = project.hasProperty('publish.passwordProperty') ?
+                                project.findProperty('publish.passwordProperty') : 'ossrhPassword'
+
+                        username = project.findProperty(usernameProperty)
+                        password = project.findProperty(passwordProperty)
                     }
                 }
             }
