@@ -94,7 +94,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onStreamHalfClosed(Http2Stream stream) {}
 
     @Override
-    public void onStreamClosed(Http2Stream stream) {}
+    public void onStreamClosed(Http2Stream stream) {
+        final HttpResponseWrapper res = getResponse(streamIdToId(stream.id()), true);
+        if (res != null) {
+            res.close(ClosedSessionException.get());
+        }
+    }
 
     @Override
     public void onStreamRemoved(Http2Stream stream) {}

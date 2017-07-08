@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.http;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Client;
@@ -44,10 +46,10 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
 
     @Override
     public HttpResponse execute(HttpRequest req) {
-        return execute(eventLoop(), req);
+        return execute(null, req);
     }
 
-    private HttpResponse execute(EventLoop eventLoop, HttpRequest req) {
+    private HttpResponse execute(@Nullable EventLoop eventLoop, HttpRequest req) {
         final String path = concatPaths(uri().getPath(), req.path());
         req.path(path);
 
@@ -60,10 +62,10 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
 
     @Override
     public HttpResponse execute(AggregatedHttpMessage aggregatedReq) {
-        return execute(eventLoop(), aggregatedReq);
+        return execute(null, aggregatedReq);
     }
 
-    HttpResponse execute(EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
+    HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
         final HttpHeaders headers = aggregatedReq.headers();
         final DefaultHttpRequest req = new DefaultHttpRequest(headers);
         final HttpData content = aggregatedReq.content();

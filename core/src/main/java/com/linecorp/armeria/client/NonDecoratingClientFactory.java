@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.NativeLibraries;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFactory;
@@ -59,11 +60,7 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
     private final SessionOptions options;
     private final Bootstrap baseBootstrap;
 
-    // FIXME(trustin): Reuse idle connections instead of creating a new connection for every event loop.
-    //                 Currently, when a client makes an invocation from a non-I/O thread, it simply chooses
-    //                 an event loop using eventLoopGroup.next(). This makes the client factory to create as
-    //                 many connections as the number of event loops. We don't really do this when there's an
-    //                 idle connection established already regardless of its event loop.
+    private final EventLoopScheduler eventLoopScheduler;
     private final Supplier<EventLoop> eventLoopSupplier =
             () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
 
@@ -120,6 +117,7 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
 
         this.baseBootstrap = baseBootstrap;
         this.options = options;
+        eventLoopScheduler = new EventLoopScheduler(eventLoopGroup);
     }
 
     private static AddressResolverGroup<InetSocketAddress> addressResolverGroup(
@@ -186,6 +184,11 @@ public abstract class NonDecoratingClientFactory extends AbstractClientFactory {
     @Override
     public final Supplier<EventLoop> eventLoopSupplier() {
         return eventLoopSupplier;
+    }
+
+    @Override
+    public final ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
+        return eventLoopScheduler.acquire(endpoint);
     }
 
     @Override

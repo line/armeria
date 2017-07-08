@@ -18,38 +18,43 @@ package com.linecorp.armeria.client.pool;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetSocketAddress;
-
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * The default key of {@link KeyedChannelPool}. It consists of:
  * <ul>
- *   <li>the server's {@link InetSocketAddress}</li>
+ *   <li>the server's host name</li>
+ *   <li>the server's port number</li>
  *   <li>the server's {@link SessionProtocol}</li>
  * </ul>
  */
 public final class PoolKey {
 
-    private final InetSocketAddress remoteAddress;
+    private final String host;
+    private final int port;
     private final SessionProtocol sessionProtocol;
-    private final String value;
 
     /**
-     * Creates a new key with the specified {@code remoteAddress} and {@code sessionProtocol}.
+     * Creates a new key with the specified {@code host}, {@code port} and {@code sessionProtocol}.
      */
-    public PoolKey(InetSocketAddress remoteAddress, SessionProtocol sessionProtocol) {
-        this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
+    public PoolKey(String host, int port, SessionProtocol sessionProtocol) {
+        this.host = requireNonNull(host, "host");
+        this.port = port;
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
-        value = sessionProtocol.uriText() + "://" + remoteAddress.getHostString() + ':' +
-                remoteAddress.getPort();
     }
 
     /**
-     * Returns the remote address of the server associated with this key.
+     * Returns the host name of the server associated with this key.
      */
-    public InetSocketAddress remoteAddress() {
-        return remoteAddress;
+    public String host() {
+        return host;
+    }
+
+    /**
+     * Returns the port number of the server associated with this key.
+     */
+    public int port() {
+        return port;
     }
 
     /**
@@ -69,17 +74,17 @@ public final class PoolKey {
             return false;
         }
 
-        PoolKey poolKey = (PoolKey) o;
-        return value.equals(poolKey.value);
+        final PoolKey that = (PoolKey) o;
+        return host.equals(that.host) && port == that.port && sessionProtocol == that.sessionProtocol;
     }
 
     @Override
     public int hashCode() {
-        return value.hashCode();
+        return (host.hashCode() * 31 + port) * 31 + sessionProtocol.hashCode();
     }
 
     @Override
     public String toString() {
-        return "PoolKey[" + value + ']';
+        return sessionProtocol.uriText() + "://" + host + ':' + port;
     }
 }
