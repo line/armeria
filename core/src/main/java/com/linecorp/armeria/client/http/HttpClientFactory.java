@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.google.common.collect.MapMaker;
 
@@ -49,7 +50,6 @@ import com.linecorp.armeria.common.http.HttpSessionProtocols;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.concurrent.Future;
 
 /**
@@ -65,8 +65,8 @@ public class HttpClientFactory extends NonDecoratingClientFactory {
     private static final KeyedChannelPoolHandlerAdapter<PoolKey> NOOP_POOL_HANDLER =
             new KeyedChannelPoolHandlerAdapter<>();
 
-    private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
-            ch -> ch.eventLoop().newSucceededFuture(ch.isActive() && HttpSession.get(ch).isActive());
+    private static final Predicate<Channel> POOL_HEALTH_CHECKER =
+            ch -> ch.isActive() && HttpSession.get(ch).isActive();
 
     private final ConcurrentMap<EventLoop, KeyedChannelPool<PoolKey>> pools = new MapMaker().weakKeys()
                                                                                             .makeMap();
