@@ -8,6 +8,7 @@ os:
 branches:
   only:
     - master
+    - '0.46'
 
 notifications:
   email: false
