@@ -18,18 +18,20 @@ package com.linecorp.armeria.client.pool;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Function;
+import java.util.function.Predicate;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
 /**
@@ -48,9 +50,9 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
 
     private final EventLoop eventLoop;
     private final Function<K, Future<Channel>> channelFactory;
-    private final ChannelHealthChecker healthCheck;
+    private final Predicate<Channel> healthChecker;
     private final KeyedChannelPoolHandler<K> channelPoolHandler;
-    private final boolean releaseHealthCheck;
+    private final boolean healthCheckOnRelease;
 
     private final Map<K, Deque<Channel>> pool;
 
@@ -58,32 +60,15 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
      * Creates a new instance.
      */
     public DefaultKeyedChannelPool(EventLoop eventLoop, Function<K, Future<Channel>> channelFactory,
-                                   KeyedChannelPoolHandler<K> channelPoolHandler) {
-        this(eventLoop, channelFactory, ChannelHealthChecker.ACTIVE, channelPoolHandler, true);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public DefaultKeyedChannelPool(EventLoop eventLoop, Function<K, Future<Channel>> channelFactory,
-                                   ChannelHealthChecker healthCheck,
-                                   KeyedChannelPoolHandler<K> channelPoolHandler) {
-        this(eventLoop, channelFactory, healthCheck, channelPoolHandler, true);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public DefaultKeyedChannelPool(EventLoop eventLoop, Function<K, Future<Channel>> channelFactory,
-                                   ChannelHealthChecker healthCheck,
+                                   Predicate<Channel> healthChecker,
                                    KeyedChannelPoolHandler<K> channelPoolHandler,
-                                   boolean releaseHealthCheck) {
+                                   boolean healthCheckOnRelease) {
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.channelFactory = requireNonNull(channelFactory, "channelFactory");
-        this.healthCheck = requireNonNull(healthCheck, "healthCheck");
+        this.healthChecker = requireNonNull(healthChecker, "healthChecker");
         this.channelPoolHandler = new SafeKeyedChannelPoolHandler<>(requireNonNull(channelPoolHandler,
                                                                                    "channelPoolHandler"));
-        this.releaseHealthCheck = releaseHealthCheck;
+        this.healthCheckOnRelease = healthCheckOnRelease;
 
         pool = new ConcurrentHashMap<>();
     }
@@ -108,9 +93,9 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     }
 
     private Future<Channel> acquireHealthyFromPoolOrNew(final K key, final Promise<Channel> promise) {
-        final Deque<Channel> queue = pool.get(key);
-        final Channel ch = queue == null ? null : queue.poll();
+        assert eventLoop.inEventLoop();
 
+        final Channel ch = pollHealthy(key);
         if (ch == null) {
             Future<Channel> f = channelFactory.apply(key);
             if (f.isDone()) {
@@ -118,17 +103,54 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
             } else {
                 f.addListener((Future<Channel> future) -> notifyConnect(key, future, promise));
             }
-            return promise;
-        }
-
-        EventLoop loop = ch.eventLoop();
-        if (loop.inEventLoop()) {
-            doHealthCheck(key, ch, promise);
         } else {
-            loop.execute(() -> doHealthCheck(key, ch, promise));
+            try {
+                ch.attr(KeyedChannelPoolUtil.POOL).set(this);
+                channelPoolHandler.channelAcquired(key, ch);
+                promise.setSuccess(ch);
+            } catch (Throwable cause) {
+                closeAndFail(ch, cause, promise);
+            }
         }
 
         return promise;
+    }
+
+    @Nullable
+    private Channel pollHealthy(K key) {
+        final Deque<Channel> queue = pool.get(key);
+        if (queue == null) {
+            return null;
+        }
+
+        // Find the most recently released channel while cleaning up the unhealthy channels from the both ends.
+        for (;;) {
+            final Channel ch = queue.pollLast();
+            if (ch == null) {
+                return null;
+            }
+
+            if (healthChecker.test(ch)) {
+                removeUnhealthy(queue);
+                return ch;
+            }
+
+            closeChannel(ch);
+        }
+    }
+
+    void removeUnhealthy(Deque<Channel> queue) {
+        if (!queue.isEmpty()) {
+            for (Iterator<Channel> i = queue.iterator(); i.hasNext();) {
+                final Channel ch = i.next();
+                if (healthChecker.test(ch)) {
+                    break;
+                } else {
+                    i.remove();
+                    closeChannel(ch);
+                }
+            }
+        }
     }
 
     private void notifyConnect(K key, Future<Channel> future, Promise<Channel> promise) {
@@ -139,7 +161,18 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
                 Channel channel = future.getNow();
                 channel.attr(KeyedChannelPoolUtil.POOL).set(this);
                 channelPoolHandler.channelCreated(key, channel);
-                channel.closeFuture().addListener(f -> channelPoolHandler.channelClosed(key, channel));
+                channel.closeFuture().addListener(f -> {
+                    channelPoolHandler.channelClosed(key, channel);
+                    final Deque<Channel> queue = pool.get(key);
+                    if (queue != null) {
+                        removeUnhealthy(queue);
+                        // NB: There's no race between pool.remove(), pool.computeIfAbsent() and queue.offer*()
+                        //     because they always run in the same thread.
+                        if (queue.isEmpty()) {
+                            pool.remove(key);
+                        }
+                    }
+                });
                 promise.setSuccess(channel);
             } else {
                 promise.setFailure(future.cause());
@@ -149,42 +182,11 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         }
     }
 
-    private void doHealthCheck(final K key, final Channel ch, final Promise<Channel> promise) {
-        assert ch.eventLoop().inEventLoop();
-
-        Future<Boolean> f = healthCheck.isHealthy(ch);
-        if (f.isDone()) {
-            notifyHealthCheck(key, f, ch, promise);
-        } else {
-            f.addListener((FutureListener<Boolean>) future -> notifyHealthCheck(key, future, ch, promise));
-        }
-    }
-
-    private void notifyHealthCheck(final K key, Future<Boolean> future, Channel ch, Promise<Channel> promise) {
-        assert ch.eventLoop().inEventLoop();
-
-        if (future.isSuccess()) {
-            if (future.getNow() == Boolean.TRUE) {
-                try {
-                    ch.attr(KeyedChannelPoolUtil.POOL).set(this);
-                    channelPoolHandler.channelAcquired(key, ch);
-                    promise.setSuccess(ch);
-                } catch (Throwable cause) {
-                    closeAndFail(ch, cause, promise);
-                }
-            } else {
-                closeChannel(ch);
-                acquireHealthyFromPoolOrNew(key, promise);
-            }
-        } else {
-            closeChannel(ch);
-            acquireHealthyFromPoolOrNew(key, promise);
-        }
-    }
-
     private static void closeChannel(Channel channel) {
         channel.attr(KeyedChannelPoolUtil.POOL).set(null);
-        channel.close();
+        if (channel.isOpen()) {
+            channel.close();
+        }
     }
 
     private static void closeAndFail(Channel channel, Throwable cause, Promise<?> promise) {
@@ -206,9 +208,9 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         try {
             EventLoop loop = channel.eventLoop();
             if (loop.inEventLoop()) {
-                doReleaseChannel(key, channel, promise);
+                doRelease(key, channel, promise);
             } else {
-                loop.execute(() -> doReleaseChannel(key, channel, promise));
+                loop.execute(() -> doRelease(key, channel, promise));
             }
         } catch (Throwable cause) {
             closeAndFail(channel, cause, promise);
@@ -216,16 +218,16 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         return promise;
     }
 
-    private void doReleaseChannel(K key, Channel channel, Promise<Void> promise) {
+    private void doRelease(K key, Channel channel, Promise<Void> promise) {
         assert channel.eventLoop().inEventLoop();
         if (channel.attr(KeyedChannelPoolUtil.POOL).getAndSet(null) != this) {
-            // Better include a stracktrace here as this is an user error.
+            // Better including a stack trace here as this is a user error.
             closeAndFail(channel, new IllegalArgumentException(
                     "Channel " + channel + " was not acquired from this ChannelPool"), promise);
         } else {
             try {
-                if (releaseHealthCheck) {
-                    doHealthCheckOnRelease(key, channel, promise);
+                if (healthCheckOnRelease) {
+                    healthCheckOnRelease(key, channel, promise);
                 } else {
                     releaseAndOffer(key, channel, promise);
                 }
@@ -235,21 +237,13 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
         }
     }
 
-    private void doHealthCheckOnRelease(K key, final Channel channel, final Promise<Void> promise)
+    private void healthCheckOnRelease(K key, final Channel channel, final Promise<Void> promise)
             throws Exception {
-        final Future<Boolean> f = healthCheck.isHealthy(channel);
-        if (f.isDone()) {
-            releaseAndOfferIfHealthy(key, channel, promise, f);
-        } else {
-            f.addListener(future -> releaseAndOfferIfHealthy(key, channel, promise, f));
-        }
-    }
-
-    private void releaseAndOfferIfHealthy(K key, Channel channel, Promise<Void> promise, Future<Boolean> future)
-            throws Exception {
-        if (future.getNow()) { //channel turns out to be healthy, offering and releasing it.
+        if (healthChecker.test(channel)) {
+            // Channel turns out to be healthy, offering and releasing it.
             releaseAndOffer(key, channel, promise);
-        } else { //channel ont healthy, just releasing it.
+        } else {
+            // Channel not healthy, just releasing it.
             channelPoolHandler.channelReleased(key, channel);
             closeAndFail(channel, UNHEALTHY_NON_OFFERED_TO_POOL, promise);
         }
@@ -265,46 +259,30 @@ public class DefaultKeyedChannelPool<K> implements KeyedChannelPool<K> {
     }
 
     /**
-     * Removes a {@link Channel} that matches the specified {@code key} from this pool.
-     *
-     * @return the removed {@link Channel}. {@code null} if there's no matching {@link Channel}.
-     */
-    protected Channel pollChannel(K key) {
-        final Deque<Channel> queue = pool.get(key);
-        final Channel ch;
-        if (queue == null) {
-            ch = null;
-        } else {
-            ch = queue.poll();
-            if (queue.isEmpty()) {
-                pool.remove(key);
-            }
-        }
-        return ch;
-    }
-
-    /**
      * Adds a {@link Channel} to this pool.
      *
      * @return whether adding the {@link Channel} has succeeded or not
      */
     protected boolean offerChannel(K key, Channel channel) {
-        return pool.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>()).offer(channel);
+        return pool.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>()).offerLast(channel);
     }
 
     @Override
     public void close() {
-        pool.forEach((k, v) -> {
+        for (Iterator<Deque<Channel>> i = pool.values().iterator(); i.hasNext();) {
+            final Deque<Channel> queue = i.next();
+            i.remove();
+
             for (;;) {
-                Channel channel = pollChannel(k);
-                if (channel == null) {
+                final Channel ch = queue.pollFirst();
+                if (ch == null) {
                     break;
                 }
 
-                if (channel.isOpen()) {
-                    channel.close();
+                if (ch.isOpen()) {
+                    ch.close();
                 }
             }
-        });
+        }
     }
 }
