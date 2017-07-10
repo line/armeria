@@ -116,14 +116,14 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                            if (cause != null) {
                                                if (!retryStrategy().shouldRetry(
                                                        rootReqDuplicator.duplicateStream(), cause)) {
-                                                   rootReqDuplicator.close();
                                                    rootResponse.close(cause);
+                                                   rootReqDuplicator.close();
                                                    return;
                                                }
                                                exception = cause;
                                            } else {
-                                               rootReqDuplicator.close();
                                                rootResponse.respond(aRes);
+                                               rootReqDuplicator.close();
                                                return;
                                            }
                                            retry0(currentAttemptNo, backoff, ctx, rootReqDuplicator, action,
@@ -148,7 +148,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                 final Long later = headers.getTimeMillis(HttpHeaderNames.RETRY_AFTER);
                 millisAfter = later - System.currentTimeMillis();
             } catch (Exception ignored) {
-                logger.debug("The retryAfter: {}, from the server is neither an http date nor a second.",
+                logger.debug("The retryAfter: {}, from the server is neither an HTTP date nor a second.",
                              value);
             }
         }
@@ -170,6 +170,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         long nextDelay = backoff.nextDelayMillis(currentAttemptNo);
         if (nextDelay < 0) {
             rootResponse.close(exception);
+            rootReqDuplicator.close();
         } else {
             final EventLoop eventLoop = ctx.contextAwareEventLoop();
             nextDelay = Math.max(nextDelay, millisAfter);
@@ -177,6 +178,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                 nextDelay = getNextDelay(nextDelay, ctx);
             } catch (ResponseTimeoutException e) {
                 rootResponse.close(e);
+                rootReqDuplicator.close();
                 return;
             }
             if (nextDelay <= 0) {
