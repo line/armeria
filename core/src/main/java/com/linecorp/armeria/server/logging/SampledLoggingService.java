@@ -26,20 +26,18 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * Decorates a {@link Service} to log {@link Request}s and {@link Response}s.
- * Same as {@link LoggingService} but can configure what kind of data will be logging.
- *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
+ * @deprecated Use {@link LoggingServiceBuilder}.
  */
+@Deprecated
 public class SampledLoggingService<I extends Request, O extends Response> extends LoggingService<I, O> {
     private final boolean logRequest;
     private final boolean logResponse;
     private final Sampler sampler;
 
     /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
+     * @deprecated Use {@link LoggingServiceBuilder}.
      */
+    @Deprecated
     public static <I extends Request, O extends Response> Function<Service<I, O>, SampledLoggingService<I, O>>
     newDecorator(float logSamplingRate) {
         return newDecorator(true, true, logSamplingRate);
@@ -56,9 +54,9 @@ public class SampledLoggingService<I extends Request, O extends Response> extend
     }
 
     /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}.
+     * @deprecated Use {@link LoggingServiceBuilder}.
      */
+    @Deprecated
     public SampledLoggingService(Service<I, O> delegate, LogLevel level,
                                  boolean logRequest, boolean logResponse, float logSamplingRate) {
         super(delegate, level);

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.Set;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -360,12 +361,34 @@ public interface RequestLog {
     Object rawResponseContent();
 
     /**
-     * Returns the string representation of the {@link Request}.
+     * Returns the string representation of the {@link Request}, with no sanitization of headers or content.
      */
     String toStringRequestOnly();
 
     /**
-     * Returns the string representation of the {@link Response}.
+     * Returns the string representation of the {@link Request}.
+     *
+     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
+     *     {@link Function} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
+     *     {@link Function} is what is actually logged as content.
+     */
+    String toStringRequestOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
+                               Function<Object, Object> contentSanitizer);
+
+    /**
+     * Returns the string representation of the {@link Response}, with no sanitization of headers or content.
      */
     String toStringResponseOnly();
+
+    /**
+     * Returns the string representation of the {@link Response}.
+     *
+     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
+     *     {@link Function} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing response content for logging. The result of the
+     *     {@link Function} is what is actually logged as content.
+     */
+    String toStringResponseOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
+                                Function<Object, Object> contentSanitizer);
 }

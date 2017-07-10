@@ -83,6 +83,11 @@ abstract class Sampler {
      * @param rate minimum sample rate is 0.01, or 1% of traces
      */
     static Sampler create(float rate) {
+        if (rate == 1.0) {
+            return ALWAYS_SAMPLE;
+        } else if (rate == 0.0) {
+            return NEVER_SAMPLE;
+        }
         return CountingSampler.create(rate);
     }
 }
