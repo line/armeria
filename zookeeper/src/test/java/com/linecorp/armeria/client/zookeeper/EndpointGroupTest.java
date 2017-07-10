@@ -18,12 +18,13 @@ package com.linecorp.armeria.client.zookeeper;
 import static com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup.Mode.IN_CHILD_NODES;
 import static com.linecorp.armeria.client.zookeeper.ZooKeeperEndpointGroup.Mode.IN_NODE_VALUE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.fail;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
@@ -54,13 +55,11 @@ import zookeeperjunit.ZooKeeperAssert;
 
 @RunWith(Parameterized.class)
 public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, OptionAssert {
-    protected static final KeeperState[] expectedStates = {
-            KeeperState.Disconnected, KeeperState.Expired,
-            KeeperState.SyncConnected, KeeperState.Disconnected
-    };
+
     @Parameter
     @SuppressWarnings("VisibilityModifier")
     public Mode mode;
+
     private ZooKeeperEndpointGroup endpointGroup;
 
     @Parameters
@@ -111,8 +110,6 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
     public void testUpdateEndpointGroup() throws Throwable {
         Set<Endpoint> expected = ImmutableSet.of(Endpoint.of("127.0.0.1", 8001, 2),
                                                  Endpoint.of("127.0.0.1", 8002, 3));
-        CountDownLatch latch = new CountDownLatch(1);
-        endpointGroup.addListener(l -> latch.countDown());
         switch (mode) {
             case IN_NODE_VALUE:
                 setNodeValue(NodeValueCodec.DEFAULT.encodeAll(expected));
@@ -130,8 +127,9 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
             zk.sync(zNode, (rc, path, ctx) -> {
             }, null);
         }
-        latch.await();
-        assertThat(endpointGroup.endpoints()).hasSameElementsAs(expected);
+
+        final Set<Endpoint> finalExpected = expected;
+        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(finalExpected));
     }
 
     @Test
@@ -148,9 +146,34 @@ public class EndpointGroupTest extends TestBase implements ZooKeeperAssert, Opti
         latch.await();
         //once connected, close the new handler to cause the original handler session expire
         zkHandler2.close();
-        for (KeeperState state : expectedStates) {
-            assertEquals(state, endpointGroup.stateQueue().take());
+
+        // Ensure the state transition went as expected.
+        final List<KeeperState> actualStates = takeAllStates(endpointGroup.stateQueue());
+        int i = 0;
+
+        // Expect the initial disconnection events.
+        int numDisconnected = 0;
+        for (; i < actualStates.size(); i++) {
+            if (actualStates.get(i) != KeeperState.Disconnected) {
+                break;
+            }
+            numDisconnected++;
         }
+        assertThat(numDisconnected).isGreaterThan(0);
+
+        assertThat(actualStates.get(i++)).isEqualTo(KeeperState.Expired);
+        assertThat(actualStates.get(i++)).isEqualTo(KeeperState.SyncConnected);
+
+        // Expect the last disconnection events.
+        numDisconnected = 0;
+        for (; i < actualStates.size(); i++) {
+            if (actualStates.get(i) != KeeperState.Disconnected) {
+                break;
+            }
+            numDisconnected++;
+        }
+        assertThat(numDisconnected).isGreaterThan(0);
+
         testGetEndpointGroup();
     }
 

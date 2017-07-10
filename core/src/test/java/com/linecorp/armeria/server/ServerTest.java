@@ -201,7 +201,7 @@ public class ServerTest {
             }
             long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - connectedNanos, TimeUnit.NANOSECONDS);
-            assertThat(elapsedTimeMillis).isGreaterThanOrEqualTo(idleTimeoutMillis);
+            assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
     }
 
