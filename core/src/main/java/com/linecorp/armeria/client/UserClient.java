@@ -19,12 +19,16 @@ package com.linecorp.armeria.client;
 import java.net.URI;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.http.DefaultHttpHeaders;
 import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.EventLoop;
@@ -95,13 +99,6 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
     }
 
     /**
-     * Retrieves an {@link EventLoop} supplied by the {@link ClientFactory}.
-     */
-    protected final EventLoop eventLoop() {
-        return params.factory().eventLoopSupplier().get();
-    }
-
-    /**
      * Returns the {@link SessionProtocol} of the {@link #delegate()}.
      */
     protected final SessionProtocol sessionProtocol() {
@@ -128,7 +125,7 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      */
     protected final O execute(
             String method, String path, String fragment, I req, Function<Throwable, O> fallback) {
-        return execute(eventLoop(), method, path,  fragment, req, fallback);
+        return execute(null, method, path,  fragment, req, fallback);
     }
 
     /**
@@ -143,11 +140,20 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      */
     protected final O execute(
-            EventLoop eventLoop, String method, String path, String fragment, I req,
+            @Nullable EventLoop eventLoop, String method, String path, String fragment, I req,
             Function<Throwable, O> fallback) {
 
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop, sessionProtocol, endpoint, method, path, fragment, options(), req);
+        final ClientRequestContext ctx;
+        if (eventLoop == null) {
+            final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
+            ctx = new DefaultClientRequestContext(
+                    releasableEventLoop.get(), sessionProtocol, endpoint,
+                    method, path, fragment, options(), req);
+            ctx.log().addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
+        } else {
+            ctx = new DefaultClientRequestContext(
+                    eventLoop, sessionProtocol, endpoint, method, path, fragment, options(), req);
+        }
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             runThreadLocalHeaderManipulator(ctx);

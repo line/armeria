@@ -275,7 +275,19 @@ public final class Endpoint {
         }
 
         final Endpoint that = (Endpoint) obj;
-        return authority().equals(that.authority()) && weight() == that.weight();
+        if (isGroup()) {
+            if (that.isGroup()) {
+                return authority().equals(that.authority());
+            } else {
+                return false;
+            }
+        } else {
+            if (that.isGroup()) {
+                return false;
+            } else {
+                return authority().equals(that.authority()) && weight() == that.weight();
+            }
+        }
     }
 
     @Override

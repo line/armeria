@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINA
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -120,33 +121,40 @@ public class HttpTracingIntegrationTest {
         final long traceId = spans[0].traceId;
         assertThat(spans).allMatch(s -> s.traceId == traceId);
 
+        // Find all spans.
+        final Span clientFooSpan = findSpan(spans, "client/foo");
+        final Span serviceFooSpan = findSpan(spans, "service/foo");
+        final Span clientBarSpan = findSpan(spans, "client/bar");
+        final Span serviceBarSpan = findSpan(spans, "service/bar");
+        final Span clientQuxSpan = findSpan(spans, "client/qux");
+        final Span serviceQuxSpan = findSpan(spans, "service/qux");
+
         // client/foo and service/foo should have no parents.
-        assertThat(spans[0].parentId).isNull();
-        assertThat(spans[1].parentId).isNull();
+        assertThat(clientFooSpan.parentId).isNull();
+        assertThat(serviceFooSpan.parentId).isNull();
 
         // client/foo and service/foo should have the ID values identical with their traceIds.
-        assertThat(spans[0].id).isEqualTo(traceId);
-        assertThat(spans[1].id).isEqualTo(traceId);
+        assertThat(clientFooSpan.id).isEqualTo(traceId);
+        assertThat(serviceFooSpan.id).isEqualTo(traceId);
 
-        // The spans that do no cross the network boundary should have the same ID.
-        for (int i = 0; i < spans.length; i += 2) {
-            assertThat(spans[i].id).isEqualTo(spans[i + 1].id);
-        }
+        // The spans that do not cross the network boundary should have the same ID.
+        assertThat(clientFooSpan.id).isEqualTo(serviceFooSpan.id);
+        assertThat(clientBarSpan.id).isEqualTo(serviceBarSpan.id);
+        assertThat(clientQuxSpan.id).isEqualTo(serviceQuxSpan.id);
 
         // Check the parentIds.
-        for (int i = 2; i < spans.length; i += 2) {
-            final long expectedParentId = spans[i - 2].id;
-            assertThat(spans[i].parentId).isEqualTo(expectedParentId);
-            assertThat(spans[i + 1].parentId).isEqualTo(expectedParentId);
-        }
+        assertThat(clientBarSpan.parentId).isEqualTo(clientFooSpan.id);
+        assertThat(serviceBarSpan.parentId).isEqualTo(clientFooSpan.id);
+        assertThat(clientQuxSpan.parentId).isEqualTo(clientBarSpan.id);
+        assertThat(serviceQuxSpan.parentId).isEqualTo(clientBarSpan.id);
 
         // Check the service names.
-        assertThat(spans[0].annotations).allMatch(a -> "client/foo".equals(a.endpoint.serviceName));
-        assertThat(spans[1].annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
-        assertThat(spans[2].annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
-        assertThat(spans[3].annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
-        assertThat(spans[4].annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
-        assertThat(spans[5].annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
+        assertThat(clientFooSpan.annotations).allMatch(a -> "client/foo".equals(a.endpoint.serviceName));
+        assertThat(serviceFooSpan.annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
+        assertThat(clientBarSpan.annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
+        assertThat(serviceBarSpan.annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
+        assertThat(clientQuxSpan.annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
+        assertThat(serviceQuxSpan.annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
 
         // Check the span names.
         assertThat(spans).allMatch(s -> "hello".equals(s.name));
@@ -160,33 +168,46 @@ public class HttpTracingIntegrationTest {
         final long traceId = spans[0].traceId;
         assertThat(spans).allMatch(s -> s.traceId == traceId);
 
+        // Find all spans.
+        final Span serviceFooSpan = findSpan(spans, "service/foo");
+        final Span clientBarSpan = findSpan(spans, "client/bar");
+        final Span serviceBarSpan = findSpan(spans, "service/bar");
+        final Span clientQuxSpan = findSpan(spans, "client/qux");
+        final Span serviceQuxSpan = findSpan(spans, "service/qux");
+
         // service/foo should have no parent.
-        assertThat(spans[0].parentId).isNull();
+        assertThat(serviceFooSpan.parentId).isNull();
 
         // service/foo should have the ID value identical with its traceId.
-        assertThat(spans[0].id).isEqualTo(traceId);
+        assertThat(serviceFooSpan.id).isEqualTo(traceId);
 
-        // The spans that do no cross the network boundary should have the same ID.
-        for (int i = 1; i < spans.length; i += 2) {
-            assertThat(spans[i].id).isEqualTo(spans[i + 1].id);
-        }
+        // The spans that do not cross the network boundary should have the same ID.
+        assertThat(clientBarSpan.id).isEqualTo(serviceBarSpan.id);
+        assertThat(clientQuxSpan.id).isEqualTo(serviceQuxSpan.id);
 
         // Check the parentIds
-        for (int i = 1; i < spans.length; i += 2) {
-            final long expectedParentId = spans[i - 1].id;
-            assertThat(spans[i].parentId).isEqualTo(expectedParentId);
-            assertThat(spans[i + 1].parentId).isEqualTo(expectedParentId);
-        }
+        assertThat(clientBarSpan.parentId).isEqualTo(serviceFooSpan.id);
+        assertThat(serviceBarSpan.parentId).isEqualTo(serviceFooSpan.id);
+        assertThat(clientQuxSpan.parentId).isEqualTo(serviceBarSpan.id);
+        assertThat(serviceQuxSpan.parentId).isEqualTo(serviceBarSpan.id);
 
         // Check the service names.
-        assertThat(spans[0].annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
-        assertThat(spans[1].annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
-        assertThat(spans[2].annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
-        assertThat(spans[3].annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
-        assertThat(spans[4].annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
+        assertThat(serviceFooSpan.annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
+        assertThat(clientBarSpan.annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
+        assertThat(serviceBarSpan.annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
+        assertThat(clientQuxSpan.annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
+        assertThat(serviceQuxSpan.annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
 
         // Check the span names.
         assertThat(spans).allMatch(s -> "hello".equals(s.name));
+    }
+
+    private static Span findSpan(Span[] spans, String serviceName) {
+        return Arrays.stream(spans)
+                     .filter(s -> s.serviceNames().contains(serviceName))
+                     .findAny()
+                     .orElseThrow(() -> new AssertionError(
+                             "Can't find a Span with service name: " + serviceName));
     }
 
     private static class DelegatingCallback implements AsyncMethodCallback<String> {

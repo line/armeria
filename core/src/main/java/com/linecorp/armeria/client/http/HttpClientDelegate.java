@@ -17,7 +17,6 @@ package com.linecorp.armeria.client.http;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
@@ -59,11 +58,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         autoFillHeaders(ctx, endpoint, req);
         sanitizePath(req);
 
-        final PoolKey poolKey = new PoolKey(
-                InetSocketAddress.createUnresolved(endpoint.host(), endpoint.port()),
-                ctx.sessionProtocol());
-
         final EventLoop eventLoop = ctx.eventLoop();
+        final PoolKey poolKey = new PoolKey(endpoint.host(), endpoint.port(), ctx.sessionProtocol());
         final Future<Channel> channelFuture = factory.pool(eventLoop).acquire(poolKey);
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
