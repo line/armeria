@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import com.google.common.collect.MapMaker;
@@ -50,7 +51,6 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
@@ -65,8 +65,8 @@ final class HttpClientFactory extends AbstractClientFactory {
                   .map(p -> Scheme.of(SerializationFormat.NONE, p))
                   .collect(toImmutableSet());
 
-    private static final ChannelHealthChecker POOL_HEALTH_CHECKER =
-            ch -> ch.eventLoop().newSucceededFuture(ch.isActive() && HttpSession.get(ch).isActive());
+    private static final Predicate<Channel> POOL_HEALTH_CHECKER =
+            ch -> ch.isActive() && HttpSession.get(ch).isActive();
 
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
