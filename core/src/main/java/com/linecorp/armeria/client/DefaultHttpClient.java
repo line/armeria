@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
@@ -37,10 +39,10 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
 
     @Override
     public HttpResponse execute(HttpRequest req) {
-        return execute(eventLoop(), req);
+        return execute(null, req);
     }
 
-    private HttpResponse execute(EventLoop eventLoop, HttpRequest req) {
+    private HttpResponse execute(@Nullable EventLoop eventLoop, HttpRequest req) {
         final String concatPaths = concatPaths(uri().getRawPath(), req.path());
         req.path(concatPaths);
 
@@ -59,10 +61,10 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
 
     @Override
     public HttpResponse execute(AggregatedHttpMessage aggregatedReq) {
-        return execute(eventLoop(), aggregatedReq);
+        return execute(null, aggregatedReq);
     }
 
-    HttpResponse execute(EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
+    HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
         return execute(eventLoop, aggregatedReq.toHttpRequest());
     }
 }
