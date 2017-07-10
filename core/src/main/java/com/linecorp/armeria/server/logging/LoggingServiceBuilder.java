@@ -131,7 +131,7 @@ public class LoggingServiceBuilder {
      */
     public <I extends Request, O extends Response> Function<Service<I, O>, LoggingService<I, O>>
     buildDecorator() {
-        return (delegate) -> new LoggingService<>(
+        return delegate -> new LoggingService<>(
                 delegate,
                 requestLogLevel,
                 successfulResponseLogLevel,
