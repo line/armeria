@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -79,6 +80,13 @@ public interface ClientFactory extends AutoCloseable {
      * {@link ClientFactory}.
      */
     Supplier<EventLoop> eventLoopSupplier();
+
+    /**
+     * Acquires an {@link EventLoop} that is expected to handle a connection to the specified {@link Endpoint}.
+     * The caller must release the returned {@link EventLoop} back by calling {@link ReleasableHolder#release()}
+     * so that {@link ClientFactory} utilizes {@link EventLoop}s efficiently.
+     */
+    ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint);
 
     /**
      * Creates a new client that connects to the specified {@code uri}.

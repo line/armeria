@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
@@ -57,11 +56,8 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
         }
 
-        final PoolKey poolKey = new PoolKey(
-                InetSocketAddress.createUnresolved(endpoint.host(), endpoint.port()),
-                ctx.sessionProtocol());
-
         final EventLoop eventLoop = ctx.eventLoop();
+        final PoolKey poolKey = new PoolKey(endpoint.host(), endpoint.port(), ctx.sessionProtocol());
         final Future<Channel> channelFuture = factory.pool(eventLoop).acquire(poolKey);
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 

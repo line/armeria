@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -93,6 +94,11 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @Override
     public Supplier<EventLoop> eventLoopSupplier() {
         return httpClientFactory.eventLoopSupplier();
+    }
+
+    @Override
+    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
+        return httpClientFactory.acquireEventLoop(endpoint);
     }
 
     @Override

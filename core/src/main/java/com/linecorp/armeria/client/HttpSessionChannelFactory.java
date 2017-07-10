@@ -57,7 +57,7 @@ class HttpSessionChannelFactory implements Function<PoolKey, Future<Channel>> {
 
     @Override
     public Future<Channel> apply(PoolKey key) {
-        final InetSocketAddress remoteAddress = key.remoteAddress();
+        final InetSocketAddress remoteAddress = InetSocketAddress.createUnresolved(key.host(), key.port());
         final SessionProtocol protocol = key.sessionProtocol();
 
         if (SessionProtocolNegotiationCache.isUnsupported(remoteAddress, protocol)) {

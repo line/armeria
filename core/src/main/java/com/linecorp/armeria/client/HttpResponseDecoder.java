@@ -20,6 +20,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,14 +79,17 @@ abstract class HttpResponseDecoder {
         return newRes;
     }
 
+    @Nullable
     final HttpResponseWrapper getResponse(int id) {
         return responses.get(id);
     }
 
+    @Nullable
     final HttpResponseWrapper getResponse(int id, boolean remove) {
         return remove ? removeResponse(id) : getResponse(id);
     }
 
+    @Nullable
     final HttpResponseWrapper removeResponse(int id) {
         return responses.remove(id);
     }

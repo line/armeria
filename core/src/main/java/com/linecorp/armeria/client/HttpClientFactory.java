@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.Bootstrap;
@@ -81,11 +82,7 @@ final class HttpClientFactory extends AbstractClientFactory {
                                                                                             .makeMap();
     private final HttpClientDelegate clientDelegate;
 
-    // FIXME(trustin): Reuse idle connections instead of creating a new connection for every event loop.
-    //                 Currently, when a client makes an invocation from a non-I/O thread, it simply chooses
-    //                 an event loop using eventLoopGroup.next(). This makes the client factory to create as
-    //                 many connections as the number of event loops. We don't really do this when there's an
-    //                 idle connection established already regardless of its event loop.
+    private final EventLoopScheduler eventLoopScheduler;
     private final Supplier<EventLoop> eventLoopSupplier =
             () -> RequestContext.mapCurrent(RequestContext::eventLoop, () -> eventLoopGroup().next());
 
@@ -97,7 +94,6 @@ final class HttpClientFactory extends AbstractClientFactory {
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
             long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
             KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener) {
-
 
         final Bootstrap baseBootstrap = new Bootstrap();
         baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
@@ -119,6 +115,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.connectionPoolListener = new ConnectionPoolListenerImpl(connectionPoolListener);
 
         clientDelegate = new HttpClientDelegate(this);
+        eventLoopScheduler = new EventLoopScheduler(workerGroup);
     }
 
     /**
@@ -162,6 +159,11 @@ final class HttpClientFactory extends AbstractClientFactory {
     @Override
     public Supplier<EventLoop> eventLoopSupplier() {
         return eventLoopSupplier;
+    }
+
+    @Override
+    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
+        return eventLoopScheduler.acquire(endpoint);
     }
 
     @Override

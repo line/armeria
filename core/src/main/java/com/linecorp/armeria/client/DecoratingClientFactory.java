@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -62,6 +63,11 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     @Override
     public Supplier<EventLoop> eventLoopSupplier() {
         return delegate().eventLoopSupplier();
+    }
+
+    @Override
+    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
+        return delegate().acquireEventLoop(endpoint);
     }
 
     @Override

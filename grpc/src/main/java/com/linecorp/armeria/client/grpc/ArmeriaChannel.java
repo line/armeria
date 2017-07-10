@@ -38,6 +38,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 
@@ -47,6 +49,7 @@ import io.grpc.ClientCall;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.MethodDescriptor;
+import io.netty.channel.EventLoop;
 
 /**
  * A {@link Channel} backed by an armeria {@link Client}. Stores the {@link ClientBuilderParams} and other
@@ -137,8 +140,9 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     }
 
     private ClientRequestContext newContext(HttpMethod method, HttpRequest req) {
-        return new DefaultClientRequestContext(
-                factory().eventLoopSupplier().get(),
+        final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint);
+        final ClientRequestContext ctx = new DefaultClientRequestContext(
+                eventLoop.get(),
                 sessionProtocol,
                 endpoint,
                 method,
@@ -147,5 +151,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                 null,
                 options(),
                 req);
+        ctx.log().addListener(log -> eventLoop.release(), RequestLogAvailability.COMPLETE);
+        return ctx;
     }
 }

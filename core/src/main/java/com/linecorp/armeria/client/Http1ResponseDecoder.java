@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.client;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
@@ -53,6 +56,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     /** The request being decoded currently. */
+    @Nullable
     private HttpResponseWrapper res;
     private int resId = 1;
     private State state = State.NEED_HEADERS;
@@ -105,6 +109,9 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if (res != null) {
+            res.close(ClosedSessionException.get());
+        }
         ctx.fireChannelInactive();
     }
 
