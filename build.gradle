@@ -764,6 +764,11 @@ configure(javaProjects) {
                         case 'com.linecorp.armeria.client.zookeeper.EndpointGroupTest':
                             lines.removeIf { it.contains('ServerCnxn$EndOfStreamException') }
                             break
+                        case 'com.linecorp.armeria.server.zookeeper.ZooKeeperRegistrationTest':
+                            lines.removeIf { it.contains('ServerCnxn$EndOfStreamException') }
+                            lines.removeIf { it.contains('KeeperException$ConnectionLossException') }
+                            lines.removeIf { it.contains('ZooKeeperException: Failed to notify ZooKeeper listener') }
+                            break
                     }
 
                     printBuffer = !lines.isEmpty()
