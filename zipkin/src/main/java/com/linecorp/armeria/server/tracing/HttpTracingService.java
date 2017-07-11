@@ -21,11 +21,11 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
+import com.linecorp.armeria.internal.tracing.SpanTags;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -73,13 +73,17 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
         TraceContextOrSamplingFlags contextOrFlags = extractor.extract(req.headers());
         Span span = contextOrFlags.context() != null ? tracer.joinSpan(contextOrFlags.context())
                                                      : tracer.newTrace(contextOrFlags.samplingFlags());
+        // For no-op spans, nothing special to do.
+        if (span.isNoop()) {
+            return delegate().serve(ctx, req);
+        }
 
         final String method = ctx.method().name();
         span.kind(Kind.SERVER).name(method).start();
 
         SpanContextUtil.setupContext(ctx, span, tracer);
 
-        ctx.log().addListener(log -> closeSpan(ctx, span, log),
+        ctx.log().addListener(log -> closeSpan(span, log),
                               RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
@@ -87,36 +91,8 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
         }
     }
 
-    private void closeSpan(ServiceRequestContext ctx, Span span, RequestLog log) {
-        final StringBuilder uriBuilder = new StringBuilder();
-        uriBuilder.append(log.scheme().uriText());
-        uriBuilder.append("://");
-        uriBuilder.append(log.host());
-        uriBuilder.append(ctx.path());
-        if (log.method() != null) {
-            uriBuilder.append('#');
-            uriBuilder.append(log.method());
-        }
-        final Throwable cause = log.responseCause();
-        final String resultText = cause == null ? "success" : "failure";
-
-        span.tag("server.uri", uriBuilder.toString())
-            .tag("server.result", resultText);
-        if (ctx.remoteAddress() != null) {
-            span.tag("server.remote", ctx.remoteAddress().toString());
-        }
-        if (ctx.localAddress() != null) {
-            span.tag("server.local", ctx.localAddress().toString());
-        }
-        if (cause != null) {
-            span.tag("server.cause", cause.toString());
-        }
-
-        final Object requestContent = log.requestContent();
-        if (requestContent instanceof RpcRequest) {
-            span.name(((RpcRequest) requestContent).method());
-        }
-
+    private void closeSpan(Span span, RequestLog log) {
+        SpanTags.addTags(span, log);
         span.finish();
     }
 }

@@ -24,11 +24,11 @@ import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.tracing.SpanContextUtil;
+import com.linecorp.armeria.internal.tracing.SpanTags;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -36,7 +36,6 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.propagation.TraceContext;
-import zipkin.Endpoint;
 
 /**
  * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
@@ -70,38 +69,26 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         Span span = tracer.nextSpan();
+        injector.inject(span.context(), req.headers());
+        // For no-op spans, we only need to inject into headers and don't set any other attributes.
+        if (span.isNoop()) {
+            return delegate().execute(ctx, req);
+        }
 
         final String method = ctx.method().name();
-
-        injector.inject(span.context(), req.headers());
-        span.kind(Kind.CLIENT)
-            .name(method)
-            .remoteEndpoint(Endpoint.builder()
-                                    .serviceName(ctx.endpoint().authority())
-                                    .build())
-            .start();
+        span.kind(Kind.CLIENT).name(method).start();
 
         SpanContextUtil.setupContext(ctx, span, tracer);
 
-        ctx.log().addListener(log -> finishSpan(ctx, span, log), RequestLogAvailability.COMPLETE);
+        ctx.log().addListener(log -> finishSpan(span, log), RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().execute(ctx, req);
         }
     }
 
-    private void finishSpan(ClientRequestContext ctx, Span span, RequestLog log) {
-        final Throwable cause = log.responseCause();
-        final String clientResultText = cause == null ? "success" : "failure";
-        span.tag("client.uri", log.scheme().uriText() + "://" + log.host() + ctx.path() + '#' + log.method())
-            .tag("client.result", clientResultText);
-        if (cause != null) {
-            span.tag("client.cause", cause.toString());
-        }
-        final Object requestContent = log.requestContent();
-        if (requestContent instanceof RpcRequest) {
-            span.name(((RpcRequest) requestContent).method());
-        }
+    private void finishSpan(Span span, RequestLog log) {
+        SpanTags.addTags(span, log);
         span.finish();
     }
 }

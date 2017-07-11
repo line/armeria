@@ -57,8 +57,8 @@ public class HttpTracingServiceTest {
     private static final String TEST_METHOD = "hello";
 
     @Test(timeout = 10000)
-    public void submitsSpan() throws Exception {
-        SpanCollectingReporter reporter = testServiceInvocation();
+    public void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
+        SpanCollectingReporter reporter = testServiceInvocation(1.0f);
 
         // check span name
         Span span = reporter.spans().take();
@@ -82,13 +82,21 @@ public class HttpTracingServiceTest {
         assertThat(serviceNames).containsExactly(TEST_SERVICE, TEST_SERVICE);
     }
 
-    private static SpanCollectingReporter testServiceInvocation() throws Exception {
+    @Test
+    public void shouldNotSubmitSpanWhenRequestIsNotSampled() throws Exception {
+        SpanCollectingReporter reporter = testServiceInvocation(0.0f);
+
+        // don't submit any spans
+        assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
+    }
+
+    private static SpanCollectingReporter testServiceInvocation(float samplingRate) throws Exception {
         SpanCollectingReporter reporter = new SpanCollectingReporter();
 
         Tracing tracing = Tracing.newBuilder()
                                  .localServiceName(TEST_SERVICE)
                                  .reporter(reporter)
-                                 .sampler(Sampler.create(1.0f))
+                                 .sampler(Sampler.create(samplingRate))
                                  .build();
 
         @SuppressWarnings("unchecked")
@@ -110,6 +118,7 @@ public class HttpTracingServiceTest {
         when(ctx.method()).thenReturn(HttpMethod.POST);
         when(ctx.log()).thenReturn(log);
         when(ctx.logBuilder()).thenReturn(log);
+        when(ctx.path()).thenReturn("/");
         ctx.onEnter(isA(Consumer.class));
         ctx.onExit(isA(Consumer.class));
         when(delegate.serve(ctx, req)).thenReturn(res);

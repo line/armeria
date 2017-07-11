@@ -19,6 +19,10 @@ package com.linecorp.armeria.internal.tracing;
 import brave.propagation.Propagation;
 import io.netty.util.AsciiString;
 
+/**
+ * Converter from {@link String} to {@link AsciiString} which is used by Brave to marshall trace information
+ * into Armeria's {@link com.linecorp.armeria.common.HttpHeaders}.
+ */
 public enum AsciiStringKeyFactory implements Propagation.KeyFactory<AsciiString> {
     INSTANCE;
 

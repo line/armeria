@@ -58,8 +58,8 @@ public class HttpTracingClientTest {
     private static final String TEST_SPAN = "hello";
 
     @Test(timeout = 10000)
-    public void submitsSpan() throws Exception {
-        SpanCollectingReporter reporter = testRemoteInvocation();
+    public void shouldSubmitSpanWhenSampled() throws Exception {
+        SpanCollectingReporter reporter = testRemoteInvocationWithSamplingRate(1.0f);
 
         // check span name
         Span span = reporter.spans().take();
@@ -83,14 +83,22 @@ public class HttpTracingClientTest {
         assertThat(serviceNames).containsExactly(TEST_SERVICE, TEST_SERVICE);
     }
 
-    private static SpanCollectingReporter testRemoteInvocation() throws Exception {
+    @Test
+    public void shouldNotSubmitSpanWhenNotSampled() throws Exception {
+        SpanCollectingReporter reporter = testRemoteInvocationWithSamplingRate(0.0f);
+
+        assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
+    }
+
+    private static SpanCollectingReporter testRemoteInvocationWithSamplingRate(
+            float samplingRate) throws Exception {
 
         SpanCollectingReporter reporter = new SpanCollectingReporter();
 
         Tracing tracing = Tracing.newBuilder()
                                .localServiceName(TEST_SERVICE)
                                .reporter(reporter)
-                               .sampler(Sampler.ALWAYS_SAMPLE)
+                                 .sampler(Sampler.create(samplingRate))
                                .build();
 
         // prepare parameters
