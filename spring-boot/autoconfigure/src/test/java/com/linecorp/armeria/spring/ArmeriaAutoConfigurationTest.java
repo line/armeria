@@ -127,7 +127,7 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testHttpServiceRegistrationBean() throws Exception {
-        HttpClient client = Clients.newClient(newUrl("none+h1c"), HttpClient.class);
+        HttpClient client = HttpClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/ok");
 
@@ -138,7 +138,7 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testAnnotatedServiceRegistrationBean() throws Exception {
-        HttpClient client = Clients.newClient(newUrl("none+h1c"), HttpClient.class);
+        HttpClient client = HttpClient.of(newUrl("h1c"));
 
         HttpResponse response = client.get("/annotated/get");
 
@@ -154,7 +154,7 @@ public class ArmeriaAutoConfigurationTest {
 
         assertThat(client.hello("world")).isEqualTo("hello world");
 
-        HttpClient httpClient = Clients.newClient(newUrl("none+h1c"), HttpClient.class);
+        HttpClient httpClient = HttpClient.of(newUrl("h1c"));
         HttpResponse response = httpClient.get("/internal/docs/specification.json");
 
         AggregatedHttpMessage msg = response.aggregate().get();

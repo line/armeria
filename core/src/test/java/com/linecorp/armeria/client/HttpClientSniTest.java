@@ -130,9 +130,7 @@ public class HttpClientSniTest {
     }
 
     private static String get(String fqdn) throws Exception {
-        HttpClient client = Clients.newClient(
-                clientFactory, "none+https://" + fqdn + ':' + httpsPort,
-                HttpClient.class);
+        final HttpClient client = HttpClient.of(clientFactory, "https://" + fqdn + ':' + httpsPort);
 
         AggregatedHttpMessage response = client.get("/").aggregate().get();
 

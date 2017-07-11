@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import java.net.URI;
 import java.nio.charset.Charset;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -29,6 +30,114 @@ import com.linecorp.armeria.common.HttpResponse;
  * An HTTP client.
  */
 public interface HttpClient extends ClientBuilderParams {
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@code uri} using the default
+     * {@link ClientFactory}.
+     *
+     * @param uri the URI of the server endpoint
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static HttpClient of(String uri, ClientOptionValue<?>... options) {
+        return of(ClientFactory.DEFAULT, uri, options);
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@code uri} using the default
+     * {@link ClientFactory}.
+     *
+     * @param uri the URI of the server endpoint
+     * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static HttpClient of(String uri, ClientOptions options) {
+        return of(ClientFactory.DEFAULT, uri, options);
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@code uri} using an alternative
+     * {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param uri the URI of the server endpoint
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static HttpClient of(ClientFactory factory, String uri, ClientOptionValue<?>... options) {
+        return new HttpClientBuilder(uri).factory(factory).options(options).build();
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@code uri} using an alternative
+     * {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param uri the URI of the server endpoint
+     * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static HttpClient of(ClientFactory factory, String uri, ClientOptions options) {
+        return new HttpClientBuilder(uri).factory(factory).options(options).build();
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link URI} using the default
+     * {@link ClientFactory}.
+     *
+     * @param uri the URI of the server endpoint
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static HttpClient of(URI uri, ClientOptionValue<?>... options) {
+        return of(ClientFactory.DEFAULT, uri, options);
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link URI} using the default
+     * {@link ClientFactory}.
+     *
+     * @param uri the URI of the server endpoint
+     * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static HttpClient of(URI uri, ClientOptions options) {
+        return of(ClientFactory.DEFAULT, uri, options);
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link URI} using an alternative
+     * {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param uri the URI of the server endpoint
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static HttpClient of(ClientFactory factory, URI uri, ClientOptionValue<?>... options) {
+        return new HttpClientBuilder(uri).factory(factory).options(options).build();
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link URI} using an alternative
+     * {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param uri the URI of the server endpoint
+     * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
+     */
+    static HttpClient of(ClientFactory factory, URI uri, ClientOptions options) {
+        return new HttpClientBuilder(uri).factory(factory).options(options).build();
+    }
 
     /**
      * Sends the specified HTTP request.

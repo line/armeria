@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.cors;
 
-import static com.linecorp.armeria.common.SerializationFormat.NONE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -23,7 +22,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -76,7 +74,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsPreflight() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, server.uri(NONE, "/"), HttpClient.class);
+        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.OPTIONS, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
@@ -91,7 +89,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsAllowed() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, server.uri(NONE, "/"), HttpClient.class);
+        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")
@@ -104,7 +102,7 @@ public class HttpServerCorsTest {
 
     @Test
     public void testCorsForbidden() throws Exception {
-        HttpClient client = Clients.newClient(clientFactory, server.uri(NONE, "/"), HttpClient.class);
+        HttpClient client = HttpClient.of(clientFactory, server.uri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST, "/cors")
                            .set(HttpHeaderNames.ACCEPT, "utf-8")

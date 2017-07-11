@@ -5,15 +5,13 @@ Calling an HTTP service
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.Clients;
     import com.linecorp.armeria.client.HttpClient;
     import com.linecorp.armeria.common.AggregatedHttpMessage;
     import com.linecorp.armeria.common.HttpHeaderNames;
     import com.linecorp.armeria.common.HttpHeaders;
     import com.linecorp.armeria.common.HttpMethod;
 
-    HttpClient httpClient = Clients.newClient(
-            "none+http://example.com/", HttpClient.class);
+    HttpClient httpClient = HttpClient.of("http://example.com/");
 
     AggregatedHttpMessage textResponse = httpClient.get("/foo/bar.txt").aggregate().join();
 

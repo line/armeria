@@ -21,7 +21,9 @@ import java.net.URI;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
- * methods in {@link Clients} if you do not have many options to override.
+ * methods in {@link Clients} if you do not have many options to override. If you are creating an
+ * {@link HttpClient}, it is recommended to use the {@link HttpClientBuilder} or
+ * factory methods in {@link HttpClient}.
  *
  * <h3>How are decorators and HTTP headers configured?</h3>
  *

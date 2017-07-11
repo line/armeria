@@ -21,7 +21,6 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -87,9 +86,7 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
         private HttpEndpointHealthChecker(ClientFactory clientFactory,
                                           Endpoint endpoint,
                                           String healthCheckPath) {
-            httpClient = Clients.newClient(clientFactory,
-                                           "none+http://" + endpoint.authority(),
-                                           HttpClient.class);
+            httpClient = HttpClient.of(clientFactory, "http://" + endpoint.authority());
             this.healthCheckPath = healthCheckPath;
         }
 
