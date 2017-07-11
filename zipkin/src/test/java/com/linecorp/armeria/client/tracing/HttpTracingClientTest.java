@@ -57,7 +57,7 @@ public class HttpTracingClientTest {
 
     private static final String TEST_SPAN = "hello";
 
-    @Test(timeout = 10000)
+    @Test(timeout = 20000)
     public void shouldSubmitSpanWhenSampled() throws Exception {
         SpanCollectingReporter reporter = testRemoteInvocationWithSamplingRate(1.0f);
 
@@ -96,10 +96,10 @@ public class HttpTracingClientTest {
         SpanCollectingReporter reporter = new SpanCollectingReporter();
 
         Tracing tracing = Tracing.newBuilder()
-                               .localServiceName(TEST_SERVICE)
-                               .reporter(reporter)
+                                 .localServiceName(TEST_SERVICE)
+                                 .reporter(reporter)
                                  .sampler(Sampler.create(samplingRate))
-                               .build();
+                                 .build();
 
         // prepare parameters
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/hello/armeria");
@@ -129,8 +129,6 @@ public class HttpTracingClientTest {
 
         ctx.logBuilder().responseContent(rpcRes, res);
         ctx.logBuilder().endResponse();
-
-        tracing.close();
 
         return reporter;
     }

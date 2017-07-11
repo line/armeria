@@ -56,7 +56,7 @@ public class HttpTracingServiceTest {
 
     private static final String TEST_METHOD = "hello";
 
-    @Test(timeout = 10000)
+    @Test(timeout = 20000)
     public void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
         SpanCollectingReporter reporter = testServiceInvocation(1.0f);
 
@@ -129,8 +129,6 @@ public class HttpTracingServiceTest {
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
         log.responseContent(rpcRes, res);
         log.endResponse();
-
-        tracing.close();
 
         return reporter;
     }
