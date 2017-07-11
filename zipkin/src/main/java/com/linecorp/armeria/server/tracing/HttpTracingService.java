@@ -83,8 +83,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
         SpanContextUtil.setupContext(ctx, span, tracer);
 
-        ctx.log().addListener(log -> closeSpan(span, log),
-                              RequestLogAvailability.COMPLETE);
+        ctx.log().addListener(log -> closeSpan(span, log), RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().serve(ctx, req);
