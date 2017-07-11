@@ -40,9 +40,7 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-// TODO(anuraag): Make final after removing SampledLoggingService, there isn't a good reason to make this
-// extensible.
-public class LoggingService<I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
+public final class LoggingService<I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
 
     @VisibleForTesting
     static final String REQUEST_FORMAT = "Request: {}";
@@ -144,9 +142,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
     /**
      * Logs a stringified request of {@link RequestLog}.
      */
-    // TODO(anuraag): Make private after removing SampledLoggingService, there isn't a good reason to make this
-    // extensible.
-    protected void logRequest(RequestLog log) {
+    private void logRequest(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
         if (requestLogLevel.isEnabled(logger)) {
             requestLogLevel.log(logger, REQUEST_FORMAT,
@@ -157,9 +153,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
     /**
      * Logs a stringified response of {@link RequestLog}.
      */
-    // TODO(anuraag): Make private after removing SampledLoggingService, there isn't a good reason to make this
-    // extensible.
-    protected void logResponse(RequestLog log) {
+    private void logResponse(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
         final LogLevel level =
                 log.responseCause() == null ? successfulResponseLogLevel : failedResponseLogLevel;
