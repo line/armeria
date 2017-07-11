@@ -120,6 +120,9 @@ public class HttpTracingServiceTest {
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
         log.responseContent(rpcRes, res);
         log.endResponse();
+
+        tracing.close();
+
         return reporter;
     }
 }

@@ -36,7 +36,6 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.propagation.TraceContext;
-import io.netty.handler.codec.Headers;
 import zipkin.Endpoint;
 
 /**
@@ -65,7 +64,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         super(delegate);
         this.tracer = tracing.tracer();
         injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
-                          .injector(Headers::set);
+                          .injector(HttpHeaders::set);
     }
 
     @Override

@@ -121,6 +121,9 @@ public class HttpTracingClientTest {
 
         ctx.logBuilder().responseContent(rpcRes, res);
         ctx.logBuilder().endResponse();
+
+        tracing.close();
+
         return reporter;
     }
 }
