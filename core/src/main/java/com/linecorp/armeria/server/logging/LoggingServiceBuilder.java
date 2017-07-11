@@ -40,7 +40,7 @@ public class LoggingServiceBuilder {
 
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
-    private LogLevel failureResponseLogLevel = LogLevel.WARN;
+    private LogLevel failedResponseLogLevel = LogLevel.WARN;
     private Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, Object> requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
@@ -69,8 +69,8 @@ public class LoggingServiceBuilder {
      * Sets the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      * If unset, will use {@link LogLevel#WARN}.
      */
-    public LoggingServiceBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
-        this.failureResponseLogLevel = requireNonNull(failureResponseLogLevel, "failureResponseLogLevel");
+    public LoggingServiceBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
+        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         return this;
     }
 
@@ -128,15 +128,15 @@ public class LoggingServiceBuilder {
     }
 
     /**
-     * Returns a newly-created {@link LoggingService} decorator based on the properties of this builder.
+     * Returns a newly-created {@link LoggingService} decorating {@code delegate} based on the properties of
+     * this builder.
      */
-    public <I extends Request, O extends Response> Function<Service<I, O>, LoggingService<I, O>>
-    buildDecorator() {
-        return delegate -> new LoggingService<>(
+    public <I extends Request, O extends Response> LoggingService<I, O> build(Service<I, O> delegate) {
+        return new LoggingService<>(
                 delegate,
                 requestLogLevel,
                 successfulResponseLogLevel,
-                failureResponseLogLevel,
+                failedResponseLogLevel,
                 requestHeadersSanitizer,
                 requestContentSanitizer,
                 responseHeadersSanitizer,
@@ -144,9 +144,17 @@ public class LoggingServiceBuilder {
                 sampler);
     }
 
+    /**
+     * Returns a newly-created {@link LoggingService} decorator based on the properties of this builder.
+     */
+    public <I extends Request, O extends Response> Function<Service<I, O>, LoggingService<I, O>>
+    newDecorator() {
+        return this::build;
+    }
+
     @Override
     public String toString() {
-        return toString(this, requestLogLevel, successfulResponseLogLevel, failureResponseLogLevel,
+        return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
                         requestHeadersSanitizer, requestContentSanitizer, responseHeadersSanitizer,
                         responseContentSanitizer, sampler);
     }
@@ -164,7 +172,7 @@ public class LoggingServiceBuilder {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                 .add("requestLogLevel", requestLogLevel)
                 .add("successfulResponseLogLevel", successfulResponseLogLevel)
-                .add("failureResponseLogLevel", failureResponseLogLevel)
+                .add("failedResponseLogLevel", failureResponseLogLevel)
                 .add("sampler", sampler);
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);

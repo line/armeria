@@ -51,7 +51,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
 
     /**
      * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s at
-     * {@link LogLevel#INFO}.
+     * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
      *
      * @see LoggingServiceBuilder for more information on the default settings.
      */
@@ -60,8 +60,8 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
         return new LoggingServiceBuilder()
                 .requestLogLevel(LogLevel.INFO)
                 .successfulResponseLogLevel(LogLevel.INFO)
-                .failureResponseLogLevel(LogLevel.INFO)
-                .buildDecorator();
+                .failureResponseLogLevel(LogLevel.WARN)
+                .newDecorator();
     }
 
     /**
@@ -75,7 +75,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
 
     private final LogLevel requestLogLevel;
     private final LogLevel successfulResponseLogLevel;
-    private final LogLevel failureResponseLogLevel;
+    private final LogLevel failedResponseLogLevel;
     private final Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer;
     private final Function<Object, Object> requestContentSanitizer;
     private final Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer;
@@ -114,7 +114,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
             Service<I, O> delegate,
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
-            LogLevel failureResponseLogLevel,
+            LogLevel failedResponseLogLevel,
             Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer,
             Function<Object, Object> requestContentSanitizer,
             Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
@@ -124,7 +124,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         this.successfulResponseLogLevel =
                 requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
-        this.failureResponseLogLevel = requireNonNull(failureResponseLogLevel, "failureResponseLogLevel");
+        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
@@ -162,7 +162,7 @@ public class LoggingService<I extends Request, O extends Response> extends Simpl
     protected void logResponse(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
         final LogLevel level =
-                log.responseCause() == null ? successfulResponseLogLevel : failureResponseLogLevel;
+                log.responseCause() == null ? successfulResponseLogLevel : failedResponseLogLevel;
         if (level.isEnabled(logger)) {
             level.log(logger, RESPONSE_FORMAT,
                       log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer));
