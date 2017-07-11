@@ -26,7 +26,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -43,14 +42,11 @@ public abstract class RetryingClientBuilder<
         T extends RetryingClientBuilder<T, U, I, O>, U extends RetryingClient<I, O>,
         I extends Request, O extends Response> {
 
+    private static final BackoffSpec DEFAULT_BACKOFF_SPEC = BackoffSpec.parse(Flags.defaultBackoffSpec());
+
     final RetryStrategy<I, O> retryStrategy;
-    // TODO(minwoox) remove hardcoded paramters and add them to Flags with a new parser
-    Supplier<? extends Backoff> backoffSupplier = () -> Backoff
-            .exponential(Flags.defaultExponentialBackoffInitialDelayMillis(),
-                         ClientOptions.DEFAULT.defaultResponseTimeoutMillis())
-            .withJitter(0.3)
-            .withMaxAttempts(Flags.defaultBackoffMaxAttempts());
-    int defaultMaxAttempts = Flags.defaultBackoffMaxAttempts();
+    Supplier<? extends Backoff> backoffSupplier = () -> DEFAULT_BACKOFF_SPEC.build();
+    int defaultMaxAttempts = DEFAULT_BACKOFF_SPEC.maxAttempts;
 
     /**
      * Creates a new builder with the specified retry strategy.
@@ -79,8 +75,8 @@ public abstract class RetryingClientBuilder<
     /**
      * Sets the {@code defaultMaxAttempts}. When a client sets the {@link Backoff} and does not invoke the
      * {@link Backoff#withMaxAttempts(int)}, the client could retry infinitely in certain circumstance.
-     * This would prevent that situation. The value will be set by the
-     * {@link Flags#DEFAULT_BACKOFF_MAX_ATTEMPTS}, if the client dose not specify.
+     * This would prevent that situation. The value will be set by the default value in
+     * {@link Flags#DEFAULT_BACKOFF_SPEC}, if the client dose not specify.
      *
      * @return {@link T} to support method chaining.
      */
