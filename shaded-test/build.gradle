@@ -41,12 +41,12 @@ rootProject.ext.publishedJavaProjects.each { testProject ->
         dependsOn shadedTestJarTask
 
         from zipTree(shadedTestJarTask.archivePath)
-        from(testProject.sourceSets.test.output.classesDir) {
+        from(testProject.sourceSets.test.output.classesDirs) {
             // Add the JAR resources excluded in the 'shadedTestJar' task.
             include '**/*.jar'
         }
 
-        into file("${sourceSets.test.output.classesDir.parent}/test-${testProject.name}")
+        into file("${project.buildDir}/classes/test-${testProject.name}")
     }
 
     def shadedTestTask = tasks.create(shadedName(testProject, 'Test'), Test) {
@@ -61,8 +61,8 @@ rootProject.ext.publishedJavaProjects.each { testProject ->
             shouldRunAfter it.tasks.test
         }
 
-        testClassesDir = shadedTestJarExtractTask.destinationDir
-        classpath = files(testClassesDir) + files(cfg.files)
+        testClassesDirs = files(shadedTestJarExtractTask.destinationDir)
+        classpath = testClassesDirs + files(cfg.files)
 
         exclude('**/internal/shaded/**')
 

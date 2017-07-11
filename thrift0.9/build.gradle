@@ -33,8 +33,10 @@ project.ext.thriftPath = "${rootProject.projectDir}/gradle/thrift-0.9/thrift.${o
 tasks.shadedJar.exclude 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*'
 tasks.shadedJar.doLast {
     ant.jar(update: true, destfile: tasks.shadedJar.archivePath) {
-        fileset(dir: "${sourceSets.main.output.classesDir}",
-                includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')
+        sourceSets.main.output.classesDirs.each { classesDir ->
+            fileset(dir: "$classesDir",
+                    includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')
+        }
     }
 }
 
