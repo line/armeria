@@ -32,9 +32,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.github.kristofa.brave.Brave;
-import com.github.kristofa.brave.Sampler;
-
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.tracing.HttpTracingClient;
@@ -48,6 +45,8 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.tracing.HttpTracingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
+import brave.Tracing;
+import brave.sampler.Sampler;
 import zipkin.Span;
 import zipkin.reporter.Reporter;
 
@@ -85,7 +84,7 @@ public class HttpTracingIntegrationTest {
     public void setupClients() {
         fooClient = new ClientBuilder(server.uri(BINARY, "/foo"))
                 .decorator(HttpRequest.class, HttpResponse.class,
-                           HttpTracingClient.newDecorator(newBrave("client/foo")))
+                           HttpTracingClient.newDecorator(newTracing("client/foo")))
                 .build(HelloService.Iface.class);
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
@@ -98,19 +97,22 @@ public class HttpTracingIntegrationTest {
     }
 
     private static HttpTracingService decorate(String name, Service<HttpRequest, HttpResponse> service) {
-        return HttpTracingService.newDecorator(newBrave(name)).apply(service);
+        return HttpTracingService.newDecorator(newTracing(name)).apply(service);
     }
 
     private HelloService.AsyncIface newClient(String path) {
         return new ClientBuilder(server.uri(BINARY, path))
                 .decorator(HttpRequest.class, HttpResponse.class,
-                           HttpTracingClient.newDecorator(newBrave("client" + path)))
+                           HttpTracingClient.newDecorator(newTracing("client" + path)))
                 .build(HelloService.AsyncIface.class);
     }
 
-    private static Brave newBrave(String name) {
-        return new Brave.Builder(name).reporter(spanReporter)
-                                      .traceSampler(Sampler.ALWAYS_SAMPLE).build();
+    private static Tracing newTracing(String name) {
+        return Tracing.newBuilder()
+                      .localServiceName(name)
+                      .reporter(spanReporter)
+                      .sampler(Sampler.ALWAYS_SAMPLE)
+                      .build();
     }
 
     @Test(timeout = 10000)
