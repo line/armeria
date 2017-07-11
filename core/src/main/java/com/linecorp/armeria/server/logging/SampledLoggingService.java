@@ -62,7 +62,7 @@ public class SampledLoggingService<I extends Request, O extends Response> extend
         super(delegate, level);
         this.logRequest = logRequest;
         this.logResponse = logResponse;
-        sampler = CountingSampler.create(logSamplingRate);
+        sampler = Sampler.create(logSamplingRate);
     }
 
     @Override

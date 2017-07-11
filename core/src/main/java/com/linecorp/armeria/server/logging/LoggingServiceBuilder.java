@@ -76,7 +76,8 @@ public class LoggingServiceBuilder {
 
     /**
      * Sets the {@link Function} to use to sanitize request headers before logging. It is common to have the
-     * {@link Function} remove sensitive headers, like {@code Cookie}, before logging.
+     * {@link Function} remove sensitive headers, like {@code Cookie}, before logging. If unset, will use
+     * {@link Function#identity()}.
      */
     public LoggingServiceBuilder requestHeadersSanitizer(
             Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer) {
