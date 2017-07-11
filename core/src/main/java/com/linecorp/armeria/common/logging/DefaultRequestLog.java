@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -622,6 +623,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public String toStringRequestOnly() {
+        return toStringRequestOnly(Function.identity(), Function.identity());
+    }
+
+    @Override
+    public String toStringRequestOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
+                                      Function<Object, Object> contentSanitizer) {
         final int flags = this.flags & 0xFFFF; // Only interested in the bits related with request.
         if (requestStrFlags == flags) {
             return requestStr;
@@ -655,11 +662,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             buf.append(", host=").append(host);
 
             if (isAvailable(flags, REQUEST_HEADERS) && requestHeaders != null) {
-                buf.append(", headers=").append(requestHeaders);
+                buf.append(", headers=").append(headersSanitizer.apply(requestHeaders));
             }
 
             if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
-                buf.append(", content=").append(requestContent);
+                buf.append(", content=").append(contentSanitizer.apply(requestContent));
             }
         }
         buf.append('}');
@@ -672,6 +679,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public String toStringResponseOnly() {
+        return toStringResponseOnly(Function.identity(), Function.identity());
+    }
+
+    @Override
+    public String toStringResponseOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
+                                       Function<Object, Object> contentSanitizer) {
+
         final int flags = this.flags & 0xFFFF0000; // Only interested in the bits related with response.
         if (responseStrFlags == flags) {
             return responseStr;
@@ -698,11 +712,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
 
             if (isAvailable(flags, RESPONSE_HEADERS) && responseHeaders != null) {
-                buf.append(", headers=").append(responseHeaders);
+                buf.append(", headers=").append(headersSanitizer.apply(responseHeaders));
             }
 
             if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
-                buf.append(", content=").append(responseContent);
+                buf.append(", content=").append(contentSanitizer.apply(responseContent));
             }
         }
         buf.append('}');

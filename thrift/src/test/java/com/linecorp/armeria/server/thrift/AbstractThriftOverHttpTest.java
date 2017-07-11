@@ -125,7 +125,7 @@ public abstract class AbstractThriftOverHttpTest {
             sb.service("/large", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete(LARGER_THAN_TLS)));
 
-            sb.decorator(LoggingService::new);
+            sb.decorator(LoggingService.newDecorator());
 
             final Function<Service<HttpRequest, HttpResponse>,
                            Service<HttpRequest, HttpResponse>> logCollectingDecorator =

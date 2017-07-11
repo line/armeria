@@ -22,6 +22,9 @@ import java.util.function.Function;
 
 import org.slf4j.Logger;
 
+import com.google.common.annotations.VisibleForTesting;
+
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
@@ -37,72 +40,126 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public class LoggingService<I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
+public final class LoggingService<I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
 
-    private static final String REQUEST_FORMAT = "Request: {}";
-    private static final String RESPONSE_FORMAT = "Response: {}";
+    @VisibleForTesting
+    static final String REQUEST_FORMAT = "Request: {}";
+    @VisibleForTesting
+    static final String RESPONSE_FORMAT = "Response: {}";
 
     /**
      * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s at
-     * {@link LogLevel#INFO}.
+     * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
+     *
+     * @see LoggingServiceBuilder for more information on the default settings.
      */
     public static <I extends Request, O extends Response>
     Function<Service<I, O>, LoggingService<I, O>> newDecorator() {
-        return LoggingService::new;
+        return new LoggingServiceBuilder()
+                .requestLogLevel(LogLevel.INFO)
+                .successfulResponseLogLevel(LogLevel.INFO)
+                .failureResponseLogLevel(LogLevel.WARN)
+                .newDecorator();
     }
 
     /**
-     * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s.
-     *
-     * @param level the log level
+     * @deprecated Use {@link LoggingServiceBuilder}.
      */
+    @Deprecated
     public static <I extends Request, O extends Response>
     Function<Service<I, O>, LoggingService<I, O>> newDecorator(LogLevel level) {
         return delegate -> new LoggingService<>(delegate, level);
     }
 
-    private final LogLevel level;
+    private final LogLevel requestLogLevel;
+    private final LogLevel successfulResponseLogLevel;
+    private final LogLevel failedResponseLogLevel;
+    private final Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer;
+    private final Function<Object, Object> requestContentSanitizer;
+    private final Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer;
+    private final Function<Object, Object> responseContentSanitizer;
+    private final Sampler sampler;
 
     /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
+     * @deprecated Use {@link LoggingService#newDecorator()}.
      */
+    @Deprecated
     public LoggingService(Service<I, O> delegate) {
         this(delegate, LogLevel.INFO);
     }
 
     /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}.
+     * @deprecated Use {@link LoggingServiceBuilder}.
      */
+    @Deprecated
     public LoggingService(Service<I, O> delegate, LogLevel level) {
-        super(delegate);
-        this.level = requireNonNull(level, "level");
+        this(delegate,
+             level,
+             level,
+             level,
+             Function.identity(),
+             Function.identity(),
+             Function.identity(),
+             Function.identity(),
+             Sampler.ALWAYS_SAMPLE);
+    }
+
+    /**
+     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
+     * {@link LogLevel}s with the specified sanitizers.
+     */
+    LoggingService(
+            Service<I, O> delegate,
+            LogLevel requestLogLevel,
+            LogLevel successfulResponseLogLevel,
+            LogLevel failedResponseLogLevel,
+            Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer,
+            Function<Object, Object> requestContentSanitizer,
+            Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
+            Function<Object, Object> responseContentSanitizer,
+            Sampler sampler) {
+        super(requireNonNull(delegate, "delegate"));
+        this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
+        this.successfulResponseLogLevel =
+                requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
+        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
+        this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
+        this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
+        this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
+        this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "resposneContentSanitizer");
+        this.sampler = requireNonNull(sampler, "sampler");
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        ctx.log().addListener(this::logRequest, RequestLogAvailability.REQUEST_END);
-        ctx.log().addListener(this::logResponse, RequestLogAvailability.COMPLETE);
+        if (sampler.isSampled()) {
+            ctx.log().addListener(this::logRequest, RequestLogAvailability.REQUEST_END);
+            ctx.log().addListener(this::logResponse, RequestLogAvailability.COMPLETE);
+        }
         return delegate().serve(ctx, req);
     }
 
     /**
      * Logs a stringified request of {@link RequestLog}.
      */
-    protected void logRequest(RequestLog log) {
+    private void logRequest(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
-        if (level.isEnabled(logger)) {
-            level.log(logger, REQUEST_FORMAT, log.toStringRequestOnly());
+        if (requestLogLevel.isEnabled(logger)) {
+            requestLogLevel.log(logger, REQUEST_FORMAT,
+                                log.toStringRequestOnly(requestHeadersSanitizer, requestContentSanitizer));
         }
     }
 
     /**
      * Logs a stringified response of {@link RequestLog}.
      */
-    protected void logResponse(RequestLog log) {
+    private void logResponse(RequestLog log) {
         final Logger logger = ((ServiceRequestContext) log.context()).logger();
+        final LogLevel level =
+                log.responseCause() == null ? successfulResponseLogLevel : failedResponseLogLevel;
         if (level.isEnabled(logger)) {
-            level.log(logger, RESPONSE_FORMAT, log.toStringResponseOnly());
+            level.log(logger, RESPONSE_FORMAT,
+                      log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer));
         }
     }
 }

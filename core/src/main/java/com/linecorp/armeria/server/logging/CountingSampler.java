@@ -29,8 +29,6 @@
  */
 package com.linecorp.armeria.server.logging;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.BitSet;
 import java.util.Random;
 
@@ -52,24 +50,9 @@ final class CountingSampler extends Sampler {
     private int counter; // guarded by this
 
     /** Fills a bitset with decisions according to the supplied rate. */
-    private CountingSampler(float rate) {
+    CountingSampler(float rate) {
         int outOf100 = (int) (rate * 100.0f);
         sampleDecisions = randomBitSet(100, outOf100, new Random());
-    }
-
-    /**
-     * @param rate 0 means never sample, 1 means always sample. Otherwise minimum sample rate is 0.01,
-     *             or 1% of traces
-     */
-    public static Sampler create(final float rate) {
-        if (rate == 0) {
-            return NEVER_SAMPLE;
-        }
-        if (rate == 1.0) {
-            return ALWAYS_SAMPLE;
-        }
-        checkArgument(rate >= 0.01f && rate < 1, "rate should be between 0.01 and 1: was %s", rate);
-        return new CountingSampler(rate);
     }
 
     /**

@@ -29,6 +29,8 @@
  */
 package com.linecorp.armeria.server.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * Sampler is responsible for deciding if a particular trace should be "sampled", i.e. whether the
  * overhead of tracing will occur and/or if a trace will be reported to the collection tier.
@@ -80,9 +82,15 @@ abstract class Sampler {
      * <p>The sampler returned is good for low volumes of traffic (<100K requests), as it is precise.
      * If you have high volumes of traffic, consider {@code BoundarySampler}.
      *
-     * @param rate minimum sample rate is 0.01, or 1% of traces
+     * @param rate 0 for no sampling, 1 for full sampling, or in [0.01, 1] for random sampling.
      */
     static Sampler create(float rate) {
-        return CountingSampler.create(rate);
+        if (rate == 1.0) {
+            return ALWAYS_SAMPLE;
+        } else if (rate == 0.0) {
+            return NEVER_SAMPLE;
+        }
+        checkArgument(rate >= 0.01f && rate < 1, "rate should be between 0.01 and 1: was %s", rate);
+        return new CountingSampler(rate);
     }
 }
