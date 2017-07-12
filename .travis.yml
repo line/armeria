@@ -16,7 +16,8 @@ notifications:
 
 cache:
   directories:
-    - $HOME/.gradle
+    - $HOME/.gradle/caches/jars-3
+    - $HOME/.gradle/caches/modules-2
     - $HOME/.jdk
 
 env:
@@ -37,7 +38,6 @@ script:
 
 before_cache:
   - find $HOME/.gradle/caches -name '*.lock' -delete
-  - rm -fr $HOME/.gradle/caches/[0-9]*
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
