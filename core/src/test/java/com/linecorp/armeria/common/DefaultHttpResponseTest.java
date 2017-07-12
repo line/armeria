@@ -32,7 +32,7 @@ import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 public class DefaultHttpResponseTest {
 
@@ -51,7 +51,7 @@ public class DefaultHttpResponseTest {
 
         future.whenComplete((unused, cause) -> {
             callbackThread.set(Thread.currentThread());
-            assertThat(cause).isInstanceOf(CancelledSubscriptionException.class);
+            assertThat(cause).isInstanceOf(AbortedStreamException.class);
         });
 
         res.abort();
@@ -81,7 +81,7 @@ public class DefaultHttpResponseTest {
             await().until(() -> callbackThread.get() != null);
 
             assertThat(callbackThread.get()).isNotSameAs(mainThread);
-            assertThat(callbackCause.get()).isInstanceOf(CancelledSubscriptionException.class);
+            assertThat(callbackCause.get()).isInstanceOf(AbortedStreamException.class);
             assertThat(future).isCompletedExceptionally();
         } finally {
             executor.shutdownNow();

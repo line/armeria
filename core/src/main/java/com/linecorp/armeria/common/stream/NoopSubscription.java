@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,31 +16,17 @@
 
 package com.linecorp.armeria.common.stream;
 
-import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-final class AbortingSubscriber<T> implements Subscriber<T> {
+final class NoopSubscription implements Subscription {
 
-    private static final AbortingSubscriber<Object> INSTANCE = new AbortingSubscriber<>();
+    static final NoopSubscription INSTANCE = new NoopSubscription();
 
-    @SuppressWarnings("unchecked")
-    static <T> AbortingSubscriber<T> get() {
-        return (AbortingSubscriber<T>) INSTANCE;
-    }
-
-    private AbortingSubscriber() {}
+    private NoopSubscription() {}
 
     @Override
-    public void onSubscribe(Subscription s) {
-        s.cancel();
-    }
+    public void request(long n) {}
 
     @Override
-    public void onNext(T o) {}
-
-    @Override
-    public void onError(Throwable cause) {}
-
-    @Override
-    public void onComplete() {}
+    public void cancel() {}
 }

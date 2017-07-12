@@ -22,6 +22,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -34,8 +36,6 @@ import com.google.common.annotations.VisibleForTesting;
  * @param <T> the type of element signaled
  */
 public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
-
-    private static final AbortableSubscriber ABORTED_SUBSCRIBER = new AbortedSubscriber();
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<PublisherBasedStreamMessage, AbortableSubscriber>
@@ -58,7 +58,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     /**
      * Returns the delegate {@link Publisher}.
      */
-    protected Publisher<? extends T> delegate() {
+    protected final Publisher<? extends T> delegate() {
         return publisher;
     }
 
@@ -96,25 +96,50 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     private void subscribe0(Subscriber<? super T> subscriber, Executor executor) {
-        final SubscriberWrapper s = new SubscriberWrapper(this, subscriber, executor);
+        final AbortableSubscriber s = new AbortableSubscriber(this, subscriber, executor);
         if (!subscriberUpdater.compareAndSet(this, null, s)) {
-            if (this.subscriber == ABORTED_SUBSCRIBER) {
-                throw new IllegalStateException("cannot subscribe to an aborted publisher");
-            } else {
-                throw new IllegalStateException(
-                        "subscribed by other subscriber already: " + subscriber);
-            }
+            failLateSubscriber(executor, subscriber, this.subscriber.subscriber);
         }
 
         publisher.subscribe(s);
     }
 
+    private static void failLateSubscriber(@Nullable Executor executor,
+                                           Subscriber<?> lateSubscriber, Subscriber<?> oldSubscriber) {
+        final Throwable cause;
+        if (oldSubscriber instanceof AbortingSubscriber) {
+            cause = AbortedStreamException.get();
+        } else {
+            cause = new IllegalStateException("subscribed by other subscriber already");
+        }
+
+        if (executor != null) {
+            executor.execute(() -> {
+                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+                lateSubscriber.onError(cause);
+            });
+        } else {
+            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+            lateSubscriber.onError(cause);
+        }
+    }
+
     @Override
     public void abort() {
-        final AbortableSubscriber s = subscriberUpdater.getAndSet(this, ABORTED_SUBSCRIBER);
-        if (s != null) {
-            s.abort();
+        final AbortableSubscriber subscriber = this.subscriber;
+        if (subscriber != null) {
+            subscriber.abort();
+            return;
         }
+
+        final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.get(), null);
+        if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
+            this.subscriber.abort();
+            return;
+        }
+
+        abortable.abort();
+        abortable.onSubscribe(NoopSubscription.INSTANCE);
     }
 
     @Override
@@ -122,87 +147,95 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         return closeFuture;
     }
 
-    private interface AbortableSubscriber extends Subscriber<Object> {
-        void abort();
-    }
-
-    private static final class AbortedSubscriber implements AbortableSubscriber {
-        @Override
-        public void abort() {}
-
-        @Override
-        public void onSubscribe(Subscription s) {}
-
-        @Override
-        public void onNext(Object o) {}
-
-        @Override
-        public void onError(Throwable t) {}
-
-        @Override
-        public void onComplete() {}
-    }
-
     @VisibleForTesting
-    static final class SubscriberWrapper implements AbortableSubscriber {
+    static final class AbortableSubscriber implements Subscriber<Object>, Subscription {
         private final PublisherBasedStreamMessage<?> parent;
-        private final Subscriber<Object> subscriber;
         private final Executor executor;
-        private boolean abortPending;
-        private SubscriptionWrapper subscription;
+        private Subscriber<Object> subscriber;
+        private volatile boolean abortPending;
+        private volatile Subscription subscription;
 
         @SuppressWarnings("unchecked")
-        SubscriberWrapper(PublisherBasedStreamMessage<?> parent,
-                          Subscriber<?> subscriber, Executor executor) {
+        AbortableSubscriber(PublisherBasedStreamMessage<?> parent,
+                            Subscriber<?> subscriber, Executor executor) {
             this.parent = parent;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
         }
 
         @Override
-        public void onSubscribe(Subscription s) {
-            final boolean abortPending;
-            final SubscriptionWrapper wrappedSubscription;
-            synchronized (this) {
-                wrappedSubscription = new SubscriptionWrapper(parent, executor, s);
-                subscription = wrappedSubscription;
-                abortPending = this.abortPending;
-            }
+        public void request(long n) {
+            assert subscription != null;
+            subscription.request(n);
+        }
 
-            if (executor == null) {
-                onSubscribe0(wrappedSubscription, abortPending);
-            } else {
-                executor.execute(() -> onSubscribe0(wrappedSubscription, abortPending));
+        @Override
+        public void cancel() {
+            // Don't cancel but just abort if abort is pending.
+            cancelOrAbort(!abortPending);
+        }
+
+        void abort() {
+            abortPending = true;
+            if (subscription != null) {
+                cancelOrAbort(false);
             }
         }
 
-        private void onSubscribe0(SubscriptionWrapper s, boolean abortPending) {
+        private void cancelOrAbort(boolean cancel) {
+            assert subscription != null;
+            final Executor executor = this.executor;
+            if (executor == null) {
+                cancelOrAbort0(cancel);
+            } else {
+                executor.execute(() -> cancelOrAbort0(cancel));
+            }
+        }
+
+        private void cancelOrAbort0(boolean cancel) {
+            final CompletableFuture<Void> closeFuture = parent.closeFuture();
+            if (closeFuture.isDone()) {
+                return;
+            }
+
+            final Subscriber<Object> subscriber = this.subscriber;
+            // Replace the subscriber with a placeholder so that it can be garbage-collected and
+            // we conform to the Reactive Streams specification rule 3.13.
+            if (!(subscriber instanceof AbortingSubscriber)) {
+                this.subscriber = NeverInvokedSubscriber.get();
+            }
+
             try {
-                subscriber.onSubscribe(s);
+                if (!cancel) {
+                    subscriber.onError(AbortedStreamException.get());
+                }
             } finally {
-                if (abortPending) {
-                    s.cancel();
+                try {
+                    subscription.cancel();
+                } finally {
+                    closeFuture.completeExceptionally(
+                            cancel ? CancelledSubscriptionException.get() : AbortedStreamException.get());
                 }
             }
         }
 
         @Override
-        public void abort() {
-            final Subscription subscription;
-            synchronized (this) {
-                subscription = this.subscription;
-                if (subscription == null) {
-                    // onSubscribe() was not invoked by Publisher yet; abort later.
-                    abortPending = true;
-                    return;
-                }
-            }
-
-            final Executor executor = this.executor;
+        public void onSubscribe(Subscription s) {
+            subscription = s;
             if (executor == null) {
-                subscription.cancel();
+                onSubscribe0();
             } else {
-                executor.execute(subscription::cancel);
+                executor.execute(this::onSubscribe0);
+            }
+        }
+
+        private void onSubscribe0() {
+            try {
+                subscriber.onSubscribe(this);
+            } finally {
+                if (abortPending) {
+                    cancelOrAbort(false);
+                }
             }
         }
 
@@ -251,43 +284,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             } finally {
                 parent.closeFuture().complete(null);
             }
-        }
-    }
-
-    @VisibleForTesting
-    static final class SubscriptionWrapper implements Subscription {
-
-        private final PublisherBasedStreamMessage<?> parent;
-        private final Executor executor;
-        private final Subscription subscription;
-
-        SubscriptionWrapper(PublisherBasedStreamMessage<?> parent,
-                            Executor executor, Subscription subscription) {
-            this.parent = parent;
-            this.executor = executor;
-            this.subscription = subscription;
-        }
-
-        @Override
-        public void request(long n) {
-            subscription.request(n);
-        }
-
-        @Override
-        public void cancel() {
-            try {
-                subscription.cancel();
-            } finally {
-                if (executor == null) {
-                    completeCloseFuture();
-                } else {
-                    executor.execute(this::completeCloseFuture);
-                }
-            }
-        }
-
-        private void completeCloseFuture() {
-            parent.closeFuture().completeExceptionally(CancelledSubscriptionException.get());
         }
     }
 }

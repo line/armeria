@@ -9,7 +9,6 @@ include 'logback'
 include 'retrofit2'
 include 'spring-boot:autoconfigure'
 include 'spring-boot:starter'
-include 'testing'
 include 'thrift'
 include 'thrift0.9'
 include 'tomcat'
@@ -20,6 +19,7 @@ include 'zookeeper'
 // Unpublished Java projects
 include 'it'
 include 'shaded-test'
+include 'testing'
 
 // Site generation project
 include 'site'

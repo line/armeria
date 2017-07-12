@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
@@ -271,7 +272,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (response.isOpen()) {
             response.close(cause);
             error = Http2Error.INTERNAL_ERROR;
-        } else if (cause instanceof WriteTimeoutException) {
+        } else if (cause instanceof WriteTimeoutException || cause instanceof AbortedStreamException) {
             error = Http2Error.CANCEL;
         } else {
             Exceptions.logIfUnexpected(logger, ch,

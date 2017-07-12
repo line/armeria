@@ -170,7 +170,8 @@ org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.6' }
 
 org.reactivestreams:
-  reactive-streams: { version: '1.0.0' }
+  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.1-RC1' }
+  reactive-streams-tck: { version: *REACTIVE_STREAMS_VERSION }
 
 org.reflections:
   reflections:
