@@ -25,13 +25,13 @@ com.google.guava:
     - com.google.j2objc:j2objc-annotations
 
 com.puppycrawl.tools:
-  checkstyle: { version: '7.8.1' }
+  checkstyle: { version: '8.0' }
 
 com.ryantenney.metrics:
   metrics-spring: { version: '3.1.3' }
 
 com.spotify:
-  completable-futures: { version: '0.3.0' }
+  completable-futures: { version: '0.3.1' }
 
 com.squareup.retrofit2:
   retrofit: { version: &RETROFIT2_VERSION '2.3.0' }
@@ -39,7 +39,7 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 io.dropwizard.metrics:
-  metrics-core: { version: &DROPWIZARD_VERSION '3.2.2' }
+  metrics-core: { version: &DROPWIZARD_VERSION '3.2.3' }
   metrics-json: { version: *DROPWIZARD_VERSION }
   metrics-jvm: { version: *DROPWIZARD_VERSION }
   metrics-logback: { version: *DROPWIZARD_VERSION }
@@ -62,21 +62,21 @@ io.grpc:
   grpc-testing: { version: *GRPC_VERSION }
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.12.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.13.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.3.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.5.Final' }
 
 io.prometheus:
-  simpleclient_common: { version: 0.0.23 }
+  simpleclient_common: { version: '0.0.24' }
 
 io.zipkin.brave:
   brave: { version: &BRAVE_VERSION '4.5.1' }
 
 it.unimi.dsi:
-  fastutil: { version: '7.2.1' }
+  fastutil: { version: '8.1.0' }
 
 javax.inject:
   javax.inject: { version: '1' }
@@ -88,7 +88,7 @@ junit:
   junit: { version: '4.12' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '1.23.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '1.24.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 org.apache.hbase:
@@ -117,7 +117,7 @@ org.apache.thrift:
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.15' }
+  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.16' }
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
@@ -164,7 +164,7 @@ org.javassist:
   javassist: { version: '3.21.0-GA' }
 
 org.mockito:
-  mockito-core: { version: '2.8.9' }
+  mockito-core: { version: '2.8.47' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.6' }

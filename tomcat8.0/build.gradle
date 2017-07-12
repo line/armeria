@@ -1,7 +1,7 @@
 dependencies {
     // Tomcat
     [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
-        compile "org.apache.tomcat.embed:$it:8.0.44"
+        compile "org.apache.tomcat.embed:$it:8.0.45"
     }
 }
 
