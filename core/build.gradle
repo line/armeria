@@ -37,7 +37,7 @@ task testNg(type: Test,
             group: 'Verification',
             description: 'Runs the TestNG unit tests.') {
     useTestNG()
-    testClassesDir = tasks.test.testClassesDir
+    testClassesDirs = tasks.test.testClassesDirs
     classpath = tasks.test.classpath
     scanForTestClasses = false
 }
