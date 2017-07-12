@@ -16,25 +16,26 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.PARENT_SPAN_ID;
-import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.SAMPLED;
-import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.SPAN_ID;
-import static com.linecorp.armeria.internal.tracing.BraveHttpHeaderNames.TRACE_ID;
-
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
-
-import com.github.kristofa.brave.Brave;
-import com.github.kristofa.brave.IdConversion;
-import com.github.kristofa.brave.SpanId;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
+import com.linecorp.armeria.internal.tracing.SpanContextUtil;
+import com.linecorp.armeria.internal.tracing.SpanTags;
+
+import brave.Span;
+import brave.Span.Kind;
+import brave.Tracer;
+import brave.Tracer.SpanInScope;
+import brave.Tracing;
+import brave.propagation.TraceContext;
 
 /**
  * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
@@ -43,38 +44,51 @@ import com.linecorp.armeria.common.HttpResponse;
  * <p>This decorator puts trace data into HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  */
-public class HttpTracingClient extends AbstractTracingClient<HttpRequest, HttpResponse> {
+public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
 
     /**
-     * Creates a new tracing {@link Client} decorator using the specified {@link Brave} instance.
+     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(Brave brave) {
-        return delegate -> new HttpTracingClient(delegate, brave);
+    public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(Tracing tracing) {
+        return delegate -> new HttpTracingClient(delegate, tracing);
     }
 
-    HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Brave brave) {
-        super(delegate, brave);
+    private final Tracer tracer;
+    private final TraceContext.Injector<HttpHeaders> injector;
+
+    /**
+     * Creates a new instance.
+     */
+    protected HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing) {
+        super(delegate);
+        this.tracer = tracing.tracer();
+        injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
+                          .injector(HttpHeaders::set);
     }
 
     @Override
-    protected void putTraceData(ClientRequestContext ctx, HttpRequest req, @Nullable SpanId spanId) {
-        final HttpHeaders headers;
-        if (ctx.hasAttr(ClientRequestContext.HTTP_HEADERS)) {
-            headers = ctx.attr(ClientRequestContext.HTTP_HEADERS).get();
-        } else {
-            headers = new DefaultHttpHeaders(true);
-            ctx.attr(ClientRequestContext.HTTP_HEADERS).set(headers);
+    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        Span span = tracer.nextSpan();
+        injector.inject(span.context(), req.headers());
+        // For no-op spans, we only need to inject into headers and don't set any other attributes.
+        if (span.isNoop()) {
+            return delegate().execute(ctx, req);
         }
 
-        if (spanId == null) {
-            headers.add(SAMPLED, "0");
-        } else {
-            headers.add(SAMPLED, "1");
-            headers.add(TRACE_ID, IdConversion.convertToString(spanId.traceId));
-            headers.add(SPAN_ID, IdConversion.convertToString(spanId.spanId));
-            if (!spanId.root()) {
-                headers.add(PARENT_SPAN_ID, IdConversion.convertToString(spanId.parentId));
-            }
+        final String method = ctx.method().name();
+        span.kind(Kind.CLIENT).name(method).start();
+
+        SpanContextUtil.setupContext(ctx, span, tracer);
+
+        ctx.log().addListener(log -> finishSpan(span, log), RequestLogAvailability.COMPLETE);
+
+        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
+            return delegate().execute(ctx, req);
         }
+    }
+
+    private void finishSpan(Span span, RequestLog log) {
+        SpanTags.addTags(span, log);
+        span.finish();
     }
 }

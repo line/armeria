@@ -73,8 +73,7 @@ io.prometheus:
   simpleclient_common: { version: 0.0.23 }
 
 io.zipkin.brave:
-  brave-core: { version: &BRAVE_VERSION '4.2.0' }
-  brave-http: { version: *BRAVE_VERSION }
+  brave: { version: &BRAVE_VERSION '4.5.1' }
 
 it.unimi.dsi:
   fastutil: { version: '7.2.1' }
