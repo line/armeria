@@ -27,15 +27,11 @@ import java.util.regex.Pattern;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 
 import okhttp3.Call;
 import okhttp3.Call.Factory;
@@ -86,10 +82,9 @@ final class ArmeriaCallFactory implements Factory {
         return httpClients.computeIfAbsent(authority, key -> {
             final String finalAuthority = isGroup(key) ?
                                           GROUP_PREFIX_MATCHER.matcher(key).replaceFirst("group:") : key;
-            final String uriText = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(sessionProtocol))
-                                         .uriText() + "://" + finalAuthority;
-            return Clients.newClient(clientFactory, uriText, HttpClient.class,
-                                     configurator.apply(uriText, new ClientOptionsBuilder()).build());
+            final String uriText = sessionProtocol + "://" + finalAuthority;
+            return HttpClient.of(
+                    clientFactory, uriText, configurator.apply(uriText, new ClientOptionsBuilder()).build());
         });
     }
 

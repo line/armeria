@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.testing.server.webapp;
 
-import static com.linecorp.armeria.common.SerializationFormat.NONE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
@@ -148,7 +147,7 @@ public abstract class WebAppContainerTest {
         ClientFactory clientFactory = new ClientFactoryBuilder()
                 .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                 .build();
-        HttpClient client = clientFactory.newClient(server().httpsUri(NONE, "/"), HttpClient.class);
+        HttpClient client = HttpClient.of(clientFactory, server().httpsUri("/"));
         AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
         final String actualContent = CR_OR_LF.matcher(response.content().toStringUtf8())
                                              .replaceAll("");

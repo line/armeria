@@ -71,10 +71,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 
-import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.DefaultHttpRequest;
@@ -838,13 +838,12 @@ public class HttpServerTest {
             return client;
         }
 
-        final ClientBuilder builder = new ClientBuilder(
-                "none+" + protocol.uriText() + "://127.0.0.1:" +
+        final HttpClientBuilder builder = new HttpClientBuilder(
+                protocol.uriText() + "://127.0.0.1:" +
                 (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 
         builder.factory(clientFactory);
         builder.decorator(
-                HttpRequest.class, HttpResponse.class,
                 (delegate, ctx, req) -> {
                     ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
                     ctx.setResponseTimeoutMillis(clientResponseTimeoutMillis);
@@ -852,7 +851,7 @@ public class HttpServerTest {
                     return delegate.execute(ctx, req);
                 });
 
-        return client = builder.build(HttpClient.class);
+        return client = builder.build();
     }
 
     private static class CountingService extends AbstractHttpService {

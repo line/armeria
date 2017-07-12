@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -294,8 +293,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testRequestNoBody() throws Exception {
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class);
+        HttpClient client = HttpClient.of(server.uri("/"));
 
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.GET, "/httptestbody")
@@ -309,8 +307,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testRequestWithBody() throws Exception {
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class);
+        HttpClient client = HttpClient.of(server.uri("/"));
 
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST, "/httptestbody")
@@ -325,8 +322,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testNot200() throws Exception {
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class);
+        HttpClient client = HttpClient.of(server.uri("/"));
 
         AggregatedHttpMessage response = client.get("/not200").aggregate().get();
 
@@ -360,9 +356,7 @@ public class HttpClientIntegrationTest {
 
         HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.USER_AGENT, TEST_USER_AGENT_NAME);
         ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
-
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class, options);
+        HttpClient client = HttpClient.of(server.uri("/"), options);
 
         AggregatedHttpMessage response = client.get("/useragent").aggregate().get();
 
@@ -374,9 +368,7 @@ public class HttpClientIntegrationTest {
 
         HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.USER_AGENT, TEST_USER_AGENT_NAME);
         ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
-
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class, options);
+        HttpClient client = HttpClient.of(server.uri("/"), options);
 
         final String OVERIDDEN_USER_AGENT_NAME = "Overridden";
 
@@ -390,11 +382,9 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void httpDecoding() throws Exception {
-        HttpClient client = new ClientBuilder(
-                server.uri(SerializationFormat.NONE, "/"))
-                .factory(clientFactory)
-                .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator())
-                .build(HttpClient.class);
+        HttpClient client = new HttpClientBuilder(server.uri("/"))
+                .factory(clientFactory).decorator(HttpDecodingClient.newDecorator()).build();
+
         AggregatedHttpMessage response =
                 client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
@@ -404,12 +394,10 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void httpDecoding_deflate() throws Exception {
-        HttpClient client = new ClientBuilder(
-                server.uri(SerializationFormat.NONE, "/"))
+        HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory)
-                .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator(
-                        new DeflateStreamDecoderFactory()))
-                .build(HttpClient.class);
+                .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
+
         AggregatedHttpMessage response =
                 client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
@@ -419,12 +407,10 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void httpDecoding_noEncodingApplied() throws Exception {
-        HttpClient client = new ClientBuilder(
-                server.uri(SerializationFormat.NONE, "/"))
+        HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory)
-                .decorator(HttpRequest.class, HttpResponse.class, HttpDecodingClient.newDecorator(
-                        new DeflateStreamDecoderFactory()))
-                .build(HttpClient.class);
+                .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
+
         AggregatedHttpMessage response =
                 client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding-toosmall")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
@@ -464,8 +450,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/hello"),
-                                              HttpClient.class);
+        HttpClient client = HttpClient.of(server.uri("/hello"));
 
         AggregatedHttpMessage response = client.get("/world").aggregate().get();
 
@@ -474,8 +459,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class);
+        HttpClient client = HttpClient.of(server.uri("/"));
 
         AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
 
@@ -484,8 +468,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testPooledResponseDefaultSubscriber() throws Exception {
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class);
+        HttpClient client = HttpClient.of(server.uri("/"));
 
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.GET, "/pooled")).aggregate().get();
@@ -497,8 +480,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testPooledResponsePooledSubscriber() throws Exception {
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class);
+        HttpClient client = HttpClient.of(server.uri("/"));
 
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.GET, "/pooled-aware")).aggregate().get();
@@ -510,8 +492,7 @@ public class HttpClientIntegrationTest {
 
     @Test
     public void testUnpooledResponsePooledSubscriber() throws Exception {
-        HttpClient client = Clients.newClient(server.uri(SerializationFormat.NONE, "/"),
-                                              HttpClient.class);
+        HttpClient client = HttpClient.of(server.uri("/"));
 
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.GET, "/pooled-unaware")).aggregate().get();

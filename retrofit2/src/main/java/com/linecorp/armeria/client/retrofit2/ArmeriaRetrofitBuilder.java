@@ -26,11 +26,9 @@ import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import okhttp3.HttpUrl;
@@ -174,11 +172,9 @@ public final class ArmeriaRetrofitBuilder {
     public Retrofit build() {
         checkState(baseUrl != null, "baseUrl not set");
         final URI uri = URI.create(baseUrl);
-        final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.of(uri.getScheme()));
-        final String fullUri = scheme.uriText() + "://" + uri.getAuthority();
-        final HttpClient baseHttpClient =
-                Clients.newClient(clientFactory, fullUri, HttpClient.class,
-                                  configurator.apply(fullUri, new ClientOptionsBuilder()).build());
+        final String fullUri = SessionProtocol.of(uri.getScheme()) + "://" + uri.getAuthority();
+        final HttpClient baseHttpClient = HttpClient.of(
+                clientFactory, fullUri, configurator.apply(fullUri, new ClientOptionsBuilder()).build());
         return retrofitBuilder.baseUrl(convertToOkHttpUrl(baseHttpClient, uri.getPath(), GROUP_PREFIX))
                               .callFactory(new ArmeriaCallFactory(baseHttpClient, clientFactory, configurator))
                               .build();

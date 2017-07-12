@@ -24,6 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -32,8 +34,10 @@ import org.junit.rules.Timeout;
 
 import com.google.common.base.Stopwatch;
 
-import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -44,7 +48,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -53,6 +57,20 @@ import com.linecorp.armeria.testing.server.ServerRule;
 public class RetryingHttpClientTest {
 
     private final int oneSecForRetryAfter = 1;
+
+    private static ClientFactory clientFactory;
+
+    @BeforeClass
+    public static void init() {
+        // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
+        clientFactory = new ClientFactoryBuilder()
+                .workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+    }
+
+    @AfterClass
+    public static void destroy() {
+        clientFactory.close();
+    }
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
@@ -145,7 +163,7 @@ public class RetryingHttpClientTest {
                     if (reqCount.getAndIncrement() < 1) {
                         res.respond(HttpStatus.SERVICE_UNAVAILABLE);
                     } else {
-                        TimeUnit.SECONDS.sleep(10);
+                        TimeUnit.MILLISECONDS.sleep(1500);
                     }
                 }
             });
@@ -191,11 +209,8 @@ public class RetryingHttpClientTest {
     @Test
     public void retryWhenContentMatched() {
         final RetryStrategy<HttpRequest, HttpResponse> strategy = new RetryOnContent("Need to retry");
-
-        final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           RetryingHttpClient.newDecorator(strategy, () -> Backoff.fixed(100)))
-                .build(HttpClient.class);
+        final HttpClient client = new HttpClientBuilder(server.uri("/")).factory(clientFactory)
+                .decorator(RetryingHttpClient.newDecorator(strategy, () -> Backoff.fixed(100))).build();
 
         final AggregatedHttpMessage res = client.get("/retry-content").aggregate().join();
         assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
@@ -222,10 +237,8 @@ public class RetryingHttpClientTest {
     public void retryWhenStatusMatched() {
         final RetryStrategy<HttpRequest, HttpResponse> strategy =
                 RetryStrategy.onStatus(HttpStatus.SERVICE_UNAVAILABLE);
-        final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           RetryingHttpClient.newDecorator(strategy, () -> Backoff.fixed(100)))
-                .build(HttpClient.class);
+        final HttpClient client = new HttpClientBuilder(server.uri("/")).factory(clientFactory)
+                .decorator(RetryingHttpClient.newDecorator(strategy, () -> Backoff.fixed(100))).build();
 
         final AggregatedHttpMessage res = client.get("/503-then-success").aggregate().join();
         assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
@@ -247,13 +260,12 @@ public class RetryingHttpClientTest {
 
     private HttpClient retryingHttpClientOf(long responseTimeoutMillis,
                                             RetryStrategy<HttpRequest, HttpResponse> strategy) {
-        return new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
+        return new HttpClientBuilder(server.uri("/")).factory(clientFactory)
                 .defaultResponseTimeoutMillis(responseTimeoutMillis)
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           new RetryingHttpClientBuilder(strategy)
+                .decorator(new RetryingHttpClientBuilder(strategy)
                                    .backoffSupplier(() -> Backoff.fixed(100).withMaxAttempts(1000))
                                    .useRetryAfter(true).newDecorator())
-                .build(HttpClient.class);
+                .build();
     }
 
     @Test
@@ -282,7 +294,7 @@ public class RetryingHttpClientTest {
         assertThatThrownBy(() -> client.get("/retry-after-one-year").aggregate().join())
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
 
-        // Retry after is limited by response time out which is 1 seconds in this case.
+        // Retry after is limited by response time out which is 1 second in this case.
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(
                 (long) (responseTimeoutMillis * 0.9));
     }
@@ -341,11 +353,9 @@ public class RetryingHttpClientTest {
     public void disableResponseTimeout() {
         final RetryStrategy<HttpRequest, HttpResponse> strategy = new RetryOnContent("Need to retry");
 
-        final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
+        final HttpClient client = new HttpClientBuilder(server.uri("/")).factory(clientFactory)
                 .defaultResponseTimeoutMillis(0) // disable response timeout
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           RetryingHttpClient.newDecorator(strategy))
-                .build(HttpClient.class);
+                .decorator(RetryingHttpClient.newDecorator(strategy, () -> Backoff.fixed(100))).build();
 
         final AggregatedHttpMessage res = client.get("/retry-content").aggregate().join();
         assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
@@ -356,19 +366,17 @@ public class RetryingHttpClientTest {
     public void differentResponseTimeout() {
         final RetryStrategyWrapper strategy = new RetryStrategyWrapper(
                 RetryStrategy.onStatus(HttpStatus.SERVICE_UNAVAILABLE));
-        final HttpClient client = new ClientBuilder(server.uri(SerializationFormat.NONE, "/"))
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           RetryingHttpClient.newDecorator(strategy))
-                .decorator(HttpRequest.class, HttpResponse.class,
-                           (delegate, ctx, req) -> {
-                               if (req.method() == HttpMethod.GET) {
-                                   ctx.setResponseTimeoutMillis(50);
-                               } else {
-                                   ctx.setResponseTimeoutMillis(10000);
-                               }
-                               return delegate.execute(ctx, req);
-                           })
-                .build(HttpClient.class);
+        final HttpClient client = new HttpClientBuilder(server.uri("/")).factory(clientFactory)
+                .decorator(RetryingHttpClient
+                                   .newDecorator(strategy, () -> Backoff.fixed(100).withMaxAttempts(500)))
+                .decorator((delegate, ctx, req) -> {
+                    if (req.method() == HttpMethod.GET) {
+                        ctx.setResponseTimeoutMillis(50);
+                    } else {
+                        ctx.setResponseTimeoutMillis(10000);
+                    }
+                    return delegate.execute(ctx, req);
+                }).build();
 
         assertThatThrownBy(() -> client.get("/get-post").aggregate().join())
                 .hasCauseInstanceOf(ResponseTimeoutException.class);

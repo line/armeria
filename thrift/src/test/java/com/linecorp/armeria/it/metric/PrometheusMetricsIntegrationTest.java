@@ -35,7 +35,6 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableSortedMap;
 
 import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.metric.PrometheusMetricCollectingClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -83,7 +82,7 @@ public class PrometheusMetricsIntegrationTest {
                                           log -> defaultMetricName(log, "HelloService2"))));
 
             sb.service("/internal/prometheus/metrics",
-                         new PrometheusExporterHttpService(registry));
+                       new PrometheusExporterHttpService(registry));
         }
     };
 
@@ -241,8 +240,7 @@ public class PrometheusMetricsIntegrationTest {
 
     private static AggregatedHttpMessage makeMetricsRequest() throws ExecutionException,
                                                                      InterruptedException {
-        final HttpClient client = Clients.newClient("none+http://127.0.0.1:" + server.httpPort(),
-                                                    HttpClient.class);
+        final HttpClient client = HttpClient.of("http://127.0.0.1:" + server.httpPort());
         return client.execute(HttpHeaders.of(HttpMethod.GET, "/internal/prometheus/metrics")
                                          .setObject(HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8))
                      .aggregate().get();

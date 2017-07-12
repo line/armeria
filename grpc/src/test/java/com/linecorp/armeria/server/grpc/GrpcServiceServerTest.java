@@ -43,7 +43,6 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -379,7 +378,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed() throws Exception {
-        HttpClient client = Clients.newClient("none+" + server.httpUri("/"), HttpClient.class);
+        HttpClient client = HttpClient.of(server.httpUri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.METHOD_STATIC_UNARY_CALL.getFullMethodName())
@@ -393,7 +392,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_acceptEncoding() throws Exception {
-        HttpClient client = Clients.newClient("none+" + server.httpUri("/"), HttpClient.class);
+        HttpClient client = HttpClient.of(server.httpUri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.METHOD_STATIC_UNARY_CALL.getFullMethodName())
@@ -408,7 +407,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_streamingApi() throws Exception {
-        HttpClient client = Clients.newClient("none+" + server.httpUri("/"), HttpClient.class);
+        HttpClient client = HttpClient.of(server.httpUri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.METHOD_STATIC_STREAMED_OUTPUT_CALL.getFullMethodName())
@@ -419,7 +418,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_noContentType() throws Exception {
-        HttpClient client = Clients.newClient("none+" + server.httpUri("/"), HttpClient.class);
+        HttpClient client = HttpClient.of(server.httpUri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.METHOD_STATIC_UNARY_CALL.getFullMethodName()),
@@ -429,7 +428,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_grpcEncoding() throws Exception {
-        HttpClient client = Clients.newClient("none+" + server.httpUri("/"), HttpClient.class);
+        HttpClient client = HttpClient.of(server.httpUri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.METHOD_STATIC_UNARY_CALL.getFullMethodName())
@@ -441,7 +440,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void unframed_serviceError() throws Exception {
-        HttpClient client = Clients.newClient("none+" + server.httpUri("/"), HttpClient.class);
+        HttpClient client = HttpClient.of(server.httpUri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.METHOD_STATIC_UNARY_CALL.getFullMethodName())
@@ -456,7 +455,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void grpcWeb() throws Exception {
-        HttpClient client = Clients.newClient("none+" + server.httpUri("/"), HttpClient.class);
+        HttpClient client = HttpClient.of(server.httpUri("/"));
         AggregatedHttpMessage response = client.execute(
                 HttpHeaders.of(HttpMethod.POST,
                                UnitTestServiceGrpc.METHOD_STATIC_UNARY_CALL.getFullMethodName())

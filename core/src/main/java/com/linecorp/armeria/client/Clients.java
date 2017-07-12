@@ -30,6 +30,8 @@ import io.netty.util.AsciiString;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
+ * If you are creating an {@link HttpClient}, it is recommended to use the factory methods in
+ * {@link HttpClient}.
  */
 public final class Clients {
 
@@ -257,7 +259,7 @@ public final class Clients {
 
     /**
      * Sets the specified HTTP header in a thread-local variable so that the header is sent by the client call
-     * made from the current thread. Use the `try-resources-finally` block with the returned
+     * made from the current thread. Use the `try-with-resources` block with the returned
      * {@link SafeCloseable} to unset the thread-local variable automatically:
      * <pre>{@code
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
@@ -291,7 +293,7 @@ public final class Clients {
 
     /**
      * Sets the specified HTTP header manipulating function in a thread-local variable so that the manipulated
-     * headers are sent by the client call made from the current thread. Use the `try-resources-finally` block
+     * headers are sent by the client call made from the current thread. Use the `try-with-resources` block
      * with the returned {@link SafeCloseable} to unset the thread-local variable automatically:
      * <pre>{@code
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
@@ -326,7 +328,6 @@ public final class Clients {
 
         final Function<HttpHeaders, HttpHeaders> oldManipulator =
                 UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.get();
-
 
         if (oldManipulator != null) {
             UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.set(oldManipulator.andThen(headerManipulator));
