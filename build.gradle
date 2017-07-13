@@ -1022,7 +1022,7 @@ task release(group: 'Publishing',
         println "1. Upload the artifacts to the staging repository and prepare the web site:"
         println()
         println "   git checkout $tag"
-        println "   ./gradlew clean publish site"
+        println "   ./gradlew --no-daemon clean publish site"
         println()
         println '2. Close and release the staging repository at:'
         println()
