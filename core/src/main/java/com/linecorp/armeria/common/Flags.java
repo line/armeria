@@ -51,13 +51,15 @@ public final class Flags {
     private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
                                                           value -> OpenSsl.isAvailable() || !value);
 
-    private static final int DEFAULT_NUM_COMMON_BOSSES = 1;
-    private static final int NUM_COMMON_BOSSES =
-            getInt("numCommonBosses", DEFAULT_NUM_COMMON_BOSSES, value -> value > 0);
-
     private static final int DEFAULT_NUM_COMMON_WORKERS = NUM_CPU_CORES * 2;
     private static final int NUM_COMMON_WORKERS =
             getInt("numCommonWorkers", DEFAULT_NUM_COMMON_WORKERS, value -> value > 0);
+
+    private static final int DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS = 200; // from Tomcat default maxThreads
+    private static final int NUM_COMMON_BLOCKING_TASK_THREADS =
+            getInt("numCommonBlockingTaskThreads",
+                   DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS,
+                   value -> value > 0);
 
     private static final long DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     private static final long DEFAULT_CONNECT_TIMEOUT_MILLIS =
@@ -89,6 +91,7 @@ public final class Flags {
                     Backoff.of(value);
                     return true;
                 } catch (Exception e) {
+                    // Invalid backoff specification
                     return false;
                 }
             });
@@ -148,24 +151,25 @@ public final class Flags {
     }
 
     /**
-     * Returns the default number of {@linkplain CommonPools#bossGroup() common boss group} threads.
-     *
-     * <p>The default value of this flag is {@value #DEFAULT_NUM_COMMON_BOSSES}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonBosses=<integer>} to override the default value.
-     */
-    public static int numCommonBosses() {
-        return NUM_COMMON_BOSSES;
-    }
-
-    /**
      * Returns the default number of {@linkplain CommonPools#workerGroup() common worker group} threads.
-     * Note that this value has effect only if a user did not specify it.
+     * Note that this value has effect only if a user did not specify a worker group.
      *
      * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
      * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} to override the default value.
      */
     public static int numCommonWorkers() {
         return NUM_COMMON_WORKERS;
+    }
+
+    /**
+     * Returns the default number of {@linkplain CommonPools#blockingTaskExecutor() blocking task executor}
+     * threads. Note that this value has effect only if a user did not specify a blocking task executor.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS}. Specify the
+     * {@code -Dcom.linecorp.armeria.numCommonBlockingTaskThreads=<integer>} to override the default value.
+     */
+    public static int numCommonBlockingTaskThreads() {
+        return NUM_COMMON_BLOCKING_TASK_THREADS;
     }
 
     /**

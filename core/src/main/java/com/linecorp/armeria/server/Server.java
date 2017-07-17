@@ -29,15 +29,25 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.internal.TransportType;
@@ -51,10 +61,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * Listens to {@link ServerPort}s and delegates client requests to {@link Service}s.
@@ -84,7 +94,7 @@ public final class Server implements AutoCloseable {
      * A handler that is shared by all ports and channels to be able to keep
      * track of all requests being processed by the server.
      */
-    private volatile GracefulShutdownSupport gracefulShutdownSupport;
+    private volatile GracefulShutdownSupport gracefulShutdownSupport = GracefulShutdownSupport.disabled();
 
     Server(ServerConfig config) {
         this.config = requireNonNull(config, "config");
@@ -248,9 +258,13 @@ public final class Server implements AutoCloseable {
     }
 
     private ChannelFuture start(ServerPort port) {
-        ServerBootstrap b = new ServerBootstrap();
+        final ServerBootstrap b = new ServerBootstrap();
 
-        b.group(config.bossGroup(), config.workerGroup());
+        b.group(EventLoopGroups.newEventLoopGroup(1, r -> {
+            final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName(port));
+            thread.setDaemon(false);
+            return thread;
+        }), config.workerGroup());
         b.channel(TransportType.detectTransportType().serverChannelClass());
         b.handler(connectionLimitingHandler);
         b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts, gracefulShutdownSupport));
@@ -319,59 +333,87 @@ public final class Server implements AutoCloseable {
     private void stop0(CompletableFuture<Void> future) {
         assert future != null;
 
-        final EventLoopGroup bossGroup = config.bossGroup();
         final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
-
-        if (gracefulShutdownSupport == null) {
-            stop1(future);
+        if (gracefulShutdownSupport.completedQuietPeriod()) {
+            stop1(future, null);
             return;
         }
 
+        // Create a single-use thread dedicated for monitoring graceful shutdown status.
+        final ScheduledExecutorService gracefulShutdownExecutor = Executors.newSingleThreadScheduledExecutor(
+                r -> new Thread(r, "armeria-shutdown-0x" + Integer.toHexString(hashCode())));
+
         // Check every 100 ms for the server to have completed processing requests.
-        final ScheduledFuture<?> quietPeriodFuture = bossGroup.scheduleAtFixedRate(() -> {
+        final ScheduledFuture<?> quietPeriodFuture = gracefulShutdownExecutor.scheduleAtFixedRate(() -> {
             if (gracefulShutdownSupport.completedQuietPeriod()) {
-                stop1(future);
+                stop1(future, gracefulShutdownExecutor);
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
 
         // Make sure the event loop stops after the timeout, regardless of what
         // the GracefulShutdownSupport says.
-        bossGroup.schedule(() -> {
-            quietPeriodFuture.cancel(false);
-            stop1(future);
-        }, config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
+        try {
+            gracefulShutdownExecutor.schedule(() -> {
+                quietPeriodFuture.cancel(false);
+                stop1(future, gracefulShutdownExecutor);
+            }, config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException e) {
+            // Can be rejected if quiet period is complete already.
+        }
     }
 
-    private void stop1(CompletableFuture<Void> future) {
+    /**
+     * Closes all channels and terminates all event loops.
+     * <ol>
+     *   <li>Closes all server channels so that we don't accept any more incoming connections.</li>
+     *   <li>Closes all accepted channels.</li>
+     *   <li>Shuts down the worker group if necessary.</li>
+     *   <li>Shuts down the boss groups.</li>
+     * </ol>
+     * Note that we terminate the boss groups lastly so that the JVM does not terminate itself
+     * even if other threads are daemon, because boss group threads are always non-daemon.
+     */
+    private void stop1(CompletableFuture<Void> future, @Nullable ExecutorService gracefulShutdownExecutor) {
+        // Graceful shutdown is over. Terminate the temporary executor we created at stop0(future).
+        if (gracefulShutdownExecutor != null) {
+            gracefulShutdownExecutor.shutdownNow();
+        }
+
         // Close all server sockets.
+        Set<Channel> serverChannels = ImmutableSet.copyOf(this.serverChannels);
         ChannelUtil.close(serverChannels).whenComplete((unused1, unused2) -> {
-            // Shut down the boss group if necessary.
-            final Future<?> bossShutdownFuture;
-            if (config.shutdownBossGroupOnStop()) {
-                bossShutdownFuture = config.bossGroup().shutdownGracefully();
-            } else {
-                bossShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
-            }
+            // All server ports have been closed.
+            primaryActivePort = null;
+            activePorts.clear();
 
-            bossShutdownFuture.addListener(unused3 -> {
-                primaryActivePort = null;
-                activePorts.clear();
+            // Close all accepted sockets.
+            ChannelUtil.close(connectionLimitingHandler.children()).whenComplete((unused3, unused4) -> {
+                // Shut down the worker group if necessary.
+                final Future<?> workerShutdownFuture;
+                if (config.shutdownWorkerGroupOnStop()) {
+                    workerShutdownFuture = config.workerGroup().shutdownGracefully();
+                } else {
+                    workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
+                }
 
-                // Close all accepted sockets.
-                ChannelUtil.close(connectionLimitingHandler.children()).whenComplete((unused4, unused5) -> {
-                    // Shut down the worker group if necessary.
-                    final Future<?> workerShutdownFuture;
-                    if (config.shutdownWorkerGroupOnStop()) {
-                        workerShutdownFuture = config.workerGroup().shutdownGracefully();
-                    } else {
-                        workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
-                    }
+                workerShutdownFuture.addListener(unused5 -> {
+                    // Shut down all boss groups and wait until they are terminated.
+                    final AtomicInteger remainingBossGroups = new AtomicInteger(serverChannels.size());
+                    serverChannels.forEach(ch -> {
+                        final EventLoopGroup bossGroup = ch.eventLoop().parent();
+                        bossGroup.shutdownGracefully();
+                        bossGroup.terminationFuture().addListener(unused6 -> {
+                            if (remainingBossGroups.decrementAndGet() != 0) {
+                                // There are more boss groups to terminate.
+                                return;
+                            }
 
-                    workerShutdownFuture.addListener(unused6 -> {
-                        // TODO(trustin): Add shutdownBlockingTaskExecutorOnStop
-                        // TODO(trustin): Count the pending blocking tasks and wait until it becomes zero.
-                        stateManager.enter(State.STOPPED);
-                        completeFuture(future);
+                            // Boss groups have been terminated completely.
+                            // TODO(trustin): Add shutdownBlockingTaskExecutorOnStop
+                            // TODO(trustin): Count the pending blocking tasks and wait until it becomes zero.
+                            stateManager.enter(State.STOPPED);
+                            completeFuture(future);
+                        });
                     });
                 });
             });
@@ -561,19 +603,25 @@ public final class Server implements AutoCloseable {
 
         @Override
         public void operationComplete(ChannelFuture f) throws Exception {
+            final Channel ch = f.channel();
+            assert ch.eventLoop().inEventLoop();
+
             if (startFuture.isDone()) {
                 return;
             }
 
             if (f.isSuccess()) {
-                final Channel ch = f.channel();
                 serverChannels.add(ch);
                 ch.closeFuture()
                   .addListener((ChannelFutureListener) future -> serverChannels.remove(future.channel()));
 
-                InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
-                ServerPort actualPort = new ServerPort(localAddress, port.protocol());
+                final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
+                final ServerPort actualPort = new ServerPort(localAddress, port.protocol());
 
+                // Update the boss thread so its name contains the actual port.
+                Thread.currentThread().setName(bossThreadName(actualPort));
+
+                // Update the map of active ports.
                 activePorts.put(localAddress, actualPort);
 
                 // The port that has been activated first becomes the primary port.
@@ -588,6 +636,16 @@ public final class Server implements AutoCloseable {
                 completeFutureExceptionally(startFuture, f.cause());
             }
         }
+    }
+
+    private static String bossThreadName(ServerPort port) {
+        final InetSocketAddress localAddr = port.localAddress();
+        final String localHostName =
+                localAddr.getAddress().isAnyLocalAddress() ? "*" : localAddr.getHostString();
+
+        // e.g. 'armeria-boss-http-*:8080'
+        //      'armeria-boss-http-127.0.0.1:8443'
+        return "armeria-boss-" + port.protocol().uriText() + '-' + localHostName + ':' + localAddr.getPort();
     }
 
     private static void completeFuture(CompletableFuture<Void> future) {

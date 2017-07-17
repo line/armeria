@@ -34,22 +34,18 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 public final class CommonPools {
 
     private static final Executor BLOCKING_TASK_EXECUTOR;
-    private static final EventLoopGroup BOSS_GROUP;
     private static final EventLoopGroup WORKER_GROUP;
 
     static {
         // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
-        final int DEFAULT_MAX_BLOCKING_TASK_THREADS = 200; // from Tomcat's default maxThreads.
         final ThreadPoolExecutor blockingTaskExecutor = new ThreadPoolExecutor(
-                DEFAULT_MAX_BLOCKING_TASK_THREADS, DEFAULT_MAX_BLOCKING_TASK_THREADS,
+                Flags.numCommonBlockingTaskThreads(), Flags.numCommonBlockingTaskThreads(),
                 60, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
                 new DefaultThreadFactory("armeria-common-blocking-tasks", true));
 
         blockingTaskExecutor.allowCoreThreadTimeOut(true);
         BLOCKING_TASK_EXECUTOR = blockingTaskExecutor;
 
-        BOSS_GROUP = EventLoopGroups.newEventLoopGroup(Flags.numCommonBosses(),
-                                                       "armeria-common-boss", true);
         WORKER_GROUP = EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(),
                                                          "armeria-common-worker", true);
     }
@@ -60,14 +56,6 @@ public final class CommonPools {
      */
     public static Executor blockingTaskExecutor() {
         return BLOCKING_TASK_EXECUTOR;
-    }
-
-    /**
-     * Returns the common boss {@link EventLoopGroup} which is used when
-     * {@link ServerBuilder#bossGroup(EventLoopGroup, boolean)} is not specified.
-     */
-    public static EventLoopGroup bossGroup() {
-        return BOSS_GROUP;
     }
 
     /**
