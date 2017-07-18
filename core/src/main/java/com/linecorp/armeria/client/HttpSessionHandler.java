@@ -251,7 +251,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
     }
 
-
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         Exceptions.logIfUnexpected(logger, ctx.channel(), protocol(), cause);

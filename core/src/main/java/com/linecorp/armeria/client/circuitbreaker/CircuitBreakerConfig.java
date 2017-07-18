@@ -110,5 +110,4 @@ class CircuitBreakerConfig {
                 .add("counterUpdateInterval", counterUpdateInterval)
                 .toString();
     }
-
 }

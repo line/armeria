@@ -310,7 +310,6 @@ public final class HttpFileService extends AbstractHttpService {
         }
     }
 
-
     /**
      * Creates a new {@link HttpService} that tries this {@link HttpFileService} first and then the specified
      * {@link HttpService} when this {@link HttpFileService} does not have a requested resource.

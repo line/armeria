@@ -29,5 +29,4 @@ public interface ExceptionFilter {
      * @return {@code true} if the error should be dealt with circuit breaker
      */
     boolean shouldDealWith(Throwable throwable) throws Exception;
-
 }

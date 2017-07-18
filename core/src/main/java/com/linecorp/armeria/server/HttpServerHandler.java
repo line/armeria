@@ -380,7 +380,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                    .set(HttpHeaderNames.LOCATION, location)));
     }
 
-
     private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, HttpStatus status) {
 
         if (status.code() < 400) {

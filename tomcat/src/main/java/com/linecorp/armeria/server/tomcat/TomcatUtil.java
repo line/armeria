@@ -79,7 +79,6 @@ final class TomcatUtil {
         try {
             Method m = Service.class.getDeclaredMethod("getContainer");
             return (Engine) m.invoke(service);
-
         } catch (Exception e) {
             throw new Error("failed to invoke Service.getContainer()", e);
         }

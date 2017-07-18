@@ -51,5 +51,4 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
     default EndpointGroup orElse(EndpointGroup nextEndpointGroup) {
         return new OrElseEndpointGroup(this, nextEndpointGroup);
     }
-
 }

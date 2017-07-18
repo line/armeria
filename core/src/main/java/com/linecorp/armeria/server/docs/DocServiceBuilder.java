@@ -102,7 +102,6 @@ public final class DocServiceBuilder {
         return exampleHttpHeaders0(serviceName, "", exampleHttpHeaders);
     }
 
-
     /**
      * Adds the example {@link HttpHeaders} for the method with the specified type and method name.
      * This method is a shortcut to:

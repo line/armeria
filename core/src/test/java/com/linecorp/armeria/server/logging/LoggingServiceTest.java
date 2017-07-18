@@ -181,5 +181,4 @@ public class LoggingServiceTest {
         service.serve(ctx, REQUEST);
         verifyZeroInteractions(logger);
     }
-
 }

@@ -38,7 +38,6 @@ public class ClientOptionsTest {
 
         ClientOptions options2 = ClientOptions.DEFAULT;
         assertThat(options2.get(ClientOption.HTTP_HEADERS), is(Optional.of(HttpHeaders.EMPTY_HEADERS)));
-
     }
 
     @Test(expected = IllegalArgumentException.class)

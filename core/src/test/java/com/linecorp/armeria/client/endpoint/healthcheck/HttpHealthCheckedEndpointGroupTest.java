@@ -55,7 +55,6 @@ public class HttpHealthCheckedEndpointGroupTest {
     @Rule
     public final ServerRule serverTwo = new HealthCheckServerRule();
 
-
     @Test
     public void endpoints() throws Exception {
         serverOne.start();

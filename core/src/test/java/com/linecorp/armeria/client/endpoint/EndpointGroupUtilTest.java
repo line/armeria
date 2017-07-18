@@ -35,7 +35,6 @@ public class EndpointGroupUtilTest {
         assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://" + endpointGroupMark + "myGroupName:8080/"));
         assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://" + endpointGroupMark + "myGroupName:8080/"));
         assertEquals("myGroupName", EndpointGroupUtil.getEndpointGroupName("http://username:password@" + endpointGroupMark + "myGroupName:8080/"));
-
     }
 
     @Test

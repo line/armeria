@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -77,11 +76,9 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
     @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        Scheme scheme = validateScheme(uri);
-        SerializationFormat serializationFormat = scheme.serializationFormat();
-
-
-        Class<?> stubClass = clientType.getEnclosingClass();
+        final Scheme scheme = validateScheme(uri);
+        final SerializationFormat serializationFormat = scheme.serializationFormat();
+        final Class<?> stubClass = clientType.getEnclosingClass();
         if (stubClass == null) {
             throw new IllegalArgumentException("Client type not a GRPC client stub class, " +
                                                "should be something like ServiceNameGrpc.ServiceNameXXStub: " +

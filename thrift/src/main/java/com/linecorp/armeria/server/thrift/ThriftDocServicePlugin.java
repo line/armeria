@@ -191,7 +191,6 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         return methodInfo;
     }
 
-
     private static MethodInfo newMethodInfo(String name,
                                             Class<? extends TBase<?, ?>> argsClass,
                                             @Nullable Class<? extends TBase<?, ?>> resultClass,

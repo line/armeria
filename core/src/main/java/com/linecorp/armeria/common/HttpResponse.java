@@ -107,7 +107,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final DefaultHttpResponse res = new DefaultHttpResponse();
         res.respond(status, mediaType, content, offset, length);
         return res;
-
     }
 
     /**

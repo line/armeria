@@ -209,5 +209,4 @@ public abstract class AbstractRequestContext implements RequestContext {
     public final boolean equals(Object obj) {
         return super.equals(obj);
     }
-
 }

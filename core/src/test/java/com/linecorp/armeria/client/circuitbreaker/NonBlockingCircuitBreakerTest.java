@@ -252,5 +252,4 @@ public class NonBlockingCircuitBreakerTest {
         verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
         verify(listener, times(1)).onStateChanged(cb, CircuitState.CLOSED);
     }
-
 }

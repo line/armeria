@@ -191,5 +191,4 @@ public class CircuitBreakerBuilderTest {
     public void testExceptionFilterWithInvalidArgument() {
         throwsException(() -> builder().exceptionFilter(null));
     }
-
 }

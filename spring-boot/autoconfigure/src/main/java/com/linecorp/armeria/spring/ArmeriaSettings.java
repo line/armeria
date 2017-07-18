@@ -240,5 +240,4 @@ public class ArmeriaSettings {
     public void setEnableDropwizardMetrics(boolean enableDropwizardMetrics) {
         this.enableDropwizardMetrics = enableDropwizardMetrics;
     }
-
 }

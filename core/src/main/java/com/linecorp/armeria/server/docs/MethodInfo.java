@@ -138,7 +138,6 @@ public final class MethodInfo {
         return exceptionTypeSignatures;
     }
 
-
     /**
      * Returns the example HTTP headers of the method.
      */

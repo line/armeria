@@ -134,7 +134,6 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
         respond(status, mediaType, content, HttpHeaders.EMPTY_HEADERS);
     }
 
-
     /**
      * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream.
      *

@@ -83,5 +83,4 @@ public interface RetryStrategy<I extends Request, O extends Response> {
     default boolean shouldRetry(I request, Throwable thrown) {
         return true;
     }
-
 }

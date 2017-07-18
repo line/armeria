@@ -13,7 +13,6 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-
 package com.linecorp.armeria.common.thrift;
 
 import static java.util.Objects.requireNonNull;
@@ -49,7 +48,6 @@ public final class ThriftSerializationFormats {
      * compatibility and should only be used in non-production use cases like debugging.
      */
     public static final SerializationFormat TEXT = SerializationFormat.of("ttext");
-
 
     private static final Set<SerializationFormat> THRIFT_FORMATS =
             ImmutableSet.of(BINARY, COMPACT, JSON, TEXT);

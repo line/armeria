@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.metric;
 
 import java.util.Map;
@@ -97,5 +96,4 @@ public final class PrometheusMetricCollectingClient<T extends MetricLabel<T>,
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         return requestDecorator.execute(delegate(), ctx, req);
     }
-
 }

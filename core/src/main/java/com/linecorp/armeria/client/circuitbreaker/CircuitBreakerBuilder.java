@@ -242,5 +242,4 @@ public final class CircuitBreakerBuilder {
                                          counterSlidingWindow, counterUpdateInterval,
                                          exceptionFilter, Collections.unmodifiableList(listeners)));
     }
-
 }

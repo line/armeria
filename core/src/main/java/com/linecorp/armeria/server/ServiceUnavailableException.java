@@ -26,7 +26,6 @@ public final class ServiceUnavailableException extends RuntimeException {
 
     private static final long serialVersionUID = -9092895165959388396L;
 
-
     private static final ServiceUnavailableException INSTANCE =
             Exceptions.clearTrace(new ServiceUnavailableException());
 

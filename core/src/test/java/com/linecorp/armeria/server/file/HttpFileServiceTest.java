@@ -118,7 +118,6 @@ public class HttpFileServiceTest {
                 Files.delete(dir);
                 return FileVisitResult.CONTINUE;
             }
-
         });
     }
 
@@ -148,7 +147,6 @@ public class HttpFileServiceTest {
             assert200Ok(res, "text/plain", "bar");
         }
     }
-
 
     @Test
     public void testIndexHtml() throws Exception {
