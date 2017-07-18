@@ -24,14 +24,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.PathMappings;
 import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.Service;
@@ -115,20 +114,19 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     /**
      * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
      *
-     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
-     *              {@code null} if query does not exist.
+     * @param mappingCtx a context to find the {@link Service}.
      *
      * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
-    protected PathMapped<Service<I, O>> findService(String path, @Nullable String query) {
-        return serviceMapping.apply(path, query);
+    protected PathMapped<Service<I, O>> findService(PathMappingContext mappingCtx) {
+        return serviceMapping.apply(mappingCtx);
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        final PathMapped<Service<I, O>> mapped = findService(ctx.mappedPath(), ctx.query());
+        final PathMappingContext mappingCtx = ctx.pathMappingContext();
+        final PathMapped<Service<I, O>> mapped = findService(mappingCtx.overridePath(ctx.mappedPath()));
         if (!mapped.isPresent()) {
             throw ResourceNotFoundException.get();
         }

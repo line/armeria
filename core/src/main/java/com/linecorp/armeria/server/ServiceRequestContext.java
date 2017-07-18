@@ -53,6 +53,11 @@ public interface ServiceRequestContext extends RequestContext {
     PathMapping pathMapping();
 
     /**
+     * Returns the {@link PathMappingContext} used to find the {@link Service}.
+     */
+    PathMappingContext pathMappingContext();
+
+    /**
      * Returns the path parameters mapped by the {@link PathMapping} associated with the {@link Service}
      * that is handling the current {@link Request}.
      */

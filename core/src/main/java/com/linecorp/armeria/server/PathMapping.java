@@ -21,8 +21,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
@@ -158,13 +156,12 @@ public interface PathMapping {
     /**
      * Matches the specified {@code path} and extracts the path parameters from it.
      *
-     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
-     *              {@code null} if query does not exist.
+     * @param mappingCtx a context to find the {@link Service}.
+     *
      * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
      *         {@link PathMappingResult#empty()} if not matches.
      */
-    PathMappingResult apply(String path, @Nullable String query);
+    PathMappingResult apply(PathMappingContext mappingCtx);
 
     /**
      * Returns the names of the path parameters extracted by this mapping.

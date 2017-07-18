@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.PathMapping.ofRegex;
+import static com.linecorp.armeria.server.PathMappingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
@@ -35,7 +36,7 @@ public class RegexPathMappingTest {
     @Test
     public void basic() {
         final PathMapping mapping = ofRegex("foo");
-        final PathMappingResult result = mapping.apply("/barfoobar", null);
+        final PathMappingResult result = mapping.apply(create("/barfoobar"));
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/barfoobar");
         assertThat(result.query()).isNull();
@@ -47,7 +48,7 @@ public class RegexPathMappingTest {
         final PathMapping mapping = ofRegex("^/files/(?<fileName>.*)$");
         assertThat(mapping.paramNames()).containsExactly("fileName");
 
-        final PathMappingResult result = mapping.apply("/files/images/avatar.jpg", "size=512");
+        final PathMappingResult result = mapping.apply(create("/files/images/avatar.jpg", "size=512"));
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/files/images/avatar.jpg");
         assertThat(result.query()).isEqualTo("size=512");

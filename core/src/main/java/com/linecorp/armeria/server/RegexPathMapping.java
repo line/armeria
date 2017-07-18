@@ -22,8 +22,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -61,8 +59,8 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
-        final Matcher matcher = regex.matcher(path);
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final Matcher matcher = regex.matcher(mappingCtx.path());
         if (!matcher.find()) {
             return PathMappingResult.empty();
         }
@@ -80,7 +78,8 @@ final class RegexPathMapping extends AbstractPathMapping {
             builder.put(name, value);
         }
 
-        return PathMappingResult.of(path, query, builder != null ? builder.build() : ImmutableMap.of());
+        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(),
+                                    builder != null ? builder.build() : ImmutableMap.of());
     }
 
     @Override

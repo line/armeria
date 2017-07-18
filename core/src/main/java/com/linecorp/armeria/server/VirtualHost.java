@@ -32,6 +32,7 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaTypeSet;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -64,11 +65,13 @@ public final class VirtualHost {
     private final SslContext sslContext;
     private final List<ServiceConfig> services;
     private final PathMappings<ServiceConfig> serviceMapping = new PathMappings<>();
+    private final MediaTypeSet producibleMediaTypes;
 
     private String strVal;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
-                SslContext sslContext, Iterable<ServiceConfig> serviceConfigs) {
+                SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
+                MediaTypeSet producibleMediaTypes) {
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
@@ -77,6 +80,7 @@ public final class VirtualHost {
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
         this.sslContext = validateSslContext(sslContext);
+        this.producibleMediaTypes = producibleMediaTypes;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
 
@@ -89,6 +93,7 @@ public final class VirtualHost {
         }
 
         services = Collections.unmodifiableList(servicesCopy);
+
         serviceMapping.freeze();
     }
 
@@ -212,18 +217,23 @@ public final class VirtualHost {
     }
 
     /**
-     * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
+     * Returns {@link MediaTypeSet} that consists of media types producible by this virtual host.
+     */
+    public MediaTypeSet producibleMediaTypes() {
+        return producibleMediaTypes;
+    }
+
+    /**
+     * Finds the {@link Service} whose {@link PathMapping} matches the {@link PathMappingContext}.
      *
-     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
-     *              {@code null} if query does not exist.
+     * @param mappingCtx a context to find the {@link Service}.
      *
      * @return the {@link ServiceConfig} wrapped by a {@link PathMapped} if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
-    public PathMapped<ServiceConfig> findServiceConfig(String path, @Nullable String query) {
-        requireNonNull(path, "path");
-        return serviceMapping.apply(path, query);
+    public PathMapped<ServiceConfig> findServiceConfig(PathMappingContext mappingCtx) {
+        requireNonNull(mappingCtx, "mappingCtx");
+        return serviceMapping.apply(mappingCtx);
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
@@ -240,7 +250,8 @@ public final class VirtualHost {
                     return new ServiceConfig(pathMapping, service, loggerName);
                 }).collect(Collectors.toList());
 
-        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(), services);
+        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
+                               services, producibleMediaTypes());
     }
 
     @Override
@@ -255,7 +266,7 @@ public final class VirtualHost {
     }
 
     static String toString(Class<?> type, String defaultHostname, String hostnamePattern,
-                           SslContext sslContext, List<?> services) {
+                           SslContext sslContext, List<?>... services) {
 
         StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -269,7 +280,9 @@ public final class VirtualHost {
         buf.append(", ssl: ");
         buf.append(sslContext != null);
         buf.append(", services: ");
-        buf.append(services);
+        for (List<?> service : services) {
+            buf.append(service);
+        }
         buf.append(')');
 
         return buf.toString();

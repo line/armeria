@@ -26,8 +26,6 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -175,21 +173,21 @@ final class DefaultPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
-        final Matcher matcher = pattern.matcher(path);
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final Matcher matcher = pattern.matcher(mappingCtx.path());
         if (!matcher.matches()) {
             return PathMappingResult.empty();
         }
 
         if (paramNameArray.length == 0) {
-            return PathMappingResult.of(path, query);
+            return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
         }
 
         final ImmutableMap.Builder<String, String> pathParams = ImmutableMap.builder();
         for (int i = 0; i < paramNameArray.length; i++) {
             pathParams.put(paramNameArray[i], matcher.group(i + 1));
         }
-        return PathMappingResult.of(path, query, pathParams.build());
+        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(), pathParams.build());
     }
 
     @Override

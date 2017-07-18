@@ -55,12 +55,14 @@ import com.linecorp.armeria.server.TestConverters.NaiveStringConverter;
 import com.linecorp.armeria.server.TestConverters.TypedNumberConverter;
 import com.linecorp.armeria.server.TestConverters.TypedStringConverter;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
+import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Converter;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Optional;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.common.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -95,6 +97,9 @@ public class AnnotatedHttpServiceTest {
                                 LoggingService.newDecorator());
 
             sb.annotatedService("/7", new MyAnnotatedService7(),
+                                LoggingService.newDecorator());
+
+            sb.annotatedService("/8", new MyAnnotatedService8(),
                                 LoggingService.newDecorator());
         }
     };
@@ -390,6 +395,52 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    public static class MyAnnotatedService8 {
+
+        @Get("/same/path")
+        public String sharedGet() {
+            return "GET";
+        }
+
+        @Post("/same/path")
+        public String sharedPost() {
+            return "POST";
+        }
+
+        @Post("/same/path")
+        @ConsumeType("application/json")
+        public String sharedPostJson() {
+            return "POST/JSON";
+        }
+
+        @Get("/same/path")
+        @ProduceType("application/json")
+        public String sharedGetJson() {
+            return "GET/JSON";
+        }
+
+        @Get("/same/path")
+        @ProduceType("text/plain")
+        public String sharedGetText() {
+            return "GET/TEXT";
+        }
+
+        @Post("/same/path")
+        @ConsumeType("application/json")
+        @ProduceType("application/json")
+        public String sharedPostJsonBoth() {
+            return "POST/JSON/BOTH";
+        }
+
+        // To add one more produce type to the virtual host.
+        @Get("/other")
+        @ProduceType("application/x-www-form-urlencoded")
+        public String other() {
+            return "GET/FORM";
+        }
+    }
+
     @Test
     public void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -423,7 +474,7 @@ public class AnnotatedHttpServiceTest {
             }
             // Run case 3 but with not-mapped HTTP method (Post).
             try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/1/string/blah")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
             }
             // Get a requested path as typed string from ServiceRequestContext or HttpRequest
             try (CloseableHttpResponse res =
@@ -482,7 +533,7 @@ public class AnnotatedHttpServiceTest {
             }
             // Run case 6 but with not-mapped HTTP method (Post).
             try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/2/string/blah")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
             }
 
             // Test the case where multiple annotated services are bound under the same path prefix.
@@ -633,6 +684,89 @@ public class AnnotatedHttpServiceTest {
                     rule.httpUri("/7/param/precedence/line5?username=dot&password=armeria5")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("line5/armeria5"));
+            }
+        }
+    }
+
+    @Test
+    public void testAdvancedAnnotatedHttpService() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpGet httpGet;
+            HttpPost httpPost;
+
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/8/same/path")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("GET"));
+            }
+
+            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/8/same/path")))) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("POST"));
+            }
+
+            httpPost = new HttpPost(rule.httpUri("/8/same/path"));
+            httpPost.setHeader(org.apache.http.HttpHeaders.CONTENT_TYPE, "application/json");
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("POST/JSON"));
+            }
+
+            httpGet = new HttpGet(rule.httpUri("/8/same/path"));
+            httpGet.setHeader(org.apache.http.HttpHeaders.ACCEPT, "application/json");
+            try (CloseableHttpResponse res = hc.execute(httpGet)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("GET/JSON"));
+            }
+
+            httpPost = new HttpPost(rule.httpUri("/8/same/path"));
+            httpPost.setHeader(org.apache.http.HttpHeaders.CONTENT_TYPE, "application/json");
+            httpPost.setHeader(org.apache.http.HttpHeaders.ACCEPT, "application/json");
+            try (CloseableHttpResponse res = hc.execute(httpPost)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("POST/JSON/BOTH"));
+            }
+
+            httpGet = new HttpGet(rule.httpUri("/8/same/path"));
+            httpGet.setHeader(org.apache.http.HttpHeaders.ACCEPT, "application/json;q=0.9, text/plain");
+            try (CloseableHttpResponse res = hc.execute(httpGet)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("GET/TEXT"));
+            }
+
+            httpGet = new HttpGet(rule.httpUri("/8/same/path"));
+            httpGet.setHeader(org.apache.http.HttpHeaders.ACCEPT, "application/json;q=0.9, text/plain;q=0.7");
+            try (CloseableHttpResponse res = hc.execute(httpGet)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("GET/JSON"));
+            }
+
+            httpGet = new HttpGet(rule.httpUri("/8/same/path"));
+            httpGet.setHeader(org.apache.http.HttpHeaders.ACCEPT,
+                              "application/json;charset=UTF-8;q=0.9, text/plain;q=0.7");
+            try (CloseableHttpResponse res = hc.execute(httpGet)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("GET/TEXT"));
+            }
+
+            httpGet = new HttpGet(rule.httpUri("/8/same/path"));
+            httpGet.setHeader(org.apache.http.HttpHeaders.ACCEPT,
+                              "application/x-www-form-urlencoded, application/json;charset=UTF-8;q=0.9," +
+                              "text/plain;q=0.7");
+            try (CloseableHttpResponse res = hc.execute(httpGet)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("GET/TEXT"));
+            }
+
+            // No matched media type. It would be handled by the MyAnnotatedService8#sharedGet.
+            // TODO(hyangtack) It is definitely wierd behavior because the request does not contain
+            // 'accept: */*'. But we cannot check it strictly because we didn't have a media type
+            // negotiation feature before. Currently we just assume that the request has a 'accept: */*'.
+            httpGet = new HttpGet(rule.httpUri("/8/same/path"));
+            httpGet.setHeader(org.apache.http.HttpHeaders.ACCEPT,
+                              "application/json;charset=UTF-8;q=0.9, text/html;q=0.7");
+            try (CloseableHttpResponse res = hc.execute(httpGet)) {
+                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("GET"));
             }
         }
     }

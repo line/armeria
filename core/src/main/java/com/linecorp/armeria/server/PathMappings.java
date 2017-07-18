@@ -23,9 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.BiFunction;
-
-import javax.annotation.Nullable;
+import java.util.function.Function;
 
 import com.linecorp.armeria.common.util.LruMap;
 import com.linecorp.armeria.server.composition.SimpleCompositeService;
@@ -36,7 +34,7 @@ import com.linecorp.armeria.server.composition.SimpleCompositeService;
  *
  * @param <T> the type of the mapped value
  */
-public class PathMappings<T> implements BiFunction<String, String, PathMapped<T>> {
+public class PathMappings<T> implements Function<PathMappingContext, PathMapped<T>> {
 
     private final ThreadLocal<Map<String, PathMapped<T>>> threadLocalCache;
     private final List<Entry<PathMapping, T>> patterns = new ArrayList<>();
@@ -68,7 +66,7 @@ public class PathMappings<T> implements BiFunction<String, String, PathMapped<T>
      * Adds the mapping from the specified {@link PathMapping} to the specified {@code value}.
      *
      * @return {@code this}
-     * @throws IllegalStateException if {@link #freeze()} or {@link #apply(String, String)} has been called
+     * @throws IllegalStateException if {@link #freeze()} or {@link #apply(PathMappingContext)} has been called
      *                               already
      */
     public PathMappings<T> add(PathMapping pathMapping, T value) {
@@ -92,21 +90,21 @@ public class PathMappings<T> implements BiFunction<String, String, PathMapped<T>
     }
 
     /**
-     * Finds the {@link Service} whose {@link PathMapping} matches the specified {@code path}.
+     * Finds the {@link Service} whose {@link PathMapping} matches the specified {@link PathMappingContext}.
      *
      * @return a {@link PathMapped} that wraps the matching value if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
     @Override
-    public PathMapped<T> apply(String path, @Nullable String query) {
+    public PathMapped<T> apply(PathMappingContext mappingCtx) {
         freeze();
 
         // Look up the cache if the cache is available and query string does not exist.
         final Map<String, PathMapped<T>> cache =
-                query == null && threadLocalCache != null ? threadLocalCache.get() : null;
+                mappingCtx.query() == null && threadLocalCache != null ? threadLocalCache.get() : null;
 
         if (cache != null) {
-            final PathMapped<T> value = cache.get(path);
+            final PathMapped<T> value = cache.get(mappingCtx.summary());
             if (value != null) {
                 return value;
             }
@@ -118,16 +116,54 @@ public class PathMappings<T> implements BiFunction<String, String, PathMapped<T>
         for (int i = 0; i < size; i++) {
             final Entry<PathMapping, T> e = patterns.get(i);
             final PathMapping mapping = e.getKey();
-            final PathMappingResult mappingResult = mapping.apply(path, query);
+            final PathMappingResult mappingResult = mapping.apply(mappingCtx);
             if (mappingResult.isPresent()) {
-                result = PathMapped.of(mapping, mappingResult, e.getValue());
-                break;
+                //
+                // The services are sorted as follows:
+                //
+                // 1) annotated service with method and media type negotiation (consumable and producible)
+                // 2) annotated service with method and producible media type negotiation
+                // 3) annotated service with method and consumable media type negotiation
+                // 4) annotated service with method negotiation
+                // 5) the other services (in a registered order)
+                //
+                // 1) and 2) may produce a score between the lowest and the highest because they should
+                // negotiate the produce type with the value of 'Accept' header.
+                // 3), 4) and 5) always produces the lowest score.
+                //
+
+                // Found the best matching.
+                if (mappingResult.isHighestScore()) {
+                    result = PathMapped.of(mapping, mappingResult, e.getValue());
+                    break;
+                }
+
+                // This means that the 'mappingResult' is produced by one of 3), 4) and 5). So we have no more
+                // chance to find a better matching from now.
+                if (mappingResult.isLowestScore()) {
+                    if (!result.isPresent()) {
+                        result = PathMapped.of(mapping, mappingResult, e.getValue());
+                    }
+                    break;
+                }
+
+                // We have still a chance to find a better matching.
+                if (result.isPresent()) {
+                    if (mappingResult.score() > result.mappingResult().score()) {
+                        // Replace the candidate with the new one only if the score is better.
+                        // If the score is same, we respect the order of service registration.
+                        result = PathMapped.of(mapping, mappingResult, e.getValue());
+                    }
+                } else {
+                    // Keep the result as a candidate.
+                    result = PathMapped.of(mapping, mappingResult, e.getValue());
+                }
             }
         }
 
         // Cache the result.
         if (cache != null) {
-            cache.put(path, result);
+            cache.put(mappingCtx.summary(), result);
         }
 
         return result;

@@ -31,8 +31,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +39,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Converter;
 import com.linecorp.armeria.server.annotation.Converter.Unspecified;
 import com.linecorp.armeria.server.annotation.Delete;
@@ -51,6 +51,7 @@ import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
@@ -135,10 +136,37 @@ final class AnnotatedHttpServices {
     }
 
     /**
+     * Returns {@link MediaType} specified by {@link ConsumeType} annotation.
+     */
+    private static MediaType consumeType(Method method) {
+        ConsumeType consumeType = method.getAnnotation(ConsumeType.class);
+        if (consumeType == null) {
+            return null;
+        }
+        return MediaType.parse(consumeType.value());
+    }
+
+    /**
+     * Returns {@link MediaType} specified by {@link ProduceType} annotation.
+     */
+    private static MediaType produceType(Method method) {
+        ProduceType produceType = method.getAnnotation(ProduceType.class);
+        if (produceType == null) {
+            return null;
+        }
+        MediaType type = MediaType.parse(produceType.value());
+        if (type.hasWildcard()) {
+            throw new IllegalArgumentException("@ProduceType must not have a wildcard: " +
+                                               produceType.value());
+        }
+        return type;
+    }
+
+    /**
      * Returns the {@link PathMapping} instance mapped to {@code method}.
      */
-    private static PathMapping pathMapping(String pathPrefix, Method method,
-                                           Set<Annotation> methodAnnotations) {
+    private static PathMapping pathStringMapping(String pathPrefix, Method method,
+                                                 Set<Annotation> methodAnnotations) {
         pathPrefix = ensureAbsolutePath(pathPrefix, "pathPrefix");
         if (!pathPrefix.endsWith("/")) {
             pathPrefix += '/';
@@ -285,7 +313,10 @@ final class AnnotatedHttpServices {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
 
-        final PathMapping pathMapping = pathMapping(pathPrefix, method, methodAnnotations);
+        final HttpHeaderPathMapping pathMapping =
+                new HttpHeaderPathMapping(pathStringMapping(pathPrefix, method, methodAnnotations),
+                                          methods, consumeType(method), produceType(method));
+
         final AnnotatedHttpServiceMethod function = new AnnotatedHttpServiceMethod(object, method, pathMapping);
 
         final Set<String> parameterNames = function.pathParamNames();
@@ -297,7 +328,7 @@ final class AnnotatedHttpServices {
 
         final ResponseConverter converter = converter(method);
         if (converter != null) {
-            return new AnnotatedHttpService(methods, pathMapping, function.withConverter(converter));
+            return new AnnotatedHttpService(pathMapping, function.withConverter(converter));
         }
 
         final ImmutableMap<Class<?>, ResponseConverter> newConverters =
@@ -306,7 +337,7 @@ final class AnnotatedHttpServices {
                         .putAll(converters(method.getDeclaringClass())) // Converters given by @Converters
                         .build();
 
-        return new AnnotatedHttpService(methods, pathMapping, function.withConverters(newConverters));
+        return new AnnotatedHttpService(pathMapping, function.withConverters(newConverters));
     }
 
     /**
@@ -346,14 +377,16 @@ final class AnnotatedHttpServices {
         }
 
         @Override
-        protected PathMappingResult doApply(String path, @Nullable String query) {
+        protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+            final String path = mappingCtx.path();
             if (!path.startsWith(pathPrefix)) {
                 return PathMappingResult.empty();
             }
 
-            final PathMappingResult result = mapping.apply(path.substring(pathPrefix.length() - 1), query);
+            final PathMappingResult result =
+                    mapping.apply(mappingCtx.overridePath(path.substring(pathPrefix.length() - 1)));
             if (result.isPresent()) {
-                return PathMappingResult.of(path, query, result.pathParams());
+                return PathMappingResult.of(path, mappingCtx.query(), result.pathParams());
             } else {
                 return PathMappingResult.empty();
             }

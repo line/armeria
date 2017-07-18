@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.PathMapping.ofExact;
+import static com.linecorp.armeria.server.PathMappingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
@@ -25,13 +26,13 @@ public class ExactPathMappingTest {
 
     @Test
     public void shouldReturnEmptyOnMismatch() {
-        final PathMappingResult result = new ExactPathMapping("/find/me").apply("/find/me/not", null);
+        final PathMappingResult result = new ExactPathMapping("/find/me").apply(create("/find/me/not"));
         assertThat(result.isPresent()).isFalse();
     }
 
     @Test
     public void shouldReturnNonEmptyOnMatch() {
-        final PathMappingResult result = new ExactPathMapping("/find/me").apply("/find/me", null);
+        final PathMappingResult result = new ExactPathMapping("/find/me").apply(create("/find/me"));
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/find/me");
         assertThat(result.query()).isNull();

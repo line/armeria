@@ -18,11 +18,10 @@ package com.linecorp.armeria.server.composition;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.PathMapped;
+import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -61,7 +60,7 @@ public class SimpleCompositeService<I extends Request, O extends Response>
     }
 
     @Override
-    public PathMapped<Service<I, O>> findService(String path, @Nullable String query) {
-        return super.findService(path, query);
+    public PathMapped<Service<I, O>> findService(PathMappingContext mappingCtx) {
+        return super.findService(mappingCtx);
     }
 }

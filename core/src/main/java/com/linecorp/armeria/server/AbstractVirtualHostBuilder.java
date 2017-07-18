@@ -26,8 +26,10 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.Function;
 
 import javax.net.ssl.SSLException;
@@ -36,10 +38,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
@@ -116,6 +121,9 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private final String defaultHostname;
     private final String hostnamePattern;
     private final List<ServiceConfig> services = new ArrayList<>();
+    private final List<Entry<AnnotatedHttpService,
+            Function<Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>>>> annotatedServices = new ArrayList<>();
     private SslContext sslContext;
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
 
@@ -324,7 +332,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final List<AnnotatedHttpService> entries =
                 AnnotatedHttpServices.build(pathPrefix, service, converters);
-        entries.forEach(e -> service(e.pathMapping(), decorator.apply(e)));
+        entries.forEach(e -> annotatedServices.add(Maps.immutableEntry(e, decorator)));
         return self();
     }
 
@@ -363,12 +371,39 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * added to this builder.
      */
     protected VirtualHost build() {
-        final VirtualHost virtualHost = new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);
+        final List<ServiceConfig> serviceConfigs =
+                new ArrayList<>(services.size() + annotatedServices.size());
+        final List<MediaType> producibleTypes = new ArrayList<>();
+
+        // Sort annotated services by the number of conditions to be checked in a descending order.
+        annotatedServices.sort(Comparator.comparingInt(e -> -1 * e.getKey().complexity()));
+
+        annotatedServices.forEach(e -> {
+            final AnnotatedHttpService service = e.getKey();
+
+            // Collect producible media types over this virtual host.
+            MediaType produceType = service.pathMapping().produceType();
+            if (produceType != null) {
+                producibleTypes.add(produceType);
+            }
+
+            serviceConfigs.add(new ServiceConfig(service.pathMapping(),
+                                                 e.getValue().apply(service),
+                                                 null));
+        });
+
+        // Add the other services after adding annotated services.
+        serviceConfigs.addAll(services);
+
+        final VirtualHost virtualHost =
+                new VirtualHost(defaultHostname, hostnamePattern, sslContext, serviceConfigs,
+                                new MediaTypeSet(producibleTypes));
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
     @Override
     public String toString() {
-        return VirtualHost.toString(getClass(), defaultHostname, hostnamePattern, sslContext, services);
+        return VirtualHost.toString(getClass(), defaultHostname, hostnamePattern, sslContext,
+                                    services, annotatedServices);
     }
 }
