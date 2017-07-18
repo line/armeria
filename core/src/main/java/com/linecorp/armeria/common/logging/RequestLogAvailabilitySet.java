@@ -80,7 +80,6 @@ final class RequestLogAvailabilitySet extends AbstractSet<RequestLogAvailability
         this.values = values.toArray(new RequestLogAvailability[values.size()]);
     }
 
-
     @Override
     public Iterator<RequestLogAvailability> iterator() {
         return Iterators.forArray(values);

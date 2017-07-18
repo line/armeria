@@ -63,5 +63,4 @@ class Tomcat85InputBuffer implements InputBuffer {
     private boolean isNeedToRead() {
         return !(read || content.isEmpty());
     }
-
 }

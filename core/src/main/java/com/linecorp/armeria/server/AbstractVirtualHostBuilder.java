@@ -56,7 +56,7 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 
 /**
  * Contains information for the build of the virtual host.
- * 
+ *
  * @see ChainedVirtualHostBuilder
  * @see VirtualHostBuilder
  */
@@ -64,7 +64,7 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractVirtualHostBuilder.class);
-    
+
     private static final ApplicationProtocolConfig HTTPS_ALPN_CFG = new ApplicationProtocolConfig(
             Protocol.ALPN,
             // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.

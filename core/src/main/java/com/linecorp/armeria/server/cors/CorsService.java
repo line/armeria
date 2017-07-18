@@ -153,7 +153,6 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
         }
     }
 
-
     /**
      * Emit CORS headers if origin was found.
      *

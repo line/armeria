@@ -56,7 +56,6 @@ public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClie
         return delegate -> new ConcurrencyLimitingHttpClient(delegate, maxConcurrency, timeout, unit);
     }
 
-
     private ConcurrencyLimitingHttpClient(Client<HttpRequest, HttpResponse> delegate, int maxConcurrency) {
         super(delegate, maxConcurrency);
     }

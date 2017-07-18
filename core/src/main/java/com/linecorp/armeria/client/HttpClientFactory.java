@@ -229,7 +229,6 @@ final class HttpClientFactory extends AbstractClientFactory {
         }
     }
 
-
     KeyedChannelPool<PoolKey> pool(EventLoop eventLoop) {
         KeyedChannelPool<PoolKey> pool = pools.get(eventLoop);
         if (pool != null) {

@@ -243,5 +243,4 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     public CompletableFuture<T> exceptionally(Function<Throwable, ? extends T> fn) {
         return ctx.makeContextAware(super.exceptionally(ctx.makeContextAware(fn)));
     }
-
 }

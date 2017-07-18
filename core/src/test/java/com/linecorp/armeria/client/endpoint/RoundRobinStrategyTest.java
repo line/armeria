@@ -52,5 +52,4 @@ public class RoundRobinStrategyTest {
         assertThat(catchThrowable(() -> EndpointGroupRegistry.selectNode("empty")))
                 .isInstanceOf(EndpointGroupException.class);
     }
-
 }

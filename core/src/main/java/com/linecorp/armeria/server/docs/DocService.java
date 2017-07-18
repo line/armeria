@@ -232,7 +232,6 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                                   .map(field -> addFieldDocString(e, field, docStrings))
                                   .collect(toImmutableList()),
                                  docString(e.name(), e.docString(), docStrings));
-
     }
 
     private static FieldInfo addFieldDocString(NamedTypeInfo parent, FieldInfo field,

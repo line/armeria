@@ -278,11 +278,12 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
                     }
                 }
             }
+
             if (parameters == null || parameters.isEmpty()) {
                 return EMPTY_PARAMETERS;
             }
-            return HttpParameters.copyOf(parameters);
 
+            return HttpParameters.copyOf(parameters);
         } catch (Exception e) {
             // If we failed to decode the query string, we ignore the exception raised here.
             // A missing parameter might be checked when invoking the annotated method.

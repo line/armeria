@@ -145,5 +145,4 @@ public class SlidingWindowCounterTest {
         assertThat(counter.onSuccess()).isEmpty();
         assertThat(counter.count()).isEqualTo(new EventCount(0, 0));
     }
-
 }

@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.healthcheck;
 
 import static org.junit.Assert.assertFalse;
@@ -42,5 +41,4 @@ public class SettableHealthCheckerTest {
         checker.setHealthy(false);
         assertFalse(checker.isHealthy());
     }
-
 }

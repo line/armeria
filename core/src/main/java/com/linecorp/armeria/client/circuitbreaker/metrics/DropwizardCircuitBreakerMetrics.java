@@ -104,5 +104,4 @@ final class DropwizardCircuitBreakerMetrics {
     void onRequestRejected() {
         requestRejected.mark();
     }
-
 }

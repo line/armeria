@@ -134,7 +134,6 @@ public class ThriftDynamicTimeoutTest {
         }
     }
 
-
     private static final class TimeoutDisablingService
             extends SimpleDecoratingService<RpcRequest, RpcResponse> {
 

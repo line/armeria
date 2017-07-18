@@ -169,7 +169,6 @@ public final class JettyService implements HttpService {
         configurator = new Configurator();
     }
 
-
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         if (armeriaServer != null) {

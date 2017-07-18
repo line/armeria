@@ -98,5 +98,4 @@ public class GrpcDocStringExtractorTest {
                 "armeria.grpc.testing.SimpleRequest.NestedEnum/OK",
                 " We're ok.\n");
     }
-
 }

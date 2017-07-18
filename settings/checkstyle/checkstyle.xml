@@ -23,6 +23,45 @@
     <property name="eachLine" value="true"/>
   </module>
 
+  <!-- Copyright headers -->
+  <module name="RegexpSingleline">
+    <property name="format" value="^(?:\s|\*)*Copyright\s+[0-9]+\s+LINE Corporation\s*$"/>
+    <property name="minimum" value="1"/>
+    <property name="maximum" value="1"/>
+    <property name="message" value="missing copyright header"/>
+  </module>
+  <!-- Unmaintainable Javadoc tags -->
+  <module name="RegexpSingleline">
+    <property name="format" value="(?:@version|\(non-Javadoc\))"/>
+    <property name="ignoreCase" value="true"/>
+    <property name="message" value="unmaintainable Javadoc tags: @version or (non-Javadoc)"/>
+  </module>
+  <!-- IDE-generated comment -->
+  <module name="RegexpSingleline">
+    <property name="format" value="File \| Settings \| File Templates"/>
+    <property name="message" value="IDE-generated comment"/>
+  </module>
+  <!-- Trailing spaces -->
+  <module name="RegexpSingleline">
+    <property name="format" value="\s+$"/>
+    <property name="message" value="trailing spaces"/>
+  </module>
+  <!-- Consecutive empty lines -->
+  <module name="RegexpMultiline">
+    <property name="format" value="[^\r\n](?:\r?\n){3,}"/>
+    <property name="message" value="consecutive empty lines"/>
+  </module>
+  <!-- Empty lines between two opening braces -->
+  <module name="RegexpMultiline">
+    <property name="format" value="\{(?:\s*\r?\n){2,}\s*\{"/>
+    <property name="message" value="empty lines between two opening braces ('{')"/>
+  </module>
+  <!-- Empty lines before a closing brace -->
+  <module name="RegexpMultiline">
+    <property name="format" value="(?:\s*\r?\n){2,}\s*\}"/>
+    <property name="message" value="empty lines before a closing brace ('}')"/>
+  </module>
+
   <module name="JavadocPackage"/>
 
   <module name="TreeWalker">

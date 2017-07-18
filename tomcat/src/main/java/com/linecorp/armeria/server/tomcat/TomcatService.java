@@ -560,5 +560,4 @@ public final class TomcatService implements HttpService {
             stop();
         }
     }
-
 }

@@ -163,7 +163,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             throw new IllegalStateException("unknown protocol: " + protocol);
         }
 
-
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p));

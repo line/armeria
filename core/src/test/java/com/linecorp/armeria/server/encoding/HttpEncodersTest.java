@@ -64,5 +64,4 @@ public class HttpEncodersTest {
         when(request.headers()).thenReturn(HttpHeaders.of(HttpHeaderNames.ACCEPT_ENCODING, "piedpiper"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isNull();
     }
-
 }

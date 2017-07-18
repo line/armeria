@@ -81,7 +81,6 @@ public class HttpServerIdleTimeoutHandlerTest {
         //pending request count turns to 0
         waitUntilTimeout();
         assertFalse(ch.isOpen());
-
     }
 
     private void waitUntilTimeout() throws InterruptedException {

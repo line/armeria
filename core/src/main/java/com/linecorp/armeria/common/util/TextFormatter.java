@@ -142,5 +142,4 @@ public final class TextFormatter {
         appendEpoch(buf, timeMillis);
         return buf;
     }
-
 }
