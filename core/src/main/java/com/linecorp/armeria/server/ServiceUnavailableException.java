@@ -17,12 +17,15 @@
 package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
+
+import io.netty.handler.codec.http2.Http2Error;
 
 /**
  * A {@link RuntimeException} that is raised when a requested invocation cannot be served.
  */
-public final class ServiceUnavailableException extends RuntimeException {
+public final class ServiceUnavailableException extends ArmeriaHttpException {
 
     private static final long serialVersionUID = -9092895165959388396L;
 
@@ -40,5 +43,7 @@ public final class ServiceUnavailableException extends RuntimeException {
     /**
      * Creates a new instance.
      */
-    private ServiceUnavailableException() {}
+    private ServiceUnavailableException() {
+        super(HttpStatus.SERVICE_UNAVAILABLE, Http2Error.CANCEL);
+    }
 }

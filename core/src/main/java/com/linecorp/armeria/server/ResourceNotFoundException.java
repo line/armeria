@@ -16,12 +16,15 @@
 package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
+
+import io.netty.handler.codec.http2.Http2Error;
 
 /**
  * A {@link RuntimeException} raised when a {@link Service} failed to find a resource.
  */
-public final class ResourceNotFoundException extends RuntimeException {
+public final class ResourceNotFoundException extends ArmeriaHttpException {
 
     private static final long serialVersionUID = 1268757990666737813L;
 
@@ -39,5 +42,7 @@ public final class ResourceNotFoundException extends RuntimeException {
     /**
      * Creates a new instance.
      */
-    private ResourceNotFoundException() {}
+    private ResourceNotFoundException() {
+        super(HttpStatus.NOT_FOUND, Http2Error.CANCEL);
+    }
 }
