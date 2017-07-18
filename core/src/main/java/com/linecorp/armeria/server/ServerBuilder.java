@@ -98,8 +98,6 @@ public final class ServerBuilder {
     private boolean updatedDefaultVirtualHostBuilder;
 
     private VirtualHost defaultVirtualHost;
-    private EventLoopGroup bossGroup = CommonPools.bossGroup();
-    private boolean shutdownBossGroupOnStop;
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
     private int maxNumConnections = DEFAULT_MAX_NUM_CONNECTIONS;
@@ -166,19 +164,6 @@ public final class ServerBuilder {
      */
     public ServerBuilder virtualHost(VirtualHost virtualHost) {
         virtualHosts.add(requireNonNull(virtualHost, "virtualHost"));
-        return this;
-    }
-
-    /**
-     * Sets the boss {@link EventLoopGroup} which is responsible for accepting incoming connections.
-     * If not set, {@linkplain CommonPools#bossGroup() the common boss group} is used.
-     *
-     * @param shutdownOnStop whether to shut down the boss {@link EventLoopGroup}
-     *                       when the {@link Server} stops
-     */
-    public ServerBuilder bossGroup(EventLoopGroup bossGroup, boolean shutdownOnStop) {
-        this.bossGroup = requireNonNull(bossGroup, "bossGroup");
-        shutdownBossGroupOnStop = shutdownOnStop;
         return this;
     }
 
@@ -626,9 +611,8 @@ public final class ServerBuilder {
             virtualHosts = this.virtualHosts;
         }
 
-        Server server = new Server(new ServerConfig(
-                ports, defaultVirtualHost, virtualHosts,
-                bossGroup, shutdownBossGroupOnStop, workerGroup, shutdownWorkerGroupOnStop,
+        final Server server = new Server(new ServerConfig(
+                ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix));
@@ -639,10 +623,8 @@ public final class ServerBuilder {
     @Override
     public String toString() {
         return ServerConfig.toString(
-                getClass(), ports, defaultVirtualHost, virtualHosts,
-                bossGroup, shutdownBossGroupOnStop, workerGroup, shutdownWorkerGroupOnStop,
-                maxNumConnections, idleTimeoutMillis,
-                defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
+                maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix);
     }

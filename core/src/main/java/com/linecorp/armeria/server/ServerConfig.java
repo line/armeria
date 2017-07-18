@@ -52,8 +52,6 @@ public final class ServerConfig {
     private final DomainNameMapping<VirtualHost> virtualHostMapping;
     private final List<ServiceConfig> services;
 
-    private final EventLoopGroup bossGroup;
-    private final boolean shutdownBossGroupOnStop;
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnStop;
     private final int maxNumConnections;
@@ -73,7 +71,6 @@ public final class ServerConfig {
     ServerConfig(
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
-            EventLoopGroup bossGroup, boolean shutdownBossGroupOnStop,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
@@ -85,8 +82,6 @@ public final class ServerConfig {
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
 
         // Set the primitive properties.
-        this.bossGroup = requireNonNull(bossGroup, "bossGroup");
-        this.shutdownBossGroupOnStop = shutdownBossGroupOnStop;
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
         this.shutdownWorkerGroupOnStop = shutdownWorkerGroupOnStop;
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
@@ -309,20 +304,6 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the boss {@link EventLoopGroup} which is responsible for accepting incoming connections.
-     */
-    public EventLoopGroup bossGroup() {
-        return bossGroup;
-    }
-
-    /**
-     * Returns whether the boss {@link EventLoopGroup} is shut down when the {@link Server} stops.
-     */
-    public boolean shutdownBossGroupOnStop() {
-        return shutdownBossGroupOnStop;
-    }
-
-    /**
      * Returns the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
      */
@@ -405,7 +386,6 @@ public final class ServerConfig {
         if (strVal == null) {
             this.strVal = strVal = toString(
                     getClass(), ports(), null, virtualHosts(),
-                    bossGroup(), shutdownBossGroupOnStop(),
                     workerGroup(), shutdownWorkerGroupOnStop(),
                     maxNumConnections(), idleTimeoutMillis(),
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
@@ -419,7 +399,6 @@ public final class ServerConfig {
     static String toString(
             Class<?> type,
             Iterable<ServerPort> ports, VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
-            EventLoopGroup bossGroup, boolean shutdownBossGroupOnStop,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
@@ -468,11 +447,7 @@ public final class ServerConfig {
                                             defaultVirtualHost.serviceConfigs()));
         }
 
-        buf.append("], bossGroup: ");
-        buf.append(bossGroup);
-        buf.append(" (shutdownOnStop=");
-        buf.append(shutdownBossGroupOnStop);
-        buf.append("), workerGroup: ");
+        buf.append("], workerGroup: ");
         buf.append(workerGroup);
         buf.append(" (shutdownOnStop=");
         buf.append(shutdownWorkerGroupOnStop);
