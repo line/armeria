@@ -24,7 +24,7 @@ import io.netty.handler.codec.http2.Http2Error;
 /**
  * A {@link RuntimeException} raised when a {@link Service} failed to find a resource.
  */
-public final class ResourceNotFoundException extends ArmeriaHttpException {
+public final class ResourceNotFoundException extends HttpResponseException {
 
     private static final long serialVersionUID = 1268757990666737813L;
 

@@ -216,8 +216,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     @Override
     public void onError(Throwable cause) {
-        if (cause instanceof ArmeriaHttpException) {
-            ArmeriaHttpException exception = (ArmeriaHttpException) cause;
+        if (cause instanceof HttpResponseException) {
+            HttpResponseException exception = (HttpResponseException) cause;
             failAndRespond(cause, exception.httpStatus(), exception.http2error());
         } else {
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",

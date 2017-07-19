@@ -23,7 +23,7 @@ import io.netty.handler.codec.http2.Http2Error;
  * A {@link RuntimeException} that is raised when an armeria internal http exception has occurred.
  * This class is the general class of exceptions produced by a failed request or a reset stream.
  */
-public abstract class ArmeriaHttpException extends RuntimeException {
+public abstract class HttpResponseException extends RuntimeException {
     private static final long serialVersionUID = 3487991462085151316L;
 
     private final HttpStatus httpStatus;
@@ -32,7 +32,7 @@ public abstract class ArmeriaHttpException extends RuntimeException {
     /**
      * Creates a new instance.
      */
-    protected ArmeriaHttpException(HttpStatus httpStatus, Http2Error http2error) {
+    protected HttpResponseException(HttpStatus httpStatus, Http2Error http2error) {
         this.httpStatus = httpStatus;
         this.http2error = http2error;
     }

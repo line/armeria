@@ -25,7 +25,7 @@ import io.netty.handler.codec.http2.Http2Error;
 /**
  * A {@link RuntimeException} that is raised when a requested invocation cannot be served.
  */
-public final class ServiceUnavailableException extends ArmeriaHttpException {
+public final class ServiceUnavailableException extends HttpResponseException {
 
     private static final long serialVersionUID = -9092895165959388396L;
 
