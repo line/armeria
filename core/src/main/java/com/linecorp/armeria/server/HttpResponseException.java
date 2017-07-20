@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,9 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpStatus;
-
-import io.netty.handler.codec.http2.Http2Error;
 
 /**
  * A {@link RuntimeException} that is raised when an armeria internal http exception has occurred.
@@ -27,14 +26,12 @@ public abstract class HttpResponseException extends RuntimeException {
     private static final long serialVersionUID = 3487991462085151316L;
 
     private final HttpStatus httpStatus;
-    private final Http2Error http2error;
 
     /**
      * Creates a new instance.
      */
-    protected HttpResponseException(HttpStatus httpStatus, Http2Error http2error) {
+    protected HttpResponseException(HttpStatus httpStatus) {
         this.httpStatus = httpStatus;
-        this.http2error = http2error;
     }
 
     /**
@@ -44,10 +41,11 @@ public abstract class HttpResponseException extends RuntimeException {
         return httpStatus;
     }
 
-    /**
-     * Returns the {@link Http2Error} that will be sent to a stream.
-     */
-    Http2Error http2error() {
-        return http2error;
+    @Override
+    public synchronized Throwable fillInStackTrace() {
+        if (Flags.verboseExceptions()) {
+            return super.fillInStackTrace();
+        }
+        return this;
     }
 }

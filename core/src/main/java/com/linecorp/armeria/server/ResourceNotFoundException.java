@@ -19,8 +19,6 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
 
-import io.netty.handler.codec.http2.Http2Error;
-
 /**
  * A {@link RuntimeException} raised when a {@link Service} failed to find a resource.
  */
@@ -43,6 +41,6 @@ public final class ResourceNotFoundException extends HttpResponseException {
      * Creates a new instance.
      */
     private ResourceNotFoundException() {
-        super(HttpStatus.NOT_FOUND, Http2Error.CANCEL);
+        super(HttpStatus.NOT_FOUND);
     }
 }
