@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpStatus;
 
@@ -31,13 +33,18 @@ public abstract class HttpResponseException extends RuntimeException {
      * Creates a new instance.
      */
     protected HttpResponseException(HttpStatus httpStatus) {
+        requireNonNull(httpStatus, "httpStatus");
+        if (100 <= httpStatus.code() && httpStatus.code() < 399) {
+            throw new IllegalArgumentException("httpStatus: " + httpStatus +
+                                               " (expected: code < 100 || 400 <= code");
+        }
         this.httpStatus = httpStatus;
     }
 
     /**
      * Returns the {@link HttpStatus} that will be sent to a client.
      */
-    HttpStatus httpStatus() {
+    public HttpStatus httpStatus() {
         return httpStatus;
     }
 

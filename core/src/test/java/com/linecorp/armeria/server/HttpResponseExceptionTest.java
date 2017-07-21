@@ -16,27 +16,26 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpStatus;
 
 public class HttpResponseExceptionTest {
-    static {
-        System.setProperty("com.linecorp.armeria.verboseExceptions", "false");
+    @Test
+    public void httpStatus() throws Exception {
+        HttpResponseException exception = new HttpResponseException(HttpStatus.INTERNAL_SERVER_ERROR) {
+            private static final long serialVersionUID = -1132103140930994783L;
+        };
+        assertThat(exception.httpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
-    public void fillInStackTrace() throws Exception {
-        MyHttpResponseException exception = new MyHttpResponseException();
-        assertThat(exception.getStackTrace()).isEmpty();
-    }
-
-    private static class MyHttpResponseException extends HttpResponseException {
-        private static final long serialVersionUID = 3634745947516435390L;
-
-        MyHttpResponseException() {
-            super(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public void onlyAcceptErrorHttpStatus() throws Exception {
+        assertThatThrownBy(() -> new HttpResponseException(HttpStatus.ACCEPTED) {
+            private static final long serialVersionUID = -1132103140930994783L;
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("expected: code < 100 || 400 <= code");
     }
 }
