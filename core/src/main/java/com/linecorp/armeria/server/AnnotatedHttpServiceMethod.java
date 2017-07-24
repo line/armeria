@@ -115,14 +115,22 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
 
     BiFunction<ServiceRequestContext, HttpRequest, Object> withConverter(ResponseConverter converter) {
         return (ctx, req) ->
-                executeSyncOrAsync(ctx, req).thenApply(obj -> convertResponse(obj, converter));
+                executeSyncOrAsync(ctx, req).thenApply(obj -> {
+                    try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
+                        return convertResponse(obj, converter);
+                    }
+                });
     }
 
     BiFunction<ServiceRequestContext, HttpRequest, Object> withConverters(
             Map<Class<?>, ResponseConverter> converters) {
 
         return (ctx, req) ->
-                executeSyncOrAsync(ctx, req).thenApply(obj -> convertResponse(obj, converters));
+                executeSyncOrAsync(ctx, req).thenApply(obj -> {
+                    try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
+                        return convertResponse(obj, converters);
+                    }
+                });
     }
 
     private CompletionStage<?> executeSyncOrAsync(ServiceRequestContext ctx, HttpRequest req) {
