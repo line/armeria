@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -118,6 +119,7 @@ public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements Aut
     @VisibleForTesting
     DnsAddressEndpointGroup(String hostname, int defaultPort, NameResolver<InetAddress> resolver,
                             EventLoop eventLoop, Duration queryInterval) {
+        checkArgument(defaultPort >= 0 && defaultPort <= 65535, "defaultPort must be between 0 and 65535");
         this.hostname = requireNonNull(hostname, "hostname");
         this.defaultPort = defaultPort;
         this.resolver = requireNonNull(resolver, "resolver");
