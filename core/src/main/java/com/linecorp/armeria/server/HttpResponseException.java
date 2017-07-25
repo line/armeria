@@ -34,9 +34,9 @@ public abstract class HttpResponseException extends RuntimeException {
      */
     protected HttpResponseException(HttpStatus httpStatus) {
         requireNonNull(httpStatus, "httpStatus");
-        if (100 <= httpStatus.code() && httpStatus.code() < 399) {
+        if (100 <= httpStatus.code() && httpStatus.code() < 400) {
             throw new IllegalArgumentException("httpStatus: " + httpStatus +
-                                               " (expected: code < 100 || 400 <= code");
+                                               " (expected: code < 100 || code >= 400)");
         }
         this.httpStatus = httpStatus;
     }

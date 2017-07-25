@@ -36,6 +36,6 @@ public class HttpResponseExceptionTest {
         assertThatThrownBy(() -> new HttpResponseException(HttpStatus.ACCEPTED) {
             private static final long serialVersionUID = -1132103140930994783L;
         }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("expected: code < 100 || 400 <= code");
+          .hasMessageContaining("expected: code < 100 || code >= 400)");
     }
 }
