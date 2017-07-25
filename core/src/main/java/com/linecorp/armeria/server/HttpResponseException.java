@@ -33,7 +33,7 @@ public abstract class HttpResponseException extends RuntimeException {
      * Creates a new instance.
      */
     protected HttpResponseException(HttpStatus httpStatus) {
-        requireNonNull(httpStatus, "httpStatus");
+        super(requireNonNull(httpStatus, "httpStatus").toString());
         if (100 <= httpStatus.code() && httpStatus.code() < 400) {
             throw new IllegalArgumentException(
                     "httpStatus: " + httpStatus +
