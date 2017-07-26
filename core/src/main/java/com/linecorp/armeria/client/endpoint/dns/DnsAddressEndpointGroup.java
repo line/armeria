@@ -38,7 +38,6 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.NameResolver;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -77,10 +76,9 @@ public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements Aut
      * Creates a {@link DnsAddressEndpointGroup} that queries every 1 second.
      *
      * @param hostname the hostname to query DNS queries for.
-     * @param defaultPort the port to use when the DNS answer does not contain one. Generally the port is only
-     *     available in the answer when {@code dnsType} is {@link DnsRecordType#SRV}. {@code 0} indicates an
-     *     unspecified port, meaning the port will either come from the DNS answer or use a protocol-specific
-     *     well-defined port number.
+     * @param defaultPort the port to use when the DNS answer does not contain one. {@code 0} indicates an
+     *     unspecified port, meaning the port will use a protocol-specific well-defined port number
+     *     (e.g., 80, 443).
      * @param eventLoop the {@link EventLoop} to schedule DNS queries on.
      */
     public static DnsAddressEndpointGroup of(String hostname, int defaultPort, EventLoop eventLoop) {
@@ -91,10 +89,9 @@ public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements Aut
      * Creates a {@link DnsAddressEndpointGroup}.
      *
      * @param hostname the hostname to query DNS queries for.
-     * @param defaultPort the port to use when the DNS answer does not contain one. Generally the port is only
-     *     available in the answer when {@code dnsType} is {@link DnsRecordType#SRV}. {@code 0} indicates an
-     *     unspecified port, meaning the port will either come from the DNS answer or use a protocol-specific
-     *     well-defined port number.
+     * @param defaultPort the port to use when the DNS answer does not contain one. {@code 0} indicates an
+     *     unspecified port, meaning the port will use a protocol-specific well-defined port number
+     *     (e.g., 80, 443).
      * @param eventLoop the {@link EventLoop} to schedule DNS queries on.
      * @param queryInterval the {@link Duration} to query DNS at.
      */
