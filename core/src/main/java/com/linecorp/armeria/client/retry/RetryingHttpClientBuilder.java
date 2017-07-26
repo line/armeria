@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
@@ -28,7 +30,11 @@ import com.linecorp.armeria.common.HttpResponse;
 public class RetryingHttpClientBuilder extends RetryingClientBuilder<
         RetryingHttpClientBuilder, RetryingHttpClient, HttpRequest, HttpResponse> {
 
+    private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = 1024 * 1024; // 1 MiB
+
     private boolean useRetryAfter;
+
+    private int contentPreviewLength = DEFAULT_CONTENT_PREVIEW_LENGTH;
 
     /**
      * Creates a new builder with the specified retry strategy.
@@ -44,11 +50,24 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
      * with the {@code useRetryAfter} with {@code true} to request after the specified delay.
      *
      * @param useRetryAfter {@code true} if you want to retry after using the {@code retryAfter} header.
-     *                      {@code false} otherwise.
-     * @return {@link RetryingHttpClientBuilder} to support method chaining.
+     *                      {@code false} otherwise
+     * @return {@link RetryingHttpClientBuilder} to support method chaining
      */
     public RetryingHttpClientBuilder useRetryAfter(boolean useRetryAfter) {
         this.useRetryAfter = useRetryAfter;
+        return self();
+    }
+
+    /**
+     * Sets the length of content to look up whether retry or not. If the total length of content exceeds
+     * this and there's no retry condition matched, it will hand over the stream to the client.
+     * @param contentPreviewLength the content length to preview. {@code 0} disables the length limit
+     * @return {@link RetryingHttpClientBuilder} to support method chaining
+     */
+    public RetryingHttpClientBuilder contentPreviewLength(int contentPreviewLength) {
+        checkArgument(contentPreviewLength >= 0,
+                      "contentPreviewLength: %s (expected: >= 0)", contentPreviewLength);
+        this.contentPreviewLength = contentPreviewLength;
         return self();
     }
 
@@ -57,8 +76,8 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
      */
     @Override
     public RetryingHttpClient build(Client<HttpRequest, HttpResponse> delegate) {
-        return new RetryingHttpClient(
-                delegate, retryStrategy, backoffSupplier, defaultMaxAttempts, useRetryAfter);
+        return new RetryingHttpClient(delegate, retryStrategy, backoffSupplier,
+                                      defaultMaxAttempts, useRetryAfter, contentPreviewLength);
     }
 
     /**
@@ -67,8 +86,8 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
      */
     @Override
     public Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient> newDecorator() {
-        return delegate -> new RetryingHttpClient(
-                delegate, retryStrategy, backoffSupplier, defaultMaxAttempts, useRetryAfter);
+        return delegate -> new RetryingHttpClient(delegate, retryStrategy, backoffSupplier,
+                                                  defaultMaxAttempts, useRetryAfter, contentPreviewLength);
     }
 
     @Override

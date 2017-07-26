@@ -42,8 +42,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator.DownstreamSubscription;
+import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator.SignalQueue;
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator.StreamMessageProcessor;
 import com.linecorp.armeria.testing.common.AnticipatedException;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.UnpooledByteBufAllocator;
 
 public class StreamMessageDuplicatorTest {
 
@@ -241,21 +245,104 @@ public class StreamMessageDuplicatorTest {
         assertThatThrownBy(duplicator::duplicateStream).isInstanceOf(IllegalStateException.class);
     }
 
+    /**
+     * A test for the {@link SignalQueue} in {@link AbstractStreamMessageDuplicator}.
+     * Queue expansion behaves differently when odd/even number head wrap-around happens.
+     */
+    @Test
+    public void circularQueueOddNumHeadWrapAround() {
+        final SignalQueue queue = new SignalQueue(obj -> 4);
+        add(queue, 0, 10);
+        assertThat(queue.size()).isEqualTo(10);
+        queue.requestRemovalAheadOf(8);
+        assertThat(queue.size()).isEqualTo(10); // removing elements happens when adding a element
+
+        int removedLength = queue.addAndRemoveIfRequested(10);
+        assertThat(removedLength).isEqualTo(8 * 4);
+        assertThat(queue.size()).isEqualTo(3); // 11 - 8 elements
+
+        add(queue, 11, 20);
+        queue.requestRemovalAheadOf(20); // head wrap around happens
+        assertThat(queue.elements.length).isEqualTo(16);
+
+        removedLength = queue.addAndRemoveIfRequested(20);
+        assertThat(removedLength).isEqualTo(12 * 4);
+
+        add(queue, 21, 40);              // queue expansion happens
+        assertThat(queue.elements.length).isEqualTo(32);
+        for (int i = 20; i < 40; i++) {
+            assertThat(queue.get(i)).isEqualTo(i);
+        }
+        assertThat(queue.size()).isEqualTo(20);
+    }
+
+    private void add(SignalQueue queue, int from, int to) {
+        for (int i = from; i < to; i++) {
+            queue.addAndRemoveIfRequested(i);
+        }
+    }
+
+    /**
+     * A test for the {@link SignalQueue} in {@link AbstractStreamMessageDuplicator}.
+     * Queue expansion behaves differently when odd/even number head wrap-around happens.
+     */
+    @Test
+    public void circularQueueEvenNumHeadWrapAround() {
+        final SignalQueue queue = new SignalQueue(obj -> 4);
+        add(queue, 0, 10);
+        queue.requestRemovalAheadOf(10);
+        add(queue, 10, 20);
+        queue.requestRemovalAheadOf(20); // first head wrap around
+        add(queue, 20, 30);
+        queue.requestRemovalAheadOf(30);
+        add(queue, 30, 40);
+        queue.requestRemovalAheadOf(40); // second head wrap around
+        add(queue, 40, 60);              // queue expansion happens
+        for (int i = 40; i < 60; i++) {
+            assertThat(queue.get(i)).isEqualTo(i);
+        }
+    }
+
+    @Test
+    public void lastDuplicateStream() {
+        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
+        final ByteBufDuplicator duplicator = new ByteBufDuplicator(publisher);
+
+        duplicator.duplicateStream().subscribe(new ByteBufSubscriber());
+        duplicator.duplicateStream(true).subscribe(new ByteBufSubscriber());
+
+        // duplicateStream() is not allowed anymore.
+        assertThatThrownBy(duplicator::duplicateStream).isInstanceOf(IllegalStateException.class);
+
+        final ByteBuf[] bufs = new ByteBuf[30];
+        for (int i = 0; i < 30; i++) {
+            final ByteBuf buf = newUnpooledBuffer();
+            bufs[i] = buf;
+            assertThat(publisher.write(buf)).isTrue();  // Removing internal caches happens when i = 25
+            assertThat(buf.refCnt()).isOne();
+        }
+
+        for (int i = 0; i < 25; i++) {  // first 25 signals are removed from the queue.
+            assertThat(bufs[i].refCnt()).isZero();
+        }
+        for (int i = 25; i < 30; i++) {  // rest of them are still in the queue.
+            assertThat(bufs[i].refCnt()).isOne();
+        }
+    }
+
+    private static ByteBuf newUnpooledBuffer() {
+        return UnpooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
+    }
+
     private static class StreamMessageDuplicator
             extends AbstractStreamMessageDuplicator<String, StreamMessage<String>> {
         StreamMessageDuplicator(StreamMessage<String> publisher) {
-            super(publisher);
+            super(publisher, String::length, 0);
         }
 
         @Override
         public StreamMessage<String> doDuplicateStream(StreamMessage<String> delegate) {
-            return new MulticastStream(delegate);
-        }
-
-        private static class MulticastStream extends StreamMessageWrapper<String> {
-            MulticastStream(StreamMessage<String> delegate) {
-                super(delegate);
-            }
+            return new StreamMessageWrapper<>(delegate);
         }
     }
 
@@ -312,5 +399,33 @@ public class StreamMessageDuplicatorTest {
         public String toString() {
             return Integer.toHexString(hashCode());
         }
+    }
+
+    private static class ByteBufDuplicator
+            extends AbstractStreamMessageDuplicator<ByteBuf, StreamMessage<ByteBuf>> {
+        ByteBufDuplicator(StreamMessage<ByteBuf> publisher) {
+            super(publisher, ByteBuf::capacity, 0);
+        }
+
+        @Override
+        protected StreamMessage<ByteBuf> doDuplicateStream(StreamMessage<ByteBuf> delegate) {
+            return new StreamMessageWrapper<>(delegate);
+        }
+    }
+
+    private static class ByteBufSubscriber implements Subscriber<ByteBuf> {
+        @Override
+        public void onSubscribe(Subscription subscription) {
+            subscription.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(ByteBuf o) {}
+
+        @Override
+        public void onError(Throwable throwable) {}
+
+        @Override
+        public void onComplete() {}
     }
 }

@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  */
 public final class AbortedStreamException extends RuntimeException {
 
-    private static final long serialVersionUID = -7665826869012452735L;
+    private static final long serialVersionUID = -5271590540551141199L;
 
     private static final AbortedStreamException INSTANCE =
             Exceptions.clearTrace(new AbortedStreamException());

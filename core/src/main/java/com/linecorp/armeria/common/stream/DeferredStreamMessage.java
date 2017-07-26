@@ -60,17 +60,6 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     protected void delegate(StreamMessage<T> delegate) {
-        delegate(delegate, false);
-    }
-
-    /**
-     * Sets the delegate {@link HttpResponse} which will publish the stream actually, optionally receiving
-     * pooled objects from the delegate.
-     *
-     * @throws IllegalStateException if the delegate has been set already or
-     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
-     */
-    protected void delegate(StreamMessage<T> delegate, boolean withPooledObjects) {
         requireNonNull(delegate, "delegate");
 
         if (!delegateUpdater.compareAndSet(this, null, delegate)) {
@@ -95,7 +84,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         @SuppressWarnings("unchecked")
         final PendingSubscription<? super T> ps = pendingSubscription;
         if (ps != null) {
-            subscribeToDelegate(delegate, ps, withPooledObjects);
+            subscribeToDelegate(delegate, ps);
         }
     }
 
@@ -182,7 +171,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         }
 
         final PendingSubscription<? super T> newPendingSubscription =
-                new PendingSubscription<>(subscriber, executor);
+                new PendingSubscription<>(subscriber, executor, withPooledObjects);
 
         final StreamMessage<T> delegate = this.delegate;
         if (delegate == null) {
@@ -193,7 +182,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
             return;
         }
 
-        subscribeToDelegate(delegate, newPendingSubscription, withPooledObjects);
+        subscribeToDelegate(delegate, newPendingSubscription);
     }
 
     private void failLateSubscriber(Subscriber<? super T> subscriber, Executor executor, Throwable cause) {
@@ -214,16 +203,15 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         }
     }
 
-    private void subscribeToDelegate(StreamMessage<T> delegate,
-                                     PendingSubscription<? super T> pendingSubscription,
-                                     boolean withPooledObjects) {
+    private void subscribeToDelegate(
+            StreamMessage<T> delegate, PendingSubscription<? super T> pendingSubscription) {
 
         final Subscriber<? super T> subscriber = pendingSubscription.subscriber;
         final Executor executor = pendingSubscription.executor;
         if (executor == null) {
-            delegate.subscribe(subscriber, withPooledObjects);
+            delegate.subscribe(subscriber, pendingSubscription.withPooledObjects);
         } else {
-            delegate.subscribe(subscriber, executor, withPooledObjects);
+            delegate.subscribe(subscriber, executor, pendingSubscription.withPooledObjects);
         }
     }
 
@@ -244,10 +232,12 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
     private static final class PendingSubscription<T> {
         final Subscriber<T> subscriber;
         final Executor executor;
+        final boolean withPooledObjects;
 
-        PendingSubscription(Subscriber<T> subscriber, Executor executor) {
+        PendingSubscription(Subscriber<T> subscriber, Executor executor, boolean withPooledObjects) {
             this.subscriber = subscriber;
             this.executor = executor;
+            this.withPooledObjects = withPooledObjects;
         }
     }
 }

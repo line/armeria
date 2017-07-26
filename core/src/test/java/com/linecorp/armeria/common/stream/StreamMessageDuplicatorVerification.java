@@ -92,7 +92,7 @@ public class StreamMessageDuplicatorVerification extends StreamMessageVerificati
     private static class StreamMessageDuplicator
             extends AbstractStreamMessageDuplicator<Long, StreamMessage<Long>> {
         StreamMessageDuplicator(StreamMessage<Long> publisher) {
-            super(publisher);
+            super(publisher, l -> 8, 0);
         }
 
         @Override
