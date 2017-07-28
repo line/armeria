@@ -24,15 +24,22 @@ import com.linecorp.armeria.common.HttpStatus;
  * A {@link RuntimeException} that is raised when an armeria internal http exception has occurred.
  * This class is the general class of exceptions produced by a failed request or a reset stream.
  */
-public abstract class HttpResponseException extends RuntimeException {
+public class HttpResponseException extends RuntimeException {
     private static final long serialVersionUID = 3487991462085151316L;
 
     private final HttpStatus httpStatus;
 
     /**
+     * Creates a new instance with HTTP status code.
+     */
+    public HttpResponseException(int statusCode) {
+        this(HttpStatus.valueOf(statusCode));
+    }
+
+    /**
      * Creates a new instance.
      */
-    protected HttpResponseException(HttpStatus httpStatus) {
+    public HttpResponseException(HttpStatus httpStatus) {
         super(requireNonNull(httpStatus, "httpStatus").toString());
         if (100 <= httpStatus.code() && httpStatus.code() < 400) {
             throw new IllegalArgumentException(
@@ -50,7 +57,7 @@ public abstract class HttpResponseException extends RuntimeException {
     }
 
     @Override
-    public synchronized Throwable fillInStackTrace() {
+    public Throwable fillInStackTrace() {
         if (Flags.verboseExceptions()) {
             return super.fillInStackTrace();
         }
