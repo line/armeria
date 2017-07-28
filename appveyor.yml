@@ -10,6 +10,7 @@ build_script:
   - gradlew.bat --no-daemon --stacktrace checkstyle build test
 
 cache:
+  - "%USERPROFILE%\\.gradle\\wrapper\\dists"
   - "%USERPROFILE%\\.gradle\\caches\\jars-3"
   - "%USERPROFILE%\\.gradle\\caches\\modules-2"
 
