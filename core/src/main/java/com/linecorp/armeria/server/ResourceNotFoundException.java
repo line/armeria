@@ -16,12 +16,13 @@
 package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link RuntimeException} raised when a {@link Service} failed to find a resource.
  */
-public final class ResourceNotFoundException extends RuntimeException {
+public final class ResourceNotFoundException extends HttpResponseException {
 
     private static final long serialVersionUID = 1268757990666737813L;
 
@@ -39,5 +40,7 @@ public final class ResourceNotFoundException extends RuntimeException {
     /**
      * Creates a new instance.
      */
-    private ResourceNotFoundException() {}
+    private ResourceNotFoundException() {
+        super(HttpStatus.NOT_FOUND);
+    }
 }

@@ -99,7 +99,8 @@ public class ArmeriaAutoConfiguration {
             throws InterruptedException {
         if (!armeriaServiceInitializers.isPresent() &&
             !thriftServiceRegistrationBeans.isPresent() &&
-            !httpServiceRegistrationBeans.isPresent()) {
+            !httpServiceRegistrationBeans.isPresent() &&
+            !annotatedServiceRegistrationBeans.isPresent()) {
             // No services to register, no need to start up armeria server.
             return null;
         }
