@@ -43,6 +43,7 @@ import org.mockito.junit.MockitoRule;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.testing.common.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -142,7 +143,7 @@ public class DnsServiceEndpointGroupTest {
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).containsExactlyElementsOf(ENDPOINTS));
 
         when(resolver.query(isA(DnsQuestion.class))).thenReturn(
-                EVENT_LOOP.newFailedFuture(new IllegalStateException("failed")));
+                EVENT_LOOP.newFailedFuture(new AnticipatedException("failed")));
         endpointGroup.query();
         // Unexpected errors ignored, do a small sleep to give time for the future to resolve.
         Thread.sleep(TimeUnit.SECONDS.toMillis(1));

@@ -64,9 +64,9 @@ import io.netty.util.concurrent.ScheduledFuture;
  * with the following changes.
  *
  * <ul>
- *     <li>Uses SRV record queries</li>
- *     <li>Does not support DNS redirect answers</li>
- *     <li>Does not support querying multiple name servers</li>
+ *   <li>Uses SRV record queries</li>
+ *   <li>Does not support DNS redirect answers</li>
+ *   <li>Does not support querying multiple name servers</li>
  * </ul>
  */
 public class DnsServiceEndpointGroup extends DynamicEndpointGroup implements AutoCloseable {
@@ -136,7 +136,9 @@ public class DnsServiceEndpointGroup extends DynamicEndpointGroup implements Aut
      */
     @Override
     public void close() {
-        scheduledFuture.cancel(true);
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+        }
     }
 
     @VisibleForTesting
@@ -146,7 +148,7 @@ public class DnsServiceEndpointGroup extends DynamicEndpointGroup implements Aut
         resolver.query(question).addListener(
                 (Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) -> {
                     if (future.cause() != null) {
-                        logger.warn("Error resolving DNS.", future.cause());
+                        logger.warn("Error resolving a domain name: {}", hostname, future.cause());
                         return;
                     }
                     onResponse(question, future.getNow(), promise);
@@ -176,7 +178,7 @@ public class DnsServiceEndpointGroup extends DynamicEndpointGroup implements Aut
                         "Name lookup failed on configured name server for hostname: {} - querying other " +
                         "name servers is not supported.", hostname);
             } else {
-                logger.info("No records found for hostname: {}", hostname);
+                logger.warn("No records found for hostname: {}. Is it registered in DNS?", hostname);
             }
             promise.complete(ImmutableList.of());
         } finally {

@@ -138,7 +138,9 @@ public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements Aut
      */
     @Override
     public void close() {
-        scheduledFuture.cancel(true);
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+        }
     }
 
     @VisibleForTesting
@@ -146,7 +148,7 @@ public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements Aut
         resolver.resolveAll(hostname).addListener(
                 (Future<List<InetAddress>> future) -> {
                     if (future.cause() != null) {
-                        logger.warn("Error resolving DNS.", future.cause());
+                        logger.warn("Error resolving a domain name: {}", hostname, future.cause());
                         return;
                     }
                     List<Endpoint> endpoints =
