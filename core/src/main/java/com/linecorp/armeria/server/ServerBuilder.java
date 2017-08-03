@@ -83,8 +83,6 @@ public final class ServerBuilder {
     // Use Integer.MAX_VALUE not to limit open connections by default.
     private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
 
-    private static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
-    private static final long DEFAULT_DEFAULT_MAX_REQUEST_LENGTH = 10 * 1024 * 1024; // 10 MB
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
@@ -102,8 +100,8 @@ public final class ServerBuilder {
     private boolean shutdownWorkerGroupOnStop;
     private int maxNumConnections = DEFAULT_MAX_NUM_CONNECTIONS;
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
-    private long defaultRequestTimeoutMillis = DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS;
-    private long defaultMaxRequestLength = DEFAULT_DEFAULT_MAX_REQUEST_LENGTH;
+    private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
+    private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();

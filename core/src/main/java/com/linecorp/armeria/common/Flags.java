@@ -61,6 +61,32 @@ public final class Flags {
                    DEFAULT_NUM_COMMON_BLOCKING_TASK_THREADS,
                    value -> value > 0);
 
+    private static final long DEFAULT_DEFAULT_MAX_REQUEST_LENGTH = 10 * 1024 * 1024; // 10 MiB
+    private static final long DEFAULT_MAX_REQUEST_LENGTH =
+            getLong("defaultMaxRequestLength",
+                    DEFAULT_DEFAULT_MAX_REQUEST_LENGTH,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH = 10 * 1024 * 1024; // 10 MiB
+    private static final long DEFAULT_MAX_RESPONSE_LENGTH =
+            getLong("defaultMaxResponseLength",
+                    DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = 10 * 1000; // 10 seconds
+    private static final long DEFAULT_REQUEST_TIMEOUT_MILLIS =
+            getLong("defaultRequestTimeoutMillis",
+                    DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS,
+                    value -> value >= 0);
+
+    // Use slightly greater value than the default request timeout so that clients have a higher chance of
+    // getting proper 503 Service Unavailable response when server-side timeout occurs.
+    private static final long DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS = 15 * 1000; // 15 seconds
+    private static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS =
+            getLong("defaultResponseTimeoutMillis",
+                    DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS,
+                    value -> value >= 0);
+
     private static final long DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     private static final long DEFAULT_CONNECT_TIMEOUT_MILLIS =
             getLong("defaultConnectTimeoutMillis",
@@ -173,7 +199,55 @@ public final class Flags {
     }
 
     /**
-     * Returns the default timeout of a socket connection attempt in milliseconds.
+     * Returns the default server-side maximum length of a request. Note that this value has effect
+     * only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_REQUEST_LENGTH}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultMaxRequestLength=<long>} to override the default value.
+     * {@code 0} disables the length limit.
+     */
+    public static long defaultMaxRequestLength() {
+        return DEFAULT_MAX_REQUEST_LENGTH;
+    }
+
+    /**
+     * Returns the default client-side maximum length of a response. Note that this value has effect
+     * only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultMaxResponseLength=<long>} to override the default value.
+     * {@code 0} disables the length limit.
+     */
+    public static long defaultMaxResponseLength() {
+        return DEFAULT_MAX_RESPONSE_LENGTH;
+    }
+
+    /**
+     * Returns the default server-side timeout of a request in milliseconds. Note that this value has effect
+     * only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultRequestTimeoutMillis=<long>} to override
+     * the default value. {@code 0} disables the timeout.
+     */
+    public static long defaultRequestTimeoutMillis() {
+        return DEFAULT_REQUEST_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side timeout of a response in milliseconds. Note that this value has effect
+     * only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultResponseTimeoutMillis=<long>} to override
+     * the default value. {@code 0} disables the timeout.
+     */
+    public static long defaultResponseTimeoutMillis() {
+        return DEFAULT_RESPONSE_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side timeout of a socket connection attempt in milliseconds.
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS}. Specify the
