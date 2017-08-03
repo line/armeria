@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.stream.StreamMessageWrapper;
  * final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(originalReq);
  *
  * final HttpRequest dupReq1 = reqDuplicator.duplicateStream();
- * final HttpRequest dupReq2 = reqDuplicator.duplicateStream();
+ * final HttpRequest dupReq2 = reqDuplicator.duplicateStream(true); // the last stream
  *
  * dupReq1.subscribe(new FooSubscriber() {
  *     ...
@@ -53,10 +53,28 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
 
     /**
      * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
+     * The length of request is limited by default with the server-side parameter which is
+     * {@link Flags#DEFAULT_MAX_REQUEST_LENGTH}. If you are at client-side, you need to use
+     * {@link #HttpRequestDuplicator(HttpRequest, long)} and the {@code long} value should be greater than
+     * the length of request or {@code 0} which disables the limit.
      * @param req the request that will publish data to subscribers
      */
     public HttpRequestDuplicator(HttpRequest req) {
-        super(requireNonNull(req, "req"));
+        this(req, Flags.defaultMaxRequestLength());
+    }
+
+    /**
+     * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
+     * @param req the request that will publish data to subscribers
+     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
+     */
+    public HttpRequestDuplicator(HttpRequest req, long maxSignalLength) {
+        super(requireNonNull(req, "req"), obj -> {
+            if (obj instanceof HttpData) {
+                return ((HttpData) obj).length();
+            }
+            return 0;
+        }, maxSignalLength);
         headers = req.headers();
         keepAlive = req.isKeepAlive();
     }

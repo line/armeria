@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -46,8 +47,6 @@ import io.netty.util.AsciiString;
 public final class ClientOptions extends AbstractOptions {
 
     private static final Long DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS = Duration.ofSeconds(1).toMillis();
-    private static final Long DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
-    private static final Long DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH = 10L * 1024 * 1024; // 10 MB
 
     @SuppressWarnings("deprecation")
     private static final Collection<AsciiString> BLACKLISTED_HEADER_NAMES =
@@ -71,8 +70,8 @@ public final class ClientOptions extends AbstractOptions {
 
     private static final ClientOptionValue<?>[] DEFAULT_OPTIONS = {
             DEFAULT_WRITE_TIMEOUT_MILLIS.newValue(DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS),
-            DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS),
-            DEFAULT_MAX_RESPONSE_LENGTH.newValue(DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH),
+            DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
+            DEFAULT_MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
             DECORATION.newValue(ClientDecoration.NONE),
             HTTP_HEADERS.newValue(HttpHeaders.EMPTY_HEADERS)
     };
@@ -215,7 +214,7 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the default timeout of a server reply to a client call.
      */
     public long defaultResponseTimeoutMillis() {
-        return getOrElse(DEFAULT_RESPONSE_TIMEOUT_MILLIS, DEFAULT_DEFAULT_RESPONSE_TIMEOUT_MILLIS);
+        return getOrElse(DEFAULT_RESPONSE_TIMEOUT_MILLIS, Flags.defaultResponseTimeoutMillis());
     }
 
     /**
@@ -230,7 +229,7 @@ public final class ClientOptions extends AbstractOptions {
      */
     @SuppressWarnings("unchecked")
     public long defaultMaxResponseLength() {
-        return getOrElse(DEFAULT_MAX_RESPONSE_LENGTH, DEFAULT_DEFAULT_MAX_RESPONSE_LENGTH);
+        return getOrElse(DEFAULT_MAX_RESPONSE_LENGTH, Flags.defaultMaxResponseLength());
     }
 
     /**

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -72,10 +74,16 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
     /**
      * Creates a new instance wrapping a {@code publisher} and publishing to multiple subscribers.
      * @param publisher the publisher who will publish data to subscribers
+     * @param signalLengthGetter the signal length getter that produces the length of signals
+     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
-    protected AbstractStreamMessageDuplicator(U publisher) {
+    protected AbstractStreamMessageDuplicator(
+            U publisher, SignalLengthGetter<? super T> signalLengthGetter, long maxSignalLength) {
         requireNonNull(publisher, "publisher");
-        processor = new StreamMessageProcessor<>(publisher);
+        requireNonNull(signalLengthGetter, "signalLengthGetter");
+        checkArgument(maxSignalLength >= 0,
+                      "maxSignalLength: %s (expected: >= 0)", maxSignalLength);
+        processor = new StreamMessageProcessor<>(publisher, signalLengthGetter, maxSignalLength);
     }
 
     /**
@@ -83,10 +91,19 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * this factory with.
      */
     public U duplicateStream() {
+        return duplicateStream(false);
+    }
+
+    /**
+     * Creates a new {@link U} instance that publishes data from the {@code publisher} you create
+     * this factory with. If you specify the {@code lastStream} as {@code true}, it will prevent further
+     * creation of duplicate stream.
+     */
+    public U duplicateStream(boolean lastStream) {
         if (!processor.isDuplicable()) {
-            throw new IllegalStateException("This duplicator has been closed already.");
+            throw new IllegalStateException("duplicator is closed or last downstream is added.");
         }
-        return doDuplicateStream(new ChildStreamMessage<>(processor));
+        return doDuplicateStream(new ChildStreamMessage<>(processor, lastStream));
     }
 
     /**
@@ -99,7 +116,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
     /**
      * Closes this factory and stream messages who are invoked by
      * {@link AbstractStreamMessageDuplicator#duplicateStream()}.
-     * Also, clean up the data published from {@code publisher}.
+     * Also, clean up the data published from {@code publisher}. If {@link #duplicateStream(boolean)} with
+     * {@code true} is called already, invoking this method does not affect and cleaning up occurs when all
+     * of the {@link Subscription}s are completed or cancelled.
      */
     @Override
     public void close() {
@@ -115,7 +134,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
              */
             DUPLICABLE,
             /**
-              * {@link AbstractStreamMessageDuplicator#close()} has been called.
+             * {@link AbstractStreamMessageDuplicator#duplicateStream(boolean)} has been called.
+             * Will enter {@link #CLOSED}.
+             */
+            LAST_DOWNSTREAM_ADDED,
+            /**
+             * {@link AbstractStreamMessageDuplicator#close()} has been called.
              */
             CLOSED
         }
@@ -129,10 +153,16 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 AtomicLongFieldUpdater.newUpdater(StreamMessageProcessor.class, "requestedDemand");
 
         private final StreamMessage<T> upstream;
+        private final SignalQueue signals;
+        private final SignalLengthGetter<Object> signalLengthGetter;
+        private final int maxSignalLength;
+        private int signalLength;
+
         private final Set<DownstreamSubscription<T>> downstreamSubscriptions =
                 Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-        private final List<Object> signals = new ArrayList<>();
+        volatile int downstreamSignaledCounter;
+        volatile int upstreamOffset;
 
         @SuppressWarnings("unused")
         private volatile long requestedDemand;
@@ -140,8 +170,17 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @SuppressWarnings("FieldMayBeFinal")
         private volatile State state = State.DUPLICABLE;
 
-        StreamMessageProcessor(StreamMessage<T> upstream) {
+        @SuppressWarnings("unchecked")
+        StreamMessageProcessor(StreamMessage<T> upstream, SignalLengthGetter<?> signalLengthGetter,
+                               long maxSignalLength) {
             this.upstream = upstream;
+            this.signalLengthGetter = (SignalLengthGetter<Object>) signalLengthGetter;
+            if (maxSignalLength == 0 || maxSignalLength > Integer.MAX_VALUE) {
+                this.maxSignalLength = Integer.MAX_VALUE;
+            } else {
+                this.maxSignalLength = (int) maxSignalLength;
+            }
+            signals = new SignalQueue(this.signalLengthGetter);
             upstream.subscribe(this, true);
         }
 
@@ -149,7 +188,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             return upstream;
         }
 
-        List<Object> signals() {
+        SignalQueue signals() {
             return signals;
         }
 
@@ -178,13 +217,28 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private void pushSignal(Object obj) {
-            if (signals.size() == Integer.MAX_VALUE) {
-                //TODO(minwoox) limit by the size of data not by the size of contentList.
-                upstream.abort();
-                throw new IllegalStateException("Upstream published more than Integer.MAX_VALUE signals.");
+            if (!(obj instanceof CloseEvent)) {
+                final int dataLength = signalLengthGetter.length(obj);
+                if (dataLength > 0) {
+                    final int allowedMaxSignalLength = maxSignalLength - signalLength;
+                    if (dataLength > allowedMaxSignalLength) {
+                        upstream.abort();
+                        throw new IllegalStateException(
+                                "signal length greater than the maxSignalLength: " + maxSignalLength);
+                    }
+                    signalLength += dataLength;
+                }
             }
 
-            signals.add(obj);
+            try {
+                final int removedLength = signals.addAndRemoveIfRequested(obj);
+                signalLength -= removedLength;
+            } catch (IllegalStateException e) {
+                upstream.abort();
+                throw e;
+            }
+
+            upstreamOffset++;
 
             if (!downstreamSubscriptions.isEmpty()) {
                 downstreamSubscriptions.forEach(DownstreamSubscription::signal);
@@ -195,8 +249,11 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             boolean reject = false;
             if (state == State.DUPLICABLE) {
                 downstreamSubscriptions.add(subscription);
-                if (state == State.CLOSED) {
-                    downstreamSubscriptions.remove(subscription);
+                if (subscription.lastSubscription) {
+                    if (!setState(State.DUPLICABLE, State.LAST_DOWNSTREAM_ADDED)) {
+                        reject = true; // duplicator is closed or another last downstream is added already
+                    }
+                } else if (state != State.DUPLICABLE) {
                     reject = true;
                 }
             } else {
@@ -204,7 +261,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
 
             if (reject) {
-                throw new IllegalStateException("duplicator has been closed already.");
+                downstreamSubscriptions.remove(subscription);
+                throw new IllegalStateException("duplicator is closed or last downstream is added.");
             }
 
             if (upstreamSubscription != null) {
@@ -226,6 +284,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                     subscriber.onComplete();
                 } finally {
                     closeFuture.complete(null);
+                    cleanupIfLastSubscription();
                 }
                 return;
             }
@@ -236,6 +295,16 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 }
             } finally {
                 closeFuture.completeExceptionally(cause);
+                cleanupIfLastSubscription();
+            }
+        }
+
+        private void cleanupIfLastSubscription() {
+            if (isLastDownstreamAdded() && downstreamSubscriptions.size() == 0) {
+                if (setState(State.LAST_DOWNSTREAM_ADDED, State.CLOSED)) {
+                    upstream.abort();
+                    signals().clear();
+                }
             }
         }
 
@@ -256,11 +325,20 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             return state == State.DUPLICABLE;
         }
 
+        boolean isLastDownstreamAdded() {
+            return state == State.LAST_DOWNSTREAM_ADDED;
+        }
+
         void close() {
-            if (stateUpdater.compareAndSet(this, State.DUPLICABLE, State.CLOSED)) {
+            if (setState(State.DUPLICABLE, State.CLOSED)) {
                 upstream.abort();
                 cleanup();
             }
+        }
+
+        private boolean setState(State oldState, State newState) {
+            assert newState != State.DUPLICABLE : "oldState: " + oldState + ", newState: " + newState;
+            return stateUpdater.compareAndSet(this, oldState, newState);
         }
 
         private void cleanup() {
@@ -271,10 +349,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             });
             final CompletableFuture<Void> allDoneFuture =
                     CompletableFuture.allOf(closeFutures.toArray(new CompletableFuture[closeFutures.size()]));
-            allDoneFuture.whenComplete((unused, cause) -> {
-                signals.forEach(ReferenceCountUtil::safeRelease);
-                signals.clear();
-            });
+            allDoneFuture.whenComplete((unused1, unused2) -> signals.clear());
         }
     }
 
@@ -286,13 +361,17 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 ChildStreamMessage.class, DownstreamSubscription.class, "subscription");
 
         private final StreamMessageProcessor<T> processor;
+
+        private final boolean lastStream;
+
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
 
         private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
 
-        ChildStreamMessage(StreamMessageProcessor<T> processor) {
+        ChildStreamMessage(StreamMessageProcessor<T> processor, boolean lastStream) {
             this.processor = processor;
+            this.lastStream = lastStream;
         }
 
         @Override
@@ -345,7 +424,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private void subscribe0(Subscriber<? super T> subscriber, Executor executor,
                                 boolean withPooledObjects) {
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
-                    this, subscriber, processor, executor, withPooledObjects);
+                    this, subscriber, processor, executor, withPooledObjects, lastStream);
 
             if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
                 failLateSubscriber(executor, subscriber, this.subscription.subscriber());
@@ -384,7 +463,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
 
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
-                    this, AbortingSubscriber.get(), processor, null, false);
+                    this, AbortingSubscriber.get(), processor, null, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
                 newSubscription.closeFuture().completeExceptionally(AbortedStreamException.get());
             } else {
@@ -395,6 +474,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
     @VisibleForTesting
     static class DownstreamSubscription<T> implements Subscription {
+
+        private static final int REQUEST_REMOVAL_THRESHOLD = 50;
 
         @SuppressWarnings("rawtypes")
         private static final AtomicIntegerFieldUpdater<DownstreamSubscription> invokedOnSubscribeUpdater =
@@ -418,6 +499,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private final StreamMessageProcessor<T> processor;
         private final Executor executor;
         private final boolean withPooledObjects;
+        final boolean lastSubscription;
 
         @SuppressWarnings("unused")
         private volatile int invokedOnSubscribe; // 0: not invoked onSubscribe, 1: invoked onSubscribe
@@ -434,18 +516,19 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @SuppressWarnings("unused")
         private volatile Throwable cancelledOrAborted;
 
-        private int offset;
+        private volatile int offset;
         private long cumulativeDemand;
         private boolean publishedAny;
 
         DownstreamSubscription(ChildStreamMessage<T> streamMessage,
                                Subscriber<? super T> subscriber, StreamMessageProcessor<T> processor,
-                               Executor executor, boolean withPooledObjects) {
+                               Executor executor, boolean withPooledObjects, boolean lastSubscription) {
             this.streamMessage = streamMessage;
             this.subscriber = subscriber;
             this.processor = processor;
             this.executor = executor;
             this.withPooledObjects = withPooledObjects;
+            this.lastSubscription = lastSubscription;
         }
 
         CompletableFuture<Void> closeFuture() {
@@ -525,13 +608,13 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private void doSignal() {
-            final List<Object> signals = processor.signals();
+            final SignalQueue signals = processor.signals();
             while (doSignalSingle(signals)) {
                 continue;
             }
         }
 
-        private boolean doSignalSingle(List<Object> signals) {
+        private boolean doSignalSingle(SignalQueue signals) {
             if (!beginSignal()) {
                 return false;
             }
@@ -543,7 +626,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                     return false;
                 }
 
-                if (offset == signals.size()) {
+                if (offset == processor.upstreamOffset) {
                     // The subscriber read all signals published so far.
                     return false;
                 }
@@ -582,6 +665,18 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                             obj = copy((ByteBufHolder) obj);
                         } else if (obj instanceof ByteBuf) {
                             obj = copy((ByteBuf) obj);
+                        }
+                    }
+
+                    if (processor.isLastDownstreamAdded()) {
+                        if (++processor.downstreamSignaledCounter >= REQUEST_REMOVAL_THRESHOLD) {
+                            // don't need to use AtomicBoolean cause it's used for rough counting
+                            processor.downstreamSignaledCounter = 0;
+                            int minOffset = Integer.MAX_VALUE;
+                            for (DownstreamSubscription s : processor.downstreamSubscriptions) {
+                                minOffset = Math.min(minOffset, s.offset);
+                            }
+                            processor.signals().requestRemovalAheadOf(minOffset);
                         }
                     }
 
@@ -654,6 +749,144 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 return "CloseEvent";
             } else {
                 return "CloseEvent(" + cause + ')';
+            }
+        }
+    }
+
+    /**
+     * A circular queue that stores signals in order and retrieves by {@link #get(int)}.
+     * Addition and removal of elements are done by only one thread, or at least once at a time. Reading
+     * can be done by multiple threads.
+     */
+    @VisibleForTesting
+    static class SignalQueue {
+
+        @SuppressWarnings("rawtypes")
+        private static final AtomicIntegerFieldUpdater<SignalQueue> lastRemovalRequestedOffsetUpdater =
+                AtomicIntegerFieldUpdater.newUpdater(SignalQueue.class, "lastRemovalRequestedOffset");
+
+        private final SignalLengthGetter<Object> signalLengthGetter;
+
+        @VisibleForTesting
+        volatile Object[] elements;
+        private volatile int head;
+        private volatile int tail;
+        private volatile int size;
+
+        private int headOffset; // head offset from the first including removed elements
+        @SuppressWarnings("unused")
+        private volatile int lastRemovalRequestedOffset;
+
+        SignalQueue(SignalLengthGetter<Object> signalLengthGetter) {
+            this.signalLengthGetter = signalLengthGetter;
+            elements = new Object[16];
+        }
+
+        int addAndRemoveIfRequested(Object o) {
+            requireNonNull(o);
+            int removedLength = 0;
+            if (headOffset < lastRemovalRequestedOffset) {
+                removedLength = removeElements();
+            }
+            final int t = tail;
+            elements[t] = o;
+            size++;
+            if ((tail = (t + 1) & (elements.length - 1)) == head) {
+                doubleCapacity();
+            }
+            return removedLength;
+        }
+
+        private int removeElements() {
+            final int removalRequestedOffset = lastRemovalRequestedOffset;
+            final int numElementsToBeRemoved = removalRequestedOffset - headOffset;
+            final int bitMask = elements.length - 1;
+            final int oldHead = head;
+            int removedLength = 0;
+            for (int numRemovals = 0; numRemovals < numElementsToBeRemoved; numRemovals++) {
+                final int index = (oldHead + numRemovals) & bitMask;
+                final Object o = elements[index];
+                if (!(o instanceof CloseEvent)) {
+                    removedLength += signalLengthGetter.length(o);
+                }
+                ReferenceCountUtil.safeRelease(o);
+                elements[index] = null;
+            }
+            head = (oldHead + numElementsToBeRemoved) & bitMask;
+            headOffset = removalRequestedOffset;
+            size = size - numElementsToBeRemoved;
+            return removedLength;
+        }
+
+        private void doubleCapacity() {
+            assert head == tail;
+            final int h = head;
+            final Object[] elements = this.elements;
+            final int n = elements.length;
+            final int r = n - h; // number of elements to the right of h including h
+            final int newCapacity = n << 1;
+            if (newCapacity < 0) {
+                throw new IllegalStateException("published more than Integer.MAX_VALUE signals.");
+            }
+            final Object[] a = new Object[newCapacity];
+            final int hOffset = headOffset;
+            if ((hOffset & newCapacity - 1) == (hOffset & n - 1)) { // even number head wrap-around
+                // [4, 5, 6, 3] will be [N, N, N, 3, 4, 5, 6, N]
+                System.arraycopy(elements, h, a, h, r); // copy 3
+                System.arraycopy(elements, 0, a, n, h); // copy 4,5,6
+                tail = tail + n;
+            } else { // odd number head wrap-around
+                // [8, 5, 6, 7] will be [8, N, N, N, N, 5, 6, 7]
+                System.arraycopy(elements, h, a, h + n, r); // copy 5,6,7
+                System.arraycopy(elements, 0, a, 0, h); // copy 8
+                head = h + n;
+            }
+            this.elements = a;
+        }
+
+        Object get(int offset) {
+            final int head = this.head;
+            final int tail = this.tail;
+            final int length = elements.length;
+            final int convertedIndex = offset & (length - 1);
+            checkState(size > 0, "queue is empty");
+            checkArgument(head < tail ? head <= convertedIndex && convertedIndex < tail
+                                      : (head <= convertedIndex && convertedIndex < length) ||
+                                        (0 <= convertedIndex && convertedIndex < tail),
+                          "offset: %s is invalid. head: %s, tail: %s, capacity: %s ",
+                          offset, head, tail, length);
+            checkArgument(offset >= lastRemovalRequestedOffset,
+                          "offset: %s is invalid. (expected: >= lastRemovalRequestedOffset: %s)",
+                          offset, lastRemovalRequestedOffset);
+            return elements[convertedIndex];
+        }
+
+        void requestRemovalAheadOf(int offset) {
+            for (;;) {
+                final int oldLastRemovalRequestedOffset = lastRemovalRequestedOffset;
+                if (oldLastRemovalRequestedOffset >= offset) {
+                    return;
+                }
+                if (lastRemovalRequestedOffsetUpdater.compareAndSet(
+                        this, oldLastRemovalRequestedOffset, offset)) {
+                    return;
+                }
+            }
+        }
+
+        int size() {
+            return size;
+        }
+
+        void clear() {
+            Object[] oldElements = elements;
+            if (oldElements == null) {
+                return; // Already cleared.
+            }
+            this.elements = null;
+            int t = tail;
+            for (int i = head; i < t; i++) {
+                ReferenceCountUtil.safeRelease(oldElements[i]);
             }
         }
     }

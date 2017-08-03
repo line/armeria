@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.stream.StreamMessageWrapper;
  * > final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(originalRes);
  * >
  * > final HttpResponse dupRes1 = resDuplicator.duplicateStream();
- * > final HttpResponse dupRes2 = resDuplicator.duplicateStream();
+ * > final HttpResponse dupRes2 = resDuplicator.duplicateStream(true); // the last stream
  * >
  * > dupRes1.subscribe(new FooHeaderSubscriber() {
  * >     @Override
@@ -52,10 +52,28 @@ public class HttpResponseDuplicator
 
     /**
      * Creates a new instance wrapping a {@link HttpResponse} and publishing to multiple subscribers.
+     * The length of response is limited by default with the client-side parameter which is
+     * {@link Flags#DEFAULT_MAX_RESPONSE_LENGTH}. If you are at server-side, you need to use
+     * {@link #HttpResponseDuplicator(HttpResponse, long)} and the {@code long} value should be greater than
+     * the length of response or {@code 0} which disables the limit.
      * @param res the response that will publish data to subscribers
      */
     public HttpResponseDuplicator(HttpResponse res) {
-        super(requireNonNull(res, "res"));
+        this(res, Flags.defaultMaxResponseLength());
+    }
+
+    /**
+     * Creates a new instance wrapping a {@link HttpResponse} and publishing to multiple subscribers.
+     * @param res the response that will publish data to subscribers
+     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
+     */
+    public HttpResponseDuplicator(HttpResponse res, long maxSignalLength) {
+        super(requireNonNull(res, "res"), obj -> {
+            if (obj instanceof HttpData) {
+                return ((HttpData) obj).length();
+            }
+            return 0;
+        }, maxSignalLength);
     }
 
     @Override
