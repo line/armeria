@@ -32,7 +32,7 @@ ext {
 
     // The list of Java projects whose artifacts are published to the Maven repository
     publishedJavaProjects = javaProjects.findAll {
-        !(it.name in ['it', 'shaded-test', 'testing'])
+        !(it.name in ['it', 'shaded-test', 'testing-internal'])
     }
 
     // The list of backward-compatibility Java projects which have the namespace conflicts with other projects.
@@ -192,7 +192,7 @@ configure(javaProjects) {
         }
 
         // Testing utilities
-        testCompile project(':testing')
+        testCompile project(':testing-internal')
     }
 
     managedDependencies {

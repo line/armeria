@@ -49,8 +49,8 @@ import org.junit.Test;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
 import com.linecorp.armeria.testing.server.ServerRule;
-import com.linecorp.armeria.testing.server.webapp.WebAppContainerTest;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 

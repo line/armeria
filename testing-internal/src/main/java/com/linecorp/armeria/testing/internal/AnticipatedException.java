@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.testing.common;
+package com.linecorp.armeria.testing.internal;
 
 /**
  * A {@link RuntimeException} which is expected to be raised during a test.

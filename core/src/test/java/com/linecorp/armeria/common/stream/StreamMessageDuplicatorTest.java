@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator.DownstreamSubscription;
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator.StreamMessageProcessor;
-import com.linecorp.armeria.testing.common.AnticipatedException;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 public class StreamMessageDuplicatorTest {
 
