@@ -289,6 +289,17 @@ public class MediaTypeTest {
     }
 
     @Test
+    public void testBelongsTo() {
+        // For quality factor, "belongsTo" has a different behavior to "is".
+        assertThat(PLAIN_TEXT_UTF_8.is(ANY_TYPE.withParameter("q", "0.9"))).isFalse();
+        assertThat(PLAIN_TEXT_UTF_8.belongsTo(ANY_TYPE.withParameter("q", "0.9"))).isTrue();
+
+        // For the other parameters, "belongsTo" has the same behavior as "is".
+        assertThat(PLAIN_TEXT_UTF_8.is(ANY_TYPE.withParameter("charset", "UTF-16"))).isFalse();
+        assertThat(PLAIN_TEXT_UTF_8.belongsTo(ANY_TYPE.withParameter("charset", "UTF-16"))).isFalse();
+    }
+
+    @Test
     public void testParse_empty() {
         assertThatThrownBy(() -> MediaType.parse("")).isInstanceOf(IllegalArgumentException.class);
     }

@@ -40,6 +40,8 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
@@ -363,7 +365,19 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * added to this builder.
      */
     protected VirtualHost build() {
-        final VirtualHost virtualHost = new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);
+        final List<MediaType> producibleTypes = new ArrayList<>();
+
+        services.forEach(e -> {
+            final PathMapping mapping = e.pathMapping();
+            if (mapping instanceof HttpHeaderPathMapping) {
+                // Collect producible media types over this virtual host.
+                producibleTypes.addAll(((HttpHeaderPathMapping) mapping).produceTypes());
+            }
+        });
+
+        final VirtualHost virtualHost =
+                new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,
+                                new MediaTypeSet(producibleTypes));
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 

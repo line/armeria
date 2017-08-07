@@ -18,34 +18,23 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 
 /**
- * {@link HttpMethod}, {@link PathMapping} and their corresponding {@link BiFunction}.
+ * {@link PathMapping} and their corresponding {@link BiFunction}.
  */
 final class AnnotatedHttpService implements HttpService {
-    // TODO(trustin): Allow binding multiple functions.
-    //                https://github.com/line/armeria/issues/579
-
-    /**
-     * EnumSet of HTTP Method, e.g., GET, POST, PUT, ...
-     */
-    private final Set<HttpMethod> methods;
 
     /**
      * Path param extractor with placeholders, e.g., "/const1/{var1}/{var2}/const2"
      */
-    private final PathMapping pathMapping;
+    private final HttpHeaderPathMapping pathMapping;
 
     /**
      * The {@link BiFunction} that will handle the request actually.
@@ -55,9 +44,8 @@ final class AnnotatedHttpService implements HttpService {
     /**
      * Creates a new instance.
      */
-    AnnotatedHttpService(Iterable<HttpMethod> methods, PathMapping pathMapping,
+    AnnotatedHttpService(HttpHeaderPathMapping pathMapping,
                          BiFunction<ServiceRequestContext, HttpRequest, Object> function) {
-        this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.function = requireNonNull(function, "function");
     }
@@ -65,7 +53,7 @@ final class AnnotatedHttpService implements HttpService {
     /**
      * Returns the {@link PathMapping} of this service.
      */
-    PathMapping pathMapping() {
+    HttpHeaderPathMapping pathMapping() {
         return pathMapping;
     }
 
@@ -81,10 +69,6 @@ final class AnnotatedHttpService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (!methods.contains(ctx.method())) {
-            return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
-        }
-
         final Object ret = function.apply(ctx, req);
         if (!(ret instanceof CompletionStage)) {
             return HttpResponse.ofFailure(new IllegalStateException(
@@ -99,7 +83,6 @@ final class AnnotatedHttpService implements HttpService {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("methods", methods)
                           .add("pathMapping", pathMapping)
                           .add("function", function).toString();
     }

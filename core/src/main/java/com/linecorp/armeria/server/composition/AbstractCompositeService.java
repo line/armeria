@@ -18,13 +18,11 @@ package com.linecorp.armeria.server.composition;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import javax.annotation.Nullable;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -32,8 +30,10 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.PathMappings;
+import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ResourceNotFoundException;
+import com.linecorp.armeria.server.Router;
+import com.linecorp.armeria.server.Routers;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCallbackInvoker;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -62,7 +62,7 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
 public abstract class AbstractCompositeService<I extends Request, O extends Response> implements Service<I, O> {
 
     private final List<CompositeServiceEntry<I, O>> services;
-    private final PathMappings<Service<I, O>> serviceMapping = new PathMappings<>();
+    private final Router<Service<I, O>> router;
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
@@ -78,15 +78,8 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     protected AbstractCompositeService(Iterable<CompositeServiceEntry<I, O>> services) {
         requireNonNull(services, "services");
 
-        final List<CompositeServiceEntry<I, O>> servicesCopy = new ArrayList<>();
-        for (CompositeServiceEntry<I, O> e : services) {
-            servicesCopy.add(e);
-            serviceMapping.add(e.pathMapping(), e.service());
-        }
-
-        this.services = Collections.unmodifiableList(servicesCopy);
-
-        serviceMapping.freeze();
+        this.services = ImmutableList.copyOf(services);
+        router = Routers.ofCompositeServiceEntry(this, this.services);
     }
 
     @Override
@@ -115,20 +108,19 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     /**
      * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
      *
-     * @param path an absolute path, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @param query a query, as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
-     *              {@code null} if query does not exist.
+     * @param mappingCtx a context to find the {@link Service}.
      *
      * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
-    protected PathMapped<Service<I, O>> findService(String path, @Nullable String query) {
-        return serviceMapping.apply(path, query);
+    protected PathMapped<Service<I, O>> findService(PathMappingContext mappingCtx) {
+        return router.find(mappingCtx);
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        final PathMapped<Service<I, O>> mapped = findService(ctx.mappedPath(), ctx.query());
+        final PathMappingContext mappingCtx = ctx.pathMappingContext();
+        final PathMapped<Service<I, O>> mapped = findService(mappingCtx.overridePath(ctx.mappedPath()));
         if (!mapped.isPresent()) {
             throw ResourceNotFoundException.get();
         }

@@ -33,11 +33,11 @@ public class PathMappingTest {
 
         m = PathMapping.of("/foo/{bar}");
         assertThat(m).isInstanceOf(DefaultPathMapping.class);
-        assertThat(((DefaultPathMapping) m).skeleton()).isEqualTo("/foo/{}");
+        assertThat(((DefaultPathMapping) m).skeleton()).isEqualTo("/foo/:");
 
         m = PathMapping.of("/bar/:baz");
         assertThat(m).isInstanceOf(DefaultPathMapping.class);
-        assertThat(((DefaultPathMapping) m).skeleton()).isEqualTo("/bar/{}");
+        assertThat(((DefaultPathMapping) m).skeleton()).isEqualTo("/bar/:");
 
         m = PathMapping.of("exact:/:foo/bar");
         assertThat(m).isInstanceOf(ExactPathMapping.class);

@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -26,28 +27,37 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import javax.annotation.Nullable;
+
+import org.apache.http.Header;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.TestConverters.NaiveIntConverter;
@@ -55,12 +65,15 @@ import com.linecorp.armeria.server.TestConverters.NaiveStringConverter;
 import com.linecorp.armeria.server.TestConverters.TypedNumberConverter;
 import com.linecorp.armeria.server.TestConverters.TypedStringConverter;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
+import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Converter;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Optional;
+import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.common.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -96,6 +109,20 @@ public class AnnotatedHttpServiceTest {
 
             sb.annotatedService("/7", new MyAnnotatedService7(),
                                 LoggingService.newDecorator());
+
+            sb.annotatedService("/8", new MyAnnotatedService8(),
+                                LoggingService.newDecorator());
+
+            sb.annotatedService("/9", new MyAnnotatedService9(),
+                                LoggingService.newDecorator());
+        }
+    };
+
+    @Rule
+    public TestWatcher watchman = new TestWatcher() {
+        @Override
+        protected void failed(Throwable e, Description description) {
+            rule.server().config().virtualHosts().forEach(vh -> vh.router().dump(System.err));
         }
     };
 
@@ -390,118 +417,114 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    public static class MyAnnotatedService8 {
+
+        @Get("/same/path")
+        public String sharedGet() {
+            return "GET";
+        }
+
+        @Post("/same/path")
+        public String sharedPost() {
+            return "POST";
+        }
+
+        @Post("/same/path")
+        @ConsumeType("application/json")
+        public String sharedPostJson() {
+            return "POST/JSON";
+        }
+
+        @Get("/same/path")
+        @ProduceType("application/json")
+        public String sharedGetJson() {
+            return "GET/JSON";
+        }
+
+        @Order(-1)
+        @Get("/same/path")
+        @ProduceType("text/plain")
+        public String sharedGetText() {
+            return "GET/TEXT";
+        }
+
+        @Post("/same/path")
+        @ConsumeType("application/json")
+        @ProduceType("application/json")
+        public String sharedPostJsonBoth() {
+            return "POST/JSON/BOTH";
+        }
+
+        // To add one more produce type to the virtual host.
+        @Get("/other")
+        @ProduceType("application/x-www-form-urlencoded")
+        public String other() {
+            return "GET/FORM";
+        }
+    }
+
+    @ProduceType("application/xml")
+    @ProduceType("application/json")
+    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    public static class MyAnnotatedService9 {
+
+        @Get("/same/path")
+        public String get() {
+            return "GET";
+        }
+
+        @Post("/same/path")
+        @ConsumeType("application/xml")
+        @ConsumeType("application/json")
+        public String post() {
+            return "POST";
+        }
+    }
+
     @Test
     public void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            // Run case 1.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/1/int/42")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 42"));
-            }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/1/int-async/42")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Integer: 43"));
-            }
-            // Run case 2.
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/1/long/42")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
-            }
-            // Run case 3.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/1/string/blah")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String: blah"));
-            }
-            // Run case 1 but illegal parameter.
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/1/int/fourty-two")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 400 Bad Request"));
-            }
-            // Run case 2 but without parameter (non-existing url).
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/1/long/")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
-            }
-            // Run case 3 but with not-mapped HTTP method (Post).
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/1/string/blah")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
-            }
-            // Get a requested path as typed string from ServiceRequestContext or HttpRequest
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/1/path/ctx/async/1")))) {
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[/1/path/ctx/async/1]"));
-            }
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/1/path/req/async/1")))) {
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[/1/path/req/async/1]"));
-            }
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/1/path/ctx/sync/1")))) {
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[/1/path/ctx/sync/1]"));
-            }
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/1/path/req/sync/1")))) {
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[/1/path/req/sync/1]"));
-            }
-            // Exceptions in business logic
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/1/exception/42")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
-            }
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/1/exception-async/1")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 500 Internal Server Error"));
-            }
+            testBody(hc, get("/1/int/42"), "Integer: 42");
+            testBody(hc, get("/1/int-async/42"), "Integer: 43");
+            testBody(hc, post("/1/long/42"), "Number[42]");
+            testBody(hc, get("/1/string/blah"), "String: blah");
 
-            // Run case 4.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/2/int/42")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
-            }
-            // Run case 5.
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/2/long/42")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
-            }
-            // Run case 6.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/2/string/blah")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String: blah"));
-            }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/2/boolean/true")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[true]"));
-            }
-            // Run case 4 but illegal parameter.
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/2/int/fourty-two")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 400 Bad Request"));
-            }
-            // Run case 5 but without parameter (non-existing url).
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/2/long/")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
-            }
-            // Run case 6 but with not-mapped HTTP method (Post).
-            try (CloseableHttpResponse res = hc.execute(new HttpPost(rule.httpUri("/2/string/blah")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 405 Method Not Allowed"));
-            }
+            // Get a requested path as typed string from ServiceRequestContext or HttpRequest
+            testBody(hc, get("/1/path/ctx/async/1"), "String[/1/path/ctx/async/1]");
+            testBody(hc, get("/1/path/req/async/1"), "String[/1/path/req/async/1]");
+            testBody(hc, get("/1/path/ctx/sync/1"), "String[/1/path/ctx/sync/1]");
+            testBody(hc, get("/1/path/req/sync/1"), "String[/1/path/req/sync/1]");
+
+            // Illegal parameter.
+            testStatusCode(hc, get("/1/int/fourty-two"), 400);
+            // Without parameter (non-existing url).
+            testStatusCode(hc, post("/1/long/"), 404);
+            // Not-mapped HTTP method (Post).
+            testStatusCode(hc, post("/1/string/blah"), 405);
+
+            // Exceptions in business logic
+            testStatusCode(hc, get("/1/exception/42"), 500);
+            testStatusCode(hc, get("/1/exception-async/1"), 500);
+
+            testBody(hc, get("/2/int/42"), "Number[42]");
+            testBody(hc, post("/2/long/42"), "Number[42]");
+            testBody(hc, get("/2/string/blah"), "String: blah");
+            testBody(hc, get("/2/boolean/true"), "String[true]");
+
+            // Illegal parameter.
+            testStatusCode(hc, get("/2/int/fourty-two"), 400);
+            // Without parameter (non-existing url).
+            testStatusCode(hc, post("/2/long/"), 404);
+            // Not-mapped HTTP method (Post).
+            testStatusCode(hc, post("/2/string/blah"), 405);
 
             // Test the case where multiple annotated services are bound under the same path prefix.
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/3/int/42")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Number[42]"));
-            }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/3/string/blah")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[blah]"));
-            }
-            try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(rule.httpUri("/3/no-path-param")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[no-path-param]"));
-            }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/3/undefined")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
-            }
+            testBody(hc, get("/3/int/42"), "Number[42]");
+            testBody(hc, get("/3/string/blah"), "String[blah]");
+            testBody(hc, get("/3/no-path-param"), "String[no-path-param]");
+
+            testStatusCode(hc, get("/3/undefined"), 404);
         }
     }
 
@@ -509,153 +532,226 @@ public class AnnotatedHttpServiceTest {
     public void testNonDefaultPathMappings() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Exact pattern
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/exact")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[exact:/6/exact]"));
-            }
-
+            testBody(hc, get("/6/exact"), "String[exact:/6/exact]");
             // Prefix pattern
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/prefix/foo")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[prefix:/6/prefix/foo:/foo]"));
-            }
-
+            testBody(hc, get("/6/prefix/foo"),  "String[prefix:/6/prefix/foo:/foo]");
             // Glob pattern
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/glob1/bar")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob1:/6/glob1/bar]"));
-            }
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/baz/glob2")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[glob2:/6/baz/glob2:0]"));
-            }
-
+            testBody(hc, get("/6/glob1/bar"),  "String[glob1:/6/glob1/bar]");
+            testBody(hc, get("/6/baz/glob2"),  "String[glob2:/6/baz/glob2:0]");
             // Regex pattern
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri("/6/regex/foo/bar")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("String[regex:/6/regex/foo/bar:foo/bar]"));
-            }
+            testBody(hc, get("/6/regex/foo/bar"),  "String[regex:/6/regex/foo/bar:foo/bar]");
         }
     }
 
     @Test
     public void testAggregation() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpPost httpPost;
-
-            httpPost = newHttpPost("/3/a/string");
-            try (CloseableHttpResponse res = hc.execute(httpPost)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()),
-                           is(EntityUtils.toString(httpPost.getEntity())));
-            }
-            httpPost = newHttpPost("/3/a/string-async1");
-            try (CloseableHttpResponse res = hc.execute(httpPost)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()),
-                           is(EntityUtils.toString(httpPost.getEntity())));
-            }
-            httpPost = newHttpPost("/3/a/string-async2");
-            try (CloseableHttpResponse res = hc.execute(httpPost)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()),
-                           is(EntityUtils.toString(httpPost.getEntity())));
-            }
-            httpPost = newHttpPost("/3/a/string-aggregate-response1");
-            try (CloseableHttpResponse res = hc.execute(httpPost)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()),
-                           is(EntityUtils.toString(httpPost.getEntity())));
-            }
-            httpPost = newHttpPost("/3/a/string-aggregate-response2");
-            try (CloseableHttpResponse res = hc.execute(httpPost)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()),
-                           is(EntityUtils.toString(httpPost.getEntity())));
-            }
+            testForm(hc, form("/3/a/string"));
+            testForm(hc, form("/3/a/string-async1"));
+            testForm(hc, form("/3/a/string-async2"));
+            testForm(hc, form("/3/a/string-aggregate-response1"));
+            testForm(hc, form("/3/a/string-aggregate-response2"));
         }
     }
 
     @Test
     public void testParam() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            HttpPost httpPost;
+            testBody(hc, get("/7/param/get?username=line1&password=armeria1"), "line1/armeria1");
+            testBody(hc, form("/7/param/post", StandardCharsets.UTF_8,
+                              "username", "line2", "password", "armeria2"), "line2/armeria2");
+            testBody(hc, form("/7/param/post", StandardCharsets.UTF_8,
+                              "username", "안녕하세요", "password", "こんにちは"), "안녕하세요/こんにちは",
+                     StandardCharsets.UTF_8);
 
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(rule.httpUri("/7/param/get?username=line1&password=armeria1")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("line1/armeria1"));
-            }
+            testBody(hc, get("/7/map/get?username=line3&password=armeria3"), "line3/armeria3");
+            testBody(hc, form("/7/map/post", null,
+                              "username", "line4", "password", "armeria4"), "line4/armeria4");
 
-            httpPost = newHttpPost("/7/param/post", "line2", "armeria2", StandardCharsets.UTF_8);
-            try (CloseableHttpResponse res = hc.execute(httpPost)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("line2/armeria2"));
-            }
-
-            httpPost = newHttpPost("/7/param/post", "안녕하세요", "こんにちは", StandardCharsets.UTF_8);
-            try (CloseableHttpResponse res = hc.execute(httpPost)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity(), StandardCharsets.UTF_8), is("안녕하세요/こんにちは"));
-            }
-
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(rule.httpUri("/7/map/get?username=line3&password=armeria3")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("line3/armeria3"));
-            }
-
-            httpPost = newHttpPost("/7/map/post", "line4", "armeria4");
-            try (CloseableHttpResponse res = hc.execute(httpPost)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("line4/armeria4"));
-            }
-
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(rule.httpUri("/7/param/default1")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("hello/world/(null)"));
-            }
-
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(rule.httpUri("/7/param/default1?extra=people")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("hello/world/people"));
-            }
-
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(rule.httpUri("/7/param/default2")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 400 Bad Request"));
-            }
+            testBody(hc, get("/7/param/default1"), "hello/world/(null)");
+            testBody(hc, get("/7/param/default1?extra=people"), "hello/world/people");
 
             // Precedence test. (path variable > query string parameter)
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(
-                    rule.httpUri("/7/param/precedence/line5?username=dot&password=armeria5")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("line5/armeria5"));
-            }
+            testBody(hc, get("/7/param/precedence/line5?username=dot&password=armeria5"), "line5/armeria5");
+
+            testStatusCode(hc, get("/7/param/default2"), 400);
         }
     }
 
-    private static HttpPost newHttpPost(String path) {
-        return newHttpPost(path, "armeria", "armeria");
+    @Test
+    public void testAdvancedAnnotatedHttpService() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+
+            final String uri = "/8/same/path";
+
+            // No 'Accept' header means accepting everything. The order of -1 would be matched first.
+            testBodyAndContentType(hc, get(uri), "GET/TEXT", "text/plain");
+            // The same as the above.
+            testBodyAndContentType(hc, get(uri, "*/*"), "GET/TEXT", "text/plain");
+            testBodyAndContentType(hc, post(uri, "application/json", "application/json"),
+                                   "POST/JSON/BOTH", "application/json");
+            testBodyAndContentType(hc, get(uri, "application/json;q=0.9, text/plain"),
+                                   "GET/TEXT", "text/plain");
+            testBodyAndContentType(hc, get(uri, "application/json;q=0.9, text/plain;q=0.7"),
+                                   "GET/JSON", "application/json");
+            testBodyAndContentType(hc, get(uri, "application/json;charset=UTF-8;q=0.9, text/plain;q=0.7"),
+                                   "GET/TEXT", "text/plain");
+            testBodyAndContentType(hc, get(uri, "application/x-www-form-urlencoded" +
+                                                ",application/json;charset=UTF-8;q=0.9" +
+                                                ",text/plain;q=0.7"),
+                                   "GET/TEXT", "text/plain");
+            testBodyAndContentType(hc, post(uri, "application/json"),
+                                   "POST/JSON/BOTH", "application/json");
+
+            testBody(hc, post(uri),"POST");
+
+            // No match on 'Accept' header list.
+            testStatusCode(hc, post(uri, null, "application/json"), 406);
+            testStatusCode(hc, get(uri, "application/json;charset=UTF-8;q=0.9, text/html;q=0.7"), 406);
+        }
     }
 
-    private static HttpPost newHttpPost(String path,
-                                        String username, String password) {
+    @Test
+    public void testClassScopeMediaTypeAnnotations() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            final String uri = "/9/same/path";
+
+            // "application/xml" is matched because "Accept: */*" is specified and
+            // the order of @ProduceTypes is {"application/xml", "application/json"}.
+            testBodyAndContentType(hc, get(uri, "*/*"),
+                                   "GET", "application/xml");
+            testBodyAndContentType(hc, post(uri, "application/xml", "*/*"),
+                                   "POST", "application/xml");
+
+            // "application/json" is matched because "Accept: application/json" is specified.
+            testBodyAndContentType(hc, get(uri, "application/json"),
+                                   "GET", "application/json");
+            testBodyAndContentType(hc, post(uri, "application/json", "application/json"),
+                                   "POST", "application/json");
+
+            testStatusCode(hc, get(uri, "text/plain"), 406);
+            testStatusCode(hc, post(uri, "text/plain", "*/*"), 415);
+        }
+    }
+
+    private static void testBodyAndContentType(CloseableHttpClient hc, HttpRequestBase req,
+                                               String body, String contentType) throws IOException {
+        try (CloseableHttpResponse res = hc.execute(req)) {
+            checkResult(res, 200, body, null, contentType);
+        }
+    }
+
+    private static void testBody(CloseableHttpClient hc, HttpRequestBase req,
+                                 String body) throws IOException {
+        testBody(hc, req, body, null);
+    }
+
+    private static void testBody(CloseableHttpClient hc, HttpRequestBase req,
+                                 String body, @Nullable Charset encoding) throws IOException {
+        try (CloseableHttpResponse res = hc.execute(req)) {
+            checkResult(res, 200, body, encoding, null);
+        }
+    }
+
+    private static void testStatusCode(CloseableHttpClient hc, HttpRequestBase req,
+                                       int statusCode) throws IOException {
+        try (CloseableHttpResponse res = hc.execute(req)) {
+            checkResult(res, statusCode, null, null, null);
+        }
+    }
+
+    private static void testForm(CloseableHttpClient hc, HttpPost req) throws IOException {
+        try (CloseableHttpResponse res = hc.execute(req)) {
+            checkResult(res, 200, EntityUtils.toString(req.getEntity()), null, null);
+        }
+    }
+
+    private static void checkResult(org.apache.http.HttpResponse res,
+                                    int statusCode,
+                                    @Nullable String body,
+                                    @Nullable Charset encoding,
+                                    @Nullable String contentType) throws IOException {
+        final HttpStatus status = HttpStatus.valueOf(statusCode);
+        assertThat(res.getStatusLine().toString(), is("HTTP/1.1 " + status));
+        if (body != null) {
+            if (encoding != null) {
+                assertThat(EntityUtils.toString(res.getEntity(), encoding), is(body));
+            } else {
+                assertThat(EntityUtils.toString(res.getEntity()), is(body));
+            }
+        }
+
+        final Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
+        if (contentType != null) {
+            assertThat(header.getValue(), is(contentType));
+        } else if (statusCode >= 400) {
+            assertThat(header.getValue(), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        } else {
+            assert header == null;
+        }
+    }
+
+    private static HttpRequestBase get(String uri) {
+        return request(HttpMethod.GET, uri, null, null);
+    }
+
+    private static HttpRequestBase get(String uri, String accept) {
+        return request(HttpMethod.GET, uri, null, accept);
+    }
+
+    private static HttpRequestBase post(String uri) {
+        return request(HttpMethod.POST, uri, null, null);
+    }
+
+    private static HttpRequestBase post(String uri, String contentType) {
+        return request(HttpMethod.POST, uri, contentType, null);
+    }
+
+    private static HttpRequestBase post(String uri, String contentType, String accept) {
+        return request(HttpMethod.POST, uri, contentType, accept);
+    }
+
+    private static HttpPost form(String uri) {
+        return form(uri, null, "armeria", "armeria");
+    }
+
+    private static HttpPost form(String uri, Charset charset, String... kv) {
+        final HttpPost req = (HttpPost) request(HttpMethod.POST, uri, MediaType.FORM_DATA.toString());
+
+        final List<NameValuePair> params = new ArrayList<>();
+        for (int i = 0; i < kv.length; i += 2) {
+            params.add(new BasicNameValuePair(kv[i], kv[i + 1]));
+        }
         // HTTP.DEF_CONTENT_CHARSET = ISO-8859-1
-        return newHttpPost(path, username, password, HTTP.DEF_CONTENT_CHARSET);
+        final Charset encoding = charset == null ? HTTP.DEF_CONTENT_CHARSET : charset;
+        final UrlEncodedFormEntity entity = new UrlEncodedFormEntity(params, encoding);
+        req.setEntity(entity);
+        return req;
     }
 
-    private static HttpPost newHttpPost(String path, String username, String password, Charset charset) {
-        HttpPost httpPost = new HttpPost(rule.httpUri(path));
+    private static HttpRequestBase request(HttpMethod method, String uri, String contentType) {
+        return request(method, uri, contentType, null);
+    }
 
-        List<NameValuePair> params = new ArrayList<>();
-        params.add(new BasicNameValuePair("username", username));
-        params.add(new BasicNameValuePair("password", password));
-        httpPost.setEntity(new UrlEncodedFormEntity(params, charset));
-
-        return httpPost;
+    private static HttpRequestBase request(HttpMethod method, String uri, String contentType, String accept) {
+        final HttpRequestBase req;
+        switch (method) {
+            case GET:
+                req = new HttpGet(rule.httpUri(uri));
+                break;
+            case POST:
+                req = new HttpPost(rule.httpUri(uri));
+                break;
+            default:
+                throw new Error("Unexpected method: " + method);
+        }
+        if (contentType != null) {
+            req.setHeader(org.apache.http.HttpHeaders.CONTENT_TYPE, contentType);
+        }
+        if (accept != null) {
+            req.setHeader(org.apache.http.HttpHeaders.ACCEPT, accept);
+        }
+        return req;
     }
 
     private static void validateContext(RequestContext ctx) {

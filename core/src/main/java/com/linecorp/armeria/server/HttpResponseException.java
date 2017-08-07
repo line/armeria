@@ -17,14 +17,42 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link RuntimeException} that is raised when an armeria internal http exception has occurred.
  * This class is the general class of exceptions produced by a failed request or a reset stream.
  */
 public class HttpResponseException extends RuntimeException {
+
+    private static final Map<Integer, HttpResponseException> EXCEPTIONS = new ConcurrentHashMap<>();
+
+    /**
+     * Returns a new {@link HttpResponseException} instance with the HTTP status code.
+     */
+    public static HttpResponseException of(int statusCode) {
+        return of(HttpStatus.valueOf(statusCode));
+    }
+
+    /**
+     * Returns a new {@link HttpResponseException} instance with the {@link HttpStatus}.
+     */
+    public static HttpResponseException of(HttpStatus httpStatus) {
+        requireNonNull(httpStatus, "httpStatus");
+        if (Flags.verboseExceptions()) {
+            return new HttpResponseException(httpStatus);
+        } else {
+            final int statusCode = httpStatus.code();
+            return EXCEPTIONS.computeIfAbsent(statusCode, code ->
+                    Exceptions.clearTrace(new HttpResponseException(code)));
+        }
+    }
+
     private static final long serialVersionUID = 3487991462085151316L;
 
     private final HttpStatus httpStatus;

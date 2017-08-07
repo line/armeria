@@ -8,6 +8,9 @@ buildscript {
 }
 
 managedDependencies {
+    // Caffeine
+    compile 'com.github.ben-manes.caffeine:caffeine'
+
     // Jackson
     [ 'jackson-core', 'jackson-annotations', 'jackson-databind' ].each {
         compile "com.fasterxml.jackson.core:$it"
@@ -17,6 +20,7 @@ managedDependencies {
     compile 'io.dropwizard.metrics:metrics-core'
 
     // Prometheus
+    compile 'io.prometheus:simpleclient_caffeine'
     compile 'io.prometheus:simpleclient_common'
 
     // Netty
@@ -102,6 +106,7 @@ task trimShadedJar(type: ProGuardTask,
 
     keepattributes 'Signature, InnerClasses, Annotation'
     keep "class !${shadedPackage}.**,com.linecorp.armeria.** { *; }"
+    keep "class ${shadedPackage}.caffeine.** { *; }"    // To make the reflection work.
 }
 
 tasks.assemble.dependsOn tasks.trimShadedJar

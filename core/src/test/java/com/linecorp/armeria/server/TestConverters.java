@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
@@ -30,109 +31,64 @@ final class TestConverters {
     public static class NaiveIntConverter implements ResponseConverter {
         @Override
         public HttpResponse convert(Object resObj) throws Exception {
-            assert RequestContext.current() != null;
-            final DefaultHttpResponse res = new DefaultHttpResponse();
-            final HttpData data = HttpData.ofUtf8(String.format("Integer: %d", resObj));
-            final long current = System.currentTimeMillis();
-            HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                     data.length())
-                                             .setTimeMillis(HttpHeaderNames.DATE, current);
-            res.write(headers);
-            res.write(data);
-            res.close();
-            return res;
+            return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", resObj)));
         }
     }
 
     public static class NaiveNumberConverter implements ResponseConverter {
         @Override
         public HttpResponse convert(Object resObj) throws Exception {
-            assert RequestContext.current() != null;
-            final DefaultHttpResponse res = new DefaultHttpResponse();
-            final HttpData data = HttpData.ofUtf8(String.format("Number: %d", resObj));
-            final long current = System.currentTimeMillis();
-            HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                     data.length())
-                                             .setTimeMillis(HttpHeaderNames.DATE, current);
-            res.write(headers);
-            res.write(data);
-            res.close();
-            return res;
+            return httpResponse(HttpData.ofUtf8(String.format("Number: %d", resObj)));
         }
     }
 
     public static class NaiveStringConverter implements ResponseConverter {
         @Override
         public HttpResponse convert(Object resObj) throws Exception {
-            assert RequestContext.current() != null;
-            final DefaultHttpResponse res = new DefaultHttpResponse();
-            final HttpData data = HttpData.ofUtf8(String.format("String: %s", resObj));
-            final long current = System.currentTimeMillis();
-            HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                     data.length())
-                                             .setTimeMillis(HttpHeaderNames.DATE, current);
-            res.write(headers);
-            res.write(data);
-            res.close();
-            return res;
+            return httpResponse(HttpData.ofUtf8(String.format("String: %s", resObj)));
         }
     }
 
     public static class TypedNumberConverter implements ResponseConverter {
         @Override
         public HttpResponse convert(Object resObj) throws Exception {
-            assert RequestContext.current() != null;
-            final DefaultHttpResponse res = new DefaultHttpResponse();
-            final HttpData data = HttpData.ofUtf8(String.format("Number[%d]", resObj));
-            final long current = System.currentTimeMillis();
-            HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                     data.length())
-                                             .setTimeMillis(HttpHeaderNames.DATE, current);
-            res.write(headers);
-            res.write(data);
-            res.close();
-            return res;
+            return httpResponse(HttpData.ofUtf8(String.format("Number[%d]", resObj)));
         }
     }
 
     public static class TypedStringConverter implements ResponseConverter {
         @Override
         public HttpResponse convert(Object resObj) throws Exception {
-            assert RequestContext.current() != null;
-            final DefaultHttpResponse res = new DefaultHttpResponse();
-            final HttpData data = HttpData.ofUtf8(String.format("String[%s]", resObj));
-            final long current = System.currentTimeMillis();
-            HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                     data.length())
-                                             .setTimeMillis(HttpHeaderNames.DATE, current);
-            res.write(headers);
-            res.write(data);
-            res.close();
-            return res;
+            return httpResponse(HttpData.ofUtf8(String.format("String[%s]", resObj)));
         }
     }
 
     public static class UnformattedStringConverter implements ResponseConverter {
         @Override
         public HttpResponse convert(Object resObj) throws Exception {
-            assert RequestContext.current() != null;
-            final DefaultHttpResponse res = new DefaultHttpResponse();
-            final HttpData data = HttpData.ofUtf8(resObj.toString());
-            final long current = System.currentTimeMillis();
-            HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                             .setInt(HttpHeaderNames.CONTENT_LENGTH,
-                                                     data.length())
-                                             .setTimeMillis(HttpHeaderNames.DATE, current);
-            res.write(headers);
-            res.write(data);
-            res.close();
-            return res;
+            return httpResponse(HttpData.ofUtf8(resObj.toString()));
         }
+    }
+
+    private static HttpResponse httpResponse(HttpData data) {
+        assert RequestContext.current() != null;
+        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final long current = System.currentTimeMillis();
+        HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
+                                         .setInt(HttpHeaderNames.CONTENT_LENGTH,
+                                                 data.length())
+                                         .setTimeMillis(HttpHeaderNames.DATE, current);
+
+        final MediaType contentType =
+                ((ServiceRequestContext) RequestContext.current()).negotiatedProduceType();
+        if (contentType != null) {
+            headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+        }
+
+        res.write(headers);
+        res.write(data);
+        res.close();
+        return res;
     }
 
     private TestConverters() {}

@@ -24,33 +24,40 @@ import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.server.annotation.ConsumeType;
+import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Converter;
 import com.linecorp.armeria.server.annotation.Converter.Unspecified;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProduceType;
+import com.linecorp.armeria.server.annotation.ProduceTypes;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
@@ -93,7 +100,17 @@ final class AnnotatedHttpServices {
         return Arrays.stream(object.getClass().getMethods())
                      .filter(m -> m.getAnnotation(Path.class) != null ||
                                   !httpMethodAnnotations(m).isEmpty())
+                     .sorted(Comparator.comparingInt(AnnotatedHttpServices::order))
                      .collect(toImmutableList());
+    }
+
+    /**
+     * Returns the value of the order of the {@link Method}. The order could be retrieved from {@link Order}
+     * annotation. 0 would be returned if there is no specified {@link Order} annotation.
+     */
+    private static int order(Method method) {
+        final Order order = method.getAnnotation(Order.class);
+        return order != null ? order.value() : 0;
     }
 
     /**
@@ -135,10 +152,50 @@ final class AnnotatedHttpServices {
     }
 
     /**
+     * Returns the list of {@link MediaType}s specified by {@link ConsumeType} annotation.
+     */
+    private static List<MediaType> consumeTypes(Method method, Class<?> clazz) {
+        final ConsumeType[] consumeTypes =
+                method.isAnnotationPresent(ConsumeType.class) ||
+                method.isAnnotationPresent(ConsumeTypes.class) ? method.getAnnotationsByType(ConsumeType.class)
+                                                               : clazz.getAnnotationsByType(ConsumeType.class);
+        if (consumeTypes == null || consumeTypes.length == 0) {
+            return ImmutableList.of();
+        }
+
+        final List<MediaType> mediaTypes = new ArrayList<>();
+        Arrays.stream(consumeTypes).forEach(e -> mediaTypes.add(MediaType.parse(e.value())));
+        return mediaTypes;
+    }
+
+    /**
+     * Returns the list of {@link MediaType}s specified by {@link ProduceType} annotation.
+     */
+    private static List<MediaType> produceTypes(Method method, Class<?> clazz) {
+        final ProduceType[] produceTypes =
+                method.isAnnotationPresent(ProduceType.class) ||
+                method.isAnnotationPresent(ProduceTypes.class) ? method.getAnnotationsByType(ProduceType.class)
+                                                               : clazz.getAnnotationsByType(ProduceType.class);
+        if (produceTypes == null || produceTypes.length == 0) {
+            return ImmutableList.of();
+        }
+
+        final List<MediaType> mediaTypes = new ArrayList<>();
+        Arrays.stream(produceTypes).forEach(e -> {
+            final MediaType type = MediaType.parse(e.value());
+            if (type.hasWildcard()) {
+                throw new IllegalArgumentException("@ProduceType must not have a wildcard: " + e.value());
+            }
+            mediaTypes.add(type);
+        });
+        return mediaTypes;
+    }
+
+    /**
      * Returns the {@link PathMapping} instance mapped to {@code method}.
      */
-    private static PathMapping pathMapping(String pathPrefix, Method method,
-                                           Set<Annotation> methodAnnotations) {
+    private static PathMapping pathStringMapping(String pathPrefix, Method method,
+                                                 Set<Annotation> methodAnnotations) {
         pathPrefix = ensureAbsolutePath(pathPrefix, "pathPrefix");
         if (!pathPrefix.endsWith("/")) {
             pathPrefix += '/';
@@ -285,7 +342,11 @@ final class AnnotatedHttpServices {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
 
-        final PathMapping pathMapping = pathMapping(pathPrefix, method, methodAnnotations);
+        final Class<?> clazz = object.getClass();
+        final HttpHeaderPathMapping pathMapping =
+                new HttpHeaderPathMapping(pathStringMapping(pathPrefix, method, methodAnnotations),
+                                          methods, consumeTypes(method, clazz), produceTypes(method, clazz));
+
         final AnnotatedHttpServiceMethod function = new AnnotatedHttpServiceMethod(object, method, pathMapping);
 
         final Set<String> parameterNames = function.pathParamNames();
@@ -297,7 +358,7 @@ final class AnnotatedHttpServices {
 
         final ResponseConverter converter = converter(method);
         if (converter != null) {
-            return new AnnotatedHttpService(methods, pathMapping, function.withConverter(converter));
+            return new AnnotatedHttpService(pathMapping, function.withConverter(converter));
         }
 
         final ImmutableMap<Class<?>, ResponseConverter> newConverters =
@@ -306,7 +367,7 @@ final class AnnotatedHttpServices {
                         .putAll(converters(method.getDeclaringClass())) // Converters given by @Converters
                         .build();
 
-        return new AnnotatedHttpService(methods, pathMapping, function.withConverters(newConverters));
+        return new AnnotatedHttpService(pathMapping, function.withConverters(newConverters));
     }
 
     /**
@@ -346,14 +407,16 @@ final class AnnotatedHttpServices {
         }
 
         @Override
-        protected PathMappingResult doApply(String path, @Nullable String query) {
+        protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+            final String path = mappingCtx.path();
             if (!path.startsWith(pathPrefix)) {
                 return PathMappingResult.empty();
             }
 
-            final PathMappingResult result = mapping.apply(path.substring(pathPrefix.length() - 1), query);
+            final PathMappingResult result =
+                    mapping.apply(mappingCtx.overridePath(path.substring(pathPrefix.length() - 1)));
             if (result.isPresent()) {
-                return PathMappingResult.of(path, query, result.pathParams());
+                return PathMappingResult.of(path, mappingCtx.query(), result.pathParams());
             } else {
                 return PathMappingResult.empty();
             }

@@ -118,6 +118,20 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
         public HttpResponse greet(HttpParameters parameters) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!",
                                    parameters.get("name");
+    });
+
+    // Using media type negotiation:
+    sb.annotatedService(new Object() {
+        @Get("/greet7")
+        @ProduceType("application/json;charset=UTF-8")
+        public HttpResponse greetGet(@Param("name") String name) {
+            return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, "{\"name\":\"%s\"}", name);
+        }
+
+        @Post("/greet7")
+        @ConsumeType("application/x-www-form-urlencoded")
+        public HttpResponse greetPost(@Param("name") String name) {
+            return HttpResponse.of(HttpStatus.OK);
         }
     });
 

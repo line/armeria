@@ -100,6 +100,11 @@ This product depends on Brave, distributed by Zipkin.io:
   * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/openzipkin/brave/
 
+This product depends on Caffeine, distributed by Ben Manes:
+
+  * License: licenses/LICENSE.caffeine.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/ben-manes/caffeine
+
 This product depends on EasyMock, distributed by Easymock contributors:
 
   * License: licenses/LICENSE.easymock.al20.txt (Apache License v2.0)

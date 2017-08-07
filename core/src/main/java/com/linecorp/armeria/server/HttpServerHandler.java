@@ -254,11 +254,24 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
+        final PathMappingContext mappingCtx = DefaultPathMappingContext.of(host, hostname,
+                                                                           path, query, headers,
+                                                                           host.producibleMediaTypes());
         // Find the service that matches the path.
-        final PathMapped<ServiceConfig> mapped = host.findServiceConfig(path, query);
+        final PathMapped<ServiceConfig> mapped;
+        try {
+            mapped = host.findServiceConfig(mappingCtx);
+        } catch (HttpResponseException cause) {
+            respond(ctx, req, cause.httpStatus());
+            return;
+        } catch (Throwable cause) {
+            logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
+            respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR);
+            return;
+        }
         if (!mapped.isPresent()) {
             // No services matched the path.
-            handleNonExistentMapping(ctx, req, host, path, query);
+            handleNonExistentMapping(ctx, req, host, mappingCtx);
             return;
         }
 
@@ -269,8 +282,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final Channel channel = ctx.channel();
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, protocol, req.method(),
-                path, mappingResult, req, getSSLSession(channel));
+                serviceCfg, channel, protocol, mappingCtx, mappingResult, req, getSSLSession(channel));
 
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
@@ -281,10 +293,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } catch (Throwable cause) {
                 logBuilder.endRequest(cause);
                 logBuilder.endResponse(cause);
-                if (cause instanceof ResourceNotFoundException) {
-                    respond(ctx, req, HttpStatus.NOT_FOUND);
-                } else if (cause instanceof ServiceUnavailableException) {
-                    respond(ctx, req, HttpStatus.SERVICE_UNAVAILABLE);
+                if (cause instanceof HttpResponseException) {
+                    respond(ctx, req, ((HttpResponseException) cause).httpStatus());
                 } else {
                     logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
                     respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -333,12 +343,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void handleNonExistentMapping(ChannelHandlerContext ctx, DecodedHttpRequest req,
-                                          VirtualHost host, String path, String query) {
+                                          VirtualHost host, PathMappingContext mappingCtx) {
 
+        String path = mappingCtx.path();
         if (path.charAt(path.length() - 1) != '/') {
             // Handle the case where /path doesn't exist but /path/ exists.
             final String pathWithSlash = path + '/';
-            if (host.findServiceConfig(pathWithSlash, query).isPresent()) {
+            if (host.findServiceConfig(mappingCtx.overridePath(pathWithSlash)).isPresent()) {
                 final String location;
                 final String originalPath = req.path();
                 if (path.length() == originalPath.length()) {

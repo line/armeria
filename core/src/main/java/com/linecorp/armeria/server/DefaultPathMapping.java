@@ -21,12 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -59,9 +58,9 @@ final class DefaultPathMapping extends AbstractPathMapping {
      * Skeletal form of given path, which is used for duplicated routing rule detection.
      * For example, "/{a}/{b}" and "/{c}/{d}" has same skeletal form and regarded as duplicated.
      *
-     * <p>e.g. "/{x}/{y}/{z}" -> "/{}/{}/{}"
+     * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"
      */
-    private final String skeleton;
+    private final Optional<String> skeleton;
 
     /**
      * The names of the path parameters in the order of appearance.
@@ -118,12 +117,12 @@ final class DefaultPathMapping extends AbstractPathMapping {
                 // in regex.
                 patternJoiner.add("\\" + (paramNameIdx + 1));
             }
-            skeletonJoiner.add("{}");
+            skeletonJoiner.add(":");
         }
 
         this.pathPattern = pathPattern;
         pattern = Pattern.compile(patternJoiner.toString());
-        skeleton = skeletonJoiner.toString();
+        skeleton = Optional.of(skeletonJoiner.toString());
         paramNameArray = paramNames.toArray(new String[paramNames.size()]);
         this.paramNames = ImmutableSet.copyOf(paramNames);
 
@@ -156,7 +155,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
      * Returns the skeleton.
      */
     String skeleton() {
-        return skeleton;
+        return skeleton.get();
     }
 
     @Override
@@ -175,21 +174,26 @@ final class DefaultPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
-        final Matcher matcher = pattern.matcher(path);
+    public Optional<String> triePath() {
+        return skeleton;
+    }
+
+    @Override
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final Matcher matcher = pattern.matcher(mappingCtx.path());
         if (!matcher.matches()) {
             return PathMappingResult.empty();
         }
 
         if (paramNameArray.length == 0) {
-            return PathMappingResult.of(path, query);
+            return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
         }
 
         final ImmutableMap.Builder<String, String> pathParams = ImmutableMap.builder();
         for (int i = 0; i < paramNameArray.length; i++) {
             pathParams.put(paramNameArray[i], matcher.group(i + 1));
         }
-        return PathMappingResult.of(path, query, pathParams.build());
+        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(), pathParams.build());
     }
 
     @Override

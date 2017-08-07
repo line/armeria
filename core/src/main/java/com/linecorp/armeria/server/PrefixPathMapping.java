@@ -19,8 +19,6 @@ package com.linecorp.armeria.server;
 import java.util.Optional;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 
 final class PrefixPathMapping extends AbstractPathMapping {
@@ -32,6 +30,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
     private final boolean stripPrefix;
     private final String loggerName;
     private final String metricName;
+    private final Optional<String> triePath;
     private final String strVal;
 
     PrefixPathMapping(String prefix, boolean stripPrefix) {
@@ -44,16 +43,19 @@ final class PrefixPathMapping extends AbstractPathMapping {
         this.stripPrefix = stripPrefix;
         loggerName = loggerName(prefix);
         metricName = prefix + "**";
+        triePath = Optional.of(prefix + '*');
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final String path = mappingCtx.path();
         if (!path.startsWith(prefix)) {
             return PathMappingResult.empty();
         }
 
-        return PathMappingResult.of(stripPrefix ? path.substring(prefix.length() - 1) : path, query);
+        return PathMappingResult.of(stripPrefix ? path.substring(prefix.length() - 1) : path,
+                                    mappingCtx.query());
     }
 
     @Override
@@ -69,6 +71,11 @@ final class PrefixPathMapping extends AbstractPathMapping {
     @Override
     public String metricName() {
         return metricName;
+    }
+
+    @Override
+    public Optional<String> triePath() {
+        return triePath;
     }
 
     @Override

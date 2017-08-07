@@ -6,6 +6,9 @@ com.fasterxml.jackson.core:
   jackson-core: { version: *JACKSON_VERSION }
   jackson-databind: { version: *JACKSON_VERSION }
 
+com.github.ben-manes.caffeine:
+  caffeine: { version: '2.5.3' }
+
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
@@ -70,7 +73,8 @@ io.netty:
   netty-tcnative-boringssl-static: { version: '2.0.5.Final' }
 
 io.prometheus:
-  simpleclient_common: { version: '0.0.24' }
+  simpleclient_caffeine: { version: &PROMETHEUS_VERSION '0.0.24' }
+  simpleclient_common: { version: *PROMETHEUS_VERSION }
 
 io.zipkin.brave:
   brave: { version: &BRAVE_VERSION '4.5.1' }

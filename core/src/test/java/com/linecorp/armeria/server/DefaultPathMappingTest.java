@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.PathMapping.of;
+import static com.linecorp.armeria.server.PathMappingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -27,7 +28,7 @@ public class DefaultPathMappingTest {
     @Test
     public void givenMatchingPathParam_whenApply_thenReturns() throws Exception {
         final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}");
-        final PathMappingResult result = ppe.apply("/service/hello", "foo=bar");
+        final PathMappingResult result = ppe.apply(create("/service/hello", "foo=bar"));
 
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/service/hello");
@@ -41,7 +42,7 @@ public class DefaultPathMappingTest {
     @Test
     public void givenNoMatchingPathParam_whenApply_thenReturnsNull() throws Exception {
         final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}");
-        final PathMappingResult result = ppe.apply("/service2/hello", "bar=baz");
+        final PathMappingResult result = ppe.apply(create("/service2/hello", "bar=baz"));
 
         assertThat(result.isPresent()).isFalse();
     }
@@ -49,7 +50,7 @@ public class DefaultPathMappingTest {
     @Test
     public void testMultipleMatches() throws Exception {
         final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}/test/:value2/something");
-        final PathMappingResult result = ppe.apply("/service/hello/test/world/something", "q=1");
+        final PathMappingResult result = ppe.apply(create("/service/hello/test/world/something", "q=1"));
 
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/service/hello/test/world/something");
@@ -65,7 +66,7 @@ public class DefaultPathMappingTest {
     public void testNumericPathParamNames() {
         final DefaultPathMapping m = new DefaultPathMapping("/{0}/{1}/{2}");
         assertThat(m.paramNames()).containsExactlyInAnyOrder("0", "1", "2");
-        assertThat(m.apply("/alice/bob/charlie", null).pathParams())
+        assertThat(m.apply(create("/alice/bob/charlie")).pathParams())
                 .containsEntry("0", "alice")
                 .containsEntry("1", "bob")
                 .containsEntry("2", "charlie")
@@ -85,7 +86,7 @@ public class DefaultPathMappingTest {
         final DefaultPathMapping ppe =
                 new DefaultPathMapping("/service/{value}/test/:value2/something/{value3}");
 
-        assertThat(ppe.skeleton()).isEqualTo("/service/{}/test/{}/something/{}");
+        assertThat(ppe.skeleton()).isEqualTo("/service/:/test/:/something/:");
     }
 
     @Test
@@ -100,7 +101,7 @@ public class DefaultPathMappingTest {
     @Test
     public void testEmptyPattern() throws Exception {
         final DefaultPathMapping ppe = new DefaultPathMapping("/service/value/test/value2");
-        final PathMappingResult result = ppe.apply("/service/value/test/value2", null);
+        final PathMappingResult result = ppe.apply(create("/service/value/test/value2"));
 
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/service/value/test/value2");

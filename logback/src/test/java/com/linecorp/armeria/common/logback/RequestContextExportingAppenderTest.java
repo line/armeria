@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.logback;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
@@ -26,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -34,6 +36,7 @@ import javax.net.ssl.SSLSession;
 
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
+import org.assertj.core.util.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -42,6 +45,7 @@ import org.junit.rules.TestName;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientOptions;
@@ -54,6 +58,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -67,11 +72,13 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.PathMappingResult;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.VirtualHost;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -407,15 +414,15 @@ public class RequestContextExportingAppenderTest {
         final Server server = new ServerBuilder().withVirtualHost("some-host.server.com")
                                                  .serviceUnder("/", service)
                                                  .and().build();
-        final ServiceConfig serviceConfig = server.config().findVirtualHost("some-host.server.com")
-                                                  .serviceConfigs().get(0);
+        final VirtualHost virtualHost = server.config().findVirtualHost("some-host.server.com");
+        final ServiceConfig serviceConfig = virtualHost.serviceConfigs().get(0);
         final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, path + '?' + query)
                                                           .authority("server.com:8080"));
+        final PathMappingContext mappingCtx =
+                new DummyPathMappingContext(virtualHost, "server.com", path, query, req.headers());
 
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
-                serviceConfig,
-                ch, SessionProtocol.H2, req.method(),
-                path,
+                serviceConfig, ch, SessionProtocol.H2, mappingCtx,
                 PathMappingResult.of(path, query, ImmutableMap.of()),
                 req, newSslSession());
 
@@ -565,5 +572,78 @@ public class RequestContextExportingAppenderTest {
         la.start();
         testLogger.addAppender(a);
         return la.list;
+    }
+
+    private static class DummyPathMappingContext implements PathMappingContext {
+
+        private final VirtualHost virtualHost;
+        private final String hostname;
+        private final String path;
+        private final String query;
+        private final HttpHeaders headers;
+        private final List<Object> summary;
+        private Throwable delayedCause;
+
+        DummyPathMappingContext(VirtualHost virtualHost, String hostname,
+                                String path, String query, HttpHeaders headers) {
+            this.virtualHost = requireNonNull(virtualHost, "virtualHost");
+            this.hostname = requireNonNull(hostname, "hostname");
+            this.path = requireNonNull(path, "path");
+            this.query = query;
+            this.headers = requireNonNull(headers, "headers");
+            summary = Lists.newArrayList(hostname, path, headers.method());
+        }
+
+        @Override
+        public VirtualHost virtualHost() {
+            return virtualHost;
+        }
+
+        @Override
+        public String hostname() {
+            return hostname;
+        }
+
+        @Override
+        public HttpMethod method() {
+            return headers.method();
+        }
+
+        @Override
+        public String path() {
+            return path;
+        }
+
+        @Nullable
+        @Override
+        public String query() {
+            return query;
+        }
+
+        @Nullable
+        @Override
+        public MediaType consumeType() {
+            return null;
+        }
+
+        @Override
+        public List<MediaType> produceTypes() {
+            return ImmutableList.of();
+        }
+
+        @Override
+        public List<Object> summary() {
+            return summary;
+        }
+
+        @Override
+        public void delayThrowable(Throwable delayedCause) {
+            this.delayedCause = delayedCause;
+        }
+
+        @Override
+        public Optional<Throwable> delayedThrowable() {
+            return Optional.ofNullable(delayedCause);
+        }
     }
 }
