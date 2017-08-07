@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
@@ -55,6 +56,9 @@ public class SelfSignedCertificateRule extends ExternalResource {
 
     /**
      * Creates a new instance.
+     *
+     * @param notBefore {@link Certificate} is not valid before this time
+     * @param notAfter {@link Certificate} is not valid after this time
      */
     public SelfSignedCertificateRule(Date notBefore, Date notAfter) {
         fqdn = null;
@@ -66,6 +70,8 @@ public class SelfSignedCertificateRule extends ExternalResource {
 
     /**
      * Creates a new instance.
+     *
+     * @param fqdn a fully qualified domain name
      */
     public SelfSignedCertificateRule(String fqdn) {
         this.fqdn = requireNonNull(fqdn, "fqdn");
@@ -77,6 +83,10 @@ public class SelfSignedCertificateRule extends ExternalResource {
 
     /**
      * Creates a new instance.
+     *
+     * @param fqdn a fully qualified domain name
+     * @param notBefore {@link Certificate} is not valid before this time
+     * @param notAfter {@link Certificate} is not valid after this time
      */
     public SelfSignedCertificateRule(String fqdn, Date notBefore, Date notAfter) {
         this.fqdn = requireNonNull(fqdn, "fqdn");
@@ -88,6 +98,10 @@ public class SelfSignedCertificateRule extends ExternalResource {
 
     /**
      * Creates a new instance.
+     *
+     * @param fqdn a fully qualified domain name
+     * @param random the {@link SecureRandom} to use
+     * @param bits the number of bits of the generated private key
      */
     public SelfSignedCertificateRule(String fqdn, SecureRandom random, int bits) {
         this.fqdn = requireNonNull(fqdn, "fqdn");
@@ -99,6 +113,12 @@ public class SelfSignedCertificateRule extends ExternalResource {
 
     /**
      * Creates a new instance.
+     *
+     * @param fqdn a fully qualified domain name
+     * @param random the {@link SecureRandom} to use
+     * @param bits the number of bits of the generated private key
+     * @param notBefore {@link Certificate} is not valid before this time
+     * @param notAfter {@link Certificate} is not valid after this time
      */
     public SelfSignedCertificateRule(String fqdn, SecureRandom random, int bits,
                                      Date notBefore, Date notAfter) {
@@ -110,7 +130,7 @@ public class SelfSignedCertificateRule extends ExternalResource {
     }
 
     /**
-     * Generates a self-signed certificate.
+     * Generates a {@link SelfSignedCertificate}.
      */
     @Override
     protected void before() throws Throwable {
@@ -136,7 +156,7 @@ public class SelfSignedCertificateRule extends ExternalResource {
     }
 
     /**
-     * Deletes the generated self-signed certificate.
+     * Deletes the generated {@link SelfSignedCertificate}.
      */
     @Override
     protected void after() {
@@ -144,7 +164,7 @@ public class SelfSignedCertificateRule extends ExternalResource {
     }
 
     /**
-     * Returns the self-signed certificate.
+     *  Returns the generated {@link X509Certificate}.
      */
     public X509Certificate certificate() {
         return certificate.cert();
@@ -158,7 +178,7 @@ public class SelfSignedCertificateRule extends ExternalResource {
     }
 
     /**
-     * Returns the private key of the self-signed certificate.
+     * Returns the {@link PrivateKey} of the self-signed certificate.
      */
     public PrivateKey privateKey() {
         return certificate.key();

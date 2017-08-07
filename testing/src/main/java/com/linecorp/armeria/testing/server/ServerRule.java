@@ -267,7 +267,7 @@ public abstract class ServerRule extends ExternalResource {
     /**
      * Returns the HTTPS {@link InetSocketAddress} for the {@link Server}.
      *
-     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
+     * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
      */
     public InetSocketAddress httpsSocketAddress() {
         return new InetSocketAddress("127.0.0.1", httpsPort());

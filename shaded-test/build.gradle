@@ -1,7 +1,7 @@
 import com.google.common.base.CaseFormat
 
 ext {
-    requiredProjects = rootProject.ext.publishedJavaProjects + project(':testing')
+    requiredProjects = rootProject.ext.publishedJavaProjects + project(':testing-internal')
 }
 
 // Evaluate other projects first so that their dependencies are fully populated.

@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.common.AnticipatedException;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.handler.codec.http.HttpStatusClass;

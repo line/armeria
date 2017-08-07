@@ -30,7 +30,7 @@ import org.junit.Test;
 import com.google.common.testing.FakeTicker;
 
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.testing.common.AnticipatedException;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 public class NonBlockingCircuitBreakerTest {
 

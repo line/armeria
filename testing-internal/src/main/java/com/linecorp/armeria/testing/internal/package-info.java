@@ -15,6 +15,6 @@
  */
 
 /**
- * Web application service testing utilities.
+ * Common testing utilities.
  */
-package com.linecorp.armeria.testing.server.webapp;
+package com.linecorp.armeria.testing.internal;

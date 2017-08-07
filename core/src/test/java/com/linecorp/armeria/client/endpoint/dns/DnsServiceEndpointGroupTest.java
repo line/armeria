@@ -43,7 +43,7 @@ import org.mockito.junit.MockitoRule;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.testing.common.AnticipatedException;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

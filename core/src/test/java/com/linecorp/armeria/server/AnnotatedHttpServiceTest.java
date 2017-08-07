@@ -75,7 +75,7 @@ import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.common.AnticipatedException;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 public class AnnotatedHttpServiceTest {

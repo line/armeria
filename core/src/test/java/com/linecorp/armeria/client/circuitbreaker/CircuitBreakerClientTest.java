@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.testing.common.AnticipatedException;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.channel.DefaultEventLoop;
 

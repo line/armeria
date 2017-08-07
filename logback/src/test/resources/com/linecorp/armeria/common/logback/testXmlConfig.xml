@@ -29,7 +29,7 @@
     <appender-ref ref="RCEA" />
   </logger>
 
-  <!-- Copied from /settings/logback/logback-test.xml -->
+  <!-- Copied from testing-internal/src/main/resources/logback-test.xml -->
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>

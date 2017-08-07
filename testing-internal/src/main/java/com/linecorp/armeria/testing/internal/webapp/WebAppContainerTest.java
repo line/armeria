@@ -14,7 +14,7 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.testing.server.webapp;
+package com.linecorp.armeria.testing.internal.webapp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -77,15 +77,15 @@ public abstract class WebAppContainerTest {
 
         final File buildDir;
         if (f.isDirectory()) {
-            // f is: testing/build/resources/main
+            // f is: testing-internal/build/resources/main
             buildDir = f.getParentFile().getParentFile();
         } else {
-            // f is: testing/build/libs/armeria-testing-*.jar
+            // f is: testing-internal/build/libs/armeria-testing-internal-*.jar
             assert f.isFile();
             buildDir = f.getParentFile().getParentFile();
         }
 
-        assert buildDir.getPath().endsWith("testing" + File.separatorChar + "build");
+        assert buildDir.getPath().endsWith("testing-internal" + File.separatorChar + "build");
 
         final File webAppRoot = new File(
                 buildDir.getParentFile(), "src" + File.separatorChar + "main" + File.separatorChar + "webapp");
