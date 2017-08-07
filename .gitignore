@@ -1,13 +1,19 @@
 # Build output
 /build
 /*/build
+/*/*/build
+/out
+/*/out
+/*/*/out
 **/src/main/gen-java
 **/src/test/gen-java
+**/gen-src
 
 # Package Files #
 *.jar
 !**/src/**/WEB-INF/lib/*.jar
 !/gradle/wrapper/gradle-wrapper.jar
+!/settings/intellij_idea/settings.jar
 *.war
 *.ear
 

@@ -15,10 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
@@ -38,26 +35,28 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.http.AbstractHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 
-public class ServerTest extends AbstractServerTest {
+public class ServerTest {
 
     private static final long processDelayMillis = 1000;
     private static final long requestTimeoutMillis = 500;
@@ -65,72 +64,81 @@ public class ServerTest extends AbstractServerTest {
 
     private static final EventExecutorGroup asyncExecutorGroup = new DefaultEventExecutorGroup(1);
 
-    @Override
-    protected void configureServer(ServerBuilder sb) {
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
 
-        final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
-                new EchoService().decorate(LoggingService::new);
+            final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
+                    new EchoService().decorate(LoggingService.newDecorator());
 
-        final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
-            @Override
-            protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
-                try {
-                    Thread.sleep(processDelayMillis);
-                    super.echo(aReq, res);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }.decorate(LoggingService::new);
-
-        final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
-            @Override
-            protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
-                asyncExecutorGroup.schedule(
-                        () -> super.echo(aReq, res), processDelayMillis, TimeUnit.MILLISECONDS);
-            }
-        }.decorate(LoggingService::new);
-
-        final Service<HttpRequest, HttpResponse> buggy = new AbstractHttpService() {
-            @Override
-            protected void doPost(ServiceRequestContext ctx,
-                                  HttpRequest req, HttpResponseWriter res) throws Exception {
-
-                throw Exceptions.clearTrace(new Exception("bug!"));
-            }
-        }.decorate(LoggingService::new);
-
-        sb.serviceAt("/", immediateResponseOnIoThread)
-          .serviceAt("/delayed", delayedResponseOnIoThread)
-          .serviceAt("/timeout", lazyResponseNotOnIoThread)
-          .serviceAt("/timeout-not", lazyResponseNotOnIoThread)
-          .serviceAt("/buggy", buggy);
-
-        // Disable request timeout for '/timeout-not' only.
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
-                s -> new DecoratingService<HttpRequest, HttpResponse, HttpRequest, HttpResponse>(s) {
-                    @Override
-                    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                        ctx.setRequestTimeoutMillis(
-                                "/timeout-not".equals(ctx.path()) ? 0 : requestTimeoutMillis);
-                        return delegate().serve(ctx, req);
+            final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
+                @Override
+                protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+                    try {
+                        Thread.sleep(processDelayMillis);
+                        super.echo(aReq, res);
+                    } catch (InterruptedException e) {
+                        res.close(e);
                     }
-                };
+                }
+            }.decorate(LoggingService.newDecorator());
 
-        sb.decorator(decorator);
+            final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
+                @Override
+                protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+                    asyncExecutorGroup.schedule(
+                            () -> super.echo(aReq, res), processDelayMillis, TimeUnit.MILLISECONDS);
+                }
+            }.decorate(LoggingService.newDecorator());
 
-        sb.idleTimeoutMillis(idleTimeoutMillis);
+            final Service<HttpRequest, HttpResponse> buggy = new AbstractHttpService() {
+                @Override
+                protected void doPost(ServiceRequestContext ctx,
+                                      HttpRequest req, HttpResponseWriter res) throws Exception {
+
+                    throw Exceptions.clearTrace(new AnticipatedException("bug!"));
+                }
+            }.decorate(LoggingService.newDecorator());
+
+            sb.service("/", immediateResponseOnIoThread)
+              .service("/delayed", delayedResponseOnIoThread)
+              .service("/timeout", lazyResponseNotOnIoThread)
+              .service("/timeout-not", lazyResponseNotOnIoThread)
+              .service("/buggy", buggy);
+
+            // Disable request timeout for '/timeout-not' only.
+            final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+                    s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
+                        @Override
+                        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                            ctx.setRequestTimeoutMillis(
+                                    "/timeout-not".equals(ctx.path()) ? 0 : requestTimeoutMillis);
+                            return delegate().serve(ctx, req);
+                        }
+                    };
+
+            sb.decorator(decorator);
+
+            sb.idleTimeoutMillis(idleTimeoutMillis);
+        }
+    };
+
+    /**
+     * Ensures that the {@link Server} is always started when a test begins. This is necessary even if we
+     * enabled auto-start for {@link ServerRule} because we stop it in {@link #testStartStop()}.
+     */
+    @Before
+    public void startServer() {
+        server.start();
     }
 
     @Test
     public void testStartStop() throws Exception {
-        try {
-            assertThat(server().activePorts().size(), is(1));
-            server().stop().get();
-            assertThat(server().activePorts().size(), is(0));
-        } finally {
-            stopServer();
-        }
+        final Server server = ServerTest.server.server();
+        assertThat(server.activePorts()).hasSize(1);
+        server.stop().get();
+        assertThat(server.activePorts()).isEmpty();
     }
 
     @Test
@@ -145,12 +153,12 @@ public class ServerTest extends AbstractServerTest {
 
     private static void testInvocation0(String path) throws IOException {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(uri(path));
+            final HttpPost req = new HttpPost(server.uri(path));
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("Hello, world!"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, world!");
             }
         }
     }
@@ -158,12 +166,12 @@ public class ServerTest extends AbstractServerTest {
     @Test
     public void testRequestTimeoutInvocation() throws Exception {
          try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(uri("/timeout"));
+            final HttpPost req = new HttpPost(server.uri("/timeout"));
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()),
-                           is(not(HttpStatusClass.SUCCESS)));
+                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()))
+                        .isNotEqualTo(HttpStatusClass.SUCCESS);
             }
         }
     }
@@ -171,12 +179,12 @@ public class ServerTest extends AbstractServerTest {
     @Test
     public void testDynamicRequestTimeoutInvocation() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(uri("/timeout-not"));
+            final HttpPost req = new HttpPost(server.uri("/timeout-not"));
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()),
-                           is(HttpStatusClass.SUCCESS));
+                assertThat(HttpStatusClass.valueOf(res.getStatusLine().getStatusCode()))
+                        .isEqualTo(HttpStatusClass.SUCCESS);
             }
         }
     }
@@ -185,7 +193,7 @@ public class ServerTest extends AbstractServerTest {
     public void testIdleTimeoutByNoContentSent() throws Exception {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
-            socket.connect(server().activePort().get().localAddress());
+            socket.connect(server.httpSocketAddress());
             long connectedNanos = System.nanoTime();
             //read until EOF
             while (socket.getInputStream().read() != -1) {
@@ -193,7 +201,7 @@ public class ServerTest extends AbstractServerTest {
             }
             long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - connectedNanos, TimeUnit.NANOSECONDS);
-            assertThat(elapsedTimeMillis, is(greaterThanOrEqualTo(idleTimeoutMillis)));
+            assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
     }
 
@@ -201,7 +209,7 @@ public class ServerTest extends AbstractServerTest {
     public void testIdleTimeoutByContentSent() throws Exception {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
-            socket.connect(server().activePort().get().localAddress());
+            socket.connect(server.httpSocketAddress());
             PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
             outWriter.print("POST / HTTP/1.1\r\n");
             outWriter.print("Connection: Keep-Alive\r\n");
@@ -216,7 +224,7 @@ public class ServerTest extends AbstractServerTest {
 
             long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - lastWriteNanos, TimeUnit.NANOSECONDS);
-            assertThat(elapsedTimeMillis, is(greaterThanOrEqualTo(idleTimeoutMillis)));
+            assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
     }
 
@@ -228,7 +236,7 @@ public class ServerTest extends AbstractServerTest {
     public void testBuggyService() throws Exception {
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
-            socket.connect(server().activePort().get().localAddress());
+            socket.connect(server.httpSocketAddress());
             PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
 
             // Send a request to a buggy service whose invoke() raises an exception.
@@ -252,7 +260,7 @@ public class ServerTest extends AbstractServerTest {
 
             long elapsedTimeMillis = TimeUnit.MILLISECONDS.convert(
                     System.nanoTime() - lastWriteNanos, TimeUnit.NANOSECONDS);
-            assertThat(elapsedTimeMillis, is(greaterThanOrEqualTo(idleTimeoutMillis)));
+            assertThat(elapsedTimeMillis).isGreaterThan((long) (idleTimeoutMillis * 0.9));
         }
     }
 
@@ -272,7 +280,7 @@ public class ServerTest extends AbstractServerTest {
 
         try (Socket socket = new Socket()) {
             socket.setSoTimeout((int) (idleTimeoutMillis * 4));
-            socket.connect(server().activePort().get().localAddress());
+            socket.connect(server.httpSocketAddress());
             PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
 
             outWriter.print(reqLine);
@@ -285,7 +293,7 @@ public class ServerTest extends AbstractServerTest {
             BufferedReader in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream(), StandardCharsets.US_ASCII));
 
-            assertThat(in.readLine(), is(expectedStatusLine));
+            assertThat(in.readLine()).isEqualTo(expectedStatusLine);
             // Read till the end of the connection.
             List<String> headers = new ArrayList<>();
             for (;;) {

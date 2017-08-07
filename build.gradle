@@ -1,48 +1,98 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.yaml.snakeyaml.Yaml
+
+import java.time.LocalDateTime
+
 buildscript {
     repositories {
         mavenCentral()
+        jcenter()
     }
     dependencies {
-        classpath 'io.spring.gradle:dependency-management-plugin:0.6.1.RELEASE'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
         classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+        classpath 'net.rdrei.android.buildtimetracker:gradle-plugin:0.10.0'
+        classpath 'org.yaml:snakeyaml:1.18'
     }
 }
 
 apply plugin: 'com.google.osdetector'
+apply plugin: 'build-time-tracker'
 
-ext.javaProjects = subprojects.findAll { it.name != 'site' }
-ext.publishedJavaProjects = javaProjects.findAll { it.name != 'it' }
-ext.gitPath = getGitPath()
-ext.repoStatus = getRepoStatus()
-ext.versionOf = { project.property("${it}.version") }
-ext.requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
-ext.isPublishing = {
-    gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null
+ext {
+    // The path to the 'git' command
+    gitPath = getGitPath()
+
+    // The Git repository status
+    repoStatus = getRepoStatus()
+
+    // The list of Java projects
+    javaProjects = subprojects.findAll { it.name != 'site' }
+
+    // The list of Java projects whose artifacts are published to the Maven repository
+    publishedJavaProjects = javaProjects.findAll {
+        !(it.name in ['it', 'shaded-test', 'testing-internal'])
+    }
+
+    // The list of backward-compatibility Java projects which have the namespace conflicts with other projects.
+    backwardCompatProjects = publishedJavaProjects.findAll { it.name in [ 'thrift0.9', 'tomcat8.0' ] }
+
+    // The list of Gradle task names specified in the startup parameters.
+    requestedTaskNames = gradle.startParameter.taskRequests.inject([]) { a, b -> a + b.args }
+
+    // Dependency management map, used by managedDependency() defined below.
+    dependencyManagement = new Yaml().loadAs(file("${project.projectDir}/dependencies.yml").text, Map)
+
+    // Constants related with dependency shading
+    shadedPackage = 'com.linecorp.armeria.internal.shaded'
+    relocations = [
+            // "groupId:artifactId", "original package name", "relocated package name"
+            ['com.github.ben-manes.caffeine:caffeine', 'com.github.benmanes.caffeine', "${shadedPackage}.caffeine"],
+            ['io.prometheus:simpleclient_caffeine', 'io.prometheus.client.cache.caffeine', "${shadedPackage}.prometheus_caffeine"],
+            ['com.google.guava:guava', 'com.google.common', "${shadedPackage}.guava"],
+            ['com.google.guava:guava', 'com.google.thirdparty.publicsuffix', "${shadedPackage}.publicsuffix"],
+            ['com.spotify:completable-futures', 'com.spotify.futures', "${shadedPackage}.futures"],
+            ['it.unimi.dsi:fastutil', 'it.unimi.dsi.fastutil', "${shadedPackage}.fastutil"],
+            ['org.reflections:reflections', 'org.reflections', "${shadedPackage}.reflections"]
+    ]
+
+    copyrightFooter =
+            '&copy; Copyright ' + "${project.property('inceptionYear')}&ndash;${LocalDateTime.now().year} " +
+            '<a href="http://linecorp.com/en/">LINE Corporation</a>. ' +
+            'All rights reserved.'
+}
+
+// Print the build time summary to the console
+buildtimetracker {
+  reporters {
+    summary {
+      ordered true
+    }
+  }
 }
 
 // Configure all projects
 allprojects {
     apply plugin: 'eclipse'
     apply plugin: 'idea'
+
+    // Define common repositories.
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 
 // Configure all Java projects
 configure(javaProjects) {
 
-    // Apply common plugins and define repositories.
+    // Apply common plugins.
     apply plugin: 'java'
     apply plugin: 'jacoco'
     apply plugin: 'checkstyle'
 
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
-
-    apply plugin: 'io.spring.dependency-management'
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
 
     // Set the artifact ID.
     if (project.name == 'core') {
@@ -54,8 +104,12 @@ configure(javaProjects) {
     // Common properties and functions.
     ext {
         pomFile = file("${project.buildDir}/generated-pom.xml")
-        isReleaseVersion = !(project.version =~ /-SNAPSHOT$/)
-        versionOf = rootProject.ext.versionOf
+
+        isReleaseVersion = { !(project.version =~ /-SNAPSHOT$/) }
+        isPublishing = { gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null }
+        isSigning = { signing.signatory != null && (project.ext.isReleaseVersion() || project.hasProperty('sign')) }
+
+        thriftPath = "${rootProject.projectDir}/gradle/thrift/thrift.${osdetector.classifier}"
         onIdeImport = { Closure action ->
             if (!requestedTaskNames.empty) {
                 return
@@ -69,143 +123,62 @@ configure(javaProjects) {
                 }
             }
         }
+
+        jacocoEnabled = project.hasProperty('coverage')
     }
 
-    // Use the dependency management plugin to keep the versions and exclusions in a single place.
-    dependencyManagement {
-        dependencies {
-            // AssertJ
-            dependency "org.assertj:assertj-core:${ext.versionOf('assertj')}"
+    // Add the 'managedDependencies' DSL which allows us to add dependencies without versions and exclusions.
+    project.metaClass.managedDependencies = { Closure action ->
+        def addManagedDependency = { String scope, String name ->
+            def dependencyManagement = rootProject.ext.dependencyManagement
+            def components = name.split(':')
+            if (components.length != 2 && components.length != 3) {
+                throw new IllegalDependencyNotation(name)
+            }
 
-            // gRPC
-            dependencySet(group: 'io.grpc', version: ext.versionOf('grpc')) {
-                entry('grpc-core') {
-                    exclude 'com.google.code.findbugs:jsr305'
+            def groupId = components[0]
+            def artifactId = components[1]
+            def classifier = components.length == 3 ? components[2] : null
+            if (!dependencyManagement[groupId] ||
+                !dependencyManagement[groupId][artifactId]) {
+                throw new UnknownDomainObjectException("unknown dependency: ${name}")
+            }
+
+            // Add a dependency.
+            def version = dependencyManagement[groupId][artifactId].version
+            Dependency dep;
+            if (classifier == null) {
+                dep = project.dependencies.add(scope, "$groupId:$artifactId:$version")
+            } else {
+                dep = project.dependencies.add(scope, "$groupId:$artifactId:$version:$classifier")
+            }
+
+            project.configurations.detachedConfiguration(dep).resolvedConfiguration.resolvedArtifacts.each {
+                def moduleId = it.moduleVersion.id
+                if (!dependencyManagement[moduleId.group] ||
+                    !dependencyManagement[moduleId.group][moduleId.name]) {
+                    return
                 }
-                entry 'grpc-stub'
-                entry 'grpc-protobuf'
-                entry('grpc-interop-testing') {
-                    exclude 'io.netty:netty-codec-http2'
-                    exclude 'com.google.guava:guava-jdk5'
+                def exclusions = dependencyManagement[moduleId.group][moduleId.name].exclusions
+                if (exclusions) {
+                    exclusions.each { String exclusion ->
+                        def exclusionComponents = exclusion.split(':')
+                        if (exclusionComponents.length != 2) {
+                            throw new IllegalDependencyNotation(exclusion)
+                        }
+                        dep.exclude group: exclusionComponents[0], module: exclusionComponents[1]
+                    }
                 }
-            }
-
-            // Guava
-            dependencySet(group: 'com.google.guava', version: ext.versionOf('guava')) {
-                entry 'guava'
-                entry('guava-testlib') {
-                    exclude 'com.google.code.findbugs:jsr305'
-                    exclude 'com.google.errorprone:error_prone_annotations'
-                }
-            }
-
-            // Hamcrest
-            dependency "org.hamcrest:hamcrest-library:${ext.versionOf('hamcrest')}"
-
-            // HBase client
-            dependency("org.apache.hbase:hbase-shaded-client:${ext.versionOf('hbase-client')}") {
-                exclude 'org.slf4j:slf4j-log4j12'
-            }
-
-            // HttpClient
-            dependency("org.apache.httpcomponents:httpclient:${ext.versionOf('httpclient')}") {
-                exclude 'commons-logging:commons-logging'
-            }
-
-            // Jackson
-            dependencySet(group: 'com.fasterxml.jackson.core', version: ext.versionOf('jackson')) {
-                entry 'jackson-core'
-                entry 'jackson-annotations'
-                entry 'jackson-databind'
-            }
-
-            // Jetty
-            dependencySet(group: 'org.eclipse.jetty', version: ext.versionOf('jetty')) {
-                entry 'jetty-server'
-                entry 'jetty-webapp'
-                entry 'jetty-annotations'
-                entry 'apache-jsp'
-                entry 'apache-jstl'
-            }
-            dependency "org.eclipse.jetty.http2:http2-server:${ext.versionOf('jetty')}"
-
-            // Jetty ALPN support
-            dependency "org.eclipse.jetty.alpn:alpn-api:${ext.versionOf('jetty-alpn-api')}"
-            dependency "org.mortbay.jetty.alpn:jetty-alpn-agent:${ext.versionOf('jetty-alpn-agent')}"
-
-            // JSON-unit
-            dependencySet(group: 'net.javacrumbs.json-unit', version: ext.versionOf('jsonunit')) {
-                entry 'json-unit'
-                entry 'json-unit-fluent'
-            }
-
-            // JSR305
-            dependency 'com.google.code.findbugs:jsr305:3.0.1'
-
-            // jUnit
-            dependency "junit:junit:${ext.versionOf('junit')}"
-
-            // Logback
-            dependency "ch.qos.logback:logback-classic:${ext.versionOf('logback')}"
-
-            // Metrics
-            dependency "io.dropwizard.metrics:metrics-core:${ext.versionOf('metrics')}"
-
-            // Mockito
-            dependency "org.mockito:mockito-core:${ext.versionOf('mockito')}"
-
-            // Netty
-            dependencySet(group: 'io.netty', version: ext.versionOf('netty')) {
-                entry 'netty-transport'
-                entry 'netty-handler'
-                entry 'netty-codec-http2'
-                entry 'netty-resolver-dns'
-            }
-            dependency "io.netty:netty-tcnative-boringssl-static:${ext.versionOf('netty-tcnative')}"
-            dependency "org.javassist:javassist:${ext.versionOf('javassist')}"
-
-            // Reactive Streams
-            dependency "org.reactivestreams:reactive-streams:${ext.versionOf('reactive-streams')}"
-
-            // Reflections
-            dependency("org.reflections:reflections:${ext.versionOf('reflections')}") {
-                exclude 'com.google.code.findbugs:annotations'
-            }
-
-            // Retrfit2
-            dependencySet(group: 'com.squareup.retrofit2', version: ext.versionOf('retrofit2')) {
-                entry 'retrofit'
-                entry 'adapter-guava'
-                entry 'converter-jackson'
-            }
-
-            // SLF4J
-            dependencySet(group: 'org.slf4j', version: ext.versionOf('slf4j')) {
-                entry 'slf4j-api'
-                entry 'jul-to-slf4j'
-                entry 'jcl-over-slf4j'
-                entry 'log4j-over-slf4j'
-            }
-
-            // Thrift
-            dependency("org.apache.thrift:libthrift:${ext.versionOf('thrift')}") {
-                exclude 'org.apache.httpcomponents:httpcore'
-                exclude 'org.apache.httpcomponents:httpclient'
-            }
-
-            // Tomcat
-            dependencySet(group: 'org.apache.tomcat.embed', version: ext.versionOf('tomcat')) {
-                entry 'tomcat-embed-core'
-                entry 'tomcat-embed-jasper'
-                entry 'tomcat-embed-el'
-            }
-
-            // Zipkin
-            dependencySet(group: 'io.zipkin.brave', version: ext.versionOf('brave')) {
-                entry 'brave-core'
-                entry 'brave-http'
             }
         }
+
+        def actionDelegate = new Object()
+        action.delegate = actionDelegate
+        configurations.names.each {
+            actionDelegate.metaClass."$it" = addManagedDependency.curry(it)
+        }
+
+        action()
     }
 
     // Common dependencies
@@ -214,11 +187,30 @@ configure(javaProjects) {
     }
 
     dependencies {
-        // JSR305
-        compile 'com.google.code.findbugs:jsr305' // Can't use compileOnly due to Javadoc errors
+        // All projects currently require ':core' (except itself)
+        if (project.name != 'core') {
+            compile project(':core')
+        }
+
+        // Testing utilities
+        testCompile project(':testing-internal')
+    }
+
+    managedDependencies {
+        // completable-futures
+        compile 'com.spotify:completable-futures'
+
+        // FastUtil
+        compile 'it.unimi.dsi:fastutil'
+
+        // Guava
+        compile 'com.google.guava:guava'
+
+        // JSR305 (Can't use compileOnly due to Javadoc errors)
+        compile 'com.google.code.findbugs:jsr305'
 
         // Jetty ALPN support
-        compileOnly('org.eclipse.jetty.alpn:alpn-api')
+        compileOnly 'org.eclipse.jetty.alpn:alpn-api'
         javaAgent 'org.mortbay.jetty.alpn:jetty-alpn-agent'
 
         // Logging
@@ -229,44 +221,19 @@ configure(javaProjects) {
             testRuntime "org.slf4j:$it"
         }
 
+        // Reflections
+        compile 'org.reflections:reflections'
+
         // Test-time dependencies
+        testCompile 'com.google.guava:guava-testlib'
         testCompile 'junit:junit'
+        testCompile 'net.javacrumbs.json-unit:json-unit'
+        testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
+        testCompile 'org.awaitility:awaitility'
         testCompile 'org.hamcrest:hamcrest-library'
         testCompile 'org.assertj:assertj-core'
         testCompile 'org.mockito:mockito-core'
         testCompile 'org.apache.httpcomponents:httpclient'
-        testCompile 'net.javacrumbs.json-unit:json-unit'
-        testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
-    }
-
-    // Copy test resources to the same directory with test classes, because some tests such as
-    // TomcatServiceTest assume so.
-    sourceSets {
-        test {
-            def testOutputDir = "${project.buildDir}/classes/test"
-            output.classesDir = testOutputDir
-            output.resourcesDir = testOutputDir
-
-            // Add shared logback configuration.
-            resources.srcDir "${rootProject.projectDir}/settings/logback"
-
-            // Add 'java-shared' directory to the source set, if exists.
-            def javaSharedDir = "${project.projectDir}/src/test/java-shared"
-            if (project.file(javaSharedDir).isDirectory()) {
-                java.srcDir javaSharedDir
-            }
-            
-            // Add 'resources-shared' directory to the source set, if exists.
-            def resourcesSharedDir = "${project.projectDir}/src/test/resources-shared"
-            if (project.file(resourcesSharedDir).isDirectory()) {
-                resources.srcDir resourcesSharedDir
-            }
-
-            // Add the 'java-shared' directory of the 'core' project to the source set.
-            if (project.name != 'core') {
-                java.srcDir "${rootProject.projectDir}/core/src/test/java-shared"
-            }
-        }
     }
 
     // Enforce checkstyle rules.
@@ -274,38 +241,48 @@ configure(javaProjects) {
         def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
         configFile = project.file("${checkstyleConfigDir}/checkstyle.xml")
         configProperties = [ 'checkstyleConfigDir': "$checkstyleConfigDir" ]
-        toolVersion = '7.1'
+        toolVersion = rootProject.ext.dependencyManagement['com.puppycrawl.tools']['checkstyle'].version
     }
     task checkstyle(group: 'Verification',
-                    description: 'Runs the checkstyle rules.')
-    tasks.checkstyle.dependsOn 'checkstyleMain'
-    tasks.checkstyle.dependsOn 'checkstyleTest'
+                    description: 'Runs the checkstyle rules.',
+                    dependsOn: [tasks.checkstyleMain, tasks.checkstyleTest])
 
     // Enable full exception logging for test failures.
+    tasks.withType(Test) {
+        it.testLogging.exceptionFormat = 'full'
+    }
     test {
-        testLogging {
-            exceptionFormat = 'full'
-        }
+        dependsOn tasks.checkstyle
     }
 
     // Enable JaCoCo test coverage when '-Pcoverage' option is specified.
-    def jacocoEnabled = project.hasProperty('coverage')
-
-    test {
+    tasks.withType(Test) {
         jacoco {
-            enabled = jacocoEnabled
+            enabled = project.ext.jacocoEnabled
             append = false
         }
     }
 
     jacocoTestReport {
         reports {
-            xml.enabled jacocoEnabled
+            csv.enabled false
+            xml.enabled true
+            html.enabled true
+        }
+
+        afterEvaluate {
+            // Include all sources and classes directories so that the report includes other modules.
+            sourceDirectories = files(javaProjects.inject([], { a, b -> a + b.sourceSets.main.java.srcDirs }))
+            classDirectories = files(javaProjects.inject([], { a, b ->
+                b in backwardCompatProjects ? a : a + b.sourceSets.main.output.classesDirs
+            }))
         }
     }
 
-    if (jacocoEnabled) {
-        tasks.test.finalizedBy(jacocoTestReport)
+    if (project.ext.jacocoEnabled) {
+        tasks.withType(Test) {
+            finalizedBy tasks.jacocoTestReport
+        }
     }
 
     // Require Java 8 to build the project.
@@ -315,6 +292,7 @@ configure(javaProjects) {
         options.encoding = 'UTF-8'
         options.warnings = false
         options.debug = true
+        options.incremental = true
     }
 
     // Prepare the JVM agent that enables TLS ALPN extension.
@@ -326,9 +304,73 @@ configure(javaProjects) {
         }
     }
 
+    // Create the shaded JAR.
+    task shadedJar(type: ShadowJar,
+                   group: 'Build',
+                   description: 'Builds the shaded JAR.',
+                   dependsOn: tasks.classes) {
+
+        baseName = "${tasks.jar.baseName}-shaded"
+
+        from(sourceSets.main.output) {
+            exclude 'META-INF/maven/**'
+        }
+
+        configurations = [ project.configurations.compile ]
+
+        relocations.each {
+            relocate it[1], it[2]
+        }
+
+        dependencies {
+            if (project.name != 'core') {
+                // Only want to rewrite source references, not bundle dependencies.
+                exclude(dependency({ true }))
+            } else {
+                // Shade the relocated dependencies only.
+                exclude(dependency({ dep ->
+                    !relocations.find { dep.name.startsWith("${it[0]}:") }
+                }))
+            }
+        }
+    }
+    tasks.assemble.dependsOn tasks.shadedJar
+
+    // Create the shaded test JAR which is used in the 'shaded-test' project.
+    task shadedTestJar(type: ShadowJar,
+                       group: 'Build',
+                       description: 'Builds the shaded test JAR.',
+                       dependsOn: tasks.testClasses) {
+
+        baseName = "test-${tasks.jar.baseName}-shaded"
+
+        // TODO(trustin): Uncomment this for faster building once shadow 2.0 is out.
+        //                We don't need to compress because we always extract it again.
+        //                https://github.com/johnrengelman/shadow/issues/203
+        //entryCompression = ZipEntryCompression.STORED
+
+        from(sourceSets.test.output) {
+            exclude 'META-INF/maven/**'
+            // Prevent the shadow plugin from exploding the JARs in the resources directory.
+            // e.g. WEB-INF/lib/hello.jar in armeria-tomcat and armeria-jetty
+            exclude '**/*.jar'
+        }
+
+        configurations = [ project.configurations.testCompile ]
+
+        relocations.each {
+            relocate it[1], it[2]
+        }
+
+        dependencies {
+            // We have relocated everything under com.google.common, so we have to relocate guava-testlib, too.
+            exclude(dependency({ !it.name.startsWith('com.google.guava:guava-testlib:') }))
+        }
+    }
+
     // Add common JVM options such as TLS ALPN agent, max memory and leak detection.
     tasks.withType(JavaForkOptions) {
-        dependsOn 'copyJavaAgents'
+        dependsOn tasks.copyJavaAgents
 
         // Use larger heap when test coverage is enabled.
         maxHeapSize = jacocoEnabled ? '384m' : '128m'
@@ -349,9 +391,8 @@ configure(javaProjects) {
     }
 
     // Compile the Thrift service definitions.
-    task compileThrift {
-        def thriftPath = "${rootProject.projectDir}/gradle/thrift/thrift.${osdetector.classifier}"
-
+    task compileThrift(group: 'Build',
+                       description: 'Compiles the .thrift files') {
         [ 'main', 'test' ].each { scope ->
             def inputDir = "${project.projectDir}/src/${scope}/thrift"
             def outputDir = "${project.projectDir}/src/${scope}/gen-java"
@@ -368,7 +409,7 @@ configure(javaProjects) {
                     }.each { sourceFile ->
                         project.mkdir(outputDir)
                         project.exec {
-                            commandLine thriftPath,
+                            commandLine project.ext.thriftPath,
                                     '-gen', 'java',
                                     '-out', outputDir,
                                     '-I', "${sourceFile.parentFile.absolutePath}",
@@ -385,28 +426,36 @@ configure(javaProjects) {
 
     if (project in publishedJavaProjects) {
         // Generate version.properties, similar to Netty.
-        task versionProperties << {
-            def artifactId = project.archivesBaseName
-            def propsFile = project.file(
-                    "${project.sourceSets.main.output.resourcesDir}/META-INF/${project.group}.versions.properties")
+        task versionProperties {
+            doLast {
+                def artifactId = project.archivesBaseName
+                def propsFile = project.file(
+                        "${project.sourceSets.main.output.resourcesDir}/META-INF/${project.group}.versions.properties")
 
-            logger.info("Generating versions.properties for ${artifactId} ..")
+                logger.info("Generating versions.properties for ${artifactId} ..")
 
-            def props = new Properties()
-            rootProject.ext.repoStatus.each { k, v ->
-                props["${artifactId}.${k}"] = v
+                def props = new Properties()
+                rootProject.ext.repoStatus.each { k, v ->
+                    props["${artifactId}.${k}"] = v
+                }
+
+                def upToDate = false
+                if (propsFile.exists()) {
+                    def oldProps = new Properties()
+                    propsFile.withInputStream { oldProps.load(it) }
+                    if (oldProps == props) {
+                        upToDate = true
+                    }
+                }
+
+                if (!upToDate) {
+                    project.mkdir(propsFile.parent)
+                    logger.info("Writing ${propsFile} ..")
+                    propsFile.withOutputStream { props.store(it, null) }
+                } else {
+                    logger.info("${propsFile} is up-to-date.")
+                }
             }
-
-            project.mkdir(propsFile.parent)
-            if (propsFile.exists()) {
-                logger.debug("Updating ${propsFile} ..")
-                props.load(propsFile.newInputStream())
-            } else {
-                logger.debug("Creating ${propsFile} ..")
-                propsFile.createNewFile()
-            }
-
-            props.store(propsFile.newWriter(), null)
         }
         // Ensure version.properties is available during the build.
         tasks.processResources.dependsOn(tasks.versionProperties)
@@ -419,26 +468,22 @@ configure(javaProjects) {
         }
 
         // Generate a javadoc JAR.
-        javadoc {
-            options {
-                quiet()
-                addBooleanOption('Xdoclint:all').value = true
-                addBooleanOption('Xdoclint:-missing').value = true
-            }
-        }
-
-        task javadocJar(type: Jar, dependsOn: javadoc) {
+        task javadocJar(type: Jar, dependsOn: tasks.javadoc) {
             classifier = 'javadoc'
             from javadoc.destinationDir
         }
 
         // Generate source/javadoc JARs only when publishing.
         tasks.sourceJar.onlyIf {
-            isPublishing() || requestedTaskNames.find { it =~ /(?:^|:)sourceJar$/ }
+            project.ext.isSigning() ||
+            project.ext.isPublishing() ||
+            requestedTaskNames.find { it =~ /(?:^|:)sourceJar$/ }
         }
         [tasks.javadoc, tasks.javadocJar].each {
             it.onlyIf {
-                isPublishing() || requestedTaskNames.find { it =~ /(?:^|:)javadoc(?:Jar)?$/ }
+                project.ext.isSigning() ||
+                project.ext.isPublishing() ||
+                requestedTaskNames.find { it =~ /(?:^|:)javadoc(?:Jar)?$/ }
             }
         }
 
@@ -447,43 +492,55 @@ configure(javaProjects) {
             archives jar
             archives sourceJar
             archives javadocJar
+            archives shadedJar
         }
 
         signing {
-            required { signatory != null && project.ext.isReleaseVersion }
+            required { project.ext.isSigning() }
             sign configurations.archives
         }
 
         publishing {
             repositories {
                 maven {
-                    if (project.ext.isReleaseVersion) {
+                    if (project.hasProperty('publish.url')) {
+                        url project.findProperty('publish.url')
+                    } else if (project.ext.isReleaseVersion()) {
                         url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
                     } else {
                         url 'https://oss.sonatype.org/content/repositories/snapshots/'
                     }
 
                     credentials {
-                        username = project.properties.ossrhUsername
-                        password = project.properties.ossrhPassword
+                        String usernameProperty = project.hasProperty('publish.usernameProperty') ?
+                                project.findProperty('publish.usernameProperty') : 'ossrhUsername'
+                        String passwordProperty = project.hasProperty('publish.passwordProperty') ?
+                                project.findProperty('publish.passwordProperty') : 'ossrhPassword'
+
+                        username = project.findProperty(usernameProperty)
+                        password = project.findProperty(passwordProperty)
                     }
                 }
             }
 
             publications {
-                jar(MavenPublication) {
-                    artifactId "${project.archivesBaseName}"
+                def configureJarPublication = { boolean isShaded ->
+                    def currentArtifactId = project.archivesBaseName
+                    if (isShaded) {
+                        currentArtifactId += '-shaded'
+                    }
 
+                    artifactId currentArtifactId
+
+                    // Generate the POM.
                     pom.withXml {
-                        NodeList children = asNode().children()
-                        Node dependencies = children.find { it.name().localPart == 'dependencies' } as Node
-
-                        // Insert the elements required by OSSRH.
-                        children[children.indexOf(dependencies) - 1] + {
+                        asNode().children().last() + {
                             resolveStrategy = Closure.DELEGATE_FIRST
-                            name "${project.archivesBaseName}"
-                            description "Asynchronous RPC/API client/server library built on top of Java 8, " +
-                                        "Netty 4.1, HTTP/2, and Thrift (${project.archivesBaseName})"
+
+                            // Write the elements required by OSSRH.
+                            name currentArtifactId
+                            description "Asynchronous HTTP/2 RPC/REST client/server library built on top of " +
+                                    "Java 8, Netty, Thrift and GRPC (${currentArtifactId})"
                             url 'http://line.github.io/armeria/'
                             licenses {
                                 license {
@@ -509,54 +566,127 @@ configure(javaProjects) {
                                 connection 'scm:git:https://github.com/line/armeria.git'
                                 developerConnection 'scm:git:ssh://git@github.com/line/armeria.git'
                             }
-                        }
 
-                        // Remove:
-                        // - the compileOnly dependencies
-                        // - the dependencies provided by the platform
-                        // - the dependencies in the 'javaAgent' configuration
-                        dependencies.children().removeAll {
-                            it.artifactId.text() in ['jsr305', 'alpn-api', 'jetty-alpn-agent']
-                        }
+                            // Write the compile- and runtime-scope dependencies.
+                            dependencies {
+                                def writeDeps = { cfg, depScope ->
+                                    cfg.dependencies.each { dep ->
+                                        // Skip:
+                                        // - the compileOnly dependencies
+                                        // - the dependencies provided by the platform
+                                        // - the dependencies in the 'javaAgent' configuration
+                                        if ("${dep.group}:${dep.name}".toString() in [
+                                                'org.eclipse.jetty.alpn:alpn-api',
+                                                'org.mortbay.jetty.alpn:jetty-alpn-agent',
+                                                'com.google.code.findbugs:jsr305'
+                                        ]) {
+                                            logger.info "Excluding ${dep.group}:${dep.name} (compileOnly)"
+                                            return
+                                        }
 
-                        // Work around the bug where the maven-publish plugin sets the scope of all
-                        // dependencies to 'runtime'.
-                        // https://discuss.gradle.org/t/maven-publish-plugin-generated-pom-making-dependency-scope-runtime/7494
-                        def compileDeps = configurations.compile.dependencies.collectEntries { [it.name, it] } +
-                                configurations.compileOnly.dependencies.collectEntries { [it.name, it] }
+                                        // Skip 'armeria-thrift-shaded' from armeria-spring-boot-autoconfigure's POM
+                                        // so that a user can choose between 'armeria-thrift(-shaded)' and
+                                        // 'armeria-thrift-0.9(-shaded).
+                                        if (currentArtifactId.startsWith('armeria-spring-') &&
+                                            dep instanceof ProjectDependency &&
+                                            dep.dependencyProject.archivesBaseName in [
+                                                'armeria-thrift',
+                                                'armeria-thrift-shaded']) {
+                                            logger.info "Excluding ${dep.group}:${dep.name} so that a user can choose thrift library version."
+                                            return
+                                        }
 
-                        def allDeps = compileDeps +
-                                configurations.runtime.dependencies.collectEntries { [it.name, it] }
+                                        // Skip the shaded dependencies.
+                                        if (isShaded &&
+                                            "${dep.group}:${dep.name}".toString() in relocations.collect { it[0] }) {
+                                            logger.info "Excluding ${dep.group}:${dep.name} (shaded)"
+                                            return
+                                        }
 
-                        dependencies.children().each {
-                            if (compileDeps.containsKey(it.artifactId.text())) {
-                                it.scope*.value = 'compile'
-                            }
+                                        dependency {
+                                            if (dep instanceof ProjectDependency) {
+                                                groupId dep.group
+                                                artifactId dep.dependencyProject.archivesBaseName + (isShaded ? '-shaded' : '')
+                                                version dep.version ? dep.version : dep.dependencyProject.version
+                                            } else {
+                                                groupId dep.group
+                                                artifactId dep.name
 
-                            // Add <optional>true</optional> to optional dependencies.
-                            def dep = allDeps[it.artifactId.text()]
-                            if (dep.hasProperty('optional') && dep.optional) {
-                                if (it.optional) {
-                                    it.optional.value = true
-                                } else {
-                                    it.appendNode('optional', 'true')
+                                                // Write version if exists.
+                                                if (dep.version) {
+                                                    version dep.version
+                                                }
+
+                                                // Write classifier if exists.
+                                                if (dep.artifacts.find() instanceof DependencyArtifact &&
+                                                    dep.artifacts.find().classifier) {
+                                                    classifier dep.artifacts.find().classifier
+                                                }
+                                            }
+
+                                            if (depScope && depScope != 'compile') {
+                                                scope depScope
+                                            }
+
+                                            if (dep.hasProperty('optional') && dep.optional) {
+                                                optional true
+                                            }
+
+                                            // Exclusions
+                                            if (!dep.excludeRules.empty) {
+                                                exclusions {
+                                                    dep.excludeRules.each { rule ->
+                                                        exclusion {
+                                                            groupId rule.group
+                                                            artifactId rule.module
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
+
+                                writeDeps(configurations.compile, 'compile')
+                                writeDeps(configurations.runtime, 'runtime')
                             }
                         }
                     }
 
-                    from components.java
+                    // Find the main JAR and the task that generates it.
+                    File mainJarFile
+                    Task mainJarTask
+                    if (!isShaded) {
+                        mainJarFile = tasks.jar.archivePath
+                        mainJarTask = tasks.jar
+                    } else {
+                        if (tasks.findByName('trimShadedJar')) {
+                            assert project.name == 'core'
+                            mainJarFile = tasks.trimShadedJar.outJarFiles.find() as File
+                            mainJarTask = tasks.trimShadedJar
+                        } else {
+                            assert project.name != 'core'
+                            mainJarFile = tasks.shadedJar.archivePath
+                            mainJarTask = tasks.shadedJar
+                        }
+                    }
 
-                    artifact(sourceJar) {
+                    // Add the main JAR.
+                    artifact(mainJarFile).builtBy(mainJarTask)
+
+                    // Add the Javadoc JAR.
+                    artifact(tasks.sourceJar) {
                         classifier = 'sources'
                     }
-                    artifact(javadocJar) {
+
+                    // Add the sources JAR.
+                    artifact(tasks.javadocJar) {
                         classifier = 'javadoc'
                     }
 
-                    // Sign the pom.xml and artifacts.
-                    if (signing.required) {
-                        // Sign the pom.xml.
+                    // Add the .asc signatures.
+                    if (project.ext.isSigning()) {
+                        // Add the signature to pom.xml.
                         pom.withXml {
                             writeTo(project.ext.pomFile)
                             def pomAscFile = signing.sign(project.ext.pomFile).signatureFiles[0]
@@ -567,20 +697,27 @@ configure(javaProjects) {
                             project.ext.pomFile.delete()
                         }
 
-                        // Sign the artifacts.
-                        project.tasks.signArchives.signatureFiles.each {
-                            artifact(it) {
-                                def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
-                                if (matcher.find()) {
-                                    classifier = matcher.group(1)
-                                } else {
-                                    classifier = null
-                                }
-                                extension = 'jar.asc'
-                            }
+                        // Add the signature to the main JAR.
+                        artifact(new File("${mainJarFile}.asc")) {
+                            extension = 'jar.asc'
+                        }
+
+                        // Add the signature to the sources JAR.
+                        artifact(new File("${tasks.sourceJar.archivePath}.asc")) {
+                            classifier = 'sources'
+                            extension = 'jar.asc'
+                        }
+
+                        // Add the signature to the javadoc JAR.
+                        artifact(new File("${tasks.javadocJar.archivePath}.asc")) {
+                            classifier = 'javadoc'
+                            extension = 'jar.asc'
                         }
                     }
                 }
+
+                jar(MavenPublication, configureJarPublication.curry(false))
+                shadedJar(MavenPublication, configureJarPublication.curry(true))
             }
         }
 
@@ -592,20 +729,19 @@ configure(javaProjects) {
                 dependsOn(project.tasks.signArchives)
             }
             tasks.signArchives {
-                onlyIf { isPublishing() }
+                onlyIf { project.ext.isSigning() }
             }
         }
-        task install(dependsOn: publishToMavenLocal,
-                     group: 'Publishing',
-                     description: 'An alias of publishToMavenLocal')
+
+        task install(group: 'Publishing',
+                     description: 'An alias of publishToMavenLocal',
+                     dependsOn: tasks.publishToMavenLocal)
     }
 
-    // Print only interesting test results and progress, except when running from IntelliJ IDEA which has
-    // its own output listener.
+    // Print interesting test results, except when running from IntelliJ IDEA which has its own output listener.
     if (System.getProperty('idea.no.launcher') == null) {
-        test {
+        tasks.withType(Test) {
             def buf = new StringBuilder()
-            def printedProgress = false
 
             // Record the test output.
             onOutput { TestDescriptor td, TestOutputEvent toe ->
@@ -614,16 +750,43 @@ configure(javaProjects) {
 
             // Print the test output when the test failed or the test output contains an Exception or an Error.
             afterTest { TestDescriptor td, TestResult tr ->
-                if (tr.resultType == TestResult.ResultType.FAILURE || buf =~ /(?:Exception|Error|Throwable):/) {
-                    def simpleClassName = td.className.substring(td.className.lastIndexOf('.') + 1)
+                def printBuffer
+                if (tr.resultType == TestResult.ResultType.FAILURE) {
+                    printBuffer = true
+                } else {
+                    def lines = buf.readLines().findAll { it =~ /(?:Exception|Error|Throwable|LEAK):/ }
 
-                    // Add an empty line if the test progress dots were printed.
-                    if (printedProgress) {
-                        println()
-                        println()
-                        printedProgress = false
+                    // Ignore the expected exceptions.
+                    lines.removeIf { it.matches(/.*Anticipated(?:Exception|Error|Throwable):.*/) }
+
+                    // Ignore known false positives.
+                    lines.removeIf { it.contains('Only supported on Linux') }
+                    switch (td.className) {
+                        case 'com.linecorp.armeria.client.zookeeper.EndpointGroupTest':
+                            lines.removeIf { it.contains('ServerCnxn$EndOfStreamException') }
+                            break
+                        case 'com.linecorp.armeria.common.stream.StreamMessageDuplicatorTest':
+                            if (td.name.contains('abort')) {
+                                lines.removeIf {
+                                    it.contains('com.linecorp.armeria.common.stream.AbortedStreamException')
+                                }
+                            }
+                            break
+                        case 'com.linecorp.armeria.server.AnnotatedServiceTest':
+                            lines.removeIf { it.contains('For input string: "fourty-two"') }
+                            break
+                        case 'com.linecorp.armeria.server.zookeeper.ZooKeeperRegistrationTest':
+                            lines.removeIf { it.contains('ServerCnxn$EndOfStreamException') }
+                            lines.removeIf { it.contains('KeeperException$ConnectionLossException') }
+                            lines.removeIf { it.contains('ZooKeeperException: Failed to notify ZooKeeper listener') }
+                            break
                     }
 
+                    printBuffer = !lines.isEmpty()
+                }
+
+                if (printBuffer) {
+                    def simpleClassName = td.className.substring(td.className.lastIndexOf('.') + 1)
                     def subject = "${simpleClassName}.${td.name}: ${tr.resultType}"
                     println subject
 
@@ -634,129 +797,256 @@ configure(javaProjects) {
                             println()
                         }
                     }
-                } else {
-                    // Print the progress dots.
-                    print '.'
-                    System.out.flush()
-                    printedProgress = true
                 }
 
                 buf.length = 0
-            }
-
-            afterSuite { TestDescriptor td, TestResult tr ->
-                if (printedProgress) {
-                    print ' '
-                    System.out.flush()
-                }
-            }
-
-            doLast {
-                if (printedProgress) {
-                    println()
-                }
             }
         }
     }
 }
 
+// Configure the Javadoc tasks of all projects.
+allprojects {
+    tasks.withType(Javadoc) {
+        options {
+            def title = "Armeria ${project.version} API reference"
+            docTitle = title
+            windowTitle = title
+            bottom = rootProject.ext.copyrightFooter + '''
+            <script>
+            // Open an external link in a new tab/window.
+            for(var i in document.links) {
+              var l = document.links[i];
+              if (l.href && l.href.indexOf("http") === 0) {
+                l.target = "_blank";
+              }
+            }
+            </script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+            <script>
+            // Trim and syntax-highlight the code snippets.
+            function trimLines(lines) {
+              var leadingSpaces = 65536;
+              for (var j in lines) {
+                lines[j] = lines[j].trimRight();
+                if (lines[j].length == 0) {
+                  continue;
+                }
+
+                leadingSpaces = Math.min(leadingSpaces, Math.max(0, lines[j].search(/[^ ]/)));
+              }
+
+              for (var j in lines) {
+                lines[j] = lines[j].substring(leadingSpaces);
+              }
+
+              while (lines.length > 0 && lines[0].length == 0) {
+                lines.shift();
+              }
+
+              while (lines.length > 0 && lines[lines.length - 1].length == 0) {
+                lines.pop();
+              }
+            }
+
+            var hasHljs = typeof hljs !== "undefined";
+            if (hasHljs) {
+              hljs.configure({
+                languages: [ "java", "xml", "json", "yaml", "shell" ]
+              });
+            }
+
+            var allPres = document.getElementsByTagName("PRE");
+            for (var i in allPres) {
+              if (typeof allPres[i].children === "undefined") {
+                continue;
+              }
+
+              var children = allPres[i].children;
+              if (children.length !== 1) {
+                continue;
+              }
+
+              var child = children[0];
+              if (child.tagName.toUpperCase() !== "CODE") {
+                continue;
+              }
+
+              var lines = child.textContent.split("\\n");
+              trimLines(lines);
+              for (var j in lines) {
+                lines[j] = lines[j].replace(/^> ?/, "");
+              }
+              trimLines(lines);
+              child.textContent = lines.join("\\n");
+
+              if (hasHljs) {
+                hljs.highlightBlock(child);
+              }
+            }
+            </script>'''.readLines().stream()
+                        .map({ line -> line.trim() })
+                        .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
+                        .collect().join('')
+
+            encoding = 'UTF-8'
+            docEncoding = 'UTF-8'
+            breakIterator = true
+            version = false
+            author = false
+            keyWords = false
+            quiet()
+            stylesheetFile = project.file("${rootProject.projectDir}/site/src/apidocs/stylesheet.css")
+
+            // Enable all lints except the missing tag warnings
+            addBooleanOption('Xdoclint:all').value = true
+            addBooleanOption('Xdoclint:-missing').value = true
+
+            // Groups
+            group 'Server', 'com.linecorp.armeria.server*'
+            group 'Client', 'com.linecorp.armeria.client*'
+            group 'Common', 'com.linecorp.armeria.common*'
+
+            // Exclude the machine-generated or internal-only classes
+            exclude '**/Tomcat*ProtocolHandler.java'
+            exclude '**/internal/**'
+            exclude '**/thrift/v1/**'
+
+            // External Javadoc links
+            def addOfflineLink = { String name, String url ->
+                linksOffline url, "${rootProject.projectDir}/site/src/apidocs/package-lists/${name}"
+            }
+
+            addOfflineLink 'caffeine', 'http://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.5.3/'
+            addOfflineLink 'dropwizard-metrics', 'http://metrics.dropwizard.io/3.2.2/apidocs/'
+            addOfflineLink 'grpc', 'http://www.grpc.io/grpc-java/javadoc/'
+            addOfflineLink 'jackson-databind', 'https://fasterxml.github.io/jackson-databind/javadoc/2.8/'
+            addOfflineLink 'java', 'https://docs.oracle.com/javase/8/docs/api/'
+            addOfflineLink 'jetty', 'http://download.eclipse.org/jetty/stable-9/apidocs/'
+            addOfflineLink 'kafka', 'https://kafka.apache.org/0100/javadoc/'
+            addOfflineLink 'logback', 'http://logback.qos.ch/apidocs/'
+            addOfflineLink 'netty', 'https://netty.io/4.1/api/'
+            addOfflineLink 'prometheus', 'https://prometheus.io/client_java/'
+            addOfflineLink 'protobuf', 'https://developers.google.com/protocol-buffers/docs/reference/java/'
+            addOfflineLink 'retrofit', 'http://square.github.io/retrofit/2.x/retrofit/'
+            addOfflineLink 'slf4j', 'https://www.slf4j.org/api/'
+            addOfflineLink 'spring', 'https://docs.spring.io/spring/docs/current/javadoc-api/'
+            addOfflineLink 'spring-metrics', 'http://metrics.ryantenney.com/docs/'
+            addOfflineLink 'thrift', 'https://people.apache.org/~thejas/thrift-0.9/javadoc/'
+            addOfflineLink 'tomcat', 'https://tomcat.apache.org/tomcat-8.5-doc/api/'
+
+            // Add --allow-script-in-comments if available (since 1.8.0_121)
+            try {
+                if (Class.forName('com.sun.tools.doclets.formats.html.ConfigurationImpl')
+                        .newInstance().optionLength('--allow-script-in-comments') > 0) {
+                    addBooleanOption('-allow-script-in-comments').value = true
+                }
+            } catch (ignored) {}
+        }
+    }
+}
+
 task release(group: 'Publishing',
-             description: 'Releases a new version.') << {
+             description: 'Releases a new version.') {
+    doLast {
+        if (gitPath == null) {
+            throw new InvalidUserDataException('Git is not available.')
+        }
 
-    if (gitPath == null) {
-        throw new InvalidUserDataException('Git is not available.')
+        if (!project.hasProperty('releaseVersion') || !project.hasProperty('nextVersion')) {
+            throw new InvalidUserDataException(
+                    "Specify 'releaseVersion' and 'nextVersion' properties.${System.lineSeparator()}" +
+                            'e.g. ./gradlew release -PreleaseVersion=0.1.2 -PnextVersion=0.1.3-SNAPSHOT')
+        }
+
+        def releaseVersion = project.property('releaseVersion')
+        def nextVersion = project.property('nextVersion')
+
+        // Validate the specified version numbers.
+        if (!(releaseVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+$/)) {
+            throw new InvalidUserDataException("invalid release version: ${releaseVersion}")
+        }
+        if (!(nextVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT$/)) {
+            throw new InvalidUserDataException("invalid next version: ${nextVersion}")
+        }
+
+        // Ensure the repository is upstream.
+        def repoUrl = executeCommand(gitPath, 'config', '--get', 'remote.origin.url').trim()
+        if (!(repoUrl =~ /github.com:line\/armeria\.git$/)) {
+            throw new InvalidUserDataException('Release must be performed at the upstream repository.')
+        }
+
+        // Ensure the repository is clean.
+        def gitStatusOut = executeCommand(gitPath, 'status', '--porcelain')
+        if (!gitStatusOut.empty) {
+            throw new InvalidUserDataException(
+                    "Git repository is not clean:${System.lineSeparator()}${gitStatusOut}")
+        }
+
+        def tag = "$rootProject.name-$releaseVersion"
+
+        def gradlePropsFile = project.file("${project.projectDir}/gradle.properties")
+        def gradlePropsContent = gradlePropsFile.getText('ISO-8859-1')
+        def versionPattern = /\nversion=[0-9]+\.[0-9]+\.[0-9]+-SNAPSHOT(\r?\n)/
+        assert gradlePropsContent =~ versionPattern
+
+        // Update the version to the release version, commit and tag.
+        gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${releaseVersion}\$1"),
+                'ISO-8859-1')
+        executeCommand(gitPath, 'add', gradlePropsFile.toString())
+        executeCommand(gitPath, 'commit', '-m', "Release $tag")
+        executeCommand(gitPath, 'tag', tag)
+
+        // Update the version to the next version.
+        executeCommand(gitPath, 'reset', '--hard', 'HEAD^')
+        gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${nextVersion}\$1"),
+                'ISO-8859-1')
+        executeCommand(gitPath, 'add', gradlePropsFile.toString())
+
+        // Update the version in the Sphinx conf.py as well.
+        def sphinxConfFile = project.file("${project.projectDir}/site/src/sphinx/conf.py")
+        def sphinxConfContent = sphinxConfFile.getText('UTF-8')
+        def sphinxConfVersionPattern = /\n( *)release = '[0-9]+\.[0-9]+\.[0-9]+'(\r?\n)/
+        assert sphinxConfContent =~ sphinxConfVersionPattern
+        sphinxConfFile.write(sphinxConfContent.replaceFirst(sphinxConfVersionPattern, "\n\$1release = '${releaseVersion}'\$2"))
+        executeCommand(gitPath, 'add', sphinxConfFile.toString())
+
+        // Commit.
+        executeCommand(gitPath, 'commit', '-m', "Update the project version to ${nextVersion}")
+
+        // Push the commits and tags.
+        executeCommand(gitPath, 'push', 'origin')
+        executeCommand(gitPath, 'push', 'origin', tag)
+
+        println()
+        println "Tagged: ${tag}"
+        println '-' * (tag.length() + 8)
+        println "1. Upload the artifacts to the staging repository and prepare the web site:"
+        println()
+        println "   git checkout $tag"
+        println "   ./gradlew --no-daemon clean publish site"
+        println()
+        println '2. Close and release the staging repository at:'
+        println()
+        println '   https://oss.sonatype.org/'
+        println()
+        println '3. Close the milestone and set its release date at:'
+        println()
+        println '   https://github.com/line/armeria/milestones'
+        println()
+        println '4. Update the release note at:'
+        println()
+        println "   https://github.com/line/armeria/releases/tag/${tag}"
+        println()
+        println "5. Copy the web site generated to the 'gh-pages' branch. e.g."
+        println()
+        println '   cd ../site-armeria'
+        println '   rm -fr .[bd]* *'
+        println '   rsync -aiP ../upstream-armeria/site/build/site/ .'
+        println '   git add -A .'
+        println "   git commit --amend -m 'Deploy the web site'"
+        println '   git push --force'
     }
-
-    if (!project.hasProperty('releaseVersion') || !project.hasProperty('nextVersion')) {
-        throw new InvalidUserDataException(
-                "Specify 'releaseVersion' and 'nextVersion' properties.${System.lineSeparator()}" +
-                'e.g. ./gradlew release -PreleaseVersion=0.1.2.Final -PnextVersion=0.1.3.Final-SNAPSHOT')
-    }
-
-    def releaseVersion = project.property('releaseVersion')
-    def nextVersion = project.property('nextVersion')
-
-    // Validate the specified version numbers.
-    if (!(releaseVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)$/)) {
-        throw new InvalidUserDataException("invalid release version: ${releaseVersion}")
-    }
-    if (!(nextVersion =~ /^[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)-SNAPSHOT$/)) {
-        throw new InvalidUserDataException("invalid next version: ${releaseVersion}")
-    }
-
-    // Ensure the repository is upstream.
-    def repoUrl = executeCommand(gitPath, 'config', '--get', 'remote.origin.url').trim()
-    if (!(repoUrl =~ /github.com:line\/armeria\.git$/)) {
-        throw new InvalidUserDataException('Release must be performed at the upstream repository.')
-    }
-
-    // Ensure the repository is clean.
-    def gitStatusOut = executeCommand(gitPath, 'status', '--porcelain')
-    if (!gitStatusOut.empty) {
-        throw new InvalidUserDataException(
-                "Git repository is not clean:${System.lineSeparator()}${gitStatusOut}")
-    }
-
-    def tag = "$rootProject.name-$releaseVersion"
-
-    def gradlePropsFile = project.file("${project.projectDir}/gradle.properties")
-    def gradlePropsContent = gradlePropsFile.getText('ISO-8859-1')
-    def versionPattern = /\nversion=[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)-SNAPSHOT(\r?\n)/
-    assert gradlePropsContent =~ versionPattern
-
-    // Update the version to the release version, commit and tag.
-    gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${releaseVersion}\$1"),
-                          'ISO-8859-1')
-    executeCommand(gitPath, 'add', gradlePropsFile.toString())
-    executeCommand(gitPath, 'commit', '-m', "Release $tag")
-    executeCommand(gitPath, 'tag', tag)
-
-    // Update the version to the next version.
-    executeCommand(gitPath, 'reset', '--hard', 'HEAD^')
-    gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${nextVersion}\$1"),
-                          'ISO-8859-1')
-    executeCommand(gitPath, 'add', gradlePropsFile.toString())
-
-    // Update the version in the Sphinx conf.py as well.
-    def sphinxConfFile = project.file("${project.projectDir}/site/src/sphinx/conf.py")
-    def sphinxConfContent = sphinxConfFile.getText('UTF-8')
-    def sphinxConfVersionPattern = /\n( *)release = '[0-9]+\.[0-9]+\.[0-9]+\.(?:Alpha|Beta|CR|Final)'(\r?\n)/
-    assert sphinxConfContent =~ sphinxConfVersionPattern
-    sphinxConfFile.write(sphinxConfContent.replaceFirst(sphinxConfVersionPattern, "\n\$1release = '${releaseVersion}'\$2"))
-    executeCommand(gitPath, 'add', sphinxConfFile.toString())
-
-    // Commit.
-    executeCommand(gitPath, 'commit', '-m', "Update the project version to ${nextVersion}")
-
-    // Push the commits and tags.
-    executeCommand(gitPath, 'push', 'origin')
-    executeCommand(gitPath, 'push', 'origin', tag)
-
-    println()
-    println "Tagged: ${tag}"
-    println '-' * (tag.length() + 8)
-    println "1. Upload the artifacts to the staging repository:"
-    println()
-    println "   git checkout $tag"
-    println "   ./gradlew clean publish"
-    println()
-    println '2. Close and release the staging repository at:'
-    println()
-    println '   https://oss.sonatype.org/'
-    println()
-    println '3. Close the milestone and set its release date at:'
-    println()
-    println '   https://github.com/line/armeria/milestones'
-    println()
-    println '4. Update the release note at:'
-    println()
-    println "   https://github.com/line/armeria/releases/tag/${tag}"
-    println()
-    println '5. Generate and deploy the new web site:'
-    println()
-    println "   git checkout $tag"
-    println '   ./gradlew site'
-    println '   .. copy the web site to the gh-pages branch ..'
 }
 
 private def getGitPath() {
@@ -766,7 +1056,11 @@ private def getGitPath() {
 
     // Find the location of the 'git' command.
     try {
-        return executeCommand(osdetector.os == 'windows' ? 'where.exe' : 'which', 'git').trim()
+        if (osdetector.os == 'windows') {
+            return executeCommand('where.exe', 'git.exe')
+        } else {
+            return executeCommand('which', 'git')
+        }
     } catch (e) {
         logger.debug('Git not available:', e)
         return null
@@ -780,7 +1074,6 @@ private def getRepoStatus() {
     // The default values taken from Netty.
     def result = [
             version : project.version,
-            buildDate : new Date().format('yyyy-MM-dd HH:mm:ss Z'), // same with git log date format
             longCommitHash : '0000000000000000000000000000000000000000',
             shortCommitHash : '0000000',
             commitDate : '1970-01-01 00:00:00 +0000',
@@ -831,5 +1124,5 @@ private static String executeCommand(String[] command) {
                 "${System.lineSeparator()}${proc.err.text}")
     }
 
-    return proc.in.text
+    return proc.in.text.trim()
 }

@@ -26,12 +26,22 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 
 /**
  * A {@link StreamMessage} which buffers the elements to be signaled into a {@link Queue}.
@@ -92,6 +102,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     private static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
     private static final CloseEvent CANCELLED_CLOSE = new CloseEvent(
             Exceptions.clearTrace(CancelledSubscriptionException.get()));
+    private static final CloseEvent ABORTED_CLOSE = new CloseEvent(
+            Exceptions.clearTrace(AbortedStreamException.get()));
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, SubscriptionImpl>
@@ -147,27 +159,64 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        subscribe0(new SubscriptionImpl(this, subscriber, null));
+        subscribe(subscriber, false);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
+        requireNonNull(subscriber, "subscriber");
+        subscribe0(new SubscriptionImpl(this, subscriber, null, withPooledObjects));
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        subscribe0(new SubscriptionImpl(this, subscriber, executor));
+        subscribe(subscriber, executor, false);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        subscribe0(new SubscriptionImpl(this, subscriber, executor, withPooledObjects));
     }
 
     private void subscribe0(SubscriptionImpl subscription) {
+        final Subscriber<Object> subscriber = subscription.subscriber();
+        final Executor executor = subscription.executor();
+
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
-            throw new IllegalStateException(
-                    "subscribed by other subscriber already: " + this.subscription.subscriber());
+            failLateSubscriber(executor, subscriber, this.subscription.subscriber());
+            return;
         }
 
-        final Executor executor = subscription.executor();
         if (executor != null) {
+            // NB: We did not use subscriber.onSubscribe() because that will increase the memory footprint
+            //     of the anonymous class by referring to 2 variables in the lambda expression.
             executor.execute(() -> subscription.subscriber().onSubscribe(subscription));
         } else {
-            subscription.subscriber().onSubscribe(subscription);
+            subscriber.onSubscribe(subscription);
+        }
+    }
+
+    private static void failLateSubscriber(@Nullable Executor executor,
+                                           Subscriber<?> lateSubscriber, Subscriber<?> oldSubscriber) {
+        final Throwable cause;
+        if (oldSubscriber instanceof AbortingSubscriber) {
+            cause = AbortedStreamException.get();
+        } else {
+            cause = new IllegalStateException("subscribed by other subscriber already");
+        }
+
+        if (executor != null) {
+            executor.execute(() -> {
+                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+                lateSubscriber.onError(cause);
+            });
+        } else {
+            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+            lateSubscriber.onError(cause);
         }
     }
 
@@ -175,22 +224,32 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     public void abort() {
         final SubscriptionImpl currentSubscription = subscription;
         if (currentSubscription != null) {
-            currentSubscription.cancel();
+            currentSubscription.abort();
             return;
         }
 
-        final SubscriptionImpl newSubscription = new SubscriptionImpl(this, AbortingSubscriber.INSTANCE, null);
+        final SubscriptionImpl newSubscription = new SubscriptionImpl(
+                this, AbortingSubscriber.get(), null, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
-            newSubscription.subscriber().onSubscribe(newSubscription);
+            newSubscription.abort();
         } else {
-            subscription.cancel();
+            subscription.abort();
         }
     }
 
     @Override
     public boolean write(T obj) {
         requireNonNull(obj, "obj");
+        if (obj instanceof ReferenceCounted) {
+            ((ReferenceCounted) obj).touch();
+            if (!(obj instanceof ByteBufHolder) && !(obj instanceof ByteBuf)) {
+                throw new IllegalArgumentException(
+                        "can't publish a ReferenceCounted that's not a ByteBuf or a ByteBufHolder: " + obj);
+            }
+        }
+
         if (!isOpen()) {
+            ReferenceCountUtil.safeRelease(obj);
             return false;
         }
 
@@ -211,10 +270,10 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         final AwaitDemandFuture f = new AwaitDemandFuture();
         if (!isOpen()) {
             f.completeExceptionally(ClosedPublisherException.get());
-        } else {
-            pushObject(f);
+            return f;
         }
 
+        pushObject(f);
         return f.thenRun(task);
     }
 
@@ -248,7 +307,6 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             return;
         }
 
-        final Subscriber<Object> subscriber = subscription.subscriber();
         for (;;) {
             final Object o = queue.peek();
             if (o == null) {
@@ -256,12 +314,12 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             }
 
             if (o instanceof CloseEvent) {
-                notifySubscriberWithCloseEvent(subscriber, (CloseEvent) o);
+                notifySubscriberWithCloseEvent(subscription, (CloseEvent) o);
                 break;
             }
 
             if (o instanceof AwaitDemandFuture) {
-                if (notifyCompletableFuture(queue)) {
+                if (notifyAwaitDemandFuture(queue)) {
                     // Notified successfully.
                     continue;
                 } else {
@@ -270,14 +328,15 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 }
             }
 
-            if (!notifySubscriber(subscriber, queue)) {
+            if (!notifySubscriberWithElements(subscription, queue)) {
                 // Not enough demand.
                 break;
             }
         }
     }
 
-    private boolean notifySubscriber(Subscriber<Object> subscriber, Queue<Object> queue) {
+    private boolean notifySubscriberWithElements(SubscriptionImpl subscription, Queue<Object> queue) {
+        final Subscriber<Object> subscriber = subscription.subscriber();
         for (;;) {
             final long demand = this.demand;
             if (demand == 0) {
@@ -286,8 +345,17 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
             if (demand == Long.MAX_VALUE || demandUpdater.compareAndSet(this, demand, demand - 1)) {
                 @SuppressWarnings("unchecked")
-                final T o = (T) queue.remove();
+                T o = (T) queue.remove();
+                ReferenceCountUtil.touch(o);
                 onRemoval(o);
+                if (!subscription.withPooledObjects()) {
+                    if (o instanceof ByteBufHolder) {
+                        o = copyAndRelease((ByteBufHolder) o);
+                    } else if (o instanceof ByteBuf) {
+                        o = copyAndRelease((ByteBuf) o);
+                    }
+                }
+
                 subscriber.onNext(o);
                 return true;
             }
@@ -296,7 +364,28 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         return false;
     }
 
-    private boolean notifyCompletableFuture(Queue<Object> queue) {
+    private T copyAndRelease(ByteBufHolder o) {
+        try {
+            final ByteBuf content = Unpooled.wrappedBuffer(ByteBufUtil.getBytes(o.content()));
+            @SuppressWarnings("unchecked")
+            final T copy = (T) o.replace(content);
+            return copy;
+        } finally {
+            ReferenceCountUtil.safeRelease(o);
+        }
+    }
+
+    private T copyAndRelease(ByteBuf o) {
+        try {
+            @SuppressWarnings("unchecked")
+            final T copy = (T) Unpooled.copiedBuffer(o);
+            return copy;
+        } finally {
+            ReferenceCountUtil.safeRelease(o);
+        }
+    }
+
+    private boolean notifyAwaitDemandFuture(Queue<Object> queue) {
         if (demand == 0) {
             return false;
         }
@@ -308,25 +397,10 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         return true;
     }
 
-    private void notifySubscriberWithCloseEvent(Subscriber<Object> subscriber, CloseEvent o) {
-        setState(State.CLEANUP);
+    private void notifySubscriberWithCloseEvent(SubscriptionImpl subscription, CloseEvent o) {
+        setState(State.OPEN, State.CLEANUP);
         try {
-            final Throwable cause = o.cause();
-            if (cause == null) {
-                try {
-                    subscriber.onComplete();
-                } finally {
-                    closeFuture.complete(null);
-                }
-            } else {
-                try {
-                    if (!o.isCancelled()) {
-                        subscriber.onError(cause);
-                    }
-                } finally {
-                    closeFuture.completeExceptionally(cause);
-                }
-            }
+            o.notifySubscriber(subscription, closeFuture);
         } finally {
             cleanup();
         }
@@ -347,7 +421,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
     @Override
     public void close() {
-        if (setState(State.CLOSED)) {
+        if (setState(State.OPEN, State.CLOSED)) {
             pushObject(SUCCESSFUL_CLOSE);
         }
     }
@@ -359,14 +433,14 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
         }
 
-        if (setState(State.CLOSED)) {
+        if (setState(State.OPEN, State.CLOSED)) {
             pushObject(new CloseEvent(cause));
         }
     }
 
-    private boolean setState(State state) {
-        assert state != State.OPEN : "state: " + state;
-        return stateUpdater.compareAndSet(this, State.OPEN, state);
+    private boolean setState(State oldState, State newState) {
+        assert newState != State.OPEN : "oldState: " + oldState + ", newState: " + newState;
+        return stateUpdater.compareAndSet(this, oldState, newState);
     }
 
     private void cleanup() {
@@ -377,51 +451,75 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 break;
             }
 
-            if (e instanceof CloseEvent) {
-                final Throwable closeCause = ((CloseEvent) e).cause();
-                if (closeCause != null) {
-                    closeFuture.completeExceptionally(closeCause);
-                } else {
-                    closeFuture.complete(null);
+            try {
+                if (e instanceof CloseEvent) {
+                    ((CloseEvent) e).notifySubscriber(subscription, closeFuture);
+                    subscription.clearSubscriber();
+                    continue;
                 }
-                continue;
-            }
 
-            if (e instanceof CompletableFuture) {
-                ((CompletableFuture<?>) e).completeExceptionally(cause);
-            }
+                if (e instanceof CompletableFuture) {
+                    ((CompletableFuture<?>) e).completeExceptionally(cause);
+                }
 
-            @SuppressWarnings("unchecked")
-            T obj = (T) e;
-            onRemoval(obj);
+                @SuppressWarnings("unchecked")
+                T obj = (T) e;
+                onRemoval(obj);
+            } finally {
+                ReferenceCountUtil.safeRelease(e);
+            }
         }
     }
 
     private static final class SubscriptionImpl implements Subscription {
 
         private final DefaultStreamMessage<?> publisher;
-        private final Subscriber<Object> subscriber;
+        private Subscriber<Object> subscriber;
         private final Executor executor;
+        private final boolean withPooledObjects;
+        private volatile boolean cancelRequested;
 
         @SuppressWarnings("unchecked")
-        SubscriptionImpl(DefaultStreamMessage<?> publisher, Subscriber<?> subscriber, Executor executor) {
+        SubscriptionImpl(DefaultStreamMessage<?> publisher, Subscriber<?> subscriber, Executor executor,
+                         boolean withPooledObjects) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
+            this.withPooledObjects = withPooledObjects;
         }
 
         Subscriber<Object> subscriber() {
             return subscriber;
         }
 
+        /**
+         * Replaces the subscriber with a placeholder so that it can be garbage-collected and
+         * we conform to the Reactive Streams specification rule 3.13.
+         */
+        void clearSubscriber() {
+            if (!(subscriber instanceof AbortingSubscriber)) {
+                subscriber = NeverInvokedSubscriber.get();
+            }
+        }
+
         Executor executor() {
             return executor;
+        }
+
+        boolean withPooledObjects() {
+            return withPooledObjects;
+        }
+
+        boolean cancelRequested() {
+            return cancelRequested;
         }
 
         @Override
         public void request(long n) {
             if (n <= 0) {
-                throw new IllegalArgumentException("n: " + n + " (expected: > 0)");
+                invokeOnError(new IllegalArgumentException(
+                        "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+                return;
             }
 
             for (;;) {
@@ -442,14 +540,59 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             }
         }
 
+        void abort() {
+            cancelOrAbort(false);
+        }
+
         @Override
         public void cancel() {
-            if (publisher.setState(State.CLEANUP)) {
-                final CloseEvent closeEvent =
-                        Exceptions.isVerbose() ? new CloseEvent(CancelledSubscriptionException.get())
-                                               : CANCELLED_CLOSE;
+            cancelOrAbort(true);
+        }
 
+        private void cancelOrAbort(boolean cancel) {
+            if (publisher.setState(State.OPEN, State.CLEANUP)) {
+                final CloseEvent closeEvent;
+                if (cancel) {
+                    closeEvent = Flags.verboseExceptions() ?
+                                 new CloseEvent(CancelledSubscriptionException.get()) : CANCELLED_CLOSE;
+                } else {
+                    closeEvent = Flags.verboseExceptions() ?
+                                 new CloseEvent(AbortedStreamException.get()) : ABORTED_CLOSE;
+                }
                 publisher.pushObject(closeEvent);
+                return;
+            }
+
+            cancelRequested = cancel;
+
+            switch (publisher.state) {
+                case CLOSED:
+                    // close() has been called before cancel(). There's no need to push a CloseEvent,
+                    // but we need to ensure the closeFuture is notified and any pending objects are removed.
+                    if (publisher.setState(State.CLOSED, State.CLEANUP)) {
+                        final Executor executor = executor();
+                        if (executor != null) {
+                            executor.execute(publisher::cleanup);
+                        } else {
+                            publisher.cleanup();
+                        }
+                    } else {
+                        // Other thread set the state to CLEANUP already and will call cleanup().
+                    }
+                    break;
+                case CLEANUP:
+                    // Cleaned up already.
+                    break;
+                default: // OPEN: should never reach here.
+                    throw new Error();
+            }
+        }
+
+        private void invokeOnError(Throwable cause) {
+            if (executor != null) {
+                executor.execute(() -> subscriber.onError(cause));
+            } else {
+                subscriber.onError(cause);
             }
         }
 
@@ -471,12 +614,33 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             this.cause = cause;
         }
 
-        boolean isCancelled() {
-            return cause instanceof CancelledSubscriptionException;
-        }
+        void notifySubscriber(SubscriptionImpl subscription, CompletableFuture<?> closeFuture) {
+            if (closeFuture.isDone()) {
+                // Notified already
+                return;
+            }
 
-        Throwable cause() {
-            return cause;
+            final Subscriber<Object> subscriber = subscription.subscriber();
+            Throwable cause = this.cause;
+            if (cause == null && subscription.cancelRequested()) {
+                cause = CancelledSubscriptionException.get();
+            }
+
+            if (cause == null) {
+                try {
+                    subscriber.onComplete();
+                } finally {
+                    closeFuture.complete(null);
+                }
+            } else {
+                try {
+                    if (!(cause instanceof CancelledSubscriptionException)) {
+                        subscriber.onError(cause);
+                    }
+                } finally {
+                    closeFuture.completeExceptionally(cause);
+                }
+            }
         }
 
         @Override

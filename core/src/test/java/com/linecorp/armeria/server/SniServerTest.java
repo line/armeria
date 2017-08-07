@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+
+import java.security.cert.X509Certificate;
 
 import javax.net.ssl.SSLContext;
 
@@ -29,101 +32,78 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.InMemoryDnsResolver;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
-import org.junit.AfterClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.google.common.net.MediaType;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;
+import com.linecorp.armeria.testing.server.ServerRule;
 
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpStatus;
-import com.linecorp.armeria.server.http.AbstractHttpService;
-import com.linecorp.armeria.test.AbstractServerTest;
-
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
 
-public class SniServerTest extends AbstractServerTest {
+public class SniServerTest {
 
-    private static SelfSignedCertificate sscA;
-    private static SelfSignedCertificate sscB;
-    private static SelfSignedCertificate sscC;
+    @ClassRule
+    public static final SelfSignedCertificateRule sscA = new SelfSignedCertificateRule("a.com");
+
+    @ClassRule
+    public static final SelfSignedCertificateRule sscB = new SelfSignedCertificateRule("b.com");
+
+    @ClassRule
+    public static final SelfSignedCertificateRule sscC = new SelfSignedCertificateRule("c.com");
 
     private static InMemoryDnsResolver dnsResolver;
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        dnsResolver = new InMemoryDnsResolver();
-        dnsResolver.add("a.com", NetUtil.LOCALHOST4);
-        dnsResolver.add("b.com", NetUtil.LOCALHOST4);
-        dnsResolver.add("c.com", NetUtil.LOCALHOST4);
-        dnsResolver.add("mismatch.com", NetUtil.LOCALHOST4);
-        dnsResolver.add("127.0.0.1", NetUtil.LOCALHOST4);
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            dnsResolver = new InMemoryDnsResolver();
+            dnsResolver.add("a.com", NetUtil.LOCALHOST4);
+            dnsResolver.add("b.com", NetUtil.LOCALHOST4);
+            dnsResolver.add("c.com", NetUtil.LOCALHOST4);
+            dnsResolver.add("mismatch.com", NetUtil.LOCALHOST4);
+            dnsResolver.add("127.0.0.1", NetUtil.LOCALHOST4);
 
-        sscA = new SelfSignedCertificate("a.com");
-        sscB = new SelfSignedCertificate("b.com");
-        sscC = new SelfSignedCertificate("c.com");
+            final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
+            final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
+            final VirtualHostBuilder c = new VirtualHostBuilder("c.com");
 
-        final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
-        final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
-        final VirtualHostBuilder c = new VirtualHostBuilder("c.com");
+            a.service("/", new SniTestService("a.com"));
+            b.service("/", new SniTestService("b.com"));
+            c.service("/", new SniTestService("c.com"));
 
-        a.serviceAt("/", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "a.com");
-            }
-        });
+            a.sslContext(HTTPS, sscA.certificateFile(), sscA.privateKeyFile());
+            b.sslContext(HTTPS, sscB.certificateFile(), sscB.privateKeyFile());
+            c.sslContext(HTTPS, sscC.certificateFile(), sscC.privateKeyFile());
 
-        b.serviceAt("/", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "b.com");
-            }
-        });
+            sb.virtualHost(a.build());
+            sb.virtualHost(b.build());
+            sb.defaultVirtualHost(c.build());
 
-        c.serviceAt("/", new AbstractHttpService() {
-            @Override
-            protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "c.com");
-            }
-        });
-
-        a.sslContext(SessionProtocol.HTTPS, sscA.certificate(), sscA.privateKey());
-        b.sslContext(SessionProtocol.HTTPS, sscB.certificate(), sscB.privateKey());
-        c.sslContext(SessionProtocol.HTTPS, sscC.certificate(), sscC.privateKey());
-
-        sb.virtualHost(a.build());
-        sb.virtualHost(b.build());
-        sb.defaultVirtualHost(c.build());
-
-        sb.port(0, SessionProtocol.HTTPS);
-    }
-
-    @AfterClass
-    public static void deleteSelfSignedCertificated() {
-        sscA.delete();
-        sscB.delete();
-        sscC.delete();
-    }
+            sb.port(0, HTTPS);
+        }
+    };
 
     @Test
     public void testSniMatch() throws Exception {
         try (CloseableHttpClient hc = newHttpClient()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://a.com:" + httpsPort()))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://a.com:" + server.httpsPort()))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("a.com"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("a.com: CN=a.com"));
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://b.com:" + httpsPort()))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://b.com:" + server.httpsPort()))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("b.com"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("b.com: CN=b.com"));
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://c.com:" + httpsPort()))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://c.com:" + server.httpsPort()))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("c.com"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("c.com: CN=c.com"));
             }
         }
     }
@@ -131,14 +111,14 @@ public class SniServerTest extends AbstractServerTest {
     @Test
     public void testSniMismatch() throws Exception {
         try (CloseableHttpClient hc = newHttpClient()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://mismatch.com:" + httpsPort()))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://mismatch.com:" + server.httpsPort()))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("c.com"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("c.com: CN=c.com"));
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(httpsUri("/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpsUri("/")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("c.com"));
+                assertThat(EntityUtils.toString(res.getEntity()), is("c.com: CN=c.com"));
             }
         }
     }
@@ -152,5 +132,22 @@ public class SniServerTest extends AbstractServerTest {
                           .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
                           .setSSLContext(sslCtx)
                           .build();
+    }
+
+    private static class SniTestService extends AbstractHttpService {
+
+        private final String domainName;
+
+        SniTestService(String domainName) {
+            this.domainName = domainName;
+        }
+
+        @Override
+        protected void doGet(ServiceRequestContext ctx, HttpRequest req,
+                             HttpResponseWriter res) {
+            final X509Certificate c = (X509Certificate) ctx.sslSession().getLocalCertificates()[0];
+            final String name = c.getSubjectX500Principal().getName();
+            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, domainName + ": " + name);
+        }
     }
 }

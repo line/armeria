@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -61,12 +64,8 @@ public final class ServerPort implements Comparable<ServerPort> {
         }
 
         requireNonNull(protocol, "protocol");
-
-        if (protocol != SessionProtocol.HTTP && protocol != SessionProtocol.HTTPS) {
-            throw new IllegalArgumentException(
-                    "protocol: " + protocol +
-                    " (expected: " + SessionProtocol.HTTP + " or " + SessionProtocol.HTTPS + ')');
-        }
+        checkArgument(protocol == HTTP || protocol == HTTPS,
+                      "protocol: %s (expected: %s or %s)", protocol, HTTP, HTTPS);
 
         this.localAddress = localAddress;
         this.protocol = protocol;

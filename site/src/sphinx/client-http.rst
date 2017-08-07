@@ -1,20 +1,17 @@
-.. _`com.linecorp.armeria.client.http`: apidocs/index.html?com/linecorp/armeria/client/http/package-summary.html
+.. _client-http:
 
-Using Armeria as an HTTP client
-===============================
-For more information, please refer to the API documentation of the `com.linecorp.armeria.client.http`_ package.
+Calling an HTTP service
+=======================
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.Clients;
-    import com.linecorp.armeria.client.http.HttpClient;
-    import com.linecorp.armeria.common.http.AggregatedHttpMessage;
-    import com.linecorp.armeria.common.http.HttpHeaderNames;
-    import com.linecorp.armeria.common.http.HttpHeaders;
-    import com.linecorp.armeria.common.http.HttpMethod;
+    import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.common.AggregatedHttpMessage;
+    import com.linecorp.armeria.common.HttpHeaderNames;
+    import com.linecorp.armeria.common.HttpHeaders;
+    import com.linecorp.armeria.common.HttpMethod;
 
-    HttpClient httpClient = Clients.newClient(
-            "none+http://example.com/", HttpClient.class);
+    HttpClient httpClient = HttpClient.of("http://example.com/");
 
     AggregatedHttpMessage textResponse = httpClient.get("/foo/bar.txt").aggregate().join();
 
@@ -23,3 +20,8 @@ For more information, please refer to the API documentation of the `com.linecorp
                        .set(HttpHeaderNames.ACCEPT, "application/json"));
 
     AggregatedHttpMessage jsonResponse = httpClient.execute(getJson).aggregate().join();
+
+See also
+--------
+
+- :ref:`client-retrofit`

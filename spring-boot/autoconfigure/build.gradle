@@ -1,0 +1,21 @@
+dependencies {
+    compile project(':thrift')
+    compile project(':logback')
+}
+
+managedDependencies {
+    compile 'com.ryantenney.metrics:metrics-spring'
+    compile 'io.dropwizard.metrics:metrics-core'
+    compile 'io.dropwizard.metrics:metrics-json'
+    compile 'io.dropwizard.metrics:metrics-jvm'
+    compile 'io.dropwizard.metrics:metrics-logback'
+    compile 'javax.inject:javax.inject'
+    compile 'javax.validation:validation-api'
+    compile 'org.springframework.boot:spring-boot'
+    compile 'org.springframework.boot:spring-boot-autoconfigure'
+    compile 'org.springframework.boot:spring-boot-starter-logging'
+
+    testCompile 'org.springframework.boot:spring-boot-starter-web'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    testCompile 'org.hibernate:hibernate-validator'
+}

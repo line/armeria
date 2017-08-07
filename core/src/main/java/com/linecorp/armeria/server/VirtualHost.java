@@ -22,15 +22,18 @@ import java.net.IDN;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
+
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaTypeSet;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -62,12 +65,14 @@ public final class VirtualHost {
     private final String hostnamePattern;
     private final SslContext sslContext;
     private final List<ServiceConfig> services;
-    private final PathMappings<ServiceConfig> serviceMapping = new PathMappings<>();
+    private final Router<ServiceConfig> router;
+    private final MediaTypeSet producibleMediaTypes;
 
     private String strVal;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
-                SslContext sslContext, Iterable<ServiceConfig> serviceConfigs) {
+                SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
+                MediaTypeSet producibleMediaTypes) {
 
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
@@ -76,6 +81,7 @@ public final class VirtualHost {
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
         this.sslContext = validateSslContext(sslContext);
+        this.producibleMediaTypes = producibleMediaTypes;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
 
@@ -84,11 +90,10 @@ public final class VirtualHost {
         for (ServiceConfig c : serviceConfigs) {
             c = c.build(this);
             servicesCopy.add(c);
-            serviceMapping.add(c.pathMapping(), c);
         }
 
         services = Collections.unmodifiableList(servicesCopy);
-        serviceMapping.freeze();
+        router = Routers.ofServiceConfig(services);
     }
 
     /**
@@ -104,7 +109,7 @@ public final class VirtualHost {
             throw new IllegalArgumentException("defaultHostname: " + defaultHostname);
         }
 
-        return defaultHostname.toLowerCase(Locale.ENGLISH);
+        return Ascii.toLowerCase(defaultHostname);
     }
 
     /**
@@ -122,7 +127,7 @@ public final class VirtualHost {
             throw new IllegalArgumentException("hostnamePattern: " + hostnamePattern);
         }
 
-        return hostnamePattern.toLowerCase(Locale.ENGLISH);
+        return Ascii.toLowerCase(hostnamePattern);
     }
 
     /**
@@ -211,16 +216,32 @@ public final class VirtualHost {
     }
 
     /**
-     * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
-     *
-     * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
-     *         {@link PathMapped#empty()} if there's no match.
+     * Returns {@link MediaTypeSet} that consists of media types producible by this virtual host.
      */
-    public PathMapped<ServiceConfig> findServiceConfig(String path) {
-        return serviceMapping.apply(path);
+    public MediaTypeSet producibleMediaTypes() {
+        return producibleMediaTypes;
     }
 
-    VirtualHost decorate(@Nullable Function<Service<Request, Response>, Service<Request, Response>> decorator) {
+    /**
+     * Finds the {@link Service} whose {@link Router} matches the {@link PathMappingContext}.
+     *
+     * @param mappingCtx a context to find the {@link Service}.
+     *
+     * @return the {@link ServiceConfig} wrapped by a {@link PathMapped} if there's a match.
+     *         {@link PathMapped#empty()} if there's no match.
+     */
+    public PathMapped<ServiceConfig> findServiceConfig(PathMappingContext mappingCtx) {
+        requireNonNull(mappingCtx, "mappingCtx");
+        return router.find(mappingCtx);
+    }
+
+    @VisibleForTesting
+    Router<ServiceConfig> router() {
+        return router;
+    }
+
+    VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
+                                            Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {
             return this;
         }
@@ -228,12 +249,13 @@ public final class VirtualHost {
         final List<ServiceConfig> services =
                 this.services.stream().map(cfg -> {
                     final PathMapping pathMapping = cfg.pathMapping();
-                    final Service<Request, Response> service = decorator.apply(cfg.service());
+                    final Service<HttpRequest, HttpResponse> service = decorator.apply(cfg.service());
                     final String loggerName = cfg.loggerName().orElse(null);
                     return new ServiceConfig(pathMapping, service, loggerName);
                 }).collect(Collectors.toList());
 
-        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(), services);
+        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
+                               services, producibleMediaTypes());
     }
 
     @Override

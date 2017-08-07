@@ -16,22 +16,22 @@
 
 package com.linecorp.armeria.common.tracing;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
 
 import zipkin.Span;
 import zipkin.reporter.Reporter;
 
 public final class SpanCollectingReporter implements Reporter<Span> {
 
-    private final List<Span> spans = new ArrayList<>();
+    private final BlockingQueue<Span> spans = new LinkedTransferQueue<>();
 
     @Override
     public void report(Span span) {
         spans.add(span);
     }
 
-    public List<Span> spans() {
+    public BlockingQueue<Span> spans() {
         return spans;
     }
 }

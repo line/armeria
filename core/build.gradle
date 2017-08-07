@@ -1,7 +1,15 @@
-dependencies {
-    // Guava
-    compile 'com.google.guava:guava'
-    testCompile 'com.google.guava:guava-testlib'
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.sf.proguard:proguard-gradle:5.3.3'
+    }
+}
+
+managedDependencies {
+    // Caffeine
+    compile 'com.github.ben-manes.caffeine:caffeine'
 
     // Jackson
     [ 'jackson-core', 'jackson-annotations', 'jackson-databind' ].each {
@@ -11,24 +19,114 @@ dependencies {
     // Metrics
     compile 'io.dropwizard.metrics:metrics-core'
 
+    // Prometheus
+    compile 'io.prometheus:simpleclient_caffeine'
+    compile 'io.prometheus:simpleclient_common'
+
     // Netty
     [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
         compile "io.netty:$it"
     }
-    compile "io.netty:netty-transport-native-epoll:${versionOf('netty')}:linux-x86_64"
+    compile 'io.netty:netty-transport-native-epoll:linux-x86_64'
     compile 'io.netty:netty-tcnative-boringssl-static'
     runtime 'org.javassist:javassist'
 
     // Reactive Streams
     compile 'org.reactivestreams:reactive-streams'
+    testCompile 'org.reactivestreams:reactive-streams-tck'
+}
 
-    // Reflections
-    compile 'org.reflections:reflections'
+// Run the test cases based on reactive-streams-tck
+task testNg(type: Test,
+            group: 'Verification',
+            description: 'Runs the TestNG unit tests.') {
+    useTestNG()
+    testClassesDirs = tasks.test.testClassesDirs
+    classpath = tasks.test.classpath
+    scanForTestClasses = false
+}
+tasks.test.finalizedBy tasks.testNg
+tasks.check.dependsOn tasks.testNg
 
-    // Thrift
-    compile 'org.apache.thrift:libthrift'
+jacocoTestReport {
+    // Include the coverage data from the TestNG test cases.
+    executionData file("${project.buildDir}/jacoco/testNg.exec")
+}
 
-    // Jetty, for testing TServlet interoperability.
-    testCompile 'org.eclipse.jetty:jetty-webapp'
-    testCompile 'org.eclipse.jetty.http2:http2-server'
+// Task 'shadedJar' produces a very large JAR. Rename it to '*-untrimmed-*.jar' and
+// let the task 'trimShadedJar' produce the trimmed JAR from it.
+tasks.shadedJar.baseName = "${tasks.jar.baseName}-untrimmed"
+
+task trimShadedJar(type: ProGuardTask,
+                   group: 'Build',
+                   description: 'Shrinks the shaded JAR by removing unused classes.') {
+
+    publishedJavaProjects.each {
+        dependsOn it.tasks.shadedJar
+        dependsOn it.tasks.shadedTestJar
+    }
+
+    def shadedFile = tasks.shadedJar.archivePath
+    def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-shaded-'))
+
+    injars shadedFile
+    // NB: By specifying 'outjar' *before* other 'injars' below, ProGuard will put only the classes
+    //     from 'shadedFile' into 'shadedAndTrimmedFile'. See 'restructuring the output archives'
+    //     for more information: https://www.guardsquare.com/en/proguard/manual/examples#restructuring
+    outjars shadedAndTrimmedFile
+
+    // Include the shaded JARs from other modules as well
+    // so that ProGuard does not trim the classes and methods that are used actually.
+    injars tasks.shadedTestJar.archivePath
+    publishedJavaProjects.each {
+        if (it != project) {
+            injars it.tasks.shadedJar.archivePath
+            injars it.tasks.shadedTestJar.archivePath,
+                   filter: '!META-INF/**,' +
+                           '!com/linecorp/armeria/internal/shaded/**,' +
+                           '!com/linecorp/armeria/service/test/**'
+        }
+    }
+
+    def dependencyJars = []
+    publishedJavaProjects.each {
+        // NB: ProGuardTask picks the dependencies added *after* evaluation correctly
+        //     because libraryjar() intentionally keeps the specified dependencies as-is.
+        //     See ProGuardTask.libraryjar() for more information.
+        it.afterEvaluate {
+            dependencyJars.addAll(it.configurations.runtime.collect())
+        }
+    }
+    libraryjars files(dependencyJars)
+    libraryjars file("${System.getProperty('java.home')}/lib/rt.jar")
+
+    dontoptimize
+    dontobfuscate
+    dontwarn // Ignore the harmless 'missing classes' warnings related with the optional dependencies.
+
+    keepattributes 'Signature, InnerClasses, Annotation'
+    keep "class !${shadedPackage}.**,com.linecorp.armeria.** { *; }"
+    keep "class ${shadedPackage}.caffeine.** { *; }"    // To make the reflection work.
+}
+
+tasks.assemble.dependsOn tasks.trimShadedJar
+
+// Add the trimmed JAR to archives so that the 'signArchives' task signs it.
+artifacts {
+    trimShadedJar.outJarFiles.each {
+        archives it
+    }
+}
+
+// Make sure trimShadedJar task is executed before signing.
+model {
+    tasks.signArchives {
+        dependsOn tasks.trimShadedJar
+    }
+}
+
+class ProGuardTask extends proguard.gradle.ProGuardTask {
+    def keepclass(String className) {
+        keep "class ${className},${className}\$* { *; }"
+    }
 }

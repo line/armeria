@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
@@ -26,21 +27,25 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLException;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
+
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.concurrent.DefaultThreadFactory;
 
 /**
  * Builds a new {@link Server} and its {@link ServerConfig}.
@@ -50,24 +55,24 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  * // Add a port to listen
  * sb.port(8080, SessionProtocol.HTTP);
  * // Build and add a virtual host.
- * sb.virtualHost(new VirtualHostBuilder("*.foo.com").serviceAt(...).build());
+ * sb.virtualHost(new VirtualHostBuilder("*.foo.com").service(...).build());
  * // Add services to the default virtual host.
- * sb.serviceAt(...);
+ * sb.service(...);
  * sb.serviceUnder(...);
  * // Build a server.
  * Server s = sb.build();
  * }</pre>
- * 
+ *
  * <h2>Example 2</h2>
  * <pre>{@code
  * ServerBuilder sb = new ServerBuilder();
  * Server server =
  *      sb.port(8080, SessionProtocol.HTTP) // Add a port to listen
  *      .withDefaultVirtualHost() // Add services to the default virtual host.
- *          .serviceAt(...)
+ *          .service(...)
  *          .serviceUnder(...)
  *      .and().withVirtualHost("*.foo.com") // Add a another virtual host.
- *          .serviceAt(...)
+ *          .service(...)
  *          .serviceUnder(...)
  *      .and().build(); // Build a server.
  * }</pre>
@@ -75,72 +80,48 @@ import io.netty.util.concurrent.DefaultThreadFactory;
  */
 public final class ServerBuilder {
 
-    private static final int DEFAULT_NUM_WORKERS;
-    private static final int DEFAULT_MAX_PENDING_REQUESTS = 8;
-    private static final int DEFAULT_MAX_CONNECTIONS = 65536;
-    // Use slightly greater value than the client default so that clients close the connection more often.
-    private static final long DEFAULT_IDLE_TIMEOUT_MILLIS = Duration.ofSeconds(15).toMillis();
-    private static final long DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS = Duration.ofSeconds(10).toMillis();
-    private static final long DEFAULT_DEFAULT_MAX_REQUEST_LENGTH = 10 * 1024 * 1024; // 10 MB
+    // Use Integer.MAX_VALUE not to limit open connections by default.
+    private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
+
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
-    private static final int DEFAULT_MAX_BLOCKING_TASK_THREADS = 200; // from Tomcat's maxThreads.
     private static final String DEFAULT_SERVICE_LOGGER_PREFIX = "armeria.services";
 
-    static {
-        String value = System.getProperty("io.netty.eventLoopThreads", "0");
-        final int fallbackDefaultNumWorkers = Runtime.getRuntime().availableProcessors() * 2;
-        int defaultNumWorkers;
-        try {
-            defaultNumWorkers = Integer.parseInt(value);
-            if (defaultNumWorkers <= 0) {
-                defaultNumWorkers = fallbackDefaultNumWorkers;
-            }
-        } catch (Exception ignored) {
-            defaultNumWorkers = fallbackDefaultNumWorkers;
-        }
-
-        DEFAULT_NUM_WORKERS = defaultNumWorkers;
-    }
-
-    private static Executor defaultBlockingTaskExecutor() {
-        return DefaultBlockingTaskExecutorHolder.INSTANCE;
-    }
-
-    private static final class DefaultBlockingTaskExecutorHolder {
-        static final Executor INSTANCE = new ThreadPoolExecutor(
-                0, DEFAULT_MAX_BLOCKING_TASK_THREADS,
-                60, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-                new DefaultThreadFactory("armeria-blocking-tasks", true));
-    }
-
     private final List<ServerPort> ports = new ArrayList<>();
+    private final List<ServerListener> serverListeners = new ArrayList<>();
     private final List<VirtualHost> virtualHosts = new ArrayList<>();
     private final List<ChainedVirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
     private final ChainedVirtualHostBuilder defaultVirtualHostBuilder = new ChainedVirtualHostBuilder(this);
     private boolean updatedDefaultVirtualHostBuilder;
 
     private VirtualHost defaultVirtualHost;
-    private int numWorkers = DEFAULT_NUM_WORKERS;
-    private int maxPendingRequests = DEFAULT_MAX_PENDING_REQUESTS;
-    private int maxConnections = DEFAULT_MAX_CONNECTIONS;
-    @SuppressWarnings("RedundantFieldInitialization")
-    private long idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT_MILLIS;
-    private long defaultRequestTimeoutMillis = DEFAULT_DEFAULT_REQUEST_TIMEOUT_MILLIS;
-    private long defaultMaxRequestLength = DEFAULT_DEFAULT_MAX_REQUEST_LENGTH;
+    private EventLoopGroup workerGroup = CommonPools.workerGroup();
+    private boolean shutdownWorkerGroupOnStop;
+    private int maxNumConnections = DEFAULT_MAX_NUM_CONNECTIONS;
+    private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
+    private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
+    private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
-    private Executor blockingTaskExecutor;
+    private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
-    private Function<Service<Request, Response>, Service<Request, Response>> decorator;
+    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
+     * interfaces using the specified protocol. If no port is added (i.e. no {@code port()} method is called),
+     * a default of {@code 0} (randomly-assigned port) and {@code "http"} will be used.
+     */
+    public ServerBuilder port(int port, String protocol) {
+        return port(port, SessionProtocol.of(requireNonNull(protocol, "protocol")));
+    }
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code port} of all available network
      * interfaces using the specified {@link SessionProtocol}. If no port is added (i.e. no {@code port()}
-     * method is called), a default of {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP}
-     * will be used.
+     * method is called), a default of {@code 0} (randomly-assigned port) and {@code "http"} will be used.
      */
     public ServerBuilder port(int port, SessionProtocol protocol) {
         ports.add(new ServerPort(port, protocol));
@@ -149,8 +130,17 @@ public final class ServerBuilder {
 
     /**
      * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
+     * protocol. If no port is added (i.e. no {@code port()} method is called), a default of {@code 0}
+     * (randomly-assigned port) and {@code "http"} will be used.
+     */
+    public ServerBuilder port(InetSocketAddress localAddress, String protocol) {
+        return port(localAddress, SessionProtocol.of(requireNonNull(protocol, "protocol")));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
      * {@link SessionProtocol}. If no port is added (i.e. no {@code port()} method is called), a default of
-     * {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP} will be used.
+     * {@code 0} (randomly-assigned port) and {@code "http"} will be used.
      */
     public ServerBuilder port(InetSocketAddress localAddress, SessionProtocol protocol) {
         ports.add(new ServerPort(localAddress, protocol));
@@ -159,7 +149,7 @@ public final class ServerBuilder {
 
     /**
      * Adds the specified {@link ServerPort}. If no port is added (i.e. no {@code port()} method is called),
-     * a default of {@code 0} (randomly-assigned port) and {@link SessionProtocol#HTTP} will be used.
+     * a default of {@code 0} (randomly-assigned port) and {@code "http"} will be used.
      */
     public ServerBuilder port(ServerPort port) {
         ports.add(requireNonNull(port, "port"));
@@ -176,32 +166,29 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the number of worker threads that performs socket I/O and runs
+     * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
+     * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
+     *
+     * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
+     *                       when the {@link Server} stops
      */
-    public ServerBuilder numWorkers(int numWorkers) {
-        this.numWorkers = ServerConfig.validateNumWorkers(numWorkers);
-        return this;
-    }
-
-    /**
-     * Sets the maximum allowed number of pending requests.
-     */
-    public ServerBuilder maxPendingRequests(int maxPendingRequests) {
-        this.maxPendingRequests = ServerConfig.validateMaxPendingRequests(maxPendingRequests);
+    public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
+        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        shutdownWorkerGroupOnStop = shutdownOnStop;
         return this;
     }
 
     /**
      * Sets the maximum allowed number of open connections.
      */
-    public ServerBuilder maxConnections(int maxConnections) {
-        this.maxConnections = ServerConfig.validateMaxConnections(maxConnections);
+    public ServerBuilder maxNumConnections(int maxNumConnections) {
+        this.maxNumConnections = ServerConfig.validateMaxNumConnections(maxNumConnections);
         return this;
     }
 
     /**
-     * Sets the idle timeout of a connection in milliseconds.
+     * Sets the idle timeout of a connection in milliseconds for keep-alive.
      *
      * @param idleTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
@@ -210,7 +197,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the idle timeout of a connection.
+     * Sets the idle timeout of a connection for keep-alive.
      *
      * @param idleTimeout the timeout. {@code 0} disables the timeout.
      */
@@ -226,8 +213,7 @@ public final class ServerBuilder {
      * @param defaultRequestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public ServerBuilder defaultRequestTimeoutMillis(long defaultRequestTimeoutMillis) {
-        validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
-        this.defaultRequestTimeoutMillis = defaultRequestTimeoutMillis;
+        this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         return this;
     }
 
@@ -248,8 +234,7 @@ public final class ServerBuilder {
      *  @param defaultMaxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
     public ServerBuilder defaultMaxRequestLength(long defaultMaxRequestLength) {
-        validateDefaultMaxRequestLength(defaultMaxRequestLength);
-        this.defaultMaxRequestLength = defaultMaxRequestLength;
+        this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
         return this;
     }
 
@@ -294,7 +279,7 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link Executor} dedicated to the execution of blocking tasks or invocations.
-     * If not set, the global default thread pool is used instead.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
      */
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
@@ -354,15 +339,11 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified {@link Service} at the specified exact path of the default {@link VirtualHost}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     * @deprecated Use {@link #service(String, Service)} instead.
      */
-    public ServerBuilder serviceAt(String exactPath, Service<?, ?> service) {
-        defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.serviceAt(exactPath, service);
-        return this;
+    @Deprecated
+    public ServerBuilder serviceAt(String pathPattern, Service<HttpRequest, HttpResponse> service) {
+        return service(pathPattern, service);
     }
 
     /**
@@ -371,9 +352,32 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceUnder(String pathPrefix, Service<?, ?> service) {
+    public ServerBuilder serviceUnder(String pathPrefix, Service<HttpRequest, HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
+        return this;
+    }
+
+    /**
+     * Binds the specified {@link Service} at the specified path pattern of the default {@link VirtualHost}.
+     * e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     *   <li>{@code exact:/foo/bar} (exact match)</li>
+     *   <li>{@code prefix:/files} (prefix match)</li>
+     *   <li><code>glob:/~&#42;/downloads/**</code> (glob pattern)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} (regular expression)</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified path pattern is invalid
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder service(String pathPattern, Service<HttpRequest, HttpResponse> service) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(pathPattern, service);
         return this;
     }
 
@@ -384,7 +388,7 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service) {
+    public ServerBuilder service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service);
         return this;
@@ -395,9 +399,82 @@ public final class ServerBuilder {
      *             {@code armeria-logback}.
      */
     @Deprecated
-    public ServerBuilder service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
+    public ServerBuilder service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service,
+                                 String loggerName) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
+        return this;
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public ServerBuilder annotatedService(Object service) {
+        return annotatedService("/", service);
+    }
+
+    /**
+     * Binds the specified annotated service object.
+     */
+    public ServerBuilder annotatedService(
+            Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        return annotatedService("/", service, decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public ServerBuilder annotatedService(Object service, Map<Class<?>, ResponseConverter> converters) {
+        return annotatedService("/", service, converters);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public ServerBuilder annotatedService(
+            Object service, Map<Class<?>, ResponseConverter> converters,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        return annotatedService("/", service, converters, decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public ServerBuilder annotatedService(String pathPrefix, Object service) {
+        return annotatedService(pathPrefix, service, ImmutableMap.of(), Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public ServerBuilder annotatedService(
+            String pathPrefix, Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        return annotatedService(pathPrefix, service, ImmutableMap.of(), decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Map<Class<?>, ResponseConverter> converters) {
+        return annotatedService(pathPrefix, service, converters, Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public ServerBuilder annotatedService(
+            String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.annotatedService(pathPrefix, service, converters, decorator);
         return this;
     }
 
@@ -416,7 +493,7 @@ public final class ServerBuilder {
      *     if other default {@link VirtualHost} builder methods have been invoked already, including:
      *     <ul>
      *       <li>{@link #sslContext(SslContext)}</li>
-     *       <li>{@link #serviceAt(String, Service)}</li>
+     *       <li>{@link #service(String, Service)}</li>
      *       <li>{@link #serviceUnder(String, Service)}</li>
      *       <li>{@link #service(PathMapping, Service)}</li>
      *     </ul>
@@ -433,11 +510,19 @@ public final class ServerBuilder {
         return this;
     }
 
+    /**
+     * Adds the specified {@link ServerListener}.
+     */
+    public ServerBuilder serverListener(ServerListener serverListener) {
+        requireNonNull(serverListener, "serverListener");
+        serverListeners.add(serverListener);
+        return this;
+    }
 
     /**
      * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
      * specified by {@link VirtualHost}.
-     * 
+     *
      * @return {@link VirtualHostBuilder} for build the default virtual host
      */
     public ChainedVirtualHostBuilder withDefaultVirtualHost() {
@@ -448,7 +533,7 @@ public final class ServerBuilder {
     /**
      * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
      * specified by {@link VirtualHost}.
-     * 
+     *
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for build the virtual host
      */
@@ -461,7 +546,7 @@ public final class ServerBuilder {
     /**
      * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
      * specified by {@link VirtualHost}.
-     * 
+     *
      * @param defaultHostname default hostname of this virtual host
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for build the virtual host
@@ -480,15 +565,14 @@ public final class ServerBuilder {
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
-    public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
-            R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response> ServerBuilder decorator(
-            Function<T, R> decorator) {
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    ServerBuilder decorator(Function<T, R> decorator) {
 
         requireNonNull(decorator, "decorator");
 
         @SuppressWarnings("unchecked")
-        Function<Service<Request, Response>, Service<Request, Response>> castDecorator =
-                (Function<Service<Request, Response>, Service<Request, Response>>) decorator;
+        Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
+                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
 
         if (this.decorator != null) {
             this.decorator = this.decorator.andThen(castDecorator);
@@ -500,17 +584,12 @@ public final class ServerBuilder {
     }
 
     /**
-     * Creates a new {@link Server} with the configuration properties set so far.
+     * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        Executor blockingTaskExecutor = this.blockingTaskExecutor;
-        if (blockingTaskExecutor == null) {
-            blockingTaskExecutor = defaultBlockingTaskExecutor();
-        }
-
         final List<ServerPort> ports =
                 !this.ports.isEmpty() ? this.ports
-                                      : Collections.singletonList(new ServerPort(0, SessionProtocol.HTTP));
+                                      : Collections.singletonList(new ServerPort(0, HTTP));
 
         final VirtualHost defaultVirtualHost;
         if (this.defaultVirtualHost != null) {
@@ -530,19 +609,20 @@ public final class ServerBuilder {
             virtualHosts = this.virtualHosts;
         }
 
-        return new Server(new ServerConfig(
-                ports, defaultVirtualHost, virtualHosts, numWorkers, maxPendingRequests, maxConnections,
-                idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
+        final Server server = new Server(new ServerConfig(
+                ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
+                maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix));
+        serverListeners.forEach(server::addListener);
+        return server;
     }
 
     @Override
     public String toString() {
         return ServerConfig.toString(
-                getClass(), ports, defaultVirtualHost, virtualHosts,
-                numWorkers, maxPendingRequests, maxConnections, idleTimeoutMillis,
-                defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
+                maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, serviceLoggerPrefix);
     }

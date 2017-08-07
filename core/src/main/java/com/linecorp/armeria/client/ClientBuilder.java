@@ -21,7 +21,9 @@ import java.net.URI;
 
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
- * methods in {@link Clients} if you do not have many options to override.
+ * methods in {@link Clients} if you do not have many options to override. If you are creating an
+ * {@link HttpClient}, it is recommended to use the {@link HttpClientBuilder} or
+ * factory methods in {@link HttpClient}.
  *
  * <h3>How are decorators and HTTP headers configured?</h3>
  *
@@ -73,7 +75,8 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     /**
-     * Creates a new client which implements the specified {@code clientType}.
+     * Returns a newly-created client which implements the specified {@code clientType}, based on the
+     * properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
      *                                  {@link #ClientBuilder(String)} or the specified {@code clientType} is

@@ -26,4 +26,9 @@ public class CatchAllPathMappingTest {
     public void testLoggerName() throws Exception {
         assertThat(ofCatchAll().loggerName()).isEqualTo("__ROOT__");
     }
+
+    @Test
+    public void testMetricName() throws Exception {
+        assertThat(ofCatchAll().metricName()).isEqualTo("/**");
+    }
 }

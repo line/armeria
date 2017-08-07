@@ -20,16 +20,16 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.util.Iterator;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -81,7 +81,7 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public String method() {
+    public HttpMethod method() {
         return delegate().method();
     }
 
@@ -91,28 +91,23 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
+    public String query() {
+        return delegate().query();
+    }
+
+    @Override
     public <T> T request() {
         return delegate().request();
     }
 
     @Override
-    public RequestLogBuilder requestLogBuilder() {
-        return delegate().requestLogBuilder();
+    public RequestLog log() {
+        return delegate().log();
     }
 
     @Override
-    public ResponseLogBuilder responseLogBuilder() {
-        return delegate().responseLogBuilder();
-    }
-
-    @Override
-    public CompletableFuture<RequestLog> requestLogFuture() {
-        return delegate().requestLogFuture();
-    }
-
-    @Override
-    public CompletableFuture<ResponseLog> responseLogFuture() {
-        return delegate().responseLogFuture();
+    public RequestLogBuilder logBuilder() {
+        return delegate().logBuilder();
     }
 
     @Override
@@ -126,13 +121,18 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public void onEnter(Runnable callback) {
+    public void onEnter(Consumer<? super RequestContext> callback) {
         delegate().onEnter(callback);
     }
 
     @Override
-    public void onExit(Runnable callback) {
+    public void onExit(Consumer<? super RequestContext> callback) {
         delegate().onExit(callback);
+    }
+
+    @Override
+    public void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback) {
+        delegate().onChild(callback);
     }
 
     @Override
@@ -146,6 +146,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
+    public void invokeOnChildCallbacks(RequestContext newCtx) {
+        delegate().invokeOnChildCallbacks(newCtx);
+    }
+
+    @Override
     public <V> Attribute<V> attr(AttributeKey<V> key) {
         return delegate().attr(key);
     }
@@ -153,5 +158,10 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public <V> boolean hasAttr(AttributeKey<V> key) {
         return delegate().hasAttr(key);
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return delegate().alloc();
     }
 }

@@ -17,12 +17,14 @@
 package com.linecorp.armeria.client;
 
 import java.net.URI;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -50,7 +52,7 @@ public interface ClientFactory extends AutoCloseable {
     /**
      * The default {@link ClientFactory} implementation.
      */
-    ClientFactory DEFAULT = new AllInOneClientFactory(true);
+    ClientFactory DEFAULT = new ClientFactoryBuilder().build();
 
     /**
      * Closes the default {@link ClientFactory}.
@@ -58,18 +60,13 @@ public interface ClientFactory extends AutoCloseable {
     static void closeDefault() {
         LoggerFactory.getLogger(ClientFactory.class).debug(
                 "Closing the default {}", ClientFactory.class.getSimpleName());
-        ((AllInOneClientFactory) DEFAULT).doClose();
+        ((DefaultClientFactory) DEFAULT).doClose();
     }
 
     /**
      * Returns the {@link Scheme}s supported by this {@link ClientFactory}.
      */
     Set<Scheme> supportedSchemes();
-
-    /**
-     * Returns the session-layer options of the connections created by this {@link ClientFactory}.
-     */
-    SessionOptions options();
 
     /**
      * Returns the {@link EventLoopGroup} being used by this {@link ClientFactory}. Can be used to, e.g.,
@@ -83,6 +80,13 @@ public interface ClientFactory extends AutoCloseable {
      * {@link ClientFactory}.
      */
     Supplier<EventLoop> eventLoopSupplier();
+
+    /**
+     * Acquires an {@link EventLoop} that is expected to handle a connection to the specified {@link Endpoint}.
+     * The caller must release the returned {@link EventLoop} back by calling {@link ReleasableHolder#release()}
+     * so that {@link ClientFactory} utilizes {@link EventLoop}s efficiently.
+     */
+    ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint);
 
     /**
      * Creates a new client that connects to the specified {@code uri}.
@@ -121,6 +125,14 @@ public interface ClientFactory extends AutoCloseable {
      * @param options the {@link ClientOptions}
      */
     <T> T newClient(URI uri, Class<T> clientType, ClientOptions options);
+
+    /**
+     * Returns the {@link ClientBuilderParams} held in {@code client}. This is used when creating a new derived
+     * {@link Client} which inherits {@link ClientBuilderParams} from {@code client}. If this
+     * {@link ClientFactory} does not know how to handle the {@link ClientBuilderParams} for the provided
+     * {@code client}, it should return {@link Optional#empty()}.
+     */
+    <T> Optional<ClientBuilderParams> clientBuilderParams(T client);
 
     /**
      * Closes all clients managed by this factory and shuts down the {@link EventLoopGroup}

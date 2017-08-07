@@ -16,12 +16,21 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.Optional;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
+
 final class PrefixPathMapping extends AbstractPathMapping {
+
+    static final String PREFIX = "prefix:";
+    static final int PREFIX_LEN = PREFIX.length();
 
     private final String prefix;
     private final boolean stripPrefix;
     private final String loggerName;
     private final String metricName;
+    private final Optional<String> triePath;
     private final String strVal;
 
     PrefixPathMapping(String prefix, boolean stripPrefix) {
@@ -34,16 +43,24 @@ final class PrefixPathMapping extends AbstractPathMapping {
         this.stripPrefix = stripPrefix;
         loggerName = loggerName(prefix);
         metricName = prefix + "**";
-        strVal = "prefix: " + prefix + " (stripPrefix: " + stripPrefix + ')';
+        triePath = Optional.of(prefix + '*');
+        strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
     @Override
-    protected String doApply(String path) {
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final String path = mappingCtx.path();
         if (!path.startsWith(prefix)) {
-            return null;
+            return PathMappingResult.empty();
         }
 
-        return stripPrefix ? path.substring(prefix.length() - 1) : path;
+        return PathMappingResult.of(stripPrefix ? path.substring(prefix.length() - 1) : path,
+                                    mappingCtx.query());
+    }
+
+    @Override
+    public Set<String> paramNames() {
+        return ImmutableSet.of();
     }
 
     @Override
@@ -54,6 +71,11 @@ final class PrefixPathMapping extends AbstractPathMapping {
     @Override
     public String metricName() {
         return metricName;
+    }
+
+    @Override
+    public Optional<String> triePath() {
+        return triePath;
     }
 
     @Override
@@ -73,6 +95,11 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
         final PrefixPathMapping that = (PrefixPathMapping) obj;
         return stripPrefix == that.stripPrefix && prefix.equals(that.prefix);
+    }
+
+    @Override
+    public Optional<String> prefix() {
+        return Optional.of(prefix);
     }
 
     @Override

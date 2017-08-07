@@ -16,60 +16,44 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.meta_data.FieldMetaData;
-import org.apache.thrift.meta_data.StructMetaData;
-import org.apache.thrift.protocol.TType;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
 
-final class StructInfo extends TypeInfo implements ClassInfo {
-
-    static StructInfo of(StructMetaData structMetaData) {
-        return of(structMetaData, Collections.emptyMap());
-    }
-
-    static StructInfo of(StructMetaData structMetaData, Map<String, String> docStrings) {
-        final Class<?> structClass = structMetaData.structClass;
-        final String name = structClass.getName();
-
-        assert structMetaData.type == TType.STRUCT;
-        assert !structMetaData.isBinary();
-
-        final Map<?, FieldMetaData> metaDataMap =
-                FieldMetaData.getStructMetaDataMap(structMetaData.structClass);
-        final List<FieldInfo> fields = metaDataMap.values().stream()
-                .map(fieldMetaData -> FieldInfo.of(fieldMetaData, name, docStrings))
-                .collect(Collectors.toList());
-
-        return new StructInfo(name, fields, docStrings.get(name));
-    }
-
-    static StructInfo of(String name, List<FieldInfo> fields) {
-        return of(name, fields, Collections.emptyMap());
-    }
-
-    static StructInfo of(String name, List<FieldInfo> fields, Map<String, String> docStrings) {
-        return new StructInfo(name, fields, docStrings.get(name));
-    }
+/**
+ * Metadata about a struct type.
+ */
+public final class StructInfo implements NamedTypeInfo {
 
     private final String name;
     private final List<FieldInfo> fields;
     private final String docString;
 
-    private StructInfo(String name, List<FieldInfo> fields, @Nullable String docString) {
-        super(ValueType.STRUCT, false);
+    /**
+     * Creates a new instance.
+     */
+    public StructInfo(String name, Iterable<FieldInfo> fields) {
+        this(name, fields, null);
+    }
 
+    /**
+     * Creates a new instance.
+     */
+    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
-        this.fields = Collections.unmodifiableList(requireNonNull(fields, "fields"));
-        this.docString = docString;
+        this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
+        this.docString = Strings.emptyToNull(docString);
     }
 
     @Override
@@ -77,19 +61,24 @@ final class StructInfo extends TypeInfo implements ClassInfo {
         return name;
     }
 
-    @Override
+    /**
+     * Returns the metadata about the fields of the type.
+     */
+    @JsonProperty
     public List<FieldInfo> fields() {
         return fields;
     }
 
     @Override
-    public List<Object> constants() {
-        return Collections.emptyList();
+    public String docString() {
+        return docString;
     }
 
     @Override
-    public String docString() {
-        return docString;
+    public Set<TypeSignature> findNamedTypes() {
+        final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
+        fields().forEach(f -> ServiceInfo.findNamedTypes(collectedNamedTypes, f.typeSignature()));
+        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
     }
 
     @Override
@@ -102,18 +91,13 @@ final class StructInfo extends TypeInfo implements ClassInfo {
             return false;
         }
 
-        if (!super.equals(o)) {
-            return false;
-        }
-
-        StructInfo that = (StructInfo) o;
-        return Objects.equals(name, that.name) &&
-               Objects.equals(fields, that.fields);
+        final StructInfo that = (StructInfo) o;
+        return name.equals(that.name) && fields.equals(that.fields);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), name, fields);
+        return Objects.hash(name, fields);
     }
 
     @Override

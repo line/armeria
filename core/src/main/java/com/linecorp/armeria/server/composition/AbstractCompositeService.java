@@ -18,10 +18,11 @@ package com.linecorp.armeria.server.composition;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -29,8 +30,10 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.PathMappings;
+import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ResourceNotFoundException;
+import com.linecorp.armeria.server.Router;
+import com.linecorp.armeria.server.Routers;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCallbackInvoker;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -58,37 +61,30 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
  */
 public abstract class AbstractCompositeService<I extends Request, O extends Response> implements Service<I, O> {
 
-    private final List<CompositeServiceEntry<? super I, ? extends O>> services;
-    private final PathMappings<Service<? super I, ? extends O>> serviceMapping = new PathMappings<>();
+    private final List<CompositeServiceEntry<I, O>> services;
+    private final Router<Service<I, O>> router;
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
      */
     @SafeVarargs
-    protected AbstractCompositeService(CompositeServiceEntry<? super I, ? extends O>... services) {
+    protected AbstractCompositeService(CompositeServiceEntry<I, O>... services) {
         this(Arrays.asList(requireNonNull(services, "services")));
     }
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
      */
-    protected AbstractCompositeService(Iterable<CompositeServiceEntry<? super I, ? extends O>> services) {
+    protected AbstractCompositeService(Iterable<CompositeServiceEntry<I, O>> services) {
         requireNonNull(services, "services");
 
-        final List<CompositeServiceEntry<? super I, ? extends O>> servicesCopy = new ArrayList<>();
-        for (CompositeServiceEntry<? super I, ? extends O> e : services) {
-            servicesCopy.add(e);
-            serviceMapping.add(e.pathMapping(), e.service());
-        }
-
-        this.services = Collections.unmodifiableList(servicesCopy);
-
-        serviceMapping.freeze();
+        this.services = ImmutableList.copyOf(services);
+        router = Routers.ofCompositeServiceEntry(this, this.services);
     }
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
-        for (CompositeServiceEntry<? super I, ? extends O> e : services()) {
+        for (CompositeServiceEntry<I, O> e : services()) {
             ServiceCallbackInvoker.invokeServiceAdded(cfg, e.service());
         }
     }
@@ -96,7 +92,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     /**
      * Returns the list of {@link CompositeServiceEntry}s added to this composite {@link Service}.
      */
-    protected List<CompositeServiceEntry<? super I, ? extends O>> services() {
+    protected List<CompositeServiceEntry<I, O>> services() {
         return services;
     }
 
@@ -105,40 +101,60 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
      * {@link Service} added first is {@code 0}, and so on.
      */
     @SuppressWarnings("unchecked")
-    protected <T extends Service<? super I, ? extends O>> T serviceAt(int index) {
+    protected <T extends Service<I, O>> T serviceAt(int index) {
         return (T) services().get(index).service();
     }
 
     /**
      * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
      *
+     * @param mappingCtx a context to find the {@link Service}.
+     *
      * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
      *         {@link PathMapped#empty()} if there's no match.
      */
-    protected PathMapped<Service<? super I, ? extends O>> findService(String path) {
-        return serviceMapping.apply(path);
+    protected PathMapped<Service<I, O>> findService(PathMappingContext mappingCtx) {
+        return router.find(mappingCtx);
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        final PathMapped<Service<? super I, ? extends O>> mapped = findService(ctx.mappedPath());
+        final PathMappingContext mappingCtx = ctx.pathMappingContext();
+        final PathMapped<Service<I, O>> mapped = findService(mappingCtx.overridePath(ctx.mappedPath()));
         if (!mapped.isPresent()) {
             throw ResourceNotFoundException.get();
         }
 
-        final ServiceRequestContext newCtx = new CompositeServiceRequestContext(ctx, mapped.mappedPath());
-        try (SafeCloseable ignored = RequestContext.push(newCtx, false)) {
-            return mapped.value().serve(newCtx, req);
+        final Optional<String> childPrefix = mapped.mapping().prefix();
+        if (childPrefix.isPresent()) {
+            final PathMapping newMapping = PathMapping.ofPrefix(ctx.pathMapping().prefix().get() +
+                                                                childPrefix.get().substring(1));
+
+            final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
+                    ctx, newMapping, mapped.mappingResult().path());
+            try (SafeCloseable ignored = RequestContext.push(newCtx, false)) {
+                return mapped.value().serve(newCtx, req);
+            }
+        } else {
+            return mapped.value().serve(ctx, req);
         }
     }
 
     private static final class CompositeServiceRequestContext extends ServiceRequestContextWrapper {
 
+        private final PathMapping pathMapping;
         private final String mappedPath;
 
-        CompositeServiceRequestContext(ServiceRequestContext delegate, String mappedPath) {
+        CompositeServiceRequestContext(ServiceRequestContext delegate, PathMapping pathMapping,
+                                       String mappedPath) {
             super(delegate);
+            this.pathMapping = pathMapping;
             this.mappedPath = mappedPath;
+        }
+
+        @Override
+        public PathMapping pathMapping() {
+            return pathMapping;
         }
 
         @Override

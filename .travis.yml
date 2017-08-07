@@ -8,6 +8,7 @@ os:
 branches:
   only:
     - master
+    - '0.46'
 
 notifications:
   email: false
@@ -15,26 +16,29 @@ notifications:
 
 cache:
   directories:
-    - $HOME/.gradle
+    - $HOME/.gradle/wrapper/dists
+    - $HOME/.gradle/caches/jars-3
+    - $HOME/.gradle/caches/modules-2
     - $HOME/.jdk
 
 env:
   global:
     - JAVA_HOME=$HOME/.jdk/default
     - PATH=$JAVA_HOME/bin:$PATH
-    - GRADLE_OPTS=-Xmx256m
+    - GRADLE_OPTS=-Xmx1024m
 
 before_install:
   - .travis/install-jdk.sh
-  - .travis/clean-m2-repo.sh
   - ./gradlew --version
 
 install:
   - true
 
 script:
-  - ./gradlew --no-daemon --stacktrace -Pcoverage build
+  - ./gradlew --no-daemon --stacktrace -Pcoverage checkstyle test build
+
+before_cache:
+  - find $HOME/.gradle/caches -name '*.lock' -delete
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
-

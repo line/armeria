@@ -20,6 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -28,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Throwables;
 
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
@@ -35,7 +39,7 @@ import io.netty.channel.ChannelException;
 import io.netty.handler.codec.http2.Http2Exception;
 
 /**
- * Provides the methods that are useful for handling exceptions.
+ * Provides methods that are useful for handling exceptions.
  */
 public final class Exceptions {
 
@@ -49,23 +53,12 @@ public final class Exceptions {
 
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
-    private static final boolean VERBOSE =
-            "true".equals(System.getProperty("com.linecorp.armeria.verboseExceptions", "false"));
-
-    static {
-        logger.info("com.linecorp.armeria.verboseExceptions: {}", VERBOSE);
-    }
-
     /**
-     * Returns whether the verbose mode is enabled. When enabled, the exceptions frequently thrown by Armeria
-     * will have full stack trace. When disabled, such exceptions will have empty stack trace to eliminate the
-     * cost of capturing the stack trace.
-     *
-     * <p>The verbose mode is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.verboseExceptions=true} JVM option to enable it.
+     * @deprecated Use {@link Flags#verboseExceptions()} instead.
      */
+    @Deprecated
     public static boolean isVerbose() {
-        return VERBOSE;
+        return Flags.verboseExceptions();
     }
 
     /**
@@ -132,7 +125,7 @@ public final class Exceptions {
      * </ul>
      */
     public static boolean isExpected(Throwable cause) {
-        if (VERBOSE) {
+        if (Flags.verboseExceptions()) {
             return true;
         }
 
@@ -167,6 +160,39 @@ public final class Exceptions {
         requireNonNull(exception, "exception");
         exception.setStackTrace(EMPTY_STACK_TRACE);
         return exception;
+    }
+
+    /**
+     * Throws the specified exception violating the {@code throws} clause of the enclosing method.
+     * This method is useful when you need to rethrow a checked exception in {@link Function}, {@link Consumer},
+     * {@link Supplier} and {@link Runnable}, only if you are sure that the rethrown exception will be handled
+     * as a {@link Throwable} or an {@link Exception}. For example:
+     * <pre>{@code
+     * CompletableFuture.supplyAsync(() -> {
+     *     try (FileInputStream fin = new FileInputStream(...)) {
+     *         ....
+     *         return someValue;
+     *     } catch (IOException e) {
+     *         // 'throw e;' won't work because Runnable.run() does not allow any checked exceptions.
+     *         return Exceptions.throwUnsafely(e);
+     *     }
+     * }).exceptionally(CompletionActions::log);
+     * }</pre>
+     *
+     * @return This method never returns because it always throws an exception. However, combined with an
+     *         arbitrary return clause, you can terminate any non-void function with a single statement.
+     *         e.g. {@code return Exceptions.throwUnsafely(...);} vs.
+     *              {@code Exceptions.throwUnsafely(...); return null;}
+     */
+    public static <T> T throwUnsafely(Throwable cause) {
+        doThrowUnsafely(requireNonNull(cause, "cause"));
+        return null;
+    }
+
+    // This black magic causes the Java compiler to believe E is an unchecked exception type.
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void doThrowUnsafely(Throwable cause) throws E {
+        throw (E) cause;
     }
 
     /**

@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.net.HostAndPort;
 
-import com.linecorp.armeria.client.routing.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 
 /**
  * A remote endpoint that refers to a single host or a group of multiple hosts.
@@ -48,7 +48,7 @@ public final class Endpoint {
         }
 
         final HostAndPort parsed = HostAndPort.fromString(authority).withDefaultPort(0);
-        return new Endpoint(parsed.getHostText(), parsed.getPort(), 1000);
+        return new Endpoint(parsed.getHost(), parsed.getPort(), 1000);
     }
 
     /**
@@ -83,9 +83,7 @@ public final class Endpoint {
     public static Endpoint of(String host, int port, int weight) {
         requireNonNull(host, "host");
         validatePort("port", port);
-        if (weight <= 0) {
-            throw new IllegalArgumentException("weight: " + weight + " (expected: > 0)");
-        }
+        validateWeight(weight);
 
         return new Endpoint(host, port, weight);
     }
@@ -155,7 +153,7 @@ public final class Endpoint {
      * Returns the port number of this endpoint.
      *
      * @throws IllegalStateException if this endpoint is not a host endpoint or
-     *                                  this endpoint does not have its port specified.
+     *                               this endpoint does not have its port specified.
      */
     public int port() {
         ensureSingle();
@@ -191,6 +189,20 @@ public final class Endpoint {
         validatePort("defaultPort", defaultPort);
 
         return port != 0 ? this : new Endpoint(host(), defaultPort, weight());
+    }
+
+    /**
+     * Returns a new host endpoint with the specified weight.
+     *
+     * @return the new endpoint with the specified weight. {@code this} if this endpoint has the same weight.
+     *
+     * @throws IllegalStateException if this endpoint is not a host endpoint
+     */
+    public Endpoint withWeight(int weight) {
+        ensureSingle();
+        validateWeight(weight);
+
+        return this.weight == weight ? this : new Endpoint(host(), port, weight);
     }
 
     /**
@@ -241,8 +253,45 @@ public final class Endpoint {
         }
     }
 
+    private static void validateWeight(int weight) {
+        if (weight <= 0) {
+            throw new IllegalArgumentException("weight: " + weight + " (expected: > 0)");
+        }
+    }
+
     @Override
     public String toString() {
-        return "Endpoint(" + authority() + ')';
+        return "Endpoint(" + authority() + '/' + weight + ')';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof Endpoint)) {
+            return false;
+        }
+
+        final Endpoint that = (Endpoint) obj;
+        if (isGroup()) {
+            if (that.isGroup()) {
+                return authority().equals(that.authority());
+            } else {
+                return false;
+            }
+        } else {
+            if (that.isGroup()) {
+                return false;
+            } else {
+                return authority().equals(that.authority()) && weight() == that.weight();
+            }
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return authority().hashCode();
     }
 }

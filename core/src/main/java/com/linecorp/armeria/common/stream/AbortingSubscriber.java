@@ -19,9 +19,14 @@ package com.linecorp.armeria.common.stream;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-final class AbortingSubscriber implements Subscriber<Object> {
+final class AbortingSubscriber<T> implements Subscriber<T> {
 
-    static final AbortingSubscriber INSTANCE = new AbortingSubscriber();
+    private static final AbortingSubscriber<Object> INSTANCE = new AbortingSubscriber<>();
+
+    @SuppressWarnings("unchecked")
+    static <T> AbortingSubscriber<T> get() {
+        return (AbortingSubscriber<T>) INSTANCE;
+    }
 
     private AbortingSubscriber() {}
 
@@ -31,10 +36,10 @@ final class AbortingSubscriber implements Subscriber<Object> {
     }
 
     @Override
-    public void onNext(Object o) {}
+    public void onNext(T o) {}
 
     @Override
-    public void onError(Throwable t) {}
+    public void onError(Throwable cause) {}
 
     @Override
     public void onComplete() {}

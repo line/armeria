@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.it.tracing;
 
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -27,29 +29,28 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-
-import com.github.kristofa.brave.Brave;
-import com.github.kristofa.brave.Sampler;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.tracing.HttpTracingClient;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.HelloService.AsyncIface;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.tracing.HttpTracingService;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
+import brave.Tracing;
+import brave.sampler.Sampler;
 import zipkin.Span;
 import zipkin.reporter.Reporter;
 
-public class HttpTracingIntegrationTest extends AbstractServerTest {
+public class HttpTracingIntegrationTest {
 
     private static final ReporterImpl spanReporter = new ReporterImpl();
 
@@ -58,33 +59,34 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
     private HelloService.AsyncIface barClient;
     private HelloService.AsyncIface quxClient;
 
-    @Override
-    protected void configureServer(ServerBuilder sb) throws Exception {
-        sb.port(0, SessionProtocol.HTTP);
+    @Rule
+    public final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/foo", decorate("service/foo", THttpService.of(
+                    (AsyncIface) (name, resultHandler) ->
+                            barClient.hello("Miss. " + name, new DelegatingCallback(resultHandler)))));
 
-        sb.serviceAt("/foo", decorate("service/foo", THttpService.of(
-                (AsyncIface) (name, resultHandler) ->
-                        barClient.hello("Miss. " + name, new DelegatingCallback(resultHandler)))));
+            sb.service("/bar", decorate("service/bar", THttpService.of(
+                    (AsyncIface) (name, resultHandler) -> {
+                        if (name.startsWith("Miss. ")) {
+                            name = "Ms. " + name.substring(6);
+                        }
+                        quxClient.hello(name, new DelegatingCallback(resultHandler));
+                    })));
 
-        sb.serviceAt("/bar", decorate("service/bar", THttpService.of(
-                (AsyncIface) (name, resultHandler) -> {
-                    if (name.startsWith("Miss. ")) {
-                        name = "Ms. " + name.substring(6);
-                    }
-                    quxClient.hello(name, new DelegatingCallback(resultHandler));
-                })));
-
-        sb.serviceAt("/qux", decorate("service/qux", THttpService.of(
-                (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!'))));
-    }
+            sb.service("/qux", decorate("service/qux", THttpService.of(
+                    (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!'))));
+        }
+    };
 
     @Before
     public void setupClients() {
-        fooClient = new ClientBuilder("tbinary+" + uri("/foo"))
+        fooClient = new ClientBuilder(server.uri(BINARY, "/foo"))
                 .decorator(HttpRequest.class, HttpResponse.class,
-                           HttpTracingClient.newDecorator(newBrave("client/foo")))
+                           HttpTracingClient.newDecorator(newTracing("client/foo")))
                 .build(HelloService.Iface.class);
-        fooClientWithoutTracing = Clients.newClient("tbinary+" + uri("/foo"), HelloService.Iface.class);
+        fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
     }
@@ -95,19 +97,22 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
     }
 
     private static HttpTracingService decorate(String name, Service<HttpRequest, HttpResponse> service) {
-        return HttpTracingService.newDecorator(newBrave(name)).apply(service);
+        return HttpTracingService.newDecorator(newTracing(name)).apply(service);
     }
 
-    private static HelloService.AsyncIface newClient(String path) {
-        return new ClientBuilder("tbinary+" + uri(path))
+    private HelloService.AsyncIface newClient(String path) {
+        return new ClientBuilder(server.uri(BINARY, path))
                 .decorator(HttpRequest.class, HttpResponse.class,
-                           HttpTracingClient.newDecorator(newBrave("client" + path)))
+                           HttpTracingClient.newDecorator(newTracing("client" + path)))
                 .build(HelloService.AsyncIface.class);
     }
 
-    private static Brave newBrave(String name) {
-        return new Brave.Builder(name).reporter(spanReporter)
-                                      .traceSampler(Sampler.ALWAYS_SAMPLE).build();
+    private static Tracing newTracing(String name) {
+        return Tracing.newBuilder()
+                      .localServiceName(name)
+                      .reporter(spanReporter)
+                      .sampler(Sampler.ALWAYS_SAMPLE)
+                      .build();
     }
 
     @Test(timeout = 10000)
@@ -118,33 +123,40 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
         final long traceId = spans[0].traceId;
         assertThat(spans).allMatch(s -> s.traceId == traceId);
 
+        // Find all spans.
+        final Span clientFooSpan = findSpan(spans, "client/foo");
+        final Span serviceFooSpan = findSpan(spans, "service/foo");
+        final Span clientBarSpan = findSpan(spans, "client/bar");
+        final Span serviceBarSpan = findSpan(spans, "service/bar");
+        final Span clientQuxSpan = findSpan(spans, "client/qux");
+        final Span serviceQuxSpan = findSpan(spans, "service/qux");
+
         // client/foo and service/foo should have no parents.
-        assertThat(spans[0].parentId).isNull();
-        assertThat(spans[1].parentId).isNull();
+        assertThat(clientFooSpan.parentId).isNull();
+        assertThat(serviceFooSpan.parentId).isNull();
 
         // client/foo and service/foo should have the ID values identical with their traceIds.
-        assertThat(spans[0].id).isEqualTo(traceId);
-        assertThat(spans[1].id).isEqualTo(traceId);
+        assertThat(clientFooSpan.id).isEqualTo(traceId);
+        assertThat(serviceFooSpan.id).isEqualTo(traceId);
 
-        // The spans that do no cross the network boundary should have the same ID.
-        for (int i = 0; i < spans.length; i += 2) {
-            assertThat(spans[i].id).isEqualTo(spans[i + 1].id);
-        }
+        // The spans that do not cross the network boundary should have the same ID.
+        assertThat(clientFooSpan.id).isEqualTo(serviceFooSpan.id);
+        assertThat(clientBarSpan.id).isEqualTo(serviceBarSpan.id);
+        assertThat(clientQuxSpan.id).isEqualTo(serviceQuxSpan.id);
 
         // Check the parentIds.
-        for (int i = 2; i < spans.length; i += 2) {
-            final long expectedParentId = spans[i - 2].id;
-            assertThat(spans[i].parentId).isEqualTo(expectedParentId);
-            assertThat(spans[i + 1].parentId).isEqualTo(expectedParentId);
-        }
+        assertThat(clientBarSpan.parentId).isEqualTo(clientFooSpan.id);
+        assertThat(serviceBarSpan.parentId).isEqualTo(clientFooSpan.id);
+        assertThat(clientQuxSpan.parentId).isEqualTo(clientBarSpan.id);
+        assertThat(serviceQuxSpan.parentId).isEqualTo(clientBarSpan.id);
 
         // Check the service names.
-        assertThat(spans[0].annotations).allMatch(a -> "client/foo".equals(a.endpoint.serviceName));
-        assertThat(spans[1].annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
-        assertThat(spans[2].annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
-        assertThat(spans[3].annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
-        assertThat(spans[4].annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
-        assertThat(spans[5].annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
+        assertThat(clientFooSpan.annotations).allMatch(a -> "client/foo".equals(a.endpoint.serviceName));
+        assertThat(serviceFooSpan.annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
+        assertThat(clientBarSpan.annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
+        assertThat(serviceBarSpan.annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
+        assertThat(clientQuxSpan.annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
+        assertThat(serviceQuxSpan.annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
 
         // Check the span names.
         assertThat(spans).allMatch(s -> "hello".equals(s.name));
@@ -158,33 +170,46 @@ public class HttpTracingIntegrationTest extends AbstractServerTest {
         final long traceId = spans[0].traceId;
         assertThat(spans).allMatch(s -> s.traceId == traceId);
 
+        // Find all spans.
+        final Span serviceFooSpan = findSpan(spans, "service/foo");
+        final Span clientBarSpan = findSpan(spans, "client/bar");
+        final Span serviceBarSpan = findSpan(spans, "service/bar");
+        final Span clientQuxSpan = findSpan(spans, "client/qux");
+        final Span serviceQuxSpan = findSpan(spans, "service/qux");
+
         // service/foo should have no parent.
-        assertThat(spans[0].parentId).isNull();
+        assertThat(serviceFooSpan.parentId).isNull();
 
         // service/foo should have the ID value identical with its traceId.
-        assertThat(spans[0].id).isEqualTo(traceId);
+        assertThat(serviceFooSpan.id).isEqualTo(traceId);
 
-        // The spans that do no cross the network boundary should have the same ID.
-        for (int i = 1; i < spans.length; i += 2) {
-            assertThat(spans[i].id).isEqualTo(spans[i + 1].id);
-        }
+        // The spans that do not cross the network boundary should have the same ID.
+        assertThat(clientBarSpan.id).isEqualTo(serviceBarSpan.id);
+        assertThat(clientQuxSpan.id).isEqualTo(serviceQuxSpan.id);
 
         // Check the parentIds
-        for (int i = 1; i < spans.length; i += 2) {
-            final long expectedParentId = spans[i - 1].id;
-            assertThat(spans[i].parentId).isEqualTo(expectedParentId);
-            assertThat(spans[i + 1].parentId).isEqualTo(expectedParentId);
-        }
+        assertThat(clientBarSpan.parentId).isEqualTo(serviceFooSpan.id);
+        assertThat(serviceBarSpan.parentId).isEqualTo(serviceFooSpan.id);
+        assertThat(clientQuxSpan.parentId).isEqualTo(serviceBarSpan.id);
+        assertThat(serviceQuxSpan.parentId).isEqualTo(serviceBarSpan.id);
 
         // Check the service names.
-        assertThat(spans[0].annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
-        assertThat(spans[1].annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
-        assertThat(spans[2].annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
-        assertThat(spans[3].annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
-        assertThat(spans[4].annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
+        assertThat(serviceFooSpan.annotations).allMatch(a -> "service/foo".equals(a.endpoint.serviceName));
+        assertThat(clientBarSpan.annotations).allMatch(a -> "client/bar".equals(a.endpoint.serviceName));
+        assertThat(serviceBarSpan.annotations).allMatch(a -> "service/bar".equals(a.endpoint.serviceName));
+        assertThat(clientQuxSpan.annotations).allMatch(a -> "client/qux".equals(a.endpoint.serviceName));
+        assertThat(serviceQuxSpan.annotations).allMatch(a -> "service/qux".equals(a.endpoint.serviceName));
 
         // Check the span names.
         assertThat(spans).allMatch(s -> "hello".equals(s.name));
+    }
+
+    private static Span findSpan(Span[] spans, String serviceName) {
+        return Arrays.stream(spans)
+                     .filter(s -> s.serviceNames().contains(serviceName))
+                     .findAny()
+                     .orElseThrow(() -> new AssertionError(
+                             "Can't find a Span with service name: " + serviceName));
     }
 
     private static class DelegatingCallback implements AsyncMethodCallback<String> {

@@ -1,20 +1,22 @@
 'use strict';
 
 $(function () {
+  // TODO(anuraag): Set debug information in server.
   var TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
+  var UNFRAMED_GRPC_JSON_TYPE = 'application/json; charset=utf-8; protocol=gRPC';
 
   var specification = {};
   var navTemplate = Handlebars.compile($('#nav-template').html());
-  var functionTemplate = Handlebars.compile($('#function-template').html());
-  var classTemplate = Handlebars.compile($('#class-template').html());
+  var methodTemplate = Handlebars.compile($('#method-template').html());
+  var namedTypeTemplate = Handlebars.compile($('#namedType-template').html());
 
-  var functionContainer = $('#function');
-  var classContainer = $('#class');
+  var methodContainer = $('#method');
+  var namedTypeContainer = $('#namedType');
 
   var previousFragmentPath = null;
 
   $.getJSON('specification.json', function (data) {
-    specification = escapeDocString(updateDocString(data));
+    specification = processSpecification(data);
 
     renderNav();
     $(window).trigger('hashchange');
@@ -24,7 +26,99 @@ $(function () {
     render(URI(window.location.href));
   });
 
-  function parseParametersDocString(docString) {
+  function processSpecification(specification) {
+    // See ServiceSpecification.java for the structure of 'specification'
+    specification = indexSpecification(specification);
+    specification = setSimpleNameAndPackageName(specification);
+    specification = updateDocStrings(specification);
+    specification = escapeDocStrings(specification);
+    return specification;
+  }
+
+  // Adds the indices that enables fast lookup.
+  function indexSpecification(specification) {
+    var process = function(e) {
+      specification.indices.namedTypes[e.name] = e;
+    };
+
+    specification.indices = {};
+    specification.indices.services = {};
+    specification.indices.namedTypes = {};
+
+    specification.services.forEach(function(e) {
+      specification.indices.services[e.name] = e;
+    });
+    specification.enums.forEach(process);
+    specification.structs.forEach(process);
+    specification.exceptions.forEach(process);
+
+    return specification;
+  }
+
+  // Sets the simple name and package name of a service or a named type.
+  function setSimpleNameAndPackageName(specification) {
+    var process = function(e) {
+      e.simpleName = simpleName(e.name);
+      e.packageName = packageName(e.name);
+    };
+
+    specification.services.forEach(process);
+    specification.enums.forEach(process);
+    specification.structs.forEach(process);
+    specification.exceptions.forEach(process);
+    return specification;
+  }
+
+  // Sets the docstrings of service method parameters or struct fields from the '@param' tags.
+  function updateDocStrings(specification) {
+    specification.services.forEach(function(svc) {
+      svc.methods.forEach(function(m) {
+        var childDocStrings = parseParamDocStrings(m.docString);
+        m.docString = removeParamDocStrings(m.docString);
+        m.parameters.forEach(function(p) {
+          if (p.name in childDocStrings) {
+            p.docString = childDocStrings[p.name];
+          }
+        });
+      });
+    });
+
+    // TODO(trustin): Handle the docstrings of enum values.
+    specification.enums.forEach(function(e) {
+      e.docString = removeParamDocStrings(e.docString);
+    });
+
+    updateStructDocStrings(specification.structs);
+    updateStructDocStrings(specification.exceptions);
+
+    return specification;
+  }
+
+  function updateStructDocStrings(structs) {
+    // TODO(trustin): Handle the docstrings of return values and exceptions.
+    structs.forEach(function(s) {
+      var childDocStrings = parseParamDocStrings(s.docString);
+      s.docString = removeParamDocStrings(s.docString);
+      s.fields.forEach(function(f) {
+        if (f.name in childDocStrings) {
+          f.docString = childDocStrings[f.name];
+        }
+      });
+    });
+  }
+
+  function simpleName(fullName) {
+    var lastDotIdx = fullName.lastIndexOf('.');
+    return lastDotIdx >= 0 ? fullName.substring(lastDotIdx + 1) : fullName;
+  }
+
+  function packageName(fullName) {
+    var lastDotIdx = fullName.lastIndexOf('.');
+    return lastDotIdx >= 0 ? fullName.substring(0, lastDotIdx) : '';
+  }
+
+  // FIXME(trustin): Get this done on the server side.
+  function parseParamDocStrings(docString) {
     var parameters = {};
     if (docString != null) {
       var pattern = /@param\s+(\w+)[\s\.]+(({@|[^@])*)(?=(@[\w]+|$|\s))/gm;
@@ -37,67 +131,26 @@ $(function () {
     return parameters;
   }
 
-  function removeParamDocString(docString) {
+  function removeParamDocStrings(docString) {
     if (docString == null) {
       return null;
     }
     return docString.replace(/@param .*[\n\r]*/mig, '');
   }
 
-  function updateDocString(specification) {
-    // hierachy
-    // services.SERVICE_NAME.functions.FUNCTION_NAME.docString
-    // services.SERVICE_NAME.functions.FUNCTION_NAME.parameters[i].name (simple_string)
-    // services.SERVICE_NAME.functions.FUNCTION_NAME.parameters[i].docString
-    // classes.CLASS_NAME.docString
-    // classes.CLASS_NAME.fields[i].name (simple_name)
-    // classes.CLASS_NAME.fields[i].docString
-
-    var services = specification.services;
-    var classes = specification.classes;
-
-    for (var serviceName in services) {
-      var svc = services[serviceName];
-      for (var functionName in svc.functions) {
-        var func = svc.functions[functionName];
-        var childDocStrings = parseParametersDocString(func.docString);
-        func.docString = removeParamDocString(func.docString);
-        for (var idx in func.parameters) {
-          var param = func.parameters[idx];
-          if (param.name in childDocStrings) {
-            param.docString = childDocStrings[param.name];
-          }
-        }
-      }
-    }
-
-    for (var className in classes) {
-      var cls = classes[className];
-      var childDocStrings = parseParametersDocString(cls.docString);
-      cls.docString = removeParamDocString(cls.docString);
-      for (var idx in cls.fields) {
-        var field = cls.fields[idx];
-        if (field.name in childDocStrings) {
-          field.docString = childDocStrings[field.name];
-        }
-      }
-    }
-
-    return specification;
-  }
-
-  function escapeDocString(node) {
+  function escapeDocStrings(node) {
     if (node instanceof Array) {
       for (var idx in node) {
-        escapeDocString(node[idx]);
+        escapeDocStrings(node[idx]);
       }
     } else if (node instanceof Object) {
-      var docString = node['docString'];
-      if (docString && typeof docString === 'string') {
-        node['docString'] = escapeHtml(docString).replace(/\n/g, '<br>');
+      if (node.docString) {
+        var docString = Handlebars.Utils.escapeExpression(node.docString);
+        docString = docString.replace(/(\r\n|\n|\r)/gm, '<br>');
+        node.docString = new Handlebars.SafeString(docString);
       }
       for (var key in node) {
-        escapeDocString(node[key]);
+        escapeDocStrings(node[key]);
       }
     }
     return node;
@@ -120,12 +173,14 @@ $(function () {
     var prefix = hashSplit[0];
 
     var mapping = {
-      'function': function (serviceName, functionName) {
-        renderFunction(serviceName, functionName);
+      'function': function (serviceName, methodName) { // For backward compatibility
+        renderMethod(serviceName, methodName);
       },
-
-      'class': function (className) {
-        renderClass(className);
+      'method': function (serviceName, methodName) {
+        renderMethod(serviceName, methodName);
+      },
+      'namedType': function (typeName) {
+        renderNamedType(typeName);
       }
     };
 
@@ -150,48 +205,56 @@ $(function () {
     $('#home').removeClass('hidden');
   }
 
-  function renderFunction(serviceName, functionName) {
-    var serviceInfo = specification.services[serviceName];
-    if (serviceInfo == undefined) {
+  function renderMethod(serviceName, methodName) {
+    if (!specification.indices.services.hasOwnProperty(serviceName)) {
       return;
     }
-    var functionInfo = serviceInfo.functions[functionName];
-    if (functionInfo == undefined) {
+    var serviceInfo = specification.indices.services[serviceName];
+
+    // Do a sequential search because we did not build an index for methods.
+    var methodInfo = serviceInfo.methods.find(function(m) {
+      return m.name === methodName;
+    });
+
+    if (methodInfo == undefined) {
       return;
     }
 
-    processService(serviceInfo);
-    processFunction(functionInfo);
+    processMethod(methodInfo);
 
-    makeActive('li#nav-' + serviceName + '.' + functionName);
+    makeActive('nav-method-' + serviceName + '/' + methodName);
 
     // Get the elements for the HTTP headers and its stickiness before applying the template,
     // because they will be replaced when the template is applied.
-    var oldDebugHttpHeadersText = functionContainer.find('.debug-http-headers');
-    var oldDebugHttpHeadersSticky = functionContainer.find('.debug-http-headers-sticky');
+    var oldDebugHttpHeadersText = methodContainer.find('.debug-http-headers');
+    var oldDebugHttpHeadersSticky = methodContainer.find('.debug-http-headers-sticky');
 
-    functionContainer.html(functionTemplate({
-      'serviceName': serviceName,
-      'serviceSimpleName': serviceInfo.simpleName,
-      'serviceEndpoints': serviceInfo.endpoints,
-      'serviceDebugPath': serviceInfo.debugPath,
-      'serviceDebugFragment': serviceInfo.debugFragment,
-      'function': functionInfo
+    methodContainer.html(methodTemplate({
+      'service': serviceInfo,
+      'method': methodInfo
     }));
 
-    var debugHttpHeadersText = functionContainer.find('.debug-http-headers');
-    var debugHttpHeadersSticky = functionContainer.find('.debug-http-headers-sticky');
-    var debugText = functionContainer.find('.debug-textarea').val(functionInfo.sampleJsonRequest);
+    var debugHttpHeadersText = methodContainer.find('.debug-http-headers');
+    var debugHttpHeadersSticky = methodContainer.find('.debug-http-headers-sticky');
+    var debugText = methodContainer.find('.debug-textarea').val(
+      Array.isArray(methodInfo.exampleRequests) ? methodInfo.exampleRequests[0] : '');
+
     if (oldDebugHttpHeadersSticky.is(':checked')) {
       debugHttpHeadersSticky.prop('checked', true);
       debugHttpHeadersText.val(oldDebugHttpHeadersText.val());
     } else {
-      debugHttpHeadersText.val(serviceInfo.sampleHttpHeaders);
+      var exampleHttpHeaders = serviceInfo.exampleHttpHeaders;
+      if (exampleHttpHeaders.length > 0) {
+        // TODO(trustin): Allow choosing from the example list.
+        debugHttpHeadersText.val(JSON.stringify(serviceInfo.exampleHttpHeaders[0], null, 2));
+      } else {
+        debugHttpHeadersText.val('');
+      }
     }
-    var debugResponse = functionContainer.find('.debug-response code');
+    var debugResponse = methodContainer.find('.debug-response code');
 
     // Sets 'debug-http-headers' section
-    var collapser = functionContainer.find('.debug-http-headers-collapser');
+    var collapser = methodContainer.find('.debug-http-headers-collapser');
     var toggleCollapser = function() {
       collapser.toggleClass('opened');
       collapser.next().collapse('toggle');
@@ -209,6 +272,7 @@ $(function () {
         var args = JSON.parse(debugText.val()); // Use the JSON parser for validation.
         if (typeof args !== 'object') {
           debugResponse.text("Arguments must be a JSON object.\nYou entered: " + typeof args);
+          return false;
         }
         // Do not use the parsed JSON but just a minified one not to lose number precision.
         // See: https://github.com/line/armeria/issues/273
@@ -237,16 +301,29 @@ $(function () {
         return false;
       }
 
-      var method = serviceInfo.debugFragment ? serviceInfo.debugFragment + ':' + functionInfo.name
-                                             : functionInfo.name;
+      var method = methodInfo.debugFragment ? methodInfo.debugFragment + ':' + methodInfo.name
+                                            : methodInfo.name;
 
-      var request = '{"method":"' + method + '","type":"CALL","args":' + argsText + '}';
+      var request = methodInfo.debugMimeType === TTEXT_MIME_TYPE ?
+                    '{"method":"' + method + '","type":"CALL","args":' + argsText + '}' :
+                    argsText;
       $.ajax({
         type: 'POST',
-        url: serviceInfo.debugPath,
+        url: methodInfo.debugPath,
         data: request,
-        headers: httpHeaders,
-        contentType: TTEXT_MIME_TYPE,
+        beforeSend: function (xhr) {
+          Object.keys(httpHeaders).forEach(function (name) {
+            var values = httpHeaders[name];
+            if (!Array.isArray(values)) {
+              // Values is a single item, so set it directly.
+              xhr.setRequestHeader(name, values);
+            } else {
+              xhr.setRequestHeader(name, values.join());
+            }
+          });
+        },
+        contentType: methodInfo.debugMimeType,
+        dataType: 'text',
         success: function (response) {
           var result = response.length > 0 ? response : "Request sent to one-way function";
           debugResponse.text(result);
@@ -275,9 +352,9 @@ $(function () {
       });
       return false;
     };
-    functionContainer.find('.debug-submit').on('click', submitDebugRequest);
+    methodContainer.find('.debug-submit').on('click', submitDebugRequest);
 
-    functionContainer.removeClass('hidden');
+    methodContainer.removeClass('hidden');
 
     // Get the parameters ('args' and 'http_headers') from the current location.
     // Note that we do not use URI.js here to avoid parsing JSON.
@@ -319,7 +396,7 @@ $(function () {
 
       debugHttpHeadersSticky.prop('checked', getParameterByName('http_headers_sticky') === 'true');
 
-      functionContainer.find('.debug-textarea').focus();
+      methodContainer.find('.debug-textarea').focus();
     }
 
     // Open debug-http-headers section when a value is set
@@ -328,94 +405,91 @@ $(function () {
     }
   }
 
-  function processService(serviceInfo) {
-    var endpoints = serviceInfo.endpoints;
-    for (var idx = 0; idx < endpoints.length; idx++) {
-      processPath(serviceInfo, endpoints[idx]);
-    }
+  function processMethod(methodInfo) {
+    methodInfo.parameters.forEach(function(p) {
+        p.typeSignatureHtml = getTypeSignatureHtml(p.typeSignature);
+    });
+
+    methodInfo.returnTypeSignatureHtml = getTypeSignatureHtml(methodInfo.returnTypeSignature);
+
+    methodInfo.exceptionTypeSignaturesHtml = [];
+    methodInfo.exceptionTypeSignatures.forEach(function(e) {
+        methodInfo.exceptionTypeSignaturesHtml.push(getTypeSignatureHtml(e));
+    });
+
+    methodInfo.endpoints.forEach(function(endpoint) {
+      processPath(methodInfo, endpoint);
+    });
   }
 
-  function processPath(serviceInfo, pathInfo) {
-    var availableMimeTypes = pathInfo.availableMimeTypes;
+  function processPath(methodInfo, endpointInfo) {
+    var availableMimeTypes = endpointInfo.availableMimeTypes;
     for (var idx = 0; idx < availableMimeTypes.length; idx++) {
       var mimeType = availableMimeTypes[idx];
-      if (mimeType === TTEXT_MIME_TYPE && serviceInfo.debugPath == undefined) {
-        serviceInfo.debugPath = pathInfo.path;
-        serviceInfo.debugFragment = pathInfo.fragment;
+      if ((mimeType === TTEXT_MIME_TYPE || mimeType === UNFRAMED_GRPC_JSON_TYPE) &&
+          methodInfo.debugPath == undefined) {
+        methodInfo.debugPath = endpointInfo.path;
+        methodInfo.debugMimeType = mimeType;
+        if (mimeType === TTEXT_MIME_TYPE) {
+          methodInfo.debugFormatLink =
+            '<a href="https://github.com/line/armeria/blob/13b0510205a84e1a3cd17509e7d39116d050b6b3/' +
+            'src/main/java/com/linecorp/armeria/common/thrift/text/TTextProtocol.java">TText</a>';
+        } else if (mimeType === UNFRAMED_GRPC_JSON_TYPE) {
+          methodInfo.debugFormatLink =
+            '<a href="https://developers.google.com/protocol-buffers/docs/proto3#json">Protobuf</a>';
+        }
+        if (typeof endpointInfo.fragment === 'string') {
+          methodInfo.debugFragment = endpointInfo.fragment;
+        } else {
+          methodInfo.debugFragment = '';
+        }
       }
-      if (mimeType === pathInfo.defaultMimeType) {
+      if (mimeType === endpointInfo.defaultMimeType) {
         availableMimeTypes[idx] = '<b>' + mimeType + '</b>';
       }
     }
   }
 
-  function processFunction(functionInfo) {
-    var parameters = functionInfo.parameters;
-    for (var idx = 0; idx < parameters.length; idx++) {
-      processType(parameters[idx].type);
-    }
+  function getTypeSignatureHtml(typeSignature) {
+    return escapeTag(typeSignature).replace(
+      new RegExp('(?:\\w+\\.)+\\w+', 'g'),
+      function (typeParamName) {
+        if (!specification.indices.namedTypes.hasOwnProperty(typeParamName)) {
+          return simpleName(typeParamName);
+        }
 
-    processType(functionInfo.returnType);
-
-    var exceptions = functionInfo.exceptions;
-    for (var idx = 0; idx < exceptions.length; idx++) {
-      processType(exceptions[idx]);
-    }
-  }
-
-  function processType(type) {
-    type.typeStr = escapeTag(type.type)
-        .replace(new RegExp('(?:\\w+\\.)+\\w+', 'g'),
-                 function (className) {
-                   var classInfo = specification.classes[className];
-                   if (!classInfo) {
-                     return className;
-                   }
-
-                   return '<a href="#!class/' + encodeURIComponent(className) + '" title="' + className + '">' +
-                          classInfo.simpleName + '</a>';
-                 });
-  }
-
-  function escapeHtml(string) {
-    var htmlEscapes = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-      '/': '&#x2F;',
-      '`': '&#x60;',
-      '=': '&#x3D;'
-    };
-    return string.replace(/[&<>"'`=\/]/g, function(s) { return htmlEscapes[s]; });
+        var typeParamInfo = specification.indices.namedTypes[typeParamName];
+        return '<a href="#!namedType/' + encodeURIComponent(typeParamName) +
+               '" title="' + typeParamName + '">' + typeParamInfo.simpleName + '</a>';
+      });
   }
 
   function escapeTag(value) {
     return value.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function makeActive(selector) {
-    $(escapeSelector(selector)).addClass('active');
+  function makeActive(id) {
+    $(document.getElementById(id)).addClass('active');
   }
 
   function escapeSelector(value) {
-    return value.replace(/\./g, '\\.');
+    return value.replace(/\./g, '\\.').replace(/[/]/g, '\\/');;
   }
 
-  function renderClass(className) {
-    var classInfo = specification.classes[className];
-    if (classInfo == undefined) {
+  function renderNamedType(typeName) {
+    if (!specification.indices.namedTypes.hasOwnProperty(typeName)) {
       return;
     }
 
-    var fields = classInfo.fields;
-    for (var idx = 0; idx < fields.length; idx++) {
-      processType(fields[idx].type);
+    var info = specification.indices.namedTypes[typeName];
+    if (info.hasOwnProperty('fields')) {
+      info.fields.forEach(function(f) {
+        f.typeSignatureHtml = getTypeSignatureHtml(f.typeSignature);
+      });
     }
 
-    makeActive('li#nav-' + className);
-    classContainer.html(classTemplate({'class': classInfo}));
-    classContainer.removeClass('hidden');
+    makeActive('nav-namedType-' + typeName);
+    namedTypeContainer.html(namedTypeTemplate({'info': info}));
+    namedTypeContainer.removeClass('hidden');
   }
 });

@@ -16,67 +16,120 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
-
-import com.github.kristofa.brave.Brave;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.DefaultHttpRequest;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpMethod;
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.tracing.HttpTracingTestBase;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.tracing.HelloService;
+import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 
+import brave.Tracing;
+import brave.sampler.Sampler;
+import io.netty.channel.Channel;
 import io.netty.channel.DefaultEventLoop;
+import zipkin.Annotation;
+import zipkin.Span;
 
-public class HttpTracingClientTest extends HttpTracingTestBase {
+public class HttpTracingClientTest {
 
-    @SuppressWarnings("unchecked")
-    private static final HttpTracingClient client =
-            new HttpTracingClient(mock(Client.class), mock(Brave.class));
+    private static final String TEST_SERVICE = "test-service";
 
-    @Test
-    public void testPutTraceData() {
-        final HttpRequest req = newRequest();
-        final ClientRequestContext ctx = newClientContext(req);
+    private static final String TEST_SPAN = "hello";
 
-        ctx.attr(ClientRequestContext.HTTP_HEADERS).set(otherHeaders());
+    @Test(timeout = 20000)
+    public void shouldSubmitSpanWhenSampled() throws Exception {
+        SpanCollectingReporter reporter = testRemoteInvocationWithSamplingRate(1.0f);
 
-        client.putTraceData(ctx, req, testSpanId);
+        // check span name
+        Span span = reporter.spans().take();
+        assertThat(span.name).isEqualTo(TEST_SPAN);
 
-        HttpHeaders expectedHeaders = traceHeaders().add(otherHeaders());
-        assertThat(ctx.attr(ClientRequestContext.HTTP_HEADERS).get(), is(expectedHeaders));
+        // only one span should be submitted
+        assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
+
+        // check # of annotations
+        List<Annotation> annotations = span.annotations;
+        assertThat(annotations).hasSize(2);
+
+        // check annotation values
+        List<String> values = annotations.stream().map(anno -> anno.value).collect(Collectors.toList());
+        assertThat(values).containsExactlyInAnyOrder("cs", "cr");
+
+        // check service name
+        List<String> serviceNames = annotations.stream()
+                                               .map(anno -> anno.endpoint.serviceName)
+                                               .collect(Collectors.toList());
+        assertThat(serviceNames).containsExactly(TEST_SERVICE, TEST_SERVICE);
     }
 
     @Test
-    public void testPutTraceDataIfSpanIsNull() {
-        final HttpRequest req = newRequest();
-        final ClientRequestContext ctx = newClientContext(req);
+    public void shouldNotSubmitSpanWhenNotSampled() throws Exception {
+        SpanCollectingReporter reporter = testRemoteInvocationWithSamplingRate(0.0f);
 
-        client.putTraceData(ctx, req, null);
-
-        HttpHeaders expectedHeaders = traceHeadersNotSampled();
-        assertThat(ctx.attr(ClientRequestContext.HTTP_HEADERS).get(), is(expectedHeaders));
+        assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
-    private static HttpRequest newRequest() {
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.POST, "/hello");
-        req.close();
-        return req;
-    }
+    private static SpanCollectingReporter testRemoteInvocationWithSamplingRate(
+            float samplingRate) throws Exception {
 
-    private static ClientRequestContext newClientContext(HttpRequest req) {
-        return new DefaultClientRequestContext(
-                new DefaultEventLoop(), SessionProtocol.H2C, Endpoint.of("localhost", 8080),
-                req.method().toString(), req.path(), "", ClientOptions.DEFAULT, req);
+        SpanCollectingReporter reporter = new SpanCollectingReporter();
+
+        Tracing tracing = Tracing.newBuilder()
+                                 .localServiceName(TEST_SERVICE)
+                                 .reporter(reporter)
+                                 .sampler(Sampler.create(samplingRate))
+                                 .build();
+
+        // prepare parameters
+        final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/hello/armeria");
+        final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
+        final HttpResponse res = HttpResponse.of(HttpStatus.OK);
+        final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
+        final ClientRequestContext ctx = new DefaultClientRequestContext(
+                new DefaultEventLoop(), H2C, Endpoint.of("localhost", 8080),
+                HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT, req);
+
+        ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost");
+        ctx.logBuilder().requestContent(rpcReq, req);
+        ctx.logBuilder().endRequest();
+
+        @SuppressWarnings("unchecked")
+        Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
+        when(delegate.execute(any(), any())).thenReturn(res);
+
+        HttpTracingClient stub = new HttpTracingClient(delegate, tracing);
+
+        // do invoke
+        HttpResponse actualRes = stub.execute(ctx, req);
+
+        assertThat(actualRes).isEqualTo(res);
+
+        verify(delegate, times(1)).execute(ctx, req);
+
+        ctx.logBuilder().responseContent(rpcRes, res);
+        ctx.logBuilder().endResponse();
+
+        return reporter;
     }
 }

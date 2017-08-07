@@ -19,19 +19,21 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.DefaultHttpHeaders;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.common.logging.DefaultResponseLog;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
@@ -45,8 +47,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private final Endpoint endpoint;
     private final String fragment;
 
-    private final DefaultRequestLog requestLog;
-    private final DefaultResponseLog responseLog;
+    private final DefaultRequestLog log;
 
     private long writeTimeoutMillis;
     private long responseTimeoutMillis;
@@ -62,35 +63,37 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, SessionProtocol sessionProtocol, Endpoint endpoint,
-            String method, String path, String fragment, ClientOptions options, Object request) {
+            HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            ClientOptions options, Object request) {
 
-        super(sessionProtocol, method, path, request);
+        super(sessionProtocol, method, path, query, request);
 
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.options = requireNonNull(options, "options");
         this.endpoint = requireNonNull(endpoint, "endpoint");
-        this.fragment = requireNonNull(fragment, "fragment");
+        this.fragment = fragment;
 
-        requestLog = new DefaultRequestLog();
-        responseLog = new DefaultResponseLog(requestLog, requestLog);
+        log = new DefaultRequestLog(this);
 
         writeTimeoutMillis = options.defaultWriteTimeoutMillis();
         responseTimeoutMillis = options.defaultResponseTimeoutMillis();
         maxResponseLength = options.defaultMaxResponseLength();
 
-        if (SessionProtocol.ofHttp().contains(sessionProtocol)) {
-            final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
-            if (!headers.isEmpty()) {
-                final HttpHeaders headersCopy = new DefaultHttpHeaders(true, headers.size());
-                headersCopy.set(headers);
-                attr(HTTP_HEADERS).set(headersCopy);
-            }
+        final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
+        if (!headers.isEmpty()) {
+            final HttpHeaders headersCopy = new DefaultHttpHeaders(true, headers.size());
+            headersCopy.set(headers);
+            attr(HTTP_HEADERS).set(headersCopy);
         }
     }
 
     @Override
     protected Channel channel() {
-        return requestLog.channel();
+        if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+            return log.channel();
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -109,6 +112,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
+    @Nullable
     public String fragment() {
         return fragment;
     }
@@ -162,23 +166,13 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public RequestLogBuilder requestLogBuilder() {
-        return requestLog;
+    public RequestLog log() {
+        return log;
     }
 
     @Override
-    public ResponseLogBuilder responseLogBuilder() {
-        return responseLog;
-    }
-
-    @Override
-    public CompletableFuture<RequestLog> requestLogFuture() {
-        return requestLog;
-    }
-
-    @Override
-    public CompletableFuture<ResponseLog> responseLogFuture() {
-        return responseLog;
+    public RequestLogBuilder logBuilder() {
+        return log;
     }
 
     @Override
@@ -213,5 +207,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         }
 
         return strVal;
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        final Channel channel = channel();
+        return channel != null ? channel.alloc() : UnpooledByteBufAllocator.DEFAULT;
     }
 }

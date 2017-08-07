@@ -1,0 +1,4 @@
+managedDependencies {
+    // Kafka
+    compile 'org.apache.kafka:kafka-clients'
+}

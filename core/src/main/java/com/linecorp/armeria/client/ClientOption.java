@@ -19,8 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.HttpHeaders;
 import com.linecorp.armeria.common.util.AbstractOption;
 
 import io.netty.util.ConstantPool;

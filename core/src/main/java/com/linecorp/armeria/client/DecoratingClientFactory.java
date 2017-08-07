@@ -19,10 +19,12 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -54,11 +56,6 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public SessionOptions options() {
-        return delegate().options();
-    }
-
-    @Override
     public EventLoopGroup eventLoopGroup() {
         return delegate().eventLoopGroup();
     }
@@ -69,8 +66,18 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
+        return delegate().acquireEventLoop(endpoint);
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         return delegate().newClient(uri, clientType, options);
+    }
+
+    @Override
+    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+        return delegate().clientBuilderParams(client);
     }
 
     @Override

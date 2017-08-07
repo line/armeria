@@ -30,77 +30,9 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.SubscriberWrapper;
-import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.SubscriptionWrapper;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.AbortableSubscriber;
 
 public class PublisherBasedStreamMessageTest {
-
-    /**
-     * Tests if {@link PublisherBasedStreamMessage#subscribe(Subscriber)} works, and it disallows more than one
-     * {@link Subscriber}s.
-     */
-    @Test
-    public void testSubscription() {
-        // Create a mock delegate Publisher which will be wrapped by PublisherBasedStreamMessage.
-        final ArgumentCaptor<SubscriberWrapper> subscriberCaptor =
-                ArgumentCaptor.forClass(SubscriberWrapper.class);
-        @SuppressWarnings("unchecked")
-        final Publisher<Integer> delegate = mock(Publisher.class);
-
-        @SuppressWarnings("unchecked")
-        final Subscriber<Integer> subscriber = mock(Subscriber.class);
-        final PublisherBasedStreamMessage<Integer> p = new PublisherBasedStreamMessage<>(delegate);
-
-        // First subscription attempt should be delegated to the delegate.
-        p.subscribe(subscriber);
-        verify(delegate).subscribe(subscriberCaptor.capture());
-
-        // Second subscription attempt should fail.
-        assertThatThrownBy(() -> p.subscribe(subscriber)).isInstanceOf(IllegalStateException.class);
-
-        // onSubscribe() on the captured SubscriberWrapper should be delegated to the mock Subscriber.
-        final SubscriberWrapper subscriberWrapper = subscriberCaptor.getValue();
-
-        // Emulate that the delegate triggers onSubscribe().
-        subscriberWrapper.onSubscribe(mock(Subscription.class));
-        verify(subscriber).onSubscribe(any(SubscriptionWrapper.class));
-    }
-
-    /**
-     * Tests if {@link Subscription#cancel()} completes {@link PublisherBasedStreamMessage#closeFuture()}
-     * exceptionally.
-     */
-    @Test
-    public void testCancelledSubscription() {
-        // Create a mock delegate Publisher which will be wrapped by PublisherBasedStreamMessage.
-        final ArgumentCaptor<SubscriberWrapper> subscriberCaptor =
-                ArgumentCaptor.forClass(SubscriberWrapper.class);
-        @SuppressWarnings("unchecked")
-        final Publisher<Integer> delegate = mock(Publisher.class);
-        final PublisherBasedStreamMessage<Integer> p = new PublisherBasedStreamMessage<>(delegate);
-
-        // Subscribe and capture the Subscriber and Subscription.
-        final ArgumentCaptor<SubscriptionWrapper> subscriptionCaptor =
-                ArgumentCaptor.forClass(SubscriptionWrapper.class);
-        @SuppressWarnings("unchecked")
-        final Subscriber<Integer> subscriber = mock(Subscriber.class);
-
-        p.subscribe(subscriber);
-        verify(delegate).subscribe(subscriberCaptor.capture());
-
-        // Emulate that the delegate triggers onSubscribe().
-        final SubscriberWrapper subscriberWrapper = subscriberCaptor.getValue();
-        subscriberWrapper.onSubscribe(mock(Subscription.class));
-        verify(subscriber).onSubscribe(subscriptionCaptor.capture());
-
-        // Cancel the subscription and check the status.
-        subscriptionCaptor.getValue().cancel();
-        assertThat(p.isOpen()).isEqualTo(false);
-        assertThat(p.isEmpty()).isEqualTo(true);
-        assertThat(p.closeFuture()).isCompletedExceptionally();
-        assertThatThrownBy(() -> p.closeFuture().get())
-                .hasCauseExactlyInstanceOf(CancelledSubscriptionException.class);
-    }
 
     /**
      * Tests if {@link PublisherBasedStreamMessage#abort()} cancels the {@link Subscription}, and tests if
@@ -145,22 +77,17 @@ public class PublisherBasedStreamMessageTest {
 
         // Publisher should not be involved at all because we are aborting without subscribing.
         verify(delegate, never()).subscribe(any());
-
-        // Attempting to subscribe after abort() should fail.
-        @SuppressWarnings("unchecked")
-        final Subscriber<Integer> subscriber = mock(Subscriber.class);
-        assertThatThrownBy(() -> p.subscribe(subscriber)).isInstanceOf(IllegalStateException.class);
     }
 
     private static final class AbortTest {
         private PublisherBasedStreamMessage<Integer> publisher;
-        private SubscriberWrapper subscriberWrapper;
+        private AbortableSubscriber subscriberWrapper;
         private Subscription subscription;
 
         AbortTest prepare() {
             // Create a mock delegate Publisher which will be wrapped by PublisherBasedStreamMessage.
-            final ArgumentCaptor<SubscriberWrapper> subscriberCaptor =
-                    ArgumentCaptor.forClass(SubscriberWrapper.class);
+            final ArgumentCaptor<AbortableSubscriber> subscriberCaptor =
+                    ArgumentCaptor.forClass(AbortableSubscriber.class);
             @SuppressWarnings("unchecked")
             final Publisher<Integer> delegate = mock(Publisher.class);
 
@@ -197,7 +124,7 @@ public class PublisherBasedStreamMessageTest {
             // Ensure closeFuture is complete exceptionally.
             assertThat(publisher.closeFuture()).isCompletedExceptionally();
             assertThatThrownBy(() -> publisher.closeFuture().get())
-                    .hasCauseExactlyInstanceOf(CancelledSubscriptionException.class);
+                    .hasCauseExactlyInstanceOf(AbortedStreamException.class);
         }
     }
 }

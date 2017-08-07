@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -38,11 +42,15 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
-    private final String method;
+    private final HttpMethod method;
     private final String path;
+    private final String query;
     private final Object request;
-    private List<Runnable> onEnterCallbacks;
-    private List<Runnable> onExitCallbacks;
+
+    // Callbacks
+    private List<Consumer<? super RequestContext>> onEnterCallbacks;
+    private List<Consumer<? super RequestContext>> onExitCallbacks;
+    private List<BiConsumer<? super RequestContext, ? super RequestContext>> onChildCallbacks;
 
     /**
      * Creates a new instance.
@@ -51,11 +59,13 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * @param request the request associated with this context
      */
     protected NonWrappingRequestContext(
-            SessionProtocol sessionProtocol, String method, String path, Object request) {
-        this.sessionProtocol = sessionProtocol;
-        this.method = method;
-        this.path = path;
-        this.request = request;
+            SessionProtocol sessionProtocol, HttpMethod method, String path, @Nullable String query,
+            Object request) {
+        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
+        this.method = requireNonNull(method, "method");
+        this.path = requireNonNull(path, "path");
+        this.query = query;
+        this.request = requireNonNull(request, "request");
     }
 
     @Override
@@ -99,13 +109,18 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     @Override
-    public final String method() {
+    public final HttpMethod method() {
         return method;
     }
 
     @Override
     public final String path() {
         return path;
+    }
+
+    @Override
+    public final String query() {
+        return query;
     }
 
     @Override
@@ -130,7 +145,8 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     @Override
-    public final void onEnter(Runnable callback) {
+    public final void onEnter(Consumer<? super RequestContext> callback) {
+        requireNonNull(callback, "callback");
         if (onEnterCallbacks == null) {
             onEnterCallbacks = new ArrayList<>(4);
         }
@@ -138,7 +154,8 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     @Override
-    public final void onExit(Runnable callback) {
+    public final void onExit(Consumer<? super RequestContext> callback) {
+        requireNonNull(callback, "callback");
         if (onExitCallbacks == null) {
             onExitCallbacks = new ArrayList<>(4);
         }
@@ -146,18 +163,43 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     @Override
-    public void invokeOnEnterCallbacks() {
-        final List<Runnable> onEnterCallbacks = this.onEnterCallbacks;
-        if (onEnterCallbacks != null) {
-            onEnterCallbacks.forEach(Runnable::run);
+    public final void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback) {
+        requireNonNull(callback, "callback");
+        if (onChildCallbacks == null) {
+            onChildCallbacks = new ArrayList<>(4);
         }
+        onChildCallbacks.add(callback);
+    }
+
+    @Override
+    public void invokeOnEnterCallbacks() {
+        invokeCallbacks(onEnterCallbacks);
     }
 
     @Override
     public void invokeOnExitCallbacks() {
-        final List<Runnable> onExitCallbacks = this.onExitCallbacks;
-        if (onExitCallbacks != null) {
-            onExitCallbacks.forEach(Runnable::run);
+        invokeCallbacks(onExitCallbacks);
+    }
+
+    private void invokeCallbacks(List<Consumer<? super RequestContext>> callbacks) {
+        if (callbacks == null) {
+            return;
+        }
+
+        for (Consumer<? super RequestContext> callback : callbacks) {
+            callback.accept(this);
+        }
+    }
+
+    @Override
+    public void invokeOnChildCallbacks(RequestContext newCtx) {
+        final List<BiConsumer<? super RequestContext, ? super RequestContext>> callbacks = onChildCallbacks;
+        if (callbacks == null) {
+            return;
+        }
+
+        for (BiConsumer<? super RequestContext, ? super RequestContext> callback : callbacks) {
+            callback.accept(this, newCtx);
         }
     }
 }

@@ -35,5 +35,4 @@ public interface CircuitBreakerListener {
      * Invoked when the circuit breaker rejects a request.
      */
     void onRequestRejected(CircuitBreaker circuitBreaker) throws Exception;
-
 }

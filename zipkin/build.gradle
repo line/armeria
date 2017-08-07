@@ -1,8 +1,8 @@
 dependencies {
-    compile project(':core')
+    testCompile project(':thrift')
+}
 
+managedDependencies {
     // Zipkin
-    [ 'brave-core', 'brave-http' ].each {
-        compile "io.zipkin.brave:$it"
-    }
+    compile 'io.zipkin.brave:brave'
 }

@@ -73,7 +73,7 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
          * A {@link KeySelector} that returns remote method name as a key.
          */
         KeySelector<String> METHOD =
-                (ctx, req) -> req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method();
+                (ctx, req) -> req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method().name();
 
         /**
          * A {@link KeySelector} that returns a key consisted of remote host name and port number.

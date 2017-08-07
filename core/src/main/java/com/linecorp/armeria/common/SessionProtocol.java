@@ -16,58 +16,81 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Set;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Map;
+import java.util.Optional;
+
+import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.
  */
 public enum SessionProtocol {
     /**
-     * HTTP - cleartext, HTTP/2 preferred.
-     */
-    HTTP(false, "http", false, 80),
-    /**
      * HTTP - over TLS, HTTP/2 preferred.
      */
-    HTTPS(true, "https", false, 443),
+    HTTPS("https", true, false, 443),
+    /**
+     * HTTP - cleartext, HTTP/2 preferred.
+     */
+    HTTP("http", false, false, 80),
     /**
      * HTTP/1 - over TLS.
      */
-    H1(true, "h1", false, 443),
+    H1("h1", true, false, 443),
     /**
      * HTTP/1 - cleartext.
      */
-    H1C(false, "h1c", false, 80),
+    H1C("h1c", false, false, 80),
     /**
      * HTTP/2 - over TLS.
      */
-    H2(true, "h2", true, 443),
+    H2("h2", true, true, 443),
     /**
      * HTTP/2 - cleartext.
      */
-    H2C(false, "h2c", true, 80);
+    H2C("h2c", false, true, 80);
 
-    private static final Set<SessionProtocol> HTTP_PROTOCOLS = Collections.unmodifiableSet(
-            EnumSet.of(HTTP, HTTPS, H1, H1C, H2, H2C));
+    private static final Map<String, SessionProtocol> uriTextToProtocols;
 
-    /**
-     * Returns the set of all known HTTP session protocols. This method is useful when determining if a
-     * {@link SessionProtocol} is HTTP or not.
-     *
-     * <p>e.g. {@code if (SessionProtocol.ofHttp().contains(proto)) { ... }}
-     */
-    public static Set<SessionProtocol> ofHttp() {
-        return HTTP_PROTOCOLS;
+    static {
+        final ImmutableMap.Builder<String, SessionProtocol> builder = ImmutableMap.builder();
+        for (SessionProtocol e : values()) {
+            builder.put(e.uriText(), e);
+        }
+
+        uriTextToProtocols = builder.build();
     }
 
-    private final boolean useTls;
+    /**
+     * Returns the {@link SessionProtocol} with the specified {@link #uriText()}.
+     *
+     * @throws IllegalArgumentException if there's no such {@link SessionProtocol}
+     */
+    public static SessionProtocol of(String uriText) {
+        uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
+        final SessionProtocol value = uriTextToProtocols.get(uriText);
+        checkArgument(value != null, "unknown session protocol: ", uriText);
+        return value;
+    }
+
+    /**
+     * Finds the {@link SessionProtocol} with the specified {@link #uriText()}.
+     */
+    public static Optional<SessionProtocol> find(String uriText) {
+        uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
+        return Optional.ofNullable(uriTextToProtocols.get(uriText));
+    }
+
     private final String uriText;
+    private final boolean useTls;
     private final boolean isMultiplex;
     private final int defaultPort;
 
-    SessionProtocol(boolean useTls, String uriText, boolean isMultiplex, int defaultPort) {
+    SessionProtocol(String uriText, boolean useTls, boolean isMultiplex, int defaultPort) {
         this.useTls = useTls;
         this.uriText = uriText;
         this.isMultiplex = isMultiplex;
@@ -101,5 +124,10 @@ public enum SessionProtocol {
      */
     public int defaultPort() {
         return defaultPort;
+    }
+
+    @Override
+    public String toString() {
+        return uriText;
     }
 }

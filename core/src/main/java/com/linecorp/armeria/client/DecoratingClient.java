@@ -22,7 +22,9 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * Decorates a {@link Client}.
+ * Decorates a {@link Client}. Use {@link SimpleDecoratingClient} or
+ * {@link ClientBuilder#decorator(Class, Class, DecoratingClientFunction)} if your {@link Client} has the same
+ * {@link Request} and {@link Response} type with the {@link Client} being decorated.
  *
  * @param <T_I> the {@link Request} type of the {@link Client} being decorated
  * @param <T_O> the {@link Response} type of the {@link Client} being decorated
@@ -32,12 +34,12 @@ import com.linecorp.armeria.common.Response;
 public abstract class DecoratingClient<T_I extends Request, T_O extends Response,
                                        R_I extends Request, R_O extends Response> implements Client<R_I, R_O> {
 
-    private final Client<? super T_I, ? extends T_O> delegate;
+    private final Client<T_I, T_O> delegate;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected DecoratingClient(Client<? super T_I, ? extends T_O> delegate) {
+    protected DecoratingClient(Client<T_I, T_O> delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
@@ -45,7 +47,7 @@ public abstract class DecoratingClient<T_I extends Request, T_O extends Response
      * Returns the {@link Client} being decorated.
      */
     @SuppressWarnings("unchecked")
-    protected final <T extends Client<? super T_I, ? extends T_O>> T delegate() {
+    protected final <T extends Client<T_I, T_O>> T delegate() {
         return (T) delegate;
     }
 

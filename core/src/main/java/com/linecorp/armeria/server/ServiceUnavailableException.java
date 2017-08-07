@@ -16,29 +16,32 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link RuntimeException} that is raised when a requested invocation cannot be served.
  */
-public final class ServiceUnavailableException extends RuntimeException {
+public final class ServiceUnavailableException extends HttpResponseException {
 
     private static final long serialVersionUID = -9092895165959388396L;
-
 
     private static final ServiceUnavailableException INSTANCE =
             Exceptions.clearTrace(new ServiceUnavailableException());
 
     /**
      * Returns a {@link ServiceUnavailableException} which may be a singleton or a new instance, depending on
-     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static ServiceUnavailableException get() {
-        return Exceptions.isVerbose() ? new ServiceUnavailableException() : INSTANCE;
+        return Flags.verboseExceptions() ? new ServiceUnavailableException() : INSTANCE;
     }
 
     /**
      * Creates a new instance.
      */
-    private ServiceUnavailableException() {}
+    private ServiceUnavailableException() {
+        super(HttpStatus.SERVICE_UNAVAILABLE);
+    }
 }

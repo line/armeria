@@ -18,23 +18,73 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 final class RegexPathMapping extends AbstractPathMapping {
 
+    static final String PREFIX = "regex:";
+    static final int PREFIX_LEN = PREFIX.length();
+
+    private static final Pattern NAMED_GROUP_PATTERN = Pattern.compile("\\(\\?<([^>]+)>");
+
     private final Pattern regex;
+    private final Set<String> paramNames;
     private final String loggerName;
+    private final String metricName;
     private final String strVal;
 
     RegexPathMapping(Pattern regex) {
         this.regex = requireNonNull(regex, "regex");
+        paramNames = findParamNames(regex);
         loggerName = toLoggerName(regex);
-        strVal = "regex: " + regex.pattern();
+        metricName = '/' + PREFIX + regex.pattern();
+        strVal = PREFIX + regex.pattern();
+    }
+
+    private static Set<String> findParamNames(Pattern regex) {
+        final Matcher matcher = NAMED_GROUP_PATTERN.matcher(regex.pattern());
+        final ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+        int pos = 0;
+        while (matcher.find(pos)) {
+            builder.add(matcher.group(1));
+            pos = matcher.end();
+        }
+        return builder.build();
     }
 
     @Override
-    protected String doApply(String path) {
-        return regex.matcher(path).find() ? path : null;
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final Matcher matcher = regex.matcher(mappingCtx.path());
+        if (!matcher.find()) {
+            return PathMappingResult.empty();
+        }
+
+        ImmutableMap.Builder<String, String> builder = null;
+        for (String name : paramNames) {
+            final String value = matcher.group(name);
+            if (value == null) {
+                continue;
+            }
+
+            if (builder == null) {
+                builder = ImmutableMap.builder();
+            }
+            builder.put(name, value);
+        }
+
+        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(),
+                                    builder != null ? builder.build() : ImmutableMap.of());
+    }
+
+    @Override
+    public Set<String> paramNames() {
+        return paramNames;
     }
 
     @Override
@@ -60,7 +110,12 @@ final class RegexPathMapping extends AbstractPathMapping {
 
     @Override
     public String metricName() {
-        return strVal;
+        return metricName;
+    }
+
+    @VisibleForTesting
+    Pattern asRegex() {
+        return regex;
     }
 
     @Override

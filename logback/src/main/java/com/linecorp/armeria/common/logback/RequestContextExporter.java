@@ -28,6 +28,7 @@ import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_CONTENT_LE
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_DIRECTION;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_METHOD;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_PATH;
+import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_QUERY;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_RPC_METHOD;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.REQ_RPC_PARAMS;
 import static com.linecorp.armeria.common.logback.BuiltInProperty.RES_CONTENT_LENGTH;
@@ -52,14 +53,15 @@ import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.http.HttpHeaders;
-import com.linecorp.armeria.common.http.HttpRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.ResponseLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
@@ -107,38 +109,41 @@ final class RequestContextExporter {
     }
 
     void export(Map<String, String> out, RequestContext ctx,
-                @Nullable RequestLog req, @Nullable ResponseLog res) {
+                @Nullable RequestLog log) {
 
         // Built-ins
         if (builtIns.containsAddresses()) {
             exportAddresses(out, ctx);
         }
         if (builtIns.contains(SCHEME)) {
-            exportScheme(out, ctx, req);
+            exportScheme(out, ctx, log);
         }
         if (builtIns.contains(REQ_DIRECTION)) {
             exportDirection(out, ctx);
         }
         if (builtIns.contains(REQ_AUTHORITY)) {
-            exportAuthority(out, ctx, req);
+            exportAuthority(out, ctx, log);
         }
         if (builtIns.contains(REQ_PATH)) {
             exportPath(out, ctx);
+        }
+        if (builtIns.contains(REQ_QUERY)) {
+            exportQuery(out, ctx);
         }
         if (builtIns.contains(REQ_METHOD)) {
             exportMethod(out, ctx);
         }
         if (builtIns.contains(REQ_CONTENT_LENGTH)) {
-            exportRequestContentLength(out, req);
+            exportRequestContentLength(out, log);
         }
         if (builtIns.contains(RES_STATUS_CODE)) {
-            exportStatusCode(out, res);
+            exportStatusCode(out, log);
         }
         if (builtIns.contains(RES_CONTENT_LENGTH)) {
-            exportResponseContentLength(out, res);
+            exportResponseContentLength(out, log);
         }
         if (builtIns.contains(ELAPSED_NANOS)) {
-            exportElapsedNanos(out, req, res);
+            exportElapsedNanos(out, log);
         }
 
         // SSL
@@ -148,8 +153,8 @@ final class RequestContextExporter {
 
         // RPC
         if (builtIns.containsRpc()) {
-            exportRpcRequest(out, req);
-            exportRpcResponse(out, res);
+            exportRpcRequest(out, log);
+            exportRpcResponse(out, log);
         }
 
         // Attributes
@@ -159,10 +164,10 @@ final class RequestContextExporter {
 
         // HTTP headers
         if (httpReqHeaders != null) {
-            exportHttpRequestHeaders(out, ctx, req);
+            exportHttpRequestHeaders(out, ctx, log);
         }
         if (httpResHeaders != null) {
-            exportHttpResponseHeaders(out, ctx, res);
+            exportHttpResponseHeaders(out, log);
         }
     }
 
@@ -195,9 +200,9 @@ final class RequestContextExporter {
         }
     }
 
-    private static void exportScheme(Map<String, String> out, RequestContext ctx, @Nullable RequestLog req) {
-        if (req != null) {
-            out.put(SCHEME.mdcKey, req.scheme().uriText());
+    private static void exportScheme(Map<String, String> out, RequestContext ctx, @Nullable RequestLog log) {
+        if (log.isAvailable(RequestLogAvailability.SCHEME)) {
+            out.put(SCHEME.mdcKey, log.scheme().uriText());
         } else {
             out.put(SCHEME.mdcKey, "unknown+" + ctx.sessionProtocol().uriText());
         }
@@ -215,31 +220,38 @@ final class RequestContextExporter {
         out.put(REQ_DIRECTION.mdcKey, d);
     }
 
-    private static void exportAuthority(Map<String, String> out, RequestContext ctx, @Nullable RequestLog req) {
-        if (req != null) {
-            String authority = req.host();
+    private static void exportAuthority(Map<String, String> out, RequestContext ctx, @Nullable RequestLog log) {
+        final Set<RequestLogAvailability> availabilities = log.availabilities();
+        if (availabilities.contains(RequestLogAvailability.REQUEST_HEADERS)) {
+            final Object envelope = log.requestHeaders();
+            if (envelope instanceof HttpHeaders) {
+                final String authority = getAuthority(ctx, (HttpHeaders) envelope);
+                if (authority != null) {
+                    out.put(REQ_AUTHORITY.mdcKey, authority);
+                    return;
+                }
+            }
+        }
+
+        final Request origReq = ctx.request();
+        if (origReq instanceof HttpRequest) {
+            final String authority = getAuthority(ctx, ((HttpRequest) origReq).headers());
             if (authority != null) {
-                final Channel ch = req.channel();
+                out.put(REQ_AUTHORITY.mdcKey, authority);
+                return;
+            }
+        }
+
+        if (log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+            String authority = log.host();
+            if (authority != null) {
+                final Channel ch = log.channel();
                 final InetSocketAddress addr = (InetSocketAddress)
                         (ctx instanceof ServiceRequestContext ? ch.localAddress() : ch.remoteAddress());
                 final int port = addr.getPort();
 
                 if (ctx.sessionProtocol().defaultPort() != port) {
                     authority = authority + ':' + port;
-                }
-                out.put(REQ_AUTHORITY.mdcKey, authority);
-                return;
-            }
-        }
-
-        final Request origReq = ctx.request();
-        if (origReq instanceof HttpRequest) {
-            String authority = ((HttpRequest) origReq).authority();
-            if (authority != null) {
-                final Pattern portPattern = ctx.sessionProtocol().isTls() ? PORT_443 : PORT_80;
-                final Matcher m = portPattern.matcher(authority);
-                if (m.find()) {
-                    authority = authority.substring(0, m.start());
                 }
                 out.put(REQ_AUTHORITY.mdcKey, authority);
                 return;
@@ -275,36 +287,54 @@ final class RequestContextExporter {
         out.put(REQ_AUTHORITY.mdcKey, authority);
     }
 
+    private static String getAuthority(RequestContext ctx, HttpHeaders headers) {
+        String authority = headers.authority();
+        if (authority != null) {
+            final Pattern portPattern = ctx.sessionProtocol().isTls() ? PORT_443 : PORT_80;
+            final Matcher m = portPattern.matcher(authority);
+            if (m.find()) {
+                authority = authority.substring(0, m.start());
+            }
+            return authority;
+        }
+
+        return null;
+    }
+
     private static void exportPath(Map<String, String> out, RequestContext ctx) {
         out.put(REQ_PATH.mdcKey, ctx.path());
     }
 
+    private static void exportQuery(Map<String, String> out, RequestContext ctx) {
+        out.put(REQ_QUERY.mdcKey, ctx.query());
+    }
+
     private static void exportMethod(Map<String, String> out, RequestContext ctx) {
-        out.put(REQ_METHOD.mdcKey, ctx.method());
+        out.put(REQ_METHOD.mdcKey, ctx.method().name());
     }
 
-    private static void exportRequestContentLength(Map<String, String> out, @Nullable RequestLog req) {
-        if (req != null) {
-            out.put(REQ_CONTENT_LENGTH.mdcKey, String.valueOf(req.contentLength()));
+    private static void exportRequestContentLength(Map<String, String> out, @Nullable RequestLog log) {
+        if (log.isAvailable(RequestLogAvailability.REQUEST_END)) {
+            out.put(REQ_CONTENT_LENGTH.mdcKey, String.valueOf(log.requestLength()));
         }
     }
 
-    private static void exportStatusCode(Map<String, String> out, @Nullable ResponseLog res) {
-        if (res != null) {
-            out.put(RES_STATUS_CODE.mdcKey, String.valueOf(res.statusCode()));
+    private static void exportStatusCode(Map<String, String> out, @Nullable RequestLog log) {
+        if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+            final HttpStatus status = log.status();
+            out.put(RES_STATUS_CODE.mdcKey, status != null ? status.codeAsText() : "-1");
         }
     }
 
-    private static void exportResponseContentLength(Map<String, String> out, @Nullable ResponseLog res) {
-        if (res != null) {
-            out.put(RES_CONTENT_LENGTH.mdcKey, String.valueOf(res.contentLength()));
+    private static void exportResponseContentLength(Map<String, String> out, @Nullable RequestLog log) {
+        if (log.isAvailable(RequestLogAvailability.RESPONSE_END)) {
+            out.put(RES_CONTENT_LENGTH.mdcKey, String.valueOf(log.responseLength()));
         }
     }
 
-    private static void exportElapsedNanos(Map<String, String> out, @Nullable RequestLog req,
-                                           @Nullable ResponseLog res) {
-        if (req != null && res != null) {
-            out.put(ELAPSED_NANOS.mdcKey, String.valueOf(res.endTimeNanos() - req.startTimeNanos()));
+    private static void exportElapsedNanos(Map<String, String> out, @Nullable RequestLog log) {
+        if (log.isAvailable(RequestLogAvailability.COMPLETE)) {
+            out.put(ELAPSED_NANOS.mdcKey, String.valueOf(log.totalDurationNanos()));
         }
     }
 
@@ -332,9 +362,14 @@ final class RequestContextExporter {
         }
     }
 
-    private void exportRpcRequest(Map<String, String> out, @Nullable RequestLog req) {
-        if (req != null && req.hasAttr(RequestLog.RPC_REQUEST)) {
-            RpcRequest rpcReq = req.attr(RequestLog.RPC_REQUEST).get();
+    private void exportRpcRequest(Map<String, String> out, @Nullable RequestLog log) {
+        if (!log.isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+            return;
+        }
+
+        final Object requestContent = log.requestContent();
+        if (requestContent instanceof RpcRequest) {
+            final RpcRequest rpcReq = (RpcRequest) requestContent;
             if (builtIns.contains(REQ_RPC_METHOD)) {
                 out.put(REQ_RPC_METHOD.mdcKey, rpcReq.method());
             }
@@ -344,11 +379,22 @@ final class RequestContextExporter {
         }
     }
 
-    private void exportRpcResponse(Map<String, String> out, @Nullable ResponseLog res) {
-        if (res != null && res.hasAttr(ResponseLog.RPC_RESPONSE)) {
-            final RpcResponse rpcRes = res.attr(ResponseLog.RPC_RESPONSE).get();
-            if (builtIns.contains(RES_RPC_RESULT)) {
-                out.put(RES_RPC_RESULT.mdcKey, String.valueOf(rpcRes.toCompletableFuture().getNow(null)));
+    private void exportRpcResponse(Map<String, String> out, @Nullable RequestLog log) {
+        if (!log.isAvailable(RequestLogAvailability.RESPONSE_CONTENT)) {
+            return;
+        }
+
+        final Object responseContent = log.responseContent();
+        if (responseContent instanceof RpcResponse) {
+            final RpcResponse rpcRes = (RpcResponse) responseContent;
+            if (builtIns.contains(RES_RPC_RESULT) &&
+                !rpcRes.isCompletedExceptionally()) {
+                try {
+                    out.put(RES_RPC_RESULT.mdcKey, String.valueOf(rpcRes.get()));
+                } catch (Exception e) {
+                    // Should never reach here because RpcResponse must be completed.
+                    throw new Error(e);
+                }
             }
         }
     }
@@ -366,10 +412,15 @@ final class RequestContextExporter {
         }
     }
 
-    private void exportHttpRequestHeaders(Map<String, String> out, RequestContext ctx, RequestLog req) {
+    private void exportHttpRequestHeaders(Map<String, String> out, RequestContext ctx, RequestLog log) {
+        if (!log.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+            return;
+        }
+
+        final Object requestEnvelope = log.requestHeaders();
         final HttpHeaders headers;
-        if (req != null && req.hasAttr(RequestLog.HTTP_HEADERS)) {
-            headers = req.attr(RequestLog.HTTP_HEADERS).get();
+        if (requestEnvelope instanceof HttpHeaders) {
+            headers = (HttpHeaders) requestEnvelope;
         } else if (ctx.request() instanceof HttpRequest) {
             headers = ((HttpRequest) ctx.request()).headers();
         } else {
@@ -379,17 +430,15 @@ final class RequestContextExporter {
         exportHttpHeaders(out, headers, httpReqHeaders);
     }
 
-    private void exportHttpResponseHeaders(Map<String, String> out, RequestContext ctx, ResponseLog res) {
-        final HttpHeaders headers;
-        if (res != null && res.hasAttr(ResponseLog.HTTP_HEADERS)) {
-            headers = res.attr(ResponseLog.HTTP_HEADERS).get();
-        } else if (ctx.request() instanceof HttpRequest) {
-            headers = ((HttpRequest) ctx.request()).headers();
-        } else {
+    private void exportHttpResponseHeaders(Map<String, String> out, RequestLog log) {
+        if (!log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
             return;
         }
 
-        exportHttpHeaders(out, headers, httpResHeaders);
+        final Object responseEnvelope = log.responseHeaders();
+        if (responseEnvelope instanceof HttpHeaders) {
+            exportHttpHeaders(out, (HttpHeaders) responseEnvelope, httpResHeaders);
+        }
     }
 
     private static void exportHttpHeaders(Map<String, String> out, HttpHeaders headers,

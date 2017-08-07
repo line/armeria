@@ -1,0 +1,22 @@
+version: "{branch}.{build}"
+
+init:
+  - git config --global core.autocrlf true
+
+build:
+  verbosity: detailed
+
+build_script:
+  - gradlew.bat --no-daemon --stacktrace checkstyle test build
+
+cache:
+  - "%USERPROFILE%\\.gradle\\wrapper\\dists"
+  - "%USERPROFILE%\\.gradle\\caches\\jars-3"
+  - "%USERPROFILE%\\.gradle\\caches\\modules-2"
+
+environment:
+  JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+  GRADLE_OPTS: -Xmx1024m
+
+matrix:
+  fast_finish: true

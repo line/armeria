@@ -24,37 +24,44 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.common.util.NativeLibraries;
-import com.linecorp.armeria.server.http.HttpServerPipelineConfigurator;
+import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.internal.ChannelUtil;
+import com.linecorp.armeria.internal.ConnectionLimitingHandler;
+import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
-import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -72,21 +79,22 @@ public final class Server implements AutoCloseable {
     private final DomainNameMapping<SslContext> sslContexts;
 
     private final StateManager stateManager = new StateManager();
+    private final Set<Channel> serverChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<InetSocketAddress, ServerPort> activePorts = new ConcurrentHashMap<>();
     private final Map<InetSocketAddress, ServerPort> unmodifiableActivePorts =
             Collections.unmodifiableMap(activePorts);
 
     private final List<ServerListener> listeners = new CopyOnWriteArrayList<>();
 
+    private final ConnectionLimitingHandler connectionLimitingHandler;
+
     private volatile ServerPort primaryActivePort;
-    private volatile EventLoopGroup bossGroup;
-    private volatile EventLoopGroup workerGroup;
 
     /**
      * A handler that is shared by all ports and channels to be able to keep
      * track of all requests being processed by the server.
      */
-    private volatile GracefulShutdownHandler gracefulShutdownHandler;
+    private volatile GracefulShutdownSupport gracefulShutdownSupport = GracefulShutdownSupport.disabled();
 
     Server(ServerConfig config) {
         this.config = requireNonNull(config, "config");
@@ -120,6 +128,8 @@ public final class Server implements AutoCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+
+        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
     }
 
     /**
@@ -164,22 +174,22 @@ public final class Server implements AutoCloseable {
      * of this {@link Server} changes. This method is useful when you want to initialize/destroy the resources
      * associated with a {@link Service}:
      * <pre>{@code
-     * public class MyService extends SimpleService {
-     *     &#64;Override
-     *     public void serviceAdded(Server server) {
-     *         server.addListener(new ServerListenerAdapter() {
-     *             &#64;Override
-     *             public void serverStarting() {
-     *                 ... initialize ...
-     *             }
-     *
-     *             &#64;Override
-     *             public void serverStopped() {
-     *                 ... destroy ...
-     *             }
-     *         }
-     *     }
-     * }
+     * > public class MyService extends SimpleService {
+     * >     @Override
+     * >     public void serviceAdded(Server server) {
+     * >         server.addListener(new ServerListenerAdapter() {
+     * >             @Override
+     * >             public void serverStarting() {
+     * >                 ... initialize ...
+     * >             }
+     * >
+     * >             @Override
+     * >             public void serverStopped() {
+     * >                 ... destroy ...
+     * >             }
+     * >         }
+     * >     }
+     * > }
      * }</pre>
      */
     public void addListener(ServerListener listener) {
@@ -228,31 +238,14 @@ public final class Server implements AutoCloseable {
         }
 
         try {
-            // Initialize the event loop groups.
-            if (NativeLibraries.isEpollAvailable()) {
-                final ThreadFactory bossThreadFactory =
-                        new DefaultThreadFactory("armeria-server-boss-epoll", false);
-                final ThreadFactory workerThreadFactory =
-                        new DefaultThreadFactory("armeria-server-epoll", false);
-                bossGroup = new EpollEventLoopGroup(1, bossThreadFactory);
-                workerGroup = new EpollEventLoopGroup(config.numWorkers(), workerThreadFactory);
-            } else {
-                final ThreadFactory bossThreadFactory =
-                        new DefaultThreadFactory("armeria-server-boss-nio", false);
-                final ThreadFactory workerThreadFactory =
-                        new DefaultThreadFactory("armeria-server-nio", false);
-                bossGroup = new NioEventLoopGroup(1, bossThreadFactory);
-                workerGroup = new NioEventLoopGroup(config.numWorkers(), workerThreadFactory);
-            }
-
             // Initialize the server sockets asynchronously.
             final List<ServerPort> ports = config().ports();
             final AtomicInteger remainingPorts = new AtomicInteger(ports.size());
             if (config().gracefulShutdownQuietPeriod().isZero()) {
-                gracefulShutdownHandler = null;
+                gracefulShutdownSupport = GracefulShutdownSupport.disabled();
             } else {
-                gracefulShutdownHandler =
-                        GracefulShutdownHandler.create(config().gracefulShutdownQuietPeriod(),
+                gracefulShutdownSupport =
+                        GracefulShutdownSupport.create(config().gracefulShutdownQuietPeriod(),
                                                        config().blockingTaskExecutor());
             }
 
@@ -265,13 +258,16 @@ public final class Server implements AutoCloseable {
     }
 
     private ChannelFuture start(ServerPort port) {
-        ServerBootstrap b = new ServerBootstrap();
+        final ServerBootstrap b = new ServerBootstrap();
 
-        b.group(bossGroup, workerGroup);
-        b.channel(NativeLibraries.isEpollAvailable() ? EpollServerSocketChannel.class
-                                                     : NioServerSocketChannel.class);
-        b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
-                                                          Optional.ofNullable(gracefulShutdownHandler)));
+        b.group(EventLoopGroups.newEventLoopGroup(1, r -> {
+            final FastThreadLocalThread thread = new FastThreadLocalThread(r, bossThreadName(port));
+            thread.setDaemon(false);
+            return thread;
+        }), config.workerGroup());
+        b.channel(TransportType.detectTransportType().serverChannelClass());
+        b.handler(connectionLimitingHandler);
+        b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts, gracefulShutdownSupport));
 
         return b.bind(port.localAddress());
     }
@@ -331,67 +327,95 @@ public final class Server implements AutoCloseable {
      * tasks do not block as this would block all requests in the server on that {@link EventLoop}.
      */
     public EventLoop nextEventLoop() {
-        if (workerGroup == null) {
-            throw new IllegalStateException("nextEventLoop must be called after the server is started.");
-        }
-        return workerGroup.next();
+        return config().workerGroup().next();
     }
 
     private void stop0(CompletableFuture<Void> future) {
         assert future != null;
 
-        final EventLoopGroup bossGroup = this.bossGroup;
-        final GracefulShutdownHandler gracefulShutdownHandler = this.gracefulShutdownHandler;
-
-        if (gracefulShutdownHandler == null) {
-            stop1(future, bossGroup);
+        final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
+        if (gracefulShutdownSupport.completedQuietPeriod()) {
+            stop1(future, null);
             return;
         }
 
-        // Check every 100 ms for the server to have completed processing
-        // requests.
-        bossGroup.scheduleAtFixedRate(() -> {
-            if (gracefulShutdownHandler.completedQuietPeriod()) {
-                stop1(future, bossGroup);
+        // Create a single-use thread dedicated for monitoring graceful shutdown status.
+        final ScheduledExecutorService gracefulShutdownExecutor = Executors.newSingleThreadScheduledExecutor(
+                r -> new Thread(r, "armeria-shutdown-0x" + Integer.toHexString(hashCode())));
+
+        // Check every 100 ms for the server to have completed processing requests.
+        final ScheduledFuture<?> quietPeriodFuture = gracefulShutdownExecutor.scheduleAtFixedRate(() -> {
+            if (gracefulShutdownSupport.completedQuietPeriod()) {
+                stop1(future, gracefulShutdownExecutor);
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
 
         // Make sure the event loop stops after the timeout, regardless of what
-        // the GracefulShutdownHandler says.
-        bossGroup.schedule(() -> stop1(future, bossGroup),
-                           config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
+        // the GracefulShutdownSupport says.
+        try {
+            gracefulShutdownExecutor.schedule(() -> {
+                quietPeriodFuture.cancel(false);
+                stop1(future, gracefulShutdownExecutor);
+            }, config.gracefulShutdownTimeout().toMillis(), TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException e) {
+            // Can be rejected if quiet period is complete already.
+        }
     }
 
-    private void stop1(CompletableFuture<Void> future, EventLoopGroup bossGroup) {
-        // FIXME(trustin): Shutdown and terminate the blockingTaskExecutor.
-        //                 Could be fixed while fixing https://github.com/line/armeria/issues/46
-
-        final Future<?> bossShutdownFuture;
-        if (bossGroup != null) {
-            bossShutdownFuture = bossGroup.shutdownGracefully();
-            this.bossGroup = null;
-        } else {
-            bossShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
+    /**
+     * Closes all channels and terminates all event loops.
+     * <ol>
+     *   <li>Closes all server channels so that we don't accept any more incoming connections.</li>
+     *   <li>Closes all accepted channels.</li>
+     *   <li>Shuts down the worker group if necessary.</li>
+     *   <li>Shuts down the boss groups.</li>
+     * </ol>
+     * Note that we terminate the boss groups lastly so that the JVM does not terminate itself
+     * even if other threads are daemon, because boss group threads are always non-daemon.
+     */
+    private void stop1(CompletableFuture<Void> future, @Nullable ExecutorService gracefulShutdownExecutor) {
+        // Graceful shutdown is over. Terminate the temporary executor we created at stop0(future).
+        if (gracefulShutdownExecutor != null) {
+            gracefulShutdownExecutor.shutdownNow();
         }
 
-        bossShutdownFuture.addListener(f1 -> {
-            // All server ports have been unbound.
+        // Close all server sockets.
+        Set<Channel> serverChannels = ImmutableSet.copyOf(this.serverChannels);
+        ChannelUtil.close(serverChannels).whenComplete((unused1, unused2) -> {
+            // All server ports have been closed.
             primaryActivePort = null;
             activePorts.clear();
 
-            // Shut down the workers.
-            final EventLoopGroup workerGroup = this.workerGroup;
-            final Future<?> workerShutdownFuture;
-            if (workerGroup != null) {
-                workerShutdownFuture = workerGroup.shutdownGracefully();
-                this.workerGroup = null;
-            } else {
-                workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
-            }
+            // Close all accepted sockets.
+            ChannelUtil.close(connectionLimitingHandler.children()).whenComplete((unused3, unused4) -> {
+                // Shut down the worker group if necessary.
+                final Future<?> workerShutdownFuture;
+                if (config.shutdownWorkerGroupOnStop()) {
+                    workerShutdownFuture = config.workerGroup().shutdownGracefully();
+                } else {
+                    workerShutdownFuture = ImmediateEventExecutor.INSTANCE.newSucceededFuture(null);
+                }
 
-            workerShutdownFuture.addListener(f2 -> {
-                stateManager.enter(State.STOPPED);
-                completeFuture(future);
+                workerShutdownFuture.addListener(unused5 -> {
+                    // Shut down all boss groups and wait until they are terminated.
+                    final AtomicInteger remainingBossGroups = new AtomicInteger(serverChannels.size());
+                    serverChannels.forEach(ch -> {
+                        final EventLoopGroup bossGroup = ch.eventLoop().parent();
+                        bossGroup.shutdownGracefully();
+                        bossGroup.terminationFuture().addListener(unused6 -> {
+                            if (remainingBossGroups.decrementAndGet() != 0) {
+                                // There are more boss groups to terminate.
+                                return;
+                            }
+
+                            // Boss groups have been terminated completely.
+                            // TODO(trustin): Add shutdownBlockingTaskExecutorOnStop
+                            // TODO(trustin): Count the pending blocking tasks and wait until it becomes zero.
+                            stateManager.enter(State.STOPPED);
+                            completeFuture(future);
+                        });
+                    });
+                });
             });
         });
     }
@@ -418,6 +442,13 @@ public final class Server implements AutoCloseable {
         if (interrupted) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    /**
+     * Returns the number of open connections on this {@link Server}.
+     */
+    public int numConnections() {
+        return connectionLimitingHandler.numConnections();
     }
 
     enum StateType {
@@ -457,8 +488,8 @@ public final class Server implements AutoCloseable {
             assert state.type != StateType.STARTING; // must be set via setStarting()
             assert state.type != StateType.STOPPING; // must be set via setStopping()
 
-            ref.set(state);
-            notifyState(state);
+            final State oldState = ref.getAndSet(state);
+            notifyState(oldState, state);
         }
 
         boolean enterStarting(CompletableFuture<Void> future, Consumer<CompletableFuture<Void>> rollbackTask) {
@@ -483,7 +514,7 @@ public final class Server implements AutoCloseable {
                 }
             })).exceptionally(CompletionActions::log);
 
-            if (!notifyState(startingState)) {
+            if (!notifyState(State.STOPPED, startingState)) {
                 completeFutureExceptionally(
                         future,
                         new IllegalStateException("failed to notify all server listeners"));
@@ -495,53 +526,59 @@ public final class Server implements AutoCloseable {
 
         CompletableFuture<Void> enterStopping(CompletableFuture<Void> future) {
             final State update = new State(StateType.STOPPING, future);
-            ref.set(update);
+            final State oldState = ref.getAndSet(update);
 
-            notifyState(update);
+            notifyState(oldState, update);
             return future;
         }
 
         boolean enterStopping(State expect, CompletableFuture<Void> future) {
             final State update = new State(StateType.STOPPING, future);
+            final State oldState;
             if (expect != null) {
                 if (!ref.compareAndSet(expect, update)) {
                     return false;
                 }
+                oldState = expect;
             } else {
-                ref.set(update);
+                oldState = ref.getAndSet(update);
             }
 
-            notifyState(update);
+            notifyState(oldState, update);
             return true;
         }
 
-        private boolean notifyState(State state) {
-            final AtomicBoolean success = new AtomicBoolean(true);
-            listeners.forEach(l -> {
+        private boolean notifyState(State oldState, State state) {
+            if (oldState.type == state.type) {
+                return true;
+            }
+
+            boolean success = true;
+            for (ServerListener l : listeners) {
                 try {
                     switch (state.type) {
-                    case STARTING:
-                        l.serverStarting(Server.this);
-                        break;
-                    case STARTED:
-                        l.serverStarted(Server.this);
-                        break;
-                    case STOPPING:
-                        l.serverStopping(Server.this);
-                        break;
-                    case STOPPED:
-                        l.serverStopped(Server.this);
-                        break;
-                    default:
-                        throw new Error("unknown state type " + state.type);
+                        case STARTING:
+                            l.serverStarting(Server.this);
+                            break;
+                        case STARTED:
+                            l.serverStarted(Server.this);
+                            break;
+                        case STOPPING:
+                            l.serverStopping(Server.this);
+                            break;
+                        case STOPPED:
+                            l.serverStopped(Server.this);
+                            break;
+                        default:
+                            throw new Error("unknown state type " + state.type);
                     }
                 } catch (Throwable t) {
-                    success.set(false);
+                    success = false;
                     logger.warn("Failed to notify a server listener: {}", l, t);
                 }
-            });
+            }
 
-            return success.get();
+            return success;
         }
 
         @Override
@@ -566,14 +603,25 @@ public final class Server implements AutoCloseable {
 
         @Override
         public void operationComplete(ChannelFuture f) throws Exception {
+            final Channel ch = f.channel();
+            assert ch.eventLoop().inEventLoop();
+
             if (startFuture.isDone()) {
                 return;
             }
 
             if (f.isSuccess()) {
-                InetSocketAddress localAddress = (InetSocketAddress) f.channel().localAddress();
-                ServerPort actualPort = new ServerPort(localAddress, port.protocol());
+                serverChannels.add(ch);
+                ch.closeFuture()
+                  .addListener((ChannelFutureListener) future -> serverChannels.remove(future.channel()));
 
+                final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
+                final ServerPort actualPort = new ServerPort(localAddress, port.protocol());
+
+                // Update the boss thread so its name contains the actual port.
+                Thread.currentThread().setName(bossThreadName(actualPort));
+
+                // Update the map of active ports.
                 activePorts.put(localAddress, actualPort);
 
                 // The port that has been activated first becomes the primary port.
@@ -588,6 +636,16 @@ public final class Server implements AutoCloseable {
                 completeFutureExceptionally(startFuture, f.cause());
             }
         }
+    }
+
+    private static String bossThreadName(ServerPort port) {
+        final InetSocketAddress localAddr = port.localAddress();
+        final String localHostName =
+                localAddr.getAddress().isAnyLocalAddress() ? "*" : localAddr.getHostString();
+
+        // e.g. 'armeria-boss-http-*:8080'
+        //      'armeria-boss-http-127.0.0.1:8443'
+        return "armeria-boss-" + port.protocol().uriText() + '-' + localHostName + ':' + localAddr.getPort();
     }
 
     private static void completeFuture(CompletableFuture<Void> future) {

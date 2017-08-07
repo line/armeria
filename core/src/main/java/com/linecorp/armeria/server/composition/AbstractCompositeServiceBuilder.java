@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.Service;
  * A skeletal builder implementation for {@link AbstractCompositeService} and its subclasses.
  * Extend this class to implement your own {@link Service} builder. e.g.
  * <pre>{@code
- * public class MyServiceBuilder extends AbstractCompositeServiceBuilder&lt;MyServiceBuilder&gt; {
+ * public class MyServiceBuilder extends AbstractCompositeServiceBuilder<MyServiceBuilder> {
  *
  *     private int propertyA;
  *     private String propertyB;
@@ -57,7 +57,7 @@ import com.linecorp.armeria.server.Service;
  * }
  *
  * public class MyService extends AbstractCompositeService {
- *     MyService(Iterable&lt;CompositeServiceEntry&gt; services) {
+ *     MyService(Iterable<CompositeServiceEntry> services) {
  *         super(services);
  *         ...
  *     }
@@ -73,8 +73,8 @@ import com.linecorp.armeria.server.Service;
 public abstract class AbstractCompositeServiceBuilder<T extends AbstractCompositeServiceBuilder<T, I, O>,
                                                       I extends Request, O extends Response> {
 
-    private final List<CompositeServiceEntry<? super I, ? extends O>> services = new ArrayList<>();
-    private final List<CompositeServiceEntry<? super I, ? extends O>> unmodifiableServices =
+    private final List<CompositeServiceEntry<I, O>> services = new ArrayList<>();
+    private final List<CompositeServiceEntry<I, O>> unmodifiableServices =
             Collections.unmodifiableList(services);
 
     /**
@@ -91,43 +91,60 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
     }
 
     /**
-     * Returns the list of the {@link CompositeServiceEntry}s added via {@link #serviceAt(String, Service)},
+     * Returns the list of the {@link CompositeServiceEntry}s added via {@link #service(String, Service)},
      * {@link #serviceUnder(String, Service)}, {@link #service(PathMapping, Service)} and
      * {@link #service(CompositeServiceEntry)}.
      */
-    protected final List<CompositeServiceEntry<? super I, ? extends O>> services() {
+    protected final List<CompositeServiceEntry<I, O>> services() {
         return unmodifiableServices;
     }
 
     /**
-     * Binds the specified {@link Service} at the specified exact path.
+     * @deprecated Use {@link #service(String, Service)} instead.
      */
-    protected T serviceAt(String exactPath, Service<? super I, ? extends O> service) {
-        return service(CompositeServiceEntry.ofExact(exactPath, service));
+    @Deprecated
+    protected T serviceAt(String pathPattern, Service<I, O> service) {
+        return service(pathPattern, service);
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    protected T serviceUnder(String pathPrefix, Service<? super I, ? extends O> service) {
+    protected T serviceUnder(String pathPrefix, Service<I, O> service) {
         return service(CompositeServiceEntry.ofPrefix(pathPrefix, service));
+    }
+
+    /**
+     * Binds the specified {@link Service} at the specified path pattern. e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     *   <li>{@code exact:/foo/bar} (exact match)</li>
+     *   <li>{@code prefix:/files} (prefix match)</li>
+     *   <li><code>glob:/~&#42;/downloads/**</code> (glob pattern)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} (regular expression)</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified path pattern is invalid
+     */
+    protected T service(String pathPattern, Service<I, O> service) {
+        return service(CompositeServiceEntry.of(pathPattern, service));
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    protected T service(PathMapping pathMapping, Service<? super I, ? extends O> service) {
+    protected T service(PathMapping pathMapping, Service<I, O> service) {
         return service(CompositeServiceEntry.of(pathMapping, service));
     }
 
     /**
      * Binds the specified {@link CompositeServiceEntry}.
      */
-    protected T service(CompositeServiceEntry<? super I, ? extends O> entry) {
+    protected T service(CompositeServiceEntry<I, O> entry) {
         requireNonNull(entry, "entry");
-        @SuppressWarnings("unchecked")
-        CompositeServiceEntry<I, O> cast = (CompositeServiceEntry<I, O>) entry;
-        services.add(cast);
+        services.add(entry);
         return self();
     }
 

@@ -33,25 +33,31 @@ public final class SimpleCompositeServiceBuilder<I extends Request, O extends Re
 
     @Override
     public SimpleCompositeServiceBuilder<I, O> serviceAt(
-            String exactPath, Service<? super I, ? extends O> service) {
-        return super.serviceAt(exactPath, service);
+            String pathPattern, Service<I, O> service) {
+        return super.serviceAt(pathPattern, service);
     }
 
     @Override
     public SimpleCompositeServiceBuilder<I, O> serviceUnder(
-            String pathPrefix, Service<? super I, ? extends O>  service) {
+            String pathPrefix, Service<I, O>  service) {
         return super.serviceUnder(pathPrefix, service);
     }
 
     @Override
     public SimpleCompositeServiceBuilder<I, O> service(
-            PathMapping pathMapping, Service<? super I, ? extends O>  service) {
+            String pathPattern, Service<I, O> service) {
+        return super.service(pathPattern, service);
+    }
+
+    @Override
+    public SimpleCompositeServiceBuilder<I, O> service(
+            PathMapping pathMapping, Service<I, O>  service) {
         return super.service(pathMapping, service);
     }
 
     /**
-     * Creates a new {@link SimpleCompositeService} with the {@link Service}s added by the {@code service*()}
-     * methods.
+     * Returns a newly-created {@link SimpleCompositeService} based on the {@link Service}s adde to this
+     * builder.
      */
     public SimpleCompositeService<I, O> build() {
         return new SimpleCompositeService<>(services());

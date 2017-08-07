@@ -16,121 +16,237 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.net.MediaType.create;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.MediaType.create;
+import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.google.common.net.MediaType;
+import com.google.common.base.Ascii;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimap;
 
 /**
  * Serialization format of a remote procedure call and its reply.
  */
-public enum SerializationFormat {
+public final class SerializationFormat implements Comparable<SerializationFormat> {
+
+    private static final BiMap<String, SerializationFormat> uriTextToFormats;
+    private static final Set<SerializationFormat> values;
 
     /**
      * No serialization format. Used when no serialization/deserialization is desired.
      */
-    NONE("none", create("application", "x-none")),
+    public static final SerializationFormat NONE;
 
     /**
      * Unknown serialization format. Used when some serialization format is desired but the server
-     * failed to understand/recognize it.
+     * failed to understand or recognize it.
      */
-    UNKNOWN("unknown", create("application", "x-unknown")),
+    public static final SerializationFormat UNKNOWN;
 
     /**
-     * Thrift TBinary serialization format.
+     * @deprecated Use {@code ThriftSerializationFormats.BINARY}. Note that the value of this field will be
+     *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
-    THRIFT_BINARY("tbinary", create("application", "x-thrift").withParameter("protocol", "TBINARY")),
+    @Deprecated
+    public static final SerializationFormat THRIFT_BINARY;
 
     /**
-     * Thrift TCompact serialization format.
+     * @deprecated Use {@code ThriftSerializationFormats.COMPACT}. Note that the value of this field will be
+     *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
-    THRIFT_COMPACT("tcompact", create("application", "x-thrift").withParameter("protocol", "TCOMPACT")),
+    @Deprecated
+    public static final SerializationFormat THRIFT_COMPACT;
 
     /**
-     * Thrift TJSON serialization format.
+     * @deprecated Use {@code ThriftSerializationFormats.JSON}. Note that the value of this field will be
+     *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
-    THRIFT_JSON("tjson", create("application", "x-thrift").withParameter("protocol", "TJSON")),
+    @Deprecated
+    public static final SerializationFormat THRIFT_JSON;
 
     /**
-     * Thrift TText serialization format. This format is not optimized for performance or backwards
-     * compatibility and should only be used in non-production use cases like debugging.
+     * @deprecated Use {@code ThriftSerializationFormats.TEXT}. Note that the value of this field will be
+     *             {@code null} if {@code armeria-thrift} module is not loaded.
      */
-    THRIFT_TEXT("ttext", create("application", "x-thrift").withParameter("protocol", "TTEXT"));
+    @Deprecated
+    public static final SerializationFormat THRIFT_TEXT;
 
-    private static final Set<SerializationFormat> THRIFT_FORMATS = Collections.unmodifiableSet(
-            EnumSet.of(THRIFT_BINARY, THRIFT_COMPACT, THRIFT_JSON, THRIFT_TEXT));
-
-    private static final Map<String, Optional<SerializationFormat>> PROTOCOL_TO_THRIFT_FORMATS;
+    private static final Set<SerializationFormat> THRIFT_FORMATS;
 
     static {
-        Map<String, Optional<SerializationFormat>> protocolToThriftFormats = new HashMap<>();
-        for (SerializationFormat f : THRIFT_FORMATS) {
-            protocolToThriftFormats.put(f.uriText(), Optional.of(f));
+        BiMap<String, SerializationFormat> mutableUriTextToFormats = HashBiMap.create();
+        Multimap<MediaType, SerializationFormat> mutableSimplifiedMediaTypeToFormats = HashMultimap.create();
+
+        // Register the core formats first.
+        NONE = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
+                        new SerializationFormatProvider.Entry("none", create("application", "x-none")));
+        UNKNOWN = register(mutableUriTextToFormats, mutableSimplifiedMediaTypeToFormats,
+                           new SerializationFormatProvider.Entry(
+                                   "unknown", create("application", "x-unknown")));
+
+        // Load all serialization formats from the providers.
+        ServiceLoader.load(SerializationFormatProvider.class,
+                           SerializationFormatProvider.class.getClassLoader())
+                     .forEach(p -> p.entries().forEach(e -> register(mutableUriTextToFormats,
+                                                                     mutableSimplifiedMediaTypeToFormats, e)));
+
+        uriTextToFormats = ImmutableBiMap.copyOf(mutableUriTextToFormats);
+        values = uriTextToFormats.values();
+
+        // Backward compatibility stuff
+        SerializationFormat tbinary = null;
+        SerializationFormat tcompact = null;
+        SerializationFormat tjson = null;
+        SerializationFormat ttext = null;
+        Set<SerializationFormat> thriftFormats = null;
+        try {
+            tbinary = of("tbinary");
+            tcompact = of("tcompact");
+            tjson = of("tjson");
+            ttext = of("ttext");
+            thriftFormats = ImmutableSet.of(tbinary, tcompact, tjson, ttext);
+        } catch (IllegalArgumentException e) {
+            // ThriftSerializationFormatProvider is not loaded.
         }
-        PROTOCOL_TO_THRIFT_FORMATS = Collections.unmodifiableMap(protocolToThriftFormats);
+
+        THRIFT_BINARY = tbinary;
+        THRIFT_COMPACT = tcompact;
+        THRIFT_JSON = tjson;
+        THRIFT_TEXT = ttext;
+        THRIFT_FORMATS = thriftFormats;
+    }
+
+    private static SerializationFormat register(
+            BiMap<String, SerializationFormat> uriTextToFormats,
+            Multimap<MediaType, SerializationFormat> simplifiedMediaTypeToFormats,
+            SerializationFormatProvider.Entry entry) {
+
+        checkState(!uriTextToFormats.containsKey(entry.uriText),
+                   "serialization format registered already: ", entry.uriText);
+
+        final SerializationFormat value = new SerializationFormat(
+                entry.uriText, entry.primaryMediaType, entry.mediaTypes);
+        for (MediaType type : entry.mediaTypes) {
+            checkMediaType(simplifiedMediaTypeToFormats, type);
+        }
+
+        uriTextToFormats.put(entry.uriText, value);
+        for (MediaType type : entry.mediaTypes) {
+            simplifiedMediaTypeToFormats.put(type.withoutParameters(), value);
+        }
+
+        return value;
     }
 
     /**
-     * Returns the set of all known Thrift serialization formats. This method is useful when determining if a
-     * {@link SerializationFormat} is Thrift or not.
-     * e.g. {@code if (SerializationFormat.ofThrift().contains(serFmt)) { ... }}
+     * @deprecated Use {@code ThriftSerializationFormats.values()}.
+     *
+     * @throws IllegalStateException if {@code armeria-thrift} module is not loaded
      */
+    @Deprecated
     public static Set<SerializationFormat> ofThrift() {
+        if (THRIFT_FORMATS == null) {
+            throw new IllegalStateException("Thrift support not available");
+        }
+
         return THRIFT_FORMATS;
     }
 
     /**
-     * Returns the serialization format corresponding to the passed in {@code mediaType}, or
-     * {@link Optional#empty} if the media type is not recognized. {@code null} is treated as an unknown
-     * mimetype.
+     * Makes sure the specified {@link MediaType} or its compatible one is registered already.
      */
-    public static Optional<SerializationFormat> fromMediaType(@Nullable String mediaType) {
-        if (mediaType == null || mediaType.isEmpty()) {
+    private static void checkMediaType(Multimap<MediaType, SerializationFormat> simplifiedMediaTypeToFormats,
+                                       MediaType mediaType) {
+        final MediaType simplifiedMediaType = mediaType.withoutParameters();
+        for (SerializationFormat format : simplifiedMediaTypeToFormats.get(simplifiedMediaType)) {
+            for (MediaType registeredMediaType : format.mediaTypes()) {
+                checkState(!registeredMediaType.is(mediaType) && !mediaType.is(registeredMediaType),
+                           "media type registered already: ", mediaType);
+            }
+        }
+    }
+
+    /**
+     * Returns all available {@link SessionProtocol}s.
+     */
+    public static Set<SerializationFormat> values() {
+        return values;
+    }
+
+    /**
+     * Returns the {@link SerializationFormat} with the specified {@link #uriText()}.
+     *
+     * @throws IllegalArgumentException if there's no such {@link SerializationFormat}
+     */
+    public static SerializationFormat of(String uriText) {
+        uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
+        final SerializationFormat value = uriTextToFormats.get(uriText);
+        checkArgument(value != null, "unknown serialization format: ", uriText);
+        return value;
+    }
+
+    /**
+     * Finds the {@link SerializationFormat} with the specified {@link #uriText()}.
+     */
+    public static Optional<SerializationFormat> find(String uriText) {
+        uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
+        return Optional.ofNullable(uriTextToFormats.get(uriText));
+    }
+
+    /**
+     * Finds the {@link SerializationFormat} which is accepted by any of the specified media ranges.
+     */
+    public static Optional<SerializationFormat> find(MediaType... ranges) {
+        requireNonNull(ranges, "ranges");
+        if (ranges.length == 0) {
             return Optional.empty();
         }
 
-        final int semicolonIdx = mediaType.indexOf(';');
-        final String paramPart;
-        if (semicolonIdx >= 0) {
-            paramPart = mediaType.substring(semicolonIdx).toLowerCase(Locale.US);
-            mediaType = mediaType.substring(0, semicolonIdx).toLowerCase(Locale.US).trim();
-        } else {
-            paramPart = null;
-            mediaType = mediaType.toLowerCase(Locale.US).trim();
-        }
-
-        if ("application/x-thrift".equals(mediaType)) {
-            return fromThriftMediaType(paramPart);
-        }
-
-        if (NONE.mediaType().toString().equals(mediaType)) {
-            return Optional.of(NONE);
+        for (SerializationFormat f : values()) {
+            if (f.isAccepted(ranges)) {
+                return Optional.of(f);
+            }
         }
 
         return Optional.empty();
     }
 
-    private static Optional<SerializationFormat> fromThriftMediaType(String params) {
-        final String protocol = MimeTypeParams.find(params, "protocol");
-        return PROTOCOL_TO_THRIFT_FORMATS.getOrDefault(protocol, Optional.empty());
+    /**
+     * @deprecated Use {@link #find(MediaType...)}.
+     */
+    @Deprecated
+    public static Optional<SerializationFormat> fromMediaType(@Nullable String mediaType) {
+        if (mediaType == null) {
+            return Optional.empty();
+        }
+
+        try {
+            return find(MediaType.parse(mediaType));
+        } catch (IllegalArgumentException e) {
+            // Malformed media type
+            return Optional.empty();
+        }
     }
 
     private final String uriText;
-    private final MediaType mediaType;
+    private final MediaType primaryMediaType;
+    private final MediaTypeSet mediaTypes;
 
-    SerializationFormat(String uriText, MediaType mediaType) {
+    private SerializationFormat(String uriText, MediaType primaryMediaType, MediaTypeSet mediaTypes) {
         this.uriText = uriText;
-        this.mediaType = mediaType;
+        this.primaryMediaType = primaryMediaType;
+        this.mediaTypes = mediaTypes;
     }
 
     /**
@@ -141,9 +257,45 @@ public enum SerializationFormat {
     }
 
     /**
-     * Returns the {@link MediaType} of this format.
+     * Returns the primary {@link MediaType} of this format.
      */
     public MediaType mediaType() {
-        return mediaType;
+        return primaryMediaType;
+    }
+
+    /**
+     * Returns the media types accepted by this format.
+     */
+    public MediaTypeSet mediaTypes() {
+        return mediaTypes;
+    }
+
+    /**
+     * Returns whether any of the specified media ranges is accepted by any of the {@link #mediaTypes()}
+     * defined by this format.
+     */
+    public boolean isAccepted(MediaType... ranges) {
+        requireNonNull(ranges, "ranges");
+        return mediaTypes.match(ranges).isPresent();
+    }
+
+    @Override
+    public int hashCode() {
+        return System.identityHashCode(this);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return this == obj;
+    }
+
+    @Override
+    public int compareTo(SerializationFormat o) {
+        return uriText.compareTo(o.uriText);
+    }
+
+    @Override
+    public String toString() {
+        return uriText;
     }
 }

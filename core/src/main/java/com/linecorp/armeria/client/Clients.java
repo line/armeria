@@ -20,15 +20,18 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.util.Optional;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.AsciiString;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
+ * If you are creating an {@link HttpClient}, it is recommended to use the factory methods in
+ * {@link HttpClient}.
  */
 public final class Clients {
 
@@ -197,7 +200,7 @@ public final class Clients {
      * <pre>{@code
      * HttpClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
      *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
-     *     builder.decorator(...);   // Add a decorator.
+     *     builder.decorator(...);  // Add a decorator.
      *     builder.httpHeader(...); // Add an HTTP header.
      *     return builder.build();
      * });
@@ -246,15 +249,20 @@ public final class Clients {
             }
         }
 
+        Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        if (params.isPresent()) {
+            return params.get();
+        }
+
         throw new IllegalArgumentException("derivation not supported by: " + client.getClass().getName());
     }
 
     /**
      * Sets the specified HTTP header in a thread-local variable so that the header is sent by the client call
-     * made from the current thread. Use the `try-resources-finally` block with the returned
+     * made from the current thread. Use the `try-with-resources` block with the returned
      * {@link SafeCloseable} to unset the thread-local variable automatically:
      * <pre>{@code
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      *
      * try (SafeCloseable ignored = withHttpHeader(AUTHORIZATION, myCredential)) {
      *     client.executeSomething(..);
@@ -262,8 +270,8 @@ public final class Clients {
      * }</pre>
      * You can also nest the header manipulation:
      * <pre>{@code
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
      * try (SafeCloseable ignored = withHttpHeader(USER_AGENT, myAgent)) {
      *     for (String secret : secrets) {
@@ -285,11 +293,11 @@ public final class Clients {
 
     /**
      * Sets the specified HTTP header manipulating function in a thread-local variable so that the manipulated
-     * headers are sent by the client call made from the current thread. Use the `try-resources-finally` block
+     * headers are sent by the client call made from the current thread. Use the `try-with-resources` block
      * with the returned {@link SafeCloseable} to unset the thread-local variable automatically:
      * <pre>{@code
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
      * try (SafeCloseable ignored = withHttpHeaders(headers -> {
      *     headers.set(HttpHeaders.AUTHORIZATION, myCredential)
@@ -300,8 +308,8 @@ public final class Clients {
      * }</pre>
      * You can also nest the header manipulation:
      * <pre>{@code
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.AUTHORIZATION;
-     * import static com.linecorp.armeria.common.http.HttpHeaderNames.USER_AGENT;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
      * try (SafeCloseable ignored = withHttpHeaders(h -> h.set(USER_AGENT, myAgent)) {
      *     for (String secret : secrets) {
@@ -320,7 +328,6 @@ public final class Clients {
 
         final Function<HttpHeaders, HttpHeaders> oldManipulator =
                 UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.get();
-
 
         if (oldManipulator != null) {
             UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.set(oldManipulator.andThen(headerManipulator));

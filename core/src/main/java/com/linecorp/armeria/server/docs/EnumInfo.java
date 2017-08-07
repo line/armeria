@@ -18,64 +18,54 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
-import org.apache.thrift.meta_data.EnumMetaData;
-import org.apache.thrift.protocol.TType;
+import javax.annotation.Nullable;
 
-final class EnumInfo extends TypeInfo implements ClassInfo {
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
-    static EnumInfo of(EnumMetaData enumMetaData) {
-        return of(enumMetaData, Collections.emptyMap());
-    }
-
-    static EnumInfo of(EnumMetaData enumMetaData, Map<String, String> docStrings) {
-        requireNonNull(enumMetaData, "enumMetaData");
-
-        final Class<?> enumClass = enumMetaData.enumClass;
-
-        assert enumMetaData.type == TType.ENUM;
-        assert !enumMetaData.isBinary();
-
-        final List<Object> constants = new ArrayList<>();
-        final Field[] fields = enumClass.getDeclaredFields();
-        for (Field field : fields) {
-            if (field.isEnumConstant()) {
-                try {
-                    constants.add(field.get(null));
-                } catch (IllegalAccessException ignored) {
-                    // Skip inaccessible fields.
-                }
-            }
-        }
-
-        final String name = enumClass.getName();
-        return new EnumInfo(name, constants, docStrings.get(name));
-    }
-
-    static EnumInfo of(String name, List<Object> constants) {
-        return of(name, constants, Collections.emptyMap());
-    }
-
-    static EnumInfo of(String name, List<Object> constants, Map<String, String> docStrings) {
-        return new EnumInfo(name, constants, docStrings.get(name));
-    }
+/**
+ * Metadata about an enum type.
+ */
+public final class EnumInfo implements NamedTypeInfo {
 
     private final String name;
-    private final List<Object> constants;
+    private final List<EnumValueInfo> values;
     private final String docString;
 
-    private EnumInfo(String name, List<Object> constants, String docString) {
-        super(ValueType.ENUM, false);
+    /**
+     * Creates a new instance.
+     */
+    public EnumInfo(String name, Class<? extends Enum<?>> enumType) {
+        this(name, enumType, null);
+    }
 
+    /**
+     * Creates a new instance.
+     */
+    public EnumInfo(String name, Class<? extends Enum<?>> enumType, @Nullable String docString) {
+        this(name, toEnumValues(enumType), docString);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public EnumInfo(String name, Iterable<EnumValueInfo> values) {
+        this(name, values, null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public EnumInfo(String name, Iterable<EnumValueInfo> values, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
-        this.constants = Collections.unmodifiableList(requireNonNull(constants, "constants"));
-        this.docString = docString;
+        this.values = ImmutableList.copyOf(requireNonNull(values, "values"));
+        this.docString = Strings.emptyToNull(docString);
     }
 
     @Override
@@ -83,14 +73,12 @@ final class EnumInfo extends TypeInfo implements ClassInfo {
         return name;
     }
 
-    @Override
-    public List<FieldInfo> fields() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<Object> constants() {
-        return constants;
+    /**
+     * Returns the constant values defined by the type.
+     */
+    @JsonProperty
+    public List<EnumValueInfo> values() {
+        return values;
     }
 
     @Override
@@ -108,22 +96,25 @@ final class EnumInfo extends TypeInfo implements ClassInfo {
             return false;
         }
 
-        if (!super.equals(o)) {
-            return false;
-        }
-
-        EnumInfo enumInfo = (EnumInfo) o;
-        return Objects.equals(name, enumInfo.name) &&
-               Objects.equals(constants, enumInfo.constants);
+        final EnumInfo that = (EnumInfo) o;
+        return name.equals(that.name) && values.equals(that.values);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), name, constants);
+        return Objects.hash(name, values);
     }
 
     @Override
     public String toString() {
         return name;
+    }
+
+    private static Iterable<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {
+        @SuppressWarnings("rawtypes")
+        final Class rawEnumType = requireNonNull(enumType, "enumType");
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        final Set<Enum> values = EnumSet.allOf((Class<Enum>) rawEnumType);
+        return values.stream().map(e -> new EnumValueInfo(e.name()))::iterator;
     }
 }

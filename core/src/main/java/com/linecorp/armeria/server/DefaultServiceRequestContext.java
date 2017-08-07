@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nullable;
@@ -29,15 +29,16 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.common.logging.DefaultResponseLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
@@ -48,16 +49,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final Channel ch;
     private final ServiceConfig cfg;
-    private final String mappedPath;
+    private final PathMappingContext pathMappingContext;
+    private final PathMappingResult pathMappingResult;
     private final SSLSession sslSession;
 
-    private final DefaultRequestLog requestLog;
-    private final DefaultResponseLog responseLog;
+    private final DefaultRequestLog log;
     private final Logger logger;
 
     private ExecutorService blockingTaskExecutor;
 
     private long requestTimeoutMillis;
+    @Nullable
+    private Runnable requestTimeoutHandler;
     private long maxRequestLength;
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
 
@@ -73,19 +76,22 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
-            String method, String path, String mappedPath, Object request,
+            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Object request,
             @Nullable SSLSession sslSession) {
 
-        super(sessionProtocol, method, path, request);
+        super(sessionProtocol,
+              requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
+              requireNonNull(pathMappingResult, "pathMappingResult").query(),
+              request);
 
-        this.ch = ch;
-        this.cfg = cfg;
-        this.mappedPath = mappedPath;
+        this.ch = requireNonNull(ch, "ch");
+        this.cfg = requireNonNull(cfg, "cfg");
+        this.pathMappingContext = pathMappingContext;
+        this.pathMappingResult = pathMappingResult;
         this.sslSession = sslSession;
 
-        requestLog = new DefaultRequestLog();
-        requestLog.start(ch, sessionProtocol, cfg.virtualHost().defaultHostname(), method, path);
-        responseLog = new DefaultResponseLog(requestLog, requestLog);
+        log = new DefaultRequestLog(this);
+        log.startRequest(ch, sessionProtocol, cfg.virtualHost().defaultHostname());
         logger = newLogger(cfg);
 
         final ServerConfig serverCfg = cfg.server().config();
@@ -124,7 +130,17 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public <T extends Service<?, ?>> T service() {
+    public PathMappingContext pathMappingContext() {
+        return pathMappingContext;
+    }
+
+    @Override
+    public Map<String, String> pathParams() {
+        return pathMappingResult.pathParams();
+    }
+
+    @Override
+    public <T extends Service<HttpRequest, HttpResponse>> T service() {
         return cfg.service();
     }
 
@@ -138,13 +154,19 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public EventLoop eventLoop() {
-        return ch.eventLoop();
+    public String mappedPath() {
+        return pathMappingResult.path();
+    }
+
+    @Nullable
+    @Override
+    public MediaType negotiatedProduceType() {
+        return pathMappingResult.negotiatedProduceType();
     }
 
     @Override
-    public String mappedPath() {
-        return mappedPath;
+    public EventLoop eventLoop() {
+        return ch.eventLoop();
     }
 
     @Override
@@ -187,6 +209,16 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         setRequestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
 
+    @Nullable
+    public Runnable requestTimeoutHandler() {
+        return requestTimeoutHandler;
+    }
+
+    @Override
+    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
+        this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
+    }
+
     @Override
     public long maxRequestLength() {
         return maxRequestLength;
@@ -202,23 +234,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public RequestLogBuilder requestLogBuilder() {
-        return requestLog;
+    public RequestLog log() {
+        return log;
     }
 
     @Override
-    public ResponseLogBuilder responseLogBuilder() {
-        return responseLog;
+    public RequestLogBuilder logBuilder() {
+        return log;
     }
 
     @Override
-    public CompletableFuture<RequestLog> requestLogFuture() {
-        return requestLog;
-    }
-
-    @Override
-    public CompletableFuture<ResponseLog> responseLogFuture() {
-        return responseLog;
+    public ByteBufAllocator alloc() {
+        return ch.alloc();
     }
 
     /**
@@ -255,10 +282,16 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         buf.append('[')
            .append(sessionProtocol().uriText())
            .append("://")
-           .append(virtualHost().defaultHostname())
-           .append(':')
-           .append(((InetSocketAddress) remoteAddress()).getPort())
-           .append(path())
+           .append(virtualHost().defaultHostname());
+
+        final InetSocketAddress laddr = localAddress();
+        if (laddr != null) {
+            buf.append(':').append(laddr.getPort());
+        } else {
+            buf.append(":-1"); // Port unknown.
+        }
+
+        buf.append(path())
            .append('#')
            .append(method())
            .append(']');

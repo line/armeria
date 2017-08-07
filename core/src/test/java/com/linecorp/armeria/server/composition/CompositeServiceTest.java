@@ -26,21 +26,21 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.google.common.net.MediaType;
-
-import com.linecorp.armeria.common.http.HttpRequest;
-import com.linecorp.armeria.common.http.HttpResponse;
-import com.linecorp.armeria.common.http.HttpResponseWriter;
-import com.linecorp.armeria.common.http.HttpStatus;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.http.AbstractHttpService;
-import com.linecorp.armeria.test.AbstractServerTest;
+import com.linecorp.armeria.testing.server.ServerRule;
 
-public class CompositeServiceTest extends AbstractServerTest {
+public class CompositeServiceTest {
 
     private static final TestService serviceA = new TestService("A");
     private static final TestService serviceB = new TestService("B");
@@ -49,30 +49,33 @@ public class CompositeServiceTest extends AbstractServerTest {
 
     private static final TestCompositeService composite = new TestCompositeService();
 
-    @Override
-    protected void configureServer(ServerBuilder sb) {
-        sb.serviceUnder("/qux/", composite);
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.serviceUnder("/qux/", composite);
 
-        // Should not hit the following services
-        sb.serviceUnder("/foo/", otherService);
-        sb.serviceUnder("/bar/", otherService);
-        sb.service(PathMapping.ofGlob("/*"), otherService);
-    }
+            // Should not hit the following services
+            sb.serviceUnder("/foo/", otherService);
+            sb.serviceUnder("/bar/", otherService);
+            sb.service(PathMapping.ofGlob("/*"), otherService);
+        }
+    };
 
     @Test
     public void testMapping() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/qux/foo/X")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/foo/X")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("A:/qux/foo/X:/X"));
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/qux/bar/Y")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/bar/Y")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("B:/qux/bar/Y:/Y"));
             }
 
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/qux/Z")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/Z")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
                 assertThat(EntityUtils.toString(res.getEntity()), is("C:/qux/Z:/Z"));
             }
@@ -82,7 +85,7 @@ public class CompositeServiceTest extends AbstractServerTest {
     @Test
     public void testNonExistentMapping() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(uri("/qux/Z/T")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/Z/T")))) {
                 assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
             }
         }

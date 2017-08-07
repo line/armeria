@@ -15,29 +15,32 @@
  */
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link RuntimeException} raised when a {@link Service} failed to find a resource.
  */
-public final class ResourceNotFoundException extends RuntimeException {
+public final class ResourceNotFoundException extends HttpResponseException {
 
     private static final long serialVersionUID = 1268757990666737813L;
-
 
     private static final ResourceNotFoundException INSTANCE =
             Exceptions.clearTrace(new ResourceNotFoundException());
 
     /**
      * Returns a {@link ResourceNotFoundException} which may be a singleton or a new instance, depending on
-     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static ResourceNotFoundException get() {
-        return Exceptions.isVerbose() ? new ResourceNotFoundException() : INSTANCE;
+        return Flags.verboseExceptions() ? new ResourceNotFoundException() : INSTANCE;
     }
 
     /**
      * Creates a new instance.
      */
-    private ResourceNotFoundException() {}
+    private ResourceNotFoundException() {
+        super(HttpStatus.NOT_FOUND);
+    }
 }

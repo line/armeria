@@ -17,11 +17,12 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 
 public class ServiceTest {
 
@@ -29,13 +30,31 @@ public class ServiceTest {
      * Tests if a user can write a decorator with working as() and serviceAdded() using lambda expressions only.
      */
     @Test
-    public void testLambdaExpressionDecorator() throws Exception {
+    public void lambdaExpressionDecorator() throws Exception {
         final FooService inner = new FooService();
-        final Service<ThriftCall, ThriftReply> outer = inner.decorate((delegate, ctx, req) -> {
-            ThriftCall newReq = new ThriftCall(
-                    req.seqId(), req.serviceType(), "new_" + req.method(), req.params());
+        final Service<RpcRequest, RpcResponse> outer = inner.decorate((delegate, ctx, req) -> {
+            RpcRequest newReq = RpcRequest.of(req.serviceType(), "new_" + req.method(), req.params());
             return delegate.serve(ctx, newReq);
         });
+
+        assertDecoration(inner, outer);
+    }
+
+    /**
+     * Tests {@link Service#decorate(Class)}.
+     */
+    @Test
+    public void reflectionDecorator() throws Exception {
+        final FooService inner = new FooService();
+        final FooServiceDecorator outer = inner.decorate(FooServiceDecorator.class);
+
+        assertDecoration(inner, outer);
+        assertThatThrownBy(() -> inner.decorate(BadFooServiceDecorator.class))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static void assertDecoration(
+            FooService inner, Service<RpcRequest, RpcResponse> outer) throws Exception {
 
         // Test if Service.as() works as expected.
         assertThat(outer.as(serviceType(inner))).containsSame(inner);
@@ -43,7 +62,8 @@ public class ServiceTest {
         assertThat(outer.as(String.class)).isNotPresent();
 
         // Test if FooService.serviceAdded() is invoked.
-        final ServiceConfig cfg = new ServiceConfig(PathMapping.ofCatchAll(), outer, "foo");
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        final ServiceConfig cfg = new ServiceConfig(PathMapping.ofCatchAll(), (Service) outer, "foo");
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }
@@ -53,7 +73,7 @@ public class ServiceTest {
         return (Class<Service<?, ?>>) service.getClass();
     }
 
-    private static final class FooService implements Service<ThriftCall, ThriftReply> {
+    private static final class FooService implements Service<RpcRequest, RpcResponse> {
 
         ServiceConfig cfg;
 
@@ -63,9 +83,27 @@ public class ServiceTest {
         }
 
         @Override
-        public ThriftReply serve(ServiceRequestContext ctx, ThriftCall req) throws Exception {
+        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
             // Will never reach here.
             throw new Error();
+        }
+    }
+
+    public static class FooServiceDecorator extends SimpleDecoratingService<RpcRequest, RpcResponse> {
+        public FooServiceDecorator(Service<RpcRequest, RpcResponse> delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
+            return delegate().serve(ctx, req);
+        }
+    }
+
+    public static class BadFooServiceDecorator extends FooServiceDecorator {
+        public BadFooServiceDecorator(Service<RpcRequest, RpcResponse> delegate,
+                                      @SuppressWarnings("unused") Object unused) {
+            super(delegate);
         }
     }
 }

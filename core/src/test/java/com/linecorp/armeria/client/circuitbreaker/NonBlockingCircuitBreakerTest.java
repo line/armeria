@@ -30,6 +30,7 @@ import org.junit.Test;
 import com.google.common.testing.FakeTicker;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 public class NonBlockingCircuitBreakerTest {
 
@@ -192,7 +193,7 @@ public class NonBlockingCircuitBreakerTest {
     public void testFailureOfExceptionFilter() {
         NonBlockingCircuitBreaker cb = (NonBlockingCircuitBreaker) new CircuitBreakerBuilder()
                 .exceptionFilter(cause -> {
-                    throw Exceptions.clearTrace(new Exception("exception filter failed"));
+                    throw Exceptions.clearTrace(new AnticipatedException("exception filter failed"));
                 })
                 .ticker(ticker)
                 .build();
@@ -251,5 +252,4 @@ public class NonBlockingCircuitBreakerTest {
         verify(listener, times(1)).onEventCountUpdated(cb, EventCount.ZERO);
         verify(listener, times(1)).onStateChanged(cb, CircuitState.CLOSED);
     }
-
 }

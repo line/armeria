@@ -20,14 +20,16 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.MoreObjects;
+
 /**
- * A value mapped by {@link PathMappings}.
+ * A value mapped by {@link Router}.
  *
  * @param <T> the type of the mapped value
  */
 public final class PathMapped<T> {
 
-    private static final PathMapped<Object> EMPTY = new PathMapped<>(null, null);
+    private static final PathMapped<Object> EMPTY = new PathMapped<>(null, PathMappingResult.empty(), null);
 
     /**
      * Returns a singleton instance of a {@link PathMapped} that represents a non-existent value.
@@ -40,42 +42,60 @@ public final class PathMapped<T> {
     /**
      * Creates a new {@link PathMapped} with the specified {@code mappedPath} and {@code value}.
      *
-     * @param mappedPath the path translated by {@link PathMappings}
-     * @param value      the value
+     * @param mappingResult the result of {@link PathMapping#apply(PathMappingContext)}
+     * @param value  the value
      */
-    public static <T> PathMapped<T> of(String mappedPath, T value) {
-        return new PathMapped<>(requireNonNull(mappedPath, "mappedPath"),
-                                requireNonNull(value, "value"));
+    static <T> PathMapped<T> of(PathMapping mapping, PathMappingResult mappingResult, T value) {
+        requireNonNull(mapping, "mapping");
+        requireNonNull(mappingResult, "mappingResult");
+        requireNonNull(value, "value");
+        if (!mappingResult.isPresent()) {
+            throw new IllegalArgumentException("mappingResult: " + mappingResult + " (must be present)");
+        }
+
+        return new PathMapped<>(mapping, mappingResult, value);
     }
 
     @Nullable
-    private final String mappedPath;
+    private final PathMapping mapping;
+    private final PathMappingResult mappingResult;
     @Nullable
     private final T value;
 
-    private PathMapped(@Nullable String mappedPath, @Nullable T value) {
-        assert mappedPath != null && value != null ||
-               mappedPath == null && value == null;
+    private PathMapped(@Nullable PathMapping mapping, PathMappingResult mappingResult, @Nullable T value) {
+        assert mapping != null && value != null ||
+               mapping == null && value == null;
 
-        this.mappedPath = mappedPath;
+        this.mapping = mapping;
+        this.mappingResult = mappingResult;
         this.value = value;
     }
 
     /**
-     * Returns {@code true} if and only if {@link PathMappings} found a matching value.
+     * Returns {@code true} if and only if {@link Router} found a matching value.
      */
     public boolean isPresent() {
-        return mappedPath != null;
+        return mapping != null;
     }
 
     /**
-     * Returns the path translated by {@link PathMappings}.
+     * Returns the {@link PathMapping} which matched the path.
      *
      * @throws IllegalStateException if there's no match
      */
-    public String mappedPath() {
+    public PathMapping mapping() {
         ensurePresence();
-        return mappedPath;
+        return mapping;
+    }
+
+    /**
+     * Returns the {@link PathMappingResult}.
+     *
+     * @throws IllegalStateException if there's no match
+     */
+    public PathMappingResult mappingResult() {
+        ensurePresence();
+        return mappingResult;
     }
 
     /**
@@ -96,6 +116,14 @@ public final class PathMapped<T> {
 
     @Override
     public String toString() {
-        return isPresent() ? mappedPath() + " -> " + value() : "<empty>";
+        if (isPresent()) {
+            return MoreObjects.toStringHelper(this)
+                                  .add("mapping", mapping)
+                                  .add("mappingResult", mappingResult)
+                                  .add("value", value)
+                                  .toString();
+        } else {
+            return getClass().getSimpleName() + "{<empty>}";
+        }
     }
 }

@@ -42,8 +42,7 @@ public final class ClientDecoration {
      * @param <T> the type of the {@link Client} being decorated
      * @param <R> the type of the {@link Client} produced by the {@code decorator}
      */
-    public static <T extends Client<? super I, ? extends O>, R extends Client<I, O>,
-                   I extends Request, O extends Response>
+    public static <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
     ClientDecoration of(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
         return new ClientDecorationBuilder().add(requestType, responseType, decorator).build();
     }
@@ -78,8 +77,7 @@ public final class ClientDecoration {
             }
 
             @SuppressWarnings("unchecked")
-            final Function<Client<? super I, ? extends O>, Client<I, O>> decorator =
-                    ((Entry<I, O>) e).decorator();
+            final Function<Client<I, O>, Client<I, O>> decorator = ((Entry<I, O>) e).decorator();
             client = decorator.apply(client);
         }
 
@@ -89,16 +87,16 @@ public final class ClientDecoration {
     static final class Entry<I extends Request, O extends Response> {
         private final Class<I> requestType;
         private final Class<O> responseType;
-        private final Function<Client<? super I, ? extends O>, Client<I, O>> decorator;
+        private final Function<Client<I, O>, Client<I, O>> decorator;
 
         Entry(Class<I> requestType, Class<O> responseType,
-              Function<? extends Client<? super I, ? extends O>, ? extends Client<I, O>> decorator) {
+              Function<? extends Client<I, O>, ? extends Client<I, O>> decorator) {
             this.requestType = requestType;
             this.responseType = responseType;
 
             @SuppressWarnings("unchecked")
-            Function<Client<? super I, ? extends O>, Client<I, O>> castDecorator =
-                    (Function<Client<? super I, ? extends O>, Client<I, O>>) decorator;
+            Function<Client<I, O>, Client<I, O>> castDecorator =
+                    (Function<Client<I, O>, Client<I, O>>) decorator;
             this.decorator = castDecorator;
         }
 
@@ -110,7 +108,7 @@ public final class ClientDecoration {
             return responseType;
         }
 
-        Function<Client<? super I, ? extends O>, Client<I, O>> decorator() {
+        Function<Client<I, O>, Client<I, O>> decorator() {
             return decorator;
         }
 

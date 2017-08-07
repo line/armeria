@@ -18,11 +18,11 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+
+import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableMap;
 
 /**
  * A pair of {@link SerializationFormat} and {@link SessionProtocol}.
@@ -36,10 +36,9 @@ import java.util.Optional;
  * For example:
  * </p>
  * <ul>
- * <li>{@code "tbinary+https"} - {@link SerializationFormat#THRIFT_BINARY} and
- *                               {@link SessionProtocol#HTTPS}</li>
- * <li>{@code "tcompact+h2c"} - {@link SerializationFormat#THRIFT_COMPACT} and
- *                              {@link SessionProtocol#H2C}</li>
+ * <li>{@code "tbinary+https"}</li>
+ * <li>{@code "tcompact+h2c"}</li>
+ * <li>{@code "none+http"}</li>
  * </ul>
  */
 public final class Scheme implements Comparable<Scheme> {
@@ -47,15 +46,15 @@ public final class Scheme implements Comparable<Scheme> {
     private static final Map<String, Scheme> SCHEMES;
 
     static {
-        // Pre-populate all known scheme combos.
-        final Map<String, Scheme> schemes = new HashMap<>();
+        // Pre-populate all possible scheme combos.
+        final ImmutableMap.Builder<String, Scheme> schemes = ImmutableMap.builder();
         for (SerializationFormat f : SerializationFormat.values()) {
             for (SessionProtocol p : SessionProtocol.values()) {
                 final String ftxt = f.uriText();
                 final String ptxt = p.uriText();
 
-                assert ftxt.equals(ftxt.toLowerCase(Locale.US));
-                assert ptxt.equals(ptxt.toLowerCase(Locale.US));
+                assert ftxt.equals(Ascii.toLowerCase(ftxt));
+                assert ptxt.equals(Ascii.toLowerCase(ptxt));
 
                 final Scheme scheme = new Scheme(f, p);
                 schemes.put(ftxt + '+' + ptxt, scheme);
@@ -63,7 +62,7 @@ public final class Scheme implements Comparable<Scheme> {
             }
         }
 
-        SCHEMES = Collections.unmodifiableMap(schemes);
+        SCHEMES = schemes.build();
     }
 
     /**
@@ -78,7 +77,7 @@ public final class Scheme implements Comparable<Scheme> {
             return Optional.empty();
         }
 
-        return Optional.ofNullable(SCHEMES.get(scheme.toLowerCase(Locale.US)));
+        return Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(scheme)));
     }
 
     /**
@@ -89,7 +88,7 @@ public final class Scheme implements Comparable<Scheme> {
      *                                  there is no such {@link Scheme} available
      */
     public static Scheme parse(String scheme) {
-        final Scheme res = SCHEMES.get(requireNonNull(scheme, "scheme").toLowerCase(Locale.US));
+        final Scheme res = SCHEMES.get(Ascii.toLowerCase(requireNonNull(scheme, "scheme")));
         if (res == null) {
             throw new IllegalArgumentException("scheme: " + scheme);
         }

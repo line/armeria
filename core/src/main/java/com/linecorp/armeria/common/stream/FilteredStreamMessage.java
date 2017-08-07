@@ -90,9 +90,23 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
+    public void subscribe(Subscriber<? super U> subscriber, boolean withPooledObjects) {
+        requireNonNull(subscriber, "subscriber");
+        delegate.subscribe(new FilteringSubscriber(subscriber), withPooledObjects);
+    }
+
+    @Override
     public void subscribe(Subscriber<? super U> subscriber, Executor executor) {
         requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
         delegate.subscribe(new FilteringSubscriber(subscriber), executor);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super U> subscriber, Executor executor, boolean withPooledObjects) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        delegate.subscribe(new FilteringSubscriber(subscriber), executor, withPooledObjects);
     }
 
     @Override

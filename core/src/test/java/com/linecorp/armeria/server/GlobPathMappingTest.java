@@ -17,9 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.PathMapping.ofGlob;
+import static com.linecorp.armeria.server.PathMappingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.Objects;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -78,18 +77,62 @@ public class GlobPathMappingTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testPathValidation() {
-        compile("**").apply("not/an/absolute/path");
+        compile("**").apply(create("not/an/absolute/path"));
     }
 
     @Test
     public void testLoggerName() throws Exception {
         assertThat(ofGlob("/foo/bar/**").loggerName()).isEqualTo("foo.bar.__");
+        assertThat(ofGlob("foo").loggerName()).isEqualTo("__.foo");
+    }
+
+    @Test
+    public void testMetricName() throws Exception {
+        assertThat(ofGlob("/foo/bar/**").metricName()).isEqualTo("/foo/bar/**");
+        assertThat(ofGlob("foo").metricName()).isEqualTo("/**/foo");
+    }
+
+    @Test
+    public void params() throws Exception {
+        PathMapping m;
+
+        m = ofGlob("baz");
+        assertThat(m.paramNames()).isEmpty();
+        // Should not create a param for 'bar'
+        assertThat(m.apply(create("/bar/baz")).pathParams()).isEmpty();
+
+        m = ofGlob("/bar/baz/*");
+        assertThat(m.paramNames()).containsExactly("0");
+        assertThat(m.apply(create("/bar/baz/qux")).pathParams())
+                .containsEntry("0", "qux")
+                .hasSize(1);
+
+        m = ofGlob("/foo/**");
+        assertThat(m.paramNames()).containsExactly("0");
+        assertThat(m.apply(create("/foo/bar/baz")).pathParams())
+                .containsEntry("0", "bar/baz")
+                .hasSize(1);
+        assertThat(m.apply(create("/foo/")).pathParams())
+                .containsEntry("0", "")
+                .hasSize(1);
+
+        m = ofGlob("/**/*.js");
+        assertThat(m.paramNames()).containsExactlyInAnyOrder("0", "1");
+        assertThat(m.apply(create("/lib/jquery.min.js")).pathParams())
+                .containsEntry("0", "lib")
+                .containsEntry("1", "jquery.min")
+                .hasSize(2);
+
+        assertThat(m.apply(create("/lodash.js")).pathParams())
+                .containsEntry("0", "")
+                .containsEntry("1", "lodash")
+                .hasSize(2);
     }
 
     private static void pass(String glob, String... paths) {
         final GlobPathMapping pattern = compile(glob);
         for (String p: paths) {
-            if (pattern.apply(p) == null) {
+            if (!pattern.apply(create(p)).isPresent()) {
                 Assert.fail('\'' + p + "' does not match '" + glob + "' or '" + pattern.asRegex() + "'.");
             }
         }
@@ -98,7 +141,7 @@ public class GlobPathMappingTest {
     private static void fail(String glob, String... paths) {
         final GlobPathMapping pattern = compile(glob);
         for (String p: paths) {
-            if (Objects.equals(pattern.apply(p), p)) {
+            if (pattern.apply(create(p)).isPresent()) {
                 Assert.fail('\'' + p + "' matches '" + glob + "' or '" + pattern.asRegex() + "'.");
             }
         }

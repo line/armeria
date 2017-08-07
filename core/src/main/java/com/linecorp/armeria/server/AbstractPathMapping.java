@@ -21,37 +21,18 @@ import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 
 /**
- * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(String)}.
+ * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(PathMappingContext)}.
  */
 public abstract class AbstractPathMapping implements PathMapping {
 
     /**
-     * Matches the specified {@code path} and translates the matched {@code path} to another path string.
-     * This method performs sanity checks on the specified {@code path}, calls {@link #doApply(String)},
-     * and then performs sanity checks on the returned {@code mappedPath}.
-     *
-     * @param path an absolute path as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
-     *         {@code null} if the specified {@code path} does not match this mapping.
+     * {@inheritDoc} This method performs sanity checks on the specified {@code path} and calls
+     * {@link #doApply(PathMappingContext)}.
      */
     @Override
-    public final String apply(String path) {
-        ensureAbsolutePath(path, "path");
-
-        final String mappedPath = doApply(path);
-        if (mappedPath == null) {
-            return null;
-        }
-
-        if (mappedPath.isEmpty()) {
-            throw new IllegalStateException("mapped path is not an absolute path: <empty>");
-        }
-
-        if (mappedPath.charAt(0) != '/') {
-            throw new IllegalStateException("mapped path is not an absolute path: " + mappedPath);
-        }
-
-        return mappedPath;
+    public final PathMappingResult apply(PathMappingContext mappingCtx) {
+        ensureAbsolutePath(mappingCtx.path(), "path");
+        return doApply(mappingCtx);
     }
 
     /**
@@ -71,13 +52,15 @@ public abstract class AbstractPathMapping implements PathMapping {
     }
 
     /**
-     * Invoked by {@link #apply(String)} to perform the actual path matching and translation.
+     * Invoked by {@link #apply(PathMappingContext)} to perform the actual path matching and path parameter
+     * extraction.
      *
-     * @param path an absolute path as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
-     * @return the translated path which is used as the value of {@link ServiceRequestContext#mappedPath()}.
-     *         {@code null} if the specified {@code path} does not match this mapping.
+     * @param mappingCtx a context to find the {@link Service}
+     *
+     * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
+     *         {@link PathMappingResult#empty()} if not matches.
      */
-    protected abstract String doApply(String path);
+    protected abstract PathMappingResult doApply(PathMappingContext mappingCtx);
 
     @Override
     public String loggerName() {
@@ -93,7 +76,10 @@ public abstract class AbstractPathMapping implements PathMapping {
         if ("/".equals(normalized)) {
             return "__ROOT__";
         }
-        normalized = normalized.substring(1); // Strip the first slash.
+
+        if (normalized.startsWith("/")) {
+            normalized = normalized.substring(1); // Strip the first slash.
+        }
 
         final int end;
         if (normalized.endsWith("/")) {
@@ -140,6 +126,11 @@ public abstract class AbstractPathMapping implements PathMapping {
 
     @Override
     public Optional<String> exactPath() {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<String> prefix() {
         return Optional.empty();
     }
 }

@@ -21,7 +21,7 @@ package com.linecorp.armeria.server;
  * <h2>Example</h2>
  * <pre>{@code
  * VirtualHostBuilder vhb = new VirtualHostBuilder("*.example.com");
- * vhb.serviceAt("/foo", new FooService())
+ * vhb.service("/foo", new FooService())
  *    .serviceUnder("/bar/", new BarService())
  *    .service(PathMapping.ofRegex("^/baz/.*", new BazService());
  *
@@ -54,9 +54,7 @@ public class VirtualHostBuilder extends AbstractVirtualHostBuilder<VirtualHostBu
         super(defaultHostname, hostnamePattern);
     }
 
-    /**
-     * Creates a new {@link VirtualHost}.
-     */
+    @Override
     public VirtualHost build() {
         return super.build();
     }

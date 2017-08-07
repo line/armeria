@@ -17,10 +17,16 @@
 package com.linecorp.armeria.server;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContextWrapper;
 
 /**
@@ -52,7 +58,17 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public <T extends Service<?, ?>> T service() {
+    public PathMappingContext pathMappingContext() {
+        return delegate().pathMappingContext();
+    }
+
+    @Override
+    public Map<String, String> pathParams() {
+        return delegate().pathParams();
+    }
+
+    @Override
+    public <T extends Service<HttpRequest, HttpResponse>> T service() {
         return delegate().service();
     }
 
@@ -64,6 +80,12 @@ public class ServiceRequestContextWrapper
     @Override
     public String mappedPath() {
         return delegate().mappedPath();
+    }
+
+    @Nullable
+    @Override
+    public MediaType negotiatedProduceType() {
+        return delegate().negotiatedProduceType();
     }
 
     @Override
@@ -84,6 +106,11 @@ public class ServiceRequestContextWrapper
     @Override
     public void setRequestTimeout(Duration requestTimeout) {
         delegate().setRequestTimeout(requestTimeout);
+    }
+
+    @Override
+    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
+        delegate().setRequestTimeoutHandler(requestTimeoutHandler);
     }
 
     @Override

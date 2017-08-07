@@ -19,12 +19,17 @@ package com.linecorp.armeria.client;
 import java.net.URI;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.http.DefaultHttpHeaders;
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.EventLoop;
@@ -95,13 +100,6 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
     }
 
     /**
-     * Retrieves an {@link EventLoop} supplied by the {@link ClientFactory}.
-     */
-    protected final EventLoop eventLoop() {
-        return params.factory().eventLoopSupplier().get();
-    }
-
-    /**
      * Returns the {@link SessionProtocol} of the {@link #delegate()}.
      */
     protected final SessionProtocol sessionProtocol() {
@@ -119,16 +117,17 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      * Executes the specified {@link Request} via {@link #delegate()}.
      *
      * @param method the method of the {@link Request}
-     * @param path the path of the {@link Request} URI
+     * @param path the path part of the {@link Request} URI
+     * @param query the query part of the {@link Request} URI
      * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
      * @param fallback the fallback response {@link Function} to use when
      *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      *                 an exception instead of returning an error response
      */
-    protected final O execute(
-            String method, String path, String fragment, I req, Function<Throwable, O> fallback) {
-        return execute(eventLoop(), method, path,  fragment, req, fallback);
+    protected final O execute(HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+                              I req, Function<Throwable, O> fallback) {
+        return execute(null, method, path, query, fragment, req, fallback);
     }
 
     /**
@@ -137,23 +136,33 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      * @param eventLoop the {@link EventLoop} to execute the {@link Request}
      * @param method the method of the {@link Request}
      * @param path the path part of the {@link Request} URI
+     * @param query the query part of the {@link Request} URI
      * @param fragment the fragment part of the {@link Request} URI
      * @param req the {@link Request}
      * @param fallback the fallback response {@link Function} to use when
      *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      */
-    protected final O execute(
-            EventLoop eventLoop, String method, String path, String fragment, I req,
-            Function<Throwable, O> fallback) {
+    protected final O execute(@Nullable EventLoop eventLoop,
+                              HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+                              I req, Function<Throwable, O> fallback) {
 
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop, sessionProtocol, endpoint, method, path, fragment, options(), req);
+        final ClientRequestContext ctx;
+        if (eventLoop == null) {
+            final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
+            ctx = new DefaultClientRequestContext(
+                    releasableEventLoop.get(), sessionProtocol, endpoint,
+                    method, path, query, fragment, options(), req);
+            ctx.log().addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
+        } else {
+            ctx = new DefaultClientRequestContext(
+                    eventLoop, sessionProtocol, endpoint, method, path, query, fragment, options(), req);
+        }
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
             runThreadLocalHeaderManipulator(ctx);
             return delegate().execute(ctx, req);
         } catch (Throwable cause) {
-            ctx.responseLogBuilder().end(cause);
+            ctx.logBuilder().endResponse(cause);
             return fallback.apply(cause);
         }
     }

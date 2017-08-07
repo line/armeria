@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import javax.net.ssl.SSLException;
@@ -34,10 +35,15 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.util.NativeLibraries;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -52,7 +58,7 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 
 /**
  * Contains information for the build of the virtual host.
- * 
+ *
  * @see ChainedVirtualHostBuilder
  * @see VirtualHostBuilder
  */
@@ -60,7 +66,7 @@ import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractVirtualHostBuilder.class);
-    
+
     private static final ApplicationProtocolConfig HTTPS_ALPN_CFG = new ApplicationProtocolConfig(
             Protocol.ALPN,
             // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -113,7 +119,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     private final String hostnamePattern;
     private final List<ServiceConfig> services = new ArrayList<>();
     private SslContext sslContext;
-    private Function<Service<Request, Response>, Service<Request, Response>> decorator;
+    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
 
     /**
      * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
@@ -186,7 +192,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final SslContextBuilder builder = SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword);
 
-        builder.sslProvider(NativeLibraries.isOpenSslAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
+        builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
         builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
         builder.applicationProtocolConfig(HTTPS_ALPN_CFG);
 
@@ -195,25 +201,44 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Binds the specified {@link Service} at the specified exact path.
+     * @deprecated Use {@link #service(String, Service)} instead.
      */
-    public B serviceAt(String exactPath, Service<?, ?> service) {
-        service(PathMapping.ofExact(exactPath), service);
+    @Deprecated
+    public B serviceAt(String pathPattern, Service<HttpRequest, HttpResponse> service) {
+        return service(pathPattern, service);
+    }
+
+    /**
+     * Binds the specified {@link Service} under the specified directory.
+     */
+    public B serviceUnder(String pathPrefix, Service<HttpRequest, HttpResponse> service) {
+        service(PathMapping.ofPrefix(pathPrefix), service);
         return self();
     }
 
     /**
-     * Binds the specified {@link Service} under the specified directory..
+     * Binds the specified {@link Service} at the the specified path pattern. e.g.
+     * <ul>
+     *   <li>{@code /login} (no path parameters)</li>
+     *   <li>{@code /users/{userId}} (curly-brace style)</li>
+     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
+     *   <li>{@code exact:/foo/bar} (exact match)</li>
+     *   <li>{@code prefix:/files} (prefix match)</li>
+     *   <li><code>glob:/~&#42;/downloads/**</code> (glob pattern)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} (regular expression)</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B serviceUnder(String pathPrefix, Service<?, ?> service) {
-        service(PathMapping.ofPrefix(pathPrefix), service);
+    public B service(String pathPattern, Service<HttpRequest, HttpResponse> service) {
+        service(PathMapping.of(pathPattern), service);
         return self();
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link PathMapping}.
      */
-    public B service(PathMapping pathMapping, Service<?, ?> service) {
+    public B service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service) {
         services.add(new ServiceConfig(pathMapping, service, null));
         return self();
     }
@@ -223,8 +248,85 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      *             {@code armeria-logback}.
      */
     @Deprecated
-    public B service(PathMapping pathMapping, Service<?, ?> service, String loggerName) {
+    public B service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service, String loggerName) {
         services.add(new ServiceConfig(pathMapping, service, loggerName));
+        return self();
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public B annotatedService(Object service) {
+        return annotatedService("/", service);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public B annotatedService(
+            Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        return annotatedService("/", service, decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public B annotatedService(Object service, Map<Class<?>, ResponseConverter> converters) {
+        return annotatedService("/", service, converters);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     */
+    public B annotatedService(
+            Object service, Map<Class<?>, ResponseConverter> converters,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        return annotatedService("/", service, converters, decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B annotatedService(String pathPrefix, Object service) {
+        return annotatedService(pathPrefix, service, ImmutableMap.of(), Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B annotatedService(
+            String pathPrefix, Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        return annotatedService(pathPrefix, service, ImmutableMap.of(), decorator);
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B annotatedService(String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters) {
+        return annotatedService(pathPrefix, service, converters, Function.identity());
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     */
+    public B annotatedService(
+            String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
+            Function<Service<HttpRequest, HttpResponse>,
+                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(converters, "converters");
+        requireNonNull(decorator, "decorator");
+
+        final List<AnnotatedHttpService> entries =
+                AnnotatedHttpServices.build(pathPrefix, service, converters);
+        entries.forEach(e -> service(e.pathMapping(), decorator.apply(e)));
         return self();
     }
 
@@ -235,15 +337,14 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
-    @SuppressWarnings("unchecked")
-    public <T extends Service<T_I, T_O>, T_I extends Request, T_O extends Response,
-            R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     B decorator(Function<T, R> decorator) {
 
         requireNonNull(decorator, "decorator");
 
-        final Function<Service<Request, Response>, Service<Request, Response>> castDecorator =
-                (Function<Service<Request, Response>, Service<Request, Response>>) decorator;
+        @SuppressWarnings("unchecked")
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
+                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
 
         if (this.decorator != null) {
             this.decorator = this.decorator.andThen(castDecorator);
@@ -260,10 +361,23 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Creates a new {@link VirtualHost}.
+     * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
+     * added to this builder.
      */
     protected VirtualHost build() {
-        final VirtualHost virtualHost = new VirtualHost(defaultHostname, hostnamePattern, sslContext, services);
+        final List<MediaType> producibleTypes = new ArrayList<>();
+
+        services.forEach(e -> {
+            final PathMapping mapping = e.pathMapping();
+            if (mapping instanceof HttpHeaderPathMapping) {
+                // Collect producible media types over this virtual host.
+                producibleTypes.addAll(((HttpHeaderPathMapping) mapping).produceTypes());
+            }
+        });
+
+        final VirtualHost virtualHost =
+                new VirtualHost(defaultHostname, hostnamePattern, sslContext, services,
+                                new MediaTypeSet(producibleTypes));
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 

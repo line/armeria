@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -31,10 +32,10 @@ public final class RequestTimeoutException extends TimeoutException {
 
     /**
      * Returns a {@link RequestTimeoutException} which may be a singleton or a new instance, depending on
-     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static RequestTimeoutException get() {
-        return Exceptions.isVerbose() ? new RequestTimeoutException() : INSTANCE;
+        return Flags.verboseExceptions() ? new RequestTimeoutException() : INSTANCE;
     }
 
     /**

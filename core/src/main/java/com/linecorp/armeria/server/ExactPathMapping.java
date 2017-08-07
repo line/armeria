@@ -17,8 +17,14 @@
 package com.linecorp.armeria.server;
 
 import java.util.Optional;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 
 final class ExactPathMapping extends AbstractPathMapping {
+
+    static final String PREFIX = "exact:";
+    static final int PREFIX_LEN = PREFIX.length();
 
     private final String exactPath;
     private final String loggerName;
@@ -29,12 +35,18 @@ final class ExactPathMapping extends AbstractPathMapping {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
         loggerName = loggerName(exactPath);
-        strVal = "exact: " + exactPath;
+        strVal = PREFIX + exactPath;
     }
 
     @Override
-    protected String doApply(String path) {
-        return exactPath.equals(path) ? path : null;
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        return exactPath.equals(mappingCtx.path()) ? PathMappingResult.of(mappingCtx.path(), mappingCtx.query())
+                                                   : PathMappingResult.empty();
+    }
+
+    @Override
+    public Set<String> paramNames() {
+        return ImmutableSet.of();
     }
 
     @Override
@@ -49,6 +61,11 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     public Optional<String> exactPath() {
+        return exactPathOpt;
+    }
+
+    @Override
+    public Optional<String> triePath() {
         return exactPathOpt;
     }
 

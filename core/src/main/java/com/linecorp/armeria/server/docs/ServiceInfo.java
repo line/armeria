@@ -16,159 +16,123 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeMap;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.TBase;
-
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Streams;
 
-final class ServiceInfo {
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.server.Service;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
-
-    static ServiceInfo of(
-            Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
-            Map<Class<?>, ? extends TBase<?, ?>> sampleRequests,
-            Map<String, String> sampleHttpHeaders) throws ClassNotFoundException {
-        requireNonNull(serviceClass, "serviceClass");
-
-        final String name = serviceClass.getName();
-
-        final ClassLoader serviceClassLoader = serviceClass.getClassLoader();
-        final Class<?> interfaceClass = Class.forName(name + "$Iface", false, serviceClassLoader);
-        final Method[] methods = interfaceClass.getDeclaredMethods();
-        final Map<String, String> docStrings = ThriftDocString.getAllDocStrings(serviceClassLoader);
-
-        final List<FunctionInfo> functions = new ArrayList<>(methods.length);
-        final Set<ClassInfo> classes = new LinkedHashSet<>();
-        for (Method method : methods) {
-            final FunctionInfo function = FunctionInfo.of(method, sampleRequests, name, docStrings);
-            functions.add(function);
-
-            addClassIfPossible(classes, function.returnType());
-            function.parameters().forEach(p -> addClassIfPossible(classes, p.type()));
-            function.exceptions().forEach(e -> {
-                e.fields().forEach(f -> addClassIfPossible(classes, f.type()));
-                addClassIfPossible(classes, e);
-            });
-        }
-
-        String httpHeaders = "";
-        if (sampleHttpHeaders != null) {
-            try {
-                httpHeaders = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(sampleHttpHeaders);
-            } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException("Failed to serialize the given httpHeaders", e);
-            }
-        }
-
-        return new ServiceInfo(name, functions, classes, endpoints, docStrings.get(name), httpHeaders);
-    }
-
-    private static void addClassIfPossible(Set<ClassInfo> classes, TypeInfo typeInfo) {
-        if (typeInfo instanceof ClassInfo) {
-            final ClassInfo classInfo = (ClassInfo) typeInfo;
-            classInfo.fields().forEach(f -> addClassIfPossible(classes, f.type()));
-            classes.add(classInfo);
-        } else if (typeInfo instanceof CollectionInfo) {
-            addClassIfPossible(classes, ((CollectionInfo) typeInfo).elementType());
-        } else if (typeInfo instanceof MapInfo) {
-            final MapInfo mapInfo = (MapInfo) typeInfo;
-            addClassIfPossible(classes, mapInfo.keyType());
-            addClassIfPossible(classes, mapInfo.valueType());
-        }
-    }
+/**
+ * Metadata about a {@link Service}.
+ */
+public final class ServiceInfo {
 
     private final String name;
-    private final Map<String, FunctionInfo> functions;
-    private final Map<String, ClassInfo> classes;
-    private final Map<String, EndpointInfo> endpoints;
+    private final Set<MethodInfo> methods;
+    private final List<HttpHeaders> exampleHttpHeaders;
     private final String docString;
-    private final String sampleHttpHeaders;
 
-    private ServiceInfo(String name,
-                        List<FunctionInfo> functions,
-                        Collection<ClassInfo> classes,
-                        Iterable<EndpointInfo> endpoints,
-                        @Nullable String docString,
-                        @Nullable String sampleHttpHeaders) {
+    /**
+     * Creates a new instance.
+     */
+    public ServiceInfo(String name,
+                       Iterable<MethodInfo> methods) {
+        this(name, methods, ImmutableList.of(), null);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ServiceInfo(String name,
+                       Iterable<MethodInfo> methods,
+                       Iterable<HttpHeaders> exampleHttpHeaders,
+                       @Nullable String docString) {
 
         this.name = requireNonNull(name, "name");
 
-        requireNonNull(functions, "functions");
-        requireNonNull(classes, "classes");
-        requireNonNull(endpoints, "endpoints");
+        requireNonNull(methods, "methods");
 
-        final Map<String, FunctionInfo> functions0 = new TreeMap<>();
-        for (FunctionInfo function : functions) {
-            functions0.put(function.name(), function);
-        }
-        this.functions = Collections.unmodifiableMap(functions0);
-
-        final Map<String, ClassInfo> classes0 = new TreeMap<>();
-        for (ClassInfo classInfo : classes) {
-            classes0.put(classInfo.name(), classInfo);
-        }
-        this.classes = Collections.unmodifiableMap(classes0);
-
-        final Map<String, EndpointInfo> endpoints0 = new TreeMap<>();
-        for (EndpointInfo i : endpoints) {
-            endpoints0.put(i.hostnamePattern() + ':' + i.path(), i);
-        }
-        this.endpoints = Collections.unmodifiableMap(endpoints0);
-
-        this.docString = docString;
-        this.sampleHttpHeaders = sampleHttpHeaders;
+        this.methods = ImmutableSortedSet.copyOf(comparing(MethodInfo::name), methods);
+        this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
+                                         .map(HttpHeaders::copyOf)
+                                         .map(HttpHeaders::asImmutable)
+                                         .collect(toImmutableList());
+        this.docString = Strings.emptyToNull(docString);
     }
 
+    /**
+     * Returns the fully qualified type name of the service.
+     */
     @JsonProperty
     public String name() {
         return name;
     }
 
+    /**
+     * Returns the metadata about the methods available in the service.
+     */
     @JsonProperty
-    public String simpleName() {
-        return name.substring(name.lastIndexOf('.') + 1);
+    public Set<MethodInfo> methods() {
+        return methods;
     }
 
-    @JsonProperty
-    public Map<String, FunctionInfo> functions() {
-        return functions;
+    /**
+     * Returns all enum, struct and exception {@link TypeSignature}s referred to by this service.
+     */
+    public Set<TypeSignature> findNamedTypes() {
+        final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
+        methods().forEach(m -> {
+            findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
+            m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
+            m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
+        });
+
+        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
     }
 
-    @JsonProperty
-    public Map<String, ClassInfo> classes() {
-        return classes;
+    static void findNamedTypes(Set<TypeSignature> collectedNamedTypes, TypeSignature typeSignature) {
+        if (typeSignature.isNamed()) {
+            collectedNamedTypes.add(typeSignature);
+        }
+
+        if (typeSignature.isContainer()) {
+            typeSignature.typeParameters().forEach(p -> findNamedTypes(collectedNamedTypes, p));
+        }
     }
 
+    /**
+     * Returns the documentation string.
+     */
     @JsonProperty
-    public Collection<EndpointInfo> endpoints() {
-        return endpoints.values();
-    }
-
-    @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
     public String docString() {
         return docString;
     }
 
+    /**
+     * Returns the example HTTP headers of the service.
+     */
     @JsonProperty
-    public String sampleHttpHeaders() {
-        return sampleHttpHeaders;
+    public List<HttpHeaders> exampleHttpHeaders() {
+        return exampleHttpHeaders;
     }
 
     @Override
@@ -181,27 +145,22 @@ final class ServiceInfo {
             return false;
         }
 
-        ServiceInfo that = (ServiceInfo) o;
-        return Objects.equals(name, that.name) &&
-               Objects.equals(functions, that.functions) &&
-               Objects.equals(classes, that.classes) &&
-               Objects.equals(endpoints, that.endpoints);
+        final ServiceInfo that = (ServiceInfo) o;
+        return name.equals(that.name) && methods.equals(that.methods);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, functions, classes, endpoints);
+        return Objects.hash(name, methods);
     }
 
     @Override
     public String toString() {
-        return "ServiceInfo{" +
-               "name='" + name() + '\'' +
-               ", functions=" + functions() +
-               ", classes=" + classes() +
-               ", endpoints=" + endpoints() +
-               ", docString=" + docString() +
-               ", sampleHttpHeaders=" + sampleHttpHeaders() +
-               '}';
+        return MoreObjects.toStringHelper(this)
+                .add("name", name)
+                .add("methods", methods)
+                .add("exampleHttpHeaders", exampleHttpHeaders)
+                .add("docstring", docString)
+                .toString();
     }
 }

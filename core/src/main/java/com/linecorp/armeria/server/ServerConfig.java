@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -28,7 +29,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -49,9 +52,9 @@ public final class ServerConfig {
     private final DomainNameMapping<VirtualHost> virtualHostMapping;
     private final List<ServiceConfig> services;
 
-    private final int numWorkers;
-    private final int maxPendingRequests;
-    private final int maxConnections;
+    private final EventLoopGroup workerGroup;
+    private final boolean shutdownWorkerGroupOnStop;
+    private final int maxNumConnections;
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
     private final long defaultMaxRequestLength;
@@ -68,9 +71,9 @@ public final class ServerConfig {
     ServerConfig(
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
-            int numWorkers, int maxPendingRequests, int maxConnections,
-            long idleTimeoutMillis, long defaultRequestTimeoutMillis,
-            long defaultMaxRequestLength,
+            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
+            int maxNumConnections, long idleTimeoutMillis,
+            long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, String serviceLoggerPrefix) {
 
@@ -79,9 +82,9 @@ public final class ServerConfig {
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
 
         // Set the primitive properties.
-        this.numWorkers = validateNumWorkers(numWorkers);
-        this.maxPendingRequests = validateMaxPendingRequests(maxPendingRequests);
-        this.maxConnections = validateMaxConnections(maxConnections);
+        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        this.shutdownWorkerGroupOnStop = shutdownWorkerGroupOnStop;
+        this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
@@ -145,32 +148,13 @@ public final class ServerConfig {
         this.defaultVirtualHost = defaultVirtualHost;
 
         // Build the complete list of the services available in this server.
-        services = Collections.unmodifiableList(
-                virtualHostsCopy.stream()
-                                .flatMap(h -> h.serviceConfigs().stream())
-                                .collect(Collectors.toList()));
+        services = virtualHostsCopy.stream()
+                                   .flatMap(h -> h.serviceConfigs().stream())
+                                   .collect(toImmutableList());
     }
 
-    static int validateNumWorkers(int numWorkers) {
-        if (numWorkers <= 0) {
-            throw new IllegalArgumentException("numWorkers: " + numWorkers + " (expected: > 0)");
-        }
-        return numWorkers;
-    }
-
-    static int validateMaxPendingRequests(int maxPendingRequests) {
-        if (maxPendingRequests <= 0) {
-            throw new IllegalArgumentException(
-                    "maxPendingRequests: " + maxPendingRequests + " (expected: > 0)");
-        }
-        return maxPendingRequests;
-    }
-
-    static int validateMaxConnections(int maxConnections) {
-        if (maxConnections <= 0) {
-            throw new IllegalArgumentException("maxConnections: " + maxConnections + " (expected: > 0)");
-        }
-        return maxConnections;
+    static int validateMaxNumConnections(int maxNumConnections) {
+        return ConnectionLimitingHandler.validateMaxNumConnections(maxNumConnections);
     }
 
     static long validateIdleTimeoutMillis(long idleTimeoutMillis) {
@@ -223,7 +207,7 @@ public final class ServerConfig {
                 h.defaultHostname(), "*", sslCtx,
                 h.serviceConfigs().stream().map(
                         e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
-                 .collect(Collectors.toList()));
+                 .collect(Collectors.toList()), h.producibleMediaTypes());
     }
 
     /**
@@ -320,29 +304,29 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the number of worker threads that perform socket I/O and run
+     * Returns the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
      */
-    public int numWorkers() {
-        return numWorkers;
+    public EventLoopGroup workerGroup() {
+        return workerGroup;
     }
 
     /**
-     * Returns the maximum allowed number of pending requests.
+     * Returns whether the worker {@link EventLoopGroup} is shut down when the {@link Server} stops.
      */
-    public int maxPendingRequests() {
-        return maxPendingRequests;
+    public boolean shutdownWorkerGroupOnStop() {
+        return shutdownWorkerGroupOnStop;
     }
 
     /**
      * Returns the maximum allowed number of open connections.
      */
-    public int maxConnections() {
-        return maxConnections;
+    public int maxNumConnections() {
+        return maxNumConnections;
     }
 
     /**
-     * Returns the idle timeout of a connection in milliseconds.
+     * Returns the idle timeout of a connection in milliseconds for keep-alive.
      */
     public long idleTimeoutMillis() {
         return idleTimeoutMillis;
@@ -402,8 +386,9 @@ public final class ServerConfig {
         if (strVal == null) {
             this.strVal = strVal = toString(
                     getClass(), ports(), null, virtualHosts(),
-                    numWorkers(), maxPendingRequests(), maxConnections(),
-                    idleTimeoutMillis(), defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                    workerGroup(), shutdownWorkerGroupOnStop(),
+                    maxNumConnections(), idleTimeoutMillis(),
+                    defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), serviceLoggerPrefix());
         }
@@ -414,7 +399,8 @@ public final class ServerConfig {
     static String toString(
             Class<?> type,
             Iterable<ServerPort> ports, VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
-            int numWorkers, int maxPendingRequests, int maxConnections, long idleTimeoutMillis,
+            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
+            int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, String serviceLoggerPrefix) {
@@ -461,12 +447,12 @@ public final class ServerConfig {
                                             defaultVirtualHost.serviceConfigs()));
         }
 
-        buf.append("], numWorkers: ");
-        buf.append(numWorkers);
-        buf.append(", maxPendingRequests: ");
-        buf.append(maxPendingRequests);
-        buf.append(", maxConnections: ");
-        buf.append(maxConnections);
+        buf.append("], workerGroup: ");
+        buf.append(workerGroup);
+        buf.append(" (shutdownOnStop=");
+        buf.append(shutdownWorkerGroupOnStop);
+        buf.append("), maxNumConnections: ");
+        buf.append(maxNumConnections);
         buf.append(", idleTimeout: ");
         buf.append(idleTimeoutMillis);
         buf.append("ms, defaultRequestTimeout: ");

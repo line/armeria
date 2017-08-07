@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -30,10 +31,10 @@ public final class WriteTimeoutException extends TimeoutException {
 
     /**
      * Returns a {@link WriteTimeoutException} which may be a singleton or a new instance, depending on
-     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static WriteTimeoutException get() {
-        return Exceptions.isVerbose() ? new WriteTimeoutException() : INSTANCE;
+        return Flags.verboseExceptions() ? new WriteTimeoutException() : INSTANCE;
     }
 
     /**

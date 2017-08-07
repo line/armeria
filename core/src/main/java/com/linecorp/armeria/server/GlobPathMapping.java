@@ -16,25 +16,91 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+
+import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 final class GlobPathMapping extends AbstractPathMapping {
 
+    static final String PREFIX = "glob:";
+    static final int PREFIX_LEN = PREFIX.length();
+
+    private static final String[] INT_TO_STRING;
+
+    static {
+        INT_TO_STRING = new String[64];
+        for (int i = 0; i < INT_TO_STRING.length; i++) {
+            INT_TO_STRING[i] = String.valueOf(i);
+        }
+    }
+
+    private static String int2str(int value) {
+        if (value < INT_TO_STRING.length) {
+            return INT_TO_STRING[value];
+        } else {
+            return Integer.toString(value);
+        }
+    }
+
     private final String glob;
     private final Pattern pattern;
+    private final int numParams;
+    private final Set<String> paramNames;
     private final String loggerName;
+    private final String metricName;
     private final String strVal;
 
     GlobPathMapping(String glob) {
+        final PatternAndParamCount patternAndParamCount = globToRegex(glob);
+
         this.glob = glob;
-        pattern = globToRegex(glob);
-        loggerName = loggerName(glob);
-        strVal = "glob:" + glob;
+        pattern = patternAndParamCount.pattern;
+        numParams = patternAndParamCount.numParams;
+
+        final ImmutableSet.Builder<String> paramNames = ImmutableSet.builder();
+        for (int i = 0; i < numParams; i++) {
+            paramNames.add(int2str(i));
+        }
+        this.paramNames = paramNames.build();
+
+        strVal = PREFIX + glob;
+
+        // Make the glob pattern as an absolute form to distinguish 'glob:foo' from 'exact:/foo'
+        // when generating logger and metric names.
+        final String aGlob = glob.startsWith("/") ? glob : "/**/" + glob;
+        loggerName = loggerName(aGlob);
+        metricName = aGlob;
     }
 
     @Override
-    protected String doApply(String path) {
-        return pattern.matcher(path).matches() ? path : null;
+    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
+        final Matcher m = pattern.matcher(mappingCtx.path());
+        if (!m.matches()) {
+            return PathMappingResult.empty();
+        }
+
+        if (numParams == 0) {
+            return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
+        }
+
+        final ImmutableMap.Builder<String, String> params = ImmutableMap.builder();
+        for (int i = 1; i <= numParams; i++) {
+            final String value = firstNonNull(m.group(i), "");
+            params.put(int2str(i - 1), value);
+        }
+
+        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query(), params.build());
+    }
+
+    @Override
+    public Set<String> paramNames() {
+        return paramNames;
     }
 
     @Override
@@ -44,9 +110,10 @@ final class GlobPathMapping extends AbstractPathMapping {
 
     @Override
     public String metricName() {
-        return glob;
+        return metricName;
     }
 
+    @VisibleForTesting
     Pattern asRegex() {
         return pattern;
     }
@@ -67,9 +134,14 @@ final class GlobPathMapping extends AbstractPathMapping {
         return strVal;
     }
 
-    static Pattern globToRegex(String glob) {
+    static PatternAndParamCount globToRegex(String glob) {
+        boolean createGroup;
+        int numGroups = 0;
         if (glob.charAt(0) != '/') {
             glob = "/**/" + glob;
+            createGroup = false; // Do not capture the prefix a user did not specify.
+        } else {
+            createGroup = true;
         }
 
         final int pathPatternLen = glob.length();
@@ -91,24 +163,60 @@ final class GlobPathMapping extends AbstractPathMapping {
 
             switch (asterisks) {
             case 1:
+                if (createGroup) {
+                    buf.append('(');
+                    numGroups++;
+                }
+
                 // Handle '/*/' specially.
                 if (beforeAsterisk == '/' && c == '/') {
                     buf.append("[^/]+");
                 } else {
                     buf.append("[^/]*");
                 }
+
+                if (createGroup) {
+                    buf.append(')');
+                } else {
+                    createGroup = true;
+                }
                 break;
             case 2:
                 // Handle '/**/' specially.
                 if (beforeAsterisk == '/' && c == '/') {
-                    buf.append("(?:.+/)?");
-                    asterisks = 0;
-                    beforeAsterisk = c;
-                    continue;
-                }
+                    buf.append("(?:");
 
-                buf.append(".*");
-                break;
+                    if (createGroup) {
+                        buf.append('(');
+                        numGroups++;
+                    }
+
+                    buf.append(".+");
+
+                    if (createGroup) {
+                        buf.append(')');
+                    } else {
+                        createGroup = false;
+                    }
+
+                    buf.append("/)?");
+                    asterisks = 0;
+                    continue;
+                } else {
+                    if (createGroup) {
+                        buf.append('(');
+                        numGroups++;
+                    }
+
+                    buf.append(".*");
+
+                    if (createGroup) {
+                        buf.append(')');
+                    } else {
+                        createGroup = false;
+                    }
+                    break;
+                }
             }
 
             asterisks = 0;
@@ -139,18 +247,46 @@ final class GlobPathMapping extends AbstractPathMapping {
         // Handle the case where the pattern ends with asterisk(s).
         switch (asterisks) {
         case 1:
+            if (createGroup) {
+                buf.append('(');
+                numGroups++;
+            }
+
             if (beforeAsterisk == '/') {
                 // '/*<END>'
                 buf.append("[^/]+");
             } else {
                 buf.append("[^/]*");
             }
+
+            if (createGroup) {
+                buf.append(')');
+            }
             break;
         case 2:
+            if (createGroup) {
+                buf.append('(');
+                numGroups++;
+            }
+
             buf.append(".*");
+
+            if (createGroup) {
+                buf.append(')');
+            }
             break;
         }
 
-        return Pattern.compile(buf.append('$').toString());
+        return new PatternAndParamCount(Pattern.compile(buf.append('$').toString()), numGroups);
+    }
+
+    private static final class PatternAndParamCount {
+        final Pattern pattern;
+        final int numParams;
+
+        PatternAndParamCount(Pattern pattern, int numParams) {
+            this.pattern = pattern;
+            this.numParams = numParams;
+        }
     }
 }

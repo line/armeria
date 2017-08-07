@@ -18,66 +18,100 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.server.Service;
 
-class EndpointInfo {
-
-    static EndpointInfo of(String hostnamePattern, String path, String fragment,
-                           SerializationFormat defaultFormat, Set<SerializationFormat> formats) {
-        return new EndpointInfo(hostnamePattern, path, fragment, defaultFormat, formats);
-    }
+/**
+ * Metadata about the endpoints exposed by a {@link Service}.
+ */
+public final class EndpointInfo {
 
     private final String hostnamePattern;
     private final String path;
+    @Nullable
     private final String fragment;
-    private final String defaultMimeType;
-    private final Set<String> availableMimeTypes;
+    private final MediaType defaultMimeType;
+    private final Set<MediaType> availableMimeTypes;
 
-    EndpointInfo(String hostnamePattern, String path, String fragment,
-                 SerializationFormat defaultFormat, Set<SerializationFormat> availableFormats) {
-        this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
-        this.path = requireNonNull(path, "path");
-        this.fragment = requireNonNull(fragment, "fragment");
-        defaultMimeType = requireNonNull(defaultFormat, "defaultFormat").mediaType().toString();
-
-        final Set<String> sortedAvailableMimeTypes =
-                availableFormats.stream()
-                                .map(SerializationFormat::mediaType)
-                                .map(Object::toString)
-                                .collect(Collectors.toCollection(TreeSet::new));
-        availableMimeTypes = Collections.unmodifiableSet(sortedAvailableMimeTypes);
+    /**
+     * Creates a new instance.
+     */
+    public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
+                        SerializationFormat defaultFormat, Iterable<SerializationFormat> availableFormats) {
+        this(hostnamePattern, path, fragment, defaultFormat.mediaType(),
+             Streams.stream(availableFormats).map(SerializationFormat::mediaType)::iterator);
     }
 
+    /**
+     * Creates a new instance.
+     */
+    public EndpointInfo(String hostnamePattern, String path, @Nullable String fragment,
+                        MediaType defaultMimeType, Iterable<MediaType> availableMimeTypes) {
+
+        this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
+        this.path = requireNonNull(path, "path");
+        this.fragment = Strings.emptyToNull(fragment);
+        this.defaultMimeType = requireNonNull(defaultMimeType, "defaultFormat");
+
+        this.availableMimeTypes = ImmutableSortedSet.copyOf(
+                Comparator.comparing(MediaType::toString),
+                requireNonNull(availableMimeTypes, "availableMimeTypes"));
+    }
+
+    /**
+     * Returns the hostname pattern of this endpoint.
+     */
     @JsonProperty
-    String hostnamePattern() {
+    public String hostnamePattern() {
         return hostnamePattern;
     }
 
+    /**
+     * Returns the path of this endpoint.
+     */
     @JsonProperty
-    String path() {
+    public String path() {
         return path;
     }
 
+    /**
+     * Returns the URI fragment of this endpoint.
+     */
     @JsonProperty
-    String fragment() {
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public String fragment() {
         return fragment;
     }
 
+    /**
+     * Returns the default MIME type of this endpoint.
+     */
     @JsonProperty
-    String defaultMimeType() {
+    public MediaType defaultMimeType() {
         return defaultMimeType;
     }
 
+    /**
+     * Returns the set of available MIME types of this endpoint.
+     */
     @JsonProperty
-    Set<String> availableMimeTypes() {
+    public Set<MediaType> availableMimeTypes() {
         return availableMimeTypes;
     }
 
@@ -99,19 +133,19 @@ class EndpointInfo {
         final EndpointInfo that = (EndpointInfo) obj;
         return hostnamePattern.equals(that.hostnamePattern) &&
                path.equals(that.path) &&
-               fragment.equals(that.fragment) &&
+               Objects.equals(fragment, that.fragment) &&
                defaultMimeType.equals(that.defaultMimeType) &&
                availableMimeTypes.equals(that.availableMimeTypes);
     }
 
     @Override
     public String toString() {
-        return "EndpointInfo{" +
-               "hostnamePattern=" + hostnamePattern +
-               ", path=" + path +
-               ", fragment=" + fragment +
-               ", defaultMimeType=" + defaultMimeType +
-               ", availableMimeTypes=" + availableMimeTypes +
-               '}';
+        return MoreObjects.toStringHelper(this)
+                          .add("hostnamePattern", hostnamePattern)
+                          .add("path", path)
+                          .add("fragment", fragment)
+                          .add("defaultMimeType", defaultMimeType)
+                          .add("availableMimeTypes", availableMimeTypes)
+                          .toString();
     }
 }

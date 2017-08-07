@@ -20,8 +20,12 @@ import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -33,13 +37,12 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.logging.ResponseLog;
-import com.linecorp.armeria.common.logging.ResponseLogBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -97,14 +100,14 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-finally} block:
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
      * try (SafeCloseable ignored = RequestContext.push(ctx)) {
      *     ...
      * }
      * }</pre>
      *
-     * <p>The callbacks added by {@link #onEnter(Runnable)} and {@link #onExit(Runnable)} will be invoked
+     * <p>The callbacks added by {@link #onEnter(Consumer)} and {@link #onExit(Consumer)} will be invoked
      * when the context is pushed to and removed from the thread-local stack respectively.
      *
      * <p>NOTE: In case of re-entrance, the callbacks will never run.
@@ -115,7 +118,7 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
-     * {@link SafeCloseable#close()}, which can be done using a {@code try-finally} block:
+     * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
      * try (PushHandle ignored = RequestContext.push(ctx, true)) {
      *     ...
@@ -125,8 +128,8 @@ public interface RequestContext extends AttributeMap {
      * <p>NOTE: This method is only useful when it is undesirable to invoke the callbacks, such as replacing
      *          the current context with another. Prefer {@link #push(RequestContext)} otherwise.
      *
-     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Runnable)} and
-     *                     {@link #onExit(Runnable)} will be invoked when the context is pushed to and
+     * @param runCallbacks if {@code true}, the callbacks added by {@link #onEnter(Consumer)} and
+     *                     {@link #onExit(Consumer)} will be invoked when the context is pushed to and
      *                     removed from the thread-local stack respectively.
      *                     If {@code false}, no callbacks will be executed.
      *                     NOTE: In case of re-entrance, the callbacks will never run.
@@ -139,13 +142,15 @@ public interface RequestContext extends AttributeMap {
         }
 
         if (runCallbacks) {
-            ctx.invokeOnEnterCallbacks();
             if (oldCtx != null) {
+                oldCtx.invokeOnChildCallbacks(ctx);
+                ctx.invokeOnEnterCallbacks();
                 return () -> {
                     ctx.invokeOnExitCallbacks();
                     RequestContextThreadLocal.set(oldCtx);
                 };
             } else {
+                ctx.invokeOnEnterCallbacks();
                 return () -> {
                     ctx.invokeOnExitCallbacks();
                     RequestContextThreadLocal.remove();
@@ -185,16 +190,22 @@ public interface RequestContext extends AttributeMap {
     SSLSession sslSession();
 
     /**
-     * Returns the session-layer method name of the current {@link Request}. e.g. "GET" or "POST" for HTTP
+     * Returns the HTTP method of the current {@link Request}.
      */
-    String method();
+    HttpMethod method();
 
     /**
-     * Returns the absolute path part of the current {@link Request}, as defined in
-     * <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5.1.2">the
-     * section 5.1.2 of RFC2616</a>.
+     * Returns the absolute path part of the current {@link Request} URI, excluding the query part,
+     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      */
     String path();
+
+    /**
+     * Returns the query part of the current {@link Request} URI, without the leading {@code '?'},
+     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     */
+    @Nullable
+    String query();
 
     /**
      * Returns the {@link Request} associated with this context.
@@ -202,26 +213,14 @@ public interface RequestContext extends AttributeMap {
     <T> T request();
 
     /**
+     * Returns the {@link RequestLog} that contains the information about the current {@link Request}.
+     */
+    RequestLog log();
+
+    /**
      * Returns the {@link RequestLogBuilder} that collects the information about the current {@link Request}.
      */
-    RequestLogBuilder requestLogBuilder();
-
-    /**
-     * Returns the {@link ResponseLogBuilder} that collects the information about the current {@link Response}.
-     */
-    ResponseLogBuilder responseLogBuilder();
-
-    /**
-     * Returns the {@link CompletableFuture} that completes when the {@link #requestLogBuilder()} finished
-     * collecting the {@link Request} information.
-     */
-    CompletableFuture<RequestLog> requestLogFuture();
-
-    /**
-     * Returns the {@link CompletableFuture} that completes when the {@link #responseLogBuilder()} finished
-     * collecting the {@link Response} information.
-     */
-    CompletableFuture<ResponseLog> responseLogFuture();
+    RequestLogBuilder logBuilder();
 
     /**
      * Returns all {@link Attribute}s set in this context.
@@ -232,6 +231,17 @@ public interface RequestContext extends AttributeMap {
      * Returns the {@link EventLoop} that is handling the current {@link Request}.
      */
     EventLoop eventLoop();
+
+    /**
+     * Returns the {@link ByteBufAllocator} for this {@link RequestContext}. Any buffers created by this
+     * {@link ByteBufAllocator} must be
+     * <a href="http://netty.io/wiki/reference-counted-objects.html">reference-counted</a>. If you don't know
+     * what this means, you should probably use {@code byte[]} or {@link java.nio.ByteBuffer} directly instead
+     * of calling this method.
+     */
+    default ByteBufAllocator alloc() {
+        throw new UnsupportedOperationException("No ByteBufAllocator available for this RequestContext.");
+    }
 
     /**
      * Returns an {@link EventLoop} that will make sure this {@link RequestContext} is set as the current
@@ -274,6 +284,30 @@ public interface RequestContext extends AttributeMap {
     Runnable makeContextAware(Runnable runnable);
 
     /**
+     * Returns a {@link Function} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code function}.
+     */
+    <T, R> Function<T, R> makeContextAware(Function<T, R> function);
+
+    /**
+     * Returns a {@link BiFunction} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code function}.
+     */
+    <T, U, V> BiFunction<T, U, V> makeContextAware(BiFunction<T, U, V> function);
+
+    /**
+     * Returns a {@link Consumer} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code action}.
+     */
+    <T> Consumer<T> makeContextAware(Consumer<T> action);
+
+    /**
+     * Returns a {@link BiConsumer} that makes sure the current {@link RequestContext} is set and then invokes
+     * the input {@code action}.
+     */
+    <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action);
+
+    /**
      * Returns a {@link FutureListener} that makes sure the current {@link RequestContext} is set and then
      * invokes the input {@code listener}.
      *
@@ -293,40 +327,106 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Returns a {@link GenericFutureListener} that makes sure the current {@link RequestContext} is set and
-     * then invokes the input {@code listener}.
-     *
+     * then invokes the input {@code listener}. Unlike other versions of {@code makeContextAware}, this one will
+     * invoke the listener with the future's result even if the context has already been timed out.
      * @deprecated Use {@link CompletableFuture} instead.
      */
     @Deprecated
     <T extends Future<?>> GenericFutureListener<T> makeContextAware(GenericFutureListener<T> listener);
 
     /**
+     * Returns a {@link CompletionStage} that makes sure the current {@link CompletionStage} is set and
+     * then invokes the input {@code stage}.
+     */
+    <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage);
+
+    /**
+     * Returns a {@link CompletableFuture} that makes sure the current {@link CompletableFuture} is set and
+     * then invokes the input {@code future}.
+     */
+    default <T> CompletableFuture<T> makeContextAware(CompletableFuture<T> future) {
+        return makeContextAware((CompletionStage<T>) future).toCompletableFuture();
+    }
+
+    /**
+     * Returns whether this {@link RequestContext} has been timed-out (e.g., when the corresponding request
+     * passes a deadline).
+     */
+    boolean isTimedOut();
+
+    /**
      * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
      * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
      * should be restored by this callback.
+     *
+     * @param callback a {@link Consumer} whose argument is this context
      */
-    void onEnter(Runnable callback);
+    void onEnter(Consumer<? super RequestContext> callback);
+
+    /**
+     * @deprecated Use {@link #onEnter(Consumer)} instead.
+     */
+    @Deprecated
+    default void onEnter(Runnable callback) {
+        onEnter(ctx -> callback.run());
+    }
 
     /**
      * Registers {@code callback} to be run when re-exiting this {@link RequestContext}, usually when using
      * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
      * should be reset by this callback.
+     *
+     * @param callback a {@link Consumer} whose argument is this context
      */
-    void onExit(Runnable callback);
+    void onExit(Consumer<? super RequestContext> callback);
 
     /**
-     * Invokes all {@link #onEnter(Runnable)} callbacks. It is discouraged to use this method directly.
+     * @deprecated Use {@link #onExit(Consumer)} instead.
+     */
+    @Deprecated
+    default void onExit(Runnable callback) {
+        onExit(ctx -> callback.run());
+    }
+
+    /**
+     * Registers {@code callback} to be run when this context is replaced by a child context.
+     * You could use this method to inherit an attribute of this context to the child contexts or
+     * register a callback to the child contexts that may be created later:
+     * <pre>{@code
+     * ctx.onChild((curCtx, newCtx) -> {
+     *     assert ctx == curCtx && curCtx != newCtx;
+     *     // Inherit the value of the 'MY_ATTR' attribute to the child context.
+     *     newCtx.attr(MY_ATTR).set(curCtx.attr(MY_ATTR).get());
+     *     // Add a callback to the child context.
+     *     newCtx.onExit(() -> { ... });
+     * });
+     * }</pre>
+     *
+     * @param callback a {@link BiConsumer} whose first argument is this context and
+     *                 whose second argument is the new context that replaces this context
+     */
+    void onChild(BiConsumer<? super RequestContext, ? super RequestContext> callback);
+
+    /**
+     * Invokes all {@link #onEnter(Consumer)} callbacks. It is discouraged to use this method directly.
      * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
      * the callbacks are invoked automatically.
      */
     void invokeOnEnterCallbacks();
 
     /**
-     * Invokes all {@link #onExit(Runnable)} callbacks. It is discouraged to use this method directly.
+     * Invokes all {@link #onExit(Consumer)} callbacks. It is discouraged to use this method directly.
      * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
      * the callbacks are invoked automatically.
      */
     void invokeOnExitCallbacks();
+
+    /**
+     * Invokes all {@link #onChild(BiConsumer)} callbacks. It is discouraged to use this method directly.
+     * Use {@link #makeContextAware(Runnable)} or {@link #push(RequestContext, boolean)} instead so that
+     * the callbacks are invoked automatically.
+     */
+    void invokeOnChildCallbacks(RequestContext newCtx);
 
     /**
      * Resolves the specified {@code promise} with the specified {@code result} so that the {@code promise} is

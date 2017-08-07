@@ -22,8 +22,8 @@ import java.util.Optional;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.http.HttpHeaderNames;
-import com.linecorp.armeria.common.http.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.util.AsciiString;
 
@@ -38,7 +38,6 @@ public class ClientOptionsTest {
 
         ClientOptions options2 = ClientOptions.DEFAULT;
         assertThat(options2.get(ClientOption.HTTP_HEADERS), is(Optional.of(HttpHeaders.EMPTY_HEADERS)));
-
     }
 
     @Test(expected = IllegalArgumentException.class)

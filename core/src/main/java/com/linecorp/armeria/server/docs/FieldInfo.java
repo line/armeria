@@ -18,70 +18,74 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.meta_data.FieldMetaData;
-
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 
-final class FieldInfo {
-
-    static FieldInfo of(FieldMetaData fieldMetaData) {
-        return of(fieldMetaData, null, Collections.emptyMap());
-    }
-
-    static FieldInfo of(FieldMetaData fieldMetaData, @Nullable String namespace,
-                        Map<String, String> docStrings) {
-        requireNonNull(fieldMetaData, "fieldMetaData");
-        final String docStringKey = ThriftDocString.key(namespace, fieldMetaData.fieldName);
-        return new FieldInfo(fieldMetaData.fieldName,
-                             RequirementType.of(fieldMetaData.requirementType),
-                             TypeInfo.of(fieldMetaData.valueMetaData, docStrings),
-                             docStrings.get(docStringKey));
-    }
-
-    static FieldInfo of(String name, RequirementType requirementType, TypeInfo type) {
-        return of(name, requirementType, type, null, Collections.emptyMap());
-    }
-
-    static FieldInfo of(String name, RequirementType requirementType, TypeInfo type,
-                        @Nullable String namespace, Map<String, String> docStrings) {
-        final String docStringKey = ThriftDocString.key(namespace, name);
-        return new FieldInfo(name, requirementType, type, docStrings.get(docStringKey));
-    }
+/**
+ * Metadata about a field of a struct or an exception.
+ */
+public final class FieldInfo {
 
     private final String name;
-    private final RequirementType requirementType;
-    private final TypeInfo type;
+    private final FieldRequirement requirement;
+    private final TypeSignature typeSignature;
     private final String docString;
 
-    private FieldInfo(String name, RequirementType requirementType, TypeInfo type, @Nullable String docString) {
-        this.name = requireNonNull(name, "name");
-        this.requirementType = requireNonNull(requirementType, "requirementType");
-        this.type = requireNonNull(type, "type");
-        this.docString = docString;
+    /**
+     * Creates a new instance.
+     */
+    public FieldInfo(String name, FieldRequirement requirement, TypeSignature typeSignature) {
+        this(name, requirement, typeSignature, null);
     }
 
+    /**
+     * Creates a new instance.
+     */
+    public FieldInfo(String name, FieldRequirement requirement,
+                     TypeSignature typeSignature, @Nullable String docString) {
+        this.name = requireNonNull(name, "name");
+        this.requirement = requireNonNull(requirement, "requirement");
+        this.typeSignature = requireNonNull(typeSignature, "typeSignature");
+        this.docString = Strings.emptyToNull(docString);
+    }
+
+    /**
+     * Returns the fully qualified type name of the field.
+     */
     @JsonProperty
     public String name() {
         return name;
     }
 
+    /**
+     * Returns the requirement level of the field.
+     */
     @JsonProperty
-    public RequirementType requirementType() {
-        return requirementType;
+    public FieldRequirement requirement() {
+        return requirement;
     }
 
+    /**
+     * Returns the metadata about the type of the field.
+     */
     @JsonProperty
-    public TypeInfo type() {
-        return type;
+    public TypeSignature typeSignature() {
+        return typeSignature;
     }
 
+    /**
+     * Returns the documentation string of the field.
+     */
     @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
     public String docString() {
         return docString;
     }
@@ -96,23 +100,23 @@ final class FieldInfo {
             return false;
         }
 
-        FieldInfo fieldInfo = (FieldInfo) o;
-        return Objects.equals(name, fieldInfo.name) &&
-               Objects.equals(requirementType, fieldInfo.requirementType) &&
-               Objects.equals(type, fieldInfo.type);
+        final FieldInfo that = (FieldInfo) o;
+        return name.equals(that.name) &&
+               requirement == that.requirement &&
+               typeSignature.equals(that.typeSignature);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, requirementType, type);
+        return Objects.hash(name, requirement, typeSignature);
     }
 
     @Override
     public String toString() {
-        return "FieldInfo{" +
-               "name='" + name + '\'' +
-               ", requirementType=" + requirementType +
-               ", type=" + type +
-               '}';
+        return MoreObjects.toStringHelper(this)
+                          .add("name", name)
+                          .add("requirement", requirement)
+                          .add("typeSignature", typeSignature)
+                          .toString();
     }
 }

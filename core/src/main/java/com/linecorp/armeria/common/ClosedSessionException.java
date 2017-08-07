@@ -28,10 +28,10 @@ public final class ClosedSessionException extends RuntimeException {
 
     /**
      * Returns a {@link ClosedSessionException} which may be a singleton or a new instance, depending on
-     * whether {@link Exceptions#isVerbose() the verbose mode} is enabled.
+     * whether {@link Flags#verboseExceptions() the verbose exception mode} is enabled.
      */
     public static ClosedSessionException get() {
-        return Exceptions.isVerbose() ? new ClosedSessionException() : INSTANCE;
+        return Flags.verboseExceptions() ? new ClosedSessionException() : INSTANCE;
     }
 
     /**

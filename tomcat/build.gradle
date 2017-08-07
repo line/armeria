@@ -1,25 +1,4 @@
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
-
-import java.nio.file.Files
-import java.nio.file.Paths
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'org.ow2.asm:asm:5.1'
-    }
-}
-
-dependencies {
-    compile project(':core')
-
+managedDependencies {
     // Tomcat
     [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
         compile "org.apache.tomcat.embed:$it"
@@ -28,34 +7,3 @@ dependencies {
     // Replace commons-logging (Tomcat's logging API) with SLF4J.
     runtime 'org.slf4j:jcl-over-slf4j'
 }
-
-// Remove the methods that did not exist until Tomcat 8.5 from the ProtocolHandler implementation using
-// bytecode manipulation. We need the methods to exist during compilation time since we compile the
-// ProtocolHandler implementation against Tomcat 8.5, but want to make sure the methods do not exist because
-// otherwise JVM will fail to load the ProtocolHandler due to the references to the non-existent classes in the
-// method signatures.
-task tomcat80compat << {
-    def path = Paths.get("${project.buildDir}", 'classes', 'main',
-            'com', 'linecorp', 'armeria', 'server', 'http', 'tomcat',
-            'Tomcat80ProtocolHandler.class')
-
-    logger.info("Manipulating ${path} ..")
-
-    def reader = new ClassReader(Files.readAllBytes(path))
-    def writer = new ClassWriter(ClassWriter.COMPUTE_MAXS)
-
-    reader.accept(new ClassVisitor(Opcodes.ASM5, writer) {
-        @Override
-        MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-            if (name == 'addSslHostConfig' || name == 'findSslHostConfigs' ||
-                    name == 'addUpgradeProtocol' || name == 'findUpgradeProtocols') {
-                return null
-            } else {
-                return super.visitMethod(access, name, desc, signature, exceptions)
-            }
-        }
-    }, 0)
-
-    Files.write(path, writer.toByteArray())
-}
-tasks.compileJava.finalizedBy(tasks.tomcat80compat)

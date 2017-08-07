@@ -1,0 +1,58 @@
+/*
+ *  Copyright 2017 LINE Corporation
+ *
+ *  LINE Corporation licenses this file to you under the Apache License,
+ *  version 2.0 (the "License"); you may not use this file except in compliance
+ *  with the License. You may obtain a copy of the License at:
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *  License for the specific language governing permissions and limitations
+ *  under the License.
+ */
+package com.linecorp.armeria.common;
+
+import java.io.IOException;
+
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+
+/**
+ * Jackson {@link JsonDeserializer} for {@link MediaType}.
+ */
+public final class MediaTypeJsonDeserializer extends StdDeserializer<MediaType> {
+
+    private static final long serialVersionUID = 2081299438299133097L;
+
+    /**
+     * Creates a new instance.
+     */
+    public MediaTypeJsonDeserializer() {
+        super(MediaType.class);
+    }
+
+    @Override
+    public MediaType deserialize(JsonParser p, DeserializationContext ctx)
+            throws IOException {
+        final JsonNode tree = p.getCodec().readTree(p);
+        if (!tree.isTextual()) {
+            ctx.reportMappingException("media type must be a string.");
+            return null;
+        }
+
+        final String textValue = tree.textValue();
+        try {
+            return MediaType.parse(textValue);
+        } catch (IllegalArgumentException unused) {
+            // Failed to parse.
+            ctx.reportMappingException("malformed media type: " + textValue);
+            return null;
+        }
+    }
+}
