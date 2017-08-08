@@ -82,6 +82,8 @@ public class HttpServerPathTest {
                 "erp..4.14.1387...0j35i39k1j0i131k1j0i19k1j0i30i19k1j0i8i30i19k1j0i5i30i19k1j0i8i10" +
                 "i30i19k1.Z6SsEq-rZDw",
                 HttpStatus.OK);
+        // Should allow the asterisk character in the path
+        TEST_URLS.put("/service/foo*bar4", HttpStatus.OK);
 
         // 400 test
         TEST_URLS.put("..", HttpStatus.BAD_REQUEST);
@@ -98,7 +100,6 @@ public class HttpServerPathTest {
         TEST_URLS.put("/service../foobar2", HttpStatus.NOT_FOUND);
         TEST_URLS.put("/service/foobar3..", HttpStatus.NOT_FOUND);
         TEST_URLS.put("/gwturl#user:45/comments", HttpStatus.NOT_FOUND);
-        TEST_URLS.put("/service/foo*bar4", HttpStatus.NOT_FOUND);
         TEST_URLS.put("/service:name/hello", HttpStatus.NOT_FOUND);
         TEST_URLS.put("/service::::name/hello", HttpStatus.NOT_FOUND);
     }
