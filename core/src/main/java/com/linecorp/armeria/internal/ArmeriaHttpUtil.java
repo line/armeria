@@ -76,7 +76,7 @@ public final class ArmeriaHttpUtil {
 
     /**
      * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
-     * 
+     *
      * <p>Should allow the asterisk character in the path, query, or fragment components of a URL(RFC2396).
      * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
      */
