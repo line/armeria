@@ -73,6 +73,7 @@ import io.netty.util.HashingStrategy;
  * <p>The conversion between HTTP/1 and HTTP/2 has been forked from Netty's {@link HttpConversionUtil}.
  */
 public final class ArmeriaHttpUtil {
+
     /**
      * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
      * 
