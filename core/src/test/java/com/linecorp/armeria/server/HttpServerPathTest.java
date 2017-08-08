@@ -100,6 +100,7 @@ public class HttpServerPathTest {
         TEST_URLS.put("/service../foobar2", HttpStatus.NOT_FOUND);
         TEST_URLS.put("/service/foobar3..", HttpStatus.NOT_FOUND);
         TEST_URLS.put("/gwturl#user:45/comments", HttpStatus.NOT_FOUND);
+        TEST_URLS.put("/service/foo*bar4", HttpStatus.NOT_FOUND);
         TEST_URLS.put("/service:name/hello", HttpStatus.NOT_FOUND);
         TEST_URLS.put("/service::::name/hello", HttpStatus.NOT_FOUND);
     }
