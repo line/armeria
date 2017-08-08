@@ -74,7 +74,7 @@ public class HttpServerPathTest {
         TEST_URLS.put("/service/foo:bar", HttpStatus.OK);
         TEST_URLS.put("/service/foo::::::bar", HttpStatus.OK);
         TEST_URLS.put("/cache/v1.0/rnd_team/get/krisjey:56578015655:1223", HttpStatus.OK);
-        
+
         TEST_URLS.put("/signout/56578015655?crumb=s-1475829101-cec4230588-%E2%98%83", HttpStatus.OK);
         TEST_URLS.put(
                 "/search/num=20&newwindow=1&espv=2&q=url+path+colon&oq=url+path+colon&gs_l=serp.3" +
