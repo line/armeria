@@ -74,7 +74,7 @@ public class HttpServerPathTest {
         TEST_URLS.put("/service/foo:bar", HttpStatus.OK);
         TEST_URLS.put("/service/foo::::::bar", HttpStatus.OK);
         TEST_URLS.put("/cache/v1.0/rnd_team/get/krisjey:56578015655:1223", HttpStatus.OK);
-
+        
         TEST_URLS.put("/signout/56578015655?crumb=s-1475829101-cec4230588-%E2%98%83", HttpStatus.OK);
         TEST_URLS.put(
                 "/search/num=20&newwindow=1&espv=2&q=url+path+colon&oq=url+path+colon&gs_l=serp.3" +
@@ -82,6 +82,8 @@ public class HttpServerPathTest {
                 "erp..4.14.1387...0j35i39k1j0i131k1j0i19k1j0i30i19k1j0i8i30i19k1j0i5i30i19k1j0i8i10" +
                 "i30i19k1.Z6SsEq-rZDw",
                 HttpStatus.OK);
+        // Should allow the asterisk character in the path
+        TEST_URLS.put("/service/foo*bar4", HttpStatus.OK);
 
         // 400 test
         TEST_URLS.put("..", HttpStatus.BAD_REQUEST);
