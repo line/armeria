@@ -209,6 +209,16 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
+     * Binds the specified grpc {@link Service} under the specified directory.
+     */
+    public B grpcServiceUnder(
+            String pathPrefix,
+            Service<HttpRequest, HttpResponse> service) {
+        service(PathMapping.ofPrefix(pathPrefix, false), service);
+        return self();
+    }
+
+    /**
      * Binds the specified {@link Service} under the specified directory.
      */
     public B serviceUnder(String pathPrefix, Service<HttpRequest, HttpResponse> service) {

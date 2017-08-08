@@ -352,9 +352,26 @@ public final class ServerBuilder {
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder serviceUnder(String pathPrefix, Service<HttpRequest, HttpResponse> service) {
+    public ServerBuilder serviceUnder(
+            String pathPrefix,
+            Service<HttpRequest, HttpResponse> service) {
         defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
+        return this;
+    }
+
+    /**
+     * Binds the specified grpc {@link Service} under the specified directory of the default
+     * {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public ServerBuilder grpcServiceUnder(
+            String pathPrefix,
+            Service<HttpRequest, HttpResponse> service) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.grpcServiceUnder(pathPrefix, service);
         return this;
     }
 
