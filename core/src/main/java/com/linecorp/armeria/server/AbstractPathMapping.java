@@ -18,12 +18,17 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Optional;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(PathMappingContext)}.
  */
 public abstract class AbstractPathMapping implements PathMapping {
+
+    private static final List<String> FALLBACK_METRIC_NAME = ImmutableList.of("__UNKNOWN_PATH__");
 
     /**
      * {@inheritDoc} This method performs sanity checks on the specified {@code path} and calls
@@ -120,8 +125,8 @@ public abstract class AbstractPathMapping implements PathMapping {
     }
 
     @Override
-    public String metricName() {
-        return "__UNKNOWN_PATH__";
+    public List<String> metricName() {
+        return FALLBACK_METRIC_NAME;
     }
 
     @Override

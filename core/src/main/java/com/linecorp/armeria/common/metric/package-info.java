@@ -15,6 +15,6 @@
  */
 
 /**
- * Common metric related components.
+ * Common metric collection API.
  */
 package com.linecorp.armeria.common.metric;

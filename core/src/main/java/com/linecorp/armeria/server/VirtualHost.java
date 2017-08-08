@@ -30,10 +30,13 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaTypeSet;
+import com.linecorp.armeria.common.metric.MetricKey;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
@@ -93,7 +96,7 @@ public final class VirtualHost {
         }
 
         services = Collections.unmodifiableList(servicesCopy);
-        router = Routers.ofServiceConfig(services);
+        router = Routers.ofVirtualHost(services);
     }
 
     /**
@@ -184,6 +187,9 @@ public final class VirtualHost {
         }
 
         this.serverConfig = requireNonNull(serverConfig, "serverConfig");
+        router.registerMetrics(serverConfig.metrics(),
+                               new MetricKey(ImmutableList.of("router", "virtualHostCache"),
+                                             ImmutableMap.of("hostnamePattern", hostnamePattern)));
     }
 
     /**

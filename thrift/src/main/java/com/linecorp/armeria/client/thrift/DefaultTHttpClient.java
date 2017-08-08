@@ -31,13 +31,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.Metrics;
 
 final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
 
-    DefaultTHttpClient(ClientBuilderParams params,
-                       Client<RpcRequest, RpcResponse> delegate,
-                       SessionProtocol sessionProtocol, Endpoint endpoint) {
-        super(params, delegate, sessionProtocol, endpoint);
+    DefaultTHttpClient(ClientBuilderParams params, Client<RpcRequest, RpcResponse> delegate,
+                       Metrics metrics, SessionProtocol sessionProtocol, Endpoint endpoint) {
+        super(params, delegate, metrics, sessionProtocol, endpoint);
     }
 
     @Override

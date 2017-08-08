@@ -8,6 +8,7 @@ buildscript {
 }
 
 managedDependencies {
+
     // Caffeine
     compile 'com.github.ben-manes.caffeine:caffeine'
 
@@ -16,12 +17,11 @@ managedDependencies {
         compile "com.fasterxml.jackson.core:$it"
     }
 
-    // Metrics
+    // Metrics (Dropwizard, Prometheus, HdrHistogram and Rolling-Metrics)
     compile 'io.dropwizard.metrics:metrics-core'
-
-    // Prometheus
-    compile 'io.prometheus:simpleclient_caffeine'
     compile 'io.prometheus:simpleclient_common'
+    compile 'org.hdrhistogram:HdrHistogram'
+    compile 'com.github.vladimir-bukhtoyarov:rolling-metrics'
 
     // Netty
     [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
@@ -106,7 +106,7 @@ task trimShadedJar(type: ProGuardTask,
 
     keepattributes 'Signature, InnerClasses, Annotation'
     keep "class !${shadedPackage}.**,com.linecorp.armeria.** { *; }"
-    keep "class ${shadedPackage}.caffeine.** { *; }"    // To make the reflection work.
+    keep "class ${shadedPackage}.caffeine.** { *; }" // To make the unsafe field access work.
 }
 
 tasks.assemble.dependsOn tasks.trimShadedJar

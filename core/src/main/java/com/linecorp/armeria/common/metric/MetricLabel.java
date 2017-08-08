@@ -23,24 +23,17 @@ import io.prometheus.client.Collector;
  *
  * <p>Example:
  * <pre>{@code
- * public enum MyMetricLabel implements MetricLabel<MyMetricLabel> {
+ * public enum MyMetricLabel implements MetricLabel {
  *     path,
  *     handler,
  *     method,
  * }}</pre>
- *
- * @param <T> the implementing class
  */
 @FunctionalInterface
-public interface MetricLabel<T extends MetricLabel<T>> extends Comparable<T> {
+public interface MetricLabel {
     /**
      * Returns a single label name.
      * @return label name
      */
     String name();
-
-    @Override
-    default int compareTo(T o) {
-        return name().compareTo(o.name());
-    }
 }

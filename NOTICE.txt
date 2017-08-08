@@ -68,9 +68,9 @@ Modified redistributions
 This product contains a modified part of Brave, distributed by Zipkin.io:
 
   * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
-  * Homepage: https://github.com/openzipkin/brave/
+  * Homepage: https://github.com/openzipkin/brave
 
-This product contains a modified part of GRPC, distributed by Google:
+This product contains a modified part of gRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
   * Homepage: http://www.grpc.io/
@@ -98,7 +98,12 @@ Dependencies
 This product depends on Brave, distributed by Zipkin.io:
 
   * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
-  * Homepage: https://github.com/openzipkin/brave/
+  * Homepage: https://github.com/openzipkin/brave
+
+This product depends on Caffeine, distributed by Ben Manes:
+
+  * License: licenses/LICENSE.caffeine.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/ben-manes/caffeine
 
 This product depends on Caffeine, distributed by Ben Manes:
 
@@ -115,7 +120,7 @@ This product depends on FindBugs-JSR305, distributed by
   * License: licenses/LICENSE.jsr305.al20.txt (Apache License v2.0)
   * Homepage: http://findbugs.sourceforge.net/
 
-This product depends on GRPC, distributed by Google:
+This product depends on gRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
   * Homepage: http://www.grpc.io/
@@ -129,6 +134,11 @@ This product depends on Hamcrest, distributed by hamcrest.org:
 
   * License: licenses/LICENSE.hamcrest.bsd.txt (BSD License)
   * Homepage: http://hamcrest.org/
+
+This product depends on HdrHistogram, distributed by HdrHistogram.org:
+
+  * License: licenses/LICENSE.hdrhistogram.cc0.txt
+  * Homepage: http://hdrhistogram.org/
 
 This product depends on Apache HttpComponents, distributed by Apache Software
 Foundation:
@@ -195,6 +205,11 @@ This product depends on Reflections, distributed by ronmamo:
 
   * License: licenses/LICENSE.reflections.wtfpl.txt (WTFPL)
   * Homepage: https://github.com/ronmamo/reflections
+
+This product depends on Rolling-Metrics, distributed by Vladimir Bukhtoyarov:
+
+  * License: licenses/LICENSE.rolling-metrics.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/vladimir-bukhtoyarov/rolling-metrics
 
 This product depends on SLF4J, distributed by QOS.ch:
 

@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
@@ -68,6 +69,11 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     @Override
     public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
         return delegate().acquireEventLoop(endpoint);
+    }
+
+    @Override
+    public Metrics metrics() {
+        return delegate().metrics();
     }
 
     @Override

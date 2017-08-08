@@ -116,6 +116,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         ArmeriaChannel channel = new ArmeriaChannel(
                 new DefaultClientBuilderParams(this, uri, clientType, options),
                 httpClient,
+                metrics(),
                 scheme.sessionProtocol(),
                 newEndpoint(uri),
                 serializationFormat,

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.spring;
 
-import static com.linecorp.armeria.spring.MetricNames.serviceMetricName;
+import static com.linecorp.armeria.spring.MetricKeyFunctions.serviceMetricKeyFunction;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.DropwizardMetricsExporter;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -65,7 +66,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
-import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
@@ -120,9 +121,8 @@ public class ArmeriaAutoConfiguration {
         thriftServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (armeriaSettings.isEnableDropwizardMetrics()) {
-                service = service.decorate(
-                        DropwizardMetricCollectingService.newDecorator(
-                                metricRegistry, serviceMetricName(bean.getServiceName())));
+                service = service.decorate(MetricCollectingService.newDecorator(
+                        serviceMetricKeyFunction(bean.getServiceName())));
             }
 
             server.service(bean.getPath(), service);
@@ -139,9 +139,8 @@ public class ArmeriaAutoConfiguration {
         httpServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (armeriaSettings.isEnableDropwizardMetrics()) {
-                service = service.decorate(
-                        DropwizardMetricCollectingService.newDecorator(
-                                metricRegistry, serviceMetricName(bean.getServiceName())));
+                service = service.decorate(MetricCollectingService.newDecorator(
+                        serviceMetricKeyFunction(bean.getServiceName())));
             }
             server.service(bean.getPathMapping(), service);
         }));
@@ -150,8 +149,8 @@ public class ArmeriaAutoConfiguration {
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<HttpRequest, HttpResponse>> decorator = bean.getDecorator();
             if (armeriaSettings.isEnableDropwizardMetrics()) {
-                decorator = decorator.andThen(DropwizardMetricCollectingService.newDecorator(
-                        metricRegistry, serviceMetricName(bean.getServiceName())));
+                decorator = decorator.andThen(MetricCollectingService.newDecorator(
+                        serviceMetricKeyFunction(bean.getServiceName())));
             }
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator);
         }));
@@ -194,6 +193,10 @@ public class ArmeriaAutoConfiguration {
                         initializer -> initializer.configure(server)));
 
         Server s = server.build();
+        if (armeriaSettings.isEnableDropwizardMetrics()) {
+            s.metrics().addExporter(new DropwizardMetricsExporter(metricRegistry, "server"));
+        }
+
         s.start().join();
         logger.info("Armeria server started at ports: {}", s.activePorts());
         return s;

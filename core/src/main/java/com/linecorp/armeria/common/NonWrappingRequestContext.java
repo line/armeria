@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.netty.channel.Channel;
@@ -40,6 +41,7 @@ import io.netty.util.AttributeKey;
  */
 public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
+    private final Metrics metrics;
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
     private final HttpMethod method;
@@ -59,8 +61,10 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * @param request the request associated with this context
      */
     protected NonWrappingRequestContext(
-            SessionProtocol sessionProtocol, HttpMethod method, String path, @Nullable String query,
-            Object request) {
+            Metrics metrics, SessionProtocol sessionProtocol,
+            HttpMethod method, String path, @Nullable String query, Object request) {
+
+        this.metrics = requireNonNull(metrics, "metrics");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
@@ -127,6 +131,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @SuppressWarnings("unchecked")
     public final <T> T request() {
         return (T) request;
+    }
+
+    @Override
+    public final Metrics metrics() {
+        return metrics;
     }
 
     @Override

@@ -35,6 +35,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -46,8 +47,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.metric.CacheMetrics;
+import com.linecorp.armeria.common.metric.MetricKey;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.metric.CaffeineMetrics;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -123,6 +128,14 @@ public class ServerTest {
             sb.idleTimeoutMillis(idleTimeoutMillis);
         }
     };
+
+    @AfterClass
+    public static void checkMetrics() {
+        final Metrics metrics = server.server().metrics();
+        assertThat(metrics.group(new MetricKey("router", "virtualHostCache").withLabel("hostnamePattern", "*"),
+                                 CacheMetrics.class))
+                .isInstanceOf(CaffeineMetrics.class);
+    }
 
     /**
      * Ensures that the {@link Server} is always started when a test begins. This is necessary even if we

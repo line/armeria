@@ -25,7 +25,7 @@ import org.springframework.validation.annotation.Validated;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
  * Settings for armeria servers, e.g.,
@@ -177,7 +177,7 @@ public class ArmeriaSettings {
     private long gracefulShutdownTimeoutMillis = 40000;
 
     /**
-     * Whether to decorate all services with {@link DropwizardMetricCollectingService}.
+     * Whether to decorate all services with {@link MetricCollectingService}.
      * The default is {@code true}.
      */
     private boolean enableDropwizardMetrics = true;

@@ -23,7 +23,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -34,13 +37,6 @@ import com.linecorp.armeria.common.MediaType;
  */
 final class HttpHeaderPathMapping implements PathMapping {
 
-    private static final HttpResponseException METHOD_NOT_ALLOWED_EXCEPTION =
-            HttpResponseException.of(HttpStatus.METHOD_NOT_ALLOWED);
-    private static final HttpResponseException NOT_ACCEPTABLE_EXCEPTION =
-            HttpResponseException.of(HttpStatus.NOT_ACCEPTABLE);
-    private static final HttpResponseException UNSUPPORTED_MEDIA_TYPE_EXCEPTION =
-            HttpResponseException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-
     private static final List<MediaType> ANY_TYPE = ImmutableList.of(MediaType.ANY_TYPE);
 
     private final PathMapping pathStringMapping;
@@ -49,7 +45,7 @@ final class HttpHeaderPathMapping implements PathMapping {
     private final List<MediaType> produceTypes;
 
     private final String loggerName;
-    private final String metricName;
+    private final List<String> metricName;
 
     private final int complexity;
 
@@ -60,10 +56,10 @@ final class HttpHeaderPathMapping implements PathMapping {
         this.consumeTypes = requireNonNull(consumeTypes, "consumeTypes");
         this.produceTypes = requireNonNull(produceTypes, "produceTypes");
 
-        loggerName = generateName(".", pathStringMapping.loggerName(),
-                                  supportedMethods, consumeTypes, produceTypes);
-        metricName = generateName("/", pathStringMapping.metricName(),
-                                  supportedMethods, consumeTypes, produceTypes);
+        loggerName = generateLoggerName(pathStringMapping.loggerName(),
+                                        supportedMethods, consumeTypes, produceTypes);
+        metricName = generateMetricName(pathStringMapping.metricName(),
+                                        supportedMethods, consumeTypes, produceTypes);
 
         // Starts with 1 due to the HTTP method mapping.
         int complexity = 1;
@@ -88,7 +84,7 @@ final class HttpHeaderPathMapping implements PathMapping {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (!mappingCtx.delayedThrowable().isPresent()) {
-                mappingCtx.delayThrowable(METHOD_NOT_ALLOWED_EXCEPTION);
+                mappingCtx.delayThrowable(HttpResponseException.of(HttpStatus.METHOD_NOT_ALLOWED));
             }
             return PathMappingResult.empty();
         }
@@ -105,7 +101,7 @@ final class HttpHeaderPathMapping implements PathMapping {
                 }
             }
             if (!found) {
-                mappingCtx.delayThrowable(UNSUPPORTED_MEDIA_TYPE_EXCEPTION);
+                mappingCtx.delayThrowable(HttpResponseException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
                 return PathMappingResult.empty();
             }
         }
@@ -135,7 +131,7 @@ final class HttpHeaderPathMapping implements PathMapping {
             }
         }
 
-        mappingCtx.delayThrowable(NOT_ACCEPTABLE_EXCEPTION);
+        mappingCtx.delayThrowable(HttpResponseException.of(HttpStatus.NOT_ACCEPTABLE));
         return PathMappingResult.empty();
     }
 
@@ -150,7 +146,7 @@ final class HttpHeaderPathMapping implements PathMapping {
     }
 
     @Override
-    public String metricName() {
+    public List<String> metricName() {
         return metricName;
     }
 
@@ -174,10 +170,6 @@ final class HttpHeaderPathMapping implements PathMapping {
         return complexity;
     }
 
-    public PathMapping pathStringMapping() {
-        return pathStringMapping;
-    }
-
     public Set<HttpMethod> supportedMethods() {
         return supportedMethods;
     }
@@ -192,35 +184,74 @@ final class HttpHeaderPathMapping implements PathMapping {
 
     @Override
     public String toString() {
-        return metricName();
+        final StringBuilder buf = new StringBuilder();
+        buf.append('[');
+        buf.append(pathStringMapping);
+        buf.append(", ");
+        buf.append(MoreObjects.toStringHelper("")
+                              .add("supportedMethods", supportedMethods)
+                              .add("consumeTypes", consumeTypes)
+                              .add("produceTypes", produceTypes));
+        buf.append(']');
+        return buf.toString();
     }
 
-    private static String generateName(String delim, String prefix, Set<HttpMethod> supportedMethods,
-                                       List<MediaType> consumeTypes, List<MediaType> produceTypes) {
-        final StringJoiner methodNames = new StringJoiner("_");
-        supportedMethods.forEach(e -> methodNames.add(e.name()));
-        StringJoiner name = new StringJoiner(delim).add(prefix)
-                                                   .add(methodNames.toString());
+    private static String generateLoggerName(String prefix, Set<HttpMethod> supportedMethods,
+                                             List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+        final StringJoiner name = new StringJoiner(".");
+        name.add(prefix);
+        name.add(Joiner.on('_').join(supportedMethods.stream().sorted().iterator()));
 
         // The following three cases should be different to each other.
-        // Each name would be produced as follows if the delimiter is assumed as '/'.
+        // Each name would be produced as follows:
         //
-        // consumeTypes: text/plain, text/html               -> /consumes/text_plain/text_html/produces/_
-        // consumeTypes: text/plain, produceTypes: text/html -> /consumes/text_plain/produces/text_html
-        // produceTypes: text/plain, text/html               -> /consumes/_/produces/text_plain/text_html
+        // consumeTypes: text/plain, text/html               -> consumes.text_plain.text_html
+        // consumeTypes: text/plain, produceTypes: text/html -> consumes.text_plain.produces.text_html
+        // produceTypes: text/plain, text/html               -> produces.text_plain.text_html
 
-        name.add("consumes");
-        if (consumeTypes.isEmpty()) {
-            name.add("_");
-        } else {
+        if (!consumeTypes.isEmpty()) {
+            name.add("consumes");
             consumeTypes.forEach(e -> name.add(e.type() + '_' + e.subtype()));
         }
-        name.add("produces");
-        if (produceTypes.isEmpty()) {
-            name.add("_");
-        } else {
+        if (!produceTypes.isEmpty()) {
+            name.add("produces");
             produceTypes.forEach(e -> name.add(e.type() + '_' + e.subtype()));
         }
         return name.toString();
+    }
+
+    private static List<String> generateMetricName(List<String> prefix, Set<HttpMethod> supportedMethods,
+                                                   List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+
+        final ImmutableList.Builder<String> builder = ImmutableList.builder();
+        builder.addAll(prefix);
+        builder.add(Joiner.on(',').join(supportedMethods.stream().sorted().iterator()));
+
+        // The following three cases should be different to each other.
+        // Each name would be produced as follows:
+        //
+        // consumeTypes: text/plain, text/html               -> "consumes:text_plain,text_html"
+        // consumeTypes: text/plain, produceTypes: text/html -> "consumes:text_plain", "produces:text_html"
+        // produceTypes: text/plain, text/html               -> "produces:text_plain,text_html"
+
+        addMediaTypes(builder, "consumes", consumeTypes);
+        addMediaTypes(builder, "produces", produceTypes);
+
+        return builder.build();
+    }
+
+    private static void addMediaTypes(Builder<String> builder, String prefix, List<MediaType> consumeTypes) {
+        if (!consumeTypes.isEmpty()) {
+            final StringBuilder buf = new StringBuilder();
+            buf.append(prefix).append(':');
+            for (MediaType t : consumeTypes) {
+                buf.append(t.type());
+                buf.append('/');
+                buf.append(t.subtype());
+                buf.append(',');
+            }
+            buf.setLength(buf.length() - 1);
+            builder.add(buf.toString());
+        }
     }
 }

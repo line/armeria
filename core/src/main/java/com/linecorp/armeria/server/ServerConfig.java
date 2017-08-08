@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 
 import io.netty.channel.EventLoopGroup;
@@ -64,6 +65,8 @@ public final class ServerConfig {
 
     private final ExecutorService blockingTaskExecutor;
 
+    private final Metrics metrics;
+
     private final String serviceLoggerPrefix;
 
     private String strVal;
@@ -75,7 +78,7 @@ public final class ServerConfig {
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, String serviceLoggerPrefix) {
+            Executor blockingTaskExecutor, Metrics metrics, String serviceLoggerPrefix) {
 
         requireNonNull(ports, "ports");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -102,6 +105,7 @@ public final class ServerConfig {
             this.blockingTaskExecutor = new ExecutorBasedExecutorService(blockingTaskExecutor);
         }
 
+        this.metrics = requireNonNull(metrics, "metrics");
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
 
         // Set localAddresses.
@@ -374,6 +378,13 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns the {@link Metrics} that collects various stats.
+     */
+    public Metrics metrics() {
+        return metrics;
+    }
+
+    /**
      * Returns the prefix of {@linkplain ServiceRequestContext#logger() service logger}'s names.
      */
     public String serviceLoggerPrefix() {
@@ -390,7 +401,7 @@ public final class ServerConfig {
                     maxNumConnections(), idleTimeoutMillis(),
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), serviceLoggerPrefix());
+                    blockingTaskExecutor(), metrics(), serviceLoggerPrefix());
         }
 
         return strVal;
@@ -403,7 +414,7 @@ public final class ServerConfig {
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, String serviceLoggerPrefix) {
+            Executor blockingTaskExecutor, Metrics metrics, String serviceLoggerPrefix) {
 
         StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -465,6 +476,10 @@ public final class ServerConfig {
         buf.append(gracefulShutdownTimeout);
         buf.append(", blockingTaskExecutor: ");
         buf.append(blockingTaskExecutor);
+        if (metrics != null) {
+            buf.append(", metrics: ");
+            buf.append(metrics);
+        }
         buf.append(", serviceLoggerPrefix: ");
         buf.append(serviceLoggerPrefix);
         buf.append(')');

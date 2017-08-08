@@ -17,6 +17,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -178,9 +179,9 @@ public interface PathMapping {
     /**
      * Returns the metric name.
      *
-     * @return the metric name whose components are separated by a slash (/)
+     * @return the {@link List} of metric name parts
      */
-    String metricName();
+    List<String> metricName();
 
     /**
      * Returns the exact path of this path mapping if it is an exact path mapping, or {@link Optional#empty}

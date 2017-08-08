@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.Metrics;
 
 public class DefaultHttpClientTest {
 
@@ -46,6 +47,7 @@ public class DefaultHttpClientTest {
                                                                                  ClientOptions.DEFAULT);
         DefaultHttpClient defaultHttpClient = new DefaultHttpClient(clientBuilderParams,
                                                                     mockClientDelegate,
+                                                                    new Metrics(),
                                                                     SessionProtocol.of("http"),
                                                                     Endpoint.of("127.0.0.1"));
 

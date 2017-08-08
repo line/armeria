@@ -24,12 +24,14 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.metric.MetricKey;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A {@link Router} implementation that enables composing multiple {@link Router}s into one.
  */
-class CompositeRouter<I, O> implements Router<O> {
+final class CompositeRouter<I, O> implements Router<O> {
 
     private final List<Router<I>> delegates;
     private final Function<PathMapped<I>, PathMapped<O>> resultMapper;
@@ -45,7 +47,7 @@ class CompositeRouter<I, O> implements Router<O> {
 
     @Override
     public PathMapped<O> find(PathMappingContext mappingCtx) {
-        for (Router<I> delegate : delegates()) {
+        for (Router<I> delegate : delegates) {
             final PathMapped<I> result = delegate.find(mappingCtx);
             if (result.isPresent()) {
                 return resultMapper.apply(result);
@@ -56,11 +58,27 @@ class CompositeRouter<I, O> implements Router<O> {
     }
 
     @Override
-    public void dump(OutputStream output) {
-        delegates().forEach(delegate -> delegate.dump(output));
+    public boolean registerMetrics(Metrics metrics, MetricKey key) {
+        boolean registered = false;
+        switch (delegates.size()) {
+            case 0:
+                break;
+            case 1:
+                registered = delegates.get(0).registerMetrics(metrics, key);
+                break;
+            default:
+                for (int i = 0; i < delegates.size(); i++) {
+                    if (registerMetrics(metrics, key.append(String.valueOf(i)))) {
+                        registered = true;
+                    }
+                }
+        }
+
+        return registered;
     }
 
-    protected final List<Router<I>> delegates() {
-        return delegates;
+    @Override
+    public void dump(OutputStream output) {
+        delegates.forEach(delegate -> delegate.dump(output));
     }
 }

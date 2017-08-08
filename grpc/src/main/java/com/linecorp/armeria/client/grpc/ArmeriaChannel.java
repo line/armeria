@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
@@ -65,6 +66,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     private final ClientBuilderParams params;
     private final Client<HttpRequest, HttpResponse> httpClient;
 
+    private final Metrics metrics;
     private final SessionProtocol sessionProtocol;
     private final Endpoint endpoint;
     private final SerializationFormat serializationFormat;
@@ -72,12 +74,14 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
 
     ArmeriaChannel(ClientBuilderParams params,
                    Client<HttpRequest, HttpResponse> httpClient,
+                   Metrics metrics,
                    SessionProtocol sessionProtocol,
                    Endpoint endpoint,
                    SerializationFormat serializationFormat,
                    @Nullable MessageMarshaller jsonMarshaller) {
         this.params = params;
         this.httpClient = httpClient;
+        this.metrics = metrics;
         this.sessionProtocol = sessionProtocol;
         this.endpoint = endpoint;
         this.serializationFormat = serializationFormat;
@@ -143,6 +147,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
         final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint);
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop.get(),
+                metrics,
                 sessionProtocol,
                 endpoint,
                 method,

@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.Metrics;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -221,6 +222,11 @@ public interface RequestContext extends AttributeMap {
      * Returns the {@link RequestLogBuilder} that collects the information about the current {@link Request}.
      */
     RequestLogBuilder logBuilder();
+
+    /**
+     * Returns the {@link Metrics} that collects various stats.
+     */
+    Metrics metrics();
 
     /**
      * Returns all {@link Attribute}s set in this context.

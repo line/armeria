@@ -137,6 +137,6 @@ public class DefaultPathMappingTest {
 
     @Test
     public void testMetricName() {
-        assertThat(of("/service/{value}").metricName()).isEqualTo("/service/{value}");
+        assertThat(of("/service/{value}").metricName()).containsExactly("/service/{value}");
     }
 }

@@ -18,6 +18,10 @@ package com.linecorp.armeria.server;
 
 import java.io.OutputStream;
 
+import com.linecorp.armeria.common.metric.CacheMetrics;
+import com.linecorp.armeria.common.metric.MetricKey;
+import com.linecorp.armeria.common.metric.Metrics;
+
 /**
  * Finds a mapping that matches a given {@link PathMappingContext}.
  */
@@ -30,6 +34,16 @@ public interface Router<V> {
      *         {@link PathMapped#empty()} if there's no match.
      */
     PathMapped<V> find(PathMappingContext mappingCtx);
+
+    /**
+     * Registers the {@link CacheMetrics} of this {@link Router} to the specified {@link Metrics}
+     * if cache stats are available.
+     *
+     * @return whether the {@link CacheMetrics} of this {@link Router} has been registered
+     */
+    default boolean registerMetrics(Metrics metrics, MetricKey key) {
+        return false;
+    }
 
     /**
      * Dumps the content of this {@link Router}.
