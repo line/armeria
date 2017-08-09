@@ -27,6 +27,8 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -36,9 +38,12 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SetPathMapping;
 
+import io.grpc.MethodDescriptor;
 import io.netty.util.AsciiString;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
@@ -118,5 +123,17 @@ public class GrpcServiceTest {
                                 "Method not found: grpc.testing.TestService/FooCall")
                            .set(HttpHeaderNames.CONTENT_LENGTH, "0"),
                 HttpData.of(new byte[] {})));
+    }
+
+    @Test
+    public void pathMapping() throws Exception {
+    assertThat(grpcService.pathMapping())
+        .isEqualTo(
+            new SetPathMapping(
+                TestServiceGrpc.getServiceDescriptor()
+                    .getMethods()
+                    .stream()
+                    .map(MethodDescriptor::getFullMethodName)
+                    .collect(ImmutableSet.toImmutableSet())));
     }
 }

@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -43,8 +44,10 @@ import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceWithPathMapping;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
@@ -72,7 +75,8 @@ import io.grpc.Status;
  *     </li>
  * </ul>
  */
-public final class GrpcService extends AbstractHttpService {
+public final class GrpcService extends AbstractHttpService
+        implements ServiceWithPathMapping<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcService.class);
 
@@ -81,6 +85,7 @@ public final class GrpcService extends AbstractHttpService {
     private static final Metadata EMPTY_METADATA = new Metadata();
 
     private final HandlerRegistry registry;
+    private final PathMapping pathMapping;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -90,12 +95,14 @@ public final class GrpcService extends AbstractHttpService {
     private int maxInboundMessageSizeBytes;
 
     GrpcService(HandlerRegistry registry,
+                PathMapping pathMapping,
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
                 int maxOutboundMessageSizeBytes,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
+        this.pathMapping = pathMapping;
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
@@ -243,6 +250,11 @@ public final class GrpcService extends AbstractHttpService {
                         .map(ServerMethodDefinition::getMethodDescriptor)
                         .collect(toImmutableList());
         return GrpcJsonUtil.jsonMarshaller(methods);
+    }
+
+    @Override
+    public PathMapping pathMapping() {
+        return pathMapping;
     }
 
     private static class EmptyListener<T> extends ServerCall.Listener<T> {}

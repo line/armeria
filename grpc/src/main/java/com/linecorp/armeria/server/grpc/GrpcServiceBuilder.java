@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.SetPathMapping;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 
 import io.grpc.BindableService;
@@ -177,8 +178,10 @@ public final class GrpcServiceBuilder {
      * {@link com.linecorp.armeria.server.ServerBuilder#serviceUnder(String, Service)}.
      */
     public Service<HttpRequest, HttpResponse> build() {
+        HandlerRegistry handlerRegistry = registryBuilder.build();
         GrpcService grpcService = new GrpcService(
-                registryBuilder.build(),
+                handlerRegistry,
+                new SetPathMapping(handlerRegistry.methods().keySet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats, maxOutboundMessageSizeBytes,

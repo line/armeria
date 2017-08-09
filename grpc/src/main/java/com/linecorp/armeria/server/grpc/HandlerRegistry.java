@@ -82,6 +82,10 @@ final class HandlerRegistry {
         return services;
     }
 
+    ImmutableMap<String, ServerMethodDefinition<?, ?>> methods() {
+        return methods;
+    }
+
     static class Builder {
         // Store per-service first, to make sure services are added/replaced atomically.
         private final HashMap<String, ServerServiceDefinition> services =
