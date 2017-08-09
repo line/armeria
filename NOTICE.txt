@@ -68,9 +68,9 @@ Modified redistributions
 This product contains a modified part of Brave, distributed by Zipkin.io:
 
   * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
-  * Homepage: https://github.com/openzipkin/brave/
+  * Homepage: https://github.com/openzipkin/brave
 
-This product contains a modified part of GRPC, distributed by Google:
+This product contains a modified part of gRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
   * Homepage: http://www.grpc.io/
@@ -98,12 +98,17 @@ Dependencies
 This product depends on Brave, distributed by Zipkin.io:
 
   * License: licenses/LICENSE.brave.al20.txt (Apache License v2.0)
-  * Homepage: https://github.com/openzipkin/brave/
+  * Homepage: https://github.com/openzipkin/brave
 
 This product depends on Caffeine, distributed by Ben Manes:
 
   * License: licenses/LICENSE.caffeine.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/ben-manes/caffeine
+
+This product depends on Dropwizard Metrics, distributed by Coda Hale:
+
+  * License: licenses/LICENSE.dropwizard.al20.txt (Apache License v2.0)
+  * Homepage: http://metrics.dropwizard.io/
 
 This product depends on EasyMock, distributed by Easymock contributors:
 
@@ -115,7 +120,7 @@ This product depends on FindBugs-JSR305, distributed by
   * License: licenses/LICENSE.jsr305.al20.txt (Apache License v2.0)
   * Homepage: http://findbugs.sourceforge.net/
 
-This product depends on GRPC, distributed by Google:
+This product depends on gRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
   * Homepage: http://www.grpc.io/
@@ -171,11 +176,6 @@ This product depends on Logback, distributed by QOS.ch:
   * License: licenses/LICENSE.logback.epl10.html (Eclipse Public License v1.0)
   * Homepage: http://logback.qos.ch/
 
-This product depends on Metrics, distributed by Coda Hale:
-
-  * License: licenses/LICENSE.metrics.al20.txt (Apache License v2.0)
-  * Homepage: http://metrics.dropwizard.io/
-
 This product depends on Mockito, distributed by Mockito contributors:
 
   * License: licenses/LICENSE.mockito.mit.txt (MIT License)
@@ -185,6 +185,11 @@ This product depends on Netty, distributed by Netty.io:
 
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
   * Homepage: http://netty.io/
+
+This product depends on Prometheus, distributed by the Prometheus authors:
+
+  * License: licenses/LICENSE.prometheus.al20.txt (Apache License v2.0)
+  * Homepage: http://prometheus.io/
 
 This product depends on Reactive Streams API, distributed by Reactive-Streams.org:
 
