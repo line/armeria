@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableSet;
 
 public final class SetPathMapping extends AbstractPathMapping {
@@ -44,9 +42,9 @@ public final class SetPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(String path, @Nullable String query) {
-        return pathSet.contains(path) ? PathMappingResult.of(path, query)
-                                      : PathMappingResult.empty();
+    protected PathMappingResult doApply(PathMappingContext ctx) {
+        return pathSet.contains(ctx.path()) ? PathMappingResult.of(ctx.path(), ctx.query())
+            : PathMappingResult.empty();
     }
 
     @Override
