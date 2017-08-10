@@ -26,6 +26,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.Rule;
@@ -47,24 +48,24 @@ import com.linecorp.armeria.testing.server.ServerRule;
 public class RetryingRpcClientTest {
     private static final RetryStrategy<RpcRequest, RpcResponse> ALWAYS =
             (request, response) -> {
-                final CompletableFuture<Boolean> future = new CompletableFuture<>();
+                final CompletableFuture<Optional<Backoff>> future = new CompletableFuture<>();
                 response.handle(voidFunction((unused1, unused2) -> {
-                    future.complete(true);
+                    future.complete(Optional.of(Backoff.withoutDelay()));
                 }));
                 return future;
             };
 
     private static final RetryStrategy<RpcRequest, RpcResponse> ONLY_HANDLES_EXCEPTION =
         (request, response) -> {
-            final CompletableFuture<Boolean> future = new CompletableFuture<>();
+            final CompletableFuture<Optional<Backoff>> future = new CompletableFuture<>();
             response.handle(voidFunction((unused1, unused2) -> {
-                future.complete(false);
+                future.complete(Optional.empty());
             }));
             return future;
         };
 
     @Mock
-    HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
+    private HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
 
     @Rule
     public final ServerRule server = new ServerRule() {
@@ -90,7 +91,7 @@ public class RetryingRpcClientTest {
     public void execute_retry() throws Exception {
         HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .decorator(RpcRequest.class, RpcResponse.class,
-                           RetryingRpcClient.newDecorator(ONLY_HANDLES_EXCEPTION, Backoff::withoutDelay))
+                           RetryingRpcClient.newDecorator(ONLY_HANDLES_EXCEPTION))
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString()))
                 .thenThrow(new IllegalArgumentException())
@@ -104,9 +105,7 @@ public class RetryingRpcClientTest {
     public void execute_reachedMaxAttempts() throws Exception {
         HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .decorator(RpcRequest.class, RpcResponse.class,
-                           new RetryingRpcClientBuilder(ALWAYS)
-                                   .backoffSupplier(() -> Backoff.withoutDelay().withMaxAttempts(1))
-                                   .newDecorator())
+                           new RetryingRpcClientBuilder(ALWAYS).defaultMaxAttempts(1).newDecorator())
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString()))
                 .thenThrow(new IllegalArgumentException());

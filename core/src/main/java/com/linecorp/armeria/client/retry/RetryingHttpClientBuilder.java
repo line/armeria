@@ -76,8 +76,8 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
      */
     @Override
     public RetryingHttpClient build(Client<HttpRequest, HttpResponse> delegate) {
-        return new RetryingHttpClient(delegate, retryStrategy, backoffSupplier,
-                                      defaultMaxAttempts, useRetryAfter, contentPreviewLength);
+        return new RetryingHttpClient(delegate, retryStrategy, defaultMaxAttempts,
+                                      useRetryAfter, contentPreviewLength);
     }
 
     /**
@@ -86,8 +86,8 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
      */
     @Override
     public Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient> newDecorator() {
-        return delegate -> new RetryingHttpClient(delegate, retryStrategy, backoffSupplier,
-                                                  defaultMaxAttempts, useRetryAfter, contentPreviewLength);
+        return delegate -> new RetryingHttpClient(delegate, retryStrategy, defaultMaxAttempts,
+                                                  useRetryAfter, contentPreviewLength);
     }
 
     @Override

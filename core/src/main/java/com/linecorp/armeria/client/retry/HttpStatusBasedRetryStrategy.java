@@ -16,19 +16,16 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
-import com.google.common.collect.ImmutableList;
+import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.internal.HttpHeaderSubscriber;
 
 /**
@@ -37,28 +34,18 @@ import com.linecorp.armeria.internal.HttpHeaderSubscriber;
  */
 final class HttpStatusBasedRetryStrategy implements RetryStrategy<HttpRequest, HttpResponse> {
 
-    private final List<HttpStatus> retryStatuses;
+    private final Function<HttpStatus, Optional<Backoff>> statusBasedBackoffFunction;
 
     /**
      * Creates a new instance.
      */
-    HttpStatusBasedRetryStrategy(Iterable<HttpStatus> retryStatuses) {
-        this.retryStatuses = validateStatus(ImmutableList.copyOf(retryStatuses));
-    }
-
-    private List<HttpStatus> validateStatus(List<HttpStatus> retryStatuses) {
-        requireNonNull(retryStatuses, "retryStatuses");
-        checkArgument(!retryStatuses.isEmpty(), "Need at least a status to retry");
-
-        for (HttpStatus retryStatus : retryStatuses) {
-            checkArgument(retryStatus.codeClass() != HttpStatusClass.INFORMATIONAL,
-                          "retryStatuses contains an informational status: %s", retryStatus);
-        }
-        return retryStatuses;
+    HttpStatusBasedRetryStrategy(Function<HttpStatus, Optional<Backoff>> statusBasedBackoffFunction) {
+        this.statusBasedBackoffFunction = requireNonNull(
+                statusBasedBackoffFunction, "statusBasedBackoffFunction");
     }
 
     @Override
-    public CompletableFuture<Boolean> shouldRetry(HttpRequest request, HttpResponse response) {
+    public CompletableFuture<Optional<Backoff>> shouldRetry(HttpRequest request, HttpResponse response) {
         final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
         response.closeFuture().whenComplete(subscriber);
@@ -68,11 +55,10 @@ final class HttpStatusBasedRetryStrategy implements RetryStrategy<HttpRequest, H
             if (headers != null) {
                 final HttpStatus resStatus = headers.status();
                 if (resStatus != null) {
-                    return retryStatuses.stream().anyMatch(
-                            retryStatus -> resStatus.code() == retryStatus.code());
+                    return statusBasedBackoffFunction.apply(resStatus);
                 }
             }
-            return false;
+            return Optional.empty();
         });
     }
 }
