@@ -127,13 +127,13 @@ public class GrpcServiceTest {
 
     @Test
     public void pathMapping() throws Exception {
-    assertThat(grpcService.pathMapping())
-        .isEqualTo(
-            new SetPathMapping(
-                TestServiceGrpc.getServiceDescriptor()
-                    .getMethods()
-                    .stream()
-                    .map(MethodDescriptor::getFullMethodName)
-                    .collect(ImmutableSet.toImmutableSet())));
+        assertThat(grpcService.pathMapping())
+            .isEqualTo(
+                new SetPathMapping(
+                    TestServiceGrpc.getServiceDescriptor()
+                        .getMethods()
+                        .stream()
+                        .map(MethodDescriptor::getFullMethodName)
+                        .collect(ImmutableSet.toImmutableSet())));
     }
 }

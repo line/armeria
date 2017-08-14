@@ -102,7 +102,7 @@ public final class GrpcService extends AbstractHttpService
                 int maxOutboundMessageSizeBytes,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
-        this.pathMapping = pathMapping;
+        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;

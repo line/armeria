@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -27,9 +27,7 @@ import com.linecorp.armeria.common.Response;
  */
 public interface ServiceWithPathMapping<I extends Request, O extends Response> extends Service<I, O> {
     /**
-     * Get the {@link PathMapping} to which the {@link Service} is bounded.
-     *
-     * @return the {@link PathMapping}
+     * Returns the {@link PathMapping} to which this {@link Service} is bound.
      */
     PathMapping pathMapping();
 }

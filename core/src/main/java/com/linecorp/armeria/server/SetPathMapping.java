@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
@@ -35,7 +37,7 @@ public final class SetPathMapping extends AbstractPathMapping {
      * @param pathSet the set of path.
      */
     public SetPathMapping(Set<String> pathSet) {
-        this.pathSet = pathSet;
+        this.pathSet = requireNonNull(pathSet, "pathSet");
         pathSetStr = String.join(", ", pathSet);
         loggerName = loggerName(pathSetStr);
         strVal = PREFIX + pathSetStr;
@@ -44,7 +46,7 @@ public final class SetPathMapping extends AbstractPathMapping {
     @Override
     protected PathMappingResult doApply(PathMappingContext ctx) {
         return pathSet.contains(ctx.path()) ? PathMappingResult.of(ctx.path(), ctx.query())
-            : PathMappingResult.empty();
+                                            : PathMappingResult.empty();
     }
 
     @Override
