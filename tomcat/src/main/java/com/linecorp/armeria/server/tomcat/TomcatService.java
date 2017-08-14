@@ -495,6 +495,10 @@ public final class TomcatService implements HttpService {
             headers.set(HttpHeaderNames.CONTENT_TYPE, contentType);
         }
 
+        if (coyoteRes.getContentLength() >= 0) {
+            headers.setInt(HttpHeaderNames.CONTENT_LENGTH, coyoteRes.getContentLength());
+        }
+
         final MimeHeaders cHeaders = coyoteRes.getMimeHeaders();
         final int numHeaders = cHeaders.size();
         for (int i = 0; i < numHeaders; i++) {
