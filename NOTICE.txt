@@ -176,6 +176,11 @@ This product depends on Logback, distributed by QOS.ch:
   * License: licenses/LICENSE.logback.epl10.html (Eclipse Public License v1.0)
   * Homepage: http://logback.qos.ch/
 
+This product depends on Micrometer, distributed by Pivotal Software, Inc:
+
+  * License: licenses/LICENSE.micrometer.al20.txt (Apache License v2.0)
+  * Homepage: http://micrometer.io/
+
 This product depends on Mockito, distributed by Mockito contributors:
 
   * License: licenses/LICENSE.mockito.mit.txt (MIT License)

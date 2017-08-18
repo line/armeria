@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.codahale.metrics.MetricSet;
 import com.google.common.collect.ImmutableList;
 import com.spotify.futures.CompletableFutures;
 
@@ -35,6 +34,13 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.metric.MeterRegistryUtil;
+import com.linecorp.armeria.common.metric.MeterUnit;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.binder.MeterBinder;
+import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
@@ -128,10 +134,21 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     protected abstract EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint);
 
     /**
-     * Creates healthcheck {@link MetricSet} for this {@link HealthCheckedEndpointGroup}.
+     * Returns a newly-created {@link MeterBinder} which binds the stats about this
+     * {@link HealthCheckedEndpointGroup} with the default meter names.
      */
-    public MetricSet newMetricSet(String metricName) {
-        return new EndpointHealthStateGaugeSet(this, metricName);
+    public MeterBinder newMeterBinder(MeterRegistry registry, String groupName) {
+        return newMeterBinder(new MeterId(
+                MeterRegistryUtil.name(registry, MeterUnit.NONE, "armeria", "client", "endpointGroup"),
+                Tags.zip("name", groupName)));
+    }
+
+    /**
+     * Returns a newly-created {@link MeterBinder} which binds the stats about this
+     * {@link HealthCheckedEndpointGroup}.
+     */
+    public MeterBinder newMeterBinder(MeterId id) {
+        return new HealthCheckedEndpointGroupMetrics(this, id);
     }
 
     @Override

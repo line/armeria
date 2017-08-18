@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.it.grpc;
 
+import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measure;
+import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.given;
 
 import java.util.concurrent.TimeUnit;
 
+import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,15 +31,18 @@ import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
-import com.codahale.metrics.MetricRegistry;
+import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
-import com.linecorp.armeria.client.metric.DropwizardMetricCollectingClient;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.metric.MeterIdFunction;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -44,15 +50,20 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
-import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.stub.StreamObserver;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
+import io.micrometer.core.instrument.util.MeterId;
 
-public class DropwizardMetricsIntegrationTest {
+public class GrpcMetricsIntegrationTest {
+
+    private static final MeterRegistry registry = new PrometheusMeterRegistry();
 
     private static class TestServiceImpl extends TestServiceImplBase {
-
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             if ("world".equals(request.getPayload().getBody().toStringUtf8())) {
@@ -64,21 +75,28 @@ public class DropwizardMetricsIntegrationTest {
         }
     }
 
-    private static final MetricRegistry metricRegistry = new MetricRegistry();
-
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.meterRegistry(registry);
             sb.port(0, SessionProtocol.HTTP);
             sb.serviceUnder("/", new GrpcServiceBuilder()
                          .addService(new TestServiceImpl())
                          .enableUnframedRequests(true)
                          .build()
-                         .decorate(DropwizardMetricCollectingService.newDecorator(
-                                 metricRegistry, MetricRegistry.name("services"))));
+                         .decorate(MetricCollectingService.newDecorator(
+                                 MeterIdFunction.ofDefault("server"))));
         }
     };
+
+    private static final ClientFactory clientFactory =
+            new ClientFactoryBuilder().meterRegistry(registry).build();
+
+    @AfterClass
+    public static void closeClientFactory() {
+        clientFactory.close();
+    }
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
@@ -95,45 +113,60 @@ public class DropwizardMetricsIntegrationTest {
 
         // Chance that get() returns NPE before the metric is first added, so ignore exceptions.
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                metricRegistry.getTimers().get(serverMetricName("UnaryCall", "requests")).getCount())
+                measure(registry, serverMeterId("UnaryCall", "requests_total", "result", "success")) +
+                measure(registry, serverMeterId("UnaryCall", "requests_total", "result", "failure")))
                 .isEqualTo(7));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                metricRegistry.getTimers().get(clientMetricName("UnaryCall", "requests")).getCount())
+                measure(registry, clientMeterId("UnaryCall", "requests_total", "result", "success")) +
+                measure(registry, clientMeterId("UnaryCall", "requests_total", "result", "failure")))
                 .isEqualTo(7));
-        assertThat(metricRegistry.getMeters().get(serverMetricName("UnaryCall", "successes")).getCount())
+
+        assertThat(measure(registry, serverMeterId("UnaryCall", "requests_total", "result", "success")))
                 .isEqualTo(4);
-        assertThat(metricRegistry.getMeters().get(clientMetricName("UnaryCall", "successes")).getCount())
+        assertThat(measure(registry, clientMeterId("UnaryCall", "requests_total", "result", "success")))
                 .isEqualTo(4);
-        assertThat(metricRegistry.getMeters().get(serverMetricName("UnaryCall", "failures")).getCount())
+        assertThat(measure(registry, serverMeterId("UnaryCall", "requests_total", "result", "failure")))
                 .isEqualTo(3);
-        assertThat(metricRegistry.getMeters().get(clientMetricName("UnaryCall", "failures")).getCount())
+        assertThat(measure(registry, clientMeterId("UnaryCall", "requests_total", "result", "failure")))
                 .isEqualTo(3);
-        assertThat(metricRegistry.getMeters().get(serverMetricName("UnaryCall", "requestBytes")).getCount())
-                .isEqualTo(98);
-        assertThat(metricRegistry.getMeters().get(clientMetricName("UnaryCall", "requestBytes")).getCount())
-                .isEqualTo(98);
-        assertThat(metricRegistry.getMeters().get(serverMetricName("UnaryCall", "responseBytes")).getCount())
-                .isEqualTo(20);
-        assertThat(metricRegistry.getMeters().get(clientMetricName("UnaryCall", "responseBytes")).getCount())
-                .isEqualTo(20);
+
+        assertThat(measureAll(registry, serverMeterId("UnaryCall", "request_length_bytes")).get("count"))
+                .isEqualTo(7);
+        assertThat(measureAll(registry, serverMeterId("UnaryCall", "request_length_bytes")).get("sum"))
+                .isEqualTo(7 * 14);
+        assertThat(measureAll(registry, clientMeterId("UnaryCall", "request_length_bytes")).get("count"))
+                .isEqualTo(7);
+        assertThat(measureAll(registry, clientMeterId("UnaryCall", "request_length_bytes")).get("sum"))
+                .isEqualTo(7 * 14);
+        assertThat(measureAll(registry, serverMeterId("UnaryCall", "response_length_bytes")).get("count"))
+                .isEqualTo(7);
+        assertThat(measureAll(registry, serverMeterId("UnaryCall", "response_length_bytes")).get("sum"))
+                .isEqualTo(4 * 5 /* + 3 * 0 */);
+        assertThat(measureAll(registry, clientMeterId("UnaryCall", "response_length_bytes")).get("count"))
+                .isEqualTo(7);
+        assertThat(measureAll(registry, clientMeterId("UnaryCall", "response_length_bytes")).get("sum"))
+                .isEqualTo(4 * 5 /* + 3 * 0 */);
     }
 
-    private static String serverMetricName(String method, String property) {
-        return MetricRegistry.name("services",
-                                   "/**",
-                                   "armeria.grpc.testing.TestService/" + method, property);
+    private static MeterId serverMeterId(String method, String suffix, String... keyValues) {
+        return new MeterId("server_" + suffix,
+                           Iterables.concat(Tags.zip("method", "armeria.grpc.testing.TestService/" + method,
+                                                     "pathMapping", "catch-all"),
+                                            Tags.zip(keyValues)));
     }
 
-    private static String clientMetricName(String method, String property) {
-        return MetricRegistry.name("clients",
-                                   "armeria.grpc.testing.TestService/" + method, property);
+    private static MeterId clientMeterId(String method, String suffix, String... keyValues) {
+        return new MeterId("client_" + suffix,
+                           Iterables.concat(Tags.zip("method", "armeria.grpc.testing.TestService/" + method),
+                                            Tags.zip(keyValues)));
     }
 
     private static void makeRequest(String name) throws Exception {
         TestServiceBlockingStub client = new ClientBuilder(server.uri(GrpcSerializationFormats.PROTO, "/"))
+                .factory(clientFactory)
                 .decorator(HttpRequest.class, HttpResponse.class,
-                           DropwizardMetricCollectingClient.newDecorator(
-                                   metricRegistry, MetricRegistry.name("clients")))
+                           MetricCollectingClient.newDecorator(
+                                   MeterIdFunction.ofDefault("client")))
                 .build(TestServiceBlockingStub.class);
 
         SimpleRequest request =

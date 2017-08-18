@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.spring;
 
-import static com.linecorp.armeria.spring.MetricNames.serviceMetricName;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -48,7 +46,6 @@ import com.codahale.metrics.json.MetricsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Strings;
-import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -65,16 +62,20 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
-import com.linecorp.armeria.server.metric.DropwizardMetricCollectingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
+import com.linecorp.armeria.server.metric.PrometheusExporterHttpService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
+import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 import io.netty.util.NetUtil;
+import io.prometheus.client.CollectorRegistry;
 
 @Configuration
 @EnableConfigurationProperties(ArmeriaSettings.class)
 @ConditionalOnMissingBean(Server.class)
-@EnableMetrics(proxyTargetClass = true)
 public class ArmeriaAutoConfiguration {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaAutoConfiguration.class);
@@ -90,13 +91,15 @@ public class ArmeriaAutoConfiguration {
     @Bean
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
-            MetricRegistry metricRegistry,
+            Optional<MeterRegistry> meterRegistry,
+            Optional<MeterIdFunctionFactory> meterIdFunctionFactory,
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<ArmeriaServerConfigurator>> armeriaServiceInitializers,
             Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
             Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans)
             throws InterruptedException {
+
         if (!armeriaServiceInitializers.isPresent() &&
             !thriftServiceRegistrationBeans.isPresent() &&
             !httpServiceRegistrationBeans.isPresent() &&
@@ -105,7 +108,15 @@ public class ArmeriaAutoConfiguration {
             return null;
         }
 
+        final boolean metricsEnabled = armeriaSettings.isEnableMetrics() && meterRegistry.isPresent();
+        final MeterIdFunctionFactory meterIdFuncFactory =
+                meterIdFunctionFactory.orElse(MeterIdFunctionFactory.DEFAULT);
+
         final ServerBuilder server = new ServerBuilder();
+        if (metricsEnabled) {
+            server.meterRegistry(meterRegistry.get());
+        }
+
         if (armeriaSettings.getGracefulShutdownQuietPeriodMillis() != -1 &&
             armeriaSettings.getGracefulShutdownTimeoutMillis() != -1) {
             server.gracefulShutdownTimeout(
@@ -119,10 +130,9 @@ public class ArmeriaAutoConfiguration {
         Map<String, Collection<HttpHeaders>> docServiceHeaders = new HashMap<>();
         thriftServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
-            if (armeriaSettings.isEnableDropwizardMetrics()) {
-                service = service.decorate(
-                        DropwizardMetricCollectingService.newDecorator(
-                                metricRegistry, serviceMetricName(bean.getServiceName())));
+            if (metricsEnabled) {
+                service = service.decorate(MetricCollectingService.newDecorator(
+                        meterIdFuncFactory.get(bean.getServiceName())));
             }
 
             server.service(bean.getPath(), service);
@@ -138,10 +148,9 @@ public class ArmeriaAutoConfiguration {
 
         httpServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
-            if (armeriaSettings.isEnableDropwizardMetrics()) {
-                service = service.decorate(
-                        DropwizardMetricCollectingService.newDecorator(
-                                metricRegistry, serviceMetricName(bean.getServiceName())));
+            if (metricsEnabled) {
+                service = service.decorate(MetricCollectingService.newDecorator(
+                        meterIdFuncFactory.get(bean.getServiceName())));
             }
             server.service(bean.getPathMapping(), service);
         }));
@@ -149,9 +158,9 @@ public class ArmeriaAutoConfiguration {
         annotatedServiceRegistrationBeans.ifPresent(beans -> beans.forEach(bean -> {
             Function<Service<HttpRequest, HttpResponse>,
                      ? extends Service<HttpRequest, HttpResponse>> decorator = bean.getDecorator();
-            if (armeriaSettings.isEnableDropwizardMetrics()) {
-                decorator = decorator.andThen(DropwizardMetricCollectingService.newDecorator(
-                        metricRegistry, serviceMetricName(bean.getServiceName())));
+            if (metricsEnabled) {
+                decorator = decorator.andThen(MetricCollectingService.newDecorator(
+                        meterIdFuncFactory.get(bean.getServiceName())));
             }
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator);
         }));
@@ -171,22 +180,30 @@ public class ArmeriaAutoConfiguration {
             server.serviceUnder(armeriaSettings.getDocsPath(), docServiceBuilder.build());
         }
 
-        if (!Strings.isNullOrEmpty(armeriaSettings.getMetricsPath())) {
-            ObjectMapper objectMapper = new ObjectMapper()
-                    .enable(SerializationFeature.INDENT_OUTPUT)
-                    .registerModule(new MetricsModule(TimeUnit.SECONDS,
-                                                      TimeUnit.MILLISECONDS,
-                                                      true));
-            server.service(
-                    armeriaSettings.getMetricsPath(),
-                    new AbstractHttpService() {
-                        @Override
-                        protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                             HttpResponseWriter res) throws Exception {
-                            res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                        objectMapper.writeValueAsBytes(metricRegistry));
-                        }
-                    });
+        if (metricsEnabled && !Strings.isNullOrEmpty(armeriaSettings.getMetricsPath())) {
+            final MeterRegistry registry = meterRegistry.get();
+            if (registry instanceof PrometheusMeterRegistry) {
+                final CollectorRegistry prometheusRegistry =
+                        ((PrometheusMeterRegistry) registry).getPrometheusRegistry();
+                server.service(armeriaSettings.getMetricsPath(),
+                               new PrometheusExporterHttpService(prometheusRegistry));
+            } else if (registry instanceof DropwizardMeterRegistry) {
+                final MetricRegistry dropwizardRegistry =
+                        ((DropwizardMeterRegistry) registry).getDropwizardRegistry();
+                final ObjectMapper objectMapper = new ObjectMapper()
+                        .enable(SerializationFeature.INDENT_OUTPUT)
+                        .registerModule(new MetricsModule(TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true));
+                server.service(
+                        armeriaSettings.getMetricsPath(),
+                        new AbstractHttpService() {
+                            @Override
+                            protected void doGet(ServiceRequestContext ctx, HttpRequest req,
+                                                 HttpResponseWriter res) throws Exception {
+                                res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                            objectMapper.writeValueAsBytes(dropwizardRegistry));
+                            }
+                        });
+            }
         }
 
         armeriaServiceInitializers.ifPresent(
@@ -194,6 +211,7 @@ public class ArmeriaAutoConfiguration {
                         initializer -> initializer.configure(server)));
 
         Server s = server.build();
+
         s.start().join();
         logger.info("Armeria server started at ports: {}", s.activePorts());
         return s;

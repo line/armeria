@@ -88,6 +88,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import ch.qos.logback.core.status.Status;
 import ch.qos.logback.core.status.StatusManager;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
@@ -422,9 +423,8 @@ public class RequestContextExportingAppenderTest {
                 new DummyPathMappingContext(virtualHost, "server.com", path, query, req.headers());
 
         final ServiceRequestContext ctx = new DefaultServiceRequestContext(
-                serviceConfig, ch, SessionProtocol.H2, mappingCtx,
-                PathMappingResult.of(path, query, ImmutableMap.of()),
-                req, newSslSession());
+                serviceConfig, ch, new SimpleMeterRegistry(), SessionProtocol.H2, mappingCtx,
+                PathMappingResult.of(path, query, ImmutableMap.of()), req, newSslSession());
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;
@@ -533,9 +533,8 @@ public class RequestContextExportingAppenderTest {
                                                           .authority("server.com:8080"));
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), SessionProtocol.H2,
-                Endpoint.of("server.com", 8080),
-                req.method(), path, query, null,
+                mock(EventLoop.class), new SimpleMeterRegistry(), SessionProtocol.H2,
+                Endpoint.of("server.com", 8080), req.method(), path, query, null,
                 ClientOptions.DEFAULT, req) {
 
             @Nullable

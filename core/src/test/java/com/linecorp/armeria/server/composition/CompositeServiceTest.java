@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.server.composition;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -26,6 +24,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -34,11 +33,17 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.server.ServerRule;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
+import io.micrometer.core.instrument.util.MeterId;
 
 public class CompositeServiceTest {
 
@@ -53,6 +58,7 @@ public class CompositeServiceTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.meterRegistry(new PrometheusMeterRegistry());
             sb.serviceUnder("/qux/", composite);
 
             // Should not hit the following services
@@ -62,22 +68,35 @@ public class CompositeServiceTest {
         }
     };
 
+    @AfterClass
+    public static void checkMetrics() {
+        final MeterRegistry registry = server.server().meterRegistry();
+        registry.getMeters().stream().forEach(m -> {
+            System.err.println(m.getName() + m.getTags());
+        });
+        assertThat(MicrometerUtil.register(registry,
+                                           new MeterId("armeria_server_router_composite_service_cache",
+                                                       Tags.zip("hostnamePattern", "*",
+                                                                "pathMapping", "prefix:/qux/")),
+                                           Object.class, (r, i) -> null)).isNotNull();
+    }
+
     @Test
     public void testMapping() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/foo/X")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("A:/qux/foo/X:/X"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("A:/qux/foo/X:/X");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/bar/Y")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("B:/qux/bar/Y:/Y"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("B:/qux/bar/Y:/Y");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/Z")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(EntityUtils.toString(res.getEntity()), is("C:/qux/Z:/Z"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("C:/qux/Z:/Z");
             }
         }
     }
@@ -86,16 +105,16 @@ public class CompositeServiceTest {
     public void testNonExistentMapping() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/Z/T")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 404 Not Found"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
             }
         }
     }
 
     @Test
     public void testServiceGetters() throws Exception {
-        assertThat(composite.serviceAt(0), is(sameInstance(serviceA)));
-        assertThat(composite.serviceAt(1), is(sameInstance(serviceB)));
-        assertThat(composite.serviceAt(2), is(sameInstance(serviceC)));
+        assertThat((Object) composite.serviceAt(0)).isSameAs(serviceA);
+        assertThat((Object) composite.serviceAt(1)).isSameAs(serviceB);
+        assertThat((Object) composite.serviceAt(2)).isSameAs(serviceC);
 
         try {
             composite.serviceAt(-1);

@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.DefaultEventLoop;
 
 public class CircuitBreakerClientTest {
@@ -59,13 +60,13 @@ public class CircuitBreakerClientTest {
 
     // Remote invocation parameters
     private static final ClientRequestContext ctx = new DefaultClientRequestContext(
-            new DefaultEventLoop(), H2C,
+            new DefaultEventLoop(), new SimpleMeterRegistry(), H2C,
             Endpoint.of("dummyhost", 8080),
             HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT,
             RpcRequest.of(Object.class, "methodA", "a", "b"));
 
     private static final ClientRequestContext ctxB = new DefaultClientRequestContext(
-            new DefaultEventLoop(), H2C,
+            new DefaultEventLoop(), new SimpleMeterRegistry(), H2C,
             Endpoint.of("dummyhost", 8080),
             HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT,
             RpcRequest.of(Object.class, "methodB", "c", "d"));

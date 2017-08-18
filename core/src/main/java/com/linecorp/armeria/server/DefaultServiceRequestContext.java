@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
@@ -70,16 +71,17 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * Creates a new instance.
      *
      * @param ch the {@link Channel} that handles the invocation
+     * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      */
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, SessionProtocol sessionProtocol,
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Object request,
             @Nullable SSLSession sslSession) {
 
-        super(sessionProtocol,
+        super(meterRegistry, sessionProtocol,
               requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
               requireNonNull(pathMappingResult, "pathMappingResult").query(),
               request);

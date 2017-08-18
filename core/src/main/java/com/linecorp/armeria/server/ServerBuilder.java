@@ -32,6 +32,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import com.google.common.collect.ImmutableMap;
@@ -44,6 +45,8 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 
@@ -105,6 +108,8 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+    @Nullable
+    private MeterRegistry meterRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -283,6 +288,14 @@ public final class ServerBuilder {
      */
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return this;
+    }
+
+    /**
+     * Sets the {@link MeterRegistry} that collects various stats.
+     */
+    public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         return this;
     }
 
@@ -609,11 +622,14 @@ public final class ServerBuilder {
             virtualHosts = this.virtualHosts;
         }
 
+        final MeterRegistry meterRegistry = this.meterRegistry != null ? this.meterRegistry
+                                                                       : new SimpleMeterRegistry();
+
         final Server server = new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix));
+                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix));
         serverListeners.forEach(server::addListener);
         return server;
     }
@@ -624,6 +640,6 @@ public final class ServerBuilder {
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, serviceLoggerPrefix);
+                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix);
     }
 }

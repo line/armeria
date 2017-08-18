@@ -35,6 +35,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -48,10 +49,15 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
+import io.micrometer.core.instrument.util.MeterId;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -68,6 +74,8 @@ public class ServerTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+
+            sb.meterRegistry(new PrometheusMeterRegistry());
 
             final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
                     new EchoService().decorate(LoggingService.newDecorator());
@@ -123,6 +131,15 @@ public class ServerTest {
             sb.idleTimeoutMillis(idleTimeoutMillis);
         }
     };
+
+    @AfterClass
+    public static void checkMetrics() {
+        final MeterRegistry registry = server.server().meterRegistry();
+        assertThat(MicrometerUtil.register(registry,
+                                           new MeterId("armeria_server_router_virtual_host_cache",
+                                                       Tags.zip("hostnamePattern", "*")),
+                                           Object.class, (r, i) -> null)).isNotNull();
+    }
 
     /**
      * Ensures that the {@link Server} is always started when a test begins. This is necessary even if we

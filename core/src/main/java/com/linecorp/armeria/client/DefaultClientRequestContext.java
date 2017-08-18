@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -62,11 +63,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param request the request associated with this context
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, SessionProtocol sessionProtocol, Endpoint endpoint,
+            EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, Endpoint endpoint,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Object request) {
 
-        super(sessionProtocol, method, path, query, request);
+        super(meterRegistry, sessionProtocol, method, path, query, request);
 
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.options = requireNonNull(options, "options");

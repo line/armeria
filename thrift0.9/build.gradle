@@ -10,6 +10,10 @@ managedDependencies {
     // Jetty, for testing TServlet interoperability.
     testCompile 'org.eclipse.jetty:jetty-webapp'
     testCompile 'org.eclipse.jetty.http2:http2-server'
+
+    // Dropwizard and Prometheus, for testing metrics integration
+    testCompile 'io.dropwizard.metrics:metrics-core'
+    testCompile 'io.prometheus:simpleclient_common'
 }
 
 // Use the sources from 'armeria-thrift'.

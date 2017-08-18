@@ -26,21 +26,21 @@ public class PrefixAddingPathMappingTest {
 
     @Test
     public void testLoggerName() {
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofGlob("/bar/**")).loggerName())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).loggerName())
                 .isEqualTo("foo.bar.__");
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofGlob("bar")).loggerName())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("bar")).loggerName())
                 .isEqualTo("foo.__.bar");
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofRegex("/(foo|bar)")).loggerName())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofRegex("/(foo|bar)")).loggerName())
                 .isEqualTo("foo.regex.__foo_bar_");
     }
 
     @Test
     public void testMetricName() {
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofGlob("/bar/**")).metricName())
-                .isEqualTo("/foo/bar/**");
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofGlob("bar")).metricName())
-                .isEqualTo("/foo/**/bar");
-        assertThat(new PrefixAddingPathMapping("/foo", PathMapping.ofRegex("/(foo|bar)")).metricName())
-                .isEqualTo("/foo/regex:/(foo|bar)");
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).metricName())
+                .containsExactly("prefix:/foo/", "glob:/bar/**");
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("bar")).metricName())
+                .containsExactly("prefix:/foo/", "glob:/**/bar");
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofRegex("/(foo|bar)")).metricName())
+                .containsExactly("prefix:/foo/", "regex:/(foo|bar)");
     }
 }

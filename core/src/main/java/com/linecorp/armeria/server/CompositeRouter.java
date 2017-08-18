@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.metric.MeterRegistryUtil.tags;
 import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
@@ -26,10 +27,13 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.util.MeterId;
+
 /**
  * A {@link Router} implementation that enables composing multiple {@link Router}s into one.
  */
-class CompositeRouter<I, O> implements Router<O> {
+final class CompositeRouter<I, O> implements Router<O> {
 
     private final List<Router<I>> delegates;
     private final Function<PathMapped<I>, PathMapped<O>> resultMapper;
@@ -45,7 +49,7 @@ class CompositeRouter<I, O> implements Router<O> {
 
     @Override
     public PathMapped<O> find(PathMappingContext mappingCtx) {
-        for (Router<I> delegate : delegates()) {
+        for (Router<I> delegate : delegates) {
             final PathMapped<I> result = delegate.find(mappingCtx);
             if (result.isPresent()) {
                 return resultMapper.apply(result);
@@ -56,11 +60,27 @@ class CompositeRouter<I, O> implements Router<O> {
     }
 
     @Override
-    public void dump(OutputStream output) {
-        delegates().forEach(delegate -> delegate.dump(output));
+    public boolean registerMetrics(MeterRegistry registry, MeterId id) {
+        final int numDelegates = delegates.size();
+        switch (numDelegates) {
+            case 0:
+                return false;
+            case 1:
+                return delegates.get(0).registerMetrics(registry, id);
+            default:
+                boolean registered = false;
+                for (int i = 0; i < numDelegates; i++) {
+                    final MeterId delegateId = new MeterId(id.getName(), tags(id, "index", String.valueOf(i)));
+                    if (delegates.get(i).registerMetrics(registry, delegateId)) {
+                        registered = true;
+                    }
+                }
+                return registered;
+        }
     }
 
-    protected final List<Router<I>> delegates() {
-        return delegates;
+    @Override
+    public void dump(OutputStream output) {
+        delegates.forEach(delegate -> delegate.dump(output));
     }
 }

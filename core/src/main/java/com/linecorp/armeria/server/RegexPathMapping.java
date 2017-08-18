@@ -18,11 +18,13 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -36,15 +38,15 @@ final class RegexPathMapping extends AbstractPathMapping {
     private final Pattern regex;
     private final Set<String> paramNames;
     private final String loggerName;
-    private final String metricName;
+    private final List<String> metricName;
     private final String strVal;
 
     RegexPathMapping(Pattern regex) {
         this.regex = requireNonNull(regex, "regex");
         paramNames = findParamNames(regex);
         loggerName = toLoggerName(regex);
-        metricName = '/' + PREFIX + regex.pattern();
         strVal = PREFIX + regex.pattern();
+        metricName = ImmutableList.of(strVal);
     }
 
     private static Set<String> findParamNames(Pattern regex) {
@@ -109,7 +111,7 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricName() {
+    public List<String> metricName() {
         return metricName;
     }
 

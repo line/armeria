@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
@@ -406,7 +407,8 @@ public class RequestContextTest {
 
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
-            super(SessionProtocol.HTTP, HttpMethod.GET, "/", null, new DefaultHttpRequest());
+            super(new SimpleMeterRegistry(), SessionProtocol.HTTP,
+                  HttpMethod.GET, "/", null, new DefaultHttpRequest());
         }
 
         @Override
