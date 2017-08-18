@@ -62,7 +62,7 @@ public final class Exceptions {
     }
 
     /**
-     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, Throwable cause) {
         if (!logger.isWarnEnabled() || isExpected(cause)) {
@@ -73,7 +73,7 @@ public final class Exceptions {
     }
 
     /**
-     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, String debugData, Throwable cause) {
 
@@ -85,7 +85,7 @@ public final class Exceptions {
     }
 
     /**
-     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, SessionProtocol protocol, Throwable cause) {
         if (!logger.isWarnEnabled() || isExpected(cause)) {
@@ -97,7 +97,7 @@ public final class Exceptions {
     }
 
     /**
-     * Logs the specified exception if it is {@linkplain #isExpected(Throwable)} unexpected}.
+     * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, SessionProtocol protocol,
                                        String debugData, Throwable cause) {
