@@ -44,6 +44,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -449,6 +450,15 @@ public final class Server implements AutoCloseable {
      */
     public int numConnections() {
         return connectionLimitingHandler.numConnections();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("config", config())
+                          .add("activePorts", activePorts())
+                          .add("state", stateManager.state())
+                          .toString();
     }
 
     enum StateType {
