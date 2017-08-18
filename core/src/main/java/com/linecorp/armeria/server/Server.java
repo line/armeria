@@ -445,6 +445,13 @@ public final class Server implements AutoCloseable {
         }
     }
 
+    /**
+     * Returns the number of open connections on this {@link Server}.
+     */
+    public int numConnections() {
+        return connectionLimitingHandler.numConnections();
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
@@ -452,13 +459,6 @@ public final class Server implements AutoCloseable {
                           .add("activePorts", activePorts())
                           .add("state", stateManager.state())
                           .toString();
-    }
-
-    /**
-     * Returns the number of open connections on this {@link Server}.
-     */
-    public int numConnections() {
-        return connectionLimitingHandler.numConnections();
     }
 
     enum StateType {
