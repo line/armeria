@@ -16,10 +16,7 @@
 
 package com.linecorp.armeria.server.tomcat;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -89,8 +86,8 @@ public class TomcatServiceTest extends WebAppContainerTest {
 
     @Test
     public void configurator() throws Exception {
-        assertThat(tomcatServices, hasSize(1));
-        assertThat(tomcatServices.get(0).getName(), is(SERVICE_NAME));
+        assertThat(tomcatServices).hasSize(1);
+        assertThat(tomcatServices.get(0).getName()).isEqualTo(SERVICE_NAME);
     }
 
     @Test
@@ -98,9 +95,11 @@ public class TomcatServiceTest extends WebAppContainerTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
                     new HttpGet(server.uri("/jar/io/netty/util/concurrent/Future.class")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
-                           startsWith("application/java"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
+                        .startsWith("application/java");
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
+                        .isEqualTo("1361");
             }
         }
     }
@@ -109,9 +108,11 @@ public class TomcatServiceTest extends WebAppContainerTest {
     public void jarBasedWebAppWithAlternativeRoot() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/jar_altroot/Future.class")))) {
-                assertThat(res.getStatusLine().toString(), is("HTTP/1.1 200 OK"));
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue(),
-                           startsWith("application/java"));
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
+                        .startsWith("application/java");
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
+                        .isEqualTo("1361");
             }
         }
     }
