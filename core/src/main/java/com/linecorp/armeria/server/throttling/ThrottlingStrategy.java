@@ -1,0 +1,74 @@
+/*
+ * Copyright 2017 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package com.linecorp.armeria.server.throttling;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
+
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+/**
+ * Determines whether a request should be throttled.
+ */
+public abstract class ThrottlingStrategy<T extends Request> {
+    private static final AtomicInteger GLOBAL_STRATEGY_ID = new AtomicInteger();
+
+    private final int strategyId = GLOBAL_STRATEGY_ID.getAndIncrement();
+
+    /**
+     * A {@link ThrottlingStrategy} that defines a throttling should not be performed.
+     */
+    public static <T extends Request> ThrottlingStrategy<T> never() {
+        return of((ctx, request) -> completedFuture(false));
+    }
+
+    /**
+     * A {@link ThrottlingStrategy} that defines a throttling should be performed.
+     */
+    public static <T extends Request> ThrottlingStrategy<T> always() {
+        return of((ctx, request) -> completedFuture(true));
+    }
+
+    /**
+     * Creates a new {@link ThrottlingStrategy} that judge a request is needed to throttle or not
+     * using given {@link BiFunction} instance.
+     */
+    public static <T extends Request> ThrottlingStrategy<T> of(
+            BiFunction<ServiceRequestContext, T, CompletableFuture<Boolean>> function) {
+        return new ThrottlingStrategy<T>() {
+            @Override
+            public CompletableFuture<Boolean> shouldThrottle(ServiceRequestContext ctx, T request) {
+                return function.apply(ctx, request);
+            }
+        };
+    }
+
+    /**
+     * Returns whether a request should be throttled according to the given request.
+     */
+    public abstract CompletableFuture<Boolean> shouldThrottle(ServiceRequestContext ctx, T request);
+
+    /**
+     * Returns a name of this {@link ThrottlingStrategy}.
+     */
+    public String name() {
+        return "strategy" + strategyId;
+    }
+}
