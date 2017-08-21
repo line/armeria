@@ -16,15 +16,10 @@
 package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import java.util.Random;
 
 import org.junit.Test;
-
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 
 public class BackoffTest {
     @Test
@@ -75,27 +70,5 @@ public class BackoffTest {
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(100);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(-1);
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(-1);
-    }
-
-    @Test
-    public void limitRetryAttempts() {
-        @SuppressWarnings("unchecked")
-        final Client<HttpRequest, HttpResponse> client = mock(Client.class);
-        @SuppressWarnings("unchecked")
-        final RetryStrategy<HttpRequest, HttpResponse> strategy = mock(RetryStrategy.class);
-        final RetryingClient<HttpRequest, HttpResponse> retryingClient =
-                new RetryingHttpClientBuilder(strategy)
-                        .backoffSupplier(Backoff::withoutDelay).defaultMaxAttempts(5).build(client);
-
-        final Backoff newBackoff = retryingClient.newBackoff();
-        int currentAttemptNo = 1;
-        assertThat(newBackoff.nextDelayMillis(currentAttemptNo++)).isEqualTo(0);
-        assertThat(newBackoff.nextDelayMillis(currentAttemptNo++)).isEqualTo(0);
-        assertThat(newBackoff.nextDelayMillis(currentAttemptNo++)).isEqualTo(0);
-        assertThat(newBackoff.nextDelayMillis(currentAttemptNo++)).isEqualTo(0);
-
-        // After 5 tries which are the sum of first normal try and 4 consecutive retries,
-        // it's failed returning -1.
-        assertThat(newBackoff.nextDelayMillis(currentAttemptNo++)).isEqualTo(-1);
     }
 }
