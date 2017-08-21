@@ -41,7 +41,7 @@ public class RetryingRpcClientBuilder
      */
     @Override
     public RetryingRpcClient build(Client<RpcRequest, RpcResponse> delegate) {
-        return new RetryingRpcClient(delegate, retryStrategy, backoffSupplier, defaultMaxAttempts);
+        return new RetryingRpcClient(delegate, retryStrategy, defaultMaxAttempts);
     }
 
     /**
@@ -51,6 +51,6 @@ public class RetryingRpcClientBuilder
     @Override
     public Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient> newDecorator() {
         return delegate ->
-                new RetryingRpcClient(delegate, retryStrategy, backoffSupplier, defaultMaxAttempts);
+                new RetryingRpcClient(delegate, retryStrategy, defaultMaxAttempts);
     }
 }

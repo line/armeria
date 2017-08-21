@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -45,7 +44,6 @@ public abstract class RetryingClientBuilder<
     private static final BackoffSpec DEFAULT_BACKOFF_SPEC = BackoffSpec.parse(Flags.defaultBackoffSpec());
 
     final RetryStrategy<I, O> retryStrategy;
-    Supplier<? extends Backoff> backoffSupplier = () -> DEFAULT_BACKOFF_SPEC.build();
     int defaultMaxAttempts = DEFAULT_BACKOFF_SPEC.maxAttempts;
 
     /**
@@ -61,21 +59,7 @@ public abstract class RetryingClientBuilder<
     }
 
     /**
-     * Sets the {@link Supplier} that provides a {@link Backoff}. The {@link Backoff} will be used to
-     * calculate next delay to retry when the {@link RetryStrategy#shouldRetry(Request, Response)}
-     * returns {@code true}.
-     *
-     * @return {@link T} to support method chaining.
-     */
-    public T backoffSupplier(Supplier<? extends Backoff> backoffSupplier) {
-        this.backoffSupplier = requireNonNull(backoffSupplier, "backoffSupplier");
-        return self();
-    }
-
-    /**
-     * Sets the {@code defaultMaxAttempts}. When a client sets the {@link Backoff} and does not invoke the
-     * {@link Backoff#withMaxAttempts(int)}, the client could retry infinitely in certain circumstance.
-     * This would prevent that situation. The value will be set by the default value in
+     * Sets the {@code defaultMaxAttempts}. The value will be set by the default value in
      * {@link Flags#DEFAULT_BACKOFF_SPEC}, if the client dose not specify.
      *
      * @return {@link T} to support method chaining.
@@ -106,7 +90,6 @@ public abstract class RetryingClientBuilder<
     ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
                           .add("retryStrategy", retryStrategy)
-                          .add("backoff", backoffSupplier.get())
                           .add("defaultMaxAttempts", defaultMaxAttempts);
     }
 }

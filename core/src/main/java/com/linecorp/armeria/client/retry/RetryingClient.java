@@ -15,12 +15,10 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
-import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -41,54 +39,44 @@ import io.netty.util.AttributeKey;
 public abstract class RetryingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private static final AttributeKey<Long> RESPONSE_TIMEOUT_DEADLINE_NANOS =
-            AttributeKey.valueOf("RESPONSE_TIMEOUT_DEADLINE_NANOS");
+    private static final AttributeKey<State> STATE =
+            AttributeKey.valueOf(RetryingClient.class, "STATE");
 
-    private final Supplier<? extends Backoff> backoffSupplier;
     private final RetryStrategy<I, O> retryStrategy;
     private final int defaultMaxAttempts;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected RetryingClient(Client<I, O> delegate, RetryStrategy<I, O> retryStrategy,
-                             Supplier<? extends Backoff> backoffSupplier, int defaultMaxAttempts) {
+    protected RetryingClient(Client<I, O> delegate,
+                             RetryStrategy<I, O> retryStrategy, int defaultMaxAttempts) {
         super(delegate);
         this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
-        this.backoffSupplier = requireNonNull(backoffSupplier, "backoffSupplier");
+        checkArgument(defaultMaxAttempts > 0, "defaultMaxAttempts: %s (expected: > 0)", defaultMaxAttempts);
         this.defaultMaxAttempts = defaultMaxAttempts;
     }
 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
-        setDeadlineOfThisRequest(ctx);
-        return doExecute(ctx, req, newBackoff());
+        setState(ctx);
+        return doExecute(ctx, req);
     }
 
-    private static void setDeadlineOfThisRequest(ClientRequestContext ctx) {
-        final Attribute<Long> deadlineNanosAttr = ctx.attr(RESPONSE_TIMEOUT_DEADLINE_NANOS);
-        if (ctx.responseTimeoutMillis() <= 0) {
-            deadlineNanosAttr.set(-1L);
+    private void setState(ClientRequestContext ctx) {
+        final Attribute<State> attr = ctx.attr(STATE);
+        final State state = attr.get();
+        if (state != null) {
+            state.init(ctx.responseTimeoutMillis());
         } else {
-            deadlineNanosAttr.set(
-                    System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+            attr.set(new State(defaultMaxAttempts, ctx.responseTimeoutMillis()));
         }
-    }
-
-    @VisibleForTesting
-    Backoff newBackoff() {
-        Backoff backoff = backoffSupplier.get();
-        if (!backoff.as(AttemptLimitingBackoff.class).isPresent()) {
-            backoff = backoff.withMaxAttempts(defaultMaxAttempts);
-        }
-        return backoff;
     }
 
     /**
      * Invoked by {@link #execute(ClientRequestContext, Request)}
      * after the deadline for response timeout is set.
      */
-    protected abstract O doExecute(ClientRequestContext ctx, I req, Backoff backoff) throws Exception;
+    protected abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
 
     protected RetryStrategy<I, O> retryStrategy() {
         return retryStrategy;
@@ -99,7 +87,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
      */
     protected final void resetResponseTimeout(ClientRequestContext ctx) {
-        final long responseTimeoutMillis = responseTimeoutMillis(ctx);
+        final long responseTimeoutMillis = responseTimeoutMillis(ctx.attr(STATE).get());
         if (responseTimeoutMillis < 0) { // response timeout is disabled.
             return;
         }
@@ -108,27 +96,99 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     }
 
     /**
-     * Returns the next delay which retry will be made after. The delay is the smaller value of
-     * {@code nextDelay} and {@code responseTimeoutMillis}. If response timeout is disabled,
-     * just returns {@code nextDelay}.
+     * Returns the next delay which retry will be made after. The delay will be:
+     *
+     * <p>{@code Math.min(responseTimeoutMillis, Backoff.nextDelayMillis(int))}
+     *
+     * @return the number of milliseconds to wait for before attempting a retry,
+     *         or a negative value if current attempt number is greater than {@code defaultMaxAttempts}
      * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
      */
-    protected final long getNextDelay(long nextDelay, ClientRequestContext ctx) {
-        long responseTimeoutMillis = responseTimeoutMillis(ctx);
+    protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff) {
+        return getNextDelay(ctx, backoff, -1);
+    }
+
+    /**
+     * Returns the next delay which retry will be made after. The delay will be:
+     *
+     * <p>{@code Math.min(responseTimeoutMillis, Math.max(Backoff.nextDelayMillis(int),
+     * millisAfterFromServer))}
+     *
+     * @return the number of milliseconds to wait for before attempting a retry,
+     *         or a negative value if current attempt number is greater than {@code defaultMaxAttempts}
+     * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
+     */
+    protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
+        requireNonNull(ctx, "ctx");
+        requireNonNull(backoff, "backoff");
+        final State state = ctx.attr(STATE).get();
+        final int currentAttemptNo = state.currentAttemptNoWith(backoff);
+        if (currentAttemptNo < 0) {
+            return -1;
+        }
+
+        long nextDelay = backoff.nextDelayMillis(currentAttemptNo);
+        if (nextDelay < 0) {
+            return -1;
+        }
+
+        nextDelay = Math.max(nextDelay, millisAfterFromServer);
+        long responseTimeoutMillis = responseTimeoutMillis(state);
         return responseTimeoutMillis < 0 ? nextDelay : Math.min(nextDelay, responseTimeoutMillis);
     }
 
-    private static long responseTimeoutMillis(ClientRequestContext ctx) {
-        final Long deadlineNanos = ctx.attr(RESPONSE_TIMEOUT_DEADLINE_NANOS).get();
+    private static long responseTimeoutMillis(State state) {
+        final long deadlineNanos = state.deadlineNanos;
         if (deadlineNanos < 0) { // response timeout is disabled.
             return -1;
         }
 
         final long responseTimeoutMillis = TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
-        if (responseTimeoutMillis > 0) { // 0 is not from the first, but subtracted to that, so it's timeout.
+        if (responseTimeoutMillis > 0) {
             return responseTimeoutMillis;
         }
 
-        throw ResponseTimeoutException.get(); // timeout!!
+        // 0 is not from the first, but subtracted to that, so it's timeout.
+        throw ResponseTimeoutException.get();
+    }
+
+    private static class State {
+
+        private final int defaultMaxAttempts;
+
+        private Backoff lastBackoff;
+        private int currentAttemptNoWithLastBackoff;
+        private int totalAttemptNo;
+        long deadlineNanos;
+
+        State(int defaultMaxAttempts, long responseTimeoutMillis) {
+            init(responseTimeoutMillis);
+            this.defaultMaxAttempts = defaultMaxAttempts;
+        }
+
+        void init(long responseTimeoutMillis) {
+            setDeadlineOfThisRequest(responseTimeoutMillis);
+            lastBackoff = null;
+            totalAttemptNo = 1;
+        }
+
+        int currentAttemptNoWith(Backoff backoff) {
+            if (totalAttemptNo++ >= defaultMaxAttempts) {
+                return -1;
+            }
+            if (lastBackoff != backoff) {
+                lastBackoff = backoff;
+                currentAttemptNoWithLastBackoff = 1;
+            }
+            return currentAttemptNoWithLastBackoff++;
+        }
+
+        private void setDeadlineOfThisRequest(long responseTimeoutMillis) {
+            if (responseTimeoutMillis <= 0) {
+                deadlineNanos = -1;
+            } else {
+                deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
+            }
+        }
     }
 }

@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -47,26 +48,23 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
-    newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
-                 Supplier<? extends Backoff> backoffSupplier) {
-        return new RetryingRpcClientBuilder(retryStrategy)
-                .backoffSupplier(backoffSupplier).newDecorator();
+    newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy, int defaultMaxAttempts) {
+        return new RetryingRpcClientBuilder(retryStrategy).defaultMaxAttempts(defaultMaxAttempts)
+                                                          .newDecorator();
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
-                      RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
-                      Supplier<? extends Backoff> backoffSupplier, int defaultMaxAttempts) {
-        super(delegate, retryStrategy, backoffSupplier, defaultMaxAttempts);
+                      RetryStrategy<RpcRequest, RpcResponse> retryStrategy, int defaultMaxAttempts) {
+        super(delegate, retryStrategy, defaultMaxAttempts);
     }
 
     @Override
-    protected RpcResponse doExecute(
-            ClientRequestContext ctx, RpcRequest req, Backoff backoff) throws Exception {
+    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         final DefaultRpcResponse responseFuture = new DefaultRpcResponse();
-        retry(1, backoff, ctx, req, () -> {
+        retry(ctx, req, () -> {
             try {
                 resetResponseTimeout(ctx);
                 return delegate().execute(ctx, req);
@@ -77,53 +75,49 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
         return responseFuture;
     }
 
-    private void retry(int currentAttemptNo, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
-                       Supplier<RpcResponse> action, DefaultRpcResponse responseFuture) {
+    private void retry(ClientRequestContext ctx, RpcRequest req, Supplier<RpcResponse> action,
+                       DefaultRpcResponse responseFuture) {
         RpcResponse response = action.get();
-        retryStrategy().shouldRetry(req, response).handle(voidFunction((retry, unused) -> {
-            if (retry != null && retry) {
-                retry0(currentAttemptNo, backoff, ctx, req,
-                       action, responseFuture, RetryGiveUpException.get());
+        retryStrategy().shouldRetry(req, response).handle(voidFunction((backoffOpt, unused) -> {
+            if (backoffOpt.isPresent()) {
+                retry0(ctx, backoffOpt.get(), req, action, responseFuture);
             } else {
                 response.handle(voidFunction((result, thrown) -> {
-                    final Throwable exception;
                     if (thrown != null) {
-                        if (!retryStrategy().shouldRetry(req, thrown)) {
+                        final Optional<Backoff> backoffOnExceptionOpt =
+                                retryStrategy().shouldRetry(req, thrown);
+                        if (backoffOnExceptionOpt.isPresent()) {
+                            retry0(ctx, backoffOnExceptionOpt.get(), req, action, responseFuture);
+                        } else { // exception that is not for retry occurred
                             responseFuture.completeExceptionally(thrown);
-                            return;
                         }
-                        exception = thrown;
-                    } else {
+                    } else { // normal response
                         responseFuture.complete(result);
-                        return;
                     }
-                    retry0(currentAttemptNo, backoff, ctx, req, action, responseFuture, exception);
                 }));
             }
         }));
     }
 
-    private void retry0(int currentAttemptNo, Backoff backoff, ClientRequestContext ctx, RpcRequest req,
-                        Supplier<RpcResponse> action, DefaultRpcResponse responseFuture, Throwable exception) {
-        long nextDelay = backoff.nextDelayMillis(currentAttemptNo);
-        if (nextDelay < 0) {
-            responseFuture.completeExceptionally(exception);
-        } else {
-            EventLoop eventLoop = ctx.contextAwareEventLoop();
-            if (nextDelay <= 0) {
-                eventLoop.submit(() -> retry(currentAttemptNo + 1, backoff, ctx, req, action,
-                                             responseFuture));
-            } else {
-                try {
-                    nextDelay = getNextDelay(nextDelay, ctx);
-                } catch (ResponseTimeoutException e) {
-                    responseFuture.completeExceptionally(e);
-                    return;
-                }
-                eventLoop.schedule(
-                        () -> retry(currentAttemptNo + 1, backoff, ctx, req, action, responseFuture),
-                        nextDelay, TimeUnit.MILLISECONDS);
+    private void retry0(ClientRequestContext ctx, Backoff backoff, RpcRequest req,
+                        Supplier<RpcResponse> action, DefaultRpcResponse responseFuture) {
+        long nextDelay;
+        try {
+            nextDelay = getNextDelay(ctx, backoff);
+            if (nextDelay < 0) { // exceed the number of max attempt
+                responseFuture.completeExceptionally(RetryGiveUpException.get());
+                return;
             }
+        } catch (ResponseTimeoutException e) {
+            responseFuture.completeExceptionally(e);
+            return;
+        }
+
+        EventLoop eventLoop = ctx.contextAwareEventLoop();
+        if (nextDelay <= 0) {
+            eventLoop.submit(() -> retry(ctx, req, action, responseFuture));
+        } else {
+            eventLoop.schedule(() -> retry(ctx, req, action, responseFuture), nextDelay, TimeUnit.MILLISECONDS);
         }
     }
 }
