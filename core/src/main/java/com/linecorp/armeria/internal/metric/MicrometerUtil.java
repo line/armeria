@@ -24,9 +24,10 @@ import java.util.function.BiFunction;
 
 import com.google.common.collect.MapMaker;
 
+import com.linecorp.armeria.common.metric.MeterId;
+
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * A utility that prevents double instantiation of an object for a certain {@link MeterId}. This can be useful
@@ -67,7 +68,7 @@ public final class MicrometerUtil {
             throw new IllegalStateException(
                     "An object of different type has been registered already for id: " + id +
                     " (expected: " + type.getName() +
-                    ", actual: " + object.getClass().getName() + ')');
+                    ", actual: " + (object != null ? object.getClass().getName() : "null") + ')');
         }
 
         @SuppressWarnings("unchecked")

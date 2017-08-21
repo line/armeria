@@ -65,7 +65,7 @@ io.grpc:
   grpc-testing: { version: *GRPC_VERSION }
 
 io.micrometer:
-  micrometer-core: { version: &MICROMETER_VERSION '0.9.2.RELEASE' }
+  micrometer-core: { version: &MICROMETER_VERSION '0.10.0.RELEASE' }
   micrometer-spring-legacy: { version: *MICROMETER_VERSION }
 
 io.netty:

@@ -16,14 +16,8 @@
 
 package com.linecorp.armeria.internal.metric;
 
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.name;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.summaryWithDefaultQuantiles;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.tags;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.timerWithDefaultQuantiles;
-import static com.linecorp.armeria.common.metric.MeterUnit.BYTES;
-import static com.linecorp.armeria.common.metric.MeterUnit.DURATION;
-import static com.linecorp.armeria.common.metric.MeterUnit.NONE;
-import static com.linecorp.armeria.common.metric.MeterUnit.NONE_TOTAL;
+import static com.linecorp.armeria.common.metric.MoreMeters.summaryWithDefaultQuantiles;
+import static com.linecorp.armeria.common.metric.MoreMeters.timerWithDefaultQuantiles;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,13 +26,13 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.util.MeterId;
 import io.netty.util.AttributeKey;
 
 /**
@@ -163,22 +157,17 @@ public final class RequestMetricSupport {
         private final Timer totalDuration;
 
         DefaultRequestMetrics(MeterRegistry parent, MeterId id) {
-            active = parent.gauge(name(parent, NONE, id, "activeRequests"), id.getTags(),
+            active = parent.gauge(id.name("activeRequests"), id.tags(),
                                   new AtomicInteger(), AtomicInteger::get);
-            final String requests = name(parent, NONE_TOTAL, id, "requests");
-            success = parent.counter(requests, tags(id, "result", "success"));
-            failure = parent.counter(requests, tags(id, "result", "failure"));
+            final String requests = id.name("requests");
+            success = parent.counter(requests, id.tags("result", "success"));
+            failure = parent.counter(requests, id.tags("result", "failure"));
 
-            requestDuration = timerWithDefaultQuantiles(
-                    parent, name(parent, DURATION, id, "requestDuration"), id.getTags());
-            requestLength = summaryWithDefaultQuantiles(
-                    parent, name(parent, BYTES, id, "requestLength"), id.getTags());
-            responseDuration = timerWithDefaultQuantiles(
-                    parent, name(parent, DURATION, id, "responseDuration"), id.getTags());
-            responseLength = summaryWithDefaultQuantiles(
-                    parent, name(parent, BYTES, id, "responseLength"), id.getTags());
-            totalDuration = timerWithDefaultQuantiles(
-                    parent, name(parent, DURATION, id, "totalDuration"), id.getTags());
+            requestDuration = timerWithDefaultQuantiles(parent, id.append("requestDuration"));
+            requestLength = summaryWithDefaultQuantiles(parent, id.append("requestLength"));
+            responseDuration = timerWithDefaultQuantiles(parent, id.append("responseDuration"));
+            responseLength = summaryWithDefaultQuantiles(parent, id.append("responseLength"));
+            totalDuration = timerWithDefaultQuantiles(parent, id.append("totalDuration"));
         }
 
         @Override

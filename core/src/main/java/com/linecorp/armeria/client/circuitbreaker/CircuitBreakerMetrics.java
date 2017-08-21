@@ -19,17 +19,14 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitState.CLOSED;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitState.HALF_OPEN;
 import static com.linecorp.armeria.client.circuitbreaker.CircuitState.OPEN;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.name;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.tags;
-import static com.linecorp.armeria.common.metric.MeterUnit.NONE;
-import static com.linecorp.armeria.common.metric.MeterUnit.NONE_TOTAL;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.linecorp.armeria.common.metric.MeterId;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * Provides {@link CircuitBreaker} stats.
@@ -46,17 +43,17 @@ final class CircuitBreakerMetrics {
         requireNonNull(parent, "parent");
         requireNonNull(id, "id");
 
-        final String requests = name(parent, NONE, id, "requests");
-        parent.gauge(requests, tags(id, "result", "success"),
+        final String requests = id.name("requests");
+        parent.gauge(requests, id.tags("result", "success"),
                      latestEventCount, lec -> lec.get().success());
-        parent.gauge(requests, tags(id, "result", "failure"),
+        parent.gauge(requests, id.tags("result", "failure"),
                      latestEventCount, lec -> lec.get().failure());
 
-        final String transitions = name(parent, NONE_TOTAL, id, "transitions");
-        transitionsToClosed = parent.counter(transitions, tags(id, "state", CLOSED.name()));
-        transitionsToOpen = parent.counter(transitions, tags(id, "state", OPEN.name()));
-        transitionsToHalfOpen = parent.counter(transitions, tags(id, "state", HALF_OPEN.name()));
-        rejectedRequests = parent.counter(name(parent, NONE_TOTAL, id, "rejectedRequests"), id.getTags());
+        final String transitions = id.name("transitions");
+        transitionsToClosed = parent.counter(transitions, id.tags("state", CLOSED.name()));
+        transitionsToOpen = parent.counter(transitions, id.tags("state", OPEN.name()));
+        transitionsToHalfOpen = parent.counter(transitions, id.tags("state", HALF_OPEN.name()));
+        rejectedRequests = parent.counter(id.name("rejectedRequests"), id.tags());
     }
 
     void onStateChanged(CircuitState state) {

@@ -30,7 +30,7 @@ public class RegexPathMappingTest {
 
     @Test
     public void testMetricName() throws Exception {
-        assertThat(ofRegex("foo/bar").metricName()).containsExactly("regex:foo/bar");
+        assertThat(ofRegex("foo/bar").metricTag()).isEqualTo("regex:foo/bar");
     }
 
     @Test

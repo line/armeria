@@ -28,11 +28,11 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.composition.CompositeServiceEntry;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * See {@link Flags#routeCacheSpec()} to configure this {@link RouteCache}.

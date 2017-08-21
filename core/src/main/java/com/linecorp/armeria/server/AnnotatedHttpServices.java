@@ -261,7 +261,7 @@ final class AnnotatedHttpServices {
                 }
                 if (pattern != null) {
                     throw new IllegalArgumentException(
-                            "Only one path can be specified. (" + pattern + ", " + p + ")");
+                            "Only one path can be specified. (" + pattern + ", " + p + ')');
                 }
                 pattern = p;
             } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
@@ -394,7 +394,7 @@ final class AnnotatedHttpServices {
         private final String pathPrefix;
         private final PathMapping mapping;
         private final String loggerName;
-        private final List<String> metricName;
+        private final String metricTag;
 
         PrefixAddingPathMapping(String pathPrefix, PathMapping mapping) {
             assert mapping instanceof GlobPathMapping || mapping instanceof RegexPathMapping
@@ -403,10 +403,7 @@ final class AnnotatedHttpServices {
             this.pathPrefix = pathPrefix;
             this.mapping = mapping;
             loggerName = loggerName(pathPrefix) + '.' + mapping.loggerName();
-            metricName = ImmutableList.<String>builder()
-                    .add(PrefixPathMapping.PREFIX + pathPrefix)
-                    .addAll(mapping.metricName())
-                    .build();
+            metricTag = PrefixPathMapping.PREFIX + pathPrefix + ',' + mapping.metricTag();
         }
 
         @Override
@@ -436,8 +433,8 @@ final class AnnotatedHttpServices {
         }
 
         @Override
-        public List<String> metricName() {
-            return metricName;
+        public String metricTag() {
+            return metricTag;
         }
 
         @Override

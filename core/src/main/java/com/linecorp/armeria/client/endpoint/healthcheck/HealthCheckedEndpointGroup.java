@@ -34,13 +34,9 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.metric.MeterRegistryUtil;
-import com.linecorp.armeria.common.metric.MeterUnit;
+import com.linecorp.armeria.common.metric.MeterId;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
@@ -137,10 +133,8 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * Returns a newly-created {@link MeterBinder} which binds the stats about this
      * {@link HealthCheckedEndpointGroup} with the default meter names.
      */
-    public MeterBinder newMeterBinder(MeterRegistry registry, String groupName) {
-        return newMeterBinder(new MeterId(
-                MeterRegistryUtil.name(registry, MeterUnit.NONE, "armeria", "client", "endpointGroup"),
-                Tags.zip("name", groupName)));
+    public MeterBinder newMeterBinder(String groupName) {
+        return newMeterBinder(new MeterId("armeria.client.endpointGroup", "name", groupName));
     }
 
     /**

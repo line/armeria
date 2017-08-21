@@ -21,15 +21,14 @@ import static org.assertj.core.api.Java6Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableList;
+import com.linecorp.armeria.common.metric.MeterId;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 public class MicrometerUtilTest {
 
-    private static final MeterId ID_A = new MeterId("a", ImmutableList.of());
+    private static final MeterId ID_A = new MeterId("a");
     private static final MeterRegistry metrics = new PrometheusMeterRegistry();
 
     @Test

@@ -66,21 +66,21 @@ public class HttpHeaderPathMappingTest {
         mapping = new HttpHeaderPathMapping(PathMapping.of(PATH), ImmutableSet.of(HttpMethod.GET),
                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
                                             ImmutableList.of(MediaType.JSON_UTF_8));
-        assertThat(mapping.metricName())
-                .containsExactly("exact:/test", "GET", "consumes:text/plain", "produces:application/json");
+        assertThat(mapping.metricTag())
+                .isEqualTo("exact:/test,methods:GET,consumes:text/plain,produces:application/json");
 
         mapping = new HttpHeaderPathMapping(PathMapping.of(PATH), ImmutableSet.of(HttpMethod.GET),
                                             ImmutableList.of(),
                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8));
-        assertThat(mapping.metricName())
-                .containsExactly("exact:/test", "GET", "produces:text/plain,application/json");
+        assertThat(mapping.metricTag())
+                .isEqualTo("exact:/test,methods:GET,produces:text/plain,application/json");
 
         mapping = new HttpHeaderPathMapping(PathMapping.of(PATH),
                                             ImmutableSet.of(HttpMethod.GET, HttpMethod.POST),
                                             ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8),
                                             ImmutableList.of());
-        assertThat(mapping.metricName())
-                .containsExactly("exact:/test", "GET,POST", "consumes:text/plain,application/json");
+        assertThat(mapping.metricTag())
+                .isEqualTo("exact:/test,methods:GET,POST,consumes:text/plain,application/json");
     }
 
     @Test

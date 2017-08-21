@@ -17,11 +17,6 @@
 package com.linecorp.armeria.internal.metric;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.name;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.tags;
-import static com.linecorp.armeria.common.metric.MeterUnit.DURATION_TOTAL;
-import static com.linecorp.armeria.common.metric.MeterUnit.NONE;
-import static com.linecorp.armeria.common.metric.MeterUnit.NONE_TOTAL;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -33,11 +28,10 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.metric.MeterRegistryUtil;
+import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.common.util.Ticker;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * Registers the stats of Caffeine {@link Cache}.
@@ -74,34 +68,30 @@ public final class CaffeineMetricSupport {
 
             updateCacheStats(true);
 
-            final String requests = name(parent, NONE_TOTAL, id, "requests");
-            parent.counter(requests, tags(id, "result", "hit"), this,
-                           new CacheStatFunction(() -> cacheStats.hitCount()));
-            parent.counter(requests, tags(id, "result", "miss"), this,
-                           new CacheStatFunction(() -> cacheStats.missCount()));
+            final String requests = id.name("requests");
+            parent.more().counter(requests, id.tags("result", "hit"), this,
+                                  new CacheStatFunction(() -> cacheStats.hitCount()));
+            parent.more().counter(requests, id.tags("result", "miss"), this,
+                                  new CacheStatFunction(() -> cacheStats.missCount()));
 
             if (cache instanceof LoadingCache) {
-                final String loads = name(parent, NONE_TOTAL, id, "loads");
-                parent.counter(loads, tags(id, "result", "success"), this,
-                               new CacheStatFunction(() -> cacheStats.loadSuccessCount()));
-                parent.counter(loads, tags(id, "result", "failure"), this,
-                               new CacheStatFunction(() -> cacheStats.loadFailureCount()));
+                final String loads = id.name("loads");
+                parent.more().counter(loads, id.tags("result", "success"), this,
+                                      new CacheStatFunction(() -> cacheStats.loadSuccessCount()));
+                parent.more().counter(loads, id.tags("result", "failure"), this,
+                                      new CacheStatFunction(() -> cacheStats.loadFailureCount()));
 
                 final DoubleSupplier totalLoadTimeSupplier;
-                if (MeterRegistryUtil.prefersBaseUnit(parent)) {
-                    totalLoadTimeSupplier = () -> cacheStats.totalLoadTime() / 1e9;
-                } else {
-                    totalLoadTimeSupplier = () -> cacheStats.totalLoadTime();
-                }
-                parent.counter(name(parent, DURATION_TOTAL, id, "loadDuration"), id.getTags(), this,
-                               new CacheStatFunction(totalLoadTimeSupplier));
+                totalLoadTimeSupplier = () -> cacheStats.totalLoadTime();
+                parent.more().counter(id.name("loadDuration"), id.tags(), this,
+                                      new CacheStatFunction(totalLoadTimeSupplier));
             }
 
-            parent.counter(name(parent, NONE_TOTAL, id, "eviction"), id.getTags(), this,
-                           new CacheStatFunction(() -> cacheStats.evictionCount()));
-            parent.counter(name(parent, NONE_TOTAL, id, "evictionWeight"), id.getTags(), this,
-                           new CacheStatFunction(() -> cacheStats.evictionWeight()));
-            parent.gauge(name(parent, NONE, id, "estimatedSize"), id.getTags(), this,
+            parent.more().counter(id.name("eviction"), id.tags(), this,
+                                  new CacheStatFunction(() -> cacheStats.evictionCount()));
+            parent.more().counter(id.name("evictionWeight"), id.tags(), this,
+                                  new CacheStatFunction(() -> cacheStats.evictionWeight()));
+            parent.gauge(id.name("estimatedSize"), id.tags(), this,
                          new CacheStatFunction(() -> estimatedSize));
         }
 

@@ -43,7 +43,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistry;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExporterHttpService;
@@ -52,8 +54,6 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 import io.prometheus.client.CollectorRegistry;
 
 public class PrometheusMetricsIntegrationTest {
@@ -117,24 +117,24 @@ public class PrometheusMetricsIntegrationTest {
                           "server_requests_total{handler=\"Foo\",",
                           "server_request_duration_seconds_count{handler=\"Foo\",",
                           "server_request_duration_seconds_sum{handler=\"Foo\",",
-                          "server_request_length_bytes_count{handler=\"Foo\",",
-                          "server_request_length_bytes_sum{handler=\"Foo\",",
+                          "server_request_length_count{handler=\"Foo\",",
+                          "server_request_length_sum{handler=\"Foo\",",
                           "server_response_duration_seconds_count{handler=\"Foo\",",
                           "server_response_duration_seconds_sum{handler=\"Foo\",",
-                          "server_response_length_bytes_count{handler=\"Foo\",",
-                          "server_response_length_bytes_sum{handler=\"Foo\",",
+                          "server_response_length_count{handler=\"Foo\",",
+                          "server_response_length_sum{handler=\"Foo\",",
                           "server_total_duration_seconds_count{handler=\"Foo\",",
                           "server_total_duration_seconds_sum{handler=\"Foo\",",
                           "client_active_requests{handler=\"Foo\"",
                           "client_requests_total{handler=\"Foo\",",
                           "client_request_duration_seconds_count{handler=\"Foo\",",
                           "client_request_duration_seconds_sum{handler=\"Foo\",",
-                          "client_request_length_bytes_count{handler=\"Foo\",",
-                          "client_request_length_bytes_sum{handler=\"Foo\",",
+                          "client_request_length_count{handler=\"Foo\",",
+                          "client_request_length_sum{handler=\"Foo\",",
                           "client_response_duration_seconds_count{handler=\"Foo\",",
                           "client_response_duration_seconds_sum{handler=\"Foo\",",
-                          "client_response_length_bytes_count{handler=\"Foo\",",
-                          "client_response_length_bytes_sum{handler=\"Foo\",",
+                          "client_response_length_count{handler=\"Foo\",",
+                          "client_response_length_sum{handler=\"Foo\",",
                           "client_total_duration_seconds_count{handler=\"Foo\",",
                           "client_total_duration_seconds_sum{handler=\"Foo\","));
 
@@ -145,20 +145,20 @@ public class PrometheusMetricsIntegrationTest {
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Foo\",method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
         assertThat(content).containsPattern(
-                multilinePattern("server_request_length_bytes_count",
+                multilinePattern("server_request_length_count",
                                  "{handler=\"Foo\",method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
         assertThat(content).containsPattern(
-                multilinePattern("server_response_length_bytes_count",
+                multilinePattern("server_response_length_count",
                                  "{handler=\"Foo\",method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
                                  "{handler=\"Foo\",method=\"hello\",} 7.0"));
         assertThat(content).containsPattern(
-                multilinePattern("client_request_length_bytes_count",
+                multilinePattern("client_request_length_count",
                                  "{handler=\"Foo\",method=\"hello\",} 7.0"));
         assertThat(content).containsPattern(
-                multilinePattern("client_response_length_bytes_count",
+                multilinePattern("client_response_length_count",
                                  "{handler=\"Foo\",method=\"hello\",} 7.0"));
 
         // Failure count
@@ -198,24 +198,24 @@ public class PrometheusMetricsIntegrationTest {
                           "server_requests_total{handler=\"Bar\",",
                           "server_request_duration_seconds_count{handler=\"Bar\",",
                           "server_request_duration_seconds_sum{handler=\"Bar\",",
-                          "server_request_length_bytes_count{handler=\"Bar\",",
-                          "server_request_length_bytes_sum{handler=\"Bar\",",
+                          "server_request_length_count{handler=\"Bar\",",
+                          "server_request_length_sum{handler=\"Bar\",",
                           "server_response_duration_seconds_count{handler=\"Bar\",",
                           "server_response_duration_seconds_sum{handler=\"Bar\",",
-                          "server_response_length_bytes_count{handler=\"Bar\",",
-                          "server_response_length_bytes_sum{handler=\"Bar\",",
+                          "server_response_length_count{handler=\"Bar\",",
+                          "server_response_length_sum{handler=\"Bar\",",
                           "server_total_duration_seconds_count{handler=\"Bar\",",
                           "server_total_duration_seconds_sum{handler=\"Bar\",",
                           "client_active_requests{handler=\"Bar\"",
                           "client_requests_total{handler=\"Bar\",",
                           "client_request_duration_seconds_count{handler=\"Bar\",",
                           "client_request_duration_seconds_sum{handler=\"Bar\",",
-                          "client_request_length_bytes_count{handler=\"Bar\",",
-                          "client_request_length_bytes_sum{handler=\"Bar\",",
+                          "client_request_length_count{handler=\"Bar\",",
+                          "client_request_length_sum{handler=\"Bar\",",
                           "client_response_duration_seconds_count{handler=\"Bar\",",
                           "client_response_duration_seconds_sum{handler=\"Bar\",",
-                          "client_response_length_bytes_count{handler=\"Bar\",",
-                          "client_response_length_bytes_sum{handler=\"Bar\",",
+                          "client_response_length_count{handler=\"Bar\",",
+                          "client_response_length_sum{handler=\"Bar\",",
                           "client_total_duration_seconds_count{handler=\"Bar\",",
                           "client_total_duration_seconds_sum{handler=\"Bar\","));
 
@@ -226,20 +226,20 @@ public class PrometheusMetricsIntegrationTest {
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Bar\",method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
         assertThat(content).containsPattern(
-                multilinePattern("server_request_length_bytes_count",
+                multilinePattern("server_request_length_count",
                                  "{handler=\"Bar\",method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
         assertThat(content).containsPattern(
-                multilinePattern("server_response_length_bytes_count",
+                multilinePattern("server_response_length_count",
                                  "{handler=\"Bar\",method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
                                  "{handler=\"Bar\",method=\"hello\",} 1.0"));
         assertThat(content).containsPattern(
-                multilinePattern("client_request_length_bytes_count",
+                multilinePattern("client_request_length_count",
                                  "{handler=\"Bar\",method=\"hello\",} 1.0"));
         assertThat(content).containsPattern(
-                multilinePattern("client_response_length_bytes_count",
+                multilinePattern("client_response_length_count",
                                  "{handler=\"Bar\",method=\"hello\",} 1.0"));
 
         // Success count

@@ -18,11 +18,9 @@ package com.linecorp.armeria.common.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -37,7 +35,6 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * Creates a {@link MeterId} from a {@link RequestLog}.
@@ -53,13 +50,8 @@ public interface MeterIdFunction {
      * derived from the current {@link PathMapping} (if available) and HTTP (or RPC) method name.
      * e.g. {@code my_service_name{pathMapping="exact:/service/path",method="POST"}}
      */
-    static MeterIdFunction ofDefault(String firstNamePart, String... otherNameParts) {
-        requireNonNull(firstNamePart, "firstNamePart");
-        requireNonNull(otherNameParts, "otherNameParts");
-
-        final List<String> name =
-                ImmutableList.<String>builder().add(firstNamePart).add(otherNameParts).build();
-
+    static MeterIdFunction ofDefault(String name) {
+        requireNonNull(name, "name");
         return (registry, log) -> {
             final RequestContext ctx = log.context();
             final Object requestContent = log.requestContent();
@@ -83,13 +75,9 @@ public interface MeterIdFunction {
 
             if (ctx instanceof ServiceRequestContext) {
                 final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                final String pathMapping = String.join(",", sCtx.pathMapping().metricName());
-                return new MeterId(MeterRegistryUtil.name(registry, name),
-                                   Tags.zip("method", methodName,
-                                            "pathMapping", pathMapping));
+                return new MeterId(name, "method", methodName, "pathMapping", sCtx.pathMapping().metricTag());
             } else {
-                return new MeterId(MeterRegistryUtil.name(registry, name),
-                                   Tags.zip("method", methodName));
+                return new MeterId(name, "method", methodName);
             }
         };
     }

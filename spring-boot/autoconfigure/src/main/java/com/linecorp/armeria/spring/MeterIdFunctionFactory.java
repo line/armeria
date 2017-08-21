@@ -29,7 +29,7 @@ public interface MeterIdFunctionFactory {
      * The default {@link MeterIdFunctionFactory} instance.
      */
     MeterIdFunctionFactory DEFAULT = serviceName ->
-            MeterIdFunction.ofDefault("armeria", "server")
+            MeterIdFunction.ofDefault("armeria.server")
                            .withTags("service", requireNonNull(serviceName, "serviceName"));
 
     /**

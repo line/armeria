@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.tags;
 import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
@@ -25,10 +24,10 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * A {@link Router} implementation that enables composing multiple {@link Router}s into one.
@@ -70,7 +69,7 @@ final class CompositeRouter<I, O> implements Router<O> {
             default:
                 boolean registered = false;
                 for (int i = 0; i < numDelegates; i++) {
-                    final MeterId delegateId = new MeterId(id.getName(), tags(id, "index", String.valueOf(i)));
+                    final MeterId delegateId = id.withTags("index", String.valueOf(i));
                     if (delegates.get(i).registerMetrics(registry, delegateId)) {
                         registered = true;
                     }

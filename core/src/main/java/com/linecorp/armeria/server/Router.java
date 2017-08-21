@@ -18,8 +18,9 @@ package com.linecorp.armeria.server;
 
 import java.io.OutputStream;
 
+import com.linecorp.armeria.common.metric.MeterId;
+
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * Finds a mapping that matches a given {@link PathMappingContext}.

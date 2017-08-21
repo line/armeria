@@ -16,11 +16,9 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 final class ExactPathMapping extends AbstractPathMapping {
@@ -30,16 +28,14 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     private final String exactPath;
     private final String loggerName;
-    private final List<String> metricName;
+    private final String metricTag;
     private final Optional<String> exactPathOpt;
-    private final String strVal;
 
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
         loggerName = loggerName(exactPath);
-        strVal = PREFIX + exactPath;
-        metricName = ImmutableList.of(strVal);
+        metricTag = PREFIX + exactPath;
     }
 
     @Override
@@ -59,8 +55,8 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public List<String> metricName() {
-        return metricName;
+    public String metricTag() {
+        return metricTag;
     }
 
     @Override
@@ -75,7 +71,7 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     public int hashCode() {
-        return strVal.hashCode();
+        return metricTag.hashCode();
     }
 
     @Override
@@ -86,6 +82,6 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     public String toString() {
-        return strVal;
+        return metricTag;
     }
 }

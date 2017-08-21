@@ -16,13 +16,14 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistry;
+
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 
 public class MetricCollectingCircuitBreakerListenerTest {
 
@@ -37,27 +38,32 @@ public class MetricCollectingCircuitBreakerListenerTest {
         // Trigger the first event so that the metric group is registered.
         l.onEventCountUpdated(cb, new EventCount(1, 2));
 
-        assertThat(measure(registry, "foo_requests", "name", "bar", "result", "success")).isEqualTo(1);
-        assertThat(measure(registry, "foo_requests", "name", "bar", "result", "failure")).isEqualTo(2);
-        assertThat(measure(registry, "foo_transitions_total", "name", "bar", "state", "CLOSED")).isZero();
-        assertThat(measure(registry, "foo_transitions_total", "name", "bar", "state", "OPEN")).isZero();
-        assertThat(measure(registry, "foo_transitions_total", "name", "bar", "state", "HALF_OPEN")).isZero();
-        assertThat(measure(registry, "foo_rejected_requests_total", "name", "bar")).isZero();
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.requests#value{name=bar,result=success}", 1.0)
+                .containsEntry("foo.requests#value{name=bar,result=failure}", 2.0)
+                .containsEntry("foo.transitions#count{name=bar,state=CLOSED}", 0.0)
+                .containsEntry("foo.transitions#count{name=bar,state=OPEN}", 0.0)
+                .containsEntry("foo.transitions#count{name=bar,state=HALF_OPEN}", 0.0)
+                .containsEntry("foo.rejectedRequests#count{name=bar}", 0.0);
 
         // Transit to CLOSED.
         l.onStateChanged(cb, CircuitState.CLOSED);
-        assertThat(measure(registry, "foo_transitions_total", "name", "bar", "state", "CLOSED")).isOne();
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.transitions#count{name=bar,state=CLOSED}", 1.0);
 
         // Transit to OPEN.
         l.onStateChanged(cb, CircuitState.OPEN);
-        assertThat(measure(registry, "foo_transitions_total", "name", "bar", "state", "OPEN")).isOne();
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.transitions#count{name=bar,state=OPEN}", 1.0);
 
         // Transit to HALF_OPEN.
         l.onStateChanged(cb, CircuitState.HALF_OPEN);
-        assertThat(measure(registry, "foo_transitions_total", "name", "bar", "state", "HALF_OPEN")).isOne();
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.transitions#count{name=bar,state=HALF_OPEN}", 1.0);
 
         // Reject a request.
         l.onRequestRejected(cb);
-        assertThat(measure(registry, "foo_rejected_requests_total", "name", "bar")).isOne();
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.rejectedRequests#count{name=bar}", 1.0);
     }
 }
