@@ -85,7 +85,7 @@ public final class GrpcService extends AbstractHttpService
     private static final Metadata EMPTY_METADATA = new Metadata();
 
     private final HandlerRegistry registry;
-    private final PathMapping pathMapping;
+    private final List<PathMapping> pathMappings;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -95,14 +95,14 @@ public final class GrpcService extends AbstractHttpService
     private int maxInboundMessageSizeBytes;
 
     GrpcService(HandlerRegistry registry,
-                PathMapping pathMapping,
+                List<PathMapping> pathMappings,
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
                 int maxOutboundMessageSizeBytes,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
-        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
+        this.pathMappings = requireNonNull(pathMappings, "pathMappings");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
@@ -253,8 +253,8 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Override
-    public PathMapping pathMapping() {
-        return pathMapping;
+    public List<PathMapping> pathMappings() {
+        return pathMappings;
     }
 
     private static class EmptyListener<T> extends ServerCall.Listener<T> {}

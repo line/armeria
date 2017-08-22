@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.List;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -27,7 +29,7 @@ import com.linecorp.armeria.common.Response;
  */
 public interface ServiceWithPathMapping<I extends Request, O extends Response> extends Service<I, O> {
     /**
-     * Returns the {@link PathMapping} to which this {@link Service} is bound.
+     * Returns the list of {@link PathMapping} to which this {@link Service} is bound.
      */
-    PathMapping pathMapping();
+    List<PathMapping> pathMappings();
 }

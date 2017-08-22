@@ -18,12 +18,14 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -31,9 +33,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.SetPathMapping;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 
 import io.grpc.BindableService;
@@ -181,7 +183,8 @@ public final class GrpcServiceBuilder {
         HandlerRegistry handlerRegistry = registryBuilder.build();
         GrpcService grpcService = new GrpcService(
                 handlerRegistry,
-                new SetPathMapping(handlerRegistry.methods().keySet()),
+                handlerRegistry.methods().keySet().stream().map(path -> PathMapping.ofExact("/" + path))
+                      .collect(ImmutableList.toImmutableList()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats, maxOutboundMessageSizeBytes,

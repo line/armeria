@@ -40,10 +40,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SetPathMapping;
 
-import io.grpc.MethodDescriptor;
 import io.netty.util.AsciiString;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
@@ -127,13 +126,12 @@ public class GrpcServiceTest {
 
     @Test
     public void pathMapping() throws Exception {
-        assertThat(grpcService.pathMapping())
-            .isEqualTo(
-                new SetPathMapping(
-                    TestServiceGrpc.getServiceDescriptor()
-                        .getMethods()
-                        .stream()
-                        .map(MethodDescriptor::getFullMethodName)
-                        .collect(ImmutableSet.toImmutableSet())));
+    assertThat(ImmutableSet.copyOf(grpcService.pathMappings()))
+        .isEqualTo(
+            TestServiceGrpc.getServiceDescriptor()
+                .getMethods()
+                .stream()
+                .map(method -> PathMapping.ofExact("/" + method.getFullMethodName()))
+                .collect(ImmutableSet.toImmutableSet()));
     }
 }
