@@ -416,6 +416,9 @@ public final class ServerBuilder {
     public <T extends ServiceWithPathMapping<HttpRequest, HttpResponse>,
             R extends Service<HttpRequest, HttpResponse>>
             ServerBuilder service(T serviceWithPathMapping, Function<T, R> decorator) {
+        requireNonNull(serviceWithPathMapping, "serviceWithPathMapping");
+        requireNonNull(serviceWithPathMapping.pathMappings(), "serviceWithPathMapping.pathMappings()");
+        requireNonNull(decorator, "decorator");
         serviceWithPathMapping.pathMappings()
                 .forEach(pathMapping -> service(pathMapping, decorator.apply(serviceWithPathMapping)));
         return this;
