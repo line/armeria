@@ -183,7 +183,12 @@ public final class GrpcServiceBuilder {
         HandlerRegistry handlerRegistry = registryBuilder.build();
         GrpcService grpcService = new GrpcService(
                 handlerRegistry,
-                handlerRegistry.methods().keySet().stream().map(path -> PathMapping.ofExact("/" + path))
+                handlerRegistry
+                      .methods()
+                      .keySet()
+                      .stream()
+                      .sorted(String::compareTo)
+                      .map(path -> PathMapping.ofExact("/" + path))
                       .collect(ImmutableList.toImmutableList()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),

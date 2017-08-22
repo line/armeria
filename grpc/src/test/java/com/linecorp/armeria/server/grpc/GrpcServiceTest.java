@@ -27,7 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpResponse;
@@ -43,6 +43,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import io.grpc.MethodDescriptor;
 import io.netty.util.AsciiString;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
@@ -126,12 +127,14 @@ public class GrpcServiceTest {
 
     @Test
     public void pathMapping() throws Exception {
-    assertThat(ImmutableSet.copyOf(grpcService.pathMappings()))
-        .isEqualTo(
-            TestServiceGrpc.getServiceDescriptor()
-                .getMethods()
-                .stream()
-                .map(method -> PathMapping.ofExact("/" + method.getFullMethodName()))
-                .collect(ImmutableSet.toImmutableSet()));
+        assertThat(grpcService.pathMappings())
+            .isEqualTo(
+                TestServiceGrpc.getServiceDescriptor()
+                    .getMethods()
+                    .stream()
+                    .map(MethodDescriptor::getFullMethodName)
+                    .sorted(String::compareTo)
+                    .map(path -> PathMapping.ofExact("/" + path))
+                    .collect(ImmutableList.toImmutableList()));
     }
 }
