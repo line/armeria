@@ -41,17 +41,17 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.ObjectUtil;
 
 /**
- * {@link ChannelDuplexHandler} which consolidate {@link ChannelOutboundInvoker#flush()} operations (which also
+ * {@link ChannelDuplexHandler} which consolidates {@link ChannelOutboundInvoker#flush()} operations (which also
  * includes {@link ChannelOutboundInvoker#writeAndFlush(Object)} and
  * {@link ChannelOutboundInvoker#writeAndFlush(Object, ChannelPromise)}).
  *
- * <p>Flush operations are general speaking expensive as these may trigger a syscall on the transport level.
+ * <p>Flush operations are, generally speaking, expensive as these may trigger a syscall on the transport level.
  * Thus it is in most cases (where write latency can be traded with throughput) a good idea to try to minimize
  * flush operations as much as possible.
  *
  * <p>When {@link #flush(ChannelHandlerContext)} is called it will only pass it on to the next
  * {@link ChannelOutboundHandler} in the {@link ChannelPipeline} if no read loop is currently ongoing
- * as it will pick up any pending flushes when {@link #channelReadComplete(ChannelHandlerContext)} is trigged.
+ * as it will pick up any pending flushes when {@link #channelReadComplete(ChannelHandlerContext)} is triggered.
  * If {@code explicitFlushAfterFlushes} is reached the flush will also be forwarded as well.
  *
  * <p>If the {@link Channel} becomes non-writable it will also try to execute any pending flush operations.

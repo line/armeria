@@ -81,8 +81,8 @@ public final class ServerConfig {
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
 
         requireNonNull(ports, "ports");
-        requireNonNull(virtualHosts, "virtualHosts");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
+        requireNonNull(virtualHosts, "virtualHosts");
 
         // Set the primitive properties.
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");

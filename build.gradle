@@ -761,6 +761,9 @@ configure(javaProjects) {
                     // Ignore known false positives.
                     lines.removeIf { it.contains('Only supported on Linux') }
                     switch (td.className) {
+                        case 'com.linecorp.armeria.client.Http2ClientSettingsTest':
+                            lines.removeIf { it.contains('Frame length: 32769 exceeds maximum: 32768') }
+                            break
                         case 'com.linecorp.armeria.client.zookeeper.EndpointGroupTest':
                             lines.removeIf { it.contains('ServerCnxn$EndOfStreamException') }
                             break

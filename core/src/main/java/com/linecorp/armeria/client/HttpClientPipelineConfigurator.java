@@ -23,6 +23,8 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -79,6 +81,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -312,6 +315,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         if (protocol == H1 || protocol == H1C) {
             addBeforeSessionHandler(pipeline, new Http1ResponseDecoder(pipeline.channel()));
+        } else if (protocol == H2 || protocol == H2C) {
+            final int initialWindow = clientFactory.initialHttp2ConnectionWindowSize();
+            if (initialWindow > DEFAULT_WINDOW_SIZE) {
+                incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
+            }
         }
 
         final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
@@ -320,6 +328,15 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
+    }
+
+    private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
+        try {
+            final Http2Connection connection = pipeline.get(Http2ClientConnectionHandler.class).connection();
+            connection.local().flowController().incrementWindowSize(connection.connectionStream(), delta);
+        } catch (Http2Exception e) {
+            logger.warn("Failed to increment local flowController window size: {}", delta, e);
+        }
     }
 
     void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
@@ -572,15 +589,26 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
         Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
+        final Http2Settings http2Settings = http2Settings();
+
         final Http2ResponseDecoder listener = new Http2ResponseDecoder(conn, ch, encoder);
-
         final Http2ClientConnectionHandler handler =
-                new Http2ClientConnectionHandler(decoder, encoder, new Http2Settings(), listener);
-
+                new Http2ClientConnectionHandler(decoder, encoder, http2Settings, listener);
         // Setup post build options
         handler.gracefulShutdownTimeoutMillis(clientFactory.idleTimeoutMillis());
 
         return handler;
+    }
+
+    private Http2Settings http2Settings() {
+        final Http2Settings http2Settings = new Http2Settings();
+        if (clientFactory.initialHttp2StreamWindowSize() != DEFAULT_WINDOW_SIZE) {
+            http2Settings.initialWindowSize(clientFactory.initialHttp2StreamWindowSize());
+        }
+        if (clientFactory.http2MaxFrameSize() != DEFAULT_MAX_FRAME_SIZE) {
+            http2Settings.maxFrameSize(clientFactory.http2MaxFrameSize());
+        }
+        return http2Settings;
     }
 
     private static Http1ClientCodec newHttp1Codec() {
