@@ -32,7 +32,7 @@ public class PrefixPathMappingTest {
 
     @Test
     public void testMetricName() throws Exception {
-        assertThat(ofPrefix("/foo/bar").metricTag()).isEqualTo("prefix:/foo/bar/");
+        assertThat(ofPrefix("/foo/bar").meterTag()).isEqualTo("prefix:/foo/bar/");
     }
 
     @Test

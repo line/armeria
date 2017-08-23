@@ -394,7 +394,7 @@ final class AnnotatedHttpServices {
         private final String pathPrefix;
         private final PathMapping mapping;
         private final String loggerName;
-        private final String metricTag;
+        private final String meterTag;
 
         PrefixAddingPathMapping(String pathPrefix, PathMapping mapping) {
             assert mapping instanceof GlobPathMapping || mapping instanceof RegexPathMapping
@@ -403,7 +403,7 @@ final class AnnotatedHttpServices {
             this.pathPrefix = pathPrefix;
             this.mapping = mapping;
             loggerName = loggerName(pathPrefix) + '.' + mapping.loggerName();
-            metricTag = PrefixPathMapping.PREFIX + pathPrefix + ',' + mapping.metricTag();
+            meterTag = PrefixPathMapping.PREFIX + pathPrefix + ',' + mapping.meterTag();
         }
 
         @Override
@@ -433,8 +433,8 @@ final class AnnotatedHttpServices {
         }
 
         @Override
-        public String metricTag() {
-            return metricTag;
+        public String meterTag() {
+            return meterTag;
         }
 
         @Override

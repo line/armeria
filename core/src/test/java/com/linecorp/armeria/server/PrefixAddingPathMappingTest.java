@@ -36,11 +36,11 @@ public class PrefixAddingPathMappingTest {
 
     @Test
     public void testMetricName() {
-        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).metricTag())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("/bar/**")).meterTag())
                 .isEqualTo("prefix:/foo/,glob:/bar/**");
-        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("bar")).metricTag())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofGlob("bar")).meterTag())
                 .isEqualTo("prefix:/foo/,glob:/**/bar");
-        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofRegex("/(foo|bar)")).metricTag())
+        assertThat(new PrefixAddingPathMapping("/foo/", PathMapping.ofRegex("/(foo|bar)")).meterTag())
                 .isEqualTo("prefix:/foo/,regex:/(foo|bar)");
     }
 }

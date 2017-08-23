@@ -29,7 +29,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
     private final String prefix;
     private final boolean stripPrefix;
     private final String loggerName;
-    private final String metricTag;
+    private final String meterTag;
     private final Optional<String> triePath;
     private final String strVal;
 
@@ -42,7 +42,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
         this.prefix = prefix;
         this.stripPrefix = stripPrefix;
         loggerName = loggerName(prefix);
-        metricTag = PREFIX + prefix;
+        meterTag = PREFIX + prefix;
         triePath = Optional.of(prefix + '*');
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
@@ -69,8 +69,8 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricTag() {
-        return metricTag;
+    public String meterTag() {
+        return meterTag;
     }
 
     @Override

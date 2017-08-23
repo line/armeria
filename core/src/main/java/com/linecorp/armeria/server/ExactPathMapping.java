@@ -28,14 +28,14 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     private final String exactPath;
     private final String loggerName;
-    private final String metricTag;
+    private final String meterTag;
     private final Optional<String> exactPathOpt;
 
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         exactPathOpt = Optional.of(exactPath);
         loggerName = loggerName(exactPath);
-        metricTag = PREFIX + exactPath;
+        meterTag = PREFIX + exactPath;
     }
 
     @Override
@@ -55,8 +55,8 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricTag() {
-        return metricTag;
+    public String meterTag() {
+        return meterTag;
     }
 
     @Override
@@ -71,7 +71,7 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     public int hashCode() {
-        return metricTag.hashCode();
+        return meterTag.hashCode();
     }
 
     @Override
@@ -82,6 +82,6 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     public String toString() {
-        return metricTag;
+        return meterTag;
     }
 }

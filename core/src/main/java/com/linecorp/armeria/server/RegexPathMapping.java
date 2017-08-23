@@ -36,13 +36,13 @@ final class RegexPathMapping extends AbstractPathMapping {
     private final Pattern regex;
     private final Set<String> paramNames;
     private final String loggerName;
-    private final String metricTag;
+    private final String meterTag;
 
     RegexPathMapping(Pattern regex) {
         this.regex = requireNonNull(regex, "regex");
         paramNames = findParamNames(regex);
         loggerName = toLoggerName(regex);
-        metricTag = PREFIX + regex.pattern();
+        meterTag = PREFIX + regex.pattern();
     }
 
     private static Set<String> findParamNames(Pattern regex) {
@@ -107,8 +107,8 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricTag() {
-        return metricTag;
+    public String meterTag() {
+        return meterTag;
     }
 
     @VisibleForTesting
@@ -118,7 +118,7 @@ final class RegexPathMapping extends AbstractPathMapping {
 
     @Override
     public int hashCode() {
-        return metricTag.hashCode();
+        return meterTag.hashCode();
     }
 
     @Override
@@ -129,6 +129,6 @@ final class RegexPathMapping extends AbstractPathMapping {
 
     @Override
     public String toString() {
-        return metricTag;
+        return meterTag;
     }
 }

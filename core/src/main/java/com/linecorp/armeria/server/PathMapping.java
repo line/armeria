@@ -181,7 +181,7 @@ public interface PathMapping {
     /**
      * Returns the value of the {@code "pathMapping"} {@link Tag} in a {@link Meter}.
      */
-    String metricTag();
+    String meterTag();
 
     /**
      * Returns the exact path of this path mapping if it is an exact path mapping, or {@link Optional#empty}

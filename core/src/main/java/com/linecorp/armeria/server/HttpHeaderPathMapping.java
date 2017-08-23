@@ -38,7 +38,7 @@ final class HttpHeaderPathMapping implements PathMapping {
 
     private static final List<MediaType> ANY_TYPE = ImmutableList.of(MediaType.ANY_TYPE);
     private static final Joiner loggerNameJoiner = Joiner.on('_');
-    private static final Joiner metricTagJoiner = Joiner.on(',');
+    private static final Joiner meterTagJoiner = Joiner.on(',');
 
     private final PathMapping pathStringMapping;
     private final Set<HttpMethod> supportedMethods;
@@ -46,7 +46,7 @@ final class HttpHeaderPathMapping implements PathMapping {
     private final List<MediaType> produceTypes;
 
     private final String loggerName;
-    private final String metricTag;
+    private final String meterTag;
 
     private final int complexity;
 
@@ -59,8 +59,8 @@ final class HttpHeaderPathMapping implements PathMapping {
 
         loggerName = generateLoggerName(pathStringMapping.loggerName(),
                                         supportedMethods, consumeTypes, produceTypes);
-        metricTag = generateMetricTag(pathStringMapping.metricTag(),
-                                      supportedMethods, consumeTypes, produceTypes);
+        meterTag = generateMeterTag(pathStringMapping.meterTag(),
+                                    supportedMethods, consumeTypes, produceTypes);
 
         // Starts with 1 due to the HTTP method mapping.
         int complexity = 1;
@@ -147,8 +147,8 @@ final class HttpHeaderPathMapping implements PathMapping {
     }
 
     @Override
-    public String metricTag() {
-        return metricTag;
+    public String meterTag() {
+        return meterTag;
     }
 
     @Override
@@ -221,12 +221,12 @@ final class HttpHeaderPathMapping implements PathMapping {
         return name.toString();
     }
 
-    private static String generateMetricTag(String parentTag, Set<HttpMethod> supportedMethods,
-                                            List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+    private static String generateMeterTag(String parentTag, Set<HttpMethod> supportedMethods,
+                                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
 
         final StringJoiner name = new StringJoiner(",");
         name.add(parentTag);
-        name.add("methods:" + metricTagJoiner.join(supportedMethods.stream().sorted().iterator()));
+        name.add("methods:" + meterTagJoiner.join(supportedMethods.stream().sorted().iterator()));
 
         // The following three cases should be different to each other.
         // Each name would be produced as follows:

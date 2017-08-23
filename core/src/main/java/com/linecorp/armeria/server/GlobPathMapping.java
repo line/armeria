@@ -53,7 +53,7 @@ final class GlobPathMapping extends AbstractPathMapping {
     private final int numParams;
     private final Set<String> paramNames;
     private final String loggerName;
-    private final String metricTag;
+    private final String meterTag;
     private final String strVal;
 
     GlobPathMapping(String glob) {
@@ -75,7 +75,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         // when generating logger and metric names.
         final String aGlob = glob.startsWith("/") ? glob : "/**/" + glob;
         loggerName = loggerName(aGlob);
-        metricTag = PREFIX + aGlob;
+        meterTag = PREFIX + aGlob;
     }
 
     @Override
@@ -109,8 +109,8 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricTag() {
-        return metricTag;
+    public String meterTag() {
+        return meterTag;
     }
 
     @VisibleForTesting

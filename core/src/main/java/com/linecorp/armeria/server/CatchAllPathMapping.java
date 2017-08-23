@@ -46,7 +46,7 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricTag() {
+    public String meterTag() {
         return "catch-all";
     }
 

@@ -120,7 +120,7 @@ public abstract class AbstractPathMapping implements PathMapping {
     }
 
     @Override
-    public String metricTag() {
+    public String meterTag() {
         return "__UNKNOWN_PATH__";
     }
 

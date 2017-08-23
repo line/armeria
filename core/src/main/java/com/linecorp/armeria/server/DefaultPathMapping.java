@@ -167,7 +167,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String metricTag() {
+    public String meterTag() {
         return pathPattern;
     }
 
