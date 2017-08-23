@@ -22,8 +22,6 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
-
 public class MeterIdFunctionTest {
 
     @Test
@@ -48,7 +46,7 @@ public class MeterIdFunctionTest {
     public void testAndThen() {
         final MeterIdFunction f = (registry, log) -> new MeterId("foo", ImmutableList.of());
         final MeterIdFunction f2 = f.andThen((registry, id) -> id.append("bar"));
-        assertThat(f2.apply(new PrometheusMeterRegistry(), null))
+        assertThat(f2.apply(PrometheusMeterRegistries.newRegistry(), null))
                 .isEqualTo(new MeterId("foo.bar", ImmutableList.of()));
     }
 }

@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
@@ -85,9 +86,7 @@ public final class MeterId {
     }
 
     private static ImmutableList<Tag> copyAndSort(Iterable<Tag> tags) {
-        final List<Tag> list = new ArrayList<>();
-        tags.forEach(list::add);
-        return sort(list);
+        return sort(Lists.newArrayList(tags));
     }
 
     /**
@@ -117,8 +116,7 @@ public final class MeterId {
      */
     public List<Tag> tags(String... tags) {
         requireNonNull(tags, "tags");
-        final List<Tag> list = new ArrayList<>();
-        list.addAll(this.tags);
+        final List<Tag> list = new ArrayList<>(this.tags);
         zip(list, tags);
         return sort(list);
     }
@@ -128,8 +126,7 @@ public final class MeterId {
      */
     public List<Tag> tags(Iterable<Tag> tags) {
         requireNonNull(tags, "tags");
-        final List<Tag> list = new ArrayList<>();
-        list.addAll(this.tags);
+        final List<Tag> list = new ArrayList<>(this.tags);
         tags.forEach(list::add);
         return sort(list);
     }

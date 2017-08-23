@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistry;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExporterHttpService;
@@ -54,11 +54,12 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 import io.prometheus.client.CollectorRegistry;
 
 public class PrometheusMetricsIntegrationTest {
 
-    private static final PrometheusMeterRegistry registry = new PrometheusMeterRegistry();
+    private static final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
     private static final CollectorRegistry prometheusRegistry = registry.getPrometheusRegistry();
 
     @ClassRule

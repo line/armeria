@@ -37,7 +37,7 @@ import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.metric.DropwizardMeterRegistry;
+import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -45,9 +45,11 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.server.ServerRule;
 
+import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
+
 public class DropwizardMetricsIntegrationTest {
 
-    private static final DropwizardMeterRegistry registry = new DropwizardMeterRegistry();
+    private static final DropwizardMeterRegistry registry = DropwizardMeterRegistries.newRegistry();
     private static final MetricRegistry dropwizardRegistry = registry.getDropwizardRegistry();
 
     private static CountDownLatch latch;

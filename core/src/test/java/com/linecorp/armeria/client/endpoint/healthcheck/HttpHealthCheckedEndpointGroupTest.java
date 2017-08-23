@@ -25,7 +25,7 @@ import org.junit.Test;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistry;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -48,7 +48,7 @@ public class HttpHealthCheckedEndpointGroupTest {
         }
     }
 
-    private final MeterRegistry registry = new PrometheusMeterRegistry();
+    private final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
     @Rule
     public final ServerRule serverOne = new HealthCheckServerRule();

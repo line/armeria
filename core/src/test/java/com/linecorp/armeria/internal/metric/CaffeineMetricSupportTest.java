@@ -34,7 +34,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistry;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -47,7 +47,7 @@ public class CaffeineMetricSupportTest {
         when(cache.estimatedSize()).thenReturn(8L);
 
         final AtomicLong ticker = new AtomicLong();
-        final MeterRegistry registry = new PrometheusMeterRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         CaffeineMetricSupport.setup(registry, new MeterId("foo"), cache, ticker::get);
 
         verify(cache, times(1)).stats();
@@ -94,7 +94,7 @@ public class CaffeineMetricSupportTest {
         when(cache.estimatedSize()).thenReturn(5L);
 
         final AtomicLong ticker = new AtomicLong();
-        final MeterRegistry registry = new PrometheusMeterRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         CaffeineMetricSupport.setup(registry, new MeterId("bar", ImmutableList.of()), cache, ticker::get);
 
         verify(cache, times(1)).stats();

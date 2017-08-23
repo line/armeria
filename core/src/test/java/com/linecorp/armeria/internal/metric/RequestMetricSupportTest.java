@@ -31,10 +31,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Statistic;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
@@ -42,7 +42,7 @@ public class RequestMetricSupportTest {
 
     @Test
     public void http() {
-        final MeterRegistry registry = new PrometheusMeterRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), registry, SessionProtocol.H2C,
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
@@ -113,7 +113,7 @@ public class RequestMetricSupportTest {
 
     @Test
     public void rpc() {
-        final MeterRegistry registry = new PrometheusMeterRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), registry, SessionProtocol.H2C,
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/bar", null, null,

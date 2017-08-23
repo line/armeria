@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -54,11 +55,10 @@ import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.MeterRegistry.Search;
 import io.micrometer.core.instrument.Statistic;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 
 public class GrpcMetricsIntegrationTest {
 
-    private static final MeterRegistry registry = new PrometheusMeterRegistry();
+    private static final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
     private static class TestServiceImpl extends TestServiceImplBase {
         @Override

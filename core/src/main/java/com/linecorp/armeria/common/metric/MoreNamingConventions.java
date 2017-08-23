@@ -23,6 +23,7 @@ import com.google.common.base.Splitter;
 
 import io.micrometer.core.instrument.Meter.Type;
 import io.micrometer.core.instrument.NamingConvention;
+import io.micrometer.core.instrument.prometheus.PrometheusNamingConvention;
 
 /**
  * Provides commonly-used {@link NamingConvention}s.
@@ -52,6 +53,14 @@ public final class MoreNamingConventions {
 
     private MoreNamingConventions() {}
 
+    /**
+     * An alternative {@link NamingConvention} of {@link PrometheusNamingConvention}.
+     * <ul>
+     *   <li>It handles base unit correctly regardless of the meter type.</li>
+     *   <li>It converts camel-case name components to snake-case.</li>
+     *   <li>It does not prepend {@code "m_"} unless it's really necessary.</li>
+     * </ul>
+     */
     private static final class BetterPrometheusNamingConvention implements NamingConvention {
 
         private static final Splitter NAME_SPLITTER = Splitter.on('.').omitEmptyStrings();

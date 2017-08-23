@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
@@ -56,7 +57,6 @@ import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
@@ -74,7 +74,7 @@ public class ServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
 
-            sb.meterRegistry(new PrometheusMeterRegistry());
+            sb.meterRegistry(PrometheusMeterRegistries.newRegistry());
 
             final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
                     new EchoService().decorate(LoggingService.newDecorator());

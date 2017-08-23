@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.metric;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Streams.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
@@ -26,8 +25,12 @@ import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Streams;
 
 import io.micrometer.core.instrument.AbstractMeterRegistry;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -45,6 +48,34 @@ import io.micrometer.core.instrument.stats.quantile.WindowSketchQuantiles;
 public final class MoreMeters {
 
     private static final double[] DEFAULT_QUANTILES = { 0.5, 0.75, 0.95, 0.98, 0.99, 0.999, 1.0 };
+    private static final Logger logger = LoggerFactory.getLogger(MoreMeters.class);
+
+    private static final String METER_ID_FQCN = "io.micrometer.core.instrument.AbstractMeterRegistry$MeterId";
+    private static final Field meterMapField;
+    private static final Method meterIdGetNameMethod;
+    private static final Method meterIdGetTagsMethod;
+
+    static {
+        Field newMeterMapField = null;
+        Method newMeterIdGetNameMethod = null;
+        Method newMeterIdGetTagsMethod = null;
+        try {
+            newMeterMapField = AbstractMeterRegistry.class.getDeclaredField("meterMap");
+            newMeterMapField.setAccessible(true);
+            final Class<?> meterIdClass = Class.forName(METER_ID_FQCN, false,
+                                                        AbstractMeterRegistry.class.getClassLoader());
+            newMeterIdGetNameMethod = meterIdClass.getDeclaredMethod("getName");
+            newMeterIdGetNameMethod.setAccessible(true);
+            newMeterIdGetTagsMethod = meterIdClass.getDeclaredMethod("getTags");
+            newMeterIdGetTagsMethod.setAccessible(true);
+        } catch (Exception e) {
+            logger.debug("Failed to get the methods and fields required for accessing a meter registry:", e);
+        }
+
+        meterMapField = newMeterMapField;
+        meterIdGetNameMethod = newMeterIdGetNameMethod;
+        meterIdGetTagsMethod = newMeterIdGetTagsMethod;
+    }
 
     /**
      * Returns a {@link DistributionSummary} with the default {@link Quantiles} configured.
@@ -86,8 +117,12 @@ public final class MoreMeters {
         checkArgument(registry instanceof AbstractMeterRegistry,
                       "registry: %s (expected: %s)", registry, AbstractMeterRegistry.class);
 
+        checkState(meterMapField != null);
+        checkState(meterIdGetNameMethod != null);
+        checkState(meterIdGetTagsMethod != null);
+
         final ImmutableMap.Builder<String, Double> builder = ImmutableMap.builder();
-        getMeterMap(registry).forEach((id, meter) -> stream(meter.measure()).forEach(measurement -> {
+        getMeterMap(registry).forEach((id, meter) -> Streams.stream(meter.measure()).forEach(measurement -> {
             final String fullName = measurementName(id, measurement);
             final double value = measurement.getValue();
             builder.put(fullName, value);
@@ -124,10 +159,7 @@ public final class MoreMeters {
     @SuppressWarnings("unchecked")
     private static Map<Object, Meter> getMeterMap(MeterRegistry registry) {
         try {
-            @SuppressWarnings("JavaReflectionMemberAccess")
-            final Field field = AbstractMeterRegistry.class.getDeclaredField("meterMap");
-            field.setAccessible(true);
-            return (Map<Object, Meter>) field.get(registry);
+            return (Map<Object, Meter>) meterMapField.get(registry);
         } catch (Exception e) {
             throw new IllegalStateException("failed to retrieve the meter map", e);
         }
@@ -136,9 +168,7 @@ public final class MoreMeters {
     private static String getName(Object id) {
         checkMeterIdType(id);
         try {
-            final Method getName = id.getClass().getDeclaredMethod("getName");
-            getName.setAccessible(true);
-            return String.valueOf(getName.invoke(id));
+            return String.valueOf(meterIdGetNameMethod.invoke(id));
         } catch (Exception e) {
             throw new IllegalStateException("failed to get the meter name", e);
         }
@@ -148,9 +178,7 @@ public final class MoreMeters {
     private static Iterable<Tag> getTags(Object id) {
         checkMeterIdType(id);
         try {
-            final Method getTags = id.getClass().getDeclaredMethod("getTags");
-            getTags.setAccessible(true);
-            return (Iterable<Tag>) getTags.invoke(id);
+            return (Iterable<Tag>) meterIdGetTagsMethod.invoke(id);
         } catch (Exception e) {
             throw new IllegalStateException("failed to get the meter tags", e);
         }
@@ -158,7 +186,7 @@ public final class MoreMeters {
 
     private static void checkMeterIdType(Object id) {
         final Class<?> idType = id.getClass();
-        checkState("io.micrometer.core.instrument.AbstractMeterRegistry$MeterId".equals(idType.getName()),
+        checkState(METER_ID_FQCN.equals(idType.getName()),
                    "unexpected meter id type: %s", idType);
     }
 
