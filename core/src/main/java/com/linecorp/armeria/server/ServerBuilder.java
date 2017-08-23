@@ -420,19 +420,21 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}
+     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
      * of the default {@link VirtualHost}.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>>
-            ServerBuilder service(T serviceWithPathMapping) {
-        return service(serviceWithPathMapping, Function.identity());
+    ServerBuilder service(T serviceWithPathMappings) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(serviceWithPathMappings);
+        return this;
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}
+     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
      * of the default {@link VirtualHost}.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
@@ -440,12 +442,9 @@ public final class ServerBuilder {
      */
     public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
             R extends Service<HttpRequest, HttpResponse>>
-            ServerBuilder service(T serviceWithPathMapping, Function<T, R> decorator) {
-        requireNonNull(serviceWithPathMapping, "serviceWithPathMapping");
-        requireNonNull(serviceWithPathMapping.pathMappings(), "serviceWithPathMapping.pathMappings()");
-        requireNonNull(decorator, "decorator");
-        serviceWithPathMapping.pathMappings()
-                .forEach(pathMapping -> service(pathMapping, decorator.apply(serviceWithPathMapping)));
+    ServerBuilder service(T serviceWithPathMappings, Function<T, R> decorator) {
+        defaultVirtualHostBuilderUpdated();
+        defaultVirtualHostBuilder.service(serviceWithPathMappings, decorator);
         return this;
     }
 
