@@ -17,15 +17,17 @@
 package com.linecorp.armeria.common.metric;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
 
 /**
  * An immutable holder of {@link Meter} name and {@link Tag}s.
@@ -42,8 +44,7 @@ public final class MeterId {
      * @param name the {@link Meter} name
      */
     public MeterId(String name) {
-        this.name = requireNonNull(name, "name");
-        tags = ImmutableList.of();
+        this(name, ImmutableList.of());
     }
 
     /**
@@ -53,8 +54,7 @@ public final class MeterId {
      * @param tags the keys and values of the {@link Tag}s
      */
     public MeterId(String name, String... tags) {
-        this.name = requireNonNull(name, "name");
-        this.tags = zip(requireNonNull(tags, "tags"));
+        this(name, sort(Tags.zip(requireNonNull(tags, "tags"))));
     }
 
     /**
@@ -64,21 +64,30 @@ public final class MeterId {
      * @param tags the {@link Tag}s of the {@link Meter}
      */
     public MeterId(String name, Iterable<Tag> tags) {
+        this(name, copyAndSort(requireNonNull(tags, "tags")));
+    }
+
+    private MeterId(String name, ImmutableList<Tag> tags) {
         this.name = requireNonNull(name, "name");
-        this.tags = ImmutableList.copyOf(requireNonNull(tags, "tags"));
+        this.tags = tags;
     }
 
-    private static List<Tag> zip(String... tags) {
-        final ImmutableList.Builder<Tag> builder = ImmutableList.builder();
-        zip(builder, tags);
-        return builder.build();
-    }
-
-    private static void zip(Builder<Tag> builder, String... tags) {
+    private static void zip(List<Tag> list, String... tags) {
         checkArgument(tags.length % 2 == 0, "tags.length: %s (expected: even)", tags.length);
         for (int i = 0; i < tags.length;) {
-            builder.add(Tag.of(tags[i++], tags[i++]));
+            list.add(Tag.of(tags[i++], tags[i++]));
         }
+    }
+
+    private static ImmutableList<Tag> sort(List<Tag> tags) {
+        tags.sort(comparing(Tag::getKey));
+        return ImmutableList.copyOf(tags);
+    }
+
+    private static ImmutableList<Tag> copyAndSort(Iterable<Tag> tags) {
+        final List<Tag> list = new ArrayList<>();
+        tags.forEach(list::add);
+        return sort(list);
     }
 
     /**
@@ -108,10 +117,10 @@ public final class MeterId {
      */
     public List<Tag> tags(String... tags) {
         requireNonNull(tags, "tags");
-        final ImmutableList.Builder<Tag> builder = ImmutableList.builder();
-        builder.addAll(this.tags);
-        zip(builder, tags);
-        return builder.build();
+        final List<Tag> list = new ArrayList<>();
+        list.addAll(this.tags);
+        zip(list, tags);
+        return sort(list);
     }
 
     /**
@@ -119,10 +128,10 @@ public final class MeterId {
      */
     public List<Tag> tags(Iterable<Tag> tags) {
         requireNonNull(tags, "tags");
-        final ImmutableList.Builder<Tag> builder = ImmutableList.builder();
-        builder.addAll(this.tags);
-        builder.addAll(tags);
-        return builder.build();
+        final List<Tag> list = new ArrayList<>();
+        list.addAll(this.tags);
+        tags.forEach(list::add);
+        return sort(list);
     }
 
     /**
@@ -152,10 +161,6 @@ public final class MeterId {
      * Returns a newly-created instance whose name is concatenated by the specified {@code tags}.
      */
     public MeterId withTags(String... tags) {
-        requireNonNull(tags, "tags");
-        final ImmutableList.Builder<Tag> builder = ImmutableList.builder();
-        builder.addAll(this.tags);
-        zip(builder, tags);
         return new MeterId(name, tags(tags));
     }
 
