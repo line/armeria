@@ -103,11 +103,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private void configureHttp(ChannelPipeline p) {
         p.addLast(new Http2PrefaceOrHttpHandler());
-        configureRequestCountingHandlers(p);
+        configureIdleTimeoutHandler(p);
         p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1C));
     }
 
-    private void configureRequestCountingHandlers(ChannelPipeline p) {
+    private void configureIdleTimeoutHandler(ChannelPipeline p) {
         if (config.idleTimeoutMillis() > 0) {
             p.addFirst(new HttpServerIdleTimeoutHandler(config.idleTimeoutMillis()));
         }
@@ -166,7 +166,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p));
-            configureRequestCountingHandlers(p);
+            configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H2));
         }
 
@@ -174,7 +174,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(new HttpServerCodec());
             p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
-            configureRequestCountingHandlers(p);
+            configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1));
         }
     }

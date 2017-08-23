@@ -75,6 +75,9 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap baseBootstrap;
     private final Consumer<? super SslContextBuilder> sslContextCustomizer;
+    private final int initialHttp2ConnectionWindowSize;
+    private final int initialHttp2StreamWindowSize;
+    private final int http2MaxFrameSize;
     private final long idleTimeoutMillis;
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
@@ -94,7 +97,8 @@ final class HttpClientFactory extends AbstractClientFactory {
             Map<ChannelOption<?>, Object> socketOptions,
             Consumer<? super SslContextBuilder> sslContextCustomizer,
             Function<? super EventLoopGroup,
-                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
+                    ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
+            int initialHttp2ConnectionWindowSize, int initialHttp2StreamWindowSize, int http2MaxFrameSize,
             long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
             KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener, MeterRegistry meterRegistry) {
 
@@ -112,6 +116,9 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.shutdownWorkerGroupOnClose = shutdownWorkerGroupOnClose;
         this.baseBootstrap = baseBootstrap;
         this.sslContextCustomizer = sslContextCustomizer;
+        this.initialHttp2ConnectionWindowSize = initialHttp2ConnectionWindowSize;
+        this.initialHttp2StreamWindowSize = initialHttp2StreamWindowSize;
+        this.http2MaxFrameSize = http2MaxFrameSize;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.useHttp2Preface = useHttp2Preface;
         this.useHttp1Pipelining = useHttp1Pipelining;
@@ -132,6 +139,18 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     Consumer<? super SslContextBuilder> sslContextCustomizer() {
         return sslContextCustomizer;
+    }
+
+    int initialHttp2ConnectionWindowSize() {
+        return initialHttp2ConnectionWindowSize;
+    }
+
+    int initialHttp2StreamWindowSize() {
+        return initialHttp2StreamWindowSize;
+    }
+
+    int http2MaxFrameSize() {
+        return http2MaxFrameSize;
     }
 
     long idleTimeoutMillis() {
