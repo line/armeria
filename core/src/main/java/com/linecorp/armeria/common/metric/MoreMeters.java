@@ -65,7 +65,7 @@ public final class MoreMeters {
     }
 
     private static Quantiles defaultQuantiles() {
-        // According to Jon Schneider of Micrometer:
+        // According to Jon Schneider of Micrometer (discussion at micrometer-metrics.slack.com):
         // (1) Frugal2U is by far the fastest, but can take a while to converge.
         // (2) CKMS is slower but isn’t a successive approximation approach.
         // (3) Window Sketch is the slowest, but the quantile is sensitive to recent samples.
@@ -100,9 +100,7 @@ public final class MoreMeters {
         final StringBuilder buf = new StringBuilder();
 
         // Append name.
-        final String name;
-        name = getName(id);
-        buf.append(name);
+        buf.append(getName(id));
 
         // Append statistic.
         buf.append('#');
