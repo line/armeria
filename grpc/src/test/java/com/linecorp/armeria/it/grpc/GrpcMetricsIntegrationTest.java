@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.it.grpc;
 
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measure;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.given;
 
@@ -31,7 +29,6 @@ import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
-import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -43,6 +40,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -55,13 +53,12 @@ import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
+import io.micrometer.core.instrument.MeterRegistry.Search;
+import io.micrometer.core.instrument.Statistic;
 
 public class GrpcMetricsIntegrationTest {
 
-    private static final MeterRegistry registry = new PrometheusMeterRegistry();
+    private static final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
     private static class TestServiceImpl extends TestServiceImplBase {
         @Override
@@ -113,52 +110,47 @@ public class GrpcMetricsIntegrationTest {
 
         // Chance that get() returns NPE before the metric is first added, so ignore exceptions.
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                measure(registry, serverMeterId("UnaryCall", "requests_total", "result", "success")) +
-                measure(registry, serverMeterId("UnaryCall", "requests_total", "result", "failure")))
-                .isEqualTo(7));
+                findServerMeter("UnaryCall", "requests", "result", "success")
+                        .value(Statistic.Count, 4).meter()).isPresent());
         given().ignoreExceptions().untilAsserted(() -> assertThat(
-                measure(registry, clientMeterId("UnaryCall", "requests_total", "result", "success")) +
-                measure(registry, clientMeterId("UnaryCall", "requests_total", "result", "failure")))
-                .isEqualTo(7));
+                findServerMeter("UnaryCall", "requests", "result", "failure")
+                        .value(Statistic.Count, 3).meter()).isPresent());
+        given().ignoreExceptions().untilAsserted(() -> assertThat(
+                findClientMeter("UnaryCall", "requests", "result", "success")
+                        .value(Statistic.Count, 4).meter()).isPresent());
+        given().ignoreExceptions().untilAsserted(() -> assertThat(
+                findClientMeter("UnaryCall", "requests", "result", "failure")
+                        .value(Statistic.Count, 3).meter()).isPresent());
 
-        assertThat(measure(registry, serverMeterId("UnaryCall", "requests_total", "result", "success")))
-                .isEqualTo(4);
-        assertThat(measure(registry, clientMeterId("UnaryCall", "requests_total", "result", "success")))
-                .isEqualTo(4);
-        assertThat(measure(registry, serverMeterId("UnaryCall", "requests_total", "result", "failure")))
-                .isEqualTo(3);
-        assertThat(measure(registry, clientMeterId("UnaryCall", "requests_total", "result", "failure")))
-                .isEqualTo(3);
-
-        assertThat(measureAll(registry, serverMeterId("UnaryCall", "request_length_bytes")).get("count"))
-                .isEqualTo(7);
-        assertThat(measureAll(registry, serverMeterId("UnaryCall", "request_length_bytes")).get("sum"))
-                .isEqualTo(7 * 14);
-        assertThat(measureAll(registry, clientMeterId("UnaryCall", "request_length_bytes")).get("count"))
-                .isEqualTo(7);
-        assertThat(measureAll(registry, clientMeterId("UnaryCall", "request_length_bytes")).get("sum"))
-                .isEqualTo(7 * 14);
-        assertThat(measureAll(registry, serverMeterId("UnaryCall", "response_length_bytes")).get("count"))
-                .isEqualTo(7);
-        assertThat(measureAll(registry, serverMeterId("UnaryCall", "response_length_bytes")).get("sum"))
-                .isEqualTo(4 * 5 /* + 3 * 0 */);
-        assertThat(measureAll(registry, clientMeterId("UnaryCall", "response_length_bytes")).get("count"))
-                .isEqualTo(7);
-        assertThat(measureAll(registry, clientMeterId("UnaryCall", "response_length_bytes")).get("sum"))
-                .isEqualTo(4 * 5 /* + 3 * 0 */);
+        assertThat(findServerMeter("UnaryCall", "requestLength")
+                           .value(Statistic.Count, 7).meter()).isPresent();
+        assertThat(findServerMeter("UnaryCall", "requestLength")
+                           .value(Statistic.Total, 7 * 14).meter()).isPresent();
+        assertThat(findClientMeter("UnaryCall", "requestLength")
+                           .value(Statistic.Count, 7).meter()).isPresent();
+        assertThat(findClientMeter("UnaryCall", "requestLength")
+                           .value(Statistic.Total, 7 * 14).meter()).isPresent();
+        assertThat(findServerMeter("UnaryCall", "responseLength")
+                           .value(Statistic.Count, 7).meter()).isPresent();
+        assertThat(findServerMeter("UnaryCall", "responseLength")
+                           .value(Statistic.Total, 4 * 5 /* + 3 * 0 */).meter()).isPresent();
+        assertThat(findClientMeter("UnaryCall", "responseLength")
+                           .value(Statistic.Count, 7).meter()).isPresent();
+        assertThat(findClientMeter("UnaryCall", "responseLength")
+                           .value(Statistic.Total, 4 * 5 /* + 3 * 0 */).meter()).isPresent();
     }
 
-    private static MeterId serverMeterId(String method, String suffix, String... keyValues) {
-        return new MeterId("server_" + suffix,
-                           Iterables.concat(Tags.zip("method", "armeria.grpc.testing.TestService/" + method,
-                                                     "pathMapping", "catch-all"),
-                                            Tags.zip(keyValues)));
+    private static Search findServerMeter(String method, String suffix, String... keyValues) {
+        return registry.find("server." + suffix)
+                       .tags("method", "armeria.grpc.testing.TestService/" + method,
+                             "pathMapping", "catch-all")
+                       .tags(keyValues);
     }
 
-    private static MeterId clientMeterId(String method, String suffix, String... keyValues) {
-        return new MeterId("client_" + suffix,
-                           Iterables.concat(Tags.zip("method", "armeria.grpc.testing.TestService/" + method),
-                                            Tags.zip(keyValues)));
+    private static Search findClientMeter(String method, String suffix, String... keyValues) {
+        return registry.find("client." + suffix)
+                       .tags("method", "armeria.grpc.testing.TestService/" + method)
+                       .tags(keyValues);
     }
 
     private static void makeRequest(String name) throws Exception {

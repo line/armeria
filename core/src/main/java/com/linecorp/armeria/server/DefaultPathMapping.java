@@ -27,7 +27,6 @@ import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -74,7 +73,6 @@ final class DefaultPathMapping extends AbstractPathMapping {
     private final Set<String> paramNames;
 
     private final String loggerName;
-    private final List<String> metricName;
 
     /**
      * Create a {@link DefaultPathMapping} instance from given {@code pathPattern}.
@@ -128,7 +126,6 @@ final class DefaultPathMapping extends AbstractPathMapping {
         this.paramNames = ImmutableSet.copyOf(paramNames);
 
         loggerName = loggerName(pathPattern);
-        metricName = ImmutableList.of(pathPattern);
     }
 
     /**
@@ -170,8 +167,8 @@ final class DefaultPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public List<String> metricName() {
-        return metricName;
+    public String meterTag() {
+        return pathPattern;
     }
 
     @Override

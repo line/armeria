@@ -26,7 +26,6 @@ import java.util.StringJoiner;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -39,7 +38,7 @@ final class HttpHeaderPathMapping implements PathMapping {
 
     private static final List<MediaType> ANY_TYPE = ImmutableList.of(MediaType.ANY_TYPE);
     private static final Joiner loggerNameJoiner = Joiner.on('_');
-    private static final Joiner metricNameJoiner = Joiner.on(',');
+    private static final Joiner meterTagJoiner = Joiner.on(',');
 
     private final PathMapping pathStringMapping;
     private final Set<HttpMethod> supportedMethods;
@@ -47,7 +46,7 @@ final class HttpHeaderPathMapping implements PathMapping {
     private final List<MediaType> produceTypes;
 
     private final String loggerName;
-    private final List<String> metricName;
+    private final String meterTag;
 
     private final int complexity;
 
@@ -60,8 +59,8 @@ final class HttpHeaderPathMapping implements PathMapping {
 
         loggerName = generateLoggerName(pathStringMapping.loggerName(),
                                         supportedMethods, consumeTypes, produceTypes);
-        metricName = generateMetricName(pathStringMapping.metricName(),
-                                        supportedMethods, consumeTypes, produceTypes);
+        meterTag = generateMeterTag(pathStringMapping.meterTag(),
+                                    supportedMethods, consumeTypes, produceTypes);
 
         // Starts with 1 due to the HTTP method mapping.
         int complexity = 1;
@@ -148,8 +147,8 @@ final class HttpHeaderPathMapping implements PathMapping {
     }
 
     @Override
-    public List<String> metricName() {
-        return metricName;
+    public String meterTag() {
+        return meterTag;
     }
 
     @Override
@@ -222,31 +221,31 @@ final class HttpHeaderPathMapping implements PathMapping {
         return name.toString();
     }
 
-    private static List<String> generateMetricName(List<String> prefix, Set<HttpMethod> supportedMethods,
-                                                   List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+    private static String generateMeterTag(String parentTag, Set<HttpMethod> supportedMethods,
+                                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
 
-        final ImmutableList.Builder<String> builder = ImmutableList.builder();
-        builder.addAll(prefix);
-        builder.add(metricNameJoiner.join(supportedMethods.stream().sorted().iterator()));
+        final StringJoiner name = new StringJoiner(",");
+        name.add(parentTag);
+        name.add("methods:" + meterTagJoiner.join(supportedMethods.stream().sorted().iterator()));
 
         // The following three cases should be different to each other.
         // Each name would be produced as follows:
         //
         // consumeTypes: text/plain, text/html               -> "consumes:text/plain,text/html"
-        // consumeTypes: text/plain, produceTypes: text/html -> "consumes:text/plain", "produces:text/html"
+        // consumeTypes: text/plain, produceTypes: text/html -> "consumes:text/plain,produces:text/html"
         // produceTypes: text/plain, text/html               -> "produces:text/plain,text/html"
 
-        addMediaTypes(builder, "consumes", consumeTypes);
-        addMediaTypes(builder, "produces", produceTypes);
+        addMediaTypes(name, "consumes", consumeTypes);
+        addMediaTypes(name, "produces", produceTypes);
 
-        return builder.build();
+        return name.toString();
     }
 
-    private static void addMediaTypes(Builder<String> builder, String prefix, List<MediaType> consumeTypes) {
-        if (!consumeTypes.isEmpty()) {
+    private static void addMediaTypes(StringJoiner builder, String prefix, List<MediaType> mediaTypes) {
+        if (!mediaTypes.isEmpty()) {
             final StringBuilder buf = new StringBuilder();
             buf.append(prefix).append(':');
-            for (MediaType t : consumeTypes) {
+            for (MediaType t : mediaTypes) {
                 buf.append(t.type());
                 buf.append('/');
                 buf.append(t.subtype());

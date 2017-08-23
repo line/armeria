@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.metric;
 
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measure;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -33,9 +31,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
+import io.micrometer.core.instrument.Statistic;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
@@ -43,7 +42,7 @@ public class RequestMetricSupportTest {
 
     @Test
     public void http() {
-        final MeterRegistry registry = new PrometheusMeterRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), registry, SessionProtocol.H2C,
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
@@ -58,50 +57,63 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().requestContent(null, null);
         ctx.logBuilder().requestLength(123);
 
-        assertThat(measure(registry, "foo_active_requests", "method", "POST")).isOne();
-        assertThat(measureAll(registry, "foo_request_duration_seconds", "method", "POST")
-                           .get("count")).isZero();
-        assertThat(measureAll(registry, "foo_request_duration_seconds", "method", "POST")
-                           .get("sum")).isZero();
-        assertThat(measureAll(registry, "foo_request_length_bytes", "method", "POST")
-                           .get("count")).isZero();
-        assertThat(measureAll(registry, "foo_request_length_bytes", "method", "POST")
-                           .get("sum")).isZero();
+        assertThat(registry.find("foo.activeRequests")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 1).meter()).isPresent();
+        assertThat(registry.find("foo.requestDuration")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 0).meter()).isPresent();
+        assertThat(registry.find("foo.requestDuration")
+                           .tags("method", "POST")
+                           .value(Statistic.Total, 0).meter()).isPresent();
+        assertThat(registry.find("foo.requestLength")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 0).meter()).isPresent();
+        assertThat(registry.find("foo.requestLength")
+                           .tags("method", "POST")
+                           .value(Statistic.Total, 0).meter()).isPresent();
 
         ctx.logBuilder().endRequest();
-        assertThat(measureAll(registry, "foo_request_duration_seconds", "method", "POST")
-                           .get("count")).isOne();
-        assertThat(measureAll(registry, "foo_request_duration_seconds", "method", "POST")
-                           .get("sum")).isGreaterThan(0);
-        assertThat(measureAll(registry, "foo_request_length_bytes", "method", "POST")
-                           .get("count")).isOne();
-        assertThat(measureAll(registry, "foo_request_length_bytes", "method", "POST")
-                           .get("sum")).isEqualTo(123);
+        assertThat(registry.find("foo.requestDuration")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 1).meter()).isPresent();
+        assertThat(registry.find("foo.requestLength")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 1).meter()).isPresent();
+        assertThat(registry.find("foo.requestLength")
+                           .tags("method", "POST")
+                           .value(Statistic.Total, 123).meter()).isPresent();
 
         ctx.logBuilder().responseHeaders(HttpHeaders.of(200));
         ctx.logBuilder().responseLength(456);
         ctx.logBuilder().endResponse();
 
-        assertThat(measure(registry, "foo_active_requests", "method", "POST")).isZero();
-        assertThat(measure(registry, "foo_requests_total", "method", "POST", "result", "success")).isOne();
-        assertThat(measure(registry, "foo_requests_total", "method", "POST", "result", "failure")).isZero();
-        assertThat(measureAll(registry, "foo_response_duration_seconds", "method", "POST")
-                           .get("count")).isOne();
-        assertThat(measureAll(registry, "foo_response_duration_seconds", "method", "POST")
-                           .get("sum")).isGreaterThan(0);
-        assertThat(measureAll(registry, "foo_response_length_bytes", "method", "POST")
-                           .get("count")).isOne();
-        assertThat(measureAll(registry, "foo_response_length_bytes", "method", "POST")
-                           .get("sum")).isEqualTo(456);
-        assertThat(measureAll(registry, "foo_total_duration_seconds", "method", "POST")
-                           .get("count")).isOne();
-        assertThat(measureAll(registry, "foo_total_duration_seconds", "method", "POST")
-                           .get("sum")).isGreaterThan(0);
+        assertThat(registry.find("foo.activeRequests")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 0).meter()).isPresent();
+        assertThat(registry.find("foo.requests")
+                           .tags("method", "POST", "result", "success")
+                           .value(Statistic.Count, 1).meter()).isPresent();
+        assertThat(registry.find("foo.requests")
+                           .tags("method", "POST", "result", "failure")
+                           .value(Statistic.Count, 0).meter()).isPresent();
+        assertThat(registry.find("foo.responseDuration")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 1).meter()).isPresent();
+        assertThat(registry.find("foo.responseLength")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 1).meter()).isPresent();
+        assertThat(registry.find("foo.responseLength")
+                           .tags("method", "POST")
+                           .value(Statistic.Total, 456).meter()).isPresent();
+        assertThat(registry.find("foo.totalDuration")
+                           .tags("method", "POST")
+                           .value(Statistic.Count, 1).meter()).isPresent();
     }
 
     @Test
     public void rpc() {
-        final MeterRegistry registry = new PrometheusMeterRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), registry, SessionProtocol.H2C,
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/bar", null, null,
@@ -115,6 +127,8 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/bar"));
         ctx.logBuilder().requestContent(new DefaultRpcRequest(Object.class, "baz"), null);
 
-        assertThat(measure(registry, "bar_active_requests", "method", "baz")).isOne();
+        assertThat(registry.find("bar.activeRequests")
+                           .tags("method", "baz")
+                           .value(Statistic.Count, 1).meter()).isPresent();
     }
 }

@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.name;
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.tags;
 import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
@@ -27,12 +25,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.metric.MeterUnit;
+import com.linecorp.armeria.common.metric.MeterId;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * {@link MeterBinder} for a {@link HealthCheckedEndpointGroup}.
@@ -49,14 +45,13 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
 
     @Override
     public void bindTo(MeterRegistry registry) {
-        final String count = name(registry, MeterUnit.NONE, id, "count");
-        registry.gauge(count, tags(id, "state", "healthy"), endpointGroup,
+        final String count = id.name("count");
+        registry.gauge(count, id.tags("state", "healthy"), endpointGroup,
                        unused -> endpointGroup.endpoints().size());
-        registry.gauge(count, tags(id, "state", "unhealthy"), endpointGroup,
+        registry.gauge(count, id.tags("state", "unhealthy"), endpointGroup,
                        unused -> endpointGroup.allServers.size() - endpointGroup.endpoints().size());
 
-        final ListenerImpl listener = new ListenerImpl(
-                registry, name(registry, MeterUnit.NONE, id, "healthy"), id.getTags());
+        final ListenerImpl listener = new ListenerImpl(registry, id.append("healthy"));
         listener.accept(endpointGroup.endpoints());
         endpointGroup.addListener(listener);
     }
@@ -64,14 +59,12 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
     private final class ListenerImpl implements Consumer<List<Endpoint>> {
 
         private final MeterRegistry registry;
-        private final String name;
-        private final Iterable<Tag> tags;
+        private final MeterId id;
         private final ConcurrentMap<String, Boolean> healthMap = new ConcurrentHashMap<>();
 
-        ListenerImpl(MeterRegistry registry, String name, Iterable<Tag> tags) {
+        ListenerImpl(MeterRegistry registry, MeterId id) {
             this.registry = registry;
-            this.name = name;
-            this.tags = tags;
+            this.id = id;
         }
 
         @Override
@@ -93,7 +86,7 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
             // Process the newly appeared endpoints.
             endpointsToUpdate.forEach((authority, healthy) -> {
                 healthMap.put(authority, healthy);
-                registry.gauge(name, tags(tags, "authority", authority),
+                registry.gauge(id.name(), id.tags("authority", authority),
                                this, unused -> healthMap.get(authority) ? 1 : 0);
             });
         }

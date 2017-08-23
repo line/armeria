@@ -33,6 +33,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
@@ -41,9 +43,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 public class CompositeServiceTest {
 
@@ -58,7 +57,7 @@ public class CompositeServiceTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.meterRegistry(new PrometheusMeterRegistry());
+            sb.meterRegistry(PrometheusMeterRegistries.newRegistry());
             sb.serviceUnder("/qux/", composite);
 
             // Should not hit the following services
@@ -71,13 +70,10 @@ public class CompositeServiceTest {
     @AfterClass
     public static void checkMetrics() {
         final MeterRegistry registry = server.server().meterRegistry();
-        registry.getMeters().stream().forEach(m -> {
-            System.err.println(m.getName() + m.getTags());
-        });
         assertThat(MicrometerUtil.register(registry,
-                                           new MeterId("armeria_server_router_composite_service_cache",
-                                                       Tags.zip("hostnamePattern", "*",
-                                                                "pathMapping", "prefix:/qux/")),
+                                           new MeterId("armeria.server.router.compositeServiceCache",
+                                                       "hostnamePattern", "*",
+                                                       "pathMapping", "prefix:/qux/"),
                                            Object.class, (r, i) -> null)).isNotNull();
     }
 

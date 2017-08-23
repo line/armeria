@@ -22,39 +22,31 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
-
 public class MeterIdFunctionTest {
 
     @Test
     public void testWithTags() {
         final MeterIdFunction f =
-                (registry, log) -> new MeterId("requests_total", Tags.zip("region", "us-west"));
+                (registry, log) -> new MeterId("requests_total", "region", "us-west");
 
-        assertThat(f.withTags(Tags.zip("zone", "1a", "host", "foo")).apply(null, null))
-                .isEqualTo(new MeterId("requests_total",
-                                       Tags.zip("region", "us-west", "zone", "1a", "host", "foo")));
+        assertThat(f.withTags("zone", "1a", "host", "foo").apply(null, null))
+                .isEqualTo(new MeterId("requests_total", "region", "us-west", "zone", "1a", "host", "foo"));
     }
 
     @Test
     public void testWithUnzippedTags() {
         final MeterIdFunction f =
-                (registry, log) -> new MeterId("requests_total", Tags.zip("region", "us-east"));
+                (registry, log) -> new MeterId("requests_total", "region", "us-east");
 
         assertThat(f.withTags("host", "bar").apply(null, null))
-                .isEqualTo(new MeterId("requests_total",
-                                       Tags.zip("region", "us-east", "host", "bar")));
+                .isEqualTo(new MeterId("requests_total", "region", "us-east", "host", "bar"));
     }
 
     @Test
     public void testAndThen() {
         final MeterIdFunction f = (registry, log) -> new MeterId("foo", ImmutableList.of());
-        final MeterIdFunction f2 = f.andThen(
-                (registry, id) -> new MeterId(MeterRegistryUtil.name(registry, id.getName(), "bar"),
-                                              id.getTags()));
-        assertThat(f2.apply(new PrometheusMeterRegistry(), null))
-                .isEqualTo(new MeterId("foo_bar", ImmutableList.of()));
+        final MeterIdFunction f2 = f.andThen((registry, id) -> id.append("bar"));
+        assertThat(f2.apply(PrometheusMeterRegistries.newRegistry(), null))
+                .isEqualTo(new MeterId("foo.bar", ImmutableList.of()));
     }
 }

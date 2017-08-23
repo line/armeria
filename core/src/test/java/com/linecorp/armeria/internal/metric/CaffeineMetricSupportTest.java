@@ -16,16 +16,13 @@
 
 package com.linecorp.armeria.internal.metric;
 
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measure;
 import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.UPDATE_INTERVAL_NANOS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.Test;
@@ -35,9 +32,11 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
-import io.micrometer.core.instrument.util.MeterId;
 
 public class CaffeineMetricSupportTest {
 
@@ -48,20 +47,21 @@ public class CaffeineMetricSupportTest {
         when(cache.estimatedSize()).thenReturn(8L);
 
         final AtomicLong ticker = new AtomicLong();
-        final MeterRegistry registry = new PrometheusMeterRegistry();
-        CaffeineMetricSupport.setup(registry, new MeterId("foo", ImmutableList.of()), cache, ticker::get);
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        CaffeineMetricSupport.setup(registry, new MeterId("foo"), cache, ticker::get);
 
         verify(cache, times(1)).stats();
         verify(cache, times(1)).estimatedSize();
 
-        assertThat(measure(registry, "foo_requests_total", "result", "hit")).isEqualTo(1);
-        assertThat(measure(registry, "foo_requests_total", "result", "miss")).isEqualTo(2);
-        assertThat(measure(registry, "foo_loads_total", "result", "success")).isEqualTo(3);
-        assertThat(measure(registry, "foo_loads_total", "result", "failure")).isEqualTo(4);
-        assertThat(measure(registry, "foo_load_duration_seconds_total")).isEqualTo(5e-9);
-        assertThat(measure(registry, "foo_eviction_total")).isEqualTo(6);
-        assertThat(measure(registry, "foo_eviction_weight_total")).isEqualTo(7);
-        assertThat(measure(registry, "foo_estimated_size")).isEqualTo(8);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.requests#count{result=hit}", 1.0)
+                .containsEntry("foo.requests#count{result=miss}", 2.0)
+                .containsEntry("foo.loads#count{result=success}", 3.0)
+                .containsEntry("foo.loads#count{result=failure}", 4.0)
+                .containsEntry("foo.loadDuration#count", 5.0)
+                .containsEntry("foo.evictions#count", 6.0)
+                .containsEntry("foo.evictionWeight#count", 7.0)
+                .containsEntry("foo.estimatedSize#value", 8.0);
 
         // Make sure Cache.stats() and estimatedSize() are not called since the initial update.
         verify(cache, times(1)).stats();
@@ -72,14 +72,15 @@ public class CaffeineMetricSupportTest {
         when(cache.stats()).thenReturn(new CacheStats(9, 10, 11, 12, 13, 14, 15));
         when(cache.estimatedSize()).thenReturn(16L);
 
-        assertThat(measure(registry, "foo_requests_total", "result", "hit")).isEqualTo(9);
-        assertThat(measure(registry, "foo_requests_total", "result", "miss")).isEqualTo(10);
-        assertThat(measure(registry, "foo_loads_total", "result", "success")).isEqualTo(11);
-        assertThat(measure(registry, "foo_loads_total", "result", "failure")).isEqualTo(12);
-        assertThat(measure(registry, "foo_load_duration_seconds_total")).isEqualTo(13e-9);
-        assertThat(measure(registry, "foo_eviction_total")).isEqualTo(14);
-        assertThat(measure(registry, "foo_eviction_weight_total")).isEqualTo(15);
-        assertThat(measure(registry, "foo_estimated_size")).isEqualTo(16);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("foo.requests#count{result=hit}", 9.0)
+                .containsEntry("foo.requests#count{result=miss}", 10.0)
+                .containsEntry("foo.loads#count{result=success}", 11.0)
+                .containsEntry("foo.loads#count{result=failure}", 12.0)
+                .containsEntry("foo.loadDuration#count", 13.0)
+                .containsEntry("foo.evictions#count", 14.0)
+                .containsEntry("foo.evictionWeight#count", 15.0)
+                .containsEntry("foo.estimatedSize#value", 16.0);
 
         // Make sure Cache.stats() and estimatedSize() were called once more since the initial update.
         verify(cache, times(2)).stats();
@@ -93,24 +94,23 @@ public class CaffeineMetricSupportTest {
         when(cache.estimatedSize()).thenReturn(5L);
 
         final AtomicLong ticker = new AtomicLong();
-        final MeterRegistry registry = new PrometheusMeterRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         CaffeineMetricSupport.setup(registry, new MeterId("bar", ImmutableList.of()), cache, ticker::get);
 
         verify(cache, times(1)).stats();
         verify(cache, times(1)).estimatedSize();
 
-        assertThat(measure(registry, "bar_requests_total", "result", "hit")).isEqualTo(1);
-        assertThat(measure(registry, "bar_requests_total", "result", "miss")).isEqualTo(2);
-        assertThat(measure(registry, "bar_eviction_total")).isEqualTo(3);
-        assertThat(measure(registry, "bar_eviction_weight_total")).isEqualTo(4);
-        assertThat(measure(registry, "bar_estimated_size")).isEqualTo(5);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("bar.requests#count{result=hit}", 1.0)
+                .containsEntry("bar.requests#count{result=miss}", 2.0)
+                .containsEntry("bar.evictions#count", 3.0)
+                .containsEntry("bar.evictionWeight#count", 4.0)
+                .containsEntry("bar.estimatedSize#value", 5.0);
 
         // Make sure the meters related with loading are not registered.
-        assertThatThrownBy(() -> measure(registry, "bar_loads_total", "result", "success"))
-                .isInstanceOf(NoSuchElementException.class);
-        assertThatThrownBy(() -> measure(registry, "bar_loads_total", "result", "failure"))
-                .isInstanceOf(NoSuchElementException.class);
-        assertThatThrownBy(() -> measure(registry, "bar_load_duration_seconds_total"))
-                .isInstanceOf(NoSuchElementException.class);
+        assertThat(MoreMeters.measureAll(registry)).doesNotContainKeys(
+                "bar.loads#count{result=success}",
+                "bar.loads#count{result=failure}",
+                "bar.loadDuration#count");
     }
 }

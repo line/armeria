@@ -29,6 +29,6 @@ public class CatchAllPathMappingTest {
 
     @Test
     public void testMetricName() throws Exception {
-        assertThat(ofCatchAll().metricName()).containsExactly("catch-all");
+        assertThat(ofCatchAll().meterTag()).isEqualTo("catch-all");
     }
 }

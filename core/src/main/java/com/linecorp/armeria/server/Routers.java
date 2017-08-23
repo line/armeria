@@ -140,7 +140,7 @@ public final class Routers {
                          values.size(), router.getClass().getSimpleName());
             values.forEach(c -> {
                 final PathMapping mapping = pathMappingResolver.apply(c);
-                logger.debug("metricName: {}, complexity: {}", mapping.metricName(), mapping.complexity());
+                logger.debug("meterTag: {}, complexity: {}", mapping.meterTag(), mapping.complexity());
             });
         }
         values.clear();

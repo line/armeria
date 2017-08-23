@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.metric.MeterRegistryUtil;
+import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
@@ -44,8 +44,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextWrapper;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.util.MeterId;
 
 /**
  * A skeletal {@link Service} implementation that enables composing multiple {@link Service}s into one.
@@ -96,10 +94,9 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         router = Routers.ofCompositeService(services);
 
         final MeterRegistry registry = server.meterRegistry();
-        final MeterId meterId = new MeterId(
-                MeterRegistryUtil.name(registry, "armeria", "server", "router", "compositeServiceCache"),
-                Tags.zip("hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                         "pathMapping", String.join(",", cfg.pathMapping().metricName())));
+        final MeterId meterId = new MeterId("armeria.server.router.compositeServiceCache",
+                                            "hostnamePattern", cfg.virtualHost().hostnamePattern(),
+                                            "pathMapping", String.join(",", cfg.pathMapping().meterTag()));
 
         router.registerMetrics(registry, meterId);
         for (CompositeServiceEntry<I, O> e : services()) {

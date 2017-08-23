@@ -37,6 +37,7 @@ import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.metric.MeterIdFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -44,15 +45,11 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.IdentityTagFormatter;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
-import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 
 public class DropwizardMetricsIntegrationTest {
 
-    private static final DropwizardMeterRegistry registry = new DropwizardMeterRegistry(
-            HierarchicalNameMapper.DEFAULT, Clock.SYSTEM, new IdentityTagFormatter());
+    private static final DropwizardMeterRegistry registry = DropwizardMeterRegistries.newRegistry();
     private static final MetricRegistry dropwizardRegistry = registry.getDropwizardRegistry();
 
     private static CountDownLatch latch;
@@ -72,7 +69,7 @@ public class DropwizardMetricsIntegrationTest {
                                       RequestLogAvailability.COMPLETE);
                 return delegate.serve(ctx, req);
             }).decorate(MetricCollectingService.newDecorator(
-                    MeterIdFunction.ofDefault("armeria", "server", "HelloService"))));
+                    MeterIdFunction.ofDefault("armeria.server.HelloService"))));
         }
     };
 
@@ -99,17 +96,18 @@ public class DropwizardMetricsIntegrationTest {
         // Wait until all RequestLogs are collected.
         latch.await();
 
+        dropwizardRegistry.getMeters().keySet().forEach(System.out::println);
         assertThat(dropwizardRegistry.getMeters()
-                                     .get(clientMetricName("requests") + ".result.failure")
+                                     .get(clientMetricName("requests") + ".result:failure")
                                      .getCount()).isEqualTo(3L);
         assertThat(dropwizardRegistry.getMeters()
-                                     .get(serverMetricName("requests") + ".result.failure")
+                                     .get(serverMetricName("requests") + ".result:failure")
                                      .getCount()).isEqualTo(3L);
         assertThat(dropwizardRegistry.getMeters()
-                                     .get(clientMetricName("requests") + ".result.success")
+                                     .get(clientMetricName("requests") + ".result:success")
                                      .getCount()).isEqualTo(4L);
         assertThat(dropwizardRegistry.getMeters()
-                                     .get(serverMetricName("requests") + ".result.success")
+                                     .get(serverMetricName("requests") + ".result:success")
                                      .getCount()).isEqualTo(4L);
 
         assertTimer("requestDuration", 7);
@@ -136,12 +134,12 @@ public class DropwizardMetricsIntegrationTest {
 
     private static String serverMetricName(String property) {
         return MetricRegistry.name("armeria", "server", "HelloService", property,
-                                   "method", "hello", "pathMapping", "exact:/helloservice");
+                                   "method:hello", "pathMapping:exact:/helloservice");
     }
 
     private static String clientMetricName(String property) {
         return MetricRegistry.name("armeria", "client", "HelloService", property,
-                                   "method", "hello");
+                                   "method:hello");
     }
 
     private static void makeRequest(String name) {
@@ -155,7 +153,7 @@ public class DropwizardMetricsIntegrationTest {
                            })
                 .decorator(RpcRequest.class, RpcResponse.class,
                            MetricCollectingClient.newDecorator(
-                                   MeterIdFunction.ofDefault("armeria", "client", "HelloService")))
+                                   MeterIdFunction.ofDefault("armeria.client.HelloService")))
                 .build(Iface.class);
         try {
             client.hello(name);

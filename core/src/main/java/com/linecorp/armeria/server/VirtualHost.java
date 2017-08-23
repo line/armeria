@@ -34,11 +34,9 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaTypeSet;
-import com.linecorp.armeria.common.metric.MeterRegistryUtil;
+import com.linecorp.armeria.common.metric.MeterId;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.util.MeterId;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
@@ -190,9 +188,8 @@ public final class VirtualHost {
         this.serverConfig = requireNonNull(serverConfig, "serverConfig");
 
         final MeterRegistry registry = serverConfig.meterRegistry();
-        final MeterId id = new MeterId(
-                MeterRegistryUtil.name(registry, "armeria", "server", "router", "virtualHostCache"),
-                Tags.zip("hostnamePattern", hostnamePattern));
+        final MeterId id = new MeterId("armeria.server.router.virtualHostCache",
+                                       "hostnamePattern", hostnamePattern);
         router.registerMetrics(registry, id);
     }
 

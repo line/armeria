@@ -28,12 +28,12 @@ public interface MeterIdFunctionFactory {
     /**
      * The default {@link MeterIdFunctionFactory} instance.
      */
-    MeterIdFunctionFactory DEFAULT = serviceName ->
-            MeterIdFunction.ofDefault("armeria", "server")
+    MeterIdFunctionFactory DEFAULT = (type, serviceName) ->
+            MeterIdFunction.ofDefault("armeria." + requireNonNull(type, "type"))
                            .withTags("service", requireNonNull(serviceName, "serviceName"));
 
     /**
      * Returns the {@link MeterIdFunction} for the specified service name.
      */
-    MeterIdFunction get(String serviceName);
+    MeterIdFunction get(String type, String serviceName);
 }

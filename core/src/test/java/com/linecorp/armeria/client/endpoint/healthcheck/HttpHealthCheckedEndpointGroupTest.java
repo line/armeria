@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.linecorp.armeria.common.metric.MeterRegistryUtil.measure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -25,12 +24,13 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
+import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 
 public class HttpHealthCheckedEndpointGroupTest {
 
@@ -48,7 +48,7 @@ public class HttpHealthCheckedEndpointGroupTest {
         }
     }
 
-    private final MeterRegistry registry = new PrometheusMeterRegistry();
+    private final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
     @Rule
     public final ServerRule serverOne = new HealthCheckServerRule();
@@ -68,29 +68,33 @@ public class HttpHealthCheckedEndpointGroupTest {
                                         Endpoint.of("127.0.0.1", portTwo)),
                 HEALTH_CHECK_PATH);
 
-        endpointGroup.newMeterBinder(registry, "foo").bindTo(registry);
+        endpointGroup.newMeterBinder("foo").bindTo(registry);
 
         await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints()).containsExactly(
                         Endpoint.of("127.0.0.1", portOne),
                         Endpoint.of("127.0.0.1", portTwo)));
-        assertThat(measure(registry, "armeria_client_endpoint_group_count",
-                           "name", "foo", "state", "healthy")).isEqualTo(2);
-        assertThat(measure(registry, "armeria_client_endpoint_group_count",
-                           "name", "foo", "state", "unhealthy")).isZero();
-        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
-                           "name", "foo", "authority", "127.0.0.1:" + portOne)).isOne();
-        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
-                           "name", "foo", "authority", "127.0.0.1:" + portTwo)).isOne();
+
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 2.0)
+                .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=unhealthy}", 0.0)
+                .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                               "{authority=127.0.0.1:" + portOne + ",name=foo}", 1.0)
+                .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                               "{authority=127.0.0.1:" + portTwo + ",name=foo}", 1.0);
 
         serverTwo.stop().get();
         await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints()).containsExactly(
                         Endpoint.of("127.0.0.1", portOne)));
-        assertThat(measure(registry, "armeria_client_endpoint_group_count",
-                           "name", "foo", "state", "healthy")).isOne();
-        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
-                           "name", "foo", "authority", "127.0.0.1:" + portTwo)).isZero();
+
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 1.0)
+                .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=unhealthy}", 1.0)
+                .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                               "{authority=127.0.0.1:" + portOne + ",name=foo}", 1.0)
+                .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                               "{authority=127.0.0.1:" + portTwo + ",name=foo}", 0.0);
     }
 
     @Test
@@ -104,19 +108,19 @@ public class HttpHealthCheckedEndpointGroupTest {
                                         Endpoint.of("127.0.0.1", portTwo)),
                 HEALTH_CHECK_PATH);
 
-        endpointGroup.newMeterBinder(registry, "bar").bindTo(registry);
+        endpointGroup.newMeterBinder("bar").bindTo(registry);
 
         await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints())
                         .containsOnly(Endpoint.of("127.0.0.1", portOne)));
-        assertThat(measure(registry, "armeria_client_endpoint_group_count",
-                           "name", "bar", "state", "healthy")).isOne();
-        assertThat(measure(registry, "armeria_client_endpoint_group_count",
-                           "name", "bar", "state", "unhealthy")).isOne();
-        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
-                           "name", "bar", "authority", "127.0.0.1:" + portOne)).isOne();
-        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
-                           "name", "bar", "authority", "127.0.0.1:" + portTwo)).isZero();
+
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=healthy}", 1.0)
+                .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=unhealthy}", 1.0)
+                .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                               "{authority=127.0.0.1:" + portOne + ",name=bar}", 1.0)
+                .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                               "{authority=127.0.0.1:" + portTwo + ",name=bar}", 0.0);
     }
 
     @Test
@@ -130,17 +134,16 @@ public class HttpHealthCheckedEndpointGroupTest {
                                         Endpoint.of("127.0.0.1", portOne)),
                 HEALTH_CHECK_PATH);
 
-        endpointGroup.newMeterBinder(registry, "baz").bindTo(registry);
+        endpointGroup.newMeterBinder("baz").bindTo(registry);
 
         await().untilAsserted(
                 () -> assertThat(endpointGroup.endpoints())
                         .containsOnly(Endpoint.of("127.0.0.1", portOne)));
 
-        assertThat(measure(registry, "armeria_client_endpoint_group_count",
-                           "name", "baz", "state", "healthy")).isEqualTo(3);
-        assertThat(measure(registry, "armeria_client_endpoint_group_count",
-                           "name", "baz", "state", "unhealthy")).isZero();
-        assertThat(measure(registry, "armeria_client_endpoint_group_healthy",
-                           "name", "baz", "authority", "127.0.0.1:" + portOne)).isOne();
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry("armeria.client.endpointGroup.count#value{name=baz,state=healthy}", 3.0)
+                .containsEntry("armeria.client.endpointGroup.count#value{name=baz,state=unhealthy}", 0.0)
+                .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                               "{authority=127.0.0.1:" + portOne + ",name=baz}", 1.0);
     }
 }

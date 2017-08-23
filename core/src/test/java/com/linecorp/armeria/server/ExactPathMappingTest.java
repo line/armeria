@@ -53,6 +53,6 @@ public class ExactPathMappingTest {
 
     @Test
     public void testMetricName() throws Exception {
-        assertThat(ofExact("/foo/bar").metricName()).containsExactly("exact:/foo/bar");
+        assertThat(ofExact("/foo/bar").meterTag()).isEqualTo("exact:/foo/bar");
     }
 }

@@ -88,8 +88,8 @@ public class GlobPathMappingTest {
 
     @Test
     public void testMetricName() throws Exception {
-        assertThat(ofGlob("/foo/bar/**").metricName()).containsExactly("glob:/foo/bar/**");
-        assertThat(ofGlob("foo").metricName()).containsExactly("glob:/**/foo");
+        assertThat(ofGlob("/foo/bar/**").meterTag()).isEqualTo("glob:/foo/bar/**");
+        assertThat(ofGlob("foo").meterTag()).isEqualTo("glob:/**/foo");
     }
 
     @Test
