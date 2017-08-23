@@ -1,6 +1,0 @@
-com.ryantenney.metrics.annotation
-com.ryantenney.metrics.spring
-com.ryantenney.metrics.spring.config
-com.ryantenney.metrics.spring.config.annotation
-com.ryantenney.metrics.spring.reporter
-com.ryantenney.metrics.spring.servlets
