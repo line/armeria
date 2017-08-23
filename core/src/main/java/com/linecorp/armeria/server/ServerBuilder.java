@@ -407,6 +407,18 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}
+     * of the default {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>>
+            ServerBuilder service(T serviceWithPathMapping) {
+        return service(serviceWithPathMapping, Function.identity());
+    }
+
+    /**
      * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}
      * of the default {@link VirtualHost}.
      *

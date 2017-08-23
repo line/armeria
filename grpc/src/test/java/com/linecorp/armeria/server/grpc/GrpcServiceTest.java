@@ -38,12 +38,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.grpc.MethodDescriptor;
 import io.netty.util.AsciiString;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
@@ -126,14 +124,16 @@ public class GrpcServiceTest {
     }
 
     @Test
-    public void pathMapping() throws Exception {
-        assertThat(grpcService.pathMappings())
+    public void pathMappings() throws Exception {
+       assertThat(grpcService.pathMappings())
             .isEqualTo(
-                TestServiceGrpc.getServiceDescriptor()
-                    .getMethods()
-                    .stream()
-                    .map(MethodDescriptor::getFullMethodName)
-                    .map(path -> PathMapping.ofExact("/" + path))
-                    .collect(ImmutableSet.toImmutableSet()));
+                ImmutableSet.of(
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/EmptyCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingOutputCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingInputCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/FullDuplexCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/HalfDuplexCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/UnimplementedCall")));
     }
 }
