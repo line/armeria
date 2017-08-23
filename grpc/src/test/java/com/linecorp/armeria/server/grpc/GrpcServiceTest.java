@@ -27,8 +27,6 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -126,14 +124,13 @@ public class GrpcServiceTest {
     @Test
     public void pathMappings() throws Exception {
        assertThat(grpcService.pathMappings())
-            .isEqualTo(
-                ImmutableSet.of(
+            .containsExactlyInAnyOrder(
                     PathMapping.ofExact("/armeria.grpc.testing.TestService/EmptyCall"),
                     PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall"),
                     PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingOutputCall"),
                     PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingInputCall"),
                     PathMapping.ofExact("/armeria.grpc.testing.TestService/FullDuplexCall"),
                     PathMapping.ofExact("/armeria.grpc.testing.TestService/HalfDuplexCall"),
-                    PathMapping.ofExact("/armeria.grpc.testing.TestService/UnimplementedCall")));
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/UnimplementedCall"));
     }
 }
