@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.metric;
 
+import static java.util.Objects.requireNonNull;
+
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.NamingConvention;
@@ -47,7 +49,7 @@ public class PrometheusMeterRegistry extends io.micrometer.core.instrument.prome
      * Creates a new instance with the specified {@link CollectorRegistry}.
      */
     public PrometheusMeterRegistry(CollectorRegistry registry, Clock clock) {
-        super(registry, clock);
+        super(requireNonNull(registry, "registry"), requireNonNull(clock, "clock"));
         config().namingConvention(MoreNamingConventions.prometheus());
     }
 }

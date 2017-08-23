@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.metric;
 
 import static java.util.Comparator.comparing;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
 
@@ -55,7 +56,7 @@ public class DropwizardMeterRegistry extends io.micrometer.core.instrument.dropw
     };
 
     /**
-     * Creates a new instance with the default {@link HierarchicalNameMapper}..
+     * Creates a new instance with the default {@link HierarchicalNameMapper}.
      */
     public DropwizardMeterRegistry() {
         this(DEFAULT_NAME_MAPPER);
@@ -72,7 +73,7 @@ public class DropwizardMeterRegistry extends io.micrometer.core.instrument.dropw
      * Creates a new instance with the specified {@link HierarchicalNameMapper}.
      */
     public DropwizardMeterRegistry(HierarchicalNameMapper nameMapper, Clock clock) {
-        super(nameMapper, clock);
+        super(requireNonNull(nameMapper, "nameMapper"), requireNonNull(clock, "clock"));
         config().namingConvention(MoreNamingConventions.dropwizard());
     }
 }

@@ -30,7 +30,7 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 
 /**
- * An immutable holder of {@link Meter} name and {@link Tag}s.
+ * An immutable holder of a {@link Meter} name and {@link Tag}s.
  */
 public final class MeterId {
 
