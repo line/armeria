@@ -47,7 +47,7 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithPathMapping;
+import com.linecorp.armeria.server.ServiceWithPathMappings;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
@@ -76,7 +76,7 @@ import io.grpc.Status;
  * </ul>
  */
 public final class GrpcService extends AbstractHttpService
-        implements ServiceWithPathMapping<HttpRequest, HttpResponse> {
+        implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcService.class);
 
@@ -85,7 +85,7 @@ public final class GrpcService extends AbstractHttpService
     private static final Metadata EMPTY_METADATA = new Metadata();
 
     private final HandlerRegistry registry;
-    private final List<PathMapping> pathMappings;
+    private final Set<PathMapping> pathMappings;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -95,7 +95,7 @@ public final class GrpcService extends AbstractHttpService
     private int maxInboundMessageSizeBytes;
 
     GrpcService(HandlerRegistry registry,
-                List<PathMapping> pathMappings,
+                Set<PathMapping> pathMappings,
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
@@ -253,7 +253,7 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Override
-    public List<PathMapping> pathMappings() {
+    public Set<PathMapping> pathMappings() {
         return pathMappings;
     }
 

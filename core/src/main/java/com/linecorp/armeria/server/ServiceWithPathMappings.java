@@ -16,20 +16,20 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.List;
+import java.util.Set;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * An interface that enables getting {@link PathMapping} of a {@link Service}.
+ * An interface that enables getting multiple {@link PathMapping} of a {@link Service}.
  *
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public interface ServiceWithPathMapping<I extends Request, O extends Response> extends Service<I, O> {
+public interface ServiceWithPathMappings<I extends Request, O extends Response> extends Service<I, O> {
     /**
      * Returns the list of {@link PathMapping} to which this {@link Service} is bound.
      */
-    List<PathMapping> pathMappings();
+    Set<PathMapping> pathMappings();
 }

@@ -25,7 +25,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -187,9 +186,8 @@ public final class GrpcServiceBuilder {
                       .methods()
                       .keySet()
                       .stream()
-                      .sorted(String::compareTo)
                       .map(path -> PathMapping.ofExact("/" + path))
-                      .collect(ImmutableList.toImmutableList()),
+                      .collect(ImmutableSet.toImmutableSet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats, maxOutboundMessageSizeBytes,

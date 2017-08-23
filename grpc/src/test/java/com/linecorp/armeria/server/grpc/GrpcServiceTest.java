@@ -27,7 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpResponse;
@@ -133,8 +133,7 @@ public class GrpcServiceTest {
                     .getMethods()
                     .stream()
                     .map(MethodDescriptor::getFullMethodName)
-                    .sorted(String::compareTo)
                     .map(path -> PathMapping.ofExact("/" + path))
-                    .collect(ImmutableList.toImmutableList()));
+                    .collect(ImmutableSet.toImmutableSet()));
     }
 }

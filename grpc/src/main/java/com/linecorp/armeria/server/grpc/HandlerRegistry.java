@@ -50,6 +50,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -65,10 +66,10 @@ import io.grpc.ServerServiceDefinition;
  */
 final class HandlerRegistry {
     private final List<ServerServiceDefinition> services;
-    private final ImmutableMap<String, ServerMethodDefinition<?, ?>> methods;
+    private final Map<String, ServerMethodDefinition<?, ?>> methods;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
-                            ImmutableMap<String, ServerMethodDefinition<?, ?>> methods) {
+                            Map<String, ServerMethodDefinition<?, ?>> methods) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
     }
@@ -82,7 +83,7 @@ final class HandlerRegistry {
         return services;
     }
 
-    ImmutableMap<String, ServerMethodDefinition<?, ?>> methods() {
+    Map<String, ServerMethodDefinition<?, ?>> methods() {
         return methods;
     }
 

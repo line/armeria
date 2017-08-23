@@ -407,13 +407,13 @@ public final class ServerBuilder {
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithPathMapping} at multiple {@link PathMapping}
+     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}
      * of the default {@link VirtualHost}.
      *
      * @throws IllegalStateException if the default {@link VirtualHost} has been set via
      *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public <T extends ServiceWithPathMapping<HttpRequest, HttpResponse>,
+    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
             R extends Service<HttpRequest, HttpResponse>>
             ServerBuilder service(T serviceWithPathMapping, Function<T, R> decorator) {
         requireNonNull(serviceWithPathMapping, "serviceWithPathMapping");
