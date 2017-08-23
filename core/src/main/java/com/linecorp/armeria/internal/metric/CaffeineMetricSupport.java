@@ -87,7 +87,7 @@ public final class CaffeineMetricSupport {
                                       new CacheStatFunction(totalLoadTimeSupplier));
             }
 
-            parent.more().counter(id.name("eviction"), id.tags(), this,
+            parent.more().counter(id.name("evictions"), id.tags(), this,
                                   new CacheStatFunction(() -> cacheStats.evictionCount()));
             parent.more().counter(id.name("evictionWeight"), id.tags(), this,
                                   new CacheStatFunction(() -> cacheStats.evictionWeight()));

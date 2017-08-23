@@ -85,6 +85,8 @@ public class ArmeriaAutoConfiguration {
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
                                                        .setProtocol(SessionProtocol.HTTP);
 
+    private static final String METER_TYPE = "server";
+
     /**
      * Create a {@link Server} bean.
      */
@@ -132,7 +134,7 @@ public class ArmeriaAutoConfiguration {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (metricsEnabled) {
                 service = service.decorate(MetricCollectingService.newDecorator(
-                        meterIdFuncFactory.get(bean.getServiceName())));
+                        meterIdFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
 
             server.service(bean.getPath(), service);
@@ -150,7 +152,7 @@ public class ArmeriaAutoConfiguration {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (metricsEnabled) {
                 service = service.decorate(MetricCollectingService.newDecorator(
-                        meterIdFuncFactory.get(bean.getServiceName())));
+                        meterIdFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
             server.service(bean.getPathMapping(), service);
         }));
@@ -160,7 +162,7 @@ public class ArmeriaAutoConfiguration {
                      ? extends Service<HttpRequest, HttpResponse>> decorator = bean.getDecorator();
             if (metricsEnabled) {
                 decorator = decorator.andThen(MetricCollectingService.newDecorator(
-                        meterIdFuncFactory.get(bean.getServiceName())));
+                        meterIdFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator);
         }));
