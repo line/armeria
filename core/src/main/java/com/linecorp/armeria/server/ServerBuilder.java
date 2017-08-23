@@ -420,6 +420,36 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}
+     * of the default {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>>
+            ServerBuilder service(T serviceWithPathMapping) {
+        return service(serviceWithPathMapping, Function.identity());
+    }
+
+    /**
+     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}
+     * of the default {@link VirtualHost}.
+     *
+     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
+     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     */
+    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
+            R extends Service<HttpRequest, HttpResponse>>
+            ServerBuilder service(T serviceWithPathMapping, Function<T, R> decorator) {
+        requireNonNull(serviceWithPathMapping, "serviceWithPathMapping");
+        requireNonNull(serviceWithPathMapping.pathMappings(), "serviceWithPathMapping.pathMappings()");
+        requireNonNull(decorator, "decorator");
+        serviceWithPathMapping.pathMappings()
+                .forEach(pathMapping -> service(pathMapping, decorator.apply(serviceWithPathMapping)));
+        return this;
+    }
+
+    /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
     public ServerBuilder annotatedService(Object service) {

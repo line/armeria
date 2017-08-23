@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
+import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -118,5 +119,18 @@ public class GrpcServiceTest {
                                 "Method not found: grpc.testing.TestService/FooCall")
                            .set(HttpHeaderNames.CONTENT_LENGTH, "0"),
                 HttpData.of(new byte[] {})));
+    }
+
+    @Test
+    public void pathMappings() throws Exception {
+       assertThat(grpcService.pathMappings())
+            .containsExactlyInAnyOrder(
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/EmptyCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingOutputCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingInputCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/FullDuplexCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/HalfDuplexCall"),
+                    PathMapping.ofExact("/armeria.grpc.testing.TestService/UnimplementedCall"));
     }
 }
