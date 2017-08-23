@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.common.metric.MeterId;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 
@@ -55,20 +56,20 @@ import io.micrometer.core.instrument.Tags;
  */
 public final class MetricCollectingCircuitBreakerListener implements CircuitBreakerListener {
 
-    private static final String DEFAULT_NAME = "armeria.client.circuitBreaker";
+    private static final String DEFAULT_METER_NAME = "armeria.client.circuitBreaker";
 
     private final MeterRegistry registry;
     private final String name;
 
     /**
-     * Creates a new instance with the default name {@value #DEFAULT_NAME}.
+     * Creates a new instance with the default name {@value #DEFAULT_METER_NAME}.
      */
     public MetricCollectingCircuitBreakerListener(MeterRegistry registry) {
-        this(registry, DEFAULT_NAME);
+        this(registry, DEFAULT_METER_NAME);
     }
 
     /**
-     * Creates a new instance with the specified name.
+     * Creates a new instance with the specified {@link Meter} name.
      */
     public MetricCollectingCircuitBreakerListener(MeterRegistry registry, String name) {
         this.registry = requireNonNull(registry, "registry");
