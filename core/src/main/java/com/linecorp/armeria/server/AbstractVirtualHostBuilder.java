@@ -254,6 +254,28 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
+     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s.
+     */
+    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>>
+    B service(T serviceWithPathMappings) {
+        return service(serviceWithPathMappings, Function.identity());
+    }
+
+    /**
+     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s.
+     */
+    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
+            R extends Service<HttpRequest, HttpResponse>>
+    B service(T serviceWithPathMappings, Function<T, R> decorator) {
+        requireNonNull(serviceWithPathMappings, "serviceWithPathMappings");
+        requireNonNull(serviceWithPathMappings.pathMappings(), "serviceWithPathMappings.pathMappings()");
+        requireNonNull(decorator, "decorator");
+        final Service<HttpRequest, HttpResponse> decorated = decorator.apply(serviceWithPathMappings);
+        serviceWithPathMappings.pathMappings().forEach(pathMapping -> service(pathMapping, decorated));
+        return self();
+    }
+
+    /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
     public B annotatedService(Object service) {
