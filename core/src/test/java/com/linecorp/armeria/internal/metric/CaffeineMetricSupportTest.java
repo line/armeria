@@ -59,7 +59,7 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("foo.loads#count{result=success}", 3.0)
                 .containsEntry("foo.loads#count{result=failure}", 4.0)
                 .containsEntry("foo.loadDuration#count", 5.0)
-                .containsEntry("foo.eviction#count", 6.0)
+                .containsEntry("foo.evictions#count", 6.0)
                 .containsEntry("foo.evictionWeight#count", 7.0)
                 .containsEntry("foo.estimatedSize#value", 8.0);
 
@@ -78,7 +78,7 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("foo.loads#count{result=success}", 11.0)
                 .containsEntry("foo.loads#count{result=failure}", 12.0)
                 .containsEntry("foo.loadDuration#count", 13.0)
-                .containsEntry("foo.eviction#count", 14.0)
+                .containsEntry("foo.evictions#count", 14.0)
                 .containsEntry("foo.evictionWeight#count", 15.0)
                 .containsEntry("foo.estimatedSize#value", 16.0);
 
@@ -103,7 +103,7 @@ public class CaffeineMetricSupportTest {
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("bar.requests#count{result=hit}", 1.0)
                 .containsEntry("bar.requests#count{result=miss}", 2.0)
-                .containsEntry("bar.eviction#count", 3.0)
+                .containsEntry("bar.evictions#count", 3.0)
                 .containsEntry("bar.evictionWeight#count", 4.0)
                 .containsEntry("bar.estimatedSize#value", 5.0);
 
