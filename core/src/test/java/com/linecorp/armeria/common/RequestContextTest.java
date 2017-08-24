@@ -50,9 +50,9 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
@@ -407,7 +407,7 @@ public class RequestContextTest {
 
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
-            super(new SimpleMeterRegistry(), SessionProtocol.HTTP,
+            super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
                   HttpMethod.GET, "/", null, new DefaultHttpRequest());
         }
 

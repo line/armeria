@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
@@ -43,10 +44,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 
@@ -651,14 +652,11 @@ public final class ServerBuilder {
             virtualHosts = this.virtualHosts;
         }
 
-        final MeterRegistry meterRegistry = this.meterRegistry != null ? this.meterRegistry
-                                                                       : new SimpleMeterRegistry();
-
         final Server server = new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
-                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix));
+                gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
+                firstNonNull(meterRegistry, NoopMeterRegistry.get()), serviceLoggerPrefix));
         serverListeners.forEach(server::addListener);
         return server;
     }
