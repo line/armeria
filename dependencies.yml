@@ -12,14 +12,14 @@ com.fasterxml.jackson.core:
   jackson-databind: { version: *JACKSON_VERSION }
 
 com.github.ben-manes.caffeine:
-  caffeine: { version: '2.5.3' }
+  caffeine: { version: '2.5.5' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '22.0'
+    version: &GUAVA_VERSION '23.0'
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
@@ -33,7 +33,7 @@ com.google.guava:
     - com.google.j2objc:j2objc-annotations
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.0' }
+  checkstyle: { version: '8.1' }
 
 com.spotify:
   completable-futures: { version: '0.3.1' }
@@ -44,12 +44,12 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 io.dropwizard.metrics:
-  metrics-core: { version: &DROPWIZARD_VERSION '3.2.3' }
+  metrics-core: { version: &DROPWIZARD_VERSION '3.2.4' }
   metrics-json: { version: *DROPWIZARD_VERSION }
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.4.0'
+    version: &GRPC_VERSION '1.5.0'
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
@@ -69,18 +69,19 @@ io.micrometer:
   micrometer-spring-legacy: { version: *MICROMETER_VERSION }
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.13.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.14.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
+  netty-transport-native-unix-common: { version: *NETTY_VERSION }
   netty-tcnative-boringssl-static: { version: '2.0.5.Final' }
 
 io.prometheus:
   simpleclient_common: { version: '0.0.26' }
 
 io.zipkin.brave:
-  brave: { version: &BRAVE_VERSION '4.5.1' }
+  brave: { version: &BRAVE_VERSION '4.5.2' }
 
 it.unimi.dsi:
   fastutil: { version: '8.1.0' }
@@ -95,7 +96,7 @@ junit:
   junit: { version: '4.12' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '1.24.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '1.25.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 org.apache.hbase:
@@ -114,7 +115,7 @@ org.apache.httpcomponents:
     - commons-logging:commons-logging
 
 org.apache.kafka:
-  kafka-clients: { version: '0.10.2.1' }
+  kafka-clients: { version: '0.11.0.0' }
 
 org.apache.thrift:
   libthrift:
@@ -124,7 +125,7 @@ org.apache.thrift:
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.16' }
+  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.20' }
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
@@ -177,7 +178,7 @@ org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.6' }
 
 org.reactivestreams:
-  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.1-RC1' }
+  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.1' }
   reactive-streams-tck: { version: *REACTIVE_STREAMS_VERSION }
 
 org.reflections:
@@ -191,7 +192,7 @@ org.slf4j:
   slf4j-api: { version: *SLF4J_VERSION }
 
 org.springframework.boot:
-  spring-boot: { version: &SPRING_BOOT_VERSION '1.5.4.RELEASE' }
+  spring-boot: { version: &SPRING_BOOT_VERSION '1.5.6.RELEASE' }
   spring-boot-autoconfigure: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-logging: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }

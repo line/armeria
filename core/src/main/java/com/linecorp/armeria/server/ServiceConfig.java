@@ -121,6 +121,8 @@ public final class ServiceConfig {
     }
 
     /**
+     * Returns the logger name for the {@link Service}.
+     *
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
      *             {@code armeria-logback}.
      */

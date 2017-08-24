@@ -371,6 +371,10 @@ public interface RequestContext extends AttributeMap {
     void onEnter(Consumer<? super RequestContext> callback);
 
     /**
+     * Registers {@code callback} to be run when re-entering this {@link RequestContext}, usually when using
+     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
+     * should be restored by this callback.
+     *
      * @deprecated Use {@link #onEnter(Consumer)} instead.
      */
     @Deprecated
@@ -388,6 +392,10 @@ public interface RequestContext extends AttributeMap {
     void onExit(Consumer<? super RequestContext> callback);
 
     /**
+     * Registers {@code callback} to be run when re-exiting this {@link RequestContext}, usually when using
+     * the {@link #makeContextAware} family of methods. Any thread-local state associated with this context
+     * should be reset by this callback.
+     *
      * @deprecated Use {@link #onExit(Consumer)} instead.
      */
     @Deprecated

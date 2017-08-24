@@ -202,7 +202,7 @@ public final class VirtualHost {
 
     /**
      * Returns the hostname pattern of this virtual host, as defined in
-     * <a href="http://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>
+     * <a href="http://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
      */
     public String hostnamePattern() {
         return hostnamePattern;

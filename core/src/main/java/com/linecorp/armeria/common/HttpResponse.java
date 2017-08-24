@@ -152,6 +152,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new failed HTTP response.
+     *
      * @deprecated Use {@link #ofFailure(Throwable)} instead.
      */
     @Deprecated

@@ -102,6 +102,8 @@ public interface ServiceRequestContext extends RequestContext {
     MediaType negotiatedProduceType();
 
     /**
+     * Returns the {@link Logger} of the {@link Service}.
+     *
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
      *             {@code armeria-logback}.
      */
