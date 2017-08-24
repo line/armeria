@@ -41,12 +41,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 
 import brave.Tracing;
 import brave.sampler.Sampler;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultEventLoop;
 import zipkin.Annotation;
@@ -108,7 +108,7 @@ public class HttpTracingClientTest {
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = new DefaultClientRequestContext(
-                new DefaultEventLoop(), new SimpleMeterRegistry(), H2C, Endpoint.of("localhost", 8080),
+                new DefaultEventLoop(), NoopMeterRegistry.get(), H2C, Endpoint.of("localhost", 8080),
                 HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT, req);
 
         ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost");
