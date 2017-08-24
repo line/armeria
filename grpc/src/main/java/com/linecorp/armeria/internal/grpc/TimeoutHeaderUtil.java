@@ -53,13 +53,15 @@ import java.util.concurrent.TimeUnit;
 /**
  * Marshals a nanoseconds representation of the timeout to and from a string representation,
  * consisting of an ASCII decimal representation of a number with at most 8 digits, followed by a
- * unit:
- * n = nanoseconds
- * u = microseconds
- * m = milliseconds
- * S = seconds
- * M = minutes
- * H = hours
+ * unit.
+ * <ul>
+ *   <li>n = nanoseconds</li>
+ *   <li>u = microseconds</li>
+ *   <li>m = milliseconds</li>
+ *   <li>S = seconds</li>
+ *   <li>M = minutes</li>
+ *   <li>H = hours</li>
+ * </ul>
  *
  * <p>The representation is greedy with respect to precision. That is, 2 seconds will be
  * represented as `2000000u`.</p>

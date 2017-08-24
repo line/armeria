@@ -196,7 +196,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     /**
-     * @see <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>
+     * See <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>.
      */
     private void configureAsHttps(Channel ch, InetSocketAddress remoteAddr) {
         final ChannelPipeline p = ch.pipeline();
@@ -375,7 +375,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         /**
-         * Sends the initial upgrade request, which is {@code "HEAD / HTTP/1.1"}
+         * Sends the initial upgrade request, which is {@code "HEAD / HTTP/1.1"}.
          */
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {

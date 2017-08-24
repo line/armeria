@@ -78,6 +78,8 @@ public final class StatusMessageEscaper {
     }
 
     /**
+     * Escapes the given byte array.
+     *
      * @param valueBytes the UTF-8 bytes
      * @param ri The reader index, pointed at the first byte that needs escaping.
      */

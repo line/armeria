@@ -422,7 +422,7 @@ public final class MediaType {
     public static final MediaType PDF = createConstant(APPLICATION_TYPE, "pdf");
     public static final MediaType POSTSCRIPT = createConstant(APPLICATION_TYPE, "postscript");
     /**
-     * <a href="http://tools.ietf.org/html/draft-rfernando-protocol-buffers-00">Protocol buffers</a>
+     * <a href="http://tools.ietf.org/html/draft-rfernando-protocol-buffers-00">Protocol buffers</a>.
      */
     public static final MediaType PROTOBUF = createConstant(APPLICATION_TYPE, "protobuf");
 

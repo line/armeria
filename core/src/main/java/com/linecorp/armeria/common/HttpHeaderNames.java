@@ -250,7 +250,7 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString IF_UNMODIFIED_SINCE = new AsciiString("if-unmodified-since");
     /**
-     * {@code "keep-alive"}
+     * {@code "keep-alive"}.
      *
      * @deprecated Use {@link #CONNECTION} instead.
      */
@@ -285,7 +285,7 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString PROXY_AUTHORIZATION = new AsciiString("proxy-authorization");
     /**
-     * {@code "proxy-connection"}
+     * {@code "proxy-connection"}.
      *
      * @deprecated Use {@link #CONNECTION} instead.
      */

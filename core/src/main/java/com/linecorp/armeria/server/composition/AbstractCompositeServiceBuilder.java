@@ -100,6 +100,8 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
     }
 
     /**
+     * Binds the specified {@link Service} at the specified path pattern.
+     *
      * @deprecated Use {@link #service(String, Service)} instead.
      */
     @Deprecated

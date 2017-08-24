@@ -63,6 +63,9 @@ public final class LoggingService<I extends Request, O extends Response> extends
     }
 
     /**
+     * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s at the given
+     * {@link LogLevel}.
+     *
      * @deprecated Use {@link LoggingServiceBuilder}.
      */
     @Deprecated
@@ -81,6 +84,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final Sampler sampler;
 
     /**
+     * Creates a new instance.
+     *
      * @deprecated Use {@link LoggingService#newDecorator()}.
      */
     @Deprecated
@@ -89,6 +94,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
     }
 
     /**
+     * Creates a new instance.
+     *
      * @deprecated Use {@link LoggingServiceBuilder}.
      */
     @Deprecated

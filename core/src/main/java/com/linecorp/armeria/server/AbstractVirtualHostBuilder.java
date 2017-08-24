@@ -201,6 +201,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
+     * Binds the specified {@link Service} at the specified path pattern.
+     *
      * @deprecated Use {@link #service(String, Service)} instead.
      */
     @Deprecated
@@ -217,7 +219,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
-     * Binds the specified {@link Service} at the the specified path pattern. e.g.
+     * Binds the specified {@link Service} at the specified path pattern. e.g.
      * <ul>
      *   <li>{@code /login} (no path parameters)</li>
      *   <li>{@code /users/{userId}} (curly-brace style)</li>
@@ -244,6 +246,8 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
     }
 
     /**
+     * Binds the specified {@link Service} at the specified {@link PathMapping}.
+     *
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
      *             {@code armeria-logback}.
      */

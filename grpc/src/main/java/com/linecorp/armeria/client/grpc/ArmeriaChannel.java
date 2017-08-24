@@ -48,6 +48,7 @@ import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -59,7 +60,7 @@ import io.netty.channel.EventLoop;
 class ArmeriaChannel extends Channel implements ClientBuilderParams {
 
     /**
-     * @see io.grpc.ManagedChannelBuilder for default setting
+     * See {@link ManagedChannelBuilder} for default setting.
      */
     private static final int DEFAULT_MAX_INBOUND_MESSAGE_SIZE = 4 * 1024 * 1024;
 

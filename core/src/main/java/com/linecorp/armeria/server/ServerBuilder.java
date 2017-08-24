@@ -352,6 +352,8 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified {@link Service} at the specified path pattern of the default {@link VirtualHost}.
+     *
      * @deprecated Use {@link #service(String, Service)} instead.
      */
     @Deprecated
@@ -408,6 +410,9 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
+     * {@link VirtualHost}.
+     *
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
      *             {@code armeria-logback}.
      */
