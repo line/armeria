@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
@@ -45,6 +46,7 @@ public abstract class RetryingClientBuilder<
 
     final RetryStrategy<I, O> retryStrategy;
     int defaultMaxAttempts = DEFAULT_BACKOFF_SPEC.maxAttempts;
+    long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
 
     /**
      * Creates a new builder with the specified retry strategy.
@@ -72,6 +74,35 @@ public abstract class RetryingClientBuilder<
     }
 
     /**
+     * Sets the response timeout for each attempt in milliseconds. When requests in {@link RetryingClient}
+     * are made, corresponding responses are timed out by this value. {@code 0} disables the timeout.
+     * It will be set by the default value in {@link Flags#defaultResponseTimeoutMillis()}, if the client
+     * dose not specify.
+     *
+     * @return {@link T} to support method chaining.
+     */
+    public T responseTimeoutMillisForEachAttempt(long responseTimeoutMillisForEachAttempt) {
+        checkArgument(responseTimeoutMillisForEachAttempt >= 0,
+                      "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
+                      responseTimeoutMillisForEachAttempt);
+        this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+        return self();
+    }
+
+    /**
+     * Sets the response timeout for each attempt. When requests in {@link RetryingClient} are made,
+     * corresponding responses are timed out by this value. {@code 0} disables the timeout.
+     *
+     * @return {@link T} to support method chaining.
+     */
+    public T responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
+        checkArgument(
+                !requireNonNull(responseTimeoutForEachAttempt, "responseTimeoutForEachAttempt").isNegative(),
+                "responseTimeoutForEachAttempt: %s (expected: >= 0)", responseTimeoutForEachAttempt);
+        return responseTimeoutMillisForEachAttempt(responseTimeoutForEachAttempt.toMillis());
+    }
+
+    /**
      * Returns a newly-created {@link RetryingClient} based on the properties of this builder.
      */
     abstract U build(Client<I, O> delegate);
@@ -90,6 +121,7 @@ public abstract class RetryingClientBuilder<
     ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
                           .add("retryStrategy", retryStrategy)
-                          .add("defaultMaxAttempts", defaultMaxAttempts);
+                          .add("defaultMaxAttempts", defaultMaxAttempts)
+                          .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt);
     }
 }

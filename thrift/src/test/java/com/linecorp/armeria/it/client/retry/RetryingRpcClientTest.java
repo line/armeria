@@ -58,8 +58,12 @@ public class RetryingRpcClientTest {
     private static final RetryStrategy<RpcRequest, RpcResponse> ONLY_HANDLES_EXCEPTION =
         (request, response) -> {
             final CompletableFuture<Optional<Backoff>> future = new CompletableFuture<>();
-            response.handle(voidFunction((unused1, unused2) -> {
-                future.complete(Optional.empty());
+            response.handle(voidFunction((unused1, cause) -> {
+                if (cause != null) {
+                    future.complete(Optional.of(Backoff.withoutDelay()));
+                } else {
+                    future.complete(Optional.empty());
+                }
             }));
             return future;
         };
