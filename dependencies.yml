@@ -69,13 +69,13 @@ io.micrometer:
   micrometer-spring-legacy: { version: *MICROMETER_VERSION }
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.14.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.15.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.5.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.6.Final' }
 
 io.prometheus:
   simpleclient_common: { version: '0.0.26' }
