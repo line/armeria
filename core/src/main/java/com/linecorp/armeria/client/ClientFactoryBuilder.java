@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -33,8 +32,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableSet;
@@ -44,10 +41,10 @@ import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
@@ -109,8 +106,7 @@ public final class ClientFactoryBuilder {
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
     private KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener = DEFAULT_CONNECTION_POOL_LISTENER;
-    @Nullable
-    private MeterRegistry meterRegistry;
+    private MeterRegistry meterRegistry = Metrics.globalRegistry;
 
     /**
      * Creates a new instance.
@@ -297,8 +293,7 @@ public final class ClientFactoryBuilder {
                 workerGroup, shutdownWorkerGroupOnClose, socketOptions, sslContextCustomizer,
                 addressResolverGroupFactory, initialHttp2ConnectionWindowSize, initialHttp2StreamWindowSize,
                 http2MaxFrameSize, idleTimeoutMillis, useHttp2Preface,
-                useHttp1Pipelining, connectionPoolListener,
-                firstNonNull(meterRegistry, NoopMeterRegistry.get())));
+                useHttp1Pipelining, connectionPoolListener, meterRegistry));
     }
 
     @Override
