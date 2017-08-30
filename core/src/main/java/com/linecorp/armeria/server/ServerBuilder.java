@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
@@ -33,7 +32,6 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
 import com.google.common.collect.ImmutableMap;
@@ -44,10 +42,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 
@@ -109,8 +107,7 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
-    @Nullable
-    private MeterRegistry meterRegistry;
+    private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -661,7 +658,7 @@ public final class ServerBuilder {
                 ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
-                firstNonNull(meterRegistry, NoopMeterRegistry.get()), serviceLoggerPrefix));
+                meterRegistry, serviceLoggerPrefix));
         serverListeners.forEach(server::addListener);
         return server;
     }
