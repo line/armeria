@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -43,7 +42,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.internal.HttpHeaderSubscriber;
 
 import io.netty.channel.EventLoop;
@@ -61,6 +59,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryStrategy the retry strategy
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy) {
@@ -69,6 +69,9 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryStrategy the retry strategy
+     * @param defaultMaxAttempts the default number of max attempts for retry
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy, int defaultMaxAttempts) {
@@ -77,12 +80,29 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     /**
+     * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryStrategy the retry strategy
+     * @param defaultMaxAttempts the default number of max attempts for retry
+     * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
+     *                                            the timeout
+     */
+    public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
+    newDecorator(RetryStrategy<HttpRequest, HttpResponse> retryStrategy,
+                 int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+        return new RetryingHttpClientBuilder(retryStrategy)
+                .defaultMaxAttempts(defaultMaxAttempts)
+                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt).newDecorator();
+    }
+
+    /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     RetryingHttpClient(Client<HttpRequest, HttpResponse> delegate,
-                       RetryStrategy<HttpRequest, HttpResponse> strategy,
-                       int defaultMaxAttempts, boolean useRetryAfter, int contentPreviewLength) {
-        super(delegate, strategy, defaultMaxAttempts);
+                       RetryStrategy<HttpRequest, HttpResponse> strategy, int defaultMaxAttempts,
+                       long responseTimeoutMillisForEachAttempt, boolean useRetryAfter,
+                       int contentPreviewLength) {
+        super(delegate, strategy, defaultMaxAttempts, responseTimeoutMillisForEachAttempt);
         this.useRetryAfter = useRetryAfter;
         checkArgument(contentPreviewLength >= 0,
                       "contentPreviewLength: %s (expected: >= 0)", contentPreviewLength);
@@ -93,53 +113,59 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final DeferredHttpResponse deferredRes = new DeferredHttpResponse();
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req, 0);
-        retry(ctx, reqDuplicator, newReq -> {
-            try {
-                resetResponseTimeout(ctx);
-                return delegate().execute(ctx, newReq);
-            } catch (Exception e) {
-                return HttpResponse.ofFailure(e);
-            }
-        }, deferredRes);
+        doExecute0(ctx, reqDuplicator, deferredRes);
         return deferredRes;
     }
 
-    private void retry(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
-                       Function<HttpRequest, HttpResponse> action, DeferredHttpResponse deferredRes) {
-        final HttpResponse response = action.apply(rootReqDuplicator.duplicateStream());
+    private void doExecute0(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
+                            DeferredHttpResponse deferredRes) {
+        if (!setResponseTimeout(ctx)) {
+            closeOnException(deferredRes, rootReqDuplicator, ResponseTimeoutException.get());
+            return;
+        }
+        HttpResponse response = executeDelegate(ctx, rootReqDuplicator.duplicateStream());
+
         final HttpResponseDuplicator resDuplicator =
                 new HttpResponseDuplicator(response, maxSignalLength(ctx.maxResponseLength()));
-        retryStrategy()
-                .shouldRetry(rootReqDuplicator.duplicateStream(),
-                             new ContentPreviewResponse(resDuplicator.duplicateStream(), contentPreviewLength))
-                .handle(voidFunction((backoffOpt, unused1) -> {
-                    if (backoffOpt.isPresent()) {
-                        final long millisAfter = useRetryAfter ?
-                                                 getRetryAfterMillis(resDuplicator.duplicateStream()) : -1;
-                        resDuplicator.close();
-                        retry0(ctx, backoffOpt.get(), rootReqDuplicator, action, deferredRes, millisAfter);
-                    } else {
-                        final HttpResponse contentPreviewResponse = new ContentPreviewResponse(
-                                resDuplicator.duplicateStream(), contentPreviewLength);
-                        contentPreviewResponse.aggregate().handle(voidFunction((unused2, cause) -> {
-                            if (cause != null && !(cause instanceof CancelledSubscriptionException)) {
-                                resDuplicator.close();
-                                final Optional<Backoff> backoffOnExceptionOpt = retryStrategy().shouldRetry(
-                                        rootReqDuplicator.duplicateStream(), cause);
-                                if (backoffOnExceptionOpt.isPresent()) {
-                                    retry0(ctx, backoffOnExceptionOpt.get(), rootReqDuplicator, action,
-                                           deferredRes, -1);
-                                } else { // exception that is not for retry occurred
-                                    deferredRes.close(cause);
-                                    rootReqDuplicator.close();
-                                }
-                            } else { // normal response
-                                deferredRes.delegate(resDuplicator.duplicateStream(true));
-                                rootReqDuplicator.close();
-                            }
-                        }));
-                    }
-                }));
+        final ContentPreviewResponse contentPreviewResponse =
+                new ContentPreviewResponse(resDuplicator.duplicateStream(), contentPreviewLength);
+        retryStrategy().shouldRetry(rootReqDuplicator.duplicateStream(), contentPreviewResponse)
+                       .handle(voidFunction((backoffOpt, unused) -> {
+                           if (backoffOpt.isPresent()) {
+                               final long millisAfter =
+                                       useRetryAfter ? getRetryAfterMillis(resDuplicator.duplicateStream())
+                                                     : -1;
+                               resDuplicator.close();
+
+                               long nextDelay;
+                               try {
+                                   nextDelay = getNextDelay(ctx, backoffOpt.get(), millisAfter);
+                               } catch (Exception e) {
+                                   closeOnException(deferredRes, rootReqDuplicator, e);
+                                   return;
+                               }
+
+                               final EventLoop eventLoop = ctx.contextAwareEventLoop();
+                               if (nextDelay <= 0) {
+                                   eventLoop.execute(() -> doExecute0(ctx, rootReqDuplicator, deferredRes));
+                               } else {
+                                   eventLoop.schedule(
+                                           () -> doExecute0(ctx, rootReqDuplicator, deferredRes),
+                                           nextDelay, TimeUnit.MILLISECONDS);
+                               }
+                           } else {
+                               deferredRes.delegate(resDuplicator.duplicateStream(true));
+                               rootReqDuplicator.close();
+                           }
+                       }));
+    }
+
+    private HttpResponse executeDelegate(ClientRequestContext ctx, HttpRequest req) {
+        try {
+            return delegate().execute(ctx, req);
+        } catch (Exception e) {
+            return HttpResponse.ofFailure(e);
+        }
     }
 
     private static int maxSignalLength(long maxResponseLength) {
@@ -180,31 +206,10 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         return future.join();
     }
 
-    private void retry0(ClientRequestContext ctx, Backoff backoff, HttpRequestDuplicator rootReqDuplicator,
-                        Function<HttpRequest, HttpResponse> action, DeferredHttpResponse deferredRes,
-                        long millisAfter) {
-        long nextDelay;
-        try {
-            nextDelay = getNextDelay(ctx, backoff, millisAfter);
-            if (nextDelay < 0) { // exceed the number of max attempt
-                deferredRes.close(RetryGiveUpException.get());
-                rootReqDuplicator.close();
-                return;
-            }
-        } catch (ResponseTimeoutException e) {
-            deferredRes.close(e);
-            rootReqDuplicator.close();
-            return;
-        }
-
-        final EventLoop eventLoop = ctx.contextAwareEventLoop();
-        if (nextDelay <= 0) {
-            eventLoop.submit(() -> retry(ctx, rootReqDuplicator, action, deferredRes));
-        } else {
-            eventLoop.schedule(
-                    () -> retry(ctx, rootReqDuplicator, action, deferredRes),
-                    nextDelay, TimeUnit.MILLISECONDS);
-        }
+    private static void closeOnException(DeferredHttpResponse deferredRes,
+                                         HttpRequestDuplicator rootReqDuplicator, Throwable cause) {
+        deferredRes.close(cause);
+        rootReqDuplicator.close();
     }
 
     private static class ContentPreviewResponse extends FilteredHttpResponse {

@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -47,11 +48,6 @@ public interface RetryStrategy<I extends Request, O extends Response> {
             @Override
             public CompletableFuture<Optional<Backoff>> shouldRetry(I request, O response) {
                 return CompletableFuture.completedFuture(Optional.empty());
-            }
-
-            @Override
-            public Optional<Backoff> shouldRetry(I request, Throwable throwable) {
-                return Optional.empty();
             }
         };
     }
@@ -88,21 +84,11 @@ public interface RetryStrategy<I extends Request, O extends Response> {
 
     /**
      * Returns {@link CompletableFuture} with {@link Optional} that contains {@link Backoff} which will be
-     * used for retry. If the condition does not match, this needs to return {@link Optional#EMPTY}
-     * to stop retry attempt.
+     * used for retry. If the condition does not match, this needs to return {@link Optional#empty()}
+     * to stop retry attempt. Note that {@link ResponseTimeoutException} is not retriable for
+     * the whole retry, but each attempt.
      *
-     * <p>If an {@link Exception} occurs while processing {@link Request} and {@link Response}, this method
-     * should not complete the {@link CompletableFuture} with the {@link Exception}. The {@link Exception}
-     * needs to be dealt in the {@link RetryStrategy#shouldRetry(Request, Throwable)} method, therefore
-     * the {@link CompletableFuture} has to be completed with {@link Optional#EMPTY}.
+     * @see RetryingClientBuilder#responseTimeoutMillisForEachAttempt(long)
      */
     CompletableFuture<Optional<Backoff>> shouldRetry(I request, O response);
-
-    /**
-     * Returns {@link Optional} that contains {@link Backoff} which will be used for retry. If the condition
-     * does not match, this needs to return {@link Optional#EMPTY} to stop retry attempt.
-     */
-    default Optional<Backoff> shouldRetry(I request, Throwable thrown) {
-        return Optional.of(defaultBackoff);
-    }
 }
