@@ -113,7 +113,7 @@ For Thrift:
 - Use the ``--gen json`` option to generate the ``.json`` file that contains the docstrings.
 - Put the generated ``.json`` file into the ``META-INF/armeria/thrift`` directory.
 
-For GRPC:
+For gRPC:
 
 - Configure the protobuf plugin to generate the ``.dsc`` file that contains the docstrings and
   put it into the ``META-INF/armeria/grpc`` directory:

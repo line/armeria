@@ -1,5 +1,5 @@
-.. _Apache Tomcat: http://tomcat.apache.org/
-.. _Jetty: http://www.eclipse.org/jetty/
+.. _Apache Tomcat: https://tomcat.apache.org/
+.. _Jetty: https://www.eclipse.org/jetty/
 .. _JettyService: apidocs/index.html?com/linecorp/armeria/server/jetty/JettyService.html
 .. _JettyServiceBuilder: apidocs/index.html?com/linecorp/armeria/server/jetty/JettyServiceBuilder.html
 .. _ServerBuilder: apidocs/index.html?com/linecorp/armeria/server/ServerBuilder.html

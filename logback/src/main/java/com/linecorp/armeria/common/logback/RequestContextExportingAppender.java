@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -48,10 +48,10 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
- * A <a href="http://logback.qos.ch/">Logback</a> {@link Appender} that exports the properties of the current
+ * A <a href="https://logback.qos.ch/">Logback</a> {@link Appender} that exports the properties of the current
  * {@link RequestContext} to {@link MDC}.
  *
- * <p>Read '<a href="http://line.github.io/armeria/server-basics.html">Logging contextual information</a>'
+ * <p>Read '<a href="https://line.github.io/armeria/server-basics.html">Logging contextual information</a>'
  * for more information.
  */
 public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<ILoggingEvent>

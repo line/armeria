@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -689,7 +689,7 @@ public class GrpcClientTest {
 
     // NB: It's unclear when anyone would set a negative timeout, and trying to set the negative timeout
     // into a header correctly raises an exception. The test has been copied over from upstream to make it
-    // easier to understand the compatibility test coverage - not sure why the GRPC test doesn't fail but it
+    // easier to understand the compatibility test coverage - not sure why the gRPC test doesn't fail but it
     // doesn't seem worth investigating too hard on this one.
     @Ignore
     @Test(timeout = 10000)
@@ -869,7 +869,7 @@ public class GrpcClientTest {
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).isEmpty();
         assertThat(responseObserver.getError()).isNotNull();
-        // TODO(anuraag): As GRPC supports handling timeouts in the server or client due to the grpc-timeout
+        // TODO(anuraag): As gRPC supports handling timeouts in the server or client due to the grpc-timeout
         // header, it's not guaranteed which is the source of this error.
         // Until https://github.com/line/armeria/issues/521 a server side timeout will not have the correct
         // status so we don't verify it for now.

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -47,8 +47,8 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.CompositeByteBuf;
 
 /**
- * Marshaller for GRPC method request or response messages to and from {@link ByteBuf}. Will attempt to use
- * optimized code paths for known message types, and otherwise delegates to the GRPC stub.
+ * Marshaller for gRPC method request or response messages to and from {@link ByteBuf}. Will attempt to use
+ * optimized code paths for known message types, and otherwise delegates to the gRPC stub.
  */
 public class GrpcMessageMarshaller<I, O> {
 

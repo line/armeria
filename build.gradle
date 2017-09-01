@@ -57,7 +57,7 @@ ext {
 
     copyrightFooter =
             '&copy; Copyright ' + "${project.property('inceptionYear')}&ndash;${LocalDateTime.now().year} " +
-            '<a href="http://linecorp.com/en/">LINE Corporation</a>. ' +
+            '<a href="https://linecorp.com/en/">LINE Corporation</a>. ' +
             'All rights reserved.'
 }
 
@@ -539,25 +539,25 @@ configure(javaProjects) {
                             // Write the elements required by OSSRH.
                             name currentArtifactId
                             description "Asynchronous HTTP/2 RPC/REST client/server library built on top of " +
-                                    "Java 8, Netty, Thrift and GRPC (${currentArtifactId})"
-                            url 'http://line.github.io/armeria/'
+                                    "Java 8, Netty, Thrift and gRPC (${currentArtifactId})"
+                            url 'https://line.github.io/armeria/'
                             licenses {
                                 license {
                                     name 'The Apache License, Version 2.0'
-                                    url 'http://www.apache.org/license/LICENSE-2.0.txt'
+                                    url 'https://www.apache.org/license/LICENSE-2.0.txt'
                                     distribution 'repo'
                                 }
                             }
                             inceptionYear 2015
                             organization {
                                 name 'LINE Corporation'
-                                url 'http://linecorp.com/en/'
+                                url 'https://linecorp.com/en/'
                             }
                             developers {
                                 developer {
                                     id 'linecorp.com'
                                     name 'LINE Corporation'
-                                    url 'http://linecorp.com/en/'
+                                    url 'https://linecorp.com/en/'
                                 }
                             }
                             scm {
@@ -919,19 +919,19 @@ allprojects {
                 linksOffline url, "${rootProject.projectDir}/site/src/apidocs/package-lists/${name}"
             }
 
-            addOfflineLink 'caffeine', 'http://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.5.5/'
+            addOfflineLink 'caffeine', 'https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.5.5/'
             addOfflineLink 'dropwizard-metrics', 'http://metrics.dropwizard.io/3.2.2/apidocs/'
-            addOfflineLink 'grpc', 'http://www.grpc.io/grpc-java/javadoc/'
+            addOfflineLink 'grpc', 'https://grpc.io/grpc-java/javadoc/'
             addOfflineLink 'jackson-databind', 'https://fasterxml.github.io/jackson-databind/javadoc/2.8/'
             addOfflineLink 'java', 'https://docs.oracle.com/javase/8/docs/api/'
             addOfflineLink 'jetty', 'http://download.eclipse.org/jetty/stable-9/apidocs/'
             addOfflineLink 'kafka', 'https://kafka.apache.org/0100/javadoc/'
-            addOfflineLink 'logback', 'http://logback.qos.ch/apidocs/'
+            addOfflineLink 'logback', 'https://logback.qos.ch/apidocs/'
             addOfflineLink 'micrometer', 'https://static.javadoc.io/io.micrometer/micrometer-core/0.10.0.RELEASE/'
             addOfflineLink 'netty', 'https://netty.io/4.1/api/'
             addOfflineLink 'prometheus', 'https://prometheus.io/client_java/'
             addOfflineLink 'protobuf', 'https://developers.google.com/protocol-buffers/docs/reference/java/'
-            addOfflineLink 'retrofit', 'http://square.github.io/retrofit/2.x/retrofit/'
+            addOfflineLink 'retrofit', 'https://square.github.io/retrofit/2.x/retrofit/'
             addOfflineLink 'slf4j', 'https://www.slf4j.org/api/'
             addOfflineLink 'spring', 'https://docs.spring.io/spring/docs/current/javadoc-api/'
             addOfflineLink 'thrift', 'https://static.javadoc.io/org.apache.thrift/libthrift/0.10.0/'

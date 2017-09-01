@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -64,8 +64,8 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 
 /**
- * A framer of messages for transport with the GRPC wire protocol. See
- * <a href="http://www.grpc.io/docs/guides/wire.html">GRPC Wire Protocol</a> for more detail on the protocol.
+ * A framer of messages for transport with the gRPC wire protocol. See
+ * <a href="https://grpc.io/docs/guides/wire.html">gRPC Wire Protocol</a> for more detail on the protocol.
  *
  * <p>The logic has mostly been copied from {@code io.grpc.internal.MessageFramer}, while removing the buffer
  * abstraction in favor of using {@link ByteBuf} directly. The code has been vastly simplified due to the lack

@@ -41,7 +41,7 @@ version = re.match(r'^[0-9]+\.[0-9]+', release).group(0)
 
 # Export the loaded properties and some useful values into epilogs
 rst_epilog = '\n'
-rst_epilog += '.. |baseurl| replace:: http://line.github.io/armeria/\n'
+rst_epilog += '.. |baseurl| replace:: https://line.github.io/armeria/\n'
 for k in properties.keys():
     v = properties[k]
     if k in [ 'release', 'version' ]:

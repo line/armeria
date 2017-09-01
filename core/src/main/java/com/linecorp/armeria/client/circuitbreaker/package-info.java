@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,7 +16,7 @@
 
 /**
  * Failure detection and fallback mechanism based on
- * <a href="http://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker pattern</a>.
+ * <a href="https://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker pattern</a>.
  *
  * <h1>Setup Client with Circuit Breaker</h1>
  * <h2>Example</h2>

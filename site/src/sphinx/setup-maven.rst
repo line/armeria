@@ -1,4 +1,4 @@
-.. _`Maven Central Repository`: http://search.maven.org/
+.. _`Maven Central Repository`: https://search.maven.org/
 
 .. _setup-maven:
 

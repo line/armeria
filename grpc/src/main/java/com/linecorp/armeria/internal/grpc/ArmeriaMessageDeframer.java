@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -71,8 +71,8 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.CompositeByteBuf;
 
 /**
- * A deframer of messages transported in the GRPC wire format. See
- * <a href="http://www.grpc.io/docs/guides/wire.html">GRPC Wire Protocol</a> for more detail on the protocol.
+ * A deframer of messages transported in the gRPC wire format. See
+ * <a href="https://grpc.io/docs/guides/wire.html">gRPC Wire Protocol</a> for more detail on the protocol.
  *
  * <p>The logic has been mostly copied from {@code io.grpc.internal.MessageDeframer}, while removing the buffer
  * abstraction in favor of using {@link ByteBuf} directly, and allowing the delivery of uncompressed frames as
@@ -370,7 +370,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     /**
-     * Processes the GRPC compression header which is composed of the compression flag and the outer
+     * Processes the gRPC compression header which is composed of the compression flag and the outer
      * frame length.
      */
     private void processHeader() {
@@ -396,8 +396,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     /**
-     * Processes the body of the GRPC compression frame. A single compression frame may contain
-     * several GRPC messages within it.
+     * Processes the body of the gRPC compression frame. A single compression frame may contain
+     * several gRPC messages within it.
      */
     private void processBody() {
         ByteBufOrStream msg = compressedFlag ? getCompressedBody() : getUncompressedBody();

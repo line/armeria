@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -242,7 +242,7 @@ public interface RequestContext extends AttributeMap {
     /**
      * Returns the {@link ByteBufAllocator} for this {@link RequestContext}. Any buffers created by this
      * {@link ByteBufAllocator} must be
-     * <a href="http://netty.io/wiki/reference-counted-objects.html">reference-counted</a>. If you don't know
+     * <a href="https://netty.io/wiki/reference-counted-objects.html">reference-counted</a>. If you don't know
      * what this means, you should probably use {@code byte[]} or {@link ByteBuffer} directly instead
      * of calling this method.
      */

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -156,7 +156,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                                             // Only the URL prefix, each method is served at a different path.
                                             path + serviceName + '/',
                                             "",
-                                            // No default mime type for GRPC, so just pick arbitrarily for now.
+                                            // No default mime type for gRPC, so just pick arbitrarily for now.
                                             // TODO(anuraag): Consider allowing default mime type to be null.
                                             Iterables.getFirst(supportedMediaTypes,
                                                                GrpcSerializationFormats.PROTO.mediaType()),
@@ -233,7 +233,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         return new MethodInfo(
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),
-                // GRPC methods always take a single request parameter of message type.
+                // gRPC methods always take a single request parameter of message type.
                 ImmutableList.of(
                         new FieldInfo(
                                 "request",
