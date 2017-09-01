@@ -61,7 +61,7 @@ task trimShadedJar(type: ProGuardTask,
                    group: 'Build',
                    description: 'Shrinks the shaded JAR by removing unused classes.') {
 
-    publishedJavaProjects.each {
+    javaProjects.each {
         dependsOn it.tasks.shadedJar
         dependsOn it.tasks.shadedTestJar
     }
@@ -78,7 +78,7 @@ task trimShadedJar(type: ProGuardTask,
     // Include the shaded JARs from other modules as well
     // so that ProGuard does not trim the classes and methods that are used actually.
     injars tasks.shadedTestJar.archivePath
-    publishedJavaProjects.each {
+    javaProjects.each {
         if (it != project) {
             injars it.tasks.shadedJar.archivePath
             injars it.tasks.shadedTestJar.archivePath,
@@ -89,7 +89,7 @@ task trimShadedJar(type: ProGuardTask,
     }
 
     def dependencyJars = []
-    publishedJavaProjects.each {
+    javaProjects.each {
         // NB: ProGuardTask picks the dependencies added *after* evaluation correctly
         //     because libraryjar() intentionally keeps the specified dependencies as-is.
         //     See ProGuardTask.libraryjar() for more information.
