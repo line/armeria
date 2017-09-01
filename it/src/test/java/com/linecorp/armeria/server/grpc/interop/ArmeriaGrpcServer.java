@@ -19,6 +19,9 @@ package com.linecorp.armeria.server.grpc.interop;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+
+import com.linecorp.armeria.server.Server;
 
 import io.grpc.Status;
 import io.grpc.internal.InternalServer;
@@ -31,13 +34,11 @@ import io.grpc.internal.ServerTransport;
  */
 public class ArmeriaGrpcServer implements InternalServer {
 
-    private final com.linecorp.armeria.server.Server armeriaServer;
+    private final Server armeriaServer;
 
-    private boolean isShutdown;
-    private boolean isTerminated;
     private CompletableFuture<Void> shutdownFuture;
 
-    public ArmeriaGrpcServer(com.linecorp.armeria.server.Server armeriaServer) {
+    public ArmeriaGrpcServer(Server armeriaServer) {
         this.armeriaServer = armeriaServer;
     }
 
@@ -57,6 +58,11 @@ public class ArmeriaGrpcServer implements InternalServer {
             @Override
             public void shutdownNow(Status reason) {
                 armeriaServer.stop();
+            }
+
+            @Override
+            public ScheduledExecutorService getScheduledExecutorService() {
+                return null;
             }
 
             @Override

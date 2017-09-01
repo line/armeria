@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.server.grpc.interop;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.security.cert.CertificateException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -38,7 +35,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.ManagedChannel;
-import io.grpc.internal.GrpcUtil;
+import io.grpc.Server;
+import io.grpc.netty.GrpcSslContexts;
 import io.grpc.okhttp.NegotiationType;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.okhttp.internal.Platform;
@@ -49,8 +47,6 @@ import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
@@ -68,29 +64,27 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     private static final AtomicReference<ServiceRequestContext> ctxCapture = new AtomicReference<>();
 
     private static SelfSignedCertificate ssc;
+    private static Server server;
 
     /** Starts the server with HTTPS. */
     @BeforeClass
-    public static void startServer() {
+    public static void startServer() throws Exception {
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
 
-        try {
-            ssc = new SelfSignedCertificate("example.com");
-            ServerBuilder sb = new ServerBuilder()
-                    .port(0, SessionProtocol.HTTPS)
-                    .defaultMaxRequestLength(16 * 1024 * 1024)
-                    .sslContext(
-                            SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                                             .applicationProtocolConfig(ALPN)
-                                             .trustManager(TestUtils.loadCert("ca.pem"))
-                                             .ciphers(TestUtils.preferredTestCiphers(),
-                                                    SupportedCipherSuiteFilter.INSTANCE)
-                                             .build());
-            startStaticServer(new ArmeriaGrpcServerBuilder(sb, new GrpcServiceBuilder(), ctxCapture));
-        } catch (IOException | CertificateException ex) {
-            throw new RuntimeException(ex);
-        }
+        ssc = new SelfSignedCertificate("example.com");
+        ServerBuilder sb = new ServerBuilder()
+                .port(0, SessionProtocol.HTTPS)
+                .defaultMaxRequestLength(16 * 1024 * 1024)
+                .sslContext(GrpcSslContexts.forServer(ssc.certificate(), ssc.privateKey())
+                                           .applicationProtocolConfig(ALPN)
+                                           .trustManager(TestUtils.loadCert("ca.pem"))
+                                           .build());
+
+        final ArmeriaGrpcServerBuilder builder = new ArmeriaGrpcServerBuilder(sb, new GrpcServiceBuilder(),
+                                                                              ctxCapture);
+        startStaticServer(builder);
+        server = builder.builtServer();
     }
 
     @AfterClass
@@ -112,26 +106,19 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     @Override
     protected ManagedChannel createChannel() {
         try {
-            final int port = getPortViaReflection();
+            final int port = server.getPort();
             return OkHttpChannelBuilder
                     .forAddress("localhost", port)
                     .negotiationType(NegotiationType.TLS)
                     .maxInboundMessageSize(16 * 1024 * 1024)
                     .connectionSpec(ConnectionSpec.MODERN_TLS)
-                    .overrideAuthority(GrpcUtil.authorityFromHostAndPort("example.com", port))
+                    .overrideAuthority("example.com:" + port)
                     .sslSocketFactory(TestUtils.newSslSocketFactoryForCa(
                             Platform.get().getProvider(), ssc.certificate()))
                     .build();
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
-    }
-
-    private int getPortViaReflection() throws Exception {
-        // Use reflection to access package-private method.
-        Method getPort = AbstractInteropTest.class.getDeclaredMethod("getPort");
-        getPort.setAccessible(true);
-        return (int) getPort.invoke(this);
     }
 
     @Override

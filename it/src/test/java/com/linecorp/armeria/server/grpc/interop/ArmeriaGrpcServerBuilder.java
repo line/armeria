@@ -32,6 +32,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
+import io.grpc.Server;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServerStreamTracer.Factory;
 import io.grpc.internal.AbstractServerImplBuilder;
@@ -39,9 +40,10 @@ import io.grpc.internal.InternalServer;
 
 public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaGrpcServerBuilder> {
 
-    private final com.linecorp.armeria.server.ServerBuilder armeriaServerBuilder;
+    private final ServerBuilder armeriaServerBuilder;
     private final GrpcServiceBuilder grpcServiceBuilder;
     private final AtomicReference<ServiceRequestContext> ctxCapture;
+    private Server builtServer;
 
     public ArmeriaGrpcServerBuilder(ServerBuilder armeriaServerBuilder,
                                     GrpcServiceBuilder grpcServiceBuilder,
@@ -49,6 +51,10 @@ public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaG
         this.armeriaServerBuilder = armeriaServerBuilder;
         this.grpcServiceBuilder = grpcServiceBuilder;
         this.ctxCapture = ctxCapture;
+    }
+
+    public Server builtServer() {
+        return builtServer;
     }
 
     @Override
@@ -78,6 +84,13 @@ public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaG
                                                                      return delegate.serve(ctx, req);
                                                                  }));
         return new ArmeriaGrpcServer(armeriaServerBuilder.build());
+    }
+
+    @Override
+    public Server build() {
+        final Server server = super.build();
+        builtServer = server;
+        return server;
     }
 
     @SuppressWarnings("unchecked")
