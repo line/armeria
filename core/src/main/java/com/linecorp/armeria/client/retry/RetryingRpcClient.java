@@ -17,10 +17,8 @@ package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
 
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -38,6 +36,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+     *
+     * @param retryStrategy the retry strategy
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy) {
@@ -46,6 +46,9 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
     /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+     *
+     * @param retryStrategy the retry strategy
+     * @param defaultMaxAttempts the default number of max attempts for retry
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy, int defaultMaxAttempts) {
@@ -54,70 +57,78 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     }
 
     /**
+     * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
+     *
+     * @param retryStrategy the retry strategy
+     * @param defaultMaxAttempts the default number of max attempts for retry
+     * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
+     *                                            the timeout
+     */
+    public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
+    newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
+                 int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+        return new RetryingRpcClientBuilder(retryStrategy)
+                .defaultMaxAttempts(defaultMaxAttempts)
+                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt).newDecorator();
+    }
+
+    /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     RetryingRpcClient(Client<RpcRequest, RpcResponse> delegate,
-                      RetryStrategy<RpcRequest, RpcResponse> retryStrategy, int defaultMaxAttempts) {
-        super(delegate, retryStrategy, defaultMaxAttempts);
+                      RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
+                      int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+        super(delegate, retryStrategy, defaultMaxAttempts, responseTimeoutMillisForEachAttempt);
     }
 
     @Override
     protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         final DefaultRpcResponse responseFuture = new DefaultRpcResponse();
-        retry(ctx, req, () -> {
-            try {
-                resetResponseTimeout(ctx);
-                return delegate().execute(ctx, req);
-            } catch (Exception e) {
-                return new DefaultRpcResponse(e);
-            }
-        }, responseFuture);
+        doExecute0(ctx, req, responseFuture);
         return responseFuture;
     }
 
-    private void retry(ClientRequestContext ctx, RpcRequest req, Supplier<RpcResponse> action,
-                       DefaultRpcResponse responseFuture) {
-        RpcResponse response = action.get();
+    private void doExecute0(ClientRequestContext ctx, RpcRequest req, DefaultRpcResponse responseFuture) {
+        if (!setResponseTimeout(ctx)) {
+            responseFuture.completeExceptionally(ResponseTimeoutException.get());
+            return;
+        }
+        final RpcResponse response = executeDelegate(ctx, req);
+
         retryStrategy().shouldRetry(req, response).handle(voidFunction((backoffOpt, unused) -> {
             if (backoffOpt.isPresent()) {
-                retry0(ctx, backoffOpt.get(), req, action, responseFuture);
+                long nextDelay;
+                try {
+                    nextDelay = getNextDelay(ctx, backoffOpt.get());
+                } catch (Exception e) {
+                    responseFuture.completeExceptionally(e);
+                    return;
+                }
+
+                EventLoop eventLoop = ctx.contextAwareEventLoop();
+                if (nextDelay <= 0) {
+                    eventLoop.execute(() -> doExecute0(ctx, req, responseFuture));
+                } else {
+                    eventLoop.schedule(() -> doExecute0(ctx, req, responseFuture),
+                                       nextDelay, TimeUnit.MILLISECONDS);
+                }
             } else {
                 response.handle(voidFunction((result, thrown) -> {
-                    if (thrown != null) {
-                        final Optional<Backoff> backoffOnExceptionOpt =
-                                retryStrategy().shouldRetry(req, thrown);
-                        if (backoffOnExceptionOpt.isPresent()) {
-                            retry0(ctx, backoffOnExceptionOpt.get(), req, action, responseFuture);
-                        } else { // exception that is not for retry occurred
-                            responseFuture.completeExceptionally(thrown);
-                        }
-                    } else { // normal response
+                    if (result != null) {
                         responseFuture.complete(result);
+                    } else {
+                        responseFuture.completeExceptionally(thrown);
                     }
                 }));
             }
         }));
     }
 
-    private void retry0(ClientRequestContext ctx, Backoff backoff, RpcRequest req,
-                        Supplier<RpcResponse> action, DefaultRpcResponse responseFuture) {
-        long nextDelay;
+    private RpcResponse executeDelegate(ClientRequestContext ctx, RpcRequest req) {
         try {
-            nextDelay = getNextDelay(ctx, backoff);
-            if (nextDelay < 0) { // exceed the number of max attempt
-                responseFuture.completeExceptionally(RetryGiveUpException.get());
-                return;
-            }
-        } catch (ResponseTimeoutException e) {
-            responseFuture.completeExceptionally(e);
-            return;
-        }
-
-        EventLoop eventLoop = ctx.contextAwareEventLoop();
-        if (nextDelay <= 0) {
-            eventLoop.submit(() -> retry(ctx, req, action, responseFuture));
-        } else {
-            eventLoop.schedule(() -> retry(ctx, req, action, responseFuture), nextDelay, TimeUnit.MILLISECONDS);
+            return delegate().execute(ctx, req);
+        } catch (Exception e) {
+            return new DefaultRpcResponse(e);
         }
     }
 }
