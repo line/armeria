@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.util.CompletionActions;
  */
 public class DeferredStreamMessage<T> implements StreamMessage<T> {
 
-    private static final PendingSubscription<Object> NO_OP_PENDING_SUBSCRIPTION =
+    private static final PendingSubscription<Object> NO_OP_ALREADY_SUBSCRIBED =
             new PendingSubscription<>(null, null, false);
 
     @SuppressWarnings({ "AtomicFieldUpdaterIssues", "rawtypes" })
@@ -84,11 +84,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
             }).exceptionally(CompletionActions::log);
         }
 
-        @SuppressWarnings("unchecked")
-        final PendingSubscription<? super T> ps = pendingSubscription;
-        if (ps != null) {
-            subscribeToDelegate(delegate, ps);
-        }
+        safeOnSubscribeToDelegate();
     }
 
     /**
@@ -179,14 +175,10 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         if (!pendingSubscriptionUpdater.compareAndSet(this, null, newPendingSubscription)) {
             failLateSubscriber(subscriber, executor,
                                new IllegalStateException("subscribed by other subscriber already"));
-        }
-
-        final StreamMessage<T> delegate = this.delegate;
-        if (delegate == null) {
             return;
         }
 
-        subscribeToDelegate(delegate, newPendingSubscription);
+        safeOnSubscribeToDelegate();
     }
 
     private void failLateSubscriber(Subscriber<? super T> subscriber, Executor executor, Throwable cause) {
@@ -207,19 +199,27 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         }
     }
 
-    private void subscribeToDelegate(StreamMessage<T> delegate,
-                                     PendingSubscription<? super T> pendingSubscription) {
+    private void safeOnSubscribeToDelegate() {
 
-        if (pendingSubscription == NO_OP_PENDING_SUBSCRIPTION ||
-            !pendingSubscriptionUpdater.compareAndSet(this,
-                                                      pendingSubscription,
-                                                      NO_OP_PENDING_SUBSCRIPTION)) {
+        if (delegate == null) {
             return;
         }
 
-        final Subscriber<? super T> subscriber = pendingSubscription.subscriber;
-        final Executor executor = pendingSubscription.executor;
-        final boolean withPooledObjects = pendingSubscription.withPooledObjects;
+        final PendingSubscription<? super T> subscription = pendingSubscription;
+
+        if (subscription == null || subscription == NO_OP_ALREADY_SUBSCRIBED) {
+            return;
+        }
+
+        if (!pendingSubscriptionUpdater.compareAndSet(this,
+                                                      subscription,
+                                                      NO_OP_ALREADY_SUBSCRIBED)) {
+            return;
+        }
+
+        final Subscriber<? super T> subscriber = subscription.subscriber;
+        final Executor executor = subscription.executor;
+        final boolean withPooledObjects = subscription.withPooledObjects;
         if (executor == null) {
             delegate.subscribe(subscriber, withPooledObjects);
         } else {
