@@ -41,10 +41,10 @@ import com.linecorp.armeria.client.pool.PoolKey;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
@@ -106,7 +106,7 @@ public final class ClientFactoryBuilder {
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
     private KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener = DEFAULT_CONNECTION_POOL_LISTENER;
-    private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private MeterRegistry meterRegistry = NoopMeterRegistry.get();
 
     /**
      * Creates a new instance.
