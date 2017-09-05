@@ -42,10 +42,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 
@@ -107,7 +107,7 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
-    private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private MeterRegistry meterRegistry = NoopMeterRegistry.get();
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
 
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
