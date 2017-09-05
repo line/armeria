@@ -16,12 +16,24 @@
 
 package com.linecorp.armeria.internal.metric;
 
-import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.Type.EVICTION_COUNT;
+import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.Type.EVICTION_WEIGHT;
+import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.Type.HIT_COUNT;
+import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.Type.LOAD_FAILURE_COUNT;
+import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.Type.LOAD_SUCCESS_COUNT;
+import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.Type.MISS_COUNT;
+import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.Type.TOTAL_LOAD_TIME;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.DoubleSupplier;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.ToDoubleFunction;
+
+import javax.annotation.Nullable;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -47,63 +59,145 @@ public final class CaffeineMetricSupport {
 
     public static void setup(MeterRegistry registry, MeterId id, Cache<?, ?> cache, Ticker ticker) {
         final CaffeineMetrics metrics = MicrometerUtil.register(
-                registry, id, CaffeineMetrics.class, (r, i) -> new CaffeineMetrics(r, i, cache, ticker));
-        checkState(metrics.cache == cache, "Meters for a different Cache have been registered for id: %s", id);
+                registry, id, CaffeineMetrics.class, CaffeineMetrics::new);
+        metrics.add(cache, ticker);
     }
 
     private CaffeineMetricSupport() {}
 
+    enum Type {
+        HIT_COUNT,
+        MISS_COUNT,
+        EVICTION_COUNT,
+        EVICTION_WEIGHT,
+        LOAD_SUCCESS_COUNT,
+        LOAD_FAILURE_COUNT,
+        TOTAL_LOAD_TIME;
+
+        static final int count = Type.values().length;
+    }
+
     private static final class CaffeineMetrics {
-        private final Cache<?, ?> cache;
-        private final Ticker ticker;
 
-        private volatile long lastStatsUpdateTime;
-        private CacheStats cacheStats;
-        private long estimatedSize;
+        private final MeterRegistry parent;
+        private final MeterId id;
+        private final List<CacheReference> cacheRefs = new ArrayList<>(2);
+        private final AtomicBoolean hasLoadingCache = new AtomicBoolean();
 
-        CaffeineMetrics(MeterRegistry parent, MeterId id, Cache<?, ?> cache, Ticker ticker) {
-            requireNonNull(parent, "parent");
-            this.cache = requireNonNull(cache, "cache");
-            this.ticker = requireNonNull(ticker, "ticker");
+        /**
+         * An array whose each element is the sum of the garbage-collected {@link Cache} stats.
+         * {@link Type#ordinal()} signifies the index of this array.
+         */
+        private final double[] statsForGarbageCollected = new double[Type.count];
 
-            updateCacheStats(true);
+        CaffeineMetrics(MeterRegistry parent, MeterId id) {
+            this.parent = requireNonNull(parent, "parent");
+            this.id = requireNonNull(id, "id");
 
             final String requests = id.name("requests");
             parent.more().counter(requests, id.tags("result", "hit"), this,
-                                  new CacheStatFunction(() -> cacheStats.hitCount()));
+                                  func(HIT_COUNT, ref -> ref.cacheStats.hitCount()));
             parent.more().counter(requests, id.tags("result", "miss"), this,
-                                  new CacheStatFunction(() -> cacheStats.missCount()));
+                                  func(MISS_COUNT, ref -> ref.cacheStats.missCount()));
+            parent.more().counter(id.name("evictions"), id.tags(), this,
+                                  func(EVICTION_COUNT, ref -> ref.cacheStats.evictionCount()));
+            parent.more().counter(id.name("evictionWeight"), id.tags(), this,
+                                  func(EVICTION_WEIGHT, ref -> ref.cacheStats.evictionWeight()));
+            parent.gauge(id.name("estimatedSize"), id.tags(), this,
+                         func(null, ref -> ref.estimatedSize));
+        }
 
-            if (cache instanceof LoadingCache) {
-                final String loads = id.name("loads");
-                parent.more().counter(loads, id.tags("result", "success"), this,
-                                      new CacheStatFunction(() -> cacheStats.loadSuccessCount()));
-                parent.more().counter(loads, id.tags("result", "failure"), this,
-                                      new CacheStatFunction(() -> cacheStats.loadFailureCount()));
+        void add(Cache<?, ?> cache, Ticker ticker) {
+            synchronized (cacheRefs) {
+                for (CacheReference ref : cacheRefs) {
+                    if (ref.get() == cache) {
+                        // Do not aggregate more than once for the same instance.
+                        return;
+                    }
+                }
 
-                final DoubleSupplier totalLoadTimeSupplier;
-                totalLoadTimeSupplier = () -> cacheStats.totalLoadTime();
-                parent.more().counter(id.name("loadDuration"), id.tags(), this,
-                                      new CacheStatFunction(totalLoadTimeSupplier));
+                cacheRefs.add(new CacheReference(cache, ticker));
             }
 
-            parent.more().counter(id.name("evictions"), id.tags(), this,
-                                  new CacheStatFunction(() -> cacheStats.evictionCount()));
-            parent.more().counter(id.name("evictionWeight"), id.tags(), this,
-                                  new CacheStatFunction(() -> cacheStats.evictionWeight()));
-            parent.gauge(id.name("estimatedSize"), id.tags(), this,
-                         new CacheStatFunction(() -> estimatedSize));
+            if (cache instanceof LoadingCache && hasLoadingCache.compareAndSet(false, true)) {
+                // Add the following meters only for LoadingCache and only once.
+                final String loads = id.name("loads");
+
+                parent.more().counter(loads, id.tags("result", "success"), this,
+                                      func(LOAD_SUCCESS_COUNT, ref -> ref.cacheStats.loadSuccessCount()));
+                parent.more().counter(loads, id.tags("result", "failure"), this,
+                                      func(LOAD_FAILURE_COUNT, ref -> ref.cacheStats.loadFailureCount()));
+                parent.more().counter(id.name("loadDuration"), id.tags(), this,
+                                      func(TOTAL_LOAD_TIME, ref -> ref.cacheStats.totalLoadTime()));
+            }
         }
 
-        private void updateCacheStats() {
-            updateCacheStats(false);
+        private ToDoubleFunction<CaffeineMetrics> func(@Nullable Type type,
+                                                       ToDoubleFunction<CacheReference> valueFunction) {
+            return value -> {
+                double sum = 0;
+                synchronized (cacheRefs) {
+                    for (Iterator<CacheReference> i = cacheRefs.iterator(); i.hasNext();) {
+                        final CacheReference ref = i.next();
+                        final boolean garbageCollected = ref.updateCacheStats();
+                        if (!garbageCollected) {
+                            sum += valueFunction.applyAsDouble(ref);
+                        } else {
+                            // Remove the garbage-collected reference from the list to prevent it from
+                            // growing infinitely.
+                            i.remove();
+
+                            // Accumulate the stats of the removed reference so the counters do not decrease.
+                            // NB: We do not accumulate 'estimatedSize' because it's not a counter but a gauge.
+                            final CacheStats stats = ref.cacheStats;
+                            statsForGarbageCollected[HIT_COUNT.ordinal()] += stats.hitCount();
+                            statsForGarbageCollected[MISS_COUNT.ordinal()] += stats.missCount();
+                            statsForGarbageCollected[EVICTION_COUNT.ordinal()] += stats.evictionCount();
+                            statsForGarbageCollected[EVICTION_WEIGHT.ordinal()] += stats.evictionWeight();
+                            statsForGarbageCollected[LOAD_SUCCESS_COUNT.ordinal()] += stats.loadSuccessCount();
+                            statsForGarbageCollected[LOAD_FAILURE_COUNT.ordinal()] += stats.loadFailureCount();
+                            statsForGarbageCollected[TOTAL_LOAD_TIME.ordinal()] += stats.totalLoadTime();
+                        }
+                    }
+
+                    if (type != null) {
+                        // Add the value of the garbage-collected caches.
+                        sum += statsForGarbageCollected[type.ordinal()];
+                    }
+                }
+
+                return sum;
+            };
+        }
+    }
+
+    private static final class CacheReference extends WeakReference<Cache<?, ?>> {
+
+        private final Ticker ticker;
+        private volatile long lastStatsUpdateTime;
+        private CacheStats cacheStats = CacheStats.empty();
+        private long estimatedSize;
+
+        CacheReference(Cache<?, ?> cache, Ticker ticker) {
+            super(requireNonNull(cache, "cache"));
+            this.ticker = requireNonNull(ticker, "ticker");
+            updateCacheStats(true);
         }
 
-        private void updateCacheStats(boolean force) {
+        boolean updateCacheStats() {
+            return updateCacheStats(false);
+        }
+
+        private boolean updateCacheStats(boolean force) {
+            final Cache<?, ?> cache = get();
+            if (cache == null) {
+                return true; // GC'd
+            }
+
             final long currentTimeNanos = ticker.read();
             if (!force) {
                 if (currentTimeNanos - lastStatsUpdateTime < UPDATE_INTERVAL_NANOS) {
-                    return;
+                    return false; // Not GC'd
                 }
             }
 
@@ -113,21 +207,7 @@ public final class CaffeineMetricSupport {
             // Write the volatile field last so that cacheStats and estimatedSize are visible
             // after reading the volatile field.
             lastStatsUpdateTime = currentTimeNanos;
-        }
-    }
-
-    private static final class CacheStatFunction implements ToDoubleFunction<CaffeineMetrics> {
-
-        private final DoubleSupplier valueSupplier;
-
-        CacheStatFunction(DoubleSupplier valueSupplier) {
-            this.valueSupplier = valueSupplier;
-        }
-
-        @Override
-        public double applyAsDouble(CaffeineMetrics value) {
-            value.updateCacheStats();
-            return valueSupplier.getAsDouble();
+            return false; // Not GC'd
         }
     }
 }
