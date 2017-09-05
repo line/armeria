@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
@@ -169,9 +170,13 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        stage.whenComplete((delegate, cause) -> {
-            if (cause != null) {
-                res.close(cause);
+        stage.whenComplete((delegate, thrown) -> {
+            if (thrown != null) {
+                if (thrown instanceof CompletionException && thrown.getCause() != null) {
+                    res.close(thrown.getCause());
+                } else {
+                    res.close(thrown);
+                }
             } else if (delegate == null) {
                 res.close(new NullPointerException("delegate stage produced a null response: " + stage));
             } else {
