@@ -19,10 +19,12 @@ package com.linecorp.armeria.testing.server.webapp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.regex.Pattern;
 
@@ -85,7 +87,8 @@ public abstract class WebAppContainerTest {
             buildDir = f.getParentFile().getParentFile();
         }
 
-        assert buildDir.getPath().endsWith("testing" + File.separatorChar + "build");
+        assert buildDir.getPath().endsWith("testing" + File.separatorChar + "build") ||
+               buildDir.getPath().endsWith("testing" + File.separatorChar + "out"); // IntelliJ IDEA
 
         final File webAppRoot = new File(
                 buildDir.getParentFile(), "src" + File.separatorChar + "main" + File.separatorChar + "webapp");
@@ -322,6 +325,40 @@ public abstract class WebAppContainerTest {
                         "<p>ServerName: localhost</p>" +
                         "<p>ServerPort: 1111</p>" +
                         "</body></html>");
+            }
+        }
+    }
+
+    @Test
+    public void largeFile() throws Exception {
+        testLarge("/jsp/large.txt");
+    }
+
+    @Test
+    public void largeResponse() throws Exception {
+        testLarge("/jsp/large.jsp");
+    }
+
+    /**
+     * Tests large response.
+     */
+    protected void testLarge(String path) throws IOException {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(server().uri(path)))) {
+                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
+                        .startsWith("text/plain");
+
+                final byte[] content = EntityUtils.toByteArray(res.getEntity());
+                // Check if the content-length header matches.
+                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
+                        .isEqualTo(String.valueOf(content.length));
+
+                // Check if the content contains what's expected.
+                assertThat(Arrays.stream(CR_OR_LF.split(new String(content, StandardCharsets.UTF_8)))
+                                 .map(String::trim)
+                                 .filter(s -> !s.isEmpty())
+                                 .count()).isEqualTo(1024);
             }
         }
     }

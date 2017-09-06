@@ -388,11 +388,9 @@ public final class TomcatService implements HttpService {
                         res.write(headers);
                         for (;;) {
                             final HttpData d = data.poll();
-                            if (d == null) {
+                            if (d == null || !res.write(d)) {
                                 break;
                             }
-
-                            res.write(d);
                         }
                         res.close();
                     } catch (Throwable t) {
@@ -495,8 +493,10 @@ public final class TomcatService implements HttpService {
             headers.set(HttpHeaderNames.CONTENT_TYPE, contentType);
         }
 
-        if (coyoteRes.getContentLengthLong() >= 0) {
-            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, coyoteRes.getContentLengthLong());
+        final long contentLength = coyoteRes.getBytesWritten(true); // 'true' will trigger flush.
+        final String method = coyoteRes.getRequest().method().toString();
+        if (!"HEAD".equals(method)) {
+            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, contentLength);
         }
 
         final MimeHeaders cHeaders = coyoteRes.getMimeHeaders();
