@@ -110,14 +110,12 @@ public class ArmeriaAutoConfiguration {
             return null;
         }
 
-        final boolean metricsEnabled = armeriaSettings.isEnableMetrics() && meterRegistry.isPresent();
+        final boolean metricsEnabled = armeriaSettings.isEnableMetrics();
         final MeterIdFunctionFactory meterIdFuncFactory =
                 meterIdFunctionFactory.orElse(MeterIdFunctionFactory.DEFAULT);
 
         final ServerBuilder server = new ServerBuilder();
-        if (metricsEnabled) {
-            server.meterRegistry(meterRegistry.get());
-        }
+        meterRegistry.ifPresent(server::meterRegistry);
 
         if (armeriaSettings.getGracefulShutdownQuietPeriodMillis() != -1 &&
             armeriaSettings.getGracefulShutdownTimeoutMillis() != -1) {
