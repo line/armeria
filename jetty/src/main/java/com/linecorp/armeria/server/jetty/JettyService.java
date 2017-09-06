@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -243,7 +244,7 @@ public final class JettyService implements HttpService {
 
             boolean success = false;
             try {
-                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport();
+                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport(req.method());
                 final HttpChannel httpChannel = new HttpChannel(
                         connector,
                         connector.getHttpConfiguration(),
@@ -282,10 +283,9 @@ public final class JettyService implements HttpService {
             res.write(headers);
             for (;;) {
                 final HttpData data = out.poll();
-                if (data == null) {
+                if (data == null || !res.write(data)) {
                     break;
                 }
-                res.write(data);
             }
             res.close();
         } catch (Throwable t) {
@@ -298,7 +298,7 @@ public final class JettyService implements HttpService {
             ServiceRequestContext ctx, AggregatedHttpMessage aReq, Request jReq) {
 
         jReq.setDispatcherType(DispatcherType.REQUEST);
-        jReq.setAsyncSupported(true, "armeria");
+        jReq.setAsyncSupported(false, "armeria");
         jReq.setSecure(ctx.sessionProtocol().isTls());
         jReq.setMetaData(toRequestMetadata(ctx, aReq));
 
@@ -344,14 +344,25 @@ public final class JettyService implements HttpService {
 
         final HttpHeaders headers = HttpHeaders.of(HttpStatus.valueOf(info.getStatus()));
         info.getFields().forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
+
+        if (transport.method != HttpMethod.HEAD) {
+            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, transport.contentLength);
+        }
+
         return headers;
     }
 
     private static final class ArmeriaHttpTransport implements HttpTransport {
 
+        final HttpMethod method;
         final Queue<HttpData> out = new ArrayDeque<>();
+        long contentLength;
         MetaData.Response info;
         Throwable cause;
+
+        ArmeriaHttpTransport(HttpMethod method) {
+            this.method = method;
+        }
 
         @Override
         public void send(MetaData.Response info, boolean head,
@@ -377,6 +388,7 @@ public final class JettyService implements HttpService {
                 out.add(HttpData.of(data));
             }
 
+            contentLength += length;
             callback.succeeded();
         }
 
