@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.metric.MeterIdFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusExporterHttpService;
+import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -84,7 +84,7 @@ public class PrometheusMetricsIntegrationTest {
                             (registry, log) -> meterId(registry, log, "server", "Bar"))));
 
             sb.service("/internal/prometheus/metrics",
-                       new PrometheusExporterHttpService(prometheusRegistry));
+                       new PrometheusExpositionService(prometheusRegistry));
         }
     };
 

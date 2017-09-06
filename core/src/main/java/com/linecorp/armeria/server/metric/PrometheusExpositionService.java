@@ -32,18 +32,21 @@ import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
 
 /**
- * Exports Prometheus metrics.
+ * Exposes Prometheus metrics in <a href="https://prometheus.io/docs/instrumenting/exposition_formats/">text
+ * format 0.0.4</a>.
  */
-public class PrometheusExporterHttpService extends AbstractHttpService {
+public class PrometheusExpositionService extends AbstractHttpService {
+
     private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
 
     private final CollectorRegistry collectorRegistry;
 
     /**
-     * Create a {@link PrometheusExporterHttpService} instance.
+     * Creates a new instance.
+     *
      * @param collectorRegistry Prometheus registry
      */
-    public PrometheusExporterHttpService(CollectorRegistry collectorRegistry) {
+    public PrometheusExpositionService(CollectorRegistry collectorRegistry) {
         requireNonNull(collectorRegistry, "collectorRegistry");
         this.collectorRegistry = collectorRegistry;
     }
