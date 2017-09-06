@@ -63,7 +63,7 @@ import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusExporterHttpService;
+import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
@@ -186,7 +186,7 @@ public class ArmeriaAutoConfiguration {
                 final CollectorRegistry prometheusRegistry =
                         ((PrometheusMeterRegistry) registry).getPrometheusRegistry();
                 server.service(armeriaSettings.getMetricsPath(),
-                               new PrometheusExporterHttpService(prometheusRegistry));
+                               new PrometheusExpositionService(prometheusRegistry));
             } else if (registry instanceof DropwizardMeterRegistry) {
                 final MetricRegistry dropwizardRegistry =
                         ((DropwizardMeterRegistry) registry).getDropwizardRegistry();
