@@ -165,8 +165,14 @@ public final class LoggingService<I extends Request, O extends Response> extends
         final LogLevel level =
                 log.responseCause() == null ? successfulResponseLogLevel : failedResponseLogLevel;
         if (level.isEnabled(logger)) {
-            level.log(logger, RESPONSE_FORMAT,
-                      log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer));
+            if (log.responseCause() == null) {
+                level.log(logger, RESPONSE_FORMAT,
+                          log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer));
+            } else {
+                level.log(logger, RESPONSE_FORMAT,
+                          log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer),
+                          log.responseCause());
+            }
         }
     }
 }
