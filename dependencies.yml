@@ -33,7 +33,7 @@ com.google.guava:
     - com.google.j2objc:j2objc-annotations
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.1' }
+  checkstyle: { version: '8.2' }
 
 com.spotify:
   completable-futures: { version: '0.3.1' }
@@ -49,15 +49,19 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.5.0'
+    version: &GRPC_VERSION '1.6.1'
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
   grpc-interop-testing:
     version: *GRPC_VERSION
     exclusions:
-    - io.grpc:grpc-netty
     - com.google.guava:guava-jdk5
+    - io.netty:netty-codec-http
+    - io.netty:netty-codec-http2
+    - io.netty:netty-codec-socks
+    - io.netty:netty-handler-proxy
+    - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
   grpc-okhttp: { version: *GRPC_VERSION }
   grpc-protobuf: { version: *GRPC_VERSION }
@@ -81,7 +85,7 @@ io.prometheus:
   simpleclient_common: { version: '0.0.26' }
 
 io.zipkin.brave:
-  brave: { version: &BRAVE_VERSION '4.5.2' }
+  brave: { version: &BRAVE_VERSION '4.6.0' }
 
 it.unimi.dsi:
   fastutil: { version: '8.1.0' }
