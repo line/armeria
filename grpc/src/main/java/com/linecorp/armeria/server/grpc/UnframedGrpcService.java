@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -52,7 +52,7 @@ import io.netty.buffer.ByteBuf;
 
 /**
  * A {@link SimpleDecoratingService} which allows {@link GrpcService} to serve requests without the framing
- * specified by the GRPC wire protocol. This can be useful for serving both legacy systems and GRPC clients with
+ * specified by the gRPC wire protocol. This can be useful for serving both legacy systems and gRPC clients with
  * the same business logic.
  *
  * <p>Limitations:
@@ -91,7 +91,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         final HttpHeaders clientHeaders = req.headers();
         final String contentType = clientHeaders.get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType == null) {
-            // All GRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
+            // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
             // the delegate return its usual error message.
             return delegate().serve(ctx, req);
         }
@@ -134,10 +134,10 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
-                                   "GRPC encoding is not supported for non-framed requests.");
+                                   "gRPC encoding is not supported for non-framed requests.");
         }
 
-        // All clients support no encoding, and we don't support GRPC encoding for non-framed requests, so just
+        // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
 

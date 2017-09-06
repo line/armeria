@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -258,7 +258,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     /**
-     * Armeria does not support {@link CallOptions} set by the user, however GRPC stubs set an {@link Executor}
+     * Armeria does not support {@link CallOptions} set by the user, however gRPC stubs set an {@link Executor}
      * within blocking stubs which is used to notify the stub when processing is finished. It's unclear why
      * the stubs use a loop and {@link java.util.concurrent.Future#isDone()} instead of just blocking on
      * {@link java.util.concurrent.Future#get}, but we make sure to run the {@link Executor} so the stub can

@@ -2,8 +2,8 @@
 .. _`ArmeriaRetrofit`: apidocs/index.html?com/linecorp/armeria/client/retrofit2/ArmeriaRetrofit.html
 .. _`com.linecorp.armeria.client.retrofit2`: apidocs/index.html?com/linecorp/armeria/client/retrofit2/package-summary.html
 .. _`Netty`: https://netty.io/
-.. _`OkHttp`: http://square.github.io/okhttp/
-.. _`Retrofit`: http://square.github.io/retrofit/
+.. _`OkHttp`: https://square.github.io/okhttp/
+.. _`Retrofit`: https://square.github.io/retrofit/
 
 .. _client-retrofit:
 

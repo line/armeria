@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -453,7 +453,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     /**
      * Sets the keep alive header as per:
-     * - http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
+     * - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
      */
     private void addKeepAliveHeaders(HttpRequest req, AggregatedHttpMessage res) {
         if (protocol == H1 || protocol == H1C) {
@@ -470,7 +470,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      * Sets the 'content-length' header to the response.
      */
     private static void setContentLength(HttpRequest req, AggregatedHttpMessage res) {
-        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+        // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
         // prohibits to send message body for below cases.
         // and in those cases, content should be empty.
         if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(res.status())) {

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -39,7 +39,7 @@ import com.google.protobuf.DescriptorProtos.ServiceDescriptorProto;
 import com.linecorp.armeria.server.docs.DocStringExtractor;
 
 /**
- * A DocString extractor for GRPC proto compiled descriptors.
+ * A DocString extractor for gRPC proto compiled descriptors.
  *
  * <p>To include docstrings in {@link com.linecorp.armeria.server.docs.DocService} pages,
  * configure the protobuf compiler to generate a descriptor set with source info and all imports

@@ -17,10 +17,10 @@ contact us if you need the CCLA (corporate contributor license agreement).
 
 ### Setting up your IDE
 
-You can import Armeria into your IDE ([IntelliJ IDEA](https://www.jetbrains.com/idea/) or [Eclipse](http://www.eclipse.org/)) as a Gradle project.
+You can import Armeria into your IDE ([IntelliJ IDEA](https://www.jetbrains.com/idea/) or [Eclipse](https://www.eclipse.org/)) as a Gradle project.
 
 - IntelliJ IDEA - See [Importing Project from Gradle Model](https://www.jetbrains.com/help/idea/2016.3/importing-project-from-gradle-model.html)
-- Eclipse - Use [Buildship Gradle Integration](http://marketplace.eclipse.org/content/buildship-gradle-integration)
+- Eclipse - Use [Buildship Gradle Integration](https://marketplace.eclipse.org/content/buildship-gradle-integration)
 
 After importing the project, import the IDE settings as well.
 
@@ -39,12 +39,12 @@ After importing the project, import the IDE settings as well.
 #### Eclipse
 
 - [`formatter.xml`](https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/formatter.xml) -
-  See [Code Formatter Preferences](http://help.eclipse.org/neon/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Freference%2Fpreferences%2Fjava%2Fcodestyle%2Fref-preferences-formatter.htm).
+  See [Code Formatter Preferences](https://help.eclipse.org/neon/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Freference%2Fpreferences%2Fjava%2Fcodestyle%2Fref-preferences-formatter.htm).
 - [`formatter.importorder`](https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/formatter.importorder) -
-  See [Organize Imports Preferences](http://help.eclipse.org/neon/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Freference%2Fpreferences%2Fjava%2Fcodestyle%2Fref-preferences-organize-imports.htm).
+  See [Organize Imports Preferences](https://help.eclipse.org/neon/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Freference%2Fpreferences%2Fjava%2Fcodestyle%2Fref-preferences-organize-imports.htm).
 - [`cleanup.xml`](https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/cleanup.xml) -
-  See [Clean Up Preferences](http://help.eclipse.org/neon/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Freference%2Fpreferences%2Fjava%2Fcodestyle%2Fref-preferences-cleanup.htm).
-- Configure [Java Save Actions Preferences](http://help.eclipse.org/neon/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Freference%2Fpreferences%2Fjava%2Feditor%2Fref-preferences-save-actions.htm).
+  See [Clean Up Preferences](https://help.eclipse.org/neon/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Freference%2Fpreferences%2Fjava%2Fcodestyle%2Fref-preferences-cleanup.htm).
+- Configure [Java Save Actions Preferences](https://help.eclipse.org/neon/index.jsp?topic=%2Forg.eclipse.jdt.doc.user%2Freference%2Fpreferences%2Fjava%2Feditor%2Fref-preferences-save-actions.htm).
   <details><summary>Click here to see the screenshot.</summary>
     <img src="https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/save_actions.png">
   </details>
@@ -86,7 +86,7 @@ LINE Corporation licenses this file to you under the Apache License,
 version 2.0 (the "License"); you may not use this file except in compliance
 with the License. You may obtain a copy of the License at:
 
-  http://www.apache.org/licenses/LICENSE-2.0
+  https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS, WITHOUT

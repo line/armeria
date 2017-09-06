@@ -1,8 +1,8 @@
-.. _`Logback`: http://logback.qos.ch/
+.. _`Logback`: https://logback.qos.ch/
 .. _`RequestContextExportingAppender`: apidocs/index.html?com/linecorp/armeria/common/logback/RequestContextExportingAppender.html
 .. _`BuiltInProperty`: apidocs/index.html?com/linecorp/armeria/common/logback/BuiltInProperty.html
 .. _`RequestContext`: apidocs/index.html?com/linecorp/armeria/common/RequestContext.html
-.. _`MDC`: http://logback.qos.ch/manual/mdc.html
+.. _`MDC`: https://logback.qos.ch/manual/mdc.html
 
 .. _advanced-logging:
 

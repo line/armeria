@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -59,8 +59,8 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 
 /**
- * A {@link AbstractHttpService} that implements the GRPC wire protocol. Interfaces and binding logic of GRPC
- * generated stubs are supported, however compatibility with GRPC's core java API is best effort.
+ * A {@link AbstractHttpService} that implements the gRPC wire protocol. Interfaces and binding logic of gRPC
+ * generated stubs are supported, however compatibility with gRPC's core java API is best effort.
  *
  * <p>Unsupported features:
  * <ul>
@@ -69,7 +69,7 @@ import io.grpc.Status;
  *         the client. Any usages of {@link Metadata} in the server will be silently ignored.
  *     </li>
  *     <li>
- *         There are some differences in the HTTP/2 error code returned from an Armeria server vs GRPC server
+ *         There are some differences in the HTTP/2 error code returned from an Armeria server vs gRPC server
  *         when dealing with transport errors and deadlines. Generally, the client will see an UNKNOWN status
  *         when the official server may have returned CANCELED.
  *     </li>

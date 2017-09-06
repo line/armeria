@@ -5,7 +5,7 @@
  *  version 2.0 (the "License"); you may not use this file except in compliance
  *  with the License. You may obtain a copy of the License at:
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -25,27 +25,27 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.SerializationFormat;
 
 /**
- * GRPC-related {@link SerializationFormat} instances.
+ * gRPC-related {@link SerializationFormat} instances.
  */
 public final class GrpcSerializationFormats {
 
     /**
-     * GRPC protobuf serialization format.
+     * gRPC protobuf serialization format.
      */
     public static final SerializationFormat PROTO = SerializationFormat.of("gproto");
 
     /**
-     * GRPC JSON serialization format.
+     * gRPC JSON serialization format.
      */
     public static final SerializationFormat JSON = SerializationFormat.of("gjson");
 
     /**
-     * GRPC-web protobuf serialization format.
+     * gRPC-web protobuf serialization format.
      */
     public static final SerializationFormat PROTO_WEB = SerializationFormat.of("gproto-web");
 
     /**
-     * GRPC-web JSON serialization format.
+     * gRPC-web JSON serialization format.
      */
     public static final SerializationFormat JSON_WEB = SerializationFormat.of("gjson-web");
 
@@ -53,21 +53,21 @@ public final class GrpcSerializationFormats {
             PROTO, JSON, PROTO_WEB, JSON_WEB);
 
     /**
-     * Returns the set of all known GRPC serialization formats.
+     * Returns the set of all known gRPC serialization formats.
      */
     public static Set<SerializationFormat> values() {
         return GRPC_FORMATS;
     }
 
     /**
-     * Returns whether the specified {@link SerializationFormat} is GRPC.
+     * Returns whether the specified {@link SerializationFormat} is gRPC.
      */
     public static boolean isGrpc(SerializationFormat format) {
         return values().contains(requireNonNull(format, "format"));
     }
 
     /**
-     * Is a proto-based GRPC serialization format.
+     * Is a proto-based gRPC serialization format.
      */
     public static boolean isProto(SerializationFormat format) {
         requireNonNull(format, "format");
@@ -75,7 +75,7 @@ public final class GrpcSerializationFormats {
     }
 
     /**
-     * Is a json-based GRPC serialization format.
+     * Is a json-based gRPC serialization format.
      */
     public static boolean isJson(SerializationFormat format) {
         requireNonNull(format, "format");
@@ -83,7 +83,7 @@ public final class GrpcSerializationFormats {
     }
 
     /**
-     * Returns whether the specified {@link SerializationFormat} is GRPC-web, the subset of GRPC that supports
+     * Returns whether the specified {@link SerializationFormat} is gRPC-web, the subset of gRPC that supports
      * browsers.
      */
     public static boolean isGrpcWeb(SerializationFormat format) {

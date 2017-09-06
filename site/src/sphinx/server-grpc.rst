@@ -1,4 +1,4 @@
-.. _gRPC: http://www.grpc.io/
+.. _gRPC: https://grpc.io/
 .. _gRPC-Web: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
 .. _gRPC-Web-Client: https://github.com/improbable-eng/grpc-web
 .. _GrpcSerializationFormats: https://github.com/line/armeria/blob/master/grpc/src/main/java/com/linecorp/armeria/common/grpc/GrpcSerializationFormats.java

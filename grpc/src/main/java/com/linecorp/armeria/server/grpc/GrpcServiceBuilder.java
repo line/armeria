@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -43,7 +43,7 @@ import io.grpc.DecompressorRegistry;
 import io.grpc.ServerServiceDefinition;
 
 /**
- * Constructs a {@link GrpcService} to serve GRPC services from within Armeria.
+ * Constructs a {@link GrpcService} to serve gRPC services from within Armeria.
  */
 public final class GrpcServiceBuilder {
 
@@ -67,7 +67,7 @@ public final class GrpcServiceBuilder {
     private boolean enableUnframedRequests;
 
     /**
-     * Adds a GRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as
+     * Adds a gRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as
      * what's returned by {@link BindableService#bindService()}.
      */
     public GrpcServiceBuilder addService(ServerServiceDefinition service) {
@@ -76,7 +76,7 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds a GRPC {@link BindableService} to this {@link GrpcServiceBuilder}. Most GRPC service
+     * Adds a gRPC {@link BindableService} to this {@link GrpcServiceBuilder}. Most gRPC service
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
@@ -119,7 +119,7 @@ public final class GrpcServiceBuilder {
         requireNonNull(formats, "formats");
         for (SerializationFormat format : formats) {
             if (!GrpcSerializationFormats.isGrpc(format)) {
-                throw new IllegalArgumentException("Not a GRPC serialization format: " + format);
+                throw new IllegalArgumentException("Not a gRPC serialization format: " + format);
             }
         }
         supportedSerializationFormats = ImmutableSet.copyOf(formats);
@@ -152,10 +152,10 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets whether the service handles requests not framed using the GRPC wire protocol. Such requests should
+     * Sets whether the service handles requests not framed using the gRPC wire protocol. Such requests should
      * only have the serialized message as the request content, and the response content will only have the
      * serialized response message. Supporting unframed requests can be useful, for example, when migrating an
-     * existing service to GRPC.
+     * existing service to gRPC.
      *
      * <p>Limitations:
      * <ul>
@@ -174,7 +174,7 @@ public final class GrpcServiceBuilder {
 
     /**
      * Constructs a new {@link GrpcService} that can be bound to
-     * {@link com.linecorp.armeria.server.ServerBuilder}. As GRPC services themselves are mounted at a path that
+     * {@link com.linecorp.armeria.server.ServerBuilder}. As gRPC services themselves are mounted at a path that
      * corresponds to their protobuf package, you will almost always want to bind to a prefix, e.g. by using
      * {@link com.linecorp.armeria.server.ServerBuilder#serviceUnder(String, Service)}.
      */

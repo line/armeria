@@ -3,7 +3,7 @@ Armeria
 
 Please visit the official web site for more information:
 
-  * http://line.github.io/armeria/
+  * https://line.github.io/armeria/
 
 Copyright 2015 LINE Corporation
 
@@ -11,7 +11,7 @@ LINE Corporation licenses this file to you under the Apache License,
 version 2.0 (the "License"); you may not use this file except in compliance
 with the License. You may obtain a copy of the License at:
 
-  http://www.apache.org/licenses/LICENSE-2.0
+  https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -30,7 +30,7 @@ Redistributed binaries
 This product contains Bootstrap, distributed by Twitter, Inc:
 
   * License: license/LICENSE.bootstrap.mit.txt (MIT License)
-  * Homepage: http://getbootstrap.com/
+  * Homepage: https://getbootstrap.com/
 
 This product contains Font Awesome, distributed by Dave Gandy:
 
@@ -43,8 +43,7 @@ This product contains Handlebars, distributed by Yehuda Katz:
   * License: license/LICENSE.handlebars.mit.txt (MIT License)
   * Homepage: http://handlebarsjs.com/
 
-This product contains jQuery, distributed by jQuery Foundation and other
-contributors:
+This product contains jQuery, distributed by jQuery Foundation and other contributors:
 
   * License: licenses/LICENSE.jquery.mit.txt (MIT License)
   * Homepage: https://jquery.org/
@@ -54,12 +53,11 @@ This product contains ReadTheDocs.org Sphinx Theme, distributed by Dave Snider:
   * License: license/LICENSE.rtdtheme.mit.txt (MIT License)
   * Homepage: https://github.com/snide/sphinx_rtd_theme
 
-This product contains Source Sans Pro and Source Code Pro fonts, distributed
-by Adobe Systems Incorporated:
+This product contains Source Sans Pro and Source Code Pro fonts, distributed by Adobe Systems Incorporated:
 
   * License: licenses/LICENSE.source.ofl11.txt (SIL Open Font License v1.1)
-  * Homepage: http://adobe-fonts.github.io/source-sans-pro/
-              http://adobe-fonts.github.io/source-code-pro/
+  * Homepage: https://adobe-fonts.github.io/source-sans-pro/
+              https://adobe-fonts.github.io/source-code-pro/
 
 
 Modified redistributions
@@ -73,27 +71,41 @@ This product contains a modified part of Brave, distributed by Zipkin.io:
 This product contains a modified part of gRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
-  * Homepage: http://www.grpc.io/
+  * Homepage: https://grpc.io/
+
+This product contains a modified part of Guava, distributed by Google:
+
+  * License: licenses/LICENSE.guava.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/google/guava
 
 This product contains a modified part of json-minify, distributed by Kyle Simpson:
 
-  * License: licenses/LICENSE.json-minify.mit.txt (New BSD License)
+  * License: licenses/LICENSE.json-minify.mit.txt (MIT License)
   * Homepage: https://github.com/getify/JSON.minify
 
 This product contains a modified part of Netty, distributed by Netty.io:
 
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
-  * Homepage: http://netty.io/
+  * Homepage: https://netty.io/
 
-This product contains a modified part of Twitter Commons, distributed by Twitter,
-Inc:
+This product contains a modified part of Twitter Commons, distributed by Twitter, Inc:
 
   * License: license/LICENSE.twitter.al20.txt (Apache License v2.0)
-  * Homepage: http://twitter.github.io/commons/
+  * Homepage: https://twitter.github.io/commons/
 
 
 Dependencies
 ============
+
+This product depends on AssertJ, distributed by the AssertJ authors:
+
+  * License: licenses/LICENSE.assertj.al20.txt (Apache License v2.0)
+  * Homepage: https://joel-costigliola.github.io/assertj/
+
+This product depends on Awaitility, distributed by the Awaitility authors:
+
+  * License: licenses/LICENSE.awaitility.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/awaitility/awaitility
 
 This product depends on Brave, distributed by Zipkin.io:
 
@@ -105,15 +117,20 @@ This product depends on Caffeine, distributed by Ben Manes:
   * License: licenses/LICENSE.caffeine.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/ben-manes/caffeine
 
+This product depends on completable-futures, distributed by Spotify AB:
+
+  * License: license/LICENSE.completable-futures.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/spotify/completable-futures
+
 This product depends on Dropwizard Metrics, distributed by Coda Hale:
 
   * License: licenses/LICENSE.dropwizard.al20.txt (Apache License v2.0)
   * Homepage: http://metrics.dropwizard.io/
 
-This product depends on EasyMock, distributed by Easymock contributors:
+This product depends on FastUtil, distributed by Sebastiano Vigna:
 
-  * License: licenses/LICENSE.easymock.al20.txt (Apache License v2.0)
-  * Homepage: http://easymock.org/
+  * License: licenses/LICENSE.fastutil.al20.txt (Apache License v2.0)
+  * Homepage: http://fastutil.di.unimi.it/
 
 This product depends on FindBugs-JSR305, distributed by
 
@@ -123,7 +140,7 @@ This product depends on FindBugs-JSR305, distributed by
 This product depends on gRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
-  * Homepage: http://www.grpc.io/
+  * Homepage: https://grpc.io/
 
 This product depends on Guava, distributed by Google:
 
@@ -135,11 +152,15 @@ This product depends on Hamcrest, distributed by hamcrest.org:
   * License: licenses/LICENSE.hamcrest.bsd.txt (BSD License)
   * Homepage: http://hamcrest.org/
 
-This product depends on Apache HttpComponents, distributed by Apache Software
-Foundation:
+This product depends on Hibernate Validator, distributed by Red Hat, Inc:
+
+  * License: licenses/LICENSE.hibernate-validator.al20.txt (Apache License v2.0)
+  * Homepage: http://hibernate.org/validator/
+
+This product depends on Apache HttpComponents, distributed by Apache Software Foundation:
 
   * License: licenses/LICENSE.httpcomponents.al20.txt (Apache License v2.0)
-  * Homepage: http://hc.apache.org/
+  * Homepage: https://hc.apache.org/
 
 This product depends on Jackson, distributed by FasterXML, LLC:
 
@@ -151,15 +172,20 @@ This product depends on Javassist, distributed by Shigeru Chiba:
   * License: licenses/LICENSE.javassist.mpl11.html (Mozilla Public License v1.1)
   * Homepage: http://www.javassist.org/
 
+This product depends on javax.inject API, distributed by the JSR-330 Expert Group:
+
+  * License: licenses/LICENSE.javax-inject.al20.txt (Apache License v2.0)
+  * Homepage: https://javax-inject.github.io/javax-inject/
+
+This product depends on javax.validation API, distributed by Red Hat, Inc:
+
+  * License: licenses/LICENSE.javax-validation.al20.txt (Apache License v2.0)
+  * Homepage: http://beanvalidation.org/
+
 This product depends on Jetty, distributed by Eclipse Foundation:
 
   * License: licenses/LICENSE.jetty.al20.txt (Apache License v2.0)
-  * Homepage: http://www.eclipse.org/jetty/
-
-This product depends on jMock, distributed by jMock.org:
-
-  * License: licenses/LICENSE.jmock.bsd.txt (BSD License)
-  * Homepage: http://www.jmock.org/
+  * Homepage: https://www.eclipse.org/jetty/
 
 This product depends on JsonUnit, distributed by Lukáš Křečan:
 
@@ -171,15 +197,20 @@ This product depends on jUnit, distributed by jUnit.org:
   * License: licenses/LICENSE.junit.epl10.html (Eclipse Public License v1.0)
   * Homepage: http://junit.org/
 
+This product depends on Apache Kafka, distributed by Apache Software Foundation:
+
+  * License: licenses/LICENSE.kafka.al20.txt (Apache License v2.0)
+  * Homepage: https://kafka.apache.org/
+
 This product depends on Logback, distributed by QOS.ch:
 
   * License: licenses/LICENSE.logback.epl10.html (Eclipse Public License v1.0)
-  * Homepage: http://logback.qos.ch/
+  * Homepage: https://logback.qos.ch/
 
 This product depends on Micrometer, distributed by Pivotal Software, Inc:
 
   * License: licenses/LICENSE.micrometer.al20.txt (Apache License v2.0)
-  * Homepage: http://micrometer.io/
+  * Homepage: https://micrometer.io/
 
 This product depends on Mockito, distributed by Mockito contributors:
 
@@ -189,12 +220,17 @@ This product depends on Mockito, distributed by Mockito contributors:
 This product depends on Netty, distributed by Netty.io:
 
   * License: licenses/LICENSE.netty.al20.txt (Apache License v2.0)
-  * Homepage: http://netty.io/
+  * Homepage: https://netty.io/
+
+This product depends on protobuf-jackson, distributed by Choko:
+
+  * License: licenses/LICENSE.protobuf-jackson.mit.txt (MIT License)
+  * Homepage: https://github.com/curioswitch/curiostack
 
 This product depends on Prometheus, distributed by the Prometheus authors:
 
   * License: licenses/LICENSE.prometheus.al20.txt (Apache License v2.0)
-  * Homepage: http://prometheus.io/
+  * Homepage: https://prometheus.io/
 
 This product depends on Reactive Streams API, distributed by Reactive-Streams.org:
 
@@ -206,19 +242,37 @@ This product depends on Reflections, distributed by ronmamo:
   * License: licenses/LICENSE.reflections.wtfpl.txt (WTFPL)
   * Homepage: https://github.com/ronmamo/reflections
 
+This product depends on Retrofit, distributed by Square:
+
+  * License: licenses/LICENSE.retrofit.al20.txt (Apache License v2.0)
+  * Homepage: https://square.github.io/retrofit/
+
 This product depends on SLF4J, distributed by QOS.ch:
 
   * License: licenses/LICENSE.slf4j.mit.txt (MIT License)
-  * Homepage: http://slf4j.org/
+  * Homepage: https://www.slf4j.org/
 
-This product depends on Apache Thrift, distributed by Apache Software
-Foundation:
+This product depends on Spring Boot, distributed by Pivotal Software, Inc:
+
+  * License: licenses/LICENSE.spring.al20.txt (Apache License v2.0)
+  * Homepage: https://spring.io/
+
+This product depends on Apache Thrift, distributed by Apache Software Foundation:
 
   * License: licenses/LICENSE.thrift.al20.txt (Apache License v2.0)
-  * Homepage: http://thrift.apache.org/
+  * Homepage: https://thrift.apache.org/
 
-This product depends on Apache Tomcat, distributed by Apache Software
-Foundation:
+This product depends on Apache Tomcat, distributed by Apache Software Foundation:
 
-  * License: licenses/LICENSE.tomcat.al20.txt (Apache Licensr v2.0)
-  * Homepage: http://tomcat.apache.org/
+  * License: licenses/LICENSE.tomcat.al20.txt (Apache License v2.0)
+  * Homepage: https://tomcat.apache.org/
+
+This product depends on Apache ZooKeeper, distributed by Apache Software Foundation:
+
+  * License: licenses/LICENSE.zookeeper.al20.txt (Apache License v2.0)
+  * Homepage: https://zookeeper.apache.org/
+
+This product depends on ZooKeeper JUnit, distributed by Peter Nerg:
+
+  * License: licenses/LICENSE.zookeeper-junit.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/pnerg/zookeeper-junit

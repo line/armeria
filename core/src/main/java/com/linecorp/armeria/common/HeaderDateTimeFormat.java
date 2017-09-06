@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -20,7 +20,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -74,7 +74,7 @@ final class HeaderDateTimeFormat {
     /**
      * A variant of the first obsolete format, which handles 20th century years such as 1994.
      *
-     * @see <a href="http://stackoverflow.com/a/29496149">http://stackoverflow.com/a/29496149</a>
+     * @see <a href="https://stackoverflow.com/a/29496149">http://stackoverflow.com/a/29496149</a>
      */
     private static final DateTimeFormatter format2a =
             new DateTimeFormatterBuilder().parseLenient()
