@@ -115,10 +115,12 @@ public class LoggingServiceTest {
     public void defaults_error() throws Exception {
         LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
-        when(log.responseCause()).thenReturn(new IllegalStateException("Failed"));
+        final IllegalStateException cause = new IllegalStateException("Failed");
+        when(log.responseCause()).thenReturn(cause);
         service.serve(ctx, REQUEST);
         verify(logger).warn(LoggingService.RESPONSE_FORMAT,
-                            "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT);
+                            "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT,
+                            cause);
     }
 
     @Test
