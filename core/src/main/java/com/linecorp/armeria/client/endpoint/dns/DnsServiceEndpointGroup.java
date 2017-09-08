@@ -78,7 +78,7 @@ public class DnsServiceEndpointGroup extends DynamicEndpointGroup implements Aut
      * @param hostname the hostname to query DNS queries for.
      */
     public static DnsServiceEndpointGroup of(String hostname) {
-        return DnsServiceEndpointGroup.of(hostname);
+        return DnsServiceEndpointGroup.of(hostname, CommonPools.workerGroup().next());
     }
 
     /**
