@@ -345,7 +345,7 @@ public class HttpFileServiceTest {
     }
 
     private static String httpDate(Date date) {
-        return DateFormatter.format(new Date());
+        return DateFormatter.format(date);
     }
 
     private static String newUri(String path) {
