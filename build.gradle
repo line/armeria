@@ -18,6 +18,7 @@ buildscript {
 
 apply plugin: 'com.google.osdetector'
 apply plugin: 'build-time-tracker'
+apply plugin: 'signing'
 
 ext {
     // The path to the 'git' command
@@ -59,6 +60,20 @@ ext {
             '&copy; Copyright ' + "${project.property('inceptionYear')}&ndash;${LocalDateTime.now().year} " +
             '<a href="https://linecorp.com/en/">LINE Corporation</a>. ' +
             'All rights reserved.'
+
+    isReleaseVersion = { !(project.version =~ /-SNAPSHOT$/) }
+    isPublishing = { gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null }
+    isSigning = {
+        signing.signatory != null && (rootProject.ext.isReleaseVersion() || rootProject.hasProperty('sign'))
+    }
+
+    gradle.taskGraph.whenReady {
+        // Do *NOT* proceed if a user is publishing a release version and signatory is missing.
+        if (rootProject.ext.isPublishing() && rootProject.ext.isReleaseVersion() && signing.signatory == null) {
+            throw new InvalidUserDataException(
+                    'Cannot publish a release version without a GPG key; missing signatory')
+        }
+    }
 }
 
 // Print the build time summary to the console
@@ -103,11 +118,6 @@ configure(javaProjects) {
     // Common properties and functions.
     ext {
         pomFile = file("${project.buildDir}/generated-pom.xml")
-
-        isReleaseVersion = { !(project.version =~ /-SNAPSHOT$/) }
-        isPublishing = { gradle.taskGraph.allTasks.find { it.name =~ /(?:^|:)publish[^:]*ToMaven[^:]*$/ } != null }
-        isSigning = { signing.signatory != null && (project.ext.isReleaseVersion() || project.hasProperty('sign')) }
-
         thriftPath = "${rootProject.projectDir}/gradle/thrift/thrift.${osdetector.classifier}"
         onIdeImport = { Closure action ->
             if (!requestedTaskNames.empty) {
@@ -474,14 +484,14 @@ configure(javaProjects) {
 
         // Generate source/javadoc JARs only when publishing.
         tasks.sourceJar.onlyIf {
-            project.ext.isSigning() ||
-            project.ext.isPublishing() ||
+            rootProject.ext.isSigning() ||
+            rootProject.ext.isPublishing() ||
             requestedTaskNames.find { it =~ /(?:^|:)sourceJar$/ }
         }
         [tasks.javadoc, tasks.javadocJar].each {
             it.onlyIf {
-                project.ext.isSigning() ||
-                project.ext.isPublishing() ||
+                rootProject.ext.isSigning() ||
+                rootProject.ext.isPublishing() ||
                 requestedTaskNames.find { it =~ /(?:^|:)javadoc(?:Jar)?$/ }
             }
         }
@@ -495,7 +505,7 @@ configure(javaProjects) {
         }
 
         signing {
-            required { project.ext.isSigning() }
+            required { rootProject.ext.isSigning() }
             sign configurations.archives
         }
 
@@ -504,7 +514,7 @@ configure(javaProjects) {
                 maven {
                     if (project.hasProperty('publish.url')) {
                         url project.findProperty('publish.url')
-                    } else if (project.ext.isReleaseVersion()) {
+                    } else if (rootProject.ext.isReleaseVersion()) {
                         url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
                     } else {
                         url 'https://oss.sonatype.org/content/repositories/snapshots/'
@@ -684,7 +694,7 @@ configure(javaProjects) {
                     }
 
                     // Add the .asc signatures.
-                    if (project.ext.isSigning()) {
+                    if (rootProject.ext.isSigning()) {
                         // Add the signature to pom.xml.
                         pom.withXml {
                             writeTo(project.ext.pomFile)
@@ -728,7 +738,7 @@ configure(javaProjects) {
                 dependsOn(project.tasks.signArchives)
             }
             tasks.signArchives {
-                onlyIf { project.ext.isSigning() }
+                onlyIf { rootProject.ext.isSigning() }
             }
         }
 
