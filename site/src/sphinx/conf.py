@@ -70,7 +70,6 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_path = ['_themes']
 html_short_title = project_short
 html_static_path = ['_static']
-html_use_smartypants = True
 html_use_index = True
 html_show_sourcelink = False
 htmlhelp_basename = project_short
