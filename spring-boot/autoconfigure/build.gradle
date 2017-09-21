@@ -12,7 +12,6 @@ managedDependencies {
     compile 'org.springframework.boot:spring-boot-autoconfigure'
     compile 'org.springframework.boot:spring-boot-starter-logging'
 
-    testCompile 'org.springframework.boot:spring-boot-starter-web'
     testCompile 'org.springframework.boot:spring-boot-starter-test'
     testCompile 'org.hibernate:hibernate-validator'
 }

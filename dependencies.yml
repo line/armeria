@@ -70,7 +70,12 @@ io.grpc:
 
 io.micrometer:
   micrometer-core: { version: &MICROMETER_VERSION '0.10.0.RELEASE' }
-  micrometer-spring-legacy: { version: *MICROMETER_VERSION }
+  micrometer-spring-legacy:
+    version: *MICROMETER_VERSION
+    exclusions:
+    - org.springframework.boot:spring-boot-actuator
+    - org.springframework:spring-web
+    - org.springframework:spring-webmvc
 
 io.netty:
   netty-codec-http2: { version: &NETTY_VERSION '4.1.15.Final' }
