@@ -166,16 +166,27 @@ samp::before, samp::after {
   content: "";
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
+}
+
 /* Use justify-align with hypenation */
-p {
+p, .rst-content li {
   text-align: justify;
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
+/* Insert space for the nested list which comes after a paragraph. */
+.rst-content li > p + ul,
+.rst-content li > p + ol {
+  padding-bottom: 1em;
+}
+
+/* Do not insert bottom margin if it's the last child. */
+.rst-content li:last-child > .admonition:last-child {
+  margin-bottom: 0;
 }
 
 /* Do not use monospace font for download links */
