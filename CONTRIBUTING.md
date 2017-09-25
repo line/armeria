@@ -48,7 +48,7 @@ After importing the project, import the IDE settings as well.
   <details><summary>Click here to see the screenshot.</summary>
     <img src="https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/save_actions.png">
   </details>
-- Although optional, if you want to run Checkstyle from Eclipse, Install the
+- Although optional, if you want to run Checkstyle from Eclipse, install the
   [Eclipse Checkstyle Plugin](http://eclipse-cs.sourceforge.net/), import and activate
   the rule file at `settings/checkstyle/checkstyle.xml`.
   - Set the 'Type' to 'External Configuration File'.
@@ -67,7 +67,7 @@ to save the reviewer's time.
 - Evaluate all warnings emitted by the 'LINE OSS' inspection profile.
   - Try to fix them all and use the `@SuppressWarnings` annotation if it's a false positive.
 
-#### Keep the build pass
+#### Always make the build pass
 
 Make sure your change does not break the build.
 
