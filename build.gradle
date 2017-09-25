@@ -829,7 +829,9 @@ allprojects {
             // Open an external link in a new tab/window.
             for(var i in document.links) {
               var l = document.links[i];
-              if (l.href && l.href.indexOf("http") === 0) {
+              if (l.href &&
+                  l.href.indexOf("//line.github.io/") < 0 &&
+                  l.href.indexOf("http") === 0) {
                 l.target = "_blank";
               }
             }
