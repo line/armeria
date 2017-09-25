@@ -47,7 +47,9 @@ import io.micrometer.core.instrument.stats.quantile.WindowSketchQuantiles;
  */
 public final class MoreMeters {
 
-    private static final double[] DEFAULT_QUANTILES = { 0.5, 0.75, 0.95, 0.98, 0.99, 0.999, 1.0 };
+    // TODO(trustin): Re-enable 1.0 if micrometer fixes IndexOutOfBoundsException.
+    //                https://github.com/micrometer-metrics/micrometer/issues/139
+    private static final double[] DEFAULT_QUANTILES = { 0.5, 0.75, 0.95, 0.98, 0.99, 0.999 /* , 1.0 */ };
     private static final Logger logger = LoggerFactory.getLogger(MoreMeters.class);
 
     private static final String METER_ID_FQCN = "io.micrometer.core.instrument.AbstractMeterRegistry$MeterId";
