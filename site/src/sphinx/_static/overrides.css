@@ -203,3 +203,8 @@ p, .rst-content li {
 .rst-content .line-block {
   margin-left: 0px;
 }
+
+/* Adjust the height of the top navbar */
+.wy-nav-top {
+  line-height: 44px;
+}
