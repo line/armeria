@@ -33,9 +33,12 @@ html, body, .wy-grid-for-nav {
   font-size: inherit;
 }
 
-.wy-side-nav-search > a, .wy-side-nav-search .wy-dropdown > a,
-.wy-nav-top > a {
+.wy-side-nav-search > a, .wy-side-nav-search .wy-dropdown > a {
   font-weight: inherit;
+}
+
+.wy-nav-top > a {
+  font-size: 125%;
 }
 
 .wy-side-nav-search > a {
@@ -206,5 +209,5 @@ p, .rst-content li {
 
 /* Adjust the height of the top navbar */
 .wy-nav-top {
-  line-height: 44px;
+  line-height: 43px;
 }
