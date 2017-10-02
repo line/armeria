@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.api.tasks.wrapper.Wrapper.DistributionType
 import org.yaml.snakeyaml.Yaml
 
 import java.time.LocalDateTime
@@ -11,13 +12,11 @@ buildscript {
     dependencies {
         classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
         classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
-        classpath 'net.rdrei.android.buildtimetracker:gradle-plugin:0.10.0'
         classpath 'org.yaml:snakeyaml:1.18'
     }
 }
 
 apply plugin: 'com.google.osdetector'
-apply plugin: 'build-time-tracker'
 apply plugin: 'signing'
 
 ext {
@@ -76,13 +75,9 @@ ext {
     }
 }
 
-// Print the build time summary to the console
-buildtimetracker {
-  reporters {
-    summary {
-      ordered true
-    }
-  }
+// Wrapper settings
+task wrapper(type: Wrapper) {
+    distributionType = DistributionType.ALL
 }
 
 // Configure all projects
