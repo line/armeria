@@ -39,8 +39,8 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.stats.quantile.CKMSQuantiles;
 import io.micrometer.core.instrument.stats.quantile.Quantiles;
-import io.micrometer.core.instrument.stats.quantile.WindowSketchQuantiles;
 
 /**
  * Provides utilities for accessing {@link MeterRegistry}.
@@ -102,7 +102,13 @@ public final class MoreMeters {
         // (1) Frugal2U is by far the fastest, but can take a while to converge.
         // (2) CKMS is slower but isn’t a successive approximation approach.
         // (3) Window Sketch is the slowest, but the quantile is sensitive to recent samples.
-        return new WindowSketchQuantiles.Builder().quantiles(DEFAULT_QUANTILES).create();
+        // See http://micrometer.io/docs/prometheus#_quantiles for more information.
+
+        final CKMSQuantiles.Builder builder = new CKMSQuantiles.Builder();
+        for (double q : DEFAULT_QUANTILES) {
+            builder.quantile(q, 0.01);
+        }
+        return builder.create();
     }
 
     /**
