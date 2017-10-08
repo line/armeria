@@ -24,42 +24,42 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.spring.ArmeriaMeterBindersTest.TestConfiguration;
+import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithoutMeterTest.NoMeterTestConfiguration;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.spring.export.prometheus.EnablePrometheusMetrics;
-
+/**
+ * This uses {@link ArmeriaAutoConfiguration} for integration tests.
+ * application-autoConfTest.yml will be loaded with minimal settings to make it work.
+ */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = NoMeterTestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
-@DirtiesContext
-@EnablePrometheusMetrics
-public class ArmeriaMeterBindersTest {
+public class ArmeriaAutoConfigurationWithoutMeterTest {
 
     @SpringBootApplication
-    public static class TestConfiguration {
-
+    public static class NoMeterTestConfiguration {
         @Bean
         public HttpServiceRegistrationBean okService() {
             return new HttpServiceRegistrationBean()
                     .setServiceName("okService")
                     .setService(new AbstractHttpService() {
                         @Override
-                        protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                             HttpResponseWriter res) throws Exception {
+                        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                                throws Exception {
                             res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
                         }
                     })
@@ -69,16 +69,21 @@ public class ArmeriaMeterBindersTest {
     }
 
     @Inject
-    private MeterRegistry registry;
+    private Server server;
+
+    private String newUrl(String scheme) {
+        final int port = server.activePort().get().localAddress().getPort();
+        return scheme + "://127.0.0.1:" + port;
+    }
 
     @Test
-    public void testDefaultMetrics() throws Exception {
-        assertThat(MoreMeters.measureAll(registry)).containsKeys(
-                "classes.loaded#value",
-                "cpu.total#value",
-                "jvm.buffer.count#value{id=direct}",
-                "jvm.memory.max#value{id=Code Cache}",
-                "logback.events#count{level=debug}",
-                "threads.daemon#value");
+    public void testHttpServiceRegistrationBean() throws Exception {
+        HttpClient client = HttpClient.of(newUrl("h1c"));
+
+        HttpResponse response = client.get("/ok");
+
+        AggregatedHttpMessage msg = response.aggregate().get();
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThat(msg.content().toStringUtf8()).isEqualTo("ok");
     }
 }
