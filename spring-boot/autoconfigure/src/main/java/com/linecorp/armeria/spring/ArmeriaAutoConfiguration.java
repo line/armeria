@@ -68,6 +68,7 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
 import io.netty.util.NetUtil;
@@ -181,7 +182,7 @@ public class ArmeriaAutoConfiguration {
         }
 
         if (metricsEnabled && !Strings.isNullOrEmpty(armeriaSettings.getMetricsPath())) {
-            final MeterRegistry registry = meterRegistry.get();
+            final MeterRegistry registry = meterRegistry.orElse(Metrics.globalRegistry);
             if (registry instanceof PrometheusMeterRegistry) {
                 final CollectorRegistry prometheusRegistry =
                         ((PrometheusMeterRegistry) registry).getPrometheusRegistry();
