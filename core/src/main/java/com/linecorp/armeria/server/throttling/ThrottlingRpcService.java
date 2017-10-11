@@ -51,7 +51,7 @@ public class ThrottlingRpcService extends ThrottlingService<RpcRequest, RpcRespo
     }
 
     /**
-     * Invoked when {@code req} is throttled. By default, this method responds with the
+     * Invoked when {@code req} is throttled. By default, this method responds with a
      * {@link ServiceUnavailableException}.
      */
     @Override

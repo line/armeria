@@ -52,7 +52,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * The {@link FileBasedDynamicThrottlingStrategy} will monitor a json mapping file for updates, whose format is
  * keys for every service API name with values is a string representation of {@link ThrottlingStrategy}.
  */
-public class FileBasedDynamicThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
+public class FileBasedDynamicThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T>
+        implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(FileBasedDynamicThrottlingStrategy.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Splitter COLON_SPLITTER = Splitter.on(':').trimResults();
@@ -105,6 +106,12 @@ public class FileBasedDynamicThrottlingStrategy<T extends Request> extends Throt
                 }
             } catch (ClosedWatchServiceException ignored) {
                 logger.info("Stopping hosts file watch thread.");
+            } finally {
+                try {
+                    watchService.close();
+                } catch (IOException e) {
+                    logger.warn("Exception occurred during closing watchService.", e);
+                }
             }
         });
         thread.setDaemon(true);
@@ -154,5 +161,10 @@ public class FileBasedDynamicThrottlingStrategy<T extends Request> extends Throt
     public CompletableFuture<Boolean> shouldThrottle(ServiceRequestContext ctx, T req) {
         String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method().name();
         return strategies.getOrDefault(method, ThrottlingStrategy.never()).shouldThrottle(ctx, req);
+    }
+
+    @Override
+    public void close() throws Exception {
+        watchService.close();
     }
 }

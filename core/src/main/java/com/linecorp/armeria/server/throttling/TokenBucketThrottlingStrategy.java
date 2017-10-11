@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A {@link ThrottlingStrategy} that throttles a request using
- * {@see <a href="http://en.wikipedia.org/wiki/Token_bucket">Token Bucket</a>}.
+ * <a href="http://en.wikipedia.org/wiki/Token_bucket">Token Bucket</a>.
  */
 public final class TokenBucketThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
     private final int tokenBucketCapacity;
@@ -41,8 +41,8 @@ public final class TokenBucketThrottlingStrategy<T extends Request> extends Thro
      * Creates a new strategy.
      */
     public TokenBucketThrottlingStrategy(int tokenBucketCapacity, int averageQPS, Duration refillInterval) {
-        checkArgument(tokenBucketCapacity > 0, "tokenBucketCapacity > 0");
-        checkArgument(averageQPS > 0, "averageQPS > 0");
+        checkArgument(tokenBucketCapacity > 0, "tokenBucketCapacity: %s (expected: > 0)", tokenBucketCapacity);
+        checkArgument(averageQPS > 0, "averageQPS: %s (expected: > 0)", averageQPS);
         requireNonNull(refillInterval, "refillInterval");
         this.tokenBucketCapacity = tokenBucketCapacity;
         this.refillInterval = LongMath.saturatedMultiply(averageQPS, refillInterval.toNanos());

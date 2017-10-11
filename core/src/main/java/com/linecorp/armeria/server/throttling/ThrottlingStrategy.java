@@ -28,27 +28,32 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Determines whether a request should be throttled.
  */
 public abstract class ThrottlingStrategy<T extends Request> {
+    private static final ThrottlingStrategy<?> NEVER = of((ctx, request) -> completedFuture(false));
+    private static final ThrottlingStrategy<?> ALWAYS = of((ctx, request) -> completedFuture(true));
+
     private static final AtomicInteger GLOBAL_STRATEGY_ID = new AtomicInteger();
 
     private final int strategyId = GLOBAL_STRATEGY_ID.getAndIncrement();
 
     /**
-     * A {@link ThrottlingStrategy} that defines a throttling should not be performed.
+     * Returns a singleton {@link ThrottlingStrategy} that never fails requests.
      */
+    @SuppressWarnings("unchecked")
     public static <T extends Request> ThrottlingStrategy<T> never() {
-        return of((ctx, request) -> completedFuture(false));
+        return (ThrottlingStrategy<T>) NEVER;
     }
 
     /**
-     * A {@link ThrottlingStrategy} that defines a throttling should be performed.
+     * Returns a singleton {@link ThrottlingStrategy} that always fails requests.
      */
+    @SuppressWarnings("unchecked")
     public static <T extends Request> ThrottlingStrategy<T> always() {
-        return of((ctx, request) -> completedFuture(true));
+        return (ThrottlingStrategy<T>) ALWAYS;
     }
 
     /**
-     * Creates a new {@link ThrottlingStrategy} that judge a request is needed to throttle or not
-     * using given {@link BiFunction} instance.
+     * Creates a new {@link ThrottlingStrategy} that determines whether a request should be throttled or not
+     * using a given {@link BiFunction} instance.
      */
     public static <T extends Request> ThrottlingStrategy<T> of(
             BiFunction<ServiceRequestContext, T, CompletableFuture<Boolean>> function) {
@@ -61,14 +66,14 @@ public abstract class ThrottlingStrategy<T extends Request> {
     }
 
     /**
-     * Returns whether a request should be throttled according to the given request.
+     * Returns whether a given request should be treated as failed before it is handled actually.
      */
     public abstract CompletableFuture<Boolean> shouldThrottle(ServiceRequestContext ctx, T request);
 
     /**
-     * Returns a name of this {@link ThrottlingStrategy}.
+     * Returns the name of this {@link ThrottlingStrategy}.
      */
     public String name() {
-        return "strategy" + strategyId;
+        return "throttling-strategy-" + strategyId;
     }
 }

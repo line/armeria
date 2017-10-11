@@ -29,6 +29,10 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public final class CircuitBreakerThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
     private final CircuitBreaker circuitBreaker;
 
+    /**
+     * Creates a new {@link ThrottlingStrategy} that determines whether a request should be throttled or not
+     * using a given {@code circuitBreaker}.
+     */
     public CircuitBreakerThrottlingStrategy(CircuitBreaker circuitBreaker) {
         this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
     }
