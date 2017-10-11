@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static com.linecorp.armeria.common.logging.LoggingDecorators.logRequest;
+import static com.linecorp.armeria.common.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -30,9 +32,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.logging.Sampler;
+import com.linecorp.armeria.internal.logging.Sampler;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 /**
@@ -110,7 +111,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
              Function.identity(),
              Function.identity(),
              Function.identity(),
-             Sampler.ALWAYS_SAMPLE);
+             Sampler.always());
     }
 
     /**
@@ -141,31 +142,14 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled()) {
-            ctx.log().addListener(this::logRequest, RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(this::logResponse, RequestLogAvailability.COMPLETE);
+            ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
+                                                    requestHeadersSanitizer, requestContentSanitizer),
+                                  RequestLogAvailability.REQUEST_END);
+            ctx.log().addListener(log -> logResponse(logger, log, successfulResponseLogLevel,
+                                                     failedResponseLogLevel, responseHeadersSanitizer,
+                                                     responseContentSanitizer),
+                                  RequestLogAvailability.COMPLETE);
         }
         return delegate().execute(ctx, req);
-    }
-
-    /**
-     * Logs a stringified request of {@link RequestLog}.
-     */
-    private void logRequest(RequestLog log) {
-        if (requestLogLevel.isEnabled(logger)) {
-            requestLogLevel.log(logger, REQUEST_FORMAT,
-                                log.toStringRequestOnly(requestHeadersSanitizer, requestContentSanitizer));
-        }
-    }
-
-    /**
-     * Logs a stringified response of {@link RequestLog}.
-     */
-    private void logResponse(RequestLog log) {
-        final LogLevel level =
-                log.responseCause() == null ? successfulResponseLogLevel : failedResponseLogLevel;
-        if (level.isEnabled(logger)) {
-            level.log(logger, RESPONSE_FORMAT,
-                      log.toStringResponseOnly(responseHeadersSanitizer, responseContentSanitizer));
-        }
     }
 }

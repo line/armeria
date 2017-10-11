@@ -21,12 +21,12 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.LoggingDelegateBuilder;
+import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 
 /**
  * Builds a new {@link LoggingClient}.
  */
-public class LoggingClientBuilder extends LoggingDelegateBuilder<LoggingClientBuilder> {
+public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientBuilder> {
 
     /**
      * Returns a newly-created {@link LoggingClient} decorating {@code delegate} based on the properties of

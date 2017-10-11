@@ -27,7 +27,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.internal.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -47,7 +47,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 // abstract for factory-method support on Java language level 7
 public abstract class Sampler {
 
-    public static final Sampler ALWAYS_SAMPLE = new Sampler() {
+    static final Sampler ALWAYS_SAMPLE = new Sampler() {
         @Override
         public boolean isSampled() {
             return true;
@@ -92,5 +92,12 @@ public abstract class Sampler {
         }
         checkArgument(rate >= 0.01f && rate < 1, "rate should be between 0.01 and 1: was %s", rate);
         return new CountingSampler(rate);
+    }
+
+    /**
+     * Returns a {@link Sampler} for full sampling.
+     */
+    public static Sampler always() {
+        return ALWAYS_SAMPLE;
     }
 }

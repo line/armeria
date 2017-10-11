@@ -24,15 +24,13 @@ import java.util.function.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.internal.logging.Sampler;
 
 /**
- * Builds a new {@link LoggingClient} or {@link LoggingService}.
+ * Builds a new logging decorator.
  */
-public class LoggingDelegateBuilder<T extends LoggingDelegateBuilder<T>> {
-
+public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     private static final Function<HttpHeaders, HttpHeaders> DEFAULT_HEADERS_SANITIZER = Function.identity();
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
 
@@ -43,7 +41,7 @@ public class LoggingDelegateBuilder<T extends LoggingDelegateBuilder<T>> {
     private Function<Object, Object> requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, Object> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
-    private Sampler sampler = Sampler.ALWAYS_SAMPLE;
+    private Sampler sampler = Sampler.always();
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
@@ -168,7 +166,7 @@ public class LoggingDelegateBuilder<T extends LoggingDelegateBuilder<T>> {
      */
     public T samplingRate(float samplingRate) {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
-        this.sampler = Sampler.create(samplingRate);
+        sampler = Sampler.create(samplingRate);
         return unsafeCast(this);
     }
 
@@ -180,7 +178,7 @@ public class LoggingDelegateBuilder<T extends LoggingDelegateBuilder<T>> {
     }
 
     @SuppressWarnings("unchecked")
-    private T unsafeCast(LoggingDelegateBuilder<T> self) {
+    private T unsafeCast(LoggingDecoratorBuilder<T> self) {
         return (T) self;
     }
 
@@ -191,8 +189,8 @@ public class LoggingDelegateBuilder<T extends LoggingDelegateBuilder<T>> {
                         responseContentSanitizer, sampler);
     }
 
-    private static <T extends LoggingDelegateBuilder<T>> String toString(
-            LoggingDelegateBuilder<T> self,
+    private static <T extends LoggingDecoratorBuilder<T>> String toString(
+            LoggingDecoratorBuilder<T> self,
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failureResponseLogLevel,
