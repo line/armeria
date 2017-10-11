@@ -25,7 +25,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.internal.logging.Sampler;
 
 /**
  * Builds a new logging decorator.
@@ -41,7 +40,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     private Function<Object, Object> requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, Object> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
-    private Sampler sampler = Sampler.always();
+    private float samplingRate = 1.0f;
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
@@ -166,15 +165,15 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
      */
     public T samplingRate(float samplingRate) {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
-        sampler = Sampler.create(samplingRate);
+        this.samplingRate = samplingRate;
         return unsafeCast(this);
     }
 
     /**
-     * Returns the {@link Sampler} at which to sample requests to log.
+     * Returns the rate at which to sample requests to log.
      */
-    public Sampler getSamplingRate() {
-        return sampler;
+    public float getSamplingRate() {
+        return samplingRate;
     }
 
     @SuppressWarnings("unchecked")
@@ -186,7 +185,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     public String toString() {
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
                         requestHeadersSanitizer, requestContentSanitizer, responseHeadersSanitizer,
-                        responseContentSanitizer, sampler);
+                        responseContentSanitizer, samplingRate);
     }
 
     private static <T extends LoggingDecoratorBuilder<T>> String toString(
@@ -198,12 +197,12 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
             Function<Object, Object> requestContentSanitizer,
             Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
             Function<Object, Object> responseContentSanitizer,
-            Sampler sampler) {
+            float samplingRate) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)
                                                  .add("failedResponseLogLevel", failureResponseLogLevel)
-                                                 .add("sampler", sampler);
+                                                 .add("samplingRate", samplingRate);
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
         }
