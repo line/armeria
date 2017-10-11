@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.internal;
 
+import java.util.Optional;
+
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.server.annotation.Optional;
+import com.linecorp.armeria.server.annotation.Default;
 
 /**
  * Holds the default values used in annotation attributes.
@@ -28,7 +30,7 @@ public final class DefaultValues {
     /**
      * A string constant defining unspecified values from users.
      *
-     * @see Optional#value()
+     * @see Default#value()
      */
     public static final String UNSPECIFIED = "\n\t\t\n\t\t\n\000\001\002\n\t\t\t\t\n";
 
@@ -44,6 +46,13 @@ public final class DefaultValues {
      */
     public static boolean isUnspecified(@Nullable String value) {
         return UNSPECIFIED.equals(value);
+    }
+
+    /**
+     * Returns the specified value if it is specified by a user.
+     */
+    public static Optional<String> getSpecifiedValue(@Nullable String value) {
+        return isSpecified(value) ? Optional.ofNullable(value) : Optional.empty();
     }
 
     private DefaultValues() {}

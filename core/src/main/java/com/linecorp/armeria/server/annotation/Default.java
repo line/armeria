@@ -24,18 +24,18 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies a parameter as an optional and provides the default value.
+ * Specifies the default value of an optional parameter.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
-public @interface Optional {
+public @interface Default {
 
     /**
      * The default value to use as a fallback when the request parameter is not provided or has an empty value.
-     * When {@link Optional} annotation exists but {@link Optional#value()} is not specified, {@code null}
+     * When {@link Default} annotation exists but {@link Default#value()} is not specified, {@code null}
      * value would be set if the parameter is not present in the request.
      *
-     * {@link Optional} annotation is not allowed for a path variable. If a user uses {@link Optional}
+     * {@link Default} annotation is not allowed for a path variable. If a user uses {@link Default}
      * annotation on a path variable, {@link IllegalArgumentException} would be raised.
      */
     String value() default UNSPECIFIED;

@@ -18,10 +18,14 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.Test;
 
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 
@@ -35,6 +39,7 @@ public class AnnotatedHttpServiceBuilderTest {
                 return null;
             }
         });
+
         new ServerBuilder().annotatedService(new Object() {
             @Path("/")
             @Get
@@ -42,6 +47,7 @@ public class AnnotatedHttpServiceBuilderTest {
                 return null;
             }
         });
+
         new ServerBuilder().annotatedService(new Object() {
             @Path("/")
             @Get
@@ -50,11 +56,40 @@ public class AnnotatedHttpServiceBuilderTest {
                 return null;
             }
         });
+
         new ServerBuilder().annotatedService(new Object() {
             @Options
             @Get
             @Post("/")
             public Object root() {
+                return null;
+            }
+        });
+
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/")
+            public Object root(@Param("a") Optional<Byte> a,
+                               @Param("b") Optional<Short> b,
+                               @Param("c") Optional<Boolean> c,
+                               @Param("d") Optional<Integer> d,
+                               @Param("e") Optional<Long> e,
+                               @Param("f") Optional<Float> f,
+                               @Param("g") Optional<Double> g,
+                               @Param("h") Optional<String> h) {
+                return null;
+            }
+        });
+
+        new ServerBuilder().annotatedService(new Object() {
+            @Get("/")
+            public Object root(@Param("a") byte a,
+                               @Param("b") short b,
+                               @Param("c") boolean c,
+                               @Param("d") int d,
+                               @Param("e") long e,
+                               @Param("f") float f,
+                               @Param("g") double g,
+                               @Param("h") String h) {
                 return null;
             }
         });
@@ -95,6 +130,41 @@ public class AnnotatedHttpServiceBuilderTest {
         assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
             @Get("  ")
             public Object root() {
+                return null;
+            }
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
+            @Get("/{name}")
+            public Object root(@Param("name") Optional<String> name) {
+                return null;
+            }
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
+            @Get("/{name}")
+            public Object root(@Param("name") Optional<AnnotatedHttpServiceBuilderTest> name) {
+                return null;
+            }
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
+            @Get("/{name}")
+            public Object root(@Param("name") List<String> name) {
+                return null;
+            }
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public Object root(@Param("name") Optional<AnnotatedHttpServiceBuilderTest> name) {
+                return null;
+            }
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> new ServerBuilder().annotatedService(new Object() {
+            @Get("/test")
+            public Object root(@Param("name") List<String> name) {
                 return null;
             }
         })).isInstanceOf(IllegalArgumentException.class);
