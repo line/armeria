@@ -129,9 +129,13 @@ public class FileBasedDynamicThrottlingStrategy<T extends Request> extends Throt
             return;
         }
 
-        strategies = newStrategies.entrySet().stream()
-                                  .collect(toImmutableMap(Entry::getKey,
-                                                          e -> convertToThrottlingStrategy(e.getValue())));
+        try {
+            strategies = newStrategies.entrySet().stream()
+                                      .collect(toImmutableMap(Entry::getKey,
+                                                              e -> convertToThrottlingStrategy(e.getValue())));
+        } catch (Exception e) {
+            logger.warn("Failed to convert new strategies", e);
+        }
     }
 
     private ThrottlingStrategy<T> convertToThrottlingStrategy(String throttlingSpec) {
