@@ -18,11 +18,11 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Throwables;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -89,11 +89,7 @@ final class AnnotatedHttpService implements HttpService {
         CompletionStage<HttpResponse> castStage = (CompletionStage<HttpResponse>) ret;
         return HttpResponse.from(castStage.handle((httpResponse, throwable) -> {
             if (throwable != null) {
-                if (throwable instanceof CompletionException &&
-                    throwable.getCause() instanceof IllegalArgumentException) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST);
-                }
-                if (throwable instanceof IllegalArgumentException) {
+                if (Throwables.getRootCause(throwable) instanceof IllegalArgumentException) {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST);
                 }
                 return Exceptions.throwUnsafely(throwable);
