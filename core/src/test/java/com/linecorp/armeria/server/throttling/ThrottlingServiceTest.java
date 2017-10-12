@@ -20,7 +20,6 @@ import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.never;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Rule;
@@ -53,7 +52,7 @@ public class ThrottlingServiceTest {
             sb.service("/http-never", SERVICE.decorate(ThrottlingHttpService.newDecorator(never())));
             sb.service("/http-always", SERVICE.decorate(ThrottlingHttpService.newDecorator(always())));
             sb.service("/token-bucket", SERVICE.decorate(ThrottlingHttpService.newDecorator(
-                    new TokenBucketThrottlingStrategy<>(4, 5, Duration.ofSeconds(1))
+                    new RateLimitingThrottlingStrategy<>(4)
             )));
         }
     };

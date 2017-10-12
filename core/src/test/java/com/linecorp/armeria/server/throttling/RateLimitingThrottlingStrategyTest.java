@@ -19,7 +19,6 @@ import static com.linecorp.armeria.server.throttling.ThrottlingServiceTest.SERVI
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Rule;
@@ -30,13 +29,13 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
 
-public class TokenBucketThrottlingStrategyTest {
+public class RateLimitingThrottlingStrategyTest {
     @Rule
     public ServerRule serverRule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/token-bucket", SERVICE.decorate(ThrottlingHttpService.newDecorator(
-                    new TokenBucketThrottlingStrategy<>(4, 5, Duration.ofSeconds(1))
+                    new RateLimitingThrottlingStrategy<>(4)
             )));
         }
     };
