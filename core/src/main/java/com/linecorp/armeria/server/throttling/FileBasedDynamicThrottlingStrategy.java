@@ -162,9 +162,9 @@ public class FileBasedDynamicThrottlingStrategy<T extends Request> extends Throt
     }
 
     @Override
-    public CompletableFuture<Boolean> shouldThrottle(ServiceRequestContext ctx, T req) {
+    public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T req) {
         String method = req instanceof RpcRequest ? ((RpcRequest) req).method() : ctx.method().name();
-        return strategies.getOrDefault(method, ThrottlingStrategy.never()).shouldThrottle(ctx, req);
+        return strategies.getOrDefault(method, ThrottlingStrategy.never()).accept(ctx, req);
     }
 
     @Override

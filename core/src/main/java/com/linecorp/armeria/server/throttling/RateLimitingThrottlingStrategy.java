@@ -44,7 +44,7 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
     }
 
     @Override
-    public CompletableFuture<Boolean> shouldThrottle(ServiceRequestContext ctx, T request) {
-        return completedFuture(!rateLimiter.tryAcquire());
+    public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request) {
+        return completedFuture(rateLimiter.tryAcquire());
     }
 }

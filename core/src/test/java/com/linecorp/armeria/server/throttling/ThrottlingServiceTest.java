@@ -18,9 +18,6 @@ package com.linecorp.armeria.server.throttling;
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.always;
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.never;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-
-import java.util.concurrent.TimeUnit;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,50 +48,19 @@ public class ThrottlingServiceTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/http-never", SERVICE.decorate(ThrottlingHttpService.newDecorator(never())));
             sb.service("/http-always", SERVICE.decorate(ThrottlingHttpService.newDecorator(always())));
-            sb.service("/token-bucket", SERVICE.decorate(ThrottlingHttpService.newDecorator(
-                    new RateLimitingThrottlingStrategy<>(4)
-            )));
         }
     };
 
     @Test
     public void serve() throws Exception {
         HttpClient client = HttpClient.of(serverRule.uri("/"));
-        assertThat(client.get("/http-never").aggregate().get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(client.get("/http-always").aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     public void throttle() throws Exception {
         HttpClient client = HttpClient.of(serverRule.uri("/"));
-        assertThat(client.get("/http-always").aggregate().get().status())
+        assertThat(client.get("/http-never").aggregate().get().status())
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-    }
-
-    @Test
-    public void file() throws Exception {
-        HttpClient client = HttpClient.of(serverRule.uri("/"));
-        assertThat(client.get("/http-always").aggregate().get().status())
-                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-    }
-
-    @Test
-    public void tokenBucket() throws Exception {
-        HttpClient client = HttpClient.of(serverRule.uri("/"));
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
-        // bucket is now empty.
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        await().atMost(10, TimeUnit.SECONDS)
-               .until(() -> HttpStatus.OK.equals(client.get("/token-bucket").aggregate().get().status()));
-        // bucket is refilled.
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
     }
 }

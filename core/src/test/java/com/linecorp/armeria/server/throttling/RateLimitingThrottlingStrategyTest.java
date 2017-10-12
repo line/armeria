@@ -34,30 +34,23 @@ public class RateLimitingThrottlingStrategyTest {
     public ServerRule serverRule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/token-bucket", SERVICE.decorate(ThrottlingHttpService.newDecorator(
-                    new RateLimitingThrottlingStrategy<>(4)
+            sb.service("/rate-limit", SERVICE.decorate(ThrottlingHttpService.newDecorator(
+                    new RateLimitingThrottlingStrategy<>(1)
             )));
         }
     };
 
     @Test
-    public void tokenBucket() throws Exception {
+    public void rateLimit() throws Exception {
         HttpClient client = HttpClient.of(serverRule.uri("/"));
-        assertThat(client.get("/token-bucket").aggregate().get().status())
+        assertThat(client.get("/rate-limit").aggregate().get().status())
                 .isEqualTo(HttpStatus.OK);
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
-        // bucket is now empty.
-        assertThat(client.get("/token-bucket").aggregate().get().status())
+        client.get("/rate-limit").aggregate().get();
+        client.get("/rate-limit").aggregate().get();
+        // Reached to limit
+        assertThat(client.get("/rate-limit").aggregate().get().status())
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         await().atMost(10, TimeUnit.SECONDS)
-               .until(() -> HttpStatus.OK.equals(client.get("/token-bucket").aggregate().get().status()));
-        // bucket is refilled.
-        assertThat(client.get("/token-bucket").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
+               .until(() -> HttpStatus.OK.equals(client.get("/rate-limit").aggregate().get().status()));
     }
 }

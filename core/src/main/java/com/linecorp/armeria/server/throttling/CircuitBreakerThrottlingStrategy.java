@@ -38,7 +38,7 @@ public final class CircuitBreakerThrottlingStrategy<T extends Request> extends T
     }
 
     @Override
-    public CompletableFuture<Boolean> shouldThrottle(ServiceRequestContext ctx, T request) {
-        return CompletableFuture.completedFuture(!circuitBreaker.canRequest());
+    public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request) {
+        return CompletableFuture.completedFuture(circuitBreaker.canRequest());
     }
 }

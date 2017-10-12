@@ -67,9 +67,9 @@ public abstract class ThrottlingService<I extends Request, O extends Response>
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         return responseConverter.apply(
-                strategy.shouldThrottle(ctx, req).handleAsync((shouldThrottle, thrown) -> {
+                strategy.accept(ctx, req).handleAsync((accept, thrown) -> {
                     try {
-                        if (thrown != null || shouldThrottle) {
+                        if (thrown != null || !accept) {
                             return onFailure(ctx, req, thrown);
                         }
                         return onSuccess(ctx, req);
