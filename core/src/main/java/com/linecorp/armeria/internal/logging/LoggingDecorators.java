@@ -14,13 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.logging;
+package com.linecorp.armeria.internal.logging;
 
 import java.util.function.Function;
 
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
 
 /**
  * Utilities for logging decorators.
