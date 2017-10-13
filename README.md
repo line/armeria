@@ -18,6 +18,8 @@ $ ./gradlew build
 
 Just [create a new issue](https://github.com/line/armeria/issues/new) to ask a question, and browse [the list of previously answered questions](https://github.com/line/armeria/issues?q=label%3Aquestion-answered).
 
+We also have slack channel at: https://line-slacknow.herokuapp.com/line-armeria/.
+
 ## How to contribute
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
