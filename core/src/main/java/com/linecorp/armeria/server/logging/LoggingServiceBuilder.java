@@ -35,14 +35,14 @@ public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServic
      */
     public <I extends Request, O extends Response> LoggingService<I, O> build(Service<I, O> delegate) {
         return new LoggingService<>(delegate,
-                                    getRequestLogLevel(),
-                                    getSuccessfulResponseLogLevel(),
-                                    getFailedResponseLogLevel(),
-                                    getRequestHeadersSanitizer(),
-                                    getRequestContentSanitizer(),
-                                    getResponseHeadersSanitizer(),
-                                    getResponseContentSanitizer(),
-                                    Sampler.create(getSamplingRate()));
+                                    requestLogLevel(),
+                                    successfulResponseLogLevel(),
+                                    failedResponseLogLevel(),
+                                    requestHeadersSanitizer(),
+                                    requestContentSanitizer(),
+                                    responseHeadersSanitizer(),
+                                    responseContentSanitizer(),
+                                    Sampler.create(samplingRate()));
     }
 
     /**

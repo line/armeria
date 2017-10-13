@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 /**
  * Builds a new logging decorator.
  */
-public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
+public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     private static final Function<HttpHeaders, HttpHeaders> DEFAULT_HEADERS_SANITIZER = Function.identity();
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
 
@@ -53,7 +53,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     /**
      * Returns the {@link LogLevel} to use when logging requests.
      */
-    public LogLevel getRequestLogLevel() {
+    protected LogLevel requestLogLevel() {
         return requestLogLevel;
     }
 
@@ -70,7 +70,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     /**
      * Returns the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      */
-    public LogLevel getSuccessfulResponseLogLevel() {
+    protected LogLevel successfulResponseLogLevel() {
         return successfulResponseLogLevel;
     }
 
@@ -86,7 +86,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     /**
      * Returns the {@link LogLevel} to use when logging failure responses (e.g., failed with an exception).
      */
-    public LogLevel getFailedResponseLogLevel() {
+    protected LogLevel failedResponseLogLevel() {
         return failedResponseLogLevel;
     }
 
@@ -103,7 +103,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     /**
      * Returns the {@link Function} to use to sanitize request headers before logging.
      */
-    public Function<HttpHeaders, HttpHeaders> getRequestHeadersSanitizer() {
+    protected Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer() {
         return requestHeadersSanitizer;
     }
 
@@ -120,7 +120,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     /**
      * Returns the {@link Function} to use to sanitize request content before logging.
      */
-    public Function<Object, Object> getRequestContentSanitizer() {
+    protected Function<Object, Object> requestContentSanitizer() {
         return requestContentSanitizer;
     }
 
@@ -137,7 +137,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     /**
      * Returns the {@link Function} to use to sanitize response headers before logging.
      */
-    public Function<HttpHeaders, HttpHeaders> getResponseHeadersSanitizer() {
+    protected Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer() {
         return responseHeadersSanitizer;
     }
 
@@ -154,7 +154,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     /**
      * Returns the {@link Function} to use to sanitize response content before logging.
      */
-    public Function<Object, Object> getResponseContentSanitizer() {
+    protected Function<Object, Object> responseContentSanitizer() {
         return responseContentSanitizer;
     }
 
@@ -172,7 +172,7 @@ public class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     /**
      * Returns the rate at which to sample requests to log.
      */
-    public float getSamplingRate() {
+    protected float samplingRate() {
         return samplingRate;
     }
 

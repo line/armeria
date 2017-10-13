@@ -35,14 +35,14 @@ public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientB
      */
     public <I extends Request, O extends Response> LoggingClient<I, O> build(Client<I, O> delegate) {
         return new LoggingClient<>(delegate,
-                                   getRequestLogLevel(),
-                                   getSuccessfulResponseLogLevel(),
-                                   getFailedResponseLogLevel(),
-                                   getRequestHeadersSanitizer(),
-                                   getRequestContentSanitizer(),
-                                   getResponseHeadersSanitizer(),
-                                   getResponseContentSanitizer(),
-                                   Sampler.create(getSamplingRate()));
+                                   requestLogLevel(),
+                                   successfulResponseLogLevel(),
+                                   failedResponseLogLevel(),
+                                   requestHeadersSanitizer(),
+                                   requestContentSanitizer(),
+                                   responseHeadersSanitizer(),
+                                   responseContentSanitizer(),
+                                   Sampler.create(samplingRate()));
     }
 
     /**
