@@ -24,6 +24,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -67,8 +68,8 @@ import com.linecorp.armeria.server.TestConverters.TypedStringConverter;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Converter;
+import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Optional;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
@@ -390,18 +391,20 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/param/default1")
         public String paramDefault1(RequestContext ctx,
-                                    @Param("username") @Optional("hello") String username,
-                                    @Param("password") @Optional("world") String password,
-                                    @Param("extra") @Optional String extra) {
+                                    @Param("username") @Default("hello") String username,
+                                    @Param("password") @Default("world") Optional<String> password,
+                                    @Param("extra") Optional<String> extra,
+                                    @Param("number") Optional<Integer> number) {
             // "extra" might be null because there is no default value specified.
             validateContext(ctx);
-            return username + "/" + password + "/" + (extra != null ? extra : "(null)");
+            return username + "/" + password.get() + "/" + extra.orElse("(null)") +
+                   (number.isPresent() ? "/" + number.get() : "");
         }
 
         @Get
         @Path("/param/default2")
         public String paramDefault2(RequestContext ctx,
-                                    @Param("username") @Optional("hello") String username,
+                                    @Param("username") @Default("hello") String username,
                                     @Param("password") String password) {
             validateContext(ctx);
             return username + "/" + password;
@@ -569,7 +572,7 @@ public class AnnotatedHttpServiceTest {
                               "username", "line4", "password", "armeria4"), "line4/armeria4");
 
             testBody(hc, get("/7/param/default1"), "hello/world/(null)");
-            testBody(hc, get("/7/param/default1?extra=people"), "hello/world/people");
+            testBody(hc, get("/7/param/default1?extra=people&number=1"), "hello/world/people/1");
 
             // Precedence test. (path variable > query string parameter)
             testBody(hc, get("/7/param/precedence/line5?username=dot&password=armeria5"), "line5/armeria5");
