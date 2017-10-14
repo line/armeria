@@ -26,6 +26,8 @@ import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
 
+import com.google.common.base.Throwables;
+
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
@@ -169,9 +171,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
         requireNonNull(stage, "stage");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        stage.whenComplete((delegate, cause) -> {
-            if (cause != null) {
-                res.close(cause);
+        stage.whenComplete((delegate, thrown) -> {
+            if (thrown != null) {
+                res.close(Throwables.getRootCause(thrown));
             } else if (delegate == null) {
                 res.close(new NullPointerException("delegate stage produced a null response: " + stage));
             } else {

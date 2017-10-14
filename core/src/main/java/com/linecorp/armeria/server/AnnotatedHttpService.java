@@ -22,9 +22,12 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Throwables;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * {@link PathMapping} and their corresponding {@link BiFunction}.
@@ -69,7 +72,14 @@ final class AnnotatedHttpService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Object ret = function.apply(ctx, req);
+
+        final Object ret;
+        try {
+            ret = function.apply(ctx, req);
+        } catch (IllegalArgumentException ignore) {
+            throw new HttpResponseException(HttpStatus.BAD_REQUEST);
+        }
+
         if (!(ret instanceof CompletionStage)) {
             return HttpResponse.ofFailure(new IllegalStateException(
                     "illegal return type: " + ret.getClass().getSimpleName()));
@@ -77,7 +87,15 @@ final class AnnotatedHttpService implements HttpService {
 
         @SuppressWarnings("unchecked")
         CompletionStage<HttpResponse> castStage = (CompletionStage<HttpResponse>) ret;
-        return HttpResponse.from(castStage);
+        return HttpResponse.from(castStage.handle((httpResponse, throwable) -> {
+            if (throwable != null) {
+                if (Throwables.getRootCause(throwable) instanceof IllegalArgumentException) {
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST);
+                }
+                return Exceptions.throwUnsafely(throwable);
+            }
+            return httpResponse;
+        }));
     }
 
     @Override

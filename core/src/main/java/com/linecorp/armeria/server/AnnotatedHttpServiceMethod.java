@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -144,9 +143,6 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     private Object invoke(ServiceRequestContext ctx, HttpRequest req, @Nullable AggregatedHttpMessage message) {
         try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
             return method.invoke(object, parameterValues(ctx, req, parameters, message));
-        } catch (IllegalArgumentException e) {
-            // Return "400 Bad Request" if the request has not sufficient arguments or has an invalid argument.
-            return HttpResponse.of(HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             if (e instanceof InvocationTargetException) {
                 final Throwable cause = e.getCause();

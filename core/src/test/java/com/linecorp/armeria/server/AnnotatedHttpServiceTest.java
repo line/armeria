@@ -116,6 +116,9 @@ public class AnnotatedHttpServiceTest {
 
             sb.annotatedService("/9", new MyAnnotatedService9(),
                                 LoggingService.newDecorator());
+
+            sb.annotatedService("/10", new MyAnnotatedService10(),
+                                LoggingService.newDecorator());
         }
     };
 
@@ -485,6 +488,44 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    public static class MyAnnotatedService10 {
+
+        @Get("/syncThrow")
+        public String sync() {
+            throw new IllegalArgumentException("foo");
+        }
+
+        @Get("/asyncThrow")
+        public CompletableFuture<String> async() {
+            throw new IllegalArgumentException("bar");
+        }
+
+        @Get("/asyncThrowWrapped")
+        public CompletableFuture<String> asyncThrowWrapped() {
+            return CompletableFuture.supplyAsync(() -> {
+                throw new IllegalArgumentException("hoge");
+            });
+        }
+
+        @Get("/syncThrow401")
+        public String sync401() {
+            throw new HttpResponseException(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Get("/asyncThrow401")
+        public CompletableFuture<String> async401() {
+            throw new HttpResponseException(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Get("/asyncThrowWrapped401")
+        public CompletableFuture<String> asyncThrowWrapped401() {
+            return CompletableFuture.supplyAsync(() -> {
+                throw new HttpResponseException(HttpStatus.UNAUTHORIZED);
+            });
+        }
+    }
+
     @Test
     public void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -611,6 +652,24 @@ public class AnnotatedHttpServiceTest {
             // No match on 'Accept' header list.
             testStatusCode(hc, post(uri, null, "application/json"), 406);
             testStatusCode(hc, get(uri, "application/json;charset=UTF-8;q=0.9, text/html;q=0.7"), 406);
+        }
+    }
+
+    @Test
+    public void testServiceThrowIllegalArgumentException() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testStatusCode(hc, get("/10/syncThrow"), 400);
+            testStatusCode(hc, get("/10/asyncThrow"), 400);
+            testStatusCode(hc, get("/10/asyncThrowWrapped"), 400);
+        }
+    }
+
+    @Test
+    public void testServiceThrowHttpResponseException() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testStatusCode(hc, get("/10/syncThrow401"), 401);
+            testStatusCode(hc, get("/10/asyncThrow401"), 401);
+            testStatusCode(hc, get("/10/asyncThrowWrapped401"), 401);
         }
     }
 
