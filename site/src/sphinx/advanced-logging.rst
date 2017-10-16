@@ -91,7 +91,7 @@ access the attribute value is ``attrs.bar``, which follows the form of ``attrs.<
 Using an alternative string converter for a custom attribute
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 By default, `RequestContextExportingAppender`_ uses ``Object.toString()`` to convert an attribute value into
-an `MDC`_ value. If you want an alternative string repredentation of an attribute value, you can define
+an `MDC`_ value. If you want an alternative string representation of an attribute value, you can define
 a ``Function`` class with a public no-args constructor that transforms an attribute value into a ``String``:
 
 .. code-block:: java
