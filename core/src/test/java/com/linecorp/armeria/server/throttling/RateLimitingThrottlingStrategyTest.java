@@ -15,42 +15,23 @@
  */
 package com.linecorp.armeria.server.throttling;
 
-import static com.linecorp.armeria.server.throttling.ThrottlingServiceTest.SERVICE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.common.Request;
 
 public class RateLimitingThrottlingStrategyTest {
-    @Rule
-    public ServerRule serverRule = new ServerRule() {
-        @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/rate-limit", SERVICE.decorate(ThrottlingHttpService.newDecorator(
-                    new RateLimitingThrottlingStrategy<>(1)
-            )));
-        }
-    };
-
     @Test
     public void rateLimit() throws Exception {
-        HttpClient client = HttpClient.of(serverRule.uri("/"));
-        assertThat(client.get("/rate-limit").aggregate().get().status())
-                .isEqualTo(HttpStatus.OK);
-        client.get("/rate-limit").aggregate().get();
-        client.get("/rate-limit").aggregate().get();
-        // Reached to limit
-        assertThat(client.get("/rate-limit").aggregate().get().status())
-                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        await().atMost(10, TimeUnit.SECONDS)
-               .until(() -> HttpStatus.OK.equals(client.get("/rate-limit").aggregate().get().status()));
+        RateLimitingThrottlingStrategy<Request> strategy = new RateLimitingThrottlingStrategy<>(1);
+        assertThat(strategy.accept(null, null).get()).isEqualTo(true);
+        assertThat(strategy.accept(null, null).get()).isEqualTo(false);
+        assertThat(strategy.accept(null, null).get()).isEqualTo(false);
+
+        TimeUnit.SECONDS.sleep(1);
+        assertThat(strategy.accept(null, null).get()).isEqualTo(true);
     }
 }

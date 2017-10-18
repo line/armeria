@@ -29,8 +29,30 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public abstract class ThrottlingStrategy<T extends Request> {
     private static final AtomicInteger GLOBAL_STRATEGY_ID = new AtomicInteger();
-    private static final ThrottlingStrategy<?> NEVER = of((ctx, request) -> completedFuture(false));
-    private static final ThrottlingStrategy<?> ALWAYS = of((ctx, request) -> completedFuture(true));
+
+    private static final ThrottlingStrategy<?> NEVER = new ThrottlingStrategy<Request>() {
+        @Override
+        public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, Request request) {
+            return completedFuture(false);
+        }
+
+        @Override
+        public String name() {
+            return "throttling-strategy-never";
+        }
+    };
+
+    private static final ThrottlingStrategy<?> ALWAYS = new ThrottlingStrategy<Request>() {
+        @Override
+        public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, Request request) {
+            return completedFuture(true);
+        }
+
+        @Override
+        public String name() {
+            return "throttling-strategy-always";
+        }
+    };
 
     private final int strategyId = GLOBAL_STRATEGY_ID.getAndIncrement();
 
@@ -73,6 +95,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
      * Returns the name of this {@link ThrottlingStrategy}.
      */
     public String name() {
-        return "throttling-strategy-" + strategyId;
+        String name = getClass().isAnonymousClass() ? Integer.toString(strategyId) : getClass().getSimpleName();
+        return "throttling-strategy-" + name;
     }
 }
