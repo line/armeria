@@ -27,7 +27,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.server.logging;
+package com.linecorp.armeria.internal.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -45,7 +45,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <p>Forked from brave-core.
  */
 // abstract for factory-method support on Java language level 7
-abstract class Sampler {
+public abstract class Sampler {
 
     static final Sampler ALWAYS_SAMPLE = new Sampler() {
         @Override
@@ -74,7 +74,7 @@ abstract class Sampler {
     /**
      *  Returns true if a log should be recorded.
      */
-    abstract boolean isSampled();
+    public abstract boolean isSampled();
 
     /**
      * Returns a sampler, given a rate expressed as a percentage.
@@ -84,7 +84,7 @@ abstract class Sampler {
      *
      * @param rate 0 for no sampling, 1 for full sampling, or in [0.01, 1] for random sampling.
      */
-    static Sampler create(float rate) {
+    public static Sampler create(float rate) {
         if (rate == 1.0) {
             return ALWAYS_SAMPLE;
         } else if (rate == 0.0) {
@@ -92,5 +92,12 @@ abstract class Sampler {
         }
         checkArgument(rate >= 0.01f && rate < 1, "rate should be between 0.01 and 1: was %s", rate);
         return new CountingSampler(rate);
+    }
+
+    /**
+     * Returns a {@link Sampler} for full sampling.
+     */
+    public static Sampler always() {
+        return ALWAYS_SAMPLE;
     }
 }

@@ -57,6 +57,9 @@ public class LoggingServiceTest {
     private static final HttpHeaders RESPONSE_HEADERS = HttpHeaders.of(HttpHeaderNames.SET_COOKIE, "barmeria");
     private static final Object RESPONSE_CONTENT = "response with pii";
 
+    private static final String REQUEST_FORMAT = "Request: {}";
+    private static final String RESPONSE_FORMAT = "Response: {}";
+
     @Rule
     public MockitoRule mocks = MockitoJUnit.rule();
 
@@ -118,7 +121,7 @@ public class LoggingServiceTest {
         final IllegalStateException cause = new IllegalStateException("Failed");
         when(log.responseCause()).thenReturn(cause);
         service.serve(ctx, REQUEST);
-        verify(logger).warn(LoggingService.RESPONSE_FORMAT,
+        verify(logger).warn(RESPONSE_FORMAT,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT,
                             cause);
     }
@@ -130,9 +133,9 @@ public class LoggingServiceTest {
                 .successfulResponseLogLevel(LogLevel.INFO)
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
-        verify(logger).info(LoggingService.REQUEST_FORMAT,
+        verify(logger).info(REQUEST_FORMAT,
                             "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT);
-        verify(logger).info(LoggingService.RESPONSE_FORMAT,
+        verify(logger).info(RESPONSE_FORMAT,
                             "headers: " + RESPONSE_HEADERS + ", content: " + RESPONSE_CONTENT);
     }
 
@@ -140,21 +143,21 @@ public class LoggingServiceTest {
     public void sanitize() throws Exception {
         HttpHeaders sanitizedRequestHeaders =
                 HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, "no cookies, too bad");
-        Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer = (headers) -> {
+        Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer = headers -> {
             assertThat(headers).isEqualTo(REQUEST_HEADERS);
             return sanitizedRequestHeaders;
         };
-        Function<Object, Object> requestContentSanitizer = (content) -> {
+        Function<Object, Object> requestContentSanitizer = content -> {
             assertThat(content).isEqualTo(REQUEST_CONTENT);
             return "clean request";
         };
         HttpHeaders sanitizedResponseHeaders =
                 HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, "where are the cookies?");
-        Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = (headers) -> {
+        Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = headers -> {
             assertThat(headers).isEqualTo(RESPONSE_HEADERS);
             return sanitizedResponseHeaders;
         };
-        Function<Object, Object> responseContentSanitizer = (content) -> {
+        Function<Object, Object> responseContentSanitizer = content -> {
             assertThat(content).isEqualTo(RESPONSE_CONTENT);
             return "clean response";
         };
@@ -167,9 +170,9 @@ public class LoggingServiceTest {
                 .responseContentSanitizer(responseContentSanitizer)
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
-        verify(logger).info(LoggingService.REQUEST_FORMAT,
+        verify(logger).info(REQUEST_FORMAT,
                             "headers: " + sanitizedRequestHeaders + ", content: clean request");
-        verify(logger).info(LoggingService.RESPONSE_FORMAT,
+        verify(logger).info(RESPONSE_FORMAT,
                             "headers: " + sanitizedResponseHeaders + ", content: clean response");
     }
 

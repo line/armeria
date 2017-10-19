@@ -27,7 +27,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.server.logging;
+package com.linecorp.armeria.internal.logging;
 
 import java.util.BitSet;
 import java.util.Random;
