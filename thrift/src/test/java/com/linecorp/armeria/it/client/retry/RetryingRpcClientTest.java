@@ -149,7 +149,7 @@ public class RetryingRpcClientTest {
 
         private int retriedCount;
 
-        public MaxTimeRetryStrategy(final int maxRetryTime) {
+        MaxTimeRetryStrategy(final int maxRetryTime) {
             this.maxRetryTime = maxRetryTime;
         }
 
@@ -158,14 +158,10 @@ public class RetryingRpcClientTest {
             if (retriedCount < maxRetryTime) {
                 retriedCount++;
 
-                System.out.println("retriedCount: " + retriedCount);
-
                 Backoff backoff = Backoff.exponential(100, 500, 2);
 
                 return CompletableFuture.completedFuture(Optional.of(backoff));
             } else {
-                System.out.println("No retry");
-
                 return CompletableFuture.completedFuture(Optional.empty());
             }
         }
