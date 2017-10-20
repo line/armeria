@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.times;
@@ -38,10 +39,13 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClientBuilder;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
+import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -71,11 +75,15 @@ public class RetryingRpcClientTest {
     @Mock
     private HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
 
+    @Mock
+    private DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);
+
     @Rule
     public final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/thrift", THttpService.of(serviceHandler));
+            sb.service("/thrift-devnull", THttpService.of(devNullServiceHandler));
         }
     };
 
@@ -115,5 +123,51 @@ public class RetryingRpcClientTest {
                 .thenThrow(new IllegalArgumentException());
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(Exception.class);
         verify(serviceHandler, times(1)).hello("hello");
+    }
+
+    @Test
+    public void execute_void() throws Exception {
+        RetryStrategy<RpcRequest, RpcResponse> retryStrategy = new MaxTimeRetryStrategy<>(2);
+
+        DevNullService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-devnull"))
+                .decorator(RpcRequest.class, RpcResponse.class,
+                           RetryingRpcClient.newDecorator(retryStrategy, 3)
+                )
+                .build(DevNullService.Iface.class);
+
+        doThrow(new IllegalArgumentException())
+                .doThrow(new IllegalArgumentException())
+                .doNothing()
+                .when(devNullServiceHandler).consume(anyString());
+        client.consume("hello");
+        verify(devNullServiceHandler, times(3)).consume("hello");
+    }
+
+    private static class MaxTimeRetryStrategy<I extends Request, O extends Response>
+            implements RetryStrategy<I, O> {
+        private final int maxRetryTime;
+
+        private int retriedCount;
+
+        public MaxTimeRetryStrategy(final int maxRetryTime) {
+            this.maxRetryTime = maxRetryTime;
+        }
+
+        @Override
+        public CompletableFuture<Optional<Backoff>> shouldRetry(final I request, final O response) {
+            if (retriedCount < maxRetryTime) {
+                retriedCount++;
+
+                System.out.println("retriedCount: " + retriedCount);
+
+                Backoff backoff = Backoff.exponential(100, 500, 2);
+
+                return CompletableFuture.completedFuture(Optional.of(backoff));
+            } else {
+                System.out.println("No retry");
+
+                return CompletableFuture.completedFuture(Optional.empty());
+            }
+        }
     }
 }
