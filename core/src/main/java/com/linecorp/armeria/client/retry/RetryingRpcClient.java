@@ -114,9 +114,14 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 }
             } else {
                 response.handle(voidFunction((result, thrown) -> {
-                    if (result != null) {
+                    // !!! DO NOT use "result != null" as the success/fail check condition !!!
+                    // !!! because the return value of the RPC target method may be void !!!
+                    // See: https://github.com/line/armeria/issues/780
+                    if (thrown == null) {
+                        // normal response
                         responseFuture.complete(result);
                     } else {
+                        // failed
                         responseFuture.completeExceptionally(thrown);
                     }
                 }));
