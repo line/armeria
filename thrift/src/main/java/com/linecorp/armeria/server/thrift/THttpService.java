@@ -591,13 +591,13 @@ public final class THttpService extends AbstractHttpService {
         }
 
         reply.handle(voidFunction((result, cause) -> {
-            if (cause != null) {
-                handleException(ctx, reply, res, serializationFormat, seqId, func, cause);
+            if (func.isOneWay()) {
+                handleOneWaySuccess(ctx, reply, res, serializationFormat);
                 return;
             }
 
-            if (func.isOneWay()) {
-                handleOneWaySuccess(ctx, reply, res, serializationFormat);
+            if (cause != null) {
+                handleException(ctx, reply, res, serializationFormat, seqId, func, cause);
                 return;
             }
 
