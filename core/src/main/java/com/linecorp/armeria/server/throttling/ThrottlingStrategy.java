@@ -21,6 +21,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -30,31 +32,43 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public abstract class ThrottlingStrategy<T extends Request> {
     private static final AtomicInteger GLOBAL_STRATEGY_ID = new AtomicInteger();
 
-    private static final ThrottlingStrategy<?> NEVER = new ThrottlingStrategy<Request>() {
-        @Override
-        public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, Request request) {
-            return completedFuture(false);
-        }
+    private static final ThrottlingStrategy<?> NEVER =
+            new ThrottlingStrategy<Request>("throttling-strategy-never") {
+                @Override
+                public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, Request request) {
+                    return completedFuture(false);
+                }
+            };
 
-        @Override
-        public String name() {
-            return "throttling-strategy-never";
-        }
-    };
+    private static final ThrottlingStrategy<?> ALWAYS =
+            new ThrottlingStrategy<Request>("throttling-strategy-always") {
+                @Override
+                public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, Request request) {
+                    return completedFuture(true);
+                }
+            };
 
-    private static final ThrottlingStrategy<?> ALWAYS = new ThrottlingStrategy<Request>() {
-        @Override
-        public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, Request request) {
-            return completedFuture(true);
-        }
+    private final String name;
 
-        @Override
-        public String name() {
-            return "throttling-strategy-always";
-        }
-    };
+    /**
+     * Creates a new anonymous {@link ThrottlingStrategy}.
+     */
+    protected ThrottlingStrategy() {
+        this(null);
+    }
 
-    private final int strategyId = GLOBAL_STRATEGY_ID.getAndIncrement();
+    /**
+     * Creates a new {@link ThrottlingStrategy} with specified name.
+     */
+    protected ThrottlingStrategy(@Nullable String name) {
+        if (name != null) {
+            this.name = name;
+        } else {
+            this.name = "throttling-strategy-" +
+                        (getClass().isAnonymousClass() ? Integer.toString(GLOBAL_STRATEGY_ID.getAndIncrement())
+                                                       : getClass().getSimpleName());
+        }
+    }
 
     /**
      * Returns a singleton {@link ThrottlingStrategy} that never accepts requests.
@@ -77,8 +91,23 @@ public abstract class ThrottlingStrategy<T extends Request> {
      * using a given {@link BiFunction} instance.
      */
     public static <T extends Request> ThrottlingStrategy<T> of(
+            BiFunction<ServiceRequestContext, T, CompletableFuture<Boolean>> function,
+            String strategyName) {
+        return new ThrottlingStrategy<T>(strategyName) {
+            @Override
+            public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request) {
+                return function.apply(ctx, request);
+            }
+        };
+    }
+
+    /**
+     * Creates a new {@link ThrottlingStrategy} that determines whether a request should be accepted or not
+     * using a given {@link BiFunction} instance.
+     */
+    public static <T extends Request> ThrottlingStrategy<T> of(
             BiFunction<ServiceRequestContext, T, CompletableFuture<Boolean>> function) {
-        return new ThrottlingStrategy<T>() {
+        return new ThrottlingStrategy<T>(null) {
             @Override
             public CompletableFuture<Boolean> accept(ServiceRequestContext ctx, T request) {
                 return function.apply(ctx, request);
@@ -95,7 +124,6 @@ public abstract class ThrottlingStrategy<T extends Request> {
      * Returns the name of this {@link ThrottlingStrategy}.
      */
     public String name() {
-        String name = getClass().isAnonymousClass() ? Integer.toString(strategyId) : getClass().getSimpleName();
-        return "throttling-strategy-" + name;
+        return name;
     }
 }

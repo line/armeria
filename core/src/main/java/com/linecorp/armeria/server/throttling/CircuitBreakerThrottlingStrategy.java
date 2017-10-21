@@ -34,6 +34,15 @@ public final class CircuitBreakerThrottlingStrategy<T extends Request> extends T
      * using a given {@code circuitBreaker}.
      */
     public CircuitBreakerThrottlingStrategy(CircuitBreaker circuitBreaker) {
+        this(circuitBreaker, null);
+    }
+
+    /**
+     * Creates a new named {@link ThrottlingStrategy} that determines whether a request should be throttled
+     * or not using a given {@code circuitBreaker}.
+     */
+    public CircuitBreakerThrottlingStrategy(CircuitBreaker circuitBreaker, String name) {
+        super(name);
         this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
     }
 

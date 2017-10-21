@@ -21,6 +21,8 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.RateLimiter;
 
@@ -36,13 +38,23 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
     private final RateLimiter rateLimiter;
 
     /**
+     * Creates a new strategy with specified name.
+     *
+     * @param requestPerSecond a number of requests per one second this {@link ThrottlingStrategy} accepts.
+     */
+    public RateLimitingThrottlingStrategy(int requestPerSecond, @Nullable String name) {
+        super(name);
+        checkArgument(requestPerSecond > 0, "requestPerSecond: %s (expected: > 0)", requestPerSecond);
+        rateLimiter = RateLimiter.create(requestPerSecond);
+    }
+
+    /**
      * Creates a new strategy.
      *
      * @param requestPerSecond a number of requests per one second this {@link ThrottlingStrategy} accepts.
      */
     public RateLimitingThrottlingStrategy(int requestPerSecond) {
-        checkArgument(requestPerSecond > 0, "requestPerSecond: %s (expected: > 0)", requestPerSecond);
-        rateLimiter = RateLimiter.create(requestPerSecond);
+        this(requestPerSecond, null);
     }
 
     @VisibleForTesting
