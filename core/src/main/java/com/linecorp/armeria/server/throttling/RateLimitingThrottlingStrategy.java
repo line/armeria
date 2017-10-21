@@ -16,10 +16,12 @@
 package com.linecorp.armeria.server.throttling;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.RateLimiter;
 
 import com.linecorp.armeria.common.Request;
@@ -41,6 +43,11 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
     public RateLimitingThrottlingStrategy(int requestPerSecond) {
         checkArgument(requestPerSecond > 0, "requestPerSecond: %s (expected: > 0)", requestPerSecond);
         rateLimiter = RateLimiter.create(requestPerSecond);
+    }
+
+    @VisibleForTesting
+    RateLimitingThrottlingStrategy(RateLimiter rateLimiter) {
+        this.rateLimiter = requireNonNull(rateLimiter, "rateLimiter");
     }
 
     @Override

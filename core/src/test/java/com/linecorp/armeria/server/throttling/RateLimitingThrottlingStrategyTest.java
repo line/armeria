@@ -16,22 +16,33 @@
 package com.linecorp.armeria.server.throttling;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
-import java.util.concurrent.TimeUnit;
-
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+
+import com.google.common.util.concurrent.RateLimiter;
 
 import com.linecorp.armeria.common.Request;
 
 public class RateLimitingThrottlingStrategyTest {
+    @Rule
+    public MockitoRule mocks = MockitoJUnit.rule();
+
+    @Mock
+    private RateLimiter rateLimiter;
+
     @Test
     public void rateLimit() throws Exception {
-        RateLimitingThrottlingStrategy<Request> strategy = new RateLimitingThrottlingStrategy<>(1);
+        RateLimitingThrottlingStrategy<Request> strategy = new RateLimitingThrottlingStrategy<>(rateLimiter);
+        when(rateLimiter.tryAcquire()).thenReturn(true)
+                                      .thenReturn(false)
+                                      .thenReturn(true);
         assertThat(strategy.accept(null, null).get()).isEqualTo(true);
         assertThat(strategy.accept(null, null).get()).isEqualTo(false);
-        assertThat(strategy.accept(null, null).get()).isEqualTo(false);
-
-        TimeUnit.SECONDS.sleep(1);
         assertThat(strategy.accept(null, null).get()).isEqualTo(true);
     }
 }
