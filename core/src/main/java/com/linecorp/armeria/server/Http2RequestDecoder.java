@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -70,9 +70,19 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
-        final HttpHeaders convertedHeaders = ArmeriaHttpUtil.toArmeria(headers);
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
+            // Validate the method.
+            final CharSequence method = headers.method();
+            if (method == null) {
+                writeErrorResponse(ctx, streamId, HttpResponseStatus.BAD_REQUEST);
+                return;
+            }
+            if (!HttpMethod.isSupported(method.toString())) {
+                writeErrorResponse(ctx, streamId, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                return;
+            }
+
             // Validate the 'content-length' header if exists.
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1L);
@@ -82,14 +92,15 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 }
             }
 
-            req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId, convertedHeaders,
-                                         true, inboundTrafficController, cfg.defaultMaxRequestLength());
+            req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId,
+                                         ArmeriaHttpUtil.toArmeria(headers), true,
+                                         inboundTrafficController, cfg.defaultMaxRequestLength());
 
             requests.put(streamId, req);
             ctx.fireChannelRead(req);
         } else {
             try {
-                req.write(convertedHeaders);
+                req.write(ArmeriaHttpUtil.toArmeria(headers));
             } catch (Throwable t) {
                 req.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
