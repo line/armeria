@@ -39,8 +39,6 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClientBuilder;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -127,11 +125,9 @@ public class RetryingRpcClientTest {
 
     @Test
     public void execute_void() throws Exception {
-        RetryStrategy<RpcRequest, RpcResponse> retryStrategy = new MaxTimeRetryStrategy<>(2);
-
         DevNullService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-devnull"))
                 .decorator(RpcRequest.class, RpcResponse.class,
-                           RetryingRpcClient.newDecorator(retryStrategy, 3)
+                           RetryingRpcClient.newDecorator(ONLY_HANDLES_EXCEPTION, 10)
                 )
                 .build(DevNullService.Iface.class);
 
@@ -141,29 +137,5 @@ public class RetryingRpcClientTest {
                 .when(devNullServiceHandler).consume(anyString());
         client.consume("hello");
         verify(devNullServiceHandler, times(3)).consume("hello");
-    }
-
-    private static class MaxTimeRetryStrategy<I extends Request, O extends Response>
-            implements RetryStrategy<I, O> {
-        private final int maxRetryTime;
-
-        private int retriedCount;
-
-        MaxTimeRetryStrategy(final int maxRetryTime) {
-            this.maxRetryTime = maxRetryTime;
-        }
-
-        @Override
-        public CompletableFuture<Optional<Backoff>> shouldRetry(final I request, final O response) {
-            if (retriedCount < maxRetryTime) {
-                retriedCount++;
-
-                Backoff backoff = Backoff.exponential(100, 500, 2);
-
-                return CompletableFuture.completedFuture(Optional.of(backoff));
-            } else {
-                return CompletableFuture.completedFuture(Optional.empty());
-            }
-        }
     }
 }
