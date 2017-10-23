@@ -42,7 +42,7 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
      *
      * @param requestPerSecond a number of requests per one second this {@link ThrottlingStrategy} accepts.
      */
-    public RateLimitingThrottlingStrategy(int requestPerSecond, @Nullable String name) {
+    public RateLimitingThrottlingStrategy(double requestPerSecond, @Nullable String name) {
         super(name);
         checkArgument(requestPerSecond > 0, "requestPerSecond: %s (expected: > 0)", requestPerSecond);
         rateLimiter = RateLimiter.create(requestPerSecond);
@@ -53,7 +53,7 @@ public final class RateLimitingThrottlingStrategy<T extends Request> extends Thr
      *
      * @param requestPerSecond a number of requests per one second this {@link ThrottlingStrategy} accepts.
      */
-    public RateLimitingThrottlingStrategy(int requestPerSecond) {
+    public RateLimitingThrottlingStrategy(double requestPerSecond) {
         this(requestPerSecond, null);
     }
 
