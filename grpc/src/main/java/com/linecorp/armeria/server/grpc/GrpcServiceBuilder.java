@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
-
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;

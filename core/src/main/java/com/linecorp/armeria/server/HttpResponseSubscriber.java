@@ -26,7 +26,6 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -251,11 +250,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         final Channel ch = ctx.channel();
-        if (!ch.isActive()) {
-            fail(ClosedSessionException.get());
-            return;
-        }
-
         if (endOfStream) {
             setDone();
         }

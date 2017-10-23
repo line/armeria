@@ -7,19 +7,19 @@ ch.qos.logback:
   logback-classic: { version: '1.2.3' }
 
 com.fasterxml.jackson.core:
-  jackson-annotations: { version: &JACKSON_VERSION '2.8.9' }
+  jackson-annotations: { version: &JACKSON_VERSION '2.9.2' }
   jackson-core: { version: *JACKSON_VERSION }
   jackson-databind: { version: *JACKSON_VERSION }
 
 com.github.ben-manes.caffeine:
-  caffeine: { version: '2.5.5' }
+  caffeine: { version: '2.5.6' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '23.0'
+    version: &GUAVA_VERSION '23.2-jre'
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
@@ -33,10 +33,10 @@ com.google.guava:
     - com.google.j2objc:j2objc-annotations
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.2' }
+  checkstyle: { version: '8.3' }
 
 com.spotify:
-  completable-futures: { version: '0.3.1' }
+  completable-futures: { version: '0.3.2' }
 
 com.squareup.retrofit2:
   retrofit: { version: &RETROFIT2_VERSION '2.3.0' }
@@ -44,12 +44,12 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 io.dropwizard.metrics:
-  metrics-core: { version: &DROPWIZARD_VERSION '3.2.4' }
+  metrics-core: { version: &DROPWIZARD_VERSION '3.2.5' }
   metrics-json: { version: *DROPWIZARD_VERSION }
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.6.1'
+    version: &GRPC_VERSION '1.7.0'
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
@@ -78,7 +78,7 @@ io.micrometer:
     - org.springframework:spring-webmvc
 
 io.netty:
-  netty-codec-http2: { version: &NETTY_VERSION '4.1.15.Final' }
+  netty-codec-http2: { version: &NETTY_VERSION '4.1.16.Final' }
   netty-handler: { version: *NETTY_VERSION }
   netty-resolver-dns: { version: *NETTY_VERSION }
   netty-transport: { version: *NETTY_VERSION }
@@ -87,7 +87,7 @@ io.netty:
   netty-tcnative-boringssl-static: { version: '2.0.6.Final' }
 
 io.prometheus:
-  simpleclient_common: { version: '0.0.26' }
+  simpleclient_common: { version: '0.1.0' }
 
 io.zipkin.brave:
   brave: { version: &BRAVE_VERSION '4.6.0' }
@@ -99,7 +99,7 @@ javax.inject:
   javax.inject: { version: '1' }
 
 javax.validation:
-  validation-api: { version: '1.1.0.Final' }
+  validation-api: { version: '2.0.0.Final' }
 
 junit:
   junit: { version: '4.12' }
@@ -124,7 +124,7 @@ org.apache.httpcomponents:
     - commons-logging:commons-logging
 
 org.apache.kafka:
-  kafka-clients: { version: '0.11.0.0' }
+  kafka-clients: { version: '0.11.0.1' }
 
 org.apache.thrift:
   libthrift:
@@ -134,7 +134,7 @@ org.apache.thrift:
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
-  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.20' }
+  tomcat-embed-core: { version: &TOMCAT_VERSION '8.5.23' }
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
   tomcat-embed-el: { version: *TOMCAT_VERSION }
 
@@ -159,7 +159,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.6.v20170531' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.7.v20170914' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations: { version: *JETTY_VERSION }
   jetty-server: { version: *JETTY_VERSION  }
@@ -174,14 +174,14 @@ org.eclipse.jetty.http2:
 org.hamcrest:
   hamcrest-library: { version: '1.3' }
 
-org.hibernate:
-  hibernate-validator: { version: '5.4.1.Final' }
+org.hibernate.validator:
+  hibernate-validator: { version: '6.0.3.Final' }
 
 org.javassist:
-  javassist: { version: '3.21.0-GA' }
+  javassist: { version: '3.22.0-GA' }
 
 org.mockito:
-  mockito-core: { version: '2.8.47' }
+  mockito-core: { version: '2.11.0' }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.6' }
@@ -201,7 +201,7 @@ org.slf4j:
   slf4j-api: { version: *SLF4J_VERSION }
 
 org.springframework.boot:
-  spring-boot: { version: &SPRING_BOOT_VERSION '1.5.6.RELEASE' }
+  spring-boot: { version: &SPRING_BOOT_VERSION '1.5.8.RELEASE' }
   spring-boot-autoconfigure: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-logging: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
