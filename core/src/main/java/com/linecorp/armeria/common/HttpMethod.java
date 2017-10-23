@@ -30,6 +30,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * HTTP request method.
  */
@@ -92,4 +94,27 @@ public enum HttpMethod {
      * The CONNECT method is used for a proxy that can dynamically switch to being a tunnel.
      */
     CONNECT;
+
+    /**
+     * Returns whether the specified {@link String} is one of the supported method names.
+     *
+     * @return {@code true} if supported. {@code false} otherwise.
+     */
+    public static boolean isSupported(String value) {
+        requireNonNull(value, "value");
+        switch (value) {
+            case "OPTIONS":
+            case "GET":
+            case "HEAD":
+            case "POST":
+            case "PUT":
+            case "PATCH":
+            case "DELETE":
+            case "TRACE":
+            case "CONNECT":
+                return true;
+        }
+
+        return false;
+    }
 }

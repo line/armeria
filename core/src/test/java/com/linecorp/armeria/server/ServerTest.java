@@ -291,6 +291,11 @@ public class ServerTest {
         testSimple("GET * HTTP/1.1", "HTTP/1.1 400 Bad Request");
     }
 
+    @Test
+    public void testUnsupportedMethod() throws Exception {
+        testSimple("WHOA / HTTP/1.1", "HTTP/1.1 405 Method Not Allowed");
+    }
+
     private static void testSimple(
             String reqLine, String expectedStatusLine, String... expectedHeaders) throws Exception {
 

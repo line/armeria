@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
@@ -106,6 +107,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final HttpHeaders nettyHeaders = nettyReq.headers();
                     final int id = ++receivedRequests;
+
+                    // Validate the method.
+                    if (!HttpMethod.isSupported(nettyReq.method().name())) {
+                        fail(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                        return;
+                    }
 
                     // Validate the 'content-length' header.
                     final String contentLengthStr = nettyHeaders.get(HttpHeaderNames.CONTENT_LENGTH);
