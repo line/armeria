@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.times;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
+import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -71,11 +73,15 @@ public class RetryingRpcClientTest {
     @Mock
     private HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
 
+    @Mock
+    private DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);
+
     @Rule
     public final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/thrift", THttpService.of(serviceHandler));
+            sb.service("/thrift-devnull", THttpService.of(devNullServiceHandler));
         }
     };
 
@@ -115,5 +121,21 @@ public class RetryingRpcClientTest {
                 .thenThrow(new IllegalArgumentException());
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(Exception.class);
         verify(serviceHandler, times(1)).hello("hello");
+    }
+
+    @Test
+    public void execute_void() throws Exception {
+        DevNullService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-devnull"))
+                .decorator(RpcRequest.class, RpcResponse.class,
+                           RetryingRpcClient.newDecorator(ONLY_HANDLES_EXCEPTION, 10)
+                )
+                .build(DevNullService.Iface.class);
+
+        doThrow(new IllegalArgumentException())
+                .doThrow(new IllegalArgumentException())
+                .doNothing()
+                .when(devNullServiceHandler).consume(anyString());
+        client.consume("hello");
+        verify(devNullServiceHandler, times(3)).consume("hello");
     }
 }

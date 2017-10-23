@@ -114,9 +114,11 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 }
             } else {
                 response.handle(voidFunction((result, thrown) -> {
-                    if (result != null) {
+                    if (thrown == null) {
+                        // normal response
                         responseFuture.complete(result);
                     } else {
+                        // failed
                         responseFuture.completeExceptionally(thrown);
                     }
                 }));
