@@ -96,7 +96,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         final MeterRegistry registry = server.meterRegistry();
         final MeterId meterId = new MeterId("armeria.server.router.compositeServiceCache",
                                             "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                            "pathMapping", String.join(",", cfg.pathMapping().meterTag()));
+                                            "pathMapping", cfg.pathMapping().meterTag());
 
         router.registerMetrics(registry, meterId);
         for (CompositeServiceEntry<I, O> e : services()) {

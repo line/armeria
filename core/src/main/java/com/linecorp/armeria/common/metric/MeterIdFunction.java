@@ -75,7 +75,10 @@ public interface MeterIdFunction {
 
             if (ctx instanceof ServiceRequestContext) {
                 final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                return new MeterId(name, "method", methodName, "pathMapping", sCtx.pathMapping().meterTag());
+                return new MeterId(name,
+                                   "hostnamePattern", sCtx.virtualHost().hostnamePattern(),
+                                   "pathMapping", sCtx.pathMapping().meterTag(),
+                                   "method", methodName);
             } else {
                 return new MeterId(name, "method", methodName);
             }
