@@ -124,9 +124,10 @@ public final class HttpFileService extends AbstractHttpService {
         if (cache != null) {
             CaffeineMetricSupport.setup(
                     registry,
-                    new MeterId("com.linecorp.armeria.server.file.vfsCache",
-                                "name", config.vfs().toString(),
-                                "pathMapping", cfg.pathMapping().meterTag()),
+                    new MeterId("armeria.server.file.vfsCache",
+                                "hostnamePattern", cfg.virtualHost().hostnamePattern(),
+                                "pathMapping", cfg.pathMapping().meterTag(),
+                                "rootDir", config.vfs().toString()),
                     cache);
         }
     }
