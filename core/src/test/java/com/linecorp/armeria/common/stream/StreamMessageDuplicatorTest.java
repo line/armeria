@@ -327,6 +327,7 @@ public class StreamMessageDuplicatorTest {
         }
         for (int i = 25; i < 30; i++) {  // rest of them are still in the queue.
             assertThat(bufs[i].refCnt()).isOne();
+            bufs[i].release();
         }
     }
 

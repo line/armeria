@@ -513,6 +513,7 @@ public class GrpcClientTest {
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(
                 goldenResponses.get(1));
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(Status.OK);
+        call.cancel("Cancelled after all of the requests are done", null);
     }
 
     @Test(timeout = 30000)
