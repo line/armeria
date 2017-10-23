@@ -134,7 +134,7 @@ public class DropwizardMetricsIntegrationTest {
 
     private static String serverMetricName(String property) {
         return MetricRegistry.name("armeria", "server", "HelloService", property,
-                                   "method:hello", "pathMapping:exact:/helloservice");
+                                   "hostnamePattern:*", "method:hello", "pathMapping:exact:/helloservice");
     }
 
     private static String clientMetricName(String property) {
