@@ -200,6 +200,7 @@ public class Http2ClientSettingsTest {
                     }
                 });
                 latch.await();
+                buffer.release();
             }
         }
     }
