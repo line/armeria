@@ -19,8 +19,8 @@ package com.linecorp.armeria.common.tracing;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
-import zipkin.Span;
-import zipkin.reporter.Reporter;
+import zipkin2.Span;
+import zipkin2.reporter.Reporter;
 
 public final class SpanCollectingReporter implements Reporter<Span> {
 

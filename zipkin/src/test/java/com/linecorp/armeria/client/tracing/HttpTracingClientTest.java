@@ -24,11 +24,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientOptions;
@@ -49,8 +49,7 @@ import brave.Tracing;
 import brave.sampler.Sampler;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultEventLoop;
-import zipkin.Annotation;
-import zipkin.Span;
+import zipkin2.Span;
 
 public class HttpTracingClientTest {
 
@@ -64,24 +63,24 @@ public class HttpTracingClientTest {
 
         // check span name
         Span span = reporter.spans().take();
-        assertThat(span.name).isEqualTo(TEST_SPAN);
+        assertThat(span.name()).isEqualTo(TEST_SPAN);
 
         // only one span should be submitted
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
 
-        // check # of annotations
-        List<Annotation> annotations = span.annotations;
-        assertThat(annotations).hasSize(2);
+        // check # of annotations (zipkin2 format does not use them by default)
+        assertThat(span.annotations()).isEmpty();
 
-        // check annotation values
-        List<String> values = annotations.stream().map(anno -> anno.value).collect(Collectors.toList());
-        assertThat(values).containsExactlyInAnyOrder("cs", "cr");
+        // check tags
+        assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
+                "http.host", "localhost",
+                "http.method", "POST",
+                "http.path", "/",
+                "http.status_code", "-1",
+                "http.url", "none+h2c://localhost/"));
 
         // check service name
-        List<String> serviceNames = annotations.stream()
-                                               .map(anno -> anno.endpoint.serviceName)
-                                               .collect(Collectors.toList());
-        assertThat(serviceNames).containsExactly(TEST_SERVICE, TEST_SERVICE);
+        assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
     }
 
     @Test
@@ -98,7 +97,7 @@ public class HttpTracingClientTest {
 
         Tracing tracing = Tracing.newBuilder()
                                  .localServiceName(TEST_SERVICE)
-                                 .reporter(reporter)
+                                 .spanReporter(reporter)
                                  .sampler(Sampler.create(samplingRate))
                                  .build();
 
