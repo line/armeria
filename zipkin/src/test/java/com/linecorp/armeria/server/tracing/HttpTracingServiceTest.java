@@ -32,6 +32,7 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -48,6 +49,7 @@ import brave.Tracing;
 import brave.sampler.Sampler;
 import io.netty.channel.Channel;
 import zipkin2.Span;
+import zipkin2.Span.Kind;
 
 public class HttpTracingServiceTest {
 
@@ -63,6 +65,9 @@ public class HttpTracingServiceTest {
         Span span = reporter.spans().take();
         assertThat(span.name()).isEqualTo(TEST_METHOD);
 
+        // check kind
+        assertThat(span.kind() == Kind.SERVER);
+
         // only one span should be submitted
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
 
@@ -73,9 +78,9 @@ public class HttpTracingServiceTest {
         assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
                 "http.host", "localhost",
                 "http.method", "POST",
-                "http.path", "/",
-                "http.status_code", "-1",
-                "http.url", "none+h2c://localhost/"));
+                "http.path", "/hello/trustin",
+                "http.status_code", "200",
+                "http.url", "none+h2c://localhost/hello/trustin"));
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
@@ -117,7 +122,7 @@ public class HttpTracingServiceTest {
         when(ctx.method()).thenReturn(HttpMethod.POST);
         when(ctx.log()).thenReturn(log);
         when(ctx.logBuilder()).thenReturn(log);
-        when(ctx.path()).thenReturn("/");
+        when(ctx.path()).thenReturn("/hello/trustin");
         ctx.onEnter(isA(Consumer.class));
         ctx.onExit(isA(Consumer.class));
         when(delegate.serve(ctx, req)).thenReturn(res);
@@ -126,6 +131,7 @@ public class HttpTracingServiceTest {
         stub.serve(ctx, req);
 
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
+        log.responseHeaders(HttpHeaders.of(HttpStatus.OK));
         log.responseContent(rpcRes, res);
         log.endResponse();
 

@@ -35,6 +35,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -50,6 +51,7 @@ import brave.sampler.Sampler;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultEventLoop;
 import zipkin2.Span;
+import zipkin2.Span.Kind;
 
 public class HttpTracingClientTest {
 
@@ -65,6 +67,9 @@ public class HttpTracingClientTest {
         Span span = reporter.spans().take();
         assertThat(span.name()).isEqualTo(TEST_SPAN);
 
+        // check kind
+        assertThat(span.kind() == Kind.CLIENT);
+
         // only one span should be submitted
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
 
@@ -75,9 +80,9 @@ public class HttpTracingClientTest {
         assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
                 "http.host", "localhost",
                 "http.method", "POST",
-                "http.path", "/",
-                "http.status_code", "-1",
-                "http.url", "none+h2c://localhost/"));
+                "http.path", "/hello/armeria",
+                "http.status_code", "200",
+                "http.url", "none+h2c://localhost/hello/armeria"));
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
@@ -108,7 +113,7 @@ public class HttpTracingClientTest {
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 new DefaultEventLoop(), NoopMeterRegistry.get(), H2C, Endpoint.of("localhost", 8080),
-                HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT, req);
+                HttpMethod.POST, "/hello/armeria", null, null, ClientOptions.DEFAULT, req);
 
         ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost");
         ctx.logBuilder().requestContent(rpcReq, req);
@@ -127,6 +132,7 @@ public class HttpTracingClientTest {
 
         verify(delegate, times(1)).execute(ctx, req);
 
+        ctx.logBuilder().responseHeaders(HttpHeaders.of(HttpStatus.OK));
         ctx.logBuilder().responseContent(rpcRes, res);
         ctx.logBuilder().endResponse();
 
