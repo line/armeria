@@ -174,6 +174,9 @@ org.eclipse.jetty.http2:
 org.hamcrest:
   hamcrest-library: { version: '1.3' }
 
+org.hdrhistogram:
+  HdrHistogram: { version: '2.1.10' }
+
 org.hibernate.validator:
   hibernate-validator: { version: '6.0.3.Final' }
 
