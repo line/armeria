@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 
 import com.google.common.base.Ascii;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
@@ -103,16 +104,16 @@ public final class EndpointGroupRegistry {
 
     /**
      * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
-     * case-insensitive {@code groupName}.
+     * {@link ClientRequestContext} and case-insensitive {@code groupName}.
      */
-    public static Endpoint selectNode(String groupName) {
+    public static Endpoint selectNode(ClientRequestContext ctx, String groupName) {
         groupName = normalizeGroupName(groupName);
         EndpointSelector endpointSelector = getNodeSelector(groupName);
         if (endpointSelector == null) {
             throw new EndpointGroupException("non-existent EndpointGroup: " + groupName);
         }
 
-        return endpointSelector.select();
+        return endpointSelector.select(ctx);
     }
 
     private static String normalizeGroupName(String groupName) {
