@@ -8,6 +8,11 @@ buildscript {
 }
 
 apply plugin: 'com.google.protobuf'
+apply plugin: 'me.champeau.gradle.jmh'
+
+// Use a flag to control whether we are running downstream or upstream benchmarks, to use to
+// share business logic while managing dependency conflicts.
+def upstreamJmh = rootProject.findProperty('grpcJmh.upstream')
 
 managedDependencies {
     // gRPC
@@ -19,6 +24,18 @@ managedDependencies {
 
     testCompile 'io.grpc:grpc-okhttp'
     testCompile 'io.grpc:grpc-testing'
+
+    if (upstreamJmh) {
+        jmh 'io.grpc:grpc-netty'
+    }
+}
+
+dependencies {
+    if (upstreamJmh) {
+        // Since project(':core') is automatically added in the top-level build, it's difficult to exclude
+        // its transitive dependencies just for upstream benchmarks. Fixing the versions to upstream works ok.
+        jmh 'com.google.guava:guava:19.0'
+    }
 }
 
 def generatedFilesDir = "$projectDir/gen-src"
@@ -29,6 +46,9 @@ sourceSets {
     }
     test {
         output.dir("${generatedFilesDir}/test/resources", builtBy: 'generateTestProto')
+    }
+    jmh {
+        output.dir("${generatedFilesDir}/jmh/resources", builtBy: 'generateJmhProto')
     }
 }
 
@@ -69,5 +89,13 @@ idea {
         sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/grpc");
         sourceDirs += file("${protobuf.generatedFilesBaseDir}/test/java");
         sourceDirs += file("${protobuf.generatedFilesBaseDir}/test/grpc");
+        sourceDirs += file("${protobuf.generatedFilesBaseDir}/jmh/java");
+        sourceDirs += file("${protobuf.generatedFilesBaseDir}/jmh/grpc");
     }
+}
+
+tasks.checkstyleJmh.enabled = false
+
+jmh {
+    include = [ "com\\.linecorp\\.armeria\\.grpc\\.${upstreamJmh ? 'upstream' : 'downstream'}\\..*".toString() ]
 }
