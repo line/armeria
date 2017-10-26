@@ -19,6 +19,7 @@ package com.linecorp.armeria.grpc.shared;
 import java.io.IOException;
 
 import com.google.common.io.Resources;
+import com.google.protobuf.Empty;
 
 import com.linecorp.armeria.benchmarks.GithubApi.SearchResponse;
 import com.linecorp.armeria.benchmarks.GithubServiceGrpc.GithubServiceImplBase;
@@ -40,6 +41,12 @@ public class GithubApiService extends GithubServiceImplBase {
     @Override
     public void simple(SearchResponse request, StreamObserver<SearchResponse> responseObserver) {
         responseObserver.onNext(SEARCH_RESPONSE);
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void empty(Empty request, StreamObserver<Empty> responseObserver) {
+        responseObserver.onNext(Empty.getDefaultInstance());
         responseObserver.onCompleted();
     }
 }

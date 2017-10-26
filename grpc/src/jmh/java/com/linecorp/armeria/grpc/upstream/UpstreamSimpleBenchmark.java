@@ -27,6 +27,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
+import com.google.protobuf.Empty;
+
 import com.linecorp.armeria.benchmarks.GithubServiceGrpc;
 import com.linecorp.armeria.benchmarks.GithubServiceGrpc.GithubServiceBlockingStub;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
@@ -66,5 +68,10 @@ public class UpstreamSimpleBenchmark {
     @Benchmark
     public void simple(Blackhole bh) throws Exception {
         bh.consume(githubApiClient.simple(SEARCH_RESPONSE));
+    }
+
+    @Benchmark
+    public void empty(Blackhole bh) throws Exception {
+        bh.consume(githubApiClient.empty(Empty.getDefaultInstance()));
     }
 }

@@ -43,6 +43,7 @@ package armeria.benchmarks;
 
 option java_package = "com.linecorp.armeria.benchmarks";
 
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 message User {
@@ -154,4 +155,6 @@ message SearchResponse {
 
 service GithubService {
     rpc Simple (SearchResponse) returns (SearchResponse);
+
+    rpc Empty (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
