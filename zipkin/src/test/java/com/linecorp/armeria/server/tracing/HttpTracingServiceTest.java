@@ -25,13 +25,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -47,8 +48,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import brave.Tracing;
 import brave.sampler.Sampler;
 import io.netty.channel.Channel;
-import zipkin.Annotation;
-import zipkin.Span;
+import zipkin2.Span;
+import zipkin2.Span.Kind;
 
 public class HttpTracingServiceTest {
 
@@ -62,24 +63,27 @@ public class HttpTracingServiceTest {
 
         // check span name
         Span span = reporter.spans().take();
-        assertThat(span.name).isEqualTo(TEST_METHOD);
+        assertThat(span.name()).isEqualTo(TEST_METHOD);
+
+        // check kind
+        assertThat(span.kind() == Kind.SERVER);
 
         // only one span should be submitted
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
 
-        // check # of annotations
-        List<Annotation> annotations = span.annotations;
-        assertThat(annotations).hasSize(2);
+        // check # of annotations (zipkin2 format does not use them by default)
+        assertThat(span.annotations()).isEmpty();
 
-        // check annotation values
-        List<String> values = annotations.stream().map(anno -> anno.value).collect(Collectors.toList());
-        assertThat(values).containsExactlyInAnyOrder("sr", "ss");
+        // check tags
+        assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
+                "http.host", "localhost",
+                "http.method", "POST",
+                "http.path", "/hello/trustin",
+                "http.status_code", "200",
+                "http.url", "none+h2c://localhost/hello/trustin"));
 
         // check service name
-        List<String> serviceNames = annotations.stream()
-                                               .map(anno -> anno.endpoint.serviceName)
-                                               .collect(Collectors.toList());
-        assertThat(serviceNames).containsExactly(TEST_SERVICE, TEST_SERVICE);
+        assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
     }
 
     @Test
@@ -95,7 +99,7 @@ public class HttpTracingServiceTest {
 
         Tracing tracing = Tracing.newBuilder()
                                  .localServiceName(TEST_SERVICE)
-                                 .reporter(reporter)
+                                 .spanReporter(reporter)
                                  .sampler(Sampler.create(samplingRate))
                                  .build();
 
@@ -118,7 +122,7 @@ public class HttpTracingServiceTest {
         when(ctx.method()).thenReturn(HttpMethod.POST);
         when(ctx.log()).thenReturn(log);
         when(ctx.logBuilder()).thenReturn(log);
-        when(ctx.path()).thenReturn("/");
+        when(ctx.path()).thenReturn("/hello/trustin");
         ctx.onEnter(isA(Consumer.class));
         ctx.onExit(isA(Consumer.class));
         when(delegate.serve(ctx, req)).thenReturn(res);
@@ -127,6 +131,7 @@ public class HttpTracingServiceTest {
         stub.serve(ctx, req);
 
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
+        log.responseHeaders(HttpHeaders.of(HttpStatus.OK));
         log.responseContent(rpcRes, res);
         log.endResponse();
 
