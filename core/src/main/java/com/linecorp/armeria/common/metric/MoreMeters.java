@@ -20,9 +20,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -32,6 +36,8 @@ import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.internal.metric.MicrometerUtil;
+
 import io.micrometer.core.instrument.AbstractMeterRegistry;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Measurement;
@@ -39,7 +45,6 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.stats.quantile.CKMSQuantiles;
 import io.micrometer.core.instrument.stats.quantile.Quantiles;
 
 /**
@@ -47,15 +52,15 @@ import io.micrometer.core.instrument.stats.quantile.Quantiles;
  */
 public final class MoreMeters {
 
-    // TODO(trustin): Re-enable 1.0 if micrometer fixes IndexOutOfBoundsException.
-    //                https://github.com/micrometer-metrics/micrometer/issues/139
-    private static final double[] DEFAULT_QUANTILES = { 0.5, 0.75, 0.95, 0.98, 0.99, 0.999 /* , 1.0 */ };
     private static final Logger logger = LoggerFactory.getLogger(MoreMeters.class);
 
     private static final String METER_ID_FQCN = "io.micrometer.core.instrument.AbstractMeterRegistry$MeterId";
     private static final Field meterMapField;
     private static final Method meterIdGetNameMethod;
     private static final Method meterIdGetTagsMethod;
+
+    private static final MeterId METER_ID_HDR_HISTOGRAM = new MeterId("armeria.hdrHistogram");
+    private static final List<Reference<RollingHdrQuantiles>> allQuantiles = new LinkedList<>();
 
     static {
         Field newMeterMapField = null;
@@ -85,7 +90,11 @@ public final class MoreMeters {
     public static DistributionSummary summaryWithDefaultQuantiles(MeterRegistry registry, MeterId id) {
         requireNonNull(registry, "registry");
         requireNonNull(id, "id");
-        return registry.summaryBuilder(id.name()).tags(id.tags()).quantiles(defaultQuantiles()).create();
+        final RollingHdrQuantiles quantiles = new RollingHdrQuantiles();
+        final DistributionSummary summary =
+                registry.summaryBuilder(id.name()).tags(id.tags()).quantiles(quantiles).create();
+        registerEstimatedFootprint(registry, quantiles);
+        return summary;
     }
 
     /**
@@ -94,21 +103,19 @@ public final class MoreMeters {
     public static Timer timerWithDefaultQuantiles(MeterRegistry registry, MeterId id) {
         requireNonNull(registry, "registry");
         requireNonNull(id, "id");
-        return registry.timerBuilder(id.name()).tags(id.tags()).quantiles(defaultQuantiles()).create();
+        final RollingHdrQuantiles quantiles = new RollingHdrQuantiles();
+        final Timer timer = registry.timerBuilder(id.name()).tags(id.tags()).quantiles(quantiles).create();
+        registerEstimatedFootprint(registry, quantiles);
+        return timer;
     }
 
-    private static Quantiles defaultQuantiles() {
-        // According to Jon Schneider of Micrometer (discussion at micrometer-metrics.slack.com):
-        // (1) Frugal2U is by far the fastest, but can take a while to converge.
-        // (2) CKMS is slower but isn’t a successive approximation approach.
-        // (3) Window Sketch is the slowest, but the quantile is sensitive to recent samples.
-        // See http://micrometer.io/docs/prometheus#_quantiles for more information.
-
-        final CKMSQuantiles.Builder builder = new CKMSQuantiles.Builder();
-        for (double q : DEFAULT_QUANTILES) {
-            builder.quantile(q, 0.01);
+    private static void registerEstimatedFootprint(MeterRegistry registry, RollingHdrQuantiles quantiles) {
+        synchronized (allQuantiles) {
+            allQuantiles.add(new WeakReference<>(quantiles));
         }
-        return builder.create();
+
+        MicrometerUtil.registerLater(registry, METER_ID_HDR_HISTOGRAM,
+                                     HdrHistogramMetricSupport.class, HdrHistogramMetricSupport::new);
     }
 
     /**
@@ -196,6 +203,34 @@ public final class MoreMeters {
         final Class<?> idType = id.getClass();
         checkState(METER_ID_FQCN.equals(idType.getName()),
                    "unexpected meter id type: %s", idType);
+    }
+
+    private static final class HdrHistogramMetricSupport {
+        HdrHistogramMetricSupport(MeterRegistry registry, MeterId id) {
+            registry.gauge(id.name("estimatedFootprint"), id.tags(), allQuantiles, allQuantiles -> {
+                double sum = 0;
+                synchronized (allQuantiles) {
+                    for (Iterator<Reference<RollingHdrQuantiles>> i = allQuantiles.iterator(); i.hasNext();) {
+                        final Reference<RollingHdrQuantiles> ref = i.next();
+                        final RollingHdrQuantiles q = ref.get();
+                        if (q == null) {
+                            i.remove();
+                        } else {
+                            sum += q.estimatedFootprintInBytes();
+                        }
+                    }
+                }
+                return sum;
+            });
+
+            registry.gauge(id.name("count"), id.tags(), allQuantiles, allQuantiles -> {
+                synchronized (allQuantiles) {
+                    // The garbage-collected references will be removed
+                    // while calculating the estimated footprint above.
+                    return allQuantiles.size();
+                }
+            });
+        }
     }
 
     private MoreMeters() {}

@@ -29,6 +29,8 @@ import org.apache.thrift.TException;
 import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -59,6 +61,7 @@ import io.prometheus.client.CollectorRegistry;
 
 public class PrometheusMetricsIntegrationTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(PrometheusMetricsIntegrationTest.class);
     private static final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
     private static final CollectorRegistry prometheusRegistry = registry.getPrometheusRegistry();
 
@@ -140,6 +143,7 @@ public class PrometheusMetricsIntegrationTest {
                           "client_total_duration_seconds_sum{handler=\"Foo\","));
 
         final String content = makeMetricsRequest().content().toStringUtf8();
+        logger.debug("Metrics reported by the exposition service:\n{}", content);
 
         // Server entry count check
         assertThat(content).containsPattern(

@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
@@ -40,6 +42,8 @@ public final class MicrometerUtil {
 
     private static final ConcurrentMap<MeterRegistry, ConcurrentMap<MeterId, Object>> map =
             new MapMaker().weakKeys().makeMap();
+    private static final ThreadLocal<RegistrationState> registrationState =
+            ThreadLocal.withInitial(RegistrationState::new);
 
     /**
      * Associates a newly-created object with the specified {@link MeterId} or returns an existing one if
@@ -62,7 +66,36 @@ public final class MicrometerUtil {
 
         final ConcurrentMap<MeterId, Object> objects =
                 map.computeIfAbsent(registry, unused -> new ConcurrentHashMap<>());
-        final Object object = objects.computeIfAbsent(id, i -> factory.apply(registry, i));
+
+        // Prevent calling computeIfAbsent inside computeIfAbsent.
+        // See https://bugs.openjdk.java.net/browse/JDK-8062841 for more information.
+        final RegistrationState registrationState = MicrometerUtil.registrationState.get();
+        if (registrationState.isRegistering) {
+            throw new IllegalStateException("nested registration prohibited");
+        }
+
+        final Object object = register(objects, registrationState, registry, id, type, factory);
+
+        // Handle the registerLater() calls, if any were made by the factory.
+        handlePendingRegistrations(objects, registrationState);
+
+        @SuppressWarnings("unchecked")
+        final T cast = (T) object;
+        return cast;
+    }
+
+    private static <T> Object register(ConcurrentMap<MeterId, Object> map, RegistrationState registrationState,
+                                       MeterRegistry registry, MeterId id, Class<T> type,
+                                       BiFunction<MeterRegistry, MeterId, T> factory) {
+
+        final Object object = map.computeIfAbsent(id, i -> {
+            registrationState.isRegistering = true;
+            try {
+                return factory.apply(registry, i);
+            } finally {
+                registrationState.isRegistering = false;
+            }
+        });
 
         if (!type.isInstance(object)) {
             throw new IllegalStateException(
@@ -70,11 +103,75 @@ public final class MicrometerUtil {
                     " (expected: " + type.getName() +
                     ", actual: " + (object != null ? object.getClass().getName() : "null") + ')');
         }
+        return object;
+    }
 
-        @SuppressWarnings("unchecked")
-        final T cast = (T) object;
-        return cast;
+    private static void handlePendingRegistrations(ConcurrentMap<MeterId, Object> map,
+                                                   RegistrationState registrationState) {
+        for (;;) {
+            @SuppressWarnings("unchecked")
+            final PendingRegistration<Object> pendingRegistration =
+                    (PendingRegistration<Object>) registrationState.pendingRegistrations.poll();
+
+            if (pendingRegistration == null) {
+                break;
+            }
+
+            register(map, registrationState, pendingRegistration.registry, pendingRegistration.id,
+                     pendingRegistration.type, pendingRegistration.factory
+            );
+        }
+    }
+
+    /**
+     * Similar to {@link #register(MeterRegistry, MeterId, Class, BiFunction)}, but used when a registration
+     * has to be nested, because otherwise the registration may enter an infinite loop, as described
+     * <a href="https://bugs.openjdk.java.net/browse/JDK-8062841">here</a>. For example:
+     * <pre>{@code
+     * // OK
+     * register(registry, id, type, (r, i) -> {
+     *     registerLater(registry, anotherId, anotherType, ...);
+     *     return ...;
+     * });
+     *
+     * // Not OK
+     * register(registry, id, type, (r, i) -> {
+     *     register(registry, anotherId, anotherType, ...);
+     *     return ...;
+     * });
+     * }</pre>
+     */
+    public static <T> void registerLater(MeterRegistry registry, MeterId id, Class<T> type,
+                                         BiFunction<MeterRegistry, MeterId, T> factory) {
+
+        final RegistrationState registrationState = MicrometerUtil.registrationState.get();
+        if (!registrationState.isRegistering) {
+            register(registry, id, type, factory);
+        } else {
+            registrationState.pendingRegistrations.add(
+                    new PendingRegistration<>(registry, id, type, factory));
+        }
     }
 
     private MicrometerUtil() {}
+
+    private static final class RegistrationState {
+        boolean isRegistering;
+        final Queue<PendingRegistration<?>> pendingRegistrations = new ArrayDeque<>();
+    }
+
+    private static final class PendingRegistration<T> {
+        final MeterRegistry registry;
+        final MeterId id;
+        final Class<T> type;
+        final BiFunction<MeterRegistry, MeterId, T> factory;
+
+        PendingRegistration(MeterRegistry registry, MeterId id, Class<T> type,
+                            BiFunction<MeterRegistry, MeterId, T> factory) {
+            this.registry = registry;
+            this.id = id;
+            this.type = type;
+            this.factory = factory;
+        }
+    }
 }

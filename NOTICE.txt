@@ -93,6 +93,11 @@ This product contains a modified part of Micrometer, distributed by Pivotal Soft
   * License: licenses/LICENSE.micrometer.al20.txt (Apache License v2.0)
   * Homepage: https://micrometer.io/
 
+This product contains a modified part of Rolling Metrics, distributed by Vladimir Bukhtoyarov:
+
+  * License: licenses/LICENSE.rolling-metrics.al20.txt (Apache License v2.0)
+  * Homepage: https://github.com/vladimir-bukhtoyarov/rolling-metrics
+
 This product contains a modified part of Twitter Commons, distributed by Twitter, Inc:
 
   * License: license/LICENSE.twitter.al20.txt (Apache License v2.0)
@@ -156,6 +161,11 @@ This product depends on Hamcrest, distributed by hamcrest.org:
 
   * License: licenses/LICENSE.hamcrest.bsd.txt (BSD License)
   * Homepage: http://hamcrest.org/
+
+This product depends on HdrHistogram, distributed by Gil Tene and others:
+
+  * License: licenses/LICENSE.hdrhistogram.cc0.txt (Pubic domain)
+  * Homepage: http://hdrhistogram.github.io/HdrHistogram/
 
 This product depends on Hibernate Validator, distributed by Red Hat, Inc:
 

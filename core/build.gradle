@@ -107,6 +107,7 @@ task trimShadedJar(type: ProGuardTask,
     keepattributes 'Signature, InnerClasses, Annotation'
     keep "class !${shadedPackage}.**,com.linecorp.armeria.** { *; }"
     keep "class ${shadedPackage}.caffeine.** { *; }" // To make the unsafe field access work.
+    keep "class ${shadedPackage}.hdrhistogram.** { *; }" // To make the reflective access work.
 }
 
 tasks.assemble.dependsOn tasks.trimShadedJar
