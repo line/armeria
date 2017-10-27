@@ -138,4 +138,5 @@ jmh {
     forceGC = true
     includeTests = false
 }
+tasks.checkstyleJmh.enabled = false
 configurations.jmh.extendsFrom configurations.compile
