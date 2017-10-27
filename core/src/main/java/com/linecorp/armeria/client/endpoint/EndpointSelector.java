@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
@@ -33,9 +34,10 @@ public interface EndpointSelector {
     EndpointSelectionStrategy strategy();
 
     /**
-     * Selects an {@link Endpoint} from the {@link EndpointGroup}.
+     * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
+     * {@link ClientRequestContext}.
      *
      * @return the {@link Endpoint} selected by this {@link EndpointSelector}'s selection strategy
      */
-    Endpoint select();
+    Endpoint select(ClientRequestContext ctx);
 }

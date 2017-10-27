@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
 final class RoundRobinStrategy implements EndpointSelectionStrategy {
@@ -56,7 +57,8 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        public Endpoint select() {
+        public Endpoint select(ClientRequestContext ctx) {
+
             List<Endpoint> endpoints = endpointGroup.endpoints();
             int currentSequence = sequence.getAndIncrement();
 

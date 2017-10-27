@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
@@ -66,7 +67,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        public Endpoint select() {
+        public Endpoint select(ClientRequestContext ctx) {
             int currentSequence = sequence.getAndIncrement();
             return endpointsAndWeights.selectEndpoint(currentSequence);
         }
