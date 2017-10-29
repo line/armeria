@@ -29,6 +29,7 @@ import io.grpc.stub.StreamObserver;
 public class GithubApiService extends GithubServiceImplBase {
 
     public static final SearchResponse SEARCH_RESPONSE;
+
     static {
         try {
             SEARCH_RESPONSE = SearchResponse.parseFrom(

@@ -94,8 +94,6 @@ idea {
     }
 }
 
-tasks.checkstyleJmh.enabled = false
-
 jmh {
     include = [ "com\\.linecorp\\.armeria\\.grpc\\.${upstreamJmh ? 'upstream' : 'downstream'}\\..*".toString() ]
 }

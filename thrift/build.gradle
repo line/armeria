@@ -27,5 +27,3 @@ tasks.shadedJar.doLast {
 }
 
 configurations.jmh.extendsFrom configurations.testRuntimeClasspath
-
-tasks.checkstyleJmh.enabled = false
