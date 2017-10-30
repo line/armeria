@@ -31,21 +31,26 @@ public class MoreMetersTest {
     public void hdrHistogramMeters() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
+        // Get the baseline stats.
+        final Map<String, Double> measurement0 = MoreMeters.measureAll(registry);
+        final double count0 = measurement0.getOrDefault(COUNT, 0.0);
+        final double footprint0 = measurement0.getOrDefault(ESTIMATED_FOOTPRINT, 0.0);
+
         // Register a distribution summary.
         MoreMeters.summaryWithDefaultQuantiles(registry, new MeterId("foo.bar"));
 
-        // Check if estimated footprint is recorded.
+        // Check if the count and footprint have increased against the baseline.
         final Map<String, Double> measurement1 = MoreMeters.measureAll(registry);
-        assertThat(measurement1).containsEntry(COUNT, 1.0).containsKey(ESTIMATED_FOOTPRINT);
+        assertThat(measurement1).containsEntry(COUNT, count0 + 1).containsKey(ESTIMATED_FOOTPRINT);
         final double footprint1 = measurement1.get(ESTIMATED_FOOTPRINT);
-        assertThat(footprint1).isPositive();
+        assertThat(footprint1).isPositive().isGreaterThan(footprint0);
 
         // Register a timer.
         MoreMeters.timerWithDefaultQuantiles(registry, new MeterId("alice.bob"));
 
-        // Check if estimated footprint has increased, because we created two Quantiles.
+        // Check if the count and footprint have increased since the first registration.
         final Map<String, Double> measurement2 = MoreMeters.measureAll(registry);
-        assertThat(measurement2).containsEntry(COUNT, 2.0).containsKey(ESTIMATED_FOOTPRINT);
+        assertThat(measurement2).containsEntry(COUNT, count0 + 2).containsKey(ESTIMATED_FOOTPRINT);
         assertThat(measurement2.get(ESTIMATED_FOOTPRINT)).isGreaterThan(footprint1);
     }
 }
