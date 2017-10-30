@@ -1,5 +1,3 @@
-apply plugin: 'me.champeau.gradle.jmh'
-
 managedDependencies {
     // Thrift
     compile 'org.apache.thrift:libthrift'
@@ -25,5 +23,3 @@ tasks.shadedJar.doLast {
         }
     }
 }
-
-configurations.jmh.extendsFrom configurations.testRuntimeClasspath
