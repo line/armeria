@@ -7,6 +7,8 @@ buildscript {
     }
 }
 
+apply plugin: 'me.champeau.gradle.jmh'
+
 managedDependencies {
     // Caffeine
     compile 'com.github.ben-manes.caffeine:caffeine'
@@ -131,3 +133,10 @@ class ProGuardTask extends proguard.gradle.ProGuardTask {
         keep "class ${className},${className}\$* { *; }"
     }
 }
+
+jmh {
+    fork = 1
+    forceGC = true
+    includeTests = false
+}
+configurations.jmh.extendsFrom configurations.compile
