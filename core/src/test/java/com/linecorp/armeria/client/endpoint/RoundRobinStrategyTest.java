@@ -49,7 +49,7 @@ public class RoundRobinStrategyTest {
     }
 
     @Test
-    public void select_empty() {
+    public void select() {
         assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint"))
                 .isEqualTo(ENDPOINT_GROUP.endpoints().get(0));
         assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint"))
@@ -61,7 +61,7 @@ public class RoundRobinStrategyTest {
     }
 
     @Test
-    public void select() {
+    public void select_empty() {
         assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint")).isNotNull();
 
         assertThat(catchThrowable(() -> EndpointGroupRegistry.selectNode(ctx, "empty")))
