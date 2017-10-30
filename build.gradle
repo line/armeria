@@ -8,16 +8,16 @@ buildscript {
     repositories {
         mavenCentral()
         jcenter()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
     dependencies {
         classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
         classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+        classpath 'me.champeau.gradle:jmh-gradle-plugin:0.4.4'
         classpath 'org.yaml:snakeyaml:1.18'
     }
-}
-
-plugins {
-    id 'me.champeau.gradle.jmh' version '0.4.4' apply false
 }
 
 apply plugin: 'com.google.osdetector'
@@ -103,6 +103,7 @@ configure(javaProjects) {
     apply plugin: 'java'
     apply plugin: 'jacoco'
     apply plugin: 'checkstyle'
+    apply plugin: 'me.champeau.gradle.jmh'
 
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
@@ -295,6 +296,35 @@ configure(javaProjects) {
             finalizedBy tasks.jacocoTestReport
         }
     }
+
+    // Configure JMH.
+    jmh {
+        forceGC = true
+        includeTests = true
+        duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
+        jmhVersion = rootProject.ext.dependencyManagement['org.openjdk.jmh']['jmh-core'].version
+
+        if (rootProject.hasProperty('jmh.fork')) {
+            fork = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.fork')))
+        } else {
+            fork = 1
+        }
+        if (rootProject.hasProperty('jmh.iterations')) {
+            iterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.iterations')))
+        }
+        if (rootProject.hasProperty('jmh.warmupIterations')) {
+            warmupIterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.warmupIterations')))
+        } else {
+            warmupIterations = iterations
+        }
+        if (rootProject.hasProperty('jmh.profilers')) {
+            profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',')
+        }
+        if (rootProject.hasProperty('jmh.verbose')) {
+            verbosity = 'EXTRA'
+        }
+    }
+    configurations.jmh.extendsFrom configurations.testRuntime
 
     // Require Java 8 to build the project.
     tasks.withType(JavaCompile) {

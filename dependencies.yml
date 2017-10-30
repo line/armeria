@@ -190,6 +190,10 @@ org.mockito:
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.6' }
 
+org.openjdk.jmh:
+  jmh-core: { version: &JMH_VERSION '1.19' }
+  jmh-generator-annprocess: { version: *JMH_VERSION }
+
 org.reactivestreams:
   reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.1' }
   reactive-streams-tck: { version: *REACTIVE_STREAMS_VERSION }
