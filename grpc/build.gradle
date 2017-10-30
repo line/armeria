@@ -8,11 +8,10 @@ buildscript {
 }
 
 apply plugin: 'com.google.protobuf'
-apply plugin: 'me.champeau.gradle.jmh'
 
 // Use a flag to control whether we are running downstream or upstream benchmarks, to use to
 // share business logic while managing dependency conflicts.
-def upstreamJmh = rootProject.findProperty('grpcJmh.upstream')
+def upstreamJmh = rootProject.findProperty('jmh.grpcUpstream') == 'true'
 
 managedDependencies {
     // gRPC
