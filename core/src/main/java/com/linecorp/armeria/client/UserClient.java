@@ -21,8 +21,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -34,7 +32,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
 
 /**
  * A base class for implementing a user's entry point for sending a {@link Request}.
@@ -47,9 +44,6 @@ import io.netty.util.Attribute;
  * @param <O> the response type
  */
 public abstract class UserClient<I extends Request, O extends Response> implements ClientBuilderParams {
-
-    static final ThreadLocal<Function<HttpHeaders, HttpHeaders>> THREAD_LOCAL_HEADER_MANIPULATOR =
-            new ThreadLocal<>();
 
     private final ClientBuilderParams params;
     private final Client<I, O> delegate;
@@ -163,22 +157,10 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
         }
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {
-            runThreadLocalHeaderManipulator(ctx);
             return delegate().execute(ctx, req);
         } catch (Throwable cause) {
             ctx.logBuilder().endResponse(cause);
             return fallback.apply(cause);
         }
-    }
-
-    private static void runThreadLocalHeaderManipulator(ClientRequestContext ctx) {
-        final Function<HttpHeaders, HttpHeaders> manipulator = THREAD_LOCAL_HEADER_MANIPULATOR.get();
-        if (manipulator == null) {
-            return;
-        }
-
-        final Attribute<HttpHeaders> attr = ctx.attr(ClientRequestContext.HTTP_HEADERS);
-        final HttpHeaders headers = attr.get();
-        attr.set(manipulator.apply(headers != null ? headers : new DefaultHttpHeaders()));
     }
 }
