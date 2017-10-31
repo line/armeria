@@ -32,6 +32,9 @@
 
 package com.linecorp.armeria.common.metric;
 
+import static com.linecorp.armeria.common.metric.RollingHdrQuantiles.MAX_VALUE;
+import static com.linecorp.armeria.common.metric.RollingHdrQuantiles.MIN_VALUE;
+import static com.linecorp.armeria.common.metric.RollingHdrQuantiles.NUM_SIGNIFICANT_VALUE_DIGITS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -40,18 +43,69 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.HdrHistogram.DoubleRecorder;
+import org.HdrHistogram.DoubleHistogram;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Throwables;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
 public class RollingHdrQuantilesTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(RollingHdrQuantilesTest.class);
+
+    /**
+     * Makes sure the pre-calculated {@link RollingHdrQuantiles#MAX_VALUE} is correct.
+     */
+    @Test
+    public void valueRanges() {
+        assertThat(MAX_VALUE).isEqualTo(findMaxValue(NUM_SIGNIFICANT_VALUE_DIGITS));
+    }
+
+    private static long findMaxValue(int numberOfSignificantValueDigits) {
+        long min = 0;
+        long max = Long.MAX_VALUE;
+        for (;;) {
+            final long mid = (max - min) / 2 + min;
+            if (min == mid) {
+                logger.debug("{}: {}", numberOfSignificantValueDigits, min);
+                return min;
+            }
+
+            if (canRecord(numberOfSignificantValueDigits, mid)) {
+                min = mid;
+            } else {
+                max = mid - 1;
+            }
+        }
+    }
+
+    private static boolean canRecord(int numberOfSignificantValueDigits, long value) {
+        final DoubleHistogram histogram = new DoubleHistogram(numberOfSignificantValueDigits);
+        try {
+            histogram.recordValue(MIN_VALUE);
+            histogram.recordValue(value);
+
+            // Make sure it is possible to create a copy of the histogram.
+            new DoubleHistogram(histogram);
+            return true;
+        } catch (Exception e) {
+            final Throwable cause = Throwables.getRootCause(e);
+            if (cause instanceof Error) {
+                throw (Error) cause;
+            }
+
+            // Recorder rejected the value that exceeds the dynamic range limits.
+            return false;
+        }
+    }
+
     @Test
     public void test() {
-        final AtomicLong time = new AtomicLong(0);
-        final RollingHdrQuantiles q =
-                new RollingHdrQuantiles(() -> new DoubleRecorder(2), 3, 1000, time::get);
+        final AtomicLong time = new AtomicLong();
+        final RollingHdrQuantiles q = new RollingHdrQuantiles(3, 1000, time::get);
 
         q.observe(10);
         q.observe(20);
@@ -122,6 +176,26 @@ public class RollingHdrQuantilesTest {
         assertThat(q.estimatedFootprintInBytes()).isBetween(94 * 1024, 98 * 1024);
     }
 
+    /**
+     * Makes sure the value less than {@link RollingHdrQuantiles#MIN_VALUE} is clamped.
+     */
+    @Test
+    public void testMinValue() {
+        final RollingHdrQuantiles q = new RollingHdrQuantiles();
+        q.observe(MIN_VALUE / 2);
+        assertThat(q.get(0)).isBetween(MIN_VALUE * 0.99, MIN_VALUE * 1.01);
+    }
+
+    /**
+     * Makes sure the value greater than {@link RollingHdrQuantiles#MAX_VALUE} is clamped.
+     */
+    @Test
+    public void testMaxValue() {
+        final RollingHdrQuantiles q = new RollingHdrQuantiles();
+        q.observe(MAX_VALUE * 2);
+        assertThat(q.get(0)).isBetween(MAX_VALUE * 0.99, MAX_VALUE * 1.01);
+    }
+
     @Test
     public void testToString() {
         assertThat(new RollingHdrQuantiles().toString()).isNotEmpty();
@@ -129,9 +203,7 @@ public class RollingHdrQuantilesTest {
 
     @Test(timeout = 10000)
     public void testThatConcurrentThreadsNotHungWithThreeChunks() throws Exception {
-        final RollingHdrQuantiles q = new RollingHdrQuantiles(
-                () -> new DoubleRecorder(2), 3, 1000, System::currentTimeMillis);
-
+        final RollingHdrQuantiles q = new RollingHdrQuantiles(3, 1000);
         runInParallel(q, Duration.ofSeconds(3).toMillis());
     }
 
