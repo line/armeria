@@ -45,7 +45,7 @@ import io.netty.util.AsciiString;
  * Standard HTTP header names.
  *
  * <p>These are all defined as lowercase to support HTTP/2 requirements while also not
- * violating HTTP/1.x requirements.  New header names should always be lowercase.
+ * violating HTTP/1.x requirements. New header names should always be lowercase.
  */
 public final class HttpHeaderNames {
 
@@ -260,6 +260,10 @@ public final class HttpHeaderNames {
      * {@code "last-modified"}.
      */
     public static final AsciiString LAST_MODIFIED = new AsciiString("last-modified");
+    /**
+     * {@code "link"}.
+     */
+    public static final AsciiString LINK = new AsciiString("link");
     /**
      * {@code "location"}.
      */
