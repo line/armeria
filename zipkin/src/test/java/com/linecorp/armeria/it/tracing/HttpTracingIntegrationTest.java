@@ -77,6 +77,7 @@ public class HttpTracingIntegrationTest {
     private HelloService.Iface fooClientWithoutTracing;
     private HelloService.AsyncIface barClient;
     private HelloService.AsyncIface quxClient;
+    private HttpClient poolHttpClient;
 
     @Rule
     public final ServerRule server = new ServerRule() {
@@ -146,6 +147,12 @@ public class HttpTracingIntegrationTest {
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
+        poolHttpClient = HttpClient.of(server.uri("/"));
+    }
+
+    @After
+    public void tearDown() {
+        Tracing.current().close();
     }
 
     @After
@@ -264,8 +271,7 @@ public class HttpTracingIntegrationTest {
 
     @Test(timeout = 10000)
     public void testSpanInThreadPoolHasSameTraceId() throws Exception {
-        HttpClient client = HttpClient.of(server.uri("/"));
-        client.get("pool").aggregate().get();
+        poolHttpClient.get("pool").aggregate().get();
         Span[] spans = spanReporter.take(5);
         assertThat(Arrays.stream(spans).map(span -> span.traceId()).collect(toImmutableSet())).hasSize(3);
     }
