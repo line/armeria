@@ -21,25 +21,25 @@ import com.linecorp.armeria.common.RequestContext;
 import brave.Span;
 import brave.Tracer;
 import brave.Tracer.SpanInScope;
-import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.FastThreadLocal;
 
 /**
  * Utility for pushing and popping a {@link Span} via a {@link RequestContext}.
  */
 public final class SpanContextUtil {
 
-    private static final AttributeKey<SpanInScope> SPAN_IN_SCOPE_KEY =
-            AttributeKey.valueOf(SpanContextUtil.class, "SPAN_IN_SCOPE");
+    private static final FastThreadLocal<SpanInScope> SPAN_IN_THREAD = new FastThreadLocal<>();
 
     /**
      * Sets up the {@link RequestContext} to push and pop the {@link Span} whenever it is entered/exited.
      */
     public static void setupContext(RequestContext ctx, Span span, Tracer tracer) {
-        ctx.onEnter(unused -> ctx.attr(SPAN_IN_SCOPE_KEY).set(tracer.withSpanInScope(span)));
+        ctx.onEnter(unused -> SPAN_IN_THREAD.set(tracer.withSpanInScope(span)));
         ctx.onExit(unused -> {
-            SpanInScope currentSpan = ctx.attr(SPAN_IN_SCOPE_KEY).getAndSet(null);
-            if (currentSpan != null) {
-                currentSpan.close();
+            SpanInScope spanInScope = SPAN_IN_THREAD.get();
+            if (spanInScope != null) {
+                spanInScope.close();
+                SPAN_IN_THREAD.remove();
             }
         });
     }
