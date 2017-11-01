@@ -39,9 +39,9 @@ import java.io.PrintStream;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
-import java.util.function.Supplier;
 
 import org.HdrHistogram.DoubleHistogram;
 import org.HdrHistogram.DoubleRecorder;
@@ -55,6 +55,23 @@ final class RollingHdrQuantiles implements Quantiles {
     private static final double[] PREDEFINED_QUANTILES = { 0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0 };
     private static final Collection<Double> MONITORED = Arrays.stream(PREDEFINED_QUANTILES).boxed()
                                                               .collect(toImmutableList());
+
+    @VisibleForTesting
+    static final int NUM_SIGNIFICANT_VALUE_DIGITS = 2;
+
+    /**
+     * A value less than this value will be replaced so that it does not exceed the dynamic range limits of
+     * {@link DoubleRecorder}.
+     */
+    @VisibleForTesting
+    static final double MIN_VALUE = 1.0 / TimeUnit.SECONDS.toMillis(1);
+
+    /**
+     * A value greater than this value will be replaced so that it does not exceed the dynamic range limits of
+     * {@link DoubleRecorder}.
+     */
+    @VisibleForTesting
+    static final double MAX_VALUE = 70368744177663L;
 
     private final long intervalBetweenResettingMillis;
     private final long creationTimestamp;
@@ -72,19 +89,22 @@ final class RollingHdrQuantiles implements Quantiles {
     private long lastSnapshotTimeMillis;
 
     RollingHdrQuantiles() {
-        this(() -> new DoubleRecorder(2), 5, Duration.ofMinutes(2).toMillis(), System::currentTimeMillis);
+        this(5, Duration.ofMinutes(2).toMillis(), System::currentTimeMillis);
     }
 
-    RollingHdrQuantiles(Supplier<DoubleRecorder> recorderSupplier,
-                        int numberHistoryChunks, long intervalBetweenResettingMillis,
+    RollingHdrQuantiles(int numberHistoryChunks, long intervalBetweenResettingMillis) {
+        this(numberHistoryChunks, intervalBetweenResettingMillis, System::currentTimeMillis);
+    }
+
+    RollingHdrQuantiles(int numberHistoryChunks, long intervalBetweenResettingMillis,
                         LongSupplier clock) {
 
         this.intervalBetweenResettingMillis = intervalBetweenResettingMillis;
         this.clock = clock;
         creationTimestamp = clock.getAsLong();
 
-        left = new Phase(recorderSupplier, creationTimestamp + intervalBetweenResettingMillis);
-        right = new Phase(recorderSupplier, Long.MAX_VALUE);
+        left = new Phase(creationTimestamp + intervalBetweenResettingMillis);
+        right = new Phase(Long.MAX_VALUE);
         phases = new Phase[] { left, right };
         currentPhaseRef = new AtomicReference<>(left);
 
@@ -108,6 +128,8 @@ final class RollingHdrQuantiles implements Quantiles {
     }
 
     public void observe(double value, double expectedIntervalBetweenValueSamples) {
+        value = Math.max(Math.min(value, MAX_VALUE), MIN_VALUE);
+
         final long currentTimeMillis = clock.getAsLong();
         final Phase currentPhase = currentPhaseRef.get();
         if (currentTimeMillis < currentPhase.proposedInvalidationTimestamp) {
@@ -137,7 +159,7 @@ final class RollingHdrQuantiles implements Quantiles {
                 final long currentPhaseNumber =
                         (currentPhase.proposedInvalidationTimestamp - creationTimestamp) /
                         intervalBetweenResettingMillis;
-                final int correspondentArchiveIndex = (int) (currentPhaseNumber - 1) % archive.length;
+                final int correspondentArchiveIndex = (int) ((currentPhaseNumber - 1) % archive.length);
                 final ArchivedHistogram correspondentArchivedHistogram = archive[correspondentArchiveIndex];
                 reset(correspondentArchivedHistogram.histogram);
                 addSecondToFirst(correspondentArchivedHistogram.histogram, currentPhase.totalsHistogram);
@@ -290,8 +312,8 @@ final class RollingHdrQuantiles implements Quantiles {
         DoubleHistogram intervalHistogram;
         volatile long proposedInvalidationTimestamp;
 
-        Phase(Supplier<DoubleRecorder> recorderSupplier, long proposedInvalidationTimestamp) {
-            recorder = recorderSupplier.get();
+        Phase(long proposedInvalidationTimestamp) {
+            recorder = new DoubleRecorder(NUM_SIGNIFICANT_VALUE_DIGITS);
             intervalHistogram = recorder.getIntervalHistogram();
             intervalHistogram.setAutoResize(true);
             totalsHistogram = intervalHistogram.copy();
