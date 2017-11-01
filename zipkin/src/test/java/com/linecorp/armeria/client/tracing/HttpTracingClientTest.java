@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -58,6 +59,11 @@ public class HttpTracingClientTest {
     private static final String TEST_SERVICE = "test-service";
 
     private static final String TEST_SPAN = "hello";
+
+    @After
+    public void tearDown() {
+        Tracing.current().close();
+    }
 
     @Test(timeout = 20000)
     public void shouldSubmitSpanWhenSampled() throws Exception {

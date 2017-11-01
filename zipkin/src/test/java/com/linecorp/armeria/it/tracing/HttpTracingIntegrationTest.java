@@ -16,6 +16,11 @@
 
 package com.linecorp.armeria.it.tracing;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.util.concurrent.Futures.allAsList;
+import static com.google.common.util.concurrent.Futures.transformAsync;
+import static com.linecorp.armeria.common.HttpStatus.OK;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,7 +29,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.After;
@@ -32,20 +40,31 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.HelloService.AsyncIface;
+import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.tracing.HttpTracingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import brave.Tracing;
+import brave.propagation.CurrentTraceContext;
 import brave.sampler.Sampler;
 import zipkin2.Span;
 import zipkin2.reporter.Reporter;
@@ -58,6 +77,7 @@ public class HttpTracingIntegrationTest {
     private HelloService.Iface fooClientWithoutTracing;
     private HelloService.AsyncIface barClient;
     private HelloService.AsyncIface quxClient;
+    private HttpClient poolHttpClient;
 
     @Rule
     public final ServerRule server = new ServerRule() {
@@ -77,6 +97,44 @@ public class HttpTracingIntegrationTest {
 
             sb.service("/qux", decorate("service/qux", THttpService.of(
                     (AsyncIface) (name, resultHandler) -> resultHandler.onComplete("Hello, " + name + '!'))));
+
+            sb.service("/pool", decorate("service/pool", new AbstractHttpService() {
+                @Override
+                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                        throws Exception {
+                    ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
+                            Executors.newFixedThreadPool(2));
+                    CountDownLatch countDownLatch = new CountDownLatch(2);
+
+                    ListenableFuture<List<Object>> spanAware = allAsList(IntStream.range(1, 3).mapToObj(
+                            i -> executorService.submit(
+                                    RequestContext.current().makeContextAware(() -> {
+                                        brave.Span span = Tracing.currentTracer().nextSpan().start();
+                                        countDownLatch.countDown();
+                                        countDownLatch.await();
+                                        try {
+                                            return null;
+                                        } finally {
+                                            span.finish();
+                                        }
+                                    }))).collect(toImmutableList()));
+
+                    transformAsync(spanAware,
+                                   result -> allAsList(IntStream.range(1, 3).mapToObj(
+                                           i -> executorService.submit(() -> {
+                                               brave.Span span = Tracing.currentTracer().nextSpan().start();
+                                               try {
+                                                   return null;
+                                               } finally {
+                                                   span.finish();
+                                               }
+                                           })).collect(toImmutableList())),
+                                   RequestContext.current().eventLoop())
+                            .addListener(() -> {
+                                res.respond(OK, MediaType.PLAIN_TEXT_UTF_8, "Lee");
+                            }, RequestContext.current().eventLoop());
+                }
+            }));
         }
     };
 
@@ -89,6 +147,12 @@ public class HttpTracingIntegrationTest {
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
+        poolHttpClient = HttpClient.of(server.uri("/"));
+    }
+
+    @After
+    public void tearDown() {
+        Tracing.current().close();
     }
 
     @After
@@ -109,6 +173,7 @@ public class HttpTracingIntegrationTest {
 
     private static Tracing newTracing(String name) {
         return Tracing.newBuilder()
+                      .currentTraceContext(CurrentTraceContext.Default.create())
                       .localServiceName(name)
                       .spanReporter(spanReporter)
                       .sampler(Sampler.ALWAYS_SAMPLE)
@@ -202,6 +267,13 @@ public class HttpTracingIntegrationTest {
 
         // Check the span names.
         assertThat(spans).allMatch(s -> "hello".equals(s.name()));
+    }
+
+    @Test(timeout = 10000)
+    public void testSpanInThreadPoolHasSameTraceId() throws Exception {
+        poolHttpClient.get("pool").aggregate().get();
+        Span[] spans = spanReporter.take(5);
+        assertThat(Arrays.stream(spans).map(span -> span.traceId()).collect(toImmutableSet())).hasSize(3);
     }
 
     private static Span findSpan(Span[] spans, String serviceName) {
