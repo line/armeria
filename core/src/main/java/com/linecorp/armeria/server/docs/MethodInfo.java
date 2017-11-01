@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -88,7 +87,7 @@ public final class MethodInfo {
                         comparing(TypeSignature::signature),
                         requireNonNull(exceptionTypeSignatures, "exceptionTypeSignatures"));
         this.endpoints = ImmutableSortedSet.copyOf(
-                Comparator.comparing(e -> e.hostnamePattern() + ':' + e.path()),
+                comparing(e -> e.hostnamePattern() + ':' + e.path()),
                 requireNonNull(endpoints, "endpoints"));
         this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
                                          .map(HttpHeaders::copyOf)

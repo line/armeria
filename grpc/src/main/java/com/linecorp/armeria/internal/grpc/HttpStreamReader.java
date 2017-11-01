@@ -89,7 +89,7 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
             String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
             if (grpcStatus != null) {
                 Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
-                if (status.getCode().equals(Status.OK.getCode())) {
+                if (status.getCode() == Status.OK.getCode()) {
                    // Successful response, finish delivering messages before returning the status.
                    closeDeframer();
                 }

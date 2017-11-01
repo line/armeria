@@ -47,7 +47,7 @@ import io.netty.util.concurrent.ScheduledFuture;
  * for environments where service discovery is handled using DNS - for example, Kubernetes uses SkyDNS for
  * service discovery.
  */
-public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements AutoCloseable {
+public class DnsAddressEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Creates a {@link DnsAddressEndpointGroup} with an unspecified port that schedules queries on a random
@@ -56,7 +56,7 @@ public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements Aut
      * @param hostname the hostname to query DNS queries for.
      */
     public static DnsAddressEndpointGroup of(String hostname) {
-        return DnsAddressEndpointGroup.of(hostname, 0);
+        return of(hostname, 0);
     }
 
     /**
@@ -69,7 +69,7 @@ public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements Aut
      *     (e.g., 80, 443).
      */
     public static DnsAddressEndpointGroup of(String hostname, int defaultPort) {
-        return DnsAddressEndpointGroup.of(hostname,  defaultPort, CommonPools.workerGroup().next());
+        return of(hostname, defaultPort, CommonPools.workerGroup().next());
     }
 
     /**
@@ -82,7 +82,7 @@ public class DnsAddressEndpointGroup extends DynamicEndpointGroup implements Aut
      * @param eventLoop the {@link EventLoop} to schedule DNS queries on.
      */
     public static DnsAddressEndpointGroup of(String hostname, int defaultPort, EventLoop eventLoop) {
-        return DnsAddressEndpointGroup.of(hostname, defaultPort, eventLoop, Duration.ofSeconds(1));
+        return of(hostname, defaultPort, eventLoop, Duration.ofSeconds(1));
     }
 
     /**
