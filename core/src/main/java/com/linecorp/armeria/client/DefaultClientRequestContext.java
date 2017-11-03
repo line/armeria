@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -42,6 +43,8 @@ import io.netty.channel.EventLoop;
  * Default {@link ClientRequestContext} implementation.
  */
 public class DefaultClientRequestContext extends NonWrappingRequestContext implements ClientRequestContext {
+    static final ThreadLocal<Consumer<ClientRequestContext>> THREAD_LOCAL_CONTEXT_CUSTOMIZER =
+            new ThreadLocal<>();
 
     private final EventLoop eventLoop;
     private final ClientOptions options;
@@ -86,6 +89,14 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             final HttpHeaders headersCopy = new DefaultHttpHeaders(true, headers.size());
             headersCopy.set(headers);
             attr(HTTP_HEADERS).set(headersCopy);
+        }
+        runThreadLocalContextCustomizer();
+    }
+
+    private void runThreadLocalContextCustomizer() {
+        final Consumer<ClientRequestContext> customizer = THREAD_LOCAL_CONTEXT_CUSTOMIZER.get();
+        if (customizer != null) {
+            customizer.accept(this);
         }
     }
 
