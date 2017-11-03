@@ -17,58 +17,68 @@
 package com.linecorp.armeria.grpc.downstream;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static com.linecorp.armeria.grpc.shared.GithubApiService.SEARCH_RESPONSE;
 
-import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
-import org.openjdk.jmh.infra.Blackhole;
-
-import com.google.protobuf.Empty;
 
 import com.linecorp.armeria.benchmarks.GithubServiceGrpc.GithubServiceBlockingStub;
+import com.linecorp.armeria.benchmarks.GithubServiceGrpc.GithubServiceFutureStub;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
+import com.linecorp.armeria.grpc.shared.SimpleBenchmarkBase;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 @State(Scope.Benchmark)
-public class DownstreamSimpleBenchmark {
+public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     private Server server;
     private GithubServiceBlockingStub githubApiClient;
+    private GithubServiceFutureStub githubApiFutureClient;
 
-    @Setup
-    public void startServer() throws Exception {
+    @Override
+    protected int port() {
+        ServerPort httpPort = server.activePorts().values().stream()
+                                    .filter(p1 -> p1.protocol() == HTTP).findAny()
+                                    .get();
+        return httpPort.localAddress().getPort();
+    }
+
+    @Override
+    protected GithubServiceBlockingStub normalClient() {
+        return githubApiClient;
+    }
+
+    @Override
+    protected GithubServiceFutureStub normalFutureClient() {
+        return githubApiFutureClient;
+    }
+
+    @Override
+    protected void setUp() throws Exception {
         server = new ServerBuilder()
                 .port(0, HTTP)
                 .serviceUnder("/", new GrpcServiceBuilder().addService(new GithubApiService()).build())
                 .build();
         server.start().join();
-        ServerPort httpPort = server.activePorts().values().stream()
-                                    .filter(p1 -> p1.protocol() == HTTP).findAny()
-                                    .get();
-        githubApiClient = Clients.newClient(
-                "gproto+http://127.0.0.1:" + httpPort.localAddress().getPort() + "/",
-                GithubServiceBlockingStub.class);
+        final String url = "gproto+http://127.0.0.1:" + port() + "/";
+        githubApiClient = Clients.newClient(url, GithubServiceBlockingStub.class);
+        githubApiFutureClient = Clients.newClient(url, GithubServiceFutureStub.class);
+
     }
 
-    @TearDown
-    public void stopServer() throws Exception {
+    @Override
+    protected void tearDown() throws Exception {
         server.stop().join();
     }
 
-    @Benchmark
-    public void simple(Blackhole bh) throws Exception {
-        bh.consume(githubApiClient.simple(SEARCH_RESPONSE));
-    }
-
-    @Benchmark
-    public void empty(Blackhole bh) throws Exception {
-        bh.consume(githubApiClient.empty(Empty.getDefaultInstance()));
+    public static void main(String[] args) throws Exception {
+        DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
+        benchmark.start();
+        System.out.println(benchmark.simple());
+        System.out.println(benchmark.empty());
+        benchmark.stop();
     }
 }
