@@ -88,29 +88,29 @@ public abstract class SimpleBenchmarkBase {
     /**
      * The port the benchmark's server is listening on.
      */
-    abstract protected int port();
+    protected abstract int port();
 
     /**
      * The normal {@link GithubServiceBlockingStub} for the benchmark. The okhttp version will be set up in this
      * class as it's the same for both upstream and downstream.
      */
-    abstract protected GithubServiceBlockingStub normalClient();
+    protected abstract GithubServiceBlockingStub normalClient();
 
     /**
      * The normal {@link GithubServiceFutureStub} for the benchmark. The okhttp version will be set up in this
      * class as it's the same for both upstream and downstream.
      */
-    abstract protected GithubServiceFutureStub normalFutureClient();
+    protected abstract GithubServiceFutureStub normalFutureClient();
 
     /**
      * Benchmark initialization logic.
      */
-    abstract protected void setUp() throws Exception;
+    protected abstract void setUp() throws Exception;
 
     /**
      * Benchmark teardown logic.
      */
-    abstract protected void tearDown() throws Exception;
+    protected abstract void tearDown() throws Exception;
 
     private ManagedChannel okhttpChannel;
     private GithubServiceBlockingStub githubApiOkhttpClient;

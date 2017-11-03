@@ -66,7 +66,6 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
         final String url = "gproto+http://127.0.0.1:" + port() + "/";
         githubApiClient = Clients.newClient(url, GithubServiceBlockingStub.class);
         githubApiFutureClient = Clients.newClient(url, GithubServiceFutureStub.class);
-
     }
 
     @Override
@@ -74,11 +73,11 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
         server.stop().join();
     }
 
-    public static void main(String[] args) throws Exception {
+    /*public static void main(String[] args) throws Exception {
         DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
         benchmark.start();
         System.out.println(benchmark.simple());
         System.out.println(benchmark.empty());
         benchmark.stop();
-    }
+    }*/
 }
