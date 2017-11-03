@@ -19,9 +19,7 @@ package com.linecorp.armeria.grpc.upstream;
 import java.util.concurrent.TimeUnit;
 
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 
 import com.linecorp.armeria.benchmarks.GithubServiceGrpc;
 import com.linecorp.armeria.benchmarks.GithubServiceGrpc.GithubServiceBlockingStub;
@@ -57,7 +55,7 @@ public class UpstreamSimpleBenchmark extends SimpleBenchmarkBase {
         return githubApiFutureClient;
     }
 
-    @Setup
+    @Override
     public void setUp() throws Exception {
         server = ServerBuilder.forPort(0)
                               .addService(new GithubApiService())
@@ -72,7 +70,7 @@ public class UpstreamSimpleBenchmark extends SimpleBenchmarkBase {
         githubApiFutureClient = GithubServiceGrpc.newFutureStub(channel);
     }
 
-    @TearDown
+    @Override
     public void tearDown() throws Exception {
         channel.shutdownNow().awaitTermination(10, TimeUnit.SECONDS);
         server.shutdown().awaitTermination();

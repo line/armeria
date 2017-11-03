@@ -17,6 +17,7 @@
 package com.linecorp.armeria.grpc.shared;
 
 import static com.linecorp.armeria.grpc.shared.GithubApiService.SEARCH_RESPONSE;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -51,21 +52,36 @@ public abstract class SimpleBenchmarkBase {
     @AuxCounters
     @State(Scope.Thread)
     public static class Counters {
-        AtomicLong numRequests = new AtomicLong();
-        AtomicLong numFailures = new AtomicLong();
+        private AtomicLong numRequests = new AtomicLong();
+        private AtomicLong numFailures = new AtomicLong();
+        private AtomicLong currentRequests = new AtomicLong();
+
+        private volatile boolean waiting;
 
         public long numRequests() {
             return numRequests.get();
         }
 
         public long numFailures() {
-            return this.numFailures.get();
+            return numFailures.get();
+        }
+
+        public long currentRequests() {
+            return currentRequests.get();
         }
 
         @Setup(Level.Iteration)
         public void reset() {
+            waiting = false;
             numRequests.set(0);
             numFailures.set(0);
+            currentRequests.set(0);
+        }
+
+        @TearDown(Level.Iteration)
+        public void waitForCurrentRequests() {
+            waiting = true;
+            await().until(() -> currentRequests.get() == 0);
         }
     }
 
@@ -127,6 +143,7 @@ public abstract class SimpleBenchmarkBase {
 
     @Benchmark
     public void simpleNonBlocking(Counters counters) throws Exception {
+        counters.currentRequests.incrementAndGet();
         Futures.addCallback(
                 futureStub().simple(SEARCH_RESPONSE),
                 counterIncrementingFutureCallback(counters),
@@ -140,6 +157,7 @@ public abstract class SimpleBenchmarkBase {
 
     @Benchmark
     public void emptyNonBlocking(Counters counters) throws Exception {
+        counters.currentRequests.incrementAndGet();
         Futures.addCallback(
                 futureStub().empty(Empty.getDefaultInstance()),
                 counterIncrementingFutureCallback(counters),
@@ -158,13 +176,19 @@ public abstract class SimpleBenchmarkBase {
         return new FutureCallback<T>() {
             @Override
             public void onSuccess(@Nullable T result) {
-                counters.numRequests.incrementAndGet();
+                counters.currentRequests.decrementAndGet();
+                if (!counters.waiting) {
+                    counters.numRequests.incrementAndGet();
+                }
             }
 
             @Override
             public void onFailure(Throwable t) {
-                counters.numRequests.incrementAndGet();
-                counters.numFailures.incrementAndGet();
+                counters.currentRequests.decrementAndGet();
+                if (!counters.waiting) {
+                    counters.numRequests.incrementAndGet();
+                    counters.numFailures.incrementAndGet();
+                }
             }
         };
     }
