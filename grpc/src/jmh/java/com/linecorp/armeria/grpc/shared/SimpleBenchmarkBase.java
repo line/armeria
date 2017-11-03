@@ -81,7 +81,7 @@ public abstract class SimpleBenchmarkBase {
         @TearDown(Level.Iteration)
         public void waitForCurrentRequests() {
             waiting = true;
-            await().until(() -> currentRequests.get() == 0);
+            await().forever().until(() -> currentRequests.get() == 0);
         }
     }
 
