@@ -27,7 +27,6 @@ import com.linecorp.armeria.client.Endpoint;
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
     @Override
-    @SuppressWarnings("unchecked")
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
         return new WeightedRoundRobinSelector(endpointGroup);
     }
@@ -50,10 +49,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
             this.endpointGroup = endpointGroup;
             endpointsAndWeights = new EndpointsAndWeights(endpointGroup.endpoints());
-            if (endpointGroup instanceof DynamicEndpointGroup) {
-                ((DynamicEndpointGroup) endpointGroup).addListener(
-                        endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
-            }
+            endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints));
         }
 
         @Override

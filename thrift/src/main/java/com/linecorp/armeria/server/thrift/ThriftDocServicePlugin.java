@@ -88,7 +88,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     private static final TypeSignature STRING = TypeSignature.ofBase("string");
     private static final TypeSignature BINARY = TypeSignature.ofBase("binary");
 
-    private ThriftDocStringExtractor docstringExtractor = new ThriftDocStringExtractor();
+    private final ThriftDocStringExtractor docstringExtractor = new ThriftDocStringExtractor();
 
     // Methods related with generating a service specification.
 

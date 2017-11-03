@@ -57,7 +57,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
 
 /**
- * {@link DynamicEndpointGroup} which resolves targets using DNS SRV quries. This is useful for environments
+ * {@link DynamicEndpointGroup} which resolves targets using DNS SRV queries. This is useful for environments
  * where service discovery is handled using DNS - for example, Kubernetes uses SkyDNS for service discovery.
  *
  * <p>DNS response handling is mostly copied from Netty's {@code io.netty.resolver.dns.DnsNameResolverContext}
@@ -69,7 +69,7 @@ import io.netty.util.concurrent.ScheduledFuture;
  *   <li>Does not support querying multiple name servers</li>
  * </ul>
  */
-public class DnsServiceEndpointGroup extends DynamicEndpointGroup implements AutoCloseable {
+public class DnsServiceEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Creates a {@link DnsServiceEndpointGroup} with an unspecified port that schedules queries on a random
@@ -78,7 +78,7 @@ public class DnsServiceEndpointGroup extends DynamicEndpointGroup implements Aut
      * @param hostname the hostname to query DNS queries for.
      */
     public static DnsServiceEndpointGroup of(String hostname) {
-        return DnsServiceEndpointGroup.of(hostname, CommonPools.workerGroup().next());
+        return of(hostname, CommonPools.workerGroup().next());
     }
 
     /**
@@ -88,7 +88,7 @@ public class DnsServiceEndpointGroup extends DynamicEndpointGroup implements Aut
      * @param eventLoop the {@link EventLoop} to schedule DNS queries on.
      */
     public static DnsServiceEndpointGroup of(String hostname, EventLoop eventLoop) {
-        return DnsServiceEndpointGroup.of(hostname, eventLoop, Duration.ofSeconds(1));
+        return of(hostname, eventLoop, Duration.ofSeconds(1));
     }
 
     /**

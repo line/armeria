@@ -300,7 +300,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private void cleanupIfLastSubscription() {
-            if (isLastDownstreamAdded() && downstreamSubscriptions.size() == 0) {
+            if (isLastDownstreamAdded() && downstreamSubscriptions.isEmpty()) {
                 if (setState(State.LAST_DOWNSTREAM_ADDED, State.CLOSED)) {
                     upstream.abort();
                     signals().clear();

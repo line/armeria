@@ -26,7 +26,7 @@ import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 
-/** Utiltities for DNS endpoint resolvers. */
+/** Utilities for DNS endpoint resolvers. */
 final class DnsEndpointGroupUtil {
 
     /**

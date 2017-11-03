@@ -206,7 +206,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
-        if (!grpcStatus.getCode().equals(Status.OK.getCode())) {
+        if (grpcStatus.getCode() != Status.OK.getCode()) {
             StringBuilder message = new StringBuilder("grpc-status: " + grpcStatusCode);
             String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
             if (grpcMessage != null) {
