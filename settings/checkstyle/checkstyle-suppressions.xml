@@ -17,6 +17,4 @@
   <suppress checks=".*" files="[\\/]gen-java[\\/]" />
   <!-- Suppress checks in large forks to make diffing against upstream easier -->
   <suppress checks=".*" files="[\\/]grpc[\\/]ServerCallImpl.java$" />
-  <!-- Suppress visibility checks for JMH which requires public fields, etc -->
-  <suppress checks="VisibilityModifier" files="[\\/](jmh)[\\/]" />
 </suppressions>
