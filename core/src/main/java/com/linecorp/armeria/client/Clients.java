@@ -15,18 +15,23 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ClientRequestContext.HTTP_HEADERS;
+import static com.linecorp.armeria.client.DefaultClientRequestContext.THREAD_LOCAL_CONTEXT_CUSTOMIZER;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.AsciiString;
+import io.netty.util.Attribute;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -325,16 +330,51 @@ public final class Clients {
      */
     public static SafeCloseable withHttpHeaders(Function<HttpHeaders, HttpHeaders> headerManipulator) {
         requireNonNull(headerManipulator, "headerManipulator");
+        return withContextCustomizer(ctx -> {
+            final Attribute<HttpHeaders> attr = ctx.attr(HTTP_HEADERS);
+            final HttpHeaders headers = attr.get();
+            attr.set(headerManipulator.apply(headers != null ? headers : new DefaultHttpHeaders()));
+        });
+    }
 
-        final Function<HttpHeaders, HttpHeaders> oldManipulator =
-                UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.get();
+    /**
+     * Sets the specified {@link ClientRequestContext} customization function in a thread-local variable so that
+     * the customized context is used when the client invokes a request from the current thread. Use the
+     * `try-with-resources` block with the returned {@link SafeCloseable} to unset the thread-local variable
+     * automatically:
+     * <pre>{@code
+     * try (SafeCloseable ignored = withContextCustomizer(ctx -> {
+     *     ctx.attr(USER_ID).set(userId);
+     *     ctx.attr(USER_SECRET).set(secret);
+     * }) {
+     *     client.executeSomething(..);
+     * }
+     * }</pre>
+     * You can also nest the request context customization:
+     * <pre>{@code
+     * try (SafeCloseable ignored = withContextCustomizer(ctx -> ctx.attr(USER_ID).set(userId)) {
+     *     String secret = client.getSecret();
+     *     try (SafeCloseable ignored2 = withContextCustomizer(ctx -> ctx.attr(USER_SECRET)
+     *                                                                   .set(secret)) {
+     *         // Both USER_ID and USER_SECRET will be set.
+     *         client.executeSomething(..);
+     *     }
+     * }
+     * }</pre>
+     *
+     * @see #withHttpHeaders(Function)
+     */
+    public static SafeCloseable withContextCustomizer(Consumer<ClientRequestContext> contextCustomizer) {
+        requireNonNull(contextCustomizer, "contextCustomizer");
 
-        if (oldManipulator != null) {
-            UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.set(oldManipulator.andThen(headerManipulator));
-            return () -> UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.set(oldManipulator);
+        final Consumer<ClientRequestContext> oldCustomizer = THREAD_LOCAL_CONTEXT_CUSTOMIZER.get();
+
+        if (oldCustomizer != null) {
+            THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(oldCustomizer.andThen(contextCustomizer));
+            return () -> THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(oldCustomizer);
         } else {
-            UserClient.THREAD_LOCAL_HEADER_MANIPULATOR.set(headerManipulator);
-            return UserClient.THREAD_LOCAL_HEADER_MANIPULATOR::remove;
+            THREAD_LOCAL_CONTEXT_CUSTOMIZER.set(contextCustomizer);
+            return THREAD_LOCAL_CONTEXT_CUSTOMIZER::remove;
         }
     }
 
