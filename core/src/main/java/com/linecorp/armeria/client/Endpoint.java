@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
@@ -123,11 +125,11 @@ public final class Endpoint {
      * @return the {@link Endpoint} resolved by {@link EndpointGroupRegistry}.
      *         {@code this} if this endpoint is already a host endpoint.
      */
-    public Endpoint resolve(ClientRequestContext ctx) {
+    public CompletableFuture<Endpoint> resolve(ClientRequestContext ctx) {
         if (isGroup()) {
             return EndpointGroupRegistry.selectNode(ctx, groupName);
         } else {
-            return this;
+            return CompletableFuture.completedFuture(this);
         }
     }
 

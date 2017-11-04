@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.endpoint;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -106,7 +107,7 @@ public final class EndpointGroupRegistry {
      * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
      * {@link ClientRequestContext} and case-insensitive {@code groupName}.
      */
-    public static Endpoint selectNode(ClientRequestContext ctx, String groupName) {
+    public static CompletableFuture<Endpoint> selectNode(ClientRequestContext ctx, String groupName) {
         groupName = normalizeGroupName(groupName);
         EndpointSelector endpointSelector = getNodeSelector(groupName);
         if (endpointSelector == null) {

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static com.linecorp.armeria.client.endpoint.EndpointGroupRegistry.selectNode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -64,37 +65,36 @@ public class StickyEndpointSelectionStrategyTest {
 
     @Test
     public void select() {
-        final EndpointSelector selector = strategy.newSelector(STATIC_ENDPOINT_GROUP);
         final int selectTime = 5;
 
-        Endpoint ep1 = EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "static");
-        Endpoint ep2 = EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria2"), "static");
-        Endpoint ep3 = EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria3"), "static");
+        Endpoint ep1 = selectNode(
+                contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "static").join();
+        Endpoint ep2 = selectNode(
+                contextWithHeader(STICKY_HEADER_NAME, "armeria2"), "static").join();
+        Endpoint ep3 = selectNode(
+                contextWithHeader(STICKY_HEADER_NAME, "armeria3"), "static").join();
 
         // select few times to confirm that same header will be routed to same endpoint
         for (int i = 0; i < selectTime; i++) {
-            assertThat(EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "static")).isEqualTo(ep1);
-            assertThat(EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria2"), "static")).isEqualTo(ep2);
-            assertThat(EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria3"), "static")).isEqualTo(ep3);
+            assertThat(selectNode(contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "static").join())
+                    .isEqualTo(ep1);
+            assertThat(selectNode(contextWithHeader(STICKY_HEADER_NAME, "armeria2"), "static").join())
+                    .isEqualTo(ep2);
+            assertThat(selectNode(contextWithHeader(STICKY_HEADER_NAME, "armeria3"), "static").join())
+                    .isEqualTo(ep3);
         }
 
         //confirm rebuild tree of dynamic
         Endpoint ep4 = Endpoint.of("localhost:9494");
         DYNAMIC_ENDPOINT_GROUP.addEndpoint(ep4);
-        assertThat(EndpointGroupRegistry.selectNode(
-                contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "dynamic")).isEqualTo(ep4);
+        assertThat(selectNode(contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "dynamic").join())
+                .isEqualTo(ep4);
 
         DYNAMIC_ENDPOINT_GROUP.removeEndpoint(ep4);
         assertThatThrownBy(
-                () -> EndpointGroupRegistry.selectNode(
-                        contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "dynamic")
-        ).isInstanceOf(EndpointGroupException.class);
+                () -> selectNode(contextWithHeader(STICKY_HEADER_NAME, "armeria1"), "dynamic")
+                        .join())
+                .isInstanceOf(EndpointGroupException.class);
     }
 
     private static ClientRequestContext contextWithHeader(String k, String v) {

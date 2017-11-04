@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
@@ -49,36 +50,43 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final Endpoint endpoint = ctx.endpoint().resolve(ctx)
-                                     .withDefaultPort(ctx.sessionProtocol().defaultPort());
-        autoFillHeaders(ctx, endpoint, req);
+        final int defaultPort = ctx.sessionProtocol().defaultPort();
+        final CompletableFuture<Endpoint> endpointFuture = ctx.endpoint().resolve(ctx);
         if (!sanitizePath(req)) {
             req.abort();
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
         }
-
         final EventLoop eventLoop = ctx.eventLoop();
-        final PoolKey poolKey = new PoolKey(endpoint.host(), endpoint.port(), ctx.sessionProtocol());
-        final Future<Channel> channelFuture = factory.pool(eventLoop).acquire(poolKey);
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
-
-        if (channelFuture.isDone()) {
-            if (channelFuture.isSuccess()) {
-                Channel ch = channelFuture.getNow();
-                invoke0(ch, ctx, req, res, poolKey);
-            } else {
-                res.close(channelFuture.cause());
+        endpointFuture.handle(voidFunction((endpoint, thrown) -> {
+            endpoint = endpoint.withDefaultPort(defaultPort);
+            if (thrown != null) {
+                req.abort();
+                res.close(thrown);
             }
-        } else {
-            channelFuture.addListener((Future<Channel> future) -> {
-                if (future.isSuccess()) {
-                    Channel ch = future.getNow();
+            autoFillHeaders(ctx, endpoint, req);
+
+            final PoolKey poolKey = new PoolKey(endpoint.host(), endpoint.port(), ctx.sessionProtocol());
+            final Future<Channel> channelFuture = factory.pool(eventLoop).acquire(poolKey);
+
+            if (channelFuture.isDone()) {
+                if (channelFuture.isSuccess()) {
+                    Channel ch = channelFuture.getNow();
                     invoke0(ch, ctx, req, res, poolKey);
                 } else {
                     res.close(channelFuture.cause());
                 }
-            });
-        }
+            } else {
+                channelFuture.addListener((Future<Channel> future) -> {
+                    if (future.isSuccess()) {
+                        Channel ch = future.getNow();
+                        invoke0(ch, ctx, req, res, poolKey);
+                    } else {
+                        res.close(channelFuture.cause());
+                    }
+                });
+            }
+        }));
 
         return res;
     }

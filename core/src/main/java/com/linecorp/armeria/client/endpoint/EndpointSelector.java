@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 
@@ -39,5 +41,5 @@ public interface EndpointSelector {
      *
      * @return the {@link Endpoint} selected by this {@link EndpointSelector}'s selection strategy
      */
-    Endpoint select(ClientRequestContext ctx);
+    CompletableFuture<Endpoint> select(ClientRequestContext ctx);
 }
