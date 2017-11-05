@@ -73,11 +73,11 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
         server.stop().join();
     }
 
-    /*public static void main(String[] args) throws Exception {
-        DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
-        benchmark.start();
-        System.out.println(benchmark.simple());
-        System.out.println(benchmark.empty());
-        benchmark.stop();
-    }*/
+    // public static void main(String[] args) throws Exception {
+    //     DownstreamSimpleBenchmark benchmark = new DownstreamSimpleBenchmark();
+    //     benchmark.start();
+    //     System.out.println(benchmark.simple());
+    //     System.out.println(benchmark.empty());
+    //     benchmark.stop();
+    // }
 }
