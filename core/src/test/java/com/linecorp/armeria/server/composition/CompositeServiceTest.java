@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -71,9 +71,9 @@ public class CompositeServiceTest {
     public static void checkMetrics() {
         final MeterRegistry registry = server.server().meterRegistry();
         assertThat(MicrometerUtil.register(registry,
-                                           new MeterId("armeria.server.router.compositeServiceCache",
-                                                       "hostnamePattern", "*",
-                                                       "pathMapping", "prefix:/qux/"),
+                                           new MeterIdPrefix("armeria.server.router.compositeServiceCache",
+                                                             "hostnamePattern", "*",
+                                                             "pathMapping", "prefix:/qux/"),
                                            Object.class, (r, i) -> null)).isNotNull();
     }
 

@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -69,8 +70,9 @@ import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.util.NetUtil;
 import io.prometheus.client.CollectorRegistry;
 
@@ -95,7 +97,7 @@ public class ArmeriaAutoConfiguration {
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
-            Optional<MeterIdFunctionFactory> meterIdFunctionFactory,
+            Optional<MeterIdPrefixFunctionFactory> meterIdPrefixFunctionFactory,
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<ArmeriaServerConfigurator>> armeriaServiceInitializers,
             Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
@@ -112,8 +114,8 @@ public class ArmeriaAutoConfiguration {
         }
 
         final boolean metricsEnabled = armeriaSettings.isEnableMetrics();
-        final MeterIdFunctionFactory meterIdFuncFactory =
-                meterIdFunctionFactory.orElse(MeterIdFunctionFactory.DEFAULT);
+        final MeterIdPrefixFunctionFactory meterIdPrefixFuncFactory =
+                meterIdPrefixFunctionFactory.orElse(MeterIdPrefixFunctionFactory.DEFAULT);
 
         final ServerBuilder server = new ServerBuilder();
         meterRegistry.ifPresent(server::meterRegistry);
@@ -133,7 +135,7 @@ public class ArmeriaAutoConfiguration {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (metricsEnabled) {
                 service = service.decorate(MetricCollectingService.newDecorator(
-                        meterIdFuncFactory.get(METER_TYPE, bean.getServiceName())));
+                        meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
 
             server.service(bean.getPath(), service);
@@ -151,7 +153,7 @@ public class ArmeriaAutoConfiguration {
             Service<HttpRequest, HttpResponse> service = bean.getService().decorate(bean.getDecorator());
             if (metricsEnabled) {
                 service = service.decorate(MetricCollectingService.newDecorator(
-                        meterIdFuncFactory.get(METER_TYPE, bean.getServiceName())));
+                        meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
             server.service(bean.getPathMapping(), service);
         }));
@@ -161,7 +163,7 @@ public class ArmeriaAutoConfiguration {
                      ? extends Service<HttpRequest, HttpResponse>> decorator = bean.getDecorator();
             if (metricsEnabled) {
                 decorator = decorator.andThen(MetricCollectingService.newDecorator(
-                        meterIdFuncFactory.get(METER_TYPE, bean.getServiceName())));
+                        meterIdPrefixFuncFactory.get(METER_TYPE, bean.getServiceName())));
             }
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator);
         }));
@@ -183,11 +185,15 @@ public class ArmeriaAutoConfiguration {
 
         if (metricsEnabled && !Strings.isNullOrEmpty(armeriaSettings.getMetricsPath())) {
             final MeterRegistry registry = meterRegistry.orElse(Metrics.globalRegistry);
-            if (registry instanceof PrometheusMeterRegistry) {
-                final CollectorRegistry prometheusRegistry =
-                        ((PrometheusMeterRegistry) registry).getPrometheusRegistry();
-                server.service(armeriaSettings.getMetricsPath(),
-                               new PrometheusExpositionService(prometheusRegistry));
+            if (registry instanceof CompositeMeterRegistry) {
+                final Set<MeterRegistry> childRegistries = ((CompositeMeterRegistry) registry).getRegistries();
+                childRegistries.stream()
+                               .filter(PrometheusMeterRegistry.class::isInstance)
+                               .map(PrometheusMeterRegistry.class::cast)
+                               .findAny()
+                               .ifPresent(r -> addPrometheusExposition(armeriaSettings, server, r));
+            } else if (registry instanceof PrometheusMeterRegistry) {
+                addPrometheusExposition(armeriaSettings, server, (PrometheusMeterRegistry) registry);
             } else if (registry instanceof DropwizardMeterRegistry) {
                 final MetricRegistry dropwizardRegistry =
                         ((DropwizardMeterRegistry) registry).getDropwizardRegistry();
@@ -216,6 +222,14 @@ public class ArmeriaAutoConfiguration {
         s.start().join();
         logger.info("Armeria server started at ports: {}", s.activePorts());
         return s;
+    }
+
+    private static void addPrometheusExposition(ArmeriaSettings armeriaSettings, ServerBuilder server,
+                                                PrometheusMeterRegistry registry) {
+        final CollectorRegistry prometheusRegistry =
+                registry.getPrometheusRegistry();
+        server.service(armeriaSettings.getMetricsPath(),
+                       new PrometheusExpositionService(prometheusRegistry));
     }
 
     private static void configurePorts(ArmeriaSettings armeriaSettings, ServerBuilder server) {

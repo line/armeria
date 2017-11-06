@@ -24,7 +24,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -59,18 +59,18 @@ final class CompositeRouter<I, O> implements Router<O> {
     }
 
     @Override
-    public boolean registerMetrics(MeterRegistry registry, MeterId id) {
+    public boolean registerMetrics(MeterRegistry registry, MeterIdPrefix idPrefix) {
         final int numDelegates = delegates.size();
         switch (numDelegates) {
             case 0:
                 return false;
             case 1:
-                return delegates.get(0).registerMetrics(registry, id);
+                return delegates.get(0).registerMetrics(registry, idPrefix);
             default:
                 boolean registered = false;
                 for (int i = 0; i < numDelegates; i++) {
-                    final MeterId delegateId = id.withTags("index", String.valueOf(i));
-                    if (delegates.get(i).registerMetrics(registry, delegateId)) {
+                    final MeterIdPrefix delegateIdPrefix = idPrefix.withTags("index", String.valueOf(i));
+                    if (delegates.get(i).registerMetrics(registry, delegateIdPrefix)) {
                         registered = true;
                     }
                 }

@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -83,7 +83,7 @@ public class GrpcMetricsIntegrationTest {
                          .enableUnframedRequests(true)
                          .build()
                          .decorate(MetricCollectingService.newDecorator(
-                                 MeterIdFunction.ofDefault("server"))));
+                                 MeterIdPrefixFunction.ofDefault("server"))));
         }
     };
 
@@ -158,7 +158,7 @@ public class GrpcMetricsIntegrationTest {
                 .factory(clientFactory)
                 .decorator(HttpRequest.class, HttpResponse.class,
                            MetricCollectingClient.newDecorator(
-                                   MeterIdFunction.ofDefault("client")))
+                                   MeterIdPrefixFunction.ofDefault("client")))
                 .build(TestServiceBlockingStub.class);
 
         SimpleRequest request =

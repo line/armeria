@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -48,10 +48,10 @@ public class RequestMetricSupportTest {
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
                 ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/foo"));
 
-        final MeterIdFunction meterIdFunction = MeterIdFunction.ofDefault("foo");
+        final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
         ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C, "example.com");
-        RequestMetricSupport.setup(ctx, meterIdFunction);
+        RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
 
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestContent(null, null);
@@ -119,10 +119,10 @@ public class RequestMetricSupportTest {
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/bar", null, null,
                 ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/bar"));
 
-        final MeterIdFunction meterIdFunction = MeterIdFunction.ofDefault("bar");
+        final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
 
         ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C, "example.com");
-        RequestMetricSupport.setup(ctx, meterIdFunction);
+        RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
 
         ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/bar"));
         ctx.logBuilder().requestContent(new DefaultRpcRequest(Object.class, "baz"), null);

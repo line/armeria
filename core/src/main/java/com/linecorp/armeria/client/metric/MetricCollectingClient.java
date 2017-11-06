@@ -24,7 +24,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -37,7 +37,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  * MyService.Iface client = new ClientBuilder(uri)
  *         .decorator(HttpRequest.class, HttpResponse.class,
  *                    MetricCollectingClient.newDecorator(
- *                            MeterIdFunction.ofDefault("myClient)))
+ *                            MeterIdPrefixFunction.ofDefault("myClient)))
  *         .build(MyService.Iface.class);
  * }
  * </pre>
@@ -55,22 +55,24 @@ public final class MetricCollectingClient<I extends Request, O extends Response>
      * Returns a {@link Client} decorator that tracks request stats using {@link MeterRegistry}.
      */
     public static <I extends Request, O extends Response>
-    Function<Client<I, O>, MetricCollectingClient<I, O>> newDecorator(MeterIdFunction meterIdFunction) {
-        requireNonNull(meterIdFunction, "meterIdFunction");
-        return delegate -> new MetricCollectingClient<>(delegate, meterIdFunction);
+    Function<Client<I, O>, MetricCollectingClient<I, O>> newDecorator(
+            MeterIdPrefixFunction meterIdPrefixFunction) {
+
+        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        return delegate -> new MetricCollectingClient<>(delegate, meterIdPrefixFunction);
     }
 
-    private final MeterIdFunction meterIdFunction;
+    private final MeterIdPrefixFunction meterIdPrefixFunction;
 
     @SuppressWarnings("unchecked")
-    MetricCollectingClient(Client<I, O> delegate, MeterIdFunction meterIdFunction) {
+    MetricCollectingClient(Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
         super(delegate);
-        this.meterIdFunction = requireNonNull(meterIdFunction, "meterIdFunction");
+        this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
     }
 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
-        RequestMetricSupport.setup(ctx, meterIdFunction);
+        RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
         return delegate().execute(ctx, req);
     }
 }

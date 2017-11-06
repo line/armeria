@@ -23,7 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -39,21 +39,21 @@ final class CircuitBreakerMetrics {
     private final Counter transitionsToHalfOpen;
     private final Counter rejectedRequests;
 
-    CircuitBreakerMetrics(MeterRegistry parent, MeterId id) {
+    CircuitBreakerMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
         requireNonNull(parent, "parent");
-        requireNonNull(id, "id");
+        requireNonNull(idPrefix, "idPrefix");
 
-        final String requests = id.name("requests");
-        parent.gauge(requests, id.tags("result", "success"),
+        final String requests = idPrefix.name("requests");
+        parent.gauge(requests, idPrefix.tags("result", "success"),
                      latestEventCount, lec -> lec.get().success());
-        parent.gauge(requests, id.tags("result", "failure"),
+        parent.gauge(requests, idPrefix.tags("result", "failure"),
                      latestEventCount, lec -> lec.get().failure());
 
-        final String transitions = id.name("transitions");
-        transitionsToClosed = parent.counter(transitions, id.tags("state", CLOSED.name()));
-        transitionsToOpen = parent.counter(transitions, id.tags("state", OPEN.name()));
-        transitionsToHalfOpen = parent.counter(transitions, id.tags("state", HALF_OPEN.name()));
-        rejectedRequests = parent.counter(id.name("rejectedRequests"), id.tags());
+        final String transitions = idPrefix.name("transitions");
+        transitionsToClosed = parent.counter(transitions, idPrefix.tags("state", CLOSED.name()));
+        transitionsToOpen = parent.counter(transitions, idPrefix.tags("state", OPEN.name()));
+        transitionsToHalfOpen = parent.counter(transitions, idPrefix.tags("state", HALF_OPEN.name()));
+        rejectedRequests = parent.counter(idPrefix.name("rejectedRequests"), idPrefix.tags());
     }
 
     void onStateChanged(CircuitState state) {

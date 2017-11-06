@@ -28,7 +28,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.composition.CompositeServiceEntry;
 
@@ -111,8 +111,8 @@ final class RouteCache {
         }
 
         @Override
-        public boolean registerMetrics(MeterRegistry registry, MeterId id) {
-            CaffeineMetricSupport.setup(registry, id, cache);
+        public boolean registerMetrics(MeterRegistry registry, MeterIdPrefix idPrefix) {
+            CaffeineMetricSupport.setup(registry, idPrefix, cache);
             return true;
         }
 

@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
@@ -94,11 +94,12 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         router = Routers.ofCompositeService(services);
 
         final MeterRegistry registry = server.meterRegistry();
-        final MeterId meterId = new MeterId("armeria.server.router.compositeServiceCache",
-                                            "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                            "pathMapping", cfg.pathMapping().meterTag());
+        final MeterIdPrefix meterIdPrefix =
+                new MeterIdPrefix("armeria.server.router.compositeServiceCache",
+                                  "hostnamePattern", cfg.virtualHost().hostnamePattern(),
+                                  "pathMapping", cfg.pathMapping().meterTag());
 
-        router.registerMetrics(registry, meterId);
+        router.registerMetrics(registry, meterIdPrefix);
         for (CompositeServiceEntry<I, O> e : services()) {
             ServiceCallbackInvoker.invokeServiceAdded(cfg, e.service());
         }

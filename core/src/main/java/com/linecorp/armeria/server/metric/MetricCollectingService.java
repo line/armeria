@@ -21,7 +21,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -38,7 +38,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  *         "/service",
  *         THttpService.of(handler)
  *                     .decorate(MetricCollectingService.newDecorator(
- *                             MeterIdFunction.ofDefault("myService"))));
+ *                             MeterIdPrefixFunction.ofDefault("myService"))));
  * }
  * </pre>
  *
@@ -55,21 +55,23 @@ public final class MetricCollectingService<I extends Request, O extends Response
      * Returns a new {@link Service} decorator that tracks request stats using {@link MeterRegistry}.
      */
     public static <I extends Request, O extends Response>
-    Function<Service<I, O>, MetricCollectingService<I, O>> newDecorator(MeterIdFunction meterIdFunction) {
-        requireNonNull(meterIdFunction, "meterIdFunction");
-        return delegate -> new MetricCollectingService<>(delegate, meterIdFunction);
+    Function<Service<I, O>, MetricCollectingService<I, O>> newDecorator(
+            MeterIdPrefixFunction meterIdPrefixFunction) {
+
+        requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        return delegate -> new MetricCollectingService<>(delegate, meterIdPrefixFunction);
     }
 
-    private final MeterIdFunction meterIdFunction;
+    private final MeterIdPrefixFunction meterIdPrefixFunction;
 
-    MetricCollectingService(Service<I, O> delegate, MeterIdFunction meterIdFunction) {
+    MetricCollectingService(Service<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
         super(delegate);
-        this.meterIdFunction = requireNonNull(meterIdFunction, "meterIdFunction");
+        this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        RequestMetricSupport.setup(ctx, meterIdFunction);
+        RequestMetricSupport.setup(ctx, meterIdPrefixFunction);
         return delegate().serve(ctx, req);
     }
 }

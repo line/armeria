@@ -34,7 +34,7 @@ import com.google.common.base.Ascii;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaTypeSet;
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
@@ -188,9 +188,9 @@ public final class VirtualHost {
         this.serverConfig = requireNonNull(serverConfig, "serverConfig");
 
         final MeterRegistry registry = serverConfig.meterRegistry();
-        final MeterId id = new MeterId("armeria.server.router.virtualHostCache",
-                                       "hostnamePattern", hostnamePattern);
-        router.registerMetrics(registry, id);
+        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.router.virtualHostCache",
+                                                         "hostnamePattern", hostnamePattern);
+        router.registerMetrics(registry, idPrefix);
     }
 
     /**
