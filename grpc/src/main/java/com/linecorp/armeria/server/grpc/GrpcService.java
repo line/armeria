@@ -226,6 +226,18 @@ public final class GrpcService extends AbstractHttpService
             return null;
         }
 
+        for (SerializationFormat format : supportedSerializationFormats) {
+            for (MediaType formatType : format.mediaTypes()) {
+                if (contentType.equals(formatType.toString())) {
+                    return format;
+                }
+            }
+        }
+
+        // It's very unlikely that gRPC content types will be introduced that do not statically match our known
+        // content types, so we only bother properly parsing it if we couldn't find a match. In practice, this
+        // should never happen.
+
         final MediaType mediaType;
         try {
             mediaType = MediaType.parse(contentType);
