@@ -16,22 +16,16 @@
 
 package com.linecorp.armeria.grpc.upstream;
 
-import static com.linecorp.armeria.grpc.shared.GithubApiService.SEARCH_RESPONSE;
-
 import java.util.concurrent.TimeUnit;
 
-import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
-import org.openjdk.jmh.infra.Blackhole;
-
-import com.google.protobuf.Empty;
 
 import com.linecorp.armeria.benchmarks.GithubServiceGrpc;
 import com.linecorp.armeria.benchmarks.GithubServiceGrpc.GithubServiceBlockingStub;
+import com.linecorp.armeria.benchmarks.GithubServiceGrpc.GithubServiceFutureStub;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
+import com.linecorp.armeria.grpc.shared.SimpleBenchmarkBase;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -39,39 +33,46 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 @State(Scope.Benchmark)
-public class UpstreamSimpleBenchmark {
+public class UpstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     private Server server;
     private ManagedChannel channel;
     private GithubServiceBlockingStub githubApiClient;
+    private GithubServiceFutureStub githubApiFutureClient;
 
-    @Setup
-    public void startServer() throws Exception {
+    @Override
+    protected int port() {
+        return server.getPort();
+    }
+
+    @Override
+    protected GithubServiceBlockingStub normalClient() {
+        return githubApiClient;
+    }
+
+    @Override
+    protected GithubServiceFutureStub normalFutureClient() {
+        return githubApiFutureClient;
+    }
+
+    @Override
+    public void setUp() throws Exception {
         server = ServerBuilder.forPort(0)
                               .addService(new GithubApiService())
                               .directExecutor()
                               .build();
         server.start();
-        channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.getPort())
+        channel = ManagedChannelBuilder.forAddress("127.0.0.1", port())
                                        .directExecutor()
                                        .usePlaintext(true)
                                        .build();
         githubApiClient = GithubServiceGrpc.newBlockingStub(channel);
+        githubApiFutureClient = GithubServiceGrpc.newFutureStub(channel);
     }
 
-    @TearDown
-    public void stopServer() throws Exception {
+    @Override
+    public void tearDown() throws Exception {
+        channel.shutdownNow().awaitTermination(10, TimeUnit.SECONDS);
         server.shutdown().awaitTermination();
-        channel.shutdown().awaitTermination(10, TimeUnit.SECONDS);
-    }
-
-    @Benchmark
-    public void simple(Blackhole bh) throws Exception {
-        bh.consume(githubApiClient.simple(SEARCH_RESPONSE));
-    }
-
-    @Benchmark
-    public void empty(Blackhole bh) throws Exception {
-        bh.consume(githubApiClient.empty(Empty.getDefaultInstance()));
     }
 }
