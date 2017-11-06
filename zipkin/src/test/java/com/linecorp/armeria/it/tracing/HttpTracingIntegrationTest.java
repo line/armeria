@@ -273,7 +273,7 @@ public class HttpTracingIntegrationTest {
     public void testSpanInThreadPoolHasSameTraceId() throws Exception {
         poolHttpClient.get("pool").aggregate().get();
         Span[] spans = spanReporter.take(5);
-        assertThat(Arrays.stream(spans).map(span -> span.traceId()).collect(toImmutableSet())).hasSize(3);
+        assertThat(Arrays.stream(spans).map(span -> span.traceId).collect(toImmutableSet())).hasSize(3);
     }
 
     private static Span findSpan(Span[] spans, String serviceName) {
