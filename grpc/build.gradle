@@ -24,6 +24,7 @@ managedDependencies {
     testCompile 'io.grpc:grpc-okhttp'
     testCompile 'io.grpc:grpc-testing'
 
+    jmh 'io.grpc:grpc-okhttp'
     if (upstreamJmh) {
         jmh 'io.grpc:grpc-netty'
     }
