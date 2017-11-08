@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -31,6 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -42,12 +46,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Converter;
 import com.linecorp.armeria.server.annotation.Converter.Unspecified;
+import com.linecorp.armeria.server.annotation.Decorate;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
@@ -67,6 +74,14 @@ import com.linecorp.armeria.server.annotation.Trace;
  */
 final class AnnotatedHttpServices {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServices.class);
+
+    /**
+     * A {@link DecoratingServiceFunction} map for reusing.
+     */
+    private static final ConcurrentMap<
+            Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>>,
+            DecoratingServiceFunction<HttpRequest, HttpResponse>>
+            decoratingServiceFunctions = new ConcurrentHashMap<>();
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -249,7 +264,7 @@ final class AnnotatedHttpServices {
     private static String findPattern(Method method, Set<Annotation> methodAnnotations) {
         String pattern = null;
 
-        Path path = method.getAnnotation(Path.class);
+        final Path path = method.getAnnotation(Path.class);
         if (path != null) {
             pattern = method.getAnnotation(Path.class).value();
         }
@@ -281,21 +296,17 @@ final class AnnotatedHttpServices {
      * specify the target class.
      */
     private static ResponseConverter converter(Method method) {
-        Converter[] converters = method.getAnnotationsByType(Converter.class);
+        final Converter[] converters = method.getAnnotationsByType(Converter.class);
         if (converters.length == 0) {
             return null;
         }
         if (converters.length == 1) {
-            Converter converter = converters[0];
+            final Converter converter = converters[0];
             if (converter.target() != Unspecified.class) {
                 throw new IllegalArgumentException(
                         "@Converter annotation can't be marked on a method with a target specified.");
             }
-            try {
-                return converter.value().newInstance();
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            }
+            return newInstance(converter.value());
         }
 
         throw new IllegalArgumentException("@Converter annotation can't be repeated on a method.");
@@ -307,22 +318,69 @@ final class AnnotatedHttpServices {
      * specify the target class, except {@link Object}.class.
      */
     private static Map<Class<?>, ResponseConverter> converters(Class<?> clazz) {
-        Converter[] converters = clazz.getAnnotationsByType(Converter.class);
-        ImmutableMap.Builder<Class<?>, ResponseConverter> builder = ImmutableMap.builder();
+        final Converter[] converters = clazz.getAnnotationsByType(Converter.class);
+        final ImmutableMap.Builder<Class<?>, ResponseConverter> builder = ImmutableMap.builder();
         for (Converter converter : converters) {
-            Class<?> target = converter.target();
+            final Class<?> target = converter.target();
             if (target == Unspecified.class) {
                 throw new IllegalArgumentException(
                         "@Converter annotation must have a target type specified.");
             }
-            try {
-                ResponseConverter instance = converter.value().newInstance();
-                builder.put(target, instance);
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            }
+            builder.put(target, newInstance(converter.value()));
         }
         return builder.build();
+    }
+
+    /**
+     * Returns a decorator chain which is specified by {@link Decorate} annotations.
+     */
+    private static Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> decorator(Method method) {
+
+        final Decorate decorate = method.getAnnotation(Decorate.class);
+        if (decorate == null) {
+            return Function.identity();
+        }
+
+        final Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>>[] c = decorate.value();
+        if (c.length == 0) {
+            return Function.identity();
+        }
+
+        // Respect the order of decorators which is specified by a user. The first one is first applied.
+        Function<Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> decorator = newDecorator(c[c.length - 1]);
+        for (int i = c.length - 2; i >= 0; i--) {
+            decorator = decorator.andThen(newDecorator(c[i]));
+        }
+        return decorator;
+    }
+
+    /**
+     * Returns a new decorator which decorates a {@link Service} by {@link FunctionalDecoratingService}
+     * and the specified {@link DecoratingServiceFunction}.
+     */
+    private static Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> newDecorator(
+            Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>> clazz) {
+        return service -> new FunctionalDecoratingService<>(
+                service, decoratingServiceFunctions.computeIfAbsent(clazz, AnnotatedHttpServices::newInstance));
+    }
+
+    /**
+     * Returns a new instance of the specified {@link Class}.
+     */
+    private static <T> T newInstance(Class<? extends T> clazz) {
+        try {
+            final Constructor<? extends T> constructor = clazz.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
+        } catch (Exception e) {
+            throw new IllegalStateException("A decorator function class specified in @" +
+                                            Decorate.class.getSimpleName() +
+                                            " annotation must have an accessible default constructor: " +
+                                            clazz.getName(), e);
+        }
     }
 
     /**
@@ -358,7 +416,8 @@ final class AnnotatedHttpServices {
 
         final ResponseConverter converter = converter(method);
         if (converter != null) {
-            return new AnnotatedHttpService(pathMapping, function.withConverter(converter));
+            return new AnnotatedHttpService(pathMapping, function.withConverter(converter),
+                                            decorator(method));
         }
 
         final ImmutableMap<Class<?>, ResponseConverter> newConverters =
@@ -367,7 +426,8 @@ final class AnnotatedHttpServices {
                         .putAll(converters(method.getDeclaringClass())) // Converters given by @Converters
                         .build();
 
-        return new AnnotatedHttpService(pathMapping, function.withConverters(newConverters));
+        return new AnnotatedHttpService(pathMapping, function.withConverters(newConverters),
+                                        decorator(method));
     }
 
     /**

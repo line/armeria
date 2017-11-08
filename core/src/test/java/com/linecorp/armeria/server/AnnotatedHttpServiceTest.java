@@ -578,12 +578,12 @@ public class AnnotatedHttpServiceTest {
             // Exact pattern
             testBody(hc, get("/6/exact"), "String[exact:/6/exact]");
             // Prefix pattern
-            testBody(hc, get("/6/prefix/foo"),  "String[prefix:/6/prefix/foo:/foo]");
+            testBody(hc, get("/6/prefix/foo"), "String[prefix:/6/prefix/foo:/foo]");
             // Glob pattern
-            testBody(hc, get("/6/glob1/bar"),  "String[glob1:/6/glob1/bar]");
-            testBody(hc, get("/6/baz/glob2"),  "String[glob2:/6/baz/glob2:0]");
+            testBody(hc, get("/6/glob1/bar"), "String[glob1:/6/glob1/bar]");
+            testBody(hc, get("/6/baz/glob2"), "String[glob2:/6/baz/glob2:0]");
             // Regex pattern
-            testBody(hc, get("/6/regex/foo/bar"),  "String[regex:/6/regex/foo/bar:foo/bar]");
+            testBody(hc, get("/6/regex/foo/bar"), "String[regex:/6/regex/foo/bar:foo/bar]");
         }
     }
 
@@ -647,7 +647,7 @@ public class AnnotatedHttpServiceTest {
             testBodyAndContentType(hc, post(uri, "application/json"),
                                    "POST/JSON/BOTH", "application/json");
 
-            testBody(hc, post(uri),"POST");
+            testBody(hc, post(uri), "POST");
 
             // No match on 'Accept' header list.
             testStatusCode(hc, post(uri, null, "application/json"), 406);
@@ -696,43 +696,43 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    private static void testBodyAndContentType(CloseableHttpClient hc, HttpRequestBase req,
-                                               String body, String contentType) throws IOException {
+    static void testBodyAndContentType(CloseableHttpClient hc, HttpRequestBase req,
+                                       String body, String contentType) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, body, null, contentType);
         }
     }
 
-    private static void testBody(CloseableHttpClient hc, HttpRequestBase req,
-                                 String body) throws IOException {
+    static void testBody(CloseableHttpClient hc, HttpRequestBase req,
+                         String body) throws IOException {
         testBody(hc, req, body, null);
     }
 
-    private static void testBody(CloseableHttpClient hc, HttpRequestBase req,
-                                 String body, @Nullable Charset encoding) throws IOException {
+    static void testBody(CloseableHttpClient hc, HttpRequestBase req,
+                         String body, @Nullable Charset encoding) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, body, encoding, null);
         }
     }
 
-    private static void testStatusCode(CloseableHttpClient hc, HttpRequestBase req,
-                                       int statusCode) throws IOException {
+    static void testStatusCode(CloseableHttpClient hc, HttpRequestBase req,
+                               int statusCode) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, statusCode, null, null, null);
         }
     }
 
-    private static void testForm(CloseableHttpClient hc, HttpPost req) throws IOException {
+    static void testForm(CloseableHttpClient hc, HttpPost req) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
             checkResult(res, 200, EntityUtils.toString(req.getEntity()), null, null);
         }
     }
 
-    private static void checkResult(org.apache.http.HttpResponse res,
-                                    int statusCode,
-                                    @Nullable String body,
-                                    @Nullable Charset encoding,
-                                    @Nullable String contentType) throws IOException {
+    static void checkResult(org.apache.http.HttpResponse res,
+                            int statusCode,
+                            @Nullable String body,
+                            @Nullable Charset encoding,
+                            @Nullable String contentType) throws IOException {
         final HttpStatus status = HttpStatus.valueOf(statusCode);
         assertThat(res.getStatusLine().toString(), is("HTTP/1.1 " + status));
         if (body != null) {
@@ -753,31 +753,31 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    private static HttpRequestBase get(String uri) {
+    static HttpRequestBase get(String uri) {
         return request(HttpMethod.GET, uri, null, null);
     }
 
-    private static HttpRequestBase get(String uri, String accept) {
+    static HttpRequestBase get(String uri, String accept) {
         return request(HttpMethod.GET, uri, null, accept);
     }
 
-    private static HttpRequestBase post(String uri) {
+    static HttpRequestBase post(String uri) {
         return request(HttpMethod.POST, uri, null, null);
     }
 
-    private static HttpRequestBase post(String uri, String contentType) {
+    static HttpRequestBase post(String uri, String contentType) {
         return request(HttpMethod.POST, uri, contentType, null);
     }
 
-    private static HttpRequestBase post(String uri, String contentType, String accept) {
+    static HttpRequestBase post(String uri, String contentType, String accept) {
         return request(HttpMethod.POST, uri, contentType, accept);
     }
 
-    private static HttpPost form(String uri) {
+    static HttpPost form(String uri) {
         return form(uri, null, "armeria", "armeria");
     }
 
-    private static HttpPost form(String uri, Charset charset, String... kv) {
+    static HttpPost form(String uri, Charset charset, String... kv) {
         final HttpPost req = (HttpPost) request(HttpMethod.POST, uri, MediaType.FORM_DATA.toString());
 
         final List<NameValuePair> params = new ArrayList<>();
@@ -791,11 +791,11 @@ public class AnnotatedHttpServiceTest {
         return req;
     }
 
-    private static HttpRequestBase request(HttpMethod method, String uri, String contentType) {
+    static HttpRequestBase request(HttpMethod method, String uri, String contentType) {
         return request(method, uri, contentType, null);
     }
 
-    private static HttpRequestBase request(HttpMethod method, String uri, String contentType, String accept) {
+    static HttpRequestBase request(HttpMethod method, String uri, String contentType, String accept) {
         final HttpRequestBase req;
         switch (method) {
             case GET:
@@ -816,13 +816,13 @@ public class AnnotatedHttpServiceTest {
         return req;
     }
 
-    private static void validateContext(RequestContext ctx) {
+    static void validateContext(RequestContext ctx) {
         if (RequestContext.current() != ctx) {
             throw new RuntimeException("ServiceRequestContext instances are not same!");
         }
     }
 
-    private static void validateContextAndRequest(RequestContext ctx, Object req) {
+    static void validateContextAndRequest(RequestContext ctx, Object req) {
         validateContext(ctx);
         if (RequestContext.current().request() != req) {
             throw new RuntimeException("HttpRequest instances are not same!");

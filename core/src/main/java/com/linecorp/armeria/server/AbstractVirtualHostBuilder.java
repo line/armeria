@@ -352,7 +352,7 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
 
         final List<AnnotatedHttpService> entries =
                 AnnotatedHttpServices.build(pathPrefix, service, converters);
-        entries.forEach(e -> service(e.pathMapping(), decorator.apply(e)));
+        entries.forEach(e -> service(e.pathMapping(), decorator.apply(e.decorator().apply(e))));
         return self();
     }
 
