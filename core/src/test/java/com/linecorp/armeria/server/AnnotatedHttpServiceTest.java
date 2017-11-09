@@ -30,7 +30,6 @@ import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
-import org.apache.http.Header;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -70,6 +69,7 @@ import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Converter;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
@@ -119,6 +119,9 @@ public class AnnotatedHttpServiceTest {
 
             sb.annotatedService("/10", new MyAnnotatedService10(),
                                 LoggingService.newDecorator());
+
+            sb.annotatedService("/11", new MyAnnotatedService11(),
+                                      LoggingService.newDecorator());
         }
     };
 
@@ -526,6 +529,53 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    public static class MyAnnotatedService11 {
+
+        @Get("/aHeader")
+        public String aHeader(@Header("if-match") String ifMatch) {
+            if ("737060cd8c284d8af7ad3082f209582d".equalsIgnoreCase(ifMatch)) {
+                return "matched";
+            }
+            return "unMatched";
+        }
+
+        @Post("/customHeader")
+        public String customHeader(@Header("a-name") String name) {
+            return name + " is awesome";
+        }
+
+        @Get("/headerDefault")
+        public String headerDefault(RequestContext ctx,
+                                    @Header("username") @Default("hello") String username,
+                                    @Header("password") @Default("world") Optional<String> password,
+                                    @Header("extra") Optional<String> extra,
+                                    @Header("number") Optional<Integer> number) {
+            validateContext(ctx);
+            return username + "/" + password.get() + "/" + extra.orElse("(null)") +
+                   (number.isPresent() ? "/" + number.get() : "");
+        }
+
+        @Get("/headerWithParam")
+        public String headerWithParam(RequestContext ctx,
+                                    @Header("username") @Default("hello") String username,
+                                    @Header("password") @Default("world") Optional<String> password,
+                                    @Param("extra") Optional<String> extra,
+                                    @Param("number") int number) {
+            validateContext(ctx);
+            return username + "/" + password.get() + "/" + extra.orElse("(null)") + "/" + number;
+        }
+
+        @Get
+        @Path("/headerWithoutValue")
+        public String headerWithoutValue(RequestContext ctx,
+                                    @Param("username") @Default("hello") String username,
+                                    @Param("password") String password) {
+            validateContext(ctx);
+            return username + "/" + password;
+        }
+    }
+
     @Test
     public void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -696,6 +746,34 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    @Test
+    public void testRequestHeaderInjection() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            HttpRequestBase request = get("/11/aHeader");
+            request.setHeader(org.apache.http.HttpHeaders.IF_MATCH, "737060cd8c284d8af7ad3082f209582d");
+            testBody(hc, request, "matched");
+
+            request = post("/11/customHeader");
+            request.setHeader("a-name", "minwoox");
+            testBody(hc, request, "minwoox is awesome");
+
+            request = get("/11/headerDefault");
+            testBody(hc, request, "hello/world/(null)");
+
+            request = get("/11/headerDefault");
+            request.setHeader("extra", "people");
+            request.setHeader("number", "1");
+            testBody(hc, request, "hello/world/people/1");
+
+            request = get("/11/headerWithParam?extra=people&number=2");
+            request.setHeader("username", "trustin");
+            request.setHeader("password", "hyangtack");
+            testBody(hc, request, "trustin/hyangtack/people/2");
+
+            testStatusCode(hc, get("/11/headerWithoutValue"), 400);
+        }
+    }
+
     static void testBodyAndContentType(CloseableHttpClient hc, HttpRequestBase req,
                                        String body, String contentType) throws IOException {
         try (CloseableHttpResponse res = hc.execute(req)) {
@@ -743,7 +821,7 @@ public class AnnotatedHttpServiceTest {
             }
         }
 
-        final Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
+        final org.apache.http.Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
         if (contentType != null) {
             assertThat(header.getValue(), is(contentType));
         } else if (statusCode >= 400) {
