@@ -119,7 +119,7 @@ public final class Endpoint {
     }
 
     /**
-     * Resolves this endpoint into a host endpoint associated with the specified
+     * Asynchronously resolves this endpoint into a host endpoint associated with the specified
      * {@link ClientRequestContext}.
      *
      * @return the {@link Endpoint} resolved by {@link EndpointGroupRegistry}.

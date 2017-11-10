@@ -36,7 +36,7 @@ public interface EndpointSelector {
     EndpointSelectionStrategy strategy();
 
     /**
-     * Selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
+     * Asynchronously selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
      * {@link ClientRequestContext}.
      *
      * @return the {@link Endpoint} selected by this {@link EndpointSelector}'s selection strategy
