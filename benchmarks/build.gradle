@@ -1,0 +1,78 @@
+
+/*
+ * Copyright 2017 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+apply plugin: 'com.google.protobuf'
+apply plugin: 'me.champeau.gradle.jmh'
+
+def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
+
+// Do a simple check of include for gRPC upstream, where we need to control dependencies to prevent conflicts.
+// It should be reliable enough.
+def grpcUpstream = jmhInclude.contains('grpc.upstream') || jmhInclude.contains('grpc\\.upstream')
+
+managedDependencies {
+    jmh 'io.grpc:grpc-okhttp'
+    if (grpcUpstream) {
+        jmh 'io.grpc:grpc-netty'
+    }
+}
+
+dependencies {
+    jmh project(':grpc')
+    jmh project(':thrift')
+
+    if (grpcUpstream) {
+        // Since project(':core') is automatically added in the top-level build, it's difficult to exclude
+        // its transitive dependencies just for upstream benchmarks. Fixing the versions to upstream works ok.
+        jmh 'com.google.guava:guava:19.0'
+    }
+}
+
+sourceSets {
+    jmh {
+        output.dir("build/gen-src/jmh/resources", builtBy: 'generateJmhProto')
+    }
+}
+
+jmh {
+    if (jmhInclude) {
+        include = jmhInclude
+    }
+    forceGC = true
+    duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
+    jmhVersion = rootProject.ext.dependencyManagement['org.openjdk.jmh']['jmh-core'].version
+
+    if (rootProject.hasProperty('jmh.fork')) {
+        fork = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.fork')))
+    } else {
+        fork = 1
+    }
+    if (rootProject.hasProperty('jmh.iterations')) {
+        iterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.iterations')))
+    }
+    if (rootProject.hasProperty('jmh.warmupIterations')) {
+        warmupIterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.warmupIterations')))
+    } else {
+        warmupIterations = iterations
+    }
+    if (rootProject.hasProperty('jmh.profilers')) {
+        profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',')
+    }
+    if (rootProject.hasProperty('jmh.verbose')) {
+        verbosity = 'EXTRA'
+    }
+}

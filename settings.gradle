@@ -18,6 +18,7 @@ include 'zipkin'
 include 'zookeeper'
 
 // Unpublished Java projects
+include 'benchmarks'
 include 'it'
 include 'shaded-test'
 include 'testing-internal'

@@ -5,8 +5,7 @@
 /out
 /*/out
 /*/*/out
-**/src/main/gen-java
-**/src/test/gen-java
+**/gen-java
 **/gen-src
 
 # Package Files #

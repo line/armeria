@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   https://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.thrift;
+package com.linecorp.armeria.benchmarks.thrift;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 
@@ -38,8 +38,9 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
+import com.linecorp.armeria.server.thrift.THttpService;
+import com.linecorp.armeria.benchmarks.thrift.services.HelloService;
+import com.linecorp.armeria.benchmarks.thrift.services.HelloService.AsyncIface;
 
 import joptsimple.internal.Strings;
 
