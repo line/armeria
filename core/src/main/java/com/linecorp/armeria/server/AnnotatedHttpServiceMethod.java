@@ -50,12 +50,14 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.Types;
 import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.util.AsciiString;
 
 /**
  * Invokes an individual method of an annotated service. An annotated service method whose return type is not
@@ -163,63 +165,72 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         requireNonNull(pathParams, "pathParams");
         boolean hasRequestMessage = false;
         final ImmutableList.Builder<Parameter> entries = ImmutableList.builder();
-        for (java.lang.reflect.Parameter p : method.getParameters()) {
-            final Param param = p.getAnnotation(Param.class);
+        for (java.lang.reflect.Parameter parameterInfo : method.getParameters()) {
+            final Param param = parameterInfo.getAnnotation(Param.class);
             if (param != null) {
-                final Default aDefault = p.getAnnotation(Default.class);
-                final boolean isOptionalType = p.getType().isAssignableFrom(Optional.class);
-                final boolean isMandatory = !isOptionalType && aDefault == null;
-
                 if (pathParams.contains(param.value())) {
-                    // Path variable
-                    if (!isMandatory) {
+                    if (parameterInfo.getAnnotation(Default.class) != null ||
+                        parameterInfo.getType().isAssignableFrom(Optional.class)) {
                         throw new IllegalArgumentException(
                                 "Path variable '" + param.value() + "' should not be an optional.");
                     }
-                    entries.add(Parameter.ofPathParam(validateAndNormalizeSupportedType(p.getType()),
-                                                      param.value()));
+                    entries.add(Parameter.ofPathParam(
+                            validateAndNormalizeSupportedType(parameterInfo.getType()), param.value()));
                 } else {
-                    // Set the default value to null if it was not specified.
-                    final String defaultValue = aDefault != null ? getSpecifiedValue(aDefault.value()).get()
-                                                                 : null;
-                    final Class<?> type;
-                    if (isOptionalType) {
-                        try {
-                            type = (Class<?>) ((ParameterizedType) p.getParameterizedType())
-                                    .getActualTypeArguments()[0];
-                        } catch (Exception e) {
-                            throw new IllegalArgumentException("Invalid optional parameter: " + p.getName(), e);
-                        }
-                    } else {
-                        type = p.getType();
-                    }
-
-                    entries.add(Parameter.ofParam(isMandatory, isOptionalType,
-                                                  validateAndNormalizeSupportedType(type), param.value(),
-                                                  defaultValue));
+                    entries.add(createOptionalSupportedParam(
+                            parameterInfo, ParameterType.PARAM, param.value()));
                 }
                 continue;
             }
 
-            if (p.getType().isAssignableFrom(ServiceRequestContext.class) ||
-                p.getType().isAssignableFrom(HttpParameters.class)) {
-                entries.add(Parameter.ofPredefinedType(p.getType()));
+            final Header header = parameterInfo.getAnnotation(Header.class);
+            if (header != null) {
+                entries.add(createOptionalSupportedParam(parameterInfo, ParameterType.HEADER, header.value()));
                 continue;
             }
 
-            if (p.getType().isAssignableFrom(HttpRequest.class) ||
-                p.getType().isAssignableFrom(AggregatedHttpMessage.class)) {
+            if (parameterInfo.getType().isAssignableFrom(ServiceRequestContext.class) ||
+                parameterInfo.getType().isAssignableFrom(HttpParameters.class)) {
+                entries.add(Parameter.ofPredefinedType(parameterInfo.getType()));
+                continue;
+            }
+
+            if (parameterInfo.getType().isAssignableFrom(HttpRequest.class) ||
+                parameterInfo.getType().isAssignableFrom(AggregatedHttpMessage.class)) {
                 if (hasRequestMessage) {
                     throw new IllegalArgumentException("Only one request message variable is allowed.");
                 }
                 hasRequestMessage = true;
-                entries.add(Parameter.ofPredefinedType(p.getType()));
+                entries.add(Parameter.ofPredefinedType(parameterInfo.getType()));
                 continue;
             }
 
-            throw new IllegalArgumentException("Unsupported object type: " + p.getType());
+            throw new IllegalArgumentException("Unsupported object type: " + parameterInfo.getType());
         }
         return entries.build();
+    }
+
+    private static Parameter createOptionalSupportedParam(java.lang.reflect.Parameter parameterInfo,
+                                                          ParameterType paramType, String paramValue) {
+        final Default aDefault = parameterInfo.getAnnotation(Default.class);
+        final boolean isOptionalType = parameterInfo.getType().isAssignableFrom(Optional.class);
+
+        // Set the default value to null if it was not specified.
+        final String defaultValue = aDefault != null ? getSpecifiedValue(aDefault.value()).get() : null;
+        final Class<?> type;
+        if (isOptionalType) {
+            try {
+                type = (Class<?>) ((ParameterizedType) parameterInfo.getParameterizedType())
+                        .getActualTypeArguments()[0];
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid optional parameter: " + parameterInfo.getName(), e);
+            }
+        } else {
+            type = parameterInfo.getType();
+        }
+
+        return new Parameter(paramType, (!isOptionalType && aDefault == null), isOptionalType,
+                             validateAndNormalizeSupportedType(type), paramValue, defaultValue);
     }
 
     /**
@@ -237,17 +248,18 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
                 case PATH_PARAM:
                     value = ctx.pathParam(entry.name());
                     assert value != null;
-                    values[i] = convertParameter(value, entry.type());
+                    values[i] = stringToType(value, entry.type());
                     break;
                 case PARAM:
                     if (httpParameters == null) {
                         httpParameters = httpParametersOf(ctx, req, message);
                     }
                     value = httpParameterValue(httpParameters, entry);
-                    final Object converted = value != null ? convertParameter(value, entry.type())
-                                                           : null;
-                    values[i] = entry.isOptionalWrapped() ? Optional.ofNullable(converted)
-                                                          : converted;
+                    values[i] = convertParameter(value, entry);
+                    break;
+                case HEADER:
+                    value = httpHeaderValue(entry, req);
+                    values[i] = convertParameter(value, entry);
                     break;
                 case PREDEFINED_TYPE:
                     if (entry.type().isAssignableFrom(ServiceRequestContext.class)) {
@@ -323,6 +335,11 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
             // The first decoded value.
             return value;
         }
+        return entryDefaultValue(entry);
+    }
+
+    @Nullable
+    private static String entryDefaultValue(Parameter entry) {
         if (!entry.isRequired()) {
             // May return null if no default value is specified.
             return entry.defaultValue();
@@ -331,13 +348,29 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         throw new IllegalArgumentException("Required parameter '" + entry.name() + "' is missing.");
     }
 
+    private static Object convertParameter(String value, Parameter entry) {
+        final Object converted = value != null ? stringToType(value, entry.type()) : null;
+        return entry.isOptionalWrapped() ? Optional.ofNullable(converted) : converted;
+    }
+
+    private static String httpHeaderValue(Parameter entry, HttpRequest req) {
+        final String name = entry.name();
+        assert name != null;
+        final String value = req.headers().get(AsciiString.of(name));
+        if (value != null) {
+            return value;
+        }
+
+        return entryDefaultValue(entry);
+    }
+
     /**
      * Converts the given {@code str} to {@code T} type object. e.g., "42" -> 42.
      *
      * @throws IllegalArgumentException if {@code str} can't be deserialized to {@code T} type object.
      */
     @SuppressWarnings("unchecked")
-    private static <T> T convertParameter(String str, Class<T> clazz) {
+    private static <T> T stringToType(String str, Class<T> clazz) {
         try {
             if (clazz == Byte.TYPE) {
                 return (T) Byte.valueOf(str);
@@ -485,11 +518,6 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
             return new Parameter(ParameterType.PATH_PARAM, true, false, type, name, null);
         }
 
-        static Parameter ofParam(boolean required, boolean optionalWrapped, Class<?> type, String name,
-                                 @Nullable String defaultValue) {
-            return new Parameter(ParameterType.PARAM, required, optionalWrapped, type, name, defaultValue);
-        }
-
         static Parameter ofPredefinedType(Class<?> type) {
             return new Parameter(ParameterType.PREDEFINED_TYPE, true, false, type, null, null);
         }
@@ -544,7 +572,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     }
 
     private enum ParameterType {
-        PATH_PARAM, PARAM, PREDEFINED_TYPE
+        PATH_PARAM, PARAM, HEADER, PREDEFINED_TYPE
     }
 
     private enum AggregationStrategy {

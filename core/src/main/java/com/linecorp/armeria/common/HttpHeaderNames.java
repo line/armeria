@@ -281,6 +281,10 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString PRAGMA = new AsciiString("pragma");
     /**
+     * {@code "prefer"}.
+     */
+    public static final AsciiString PREFER = new AsciiString("prefer");
+    /**
      * {@code "proxy-authenticate"}.
      */
     public static final AsciiString PROXY_AUTHENTICATE = new AsciiString("proxy-authenticate");
