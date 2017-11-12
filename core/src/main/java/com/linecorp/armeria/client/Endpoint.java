@@ -122,7 +122,7 @@ public final class Endpoint {
      * Asynchronously resolves this endpoint into a host endpoint associated with the specified
      * {@link ClientRequestContext}.
      *
-     * @return the {@link Endpoint} resolved by {@link EndpointGroupRegistry}.
+     * @return the {@link CompletableFuture} of {@link Endpoint} resolved by {@link EndpointGroupRegistry}.
      *         {@code this} if this endpoint is already a host endpoint.
      */
     public CompletableFuture<Endpoint> resolve(ClientRequestContext ctx) {

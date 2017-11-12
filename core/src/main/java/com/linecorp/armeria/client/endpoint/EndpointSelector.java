@@ -39,7 +39,8 @@ public interface EndpointSelector {
      * Asynchronously selects an {@link Endpoint} from the {@link EndpointGroup} associated with the specified
      * {@link ClientRequestContext}.
      *
-     * @return the {@link Endpoint} selected by this {@link EndpointSelector}'s selection strategy
+     * @return the {@link CompletableFuture} of {@link Endpoint} selected by this {@link EndpointSelector}'s
+     *         selection strategy.
      */
     CompletableFuture<Endpoint> select(ClientRequestContext ctx);
 }
