@@ -16,6 +16,7 @@ include 'tomcat'
 include 'tomcat8.0'
 include 'zipkin'
 include 'zookeeper'
+include 'centraldogma'
 
 // Unpublished Java projects
 include 'it'

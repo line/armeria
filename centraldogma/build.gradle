@@ -1,0 +1,4 @@
+managedDependencies {
+    compile 'com.linecorp.centraldogma:centraldogma-client'
+    testCompile 'com.linecorp.centraldogma:centraldogma-testing'
+}

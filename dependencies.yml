@@ -214,3 +214,7 @@ org.springframework.boot:
   spring-boot-starter-logging: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
+
+com.linecorp.centraldogma:
+  centraldogma-client: { version: '0.17.0' }
+  centraldogma-testing: { version: '0.17.0' }
