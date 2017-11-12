@@ -80,6 +80,8 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         isAsynchronous = HttpResponse.class.isAssignableFrom(returnType) ||
                          CompletionStage.class.isAssignableFrom(returnType);
         aggregationStrategy = AggregationStrategy.resolve(parameters);
+
+        this.method.setAccessible(true);
     }
 
     /**

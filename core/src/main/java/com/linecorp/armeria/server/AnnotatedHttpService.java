@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
@@ -45,12 +46,21 @@ final class AnnotatedHttpService implements HttpService {
     private final BiFunction<ServiceRequestContext, HttpRequest, Object> function;
 
     /**
+     * A decorator of this service.
+     */
+    private final Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> decorator;
+
+    /**
      * Creates a new instance.
      */
     AnnotatedHttpService(HttpHeaderPathMapping pathMapping,
-                         BiFunction<ServiceRequestContext, HttpRequest, Object> function) {
+                         BiFunction<ServiceRequestContext, HttpRequest, Object> function,
+                         Function<Service<HttpRequest, HttpResponse>,
+                                 ? extends Service<HttpRequest, HttpResponse>> decorator) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.function = requireNonNull(function, "function");
+        this.decorator = requireNonNull(decorator, "decorator");
     }
 
     /**
@@ -58,6 +68,14 @@ final class AnnotatedHttpService implements HttpService {
      */
     HttpHeaderPathMapping pathMapping() {
         return pathMapping;
+    }
+
+    /**
+     * Returns the decorator of this service.
+     */
+    Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> decorator() {
+        return decorator;
     }
 
     /**
