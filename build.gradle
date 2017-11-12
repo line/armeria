@@ -442,45 +442,52 @@ configure(javaProjects) {
         onIdeImport { tasks.compileThrift.execute() }
     }
 
-    plugins.withType(com.google.protobuf.gradle.ProtobufPlugin) {
-        def generatedFilesDir = "$projectDir/gen-src"
-        protobuf {
-            generatedFilesBaseDir = generatedFilesDir
-            protoc {
-                artifact = 'com.google.protobuf:protoc:3.4.0'
+    afterEvaluate {
+        plugins.withType(com.google.protobuf.gradle.ProtobufPlugin) {
+            def generatedFilesDir = "$projectDir/gen-src"
+
+            sourceSets.each {
+                it.output.dir("${generatedFilesDir}/${it.name}/resources", builtBy: "generate${it.name != 'main' ? it.name.capitalize() : ''}Proto")
             }
-            plugins {
-                grpc {
-                    artifact = "io.grpc:protoc-gen-grpc-java:${rootProject.ext.dependencyManagement['io.grpc']['grpc-core'].version}"
+
+            protobuf {
+                generatedFilesBaseDir = generatedFilesDir
+                protoc {
+                    artifact = 'com.google.protobuf:protoc:3.4.0'
                 }
-            }
-            generateProtoTasks {
-                all()*.plugins {
+                plugins {
                     grpc {
-                        option 'enable_deprecated=false'
+                        artifact = "io.grpc:protoc-gen-grpc-java:${rootProject.ext.dependencyManagement['io.grpc']['grpc-core'].version}"
                     }
                 }
-                all().each { task ->
-                    task.generateDescriptorSet = true
-                    task.descriptorSetOptions.includeSourceInfo = true
-                    task.descriptorSetOptions.includeImports = true
-                    task.descriptorSetOptions.path =
-                            "${generatedFilesDir}/${task.sourceSet.name}/resources/" +
-                                    "META-INF/armeria/grpc/armeria-${task.sourceSet.name}.dsc"
+                generateProtoTasks {
+                    all()*.plugins {
+                        grpc {
+                            option 'enable_deprecated=false'
+                        }
+                    }
+                    all().each { task ->
+                        task.generateDescriptorSet = true
+                        task.descriptorSetOptions.includeSourceInfo = true
+                        task.descriptorSetOptions.includeImports = true
+                        task.descriptorSetOptions.path =
+                                "${generatedFilesDir}/${task.sourceSet.name}/resources/" +
+                                        "META-INF/armeria/grpc/armeria-${task.sourceSet.name}.dsc"
+                    }
                 }
             }
-        }
 
-        clean {
-            delete protobuf.generatedFilesBaseDir
-        }
+            clean {
+                delete protobuf.generatedFilesBaseDir
+            }
 
-        idea {
-            module {
-                sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java");
-                sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/grpc");
-                sourceDirs += file("${protobuf.generatedFilesBaseDir}/test/java");
-                sourceDirs += file("${protobuf.generatedFilesBaseDir}/test/grpc");
+            idea {
+                module {
+                    sourceSets.each {
+                        sourceDirs += file("${protobuf.generatedFilesBaseDir}/${it.name}/java");
+                        sourceDirs += file("${protobuf.generatedFilesBaseDir}/${it.name}/grpc");
+                    }
+                }
             }
         }
     }

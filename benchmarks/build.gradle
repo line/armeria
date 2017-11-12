@@ -42,12 +42,6 @@ dependencies {
     }
 }
 
-sourceSets {
-    jmh {
-        output.dir("build/gen-src/jmh/resources", builtBy: 'generateJmhProto')
-    }
-}
-
 jmh {
     if (jmhInclude) {
         include = jmhInclude
