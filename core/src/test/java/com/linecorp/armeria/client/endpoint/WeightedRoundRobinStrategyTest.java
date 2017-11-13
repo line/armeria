@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static com.linecorp.armeria.client.endpoint.EndpointGroupRegistry.selectNode;
 import static com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -55,9 +56,9 @@ public class WeightedRoundRobinStrategyTest {
 
     @Test
     public void select() {
-        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint")).isNotNull();
+        assertThat(selectNode(ctx, "endpoint")).isNotNull();
 
-        assertThat(catchThrowable(() -> EndpointGroupRegistry.selectNode(ctx, "empty")))
+        assertThat(catchThrowable(() -> selectNode(ctx, "empty")))
                 .isInstanceOf(EndpointGroupException.class);
     }
 
@@ -71,12 +72,12 @@ public class WeightedRoundRobinStrategyTest {
 
         EndpointGroupRegistry.register(groupName, endpointGroup, WEIGHTED_ROUND_ROBIN);
 
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
     }
 
     @Test
@@ -90,19 +91,19 @@ public class WeightedRoundRobinStrategyTest {
 
         EndpointGroupRegistry.register(groupName, endpointGroup, WEIGHTED_ROUND_ROBIN);
 
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
 
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
 
         //weight 3,2,2
         EndpointGroup endpointGroup2 = new StaticEndpointGroup(
@@ -111,21 +112,21 @@ public class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 3456, 2));
         EndpointGroupRegistry.register(groupName, endpointGroup2, WEIGHTED_ROUND_ROBIN);
 
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
 
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
 
         //weight 4,4,4
         EndpointGroup endpointGroup3 = new StaticEndpointGroup(
@@ -134,12 +135,12 @@ public class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 3456, 4));
         EndpointGroupRegistry.register(groupName, endpointGroup3, WEIGHTED_ROUND_ROBIN);
 
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
 
         //weight 2,4,6
         EndpointGroup endpointGroup4 = new StaticEndpointGroup(
@@ -148,31 +149,31 @@ public class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 3456, 6));
         EndpointGroupRegistry.register(groupName, endpointGroup4, WEIGHTED_ROUND_ROBIN);
 
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
         //new round
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:1234");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:2345");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
-        assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:1234");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:2345");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
+        assertThat(selectNode(ctx, groupName).join().authority()).isEqualTo("127.0.0.1:3456");
     }
 
     @Test
@@ -182,17 +183,17 @@ public class WeightedRoundRobinStrategyTest {
         endpointGroup.updateEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1000)));
 
         EndpointSelector selector = EndpointGroupRegistry.getNodeSelector("dynamic");
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1000));
+        assertThat(selector.select(ctx).join()).isEqualTo(Endpoint.of("127.0.0.1", 1000));
 
         endpointGroup.updateEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 1111, 1),
                                                        Endpoint.of("127.0.0.1", 2222, 2)));
 
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111, 1));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
-        assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111, 1));
+        assertThat(selector.select(ctx).join()).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
+        assertThat(selector.select(ctx).join()).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
+        assertThat(selector.select(ctx).join()).isEqualTo(Endpoint.of("127.0.0.1", 1111, 1));
+        assertThat(selector.select(ctx).join()).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
+        assertThat(selector.select(ctx).join()).isEqualTo(Endpoint.of("127.0.0.1", 2222, 2));
+        assertThat(selector.select(ctx).join()).isEqualTo(Endpoint.of("127.0.0.1", 1111, 1));
     }
 
     private static final class TestDynamicEndpointGroup extends DynamicEndpointGroup {
