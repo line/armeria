@@ -41,7 +41,7 @@ syntax = "proto3";
 
 package armeria.benchmarks;
 
-option java_package = "com.linecorp.armeria.benchmarks";
+option java_package = "com.linecorp.armeria.benchmarks.grpc";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";

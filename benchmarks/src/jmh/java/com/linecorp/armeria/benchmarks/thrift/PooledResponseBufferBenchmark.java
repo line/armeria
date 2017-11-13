@@ -27,6 +27,8 @@ import org.openjdk.jmh.infra.Blackhole;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.benchmarks.thrift.services.HelloService;
+import com.linecorp.armeria.benchmarks.thrift.services.HelloService.AsyncIface;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpObject;
@@ -39,8 +41,6 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.benchmarks.thrift.services.HelloService;
-import com.linecorp.armeria.benchmarks.thrift.services.HelloService.AsyncIface;
 
 import joptsimple.internal.Strings;
 

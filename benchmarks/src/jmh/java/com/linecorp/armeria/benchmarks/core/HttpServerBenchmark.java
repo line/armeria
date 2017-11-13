@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.benchmarks;
+package com.linecorp.armeria.benchmarks.core;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 

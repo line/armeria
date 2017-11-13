@@ -14,15 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.grpc.shared;
+package com.linecorp.armeria.benchmarks.grpc.shared;
 
 import java.io.IOException;
 
 import com.google.common.io.Resources;
 import com.google.protobuf.Empty;
 
-import com.linecorp.armeria.benchmarks.GithubApi.SearchResponse;
-import com.linecorp.armeria.benchmarks.GithubServiceGrpc.GithubServiceImplBase;
+import com.linecorp.armeria.benchmarks.grpc.GithubApi.SearchResponse;
+import com.linecorp.armeria.benchmarks.grpc.GithubServiceGrpc.GithubServiceImplBase;
 
 import io.grpc.stub.StreamObserver;
 
