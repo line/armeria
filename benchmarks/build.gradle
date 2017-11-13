@@ -8,20 +8,20 @@ def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
 def grpcUpstream = jmhInclude.contains('grpc.upstream') || jmhInclude.contains('grpc\\.upstream')
 
 managedDependencies {
-    jmh 'io.grpc:grpc-okhttp'
+    compile 'io.grpc:grpc-okhttp'
     if (grpcUpstream) {
-        jmh 'io.grpc:grpc-netty'
+        compile 'io.grpc:grpc-netty'
     }
 }
 
 dependencies {
-    jmh project(':grpc')
-    jmh project(':thrift')
+    compile project(':grpc')
+    compile project(':thrift')
 
     if (grpcUpstream) {
         // Since project(':core') is automatically added in the top-level build, it's difficult to exclude
         // its transitive dependencies just for upstream benchmarks. Fixing the versions to upstream works ok.
-        jmh 'com.google.guava:guava:19.0'
+        compile 'com.google.guava:guava:19.0'
     }
 }
 
