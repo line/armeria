@@ -50,19 +50,19 @@ public class RoundRobinStrategyTest {
 
     @Test
     public void select() {
-        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint"))
+        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint").join())
                 .isEqualTo(ENDPOINT_GROUP.endpoints().get(0));
-        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint"))
+        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint").join())
                 .isEqualTo(ENDPOINT_GROUP.endpoints().get(1));
-        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint"))
+        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint").join())
                 .isEqualTo(ENDPOINT_GROUP.endpoints().get(0));
-        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint"))
+        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint").join())
                 .isEqualTo(ENDPOINT_GROUP.endpoints().get(1));
     }
 
     @Test
     public void select_empty() {
-        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint")).isNotNull();
+        assertThat(EndpointGroupRegistry.selectNode(ctx, "endpoint").join()).isNotNull();
 
         assertThat(catchThrowable(() -> EndpointGroupRegistry.selectNode(ctx, "empty")))
                 .isInstanceOf(EndpointGroupException.class);

@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableList;
@@ -63,9 +66,9 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        public Endpoint select(ClientRequestContext ctx) {
+        public CompletableFuture<Endpoint> select(ClientRequestContext ctx) {
             int currentSequence = sequence.getAndIncrement();
-            return endpointsAndWeights.selectEndpoint(currentSequence);
+            return completedFuture(endpointsAndWeights.selectEndpoint(currentSequence));
         }
 
         private static final class EndpointsAndWeights {
