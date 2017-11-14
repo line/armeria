@@ -133,12 +133,12 @@ final class RollingHdrQuantiles implements Quantiles {
         final long currentTimeMillis = clock.getAsLong();
         final Phase currentPhase = currentPhaseRef.get();
         if (currentTimeMillis < currentPhase.proposedInvalidationTimestamp) {
-            currentPhase.recorder.recordValueWithExpectedInterval(value, expectedIntervalBetweenValueSamples);
+            safeRecord(currentPhase, value, expectedIntervalBetweenValueSamples);
             return;
         }
 
         final Phase nextPhase = currentPhase == left ? right : left;
-        nextPhase.recorder.recordValueWithExpectedInterval(value, expectedIntervalBetweenValueSamples);
+        safeRecord(nextPhase, value, expectedIntervalBetweenValueSamples);
 
         if (!currentPhaseRef.compareAndSet(currentPhase, nextPhase)) {
             // another writer achieved progress and must submit rotation task to backgroundExecutor
@@ -147,6 +147,14 @@ final class RollingHdrQuantiles implements Quantiles {
 
         // Current thread is responsible to rotate phases.
         rotate(currentTimeMillis, currentPhase, nextPhase);
+    }
+
+    private void safeRecord(Phase phase, double value, double expectedIntervalBetweenValueSamples) {
+        try {
+            phase.recorder.recordValueWithExpectedInterval(value, expectedIntervalBetweenValueSamples);
+        } catch (IndexOutOfBoundsException ignored) {
+            // Out of dynamic range?
+        }
     }
 
     private synchronized void rotate(long currentTimeMillis, Phase currentPhase, Phase nextPhase) {
