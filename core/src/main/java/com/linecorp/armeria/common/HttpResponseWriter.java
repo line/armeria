@@ -199,4 +199,113 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
 
         close();
     }
+
+    /**
+     * Convenience method for redirect.
+     *
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    default void redirect(String format, Object... args) {
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+        redirect(HttpStatus.TEMPORARY_REDIRECT, format, args);
+    }
+
+    /**
+     * Convenience method for redirect.
+     *
+     * @param newLocation the new location
+     */
+    default void redirect(String newLocation) {
+        requireNonNull(newLocation, "newLocation");
+        redirect(HttpStatus.TEMPORARY_REDIRECT, newLocation);
+    }
+
+    /**
+     * Convenience method for redirect.
+     *
+     * @param status send the {@link HttpStatus} code
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    default void redirect(HttpStatus status, String format, Object... args) {
+        requireNonNull(status, "status");
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+        redirect(status, MediaType.PLAIN_TEXT_UTF_8, format, args);
+    }
+
+    /**
+     * Convenience method for redirect.
+     *
+     * @param status send the {@link HttpStatus} code
+     * @param newLocation the new location
+     */
+    default void redirect(HttpStatus status, String newLocation) {
+        requireNonNull(status, "status");
+        requireNonNull(newLocation, "newLocation");
+        redirect(status, newLocation);
+    }
+
+    /**
+     * Convenience method for redirect.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    default void redirect(MediaType mediaType, String format, Object... args) {
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+
+        redirect(HttpStatus.TEMPORARY_REDIRECT, mediaType, format, args);
+    }
+
+    /**
+     * Convenience method for redirect.
+     *
+     * @param mediaType the {@link MediaType} of the response content
+     * @param newLocation the new location
+     */
+    default void redirect(MediaType mediaType, String newLocation) {
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(newLocation, "newLocation");
+
+        redirect(HttpStatus.TEMPORARY_REDIRECT, mediaType, newLocation);
+    }
+
+    /**
+     * Convenience method for redirect.
+     *
+     * @param status send the {@link HttpStatus} code
+     * @param mediaType the {@link MediaType} of the response content
+     * @param format {@linkplain Formatter the format string} of the response content
+     * @param args the arguments referenced by the format specifiers in the format string
+     */
+    default void redirect(HttpStatus status, MediaType mediaType, String format, Object... args) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+        redirect(status, mediaType, String.format(Locale.ENGLISH, format, args));
+    }
+
+    /**
+     * Convenience method for redirect.
+     *
+     * @param status send the {@link HttpStatus} code
+     * @param mediaType the {@link MediaType} of the response content
+     * @param newLocation the new location
+     */
+    default void redirect(HttpStatus status, MediaType mediaType, String newLocation) {
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(newLocation, "newLocation");
+
+        HttpHeaders trailingHeaders = HttpHeaders.of(status).set(
+                HttpHeaderNames.LOCATION, newLocation);
+        respond(status, mediaType, null, trailingHeaders);
+    }
 }
