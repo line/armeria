@@ -1,17 +1,4 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.3'
-    }
-}
-
 apply plugin: 'com.google.protobuf'
-
-// Use a flag to control whether we are running downstream or upstream benchmarks, to use to
-// share business logic while managing dependency conflicts.
-def upstreamJmh = rootProject.findProperty('jmh.grpcUpstream') == 'true'
 
 managedDependencies {
     // gRPC
@@ -23,77 +10,4 @@ managedDependencies {
 
     testCompile 'io.grpc:grpc-okhttp'
     testCompile 'io.grpc:grpc-testing'
-
-    jmh 'io.grpc:grpc-okhttp'
-    if (upstreamJmh) {
-        jmh 'io.grpc:grpc-netty'
-    }
-}
-
-dependencies {
-    if (upstreamJmh) {
-        // Since project(':core') is automatically added in the top-level build, it's difficult to exclude
-        // its transitive dependencies just for upstream benchmarks. Fixing the versions to upstream works ok.
-        jmh 'com.google.guava:guava:19.0'
-    }
-}
-
-def generatedFilesDir = "$projectDir/gen-src"
-
-sourceSets {
-    main {
-        output.dir("${generatedFilesDir}/main/resources", builtBy: 'generateProto')
-    }
-    test {
-        output.dir("${generatedFilesDir}/test/resources", builtBy: 'generateTestProto')
-    }
-    jmh {
-        output.dir("${generatedFilesDir}/jmh/resources", builtBy: 'generateJmhProto')
-    }
-}
-
-protobuf {
-    generatedFilesBaseDir = generatedFilesDir
-    protoc {
-        artifact = 'com.google.protobuf:protoc:3.2.0'
-    }
-    plugins {
-        grpc {
-            artifact = "io.grpc:protoc-gen-grpc-java:${rootProject.ext.dependencyManagement['io.grpc']['grpc-core'].version}"
-        }
-    }
-    generateProtoTasks {
-        all()*.plugins {
-            grpc {
-                option 'enable_deprecated=false'
-            }
-        }
-        all().each { task ->
-            task.generateDescriptorSet = true
-            task.descriptorSetOptions.includeSourceInfo = true
-            task.descriptorSetOptions.includeImports = true
-            task.descriptorSetOptions.path =
-                    "${generatedFilesDir}/${task.sourceSet.name}/resources/" +
-                            "META-INF/armeria/grpc/armeria-${task.sourceSet.name}.dsc"
-        }
-    }
-}
-
-clean {
-    delete protobuf.generatedFilesBaseDir
-}
-
-idea {
-    module {
-        sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/java");
-        sourceDirs += file("${protobuf.generatedFilesBaseDir}/main/grpc");
-        sourceDirs += file("${protobuf.generatedFilesBaseDir}/test/java");
-        sourceDirs += file("${protobuf.generatedFilesBaseDir}/test/grpc");
-        sourceDirs += file("${protobuf.generatedFilesBaseDir}/jmh/java");
-        sourceDirs += file("${protobuf.generatedFilesBaseDir}/jmh/grpc");
-    }
-}
-
-jmh {
-    include = [ "com\\.linecorp\\.armeria\\.grpc\\.${upstreamJmh ? 'upstream' : 'downstream'}\\..*".toString() ]
 }

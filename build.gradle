@@ -15,6 +15,7 @@ buildscript {
     dependencies {
         classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
         classpath 'com.google.gradle:osdetector-gradle-plugin:1.4.0'
+        classpath 'gradle.plugin.com.google.protobuf:protobuf-gradle-plugin:0.8.3'
         classpath 'me.champeau.gradle:jmh-gradle-plugin:0.4.4'
         classpath 'org.yaml:snakeyaml:1.18'
     }
@@ -35,7 +36,7 @@ ext {
 
     // The list of Java projects whose artifacts are published to the Maven repository
     publishedJavaProjects = javaProjects.findAll {
-        !(it.name in ['it', 'shaded-test', 'testing-internal'])
+        !(it.name in ['benchmarks', 'it', 'shaded-test', 'testing-internal'])
     }
 
     // The list of backward-compatibility Java projects which have the namespace conflicts with other projects.
@@ -103,7 +104,6 @@ configure(javaProjects) {
     apply plugin: 'java'
     apply plugin: 'jacoco'
     apply plugin: 'checkstyle'
-    apply plugin: 'me.champeau.gradle.jmh'
 
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
@@ -297,35 +297,6 @@ configure(javaProjects) {
         }
     }
 
-    // Configure JMH.
-    jmh {
-        forceGC = true
-        includeTests = true
-        duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
-        jmhVersion = rootProject.ext.dependencyManagement['org.openjdk.jmh']['jmh-core'].version
-
-        if (rootProject.hasProperty('jmh.fork')) {
-            fork = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.fork')))
-        } else {
-            fork = 1
-        }
-        if (rootProject.hasProperty('jmh.iterations')) {
-            iterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.iterations')))
-        }
-        if (rootProject.hasProperty('jmh.warmupIterations')) {
-            warmupIterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.warmupIterations')))
-        } else {
-            warmupIterations = iterations
-        }
-        if (rootProject.hasProperty('jmh.profilers')) {
-            profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',')
-        }
-        if (rootProject.hasProperty('jmh.verbose')) {
-            verbosity = 'EXTRA'
-        }
-    }
-    configurations.jmh.extendsFrom configurations.testRuntime
-
     // Require Java 8 to build the project.
     tasks.withType(JavaCompile) {
         sourceCompatibility = '1.8'
@@ -431,39 +402,95 @@ configure(javaProjects) {
         }
     }
 
-    // Compile the Thrift service definitions.
-    task compileThrift(group: 'Build',
-                       description: 'Compiles the .thrift files') {
-        [ 'main', 'test' ].each { scope ->
-            def inputDir = "${project.projectDir}/src/${scope}/thrift"
-            def outputDir = "${project.projectDir}/src/${scope}/gen-java"
+    // TODO(anuraaga): Consider replacing with https://github.com/yodle/griddle
+    afterEvaluate {
+        // Compile the Thrift service definitions.
+        task compileThrift(group: 'Build',
+                description: 'Compiles the .thrift files') {
+            sourceSets.each { sourceSet ->
+                def scope = sourceSet.name
+                def inputDir = "${project.projectDir}/src/${scope}/thrift"
+                def outputDir = "${project.projectDir}/src/${scope}/gen-java"
 
-            if (project.file(inputDir).isDirectory()) {
-                inputs.dir inputDir
-                outputs.dir outputDir
+                if (project.file(inputDir).isDirectory()) {
+                    inputs.dir inputDir
+                    outputs.dir outputDir
 
-                project.sourceSets[scope].java.srcDir outputDir
+                    project.sourceSets[scope].java.srcDir outputDir
 
-                doLast {
-                    project.fileTree(inputDir) {
-                        include '**/*.thrift'
-                    }.each { sourceFile ->
-                        project.mkdir(outputDir)
-                        project.exec {
-                            commandLine project.ext.thriftPath,
-                                    '-gen', 'java',
-                                    '-out', outputDir,
-                                    '-I', "${sourceFile.parentFile.absolutePath}",
-                                    sourceFile.absolutePath
+                    doLast {
+                        project.fileTree(inputDir) {
+                            include '**/*.thrift'
+                        }.each { sourceFile ->
+                            project.mkdir(outputDir)
+                            project.exec {
+                                commandLine project.ext.thriftPath,
+                                        '-gen', 'java',
+                                        '-out', outputDir,
+                                        '-I', "${sourceFile.parentFile.absolutePath}",
+                                        sourceFile.absolutePath
+                            }
                         }
                     }
                 }
             }
         }
+        // Ensure the generated Thrift source files are available during the build.
+        tasks.withType(JavaCompile) {
+            dependsOn tasks.compileThrift
+        }
+        onIdeImport { tasks.compileThrift.execute() }
     }
-    // Ensure the generated Thrift source files are available during the build.
-    tasks.compileJava.dependsOn(tasks.compileThrift)
-    onIdeImport { tasks.compileThrift.execute() }
+
+    afterEvaluate {
+        plugins.withType(com.google.protobuf.gradle.ProtobufPlugin) {
+            def generatedFilesDir = "$projectDir/gen-src"
+
+            sourceSets.each {
+                it.output.dir("${generatedFilesDir}/${it.name}/resources", builtBy: "generate${it.name != 'main' ? it.name.capitalize() : ''}Proto")
+            }
+
+            protobuf {
+                generatedFilesBaseDir = generatedFilesDir
+                protoc {
+                    artifact = 'com.google.protobuf:protoc:3.4.0'
+                }
+                plugins {
+                    grpc {
+                        artifact = "io.grpc:protoc-gen-grpc-java:${rootProject.ext.dependencyManagement['io.grpc']['grpc-core'].version}"
+                    }
+                }
+                generateProtoTasks {
+                    all()*.plugins {
+                        grpc {
+                            option 'enable_deprecated=false'
+                        }
+                    }
+                    all().each { task ->
+                        task.generateDescriptorSet = true
+                        task.descriptorSetOptions.includeSourceInfo = true
+                        task.descriptorSetOptions.includeImports = true
+                        task.descriptorSetOptions.path =
+                                "${generatedFilesDir}/${task.sourceSet.name}/resources/" +
+                                        "META-INF/armeria/grpc/armeria-${task.sourceSet.name}.dsc"
+                    }
+                }
+            }
+
+            clean {
+                delete protobuf.generatedFilesBaseDir
+            }
+
+            idea {
+                module {
+                    sourceSets.each {
+                        sourceDirs += file("${protobuf.generatedFilesBaseDir}/${it.name}/java");
+                        sourceDirs += file("${protobuf.generatedFilesBaseDir}/${it.name}/grpc");
+                    }
+                }
+            }
+        }
+    }
 
     if (project in publishedJavaProjects) {
         // Generate version.properties, similar to Netty.

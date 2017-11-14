@@ -1,0 +1,55 @@
+apply plugin: 'com.google.protobuf'
+apply plugin: 'me.champeau.gradle.jmh'
+
+def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
+
+// Do a simple check of include for gRPC upstream, where we need to control dependencies to prevent conflicts.
+// It should be reliable enough.
+def grpcUpstream = jmhInclude.contains('grpc.upstream') || jmhInclude.contains('grpc\\.upstream')
+
+managedDependencies {
+    compile 'io.grpc:grpc-okhttp'
+    if (grpcUpstream) {
+        compile 'io.grpc:grpc-netty'
+    }
+}
+
+dependencies {
+    compile project(':grpc')
+    compile project(':thrift')
+
+    if (grpcUpstream) {
+        // Since project(':core') is automatically added in the top-level build, it's difficult to exclude
+        // its transitive dependencies just for upstream benchmarks. Fixing the versions to upstream works ok.
+        compile 'com.google.guava:guava:19.0'
+    }
+}
+
+jmh {
+    if (jmhInclude) {
+        include = jmhInclude
+    }
+    forceGC = true
+    duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
+    jmhVersion = rootProject.ext.dependencyManagement['org.openjdk.jmh']['jmh-core'].version
+
+    if (rootProject.hasProperty('jmh.fork')) {
+        fork = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.fork')))
+    } else {
+        fork = 1
+    }
+    if (rootProject.hasProperty('jmh.iterations')) {
+        iterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.iterations')))
+    }
+    if (rootProject.hasProperty('jmh.warmupIterations')) {
+        warmupIterations = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.warmupIterations')))
+    } else {
+        warmupIterations = iterations
+    }
+    if (rootProject.hasProperty('jmh.profilers')) {
+        profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',')
+    }
+    if (rootProject.hasProperty('jmh.verbose')) {
+        verbosity = 'EXTRA'
+    }
+}
