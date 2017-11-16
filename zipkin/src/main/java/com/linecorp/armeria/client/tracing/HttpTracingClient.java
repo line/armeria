@@ -16,7 +16,12 @@
 
 package com.linecorp.armeria.client.tracing;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -36,6 +41,7 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.propagation.TraceContext;
+import zipkin2.Endpoint;
 
 /**
  * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
@@ -50,20 +56,34 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
      */
     public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(Tracing tracing) {
-        return delegate -> new HttpTracingClient(delegate, tracing);
+        return newDecorator(tracing, null);
+    }
+
+    /**
+     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance
+     * and remote service name.
+     */
+    public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(
+            Tracing tracing,
+            @Nullable String remoteServiceName) {
+        return delegate -> new HttpTracingClient(delegate, tracing, remoteServiceName);
     }
 
     private final Tracer tracer;
     private final TraceContext.Injector<HttpHeaders> injector;
+    @Nullable
+    private final String remoteServiceName;
 
     /**
      * Creates a new instance.
      */
-    protected HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing) {
+    protected HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing,
+                                @Nullable String remoteServiceName) {
         super(delegate);
         this.tracer = tracing.tracer();
         injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                           .injector(HttpHeaders::set);
+        this.remoteServiceName = remoteServiceName;
     }
 
     @Override
@@ -88,7 +108,34 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     }
 
     private void finishSpan(Span span, RequestLog log) {
+        setRemoteEndpoint(span, log);
         SpanTags.addTags(span, log);
         span.finish();
+    }
+
+    private void setRemoteEndpoint(Span span, RequestLog log) {
+
+        SocketAddress remoteAddress = log.context().remoteAddress();
+        final InetAddress address;
+        if (remoteAddress instanceof InetSocketAddress) {
+            address = ((InetSocketAddress) remoteAddress).getAddress();
+        } else {
+            address = null;
+        }
+
+        final String remoteServiceName;
+        if (this.remoteServiceName != null) {
+            remoteServiceName = this.remoteServiceName;
+        } else if (log.host() != null) {
+            remoteServiceName = log.host();
+        } else {
+            remoteServiceName = null;
+        }
+
+        if (remoteServiceName == null && address == null) {
+            return;
+        }
+
+        span.remoteEndpoint(Endpoint.newBuilder().serviceName(remoteServiceName).ip(address).build());
     }
 }
