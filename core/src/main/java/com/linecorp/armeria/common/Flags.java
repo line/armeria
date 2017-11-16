@@ -112,6 +112,25 @@ public final class Flags {
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
+    private static final int DEFAULT_DEFAULT_MAX_INITIAL_LINE_LENGTH =
+            4096; // from Netty default maxInitialLineLength
+    private static final int DEFAULT_MAX_INITIAL_LINE_LENGTH =
+            getInt("defaultMaxInitialLineLength",
+                    DEFAULT_DEFAULT_MAX_INITIAL_LINE_LENGTH,
+                    value -> value >= 0);
+
+    private static final int DEFAULT_DEFAULT_MAX_HEADER_SIZE = 8192; // from Netty default maxHeaderSize
+    private static final int DEFAULT_MAX_HEADER_SIZE =
+            getInt("defaultMaxHeaderSize",
+                    DEFAULT_DEFAULT_MAX_HEADER_SIZE,
+                    value -> value >= 0);
+
+    private static final int DEFAULT_DEFAULT_MAX_CHUNK_SIZE = 8192; // from Netty default maxChunkSize
+    private static final int DEFAULT_MAX_CHUNK_SIZE =
+            getInt("defaultMaxChunkSize",
+                    DEFAULT_DEFAULT_MAX_CHUNK_SIZE,
+                    value -> value >= 0);
+
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", true);
 
@@ -295,6 +314,39 @@ public final class Flags {
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default maximum length of the initial line.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_INITIAL_LINE_LENGTH}. Specify the
+     * {@code -Dcom.linecorp.armeria.maxInitialLineLength=<integer>} JVM option to override the default value.
+     */
+    public static int defaultMaxInitialLineLength() {
+        return DEFAULT_MAX_INITIAL_LINE_LENGTH;
+    }
+
+    /**
+     * Returns the default maximum length of all headers.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HEADER_SIZE}. Specify the
+     * {@code -Dcom.linecorp.armeria.maxHeaderSize=<integer>} JVM option to override the default value.
+     */
+    public static int defaultMaxHeaderSize() {
+        return DEFAULT_MAX_HEADER_SIZE;
+    }
+
+    /**
+     * Returns the default maximum length of the content or each chunk.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_CHUNK_SIZE}. Specify the
+     * {@code -Dcom.linecorp.armeria.maxChunkSize=<integer>} JVM option to override the default value.
+     */
+    public static int defaultMaxChunkSize() {
+        return DEFAULT_MAX_CHUNK_SIZE;
     }
 
     /**

@@ -238,7 +238,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                         return;
                     }
 
-                    addBeforeSessionHandler(p, newHttp1Codec());
+                    addBeforeSessionHandler(p, newHttp1Codec(
+                            clientFactory.defaultMaxInitialLineLength(),
+                            clientFactory.defaultMaxHeaderSize(),
+                            clientFactory.defaultMaxChunkSize()));
                     protocol = H1;
                 }
                 finishSuccessfully(p, protocol);
@@ -280,7 +283,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 pipeline.addLast(new DowngradeHandler());
                 pipeline.addLast(http2Handler);
             } else {
-                Http1ClientCodec http1Codec = newHttp1Codec();
+                Http1ClientCodec http1Codec = newHttp1Codec(
+                        clientFactory.defaultMaxInitialLineLength(),
+                        clientFactory.defaultMaxHeaderSize(),
+                        clientFactory.defaultMaxChunkSize());
                 Http2ClientUpgradeCodec http2ClientUpgradeCodec =
                         new Http2ClientUpgradeCodec(http2Handler);
                 HttpClientUpgradeHandler http2UpgradeHandler =
@@ -294,7 +300,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 pipeline.addLast(new UpgradeRequestHandler(http2Handler.responseDecoder()));
             }
         } else {
-            pipeline.addLast(newHttp1Codec());
+            pipeline.addLast(newHttp1Codec(
+                    clientFactory.defaultMaxInitialLineLength(),
+                    clientFactory.defaultMaxHeaderSize(),
+                    clientFactory.defaultMaxChunkSize()));
 
             // NB: We do not call finishSuccessfully() immediately here
             //     because it assumes HttpSessionHandler to be in the pipeline,
@@ -611,8 +620,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         return http2Settings;
     }
 
-    private static Http1ClientCodec newHttp1Codec() {
-        return new Http1ClientCodec() {
+    private static Http1ClientCodec newHttp1Codec(
+            int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
+        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize) {
             @Override
             public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
                 HttpSession.get(ctx.channel()).deactivate();

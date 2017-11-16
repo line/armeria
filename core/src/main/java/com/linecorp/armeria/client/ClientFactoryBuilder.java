@@ -100,6 +100,9 @@ public final class ClientFactoryBuilder {
     private int initialHttp2ConnectionWindowSize = DEFAULT_WINDOW_SIZE;
     private int initialHttp2StreamWindowSize = DEFAULT_WINDOW_SIZE;
     private int http2MaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private int defaultMaxInitialLineLength = Flags.defaultMaxInitialLineLength();
+    private int defaultMaxHeaderSize = Flags.defaultMaxHeaderSize();
+    private int defaultMaxChunkSize = Flags.defaultMaxChunkSize();
 
     // Armeria-related properties:
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
@@ -231,6 +234,39 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the default maximum length of the initial line.
+     */
+    public ClientFactoryBuilder defaultMaxInitialLineLength(int defaultMaxInitialLineLength) {
+        checkArgument(defaultMaxInitialLineLength < 0,
+                "defaultMaxHeaderSize: %s (expected: >= 0)",
+                defaultMaxInitialLineLength);
+        this.defaultMaxInitialLineLength = defaultMaxInitialLineLength;
+        return this;
+    }
+
+    /**
+     * Sets the default maximum length of all headers.
+     */
+    public ClientFactoryBuilder defaultMaxHeaderSize(int defaultMaxHeaderSize) {
+        checkArgument(defaultMaxHeaderSize < 0,
+                "defaultMaxHeaderSize: %s (expected: >= 0)",
+                defaultMaxHeaderSize);
+        this.defaultMaxHeaderSize = defaultMaxHeaderSize;
+        return this;
+    }
+
+    /**
+     * Sets the default maximum length of the content or each chunk.
+     */
+    public ClientFactoryBuilder defaultMaxChunkSize(int defaultMaxChunkSize) {
+        checkArgument(defaultMaxChunkSize < 0,
+                "defaultMaxChunkSize: %s (expected: >= 0)",
+                defaultMaxChunkSize);
+        this.defaultMaxChunkSize = defaultMaxChunkSize;
+        return this;
+    }
+
+    /**
      * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
      * progress for this amount of time.
      */
@@ -292,7 +328,8 @@ public final class ClientFactoryBuilder {
         return new DefaultClientFactory(new HttpClientFactory(
                 workerGroup, shutdownWorkerGroupOnClose, socketOptions, sslContextCustomizer,
                 addressResolverGroupFactory, initialHttp2ConnectionWindowSize, initialHttp2StreamWindowSize,
-                http2MaxFrameSize, idleTimeoutMillis, useHttp2Preface,
+                http2MaxFrameSize, defaultMaxInitialLineLength, defaultMaxHeaderSize,
+                defaultMaxChunkSize, idleTimeoutMillis, useHttp2Preface,
                 useHttp1Pipelining, connectionPoolListener, meterRegistry));
     }
 
@@ -300,7 +337,8 @@ public final class ClientFactoryBuilder {
     public String toString() {
         return toString(this, workerGroup, shutdownWorkerGroupOnClose, socketOptions,
                         sslContextCustomizer, addressResolverGroupFactory, initialHttp2ConnectionWindowSize,
-                        initialHttp2StreamWindowSize, http2MaxFrameSize, idleTimeoutMillis,
+                        initialHttp2StreamWindowSize, http2MaxFrameSize, defaultMaxInitialLineLength,
+                        defaultMaxHeaderSize, defaultMaxChunkSize, idleTimeoutMillis,
                         useHttp2Preface, useHttp1Pipelining, connectionPoolListener, meterRegistry);
     }
 
@@ -312,6 +350,7 @@ public final class ClientFactoryBuilder {
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
             int initialHttp2ConnectionWindowSize, int initialHttp2StreamWindowSize, int http2MaxFrameSize,
+            int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize,
             long idleTimeoutMillis, boolean useHttp2Preface,
             boolean useHttp1Pipelining, KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener,
             MeterRegistry meterRegistry) {
@@ -322,6 +361,9 @@ public final class ClientFactoryBuilder {
               .add("initialHttp2ConnectionWindowSize", initialHttp2ConnectionWindowSize)
               .add("initialHttp2StreamWindowSize", initialHttp2StreamWindowSize)
               .add("http2MaxFrameSize", http2MaxFrameSize)
+              .add("defaultMaxInitialLineLength", defaultMaxInitialLineLength)
+              .add("defaultMaxHeaderSize", defaultMaxHeaderSize)
+              .add("defaultMaxChunkSize", defaultMaxChunkSize)
               .add("idleTimeoutMillis", idleTimeoutMillis)
               .add("useHttp2Preface", useHttp2Preface)
               .add("useHttp1Pipelining", useHttp1Pipelining);

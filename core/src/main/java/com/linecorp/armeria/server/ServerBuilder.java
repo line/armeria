@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxInitialLineLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
@@ -104,6 +105,9 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
     private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
+    private int defaultMaxInitialLineLength = Flags.defaultMaxInitialLineLength();
+    private int defaultMaxHeaderSize = Flags.defaultMaxHeaderSize();
+    private int defaultMaxChunkSize = Flags.defaultMaxChunkSize();
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
@@ -238,6 +242,30 @@ public final class ServerBuilder {
      */
     public ServerBuilder defaultMaxRequestLength(long defaultMaxRequestLength) {
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
+        return this;
+    }
+
+    /**
+     * Sets the default maximum length of the initial line.
+     */
+    public ServerBuilder defaultMaxInitialLineLength(int defaultMaxInitialLineLength) {
+        this.defaultMaxInitialLineLength = validateDefaultMaxInitialLineLength(defaultMaxInitialLineLength);
+        return this;
+    }
+
+    /**
+     * Sets the default maximum length of all headers.
+     */
+    public ServerBuilder defaultMaxHeaderSize(int defaultMaxHeaderSize) {
+        this.defaultMaxHeaderSize = ServerConfig.validateDefaultMaxHeaderSize(defaultMaxHeaderSize);
+        return this;
+    }
+
+    /**
+     * Sets the default maximum length of the content or each chunk.
+     */
+    public ServerBuilder defaultMaxChunkSize(int defaultMaxChunkSize) {
+        this.defaultMaxChunkSize = ServerConfig.validateDefaultMaxChunkSize(defaultMaxChunkSize);
         return this;
     }
 
@@ -657,6 +685,7 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
                 meterRegistry, serviceLoggerPrefix));
         serverListeners.forEach(server::addListener);
@@ -668,6 +697,7 @@ public final class ServerBuilder {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, meterRegistry, serviceLoggerPrefix);
     }

@@ -59,6 +59,9 @@ public final class ServerConfig {
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
     private final long defaultMaxRequestLength;
+    private final int defaultMaxInitialLineLength;
+    private final int defaultMaxHeaderSize;
+    private final int defaultMaxChunkSize;
 
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
@@ -77,6 +80,7 @@ public final class ServerConfig {
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
+            int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
 
@@ -91,6 +95,9 @@ public final class ServerConfig {
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
+        this.defaultMaxInitialLineLength = validateDefaultMaxInitialLineLength(defaultMaxInitialLineLength);
+        this.defaultMaxHeaderSize = validateDefaultMaxHeaderSize(defaultMaxHeaderSize);
+        this.defaultMaxChunkSize = validateDefaultMaxChunkSize(defaultMaxChunkSize);
         this.gracefulShutdownQuietPeriod = validateNonNegative(requireNonNull(
                 gracefulShutdownQuietPeriod), "gracefulShutdownQuietPeriod");
         this.gracefulShutdownTimeout = validateNonNegative(requireNonNull(
@@ -182,6 +189,30 @@ public final class ServerConfig {
                     "defaultMaxRequestLength: " + defaultMaxRequestLength + " (expected: >= 0)");
         }
         return defaultMaxRequestLength;
+    }
+
+    static int validateDefaultMaxInitialLineLength(int defaultMaxInitialLineLength) {
+        if (defaultMaxInitialLineLength < 0) {
+            throw new IllegalArgumentException(
+                    "defaultMaxInitialLineLength: " + defaultMaxInitialLineLength + " (expected: >= 0)");
+        }
+        return defaultMaxInitialLineLength;
+    }
+
+    static int validateDefaultMaxHeaderSize(int defaultMaxHeaderSize) {
+        if (defaultMaxHeaderSize < 0) {
+            throw new IllegalArgumentException(
+                    "defaultMaxHeaderSize: " + defaultMaxHeaderSize + " (expected: >= 0)");
+        }
+        return defaultMaxHeaderSize;
+    }
+
+    static int validateDefaultMaxChunkSize(int defaultMaxChunkSize) {
+        if (defaultMaxChunkSize < 0) {
+            throw new IllegalArgumentException(
+                    "defaultMaxChunkSize: " + defaultMaxChunkSize + " (expected: >= 0)");
+        }
+        return defaultMaxChunkSize;
     }
 
     static Duration validateNonNegative(Duration duration, String fieldName) {
@@ -352,6 +383,27 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns the default maximum length of the initial line.
+     */
+    public int defaultMaxInitialLineLength() {
+        return defaultMaxInitialLineLength;
+    }
+
+    /**
+     * Returns the default maximum length of all headers.
+     */
+    public int defaultMaxHeaderSize() {
+        return defaultMaxHeaderSize;
+    }
+
+    /**
+     * Returns the default maximum length of the content or each chunk.
+     */
+    public int defaultMaxChunkSize() {
+        return defaultMaxChunkSize;
+    }
+
+    /**
      * Returns the number of milliseconds to wait for active requests to go end before shutting down.
      * {@code 0} means the server will stop right away without waiting.
      */
@@ -400,6 +452,7 @@ public final class ServerConfig {
                     workerGroup(), shutdownWorkerGroupOnStop(),
                     maxNumConnections(), idleTimeoutMillis(),
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
+                    defaultMaxInitialLineLength(), defaultMaxHeaderSize(), defaultMaxChunkSize(),
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix());
         }
@@ -413,6 +466,7 @@ public final class ServerConfig {
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
+            long defaultMaxInitialLineLength, long defaultMaxHeaderSize, long defaultMaxChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
 
@@ -470,6 +524,12 @@ public final class ServerConfig {
         buf.append(defaultRequestTimeoutMillis);
         buf.append("ms, defaultMaxRequestLength: ");
         buf.append(defaultMaxRequestLength);
+        buf.append("B, defaultMaxInitialLineLength: ");
+        buf.append(defaultMaxInitialLineLength);
+        buf.append("B, defaultMaxHeaderSize: ");
+        buf.append(defaultMaxHeaderSize);
+        buf.append("B, defaultMaxChunkSize: ");
+        buf.append(defaultMaxChunkSize);
         buf.append("B, gracefulShutdownQuietPeriod: ");
         buf.append(gracefulShutdownQuietPeriod);
         buf.append(", gracefulShutdownTimeout: ");
