@@ -28,6 +28,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -173,8 +174,11 @@ public final class ZooKeeperConnector {
                         newChildValue.put(child,
                                           new String(zooKeeper.getData(zNodePath + '/' + child,
                                                                        false, null), StandardCharsets.UTF_8));
+                    } catch (KeeperException.NoNodeException e) {
+                        // Skip the node which got deleted between getChildren() and getData().
                     } catch (Exception e) {
-                        throw new ZooKeeperException(e);
+                        throw new ZooKeeperException("Failed to retrieve the data from: " +
+                                                     zNodePath + '/' + child, e);
                     }
                 });
                 if (prevChildValue == null || !prevChildValue.equals(newChildValue)) {
@@ -182,8 +186,10 @@ public final class ZooKeeperConnector {
                     prevChildValue = newChildValue;
                 }
             }
-        } catch (Exception ex) {
-            throw new ZooKeeperException("Failed to notify ZooKeeper listener", ex);
+        } catch (ZooKeeperException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ZooKeeperException("Failed to notify ZooKeeper listener", e);
         }
     }
 
