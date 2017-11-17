@@ -62,7 +62,7 @@ public class ClientOptionsBuilderTest {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void testDecorators() {
         final ClientOptionsBuilder b = new ClientOptionsBuilder();
-        final Function decorator = service -> new LoggingClient((Client) service);
+        final Function decorator = LoggingClient.newDecorator();
 
         b.option(ClientOption.DECORATION.newValue(
                 new ClientDecorationBuilder()
