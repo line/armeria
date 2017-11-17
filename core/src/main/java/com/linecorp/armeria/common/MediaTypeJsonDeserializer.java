@@ -42,7 +42,7 @@ public final class MediaTypeJsonDeserializer extends StdDeserializer<MediaType> 
             throws IOException {
         final JsonNode tree = p.getCodec().readTree(p);
         if (!tree.isTextual()) {
-            ctx.reportMappingException("media type must be a string.");
+            ctx.reportInputMismatch(MediaType.class, "media type must be a string.");
             return null;
         }
 
@@ -51,7 +51,7 @@ public final class MediaTypeJsonDeserializer extends StdDeserializer<MediaType> 
             return MediaType.parse(textValue);
         } catch (IllegalArgumentException unused) {
             // Failed to parse.
-            ctx.reportMappingException("malformed media type: " + textValue);
+            ctx.reportInputMismatch(MediaType.class, "malformed media type: " + textValue);
             return null;
         }
     }
