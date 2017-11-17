@@ -45,8 +45,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.metric.MeterId;
-import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -56,7 +56,7 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.prometheus.client.CollectorRegistry;
 
 public class PrometheusMetricsIntegrationTest {
@@ -80,11 +80,11 @@ public class PrometheusMetricsIntegrationTest {
 
             sb.service("/foo", helloService.decorate(
                     MetricCollectingService.newDecorator(
-                            (registry, log) -> meterId(registry, log, "server", "Foo"))));
+                            (registry, log) -> meterIdPrefix(registry, log, "server", "Foo"))));
 
             sb.service("/bar", helloService.decorate(
                     MetricCollectingService.newDecorator(
-                            (registry, log) -> meterId(registry, log, "server", "Bar"))));
+                            (registry, log) -> meterIdPrefix(registry, log, "server", "Bar"))));
 
             sb.service("/internal/prometheus/metrics",
                        new PrometheusExpositionService(prometheusRegistry));
@@ -289,7 +289,7 @@ public class PrometheusMetricsIntegrationTest {
                 .factory(clientFactory)
                 .decorator(RpcRequest.class, RpcResponse.class,
                            MetricCollectingClient.newDecorator(
-                                   (registry, log) -> meterId(registry, log, "client", serviceName)))
+                                   (registry, log) -> meterIdPrefix(registry, log, "client", serviceName)))
                 .build(Iface.class);
         client.hello(name);
     }
@@ -302,10 +302,11 @@ public class PrometheusMetricsIntegrationTest {
                      .aggregate().get();
     }
 
-    private static MeterId meterId(MeterRegistry registry, RequestLog log, String name, String serviceName) {
-        return MeterIdFunction.ofDefault(name)
-                              .withTags("handler", serviceName)
-                              .apply(registry, log);
+    private static MeterIdPrefix meterIdPrefix(MeterRegistry registry, RequestLog log,
+                                               String name, String serviceName) {
+        return MeterIdPrefixFunction.ofDefault(name)
+                                    .withTags("handler", serviceName)
+                                    .apply(registry, log);
     }
 
     private static Pattern multilinePattern(String... lines) {

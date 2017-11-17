@@ -31,9 +31,9 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 
 /**
- * An immutable holder of a {@link Meter} name and {@link Tag}s.
+ * A common prefix of {@link Meter.Id} which consists of {@link Meter} name and {@link Tag}s.
  */
-public final class MeterId {
+public final class MeterIdPrefix {
 
     private final String name;
     private final List<Tag> tags;
@@ -44,7 +44,7 @@ public final class MeterId {
      *
      * @param name the {@link Meter} name
      */
-    public MeterId(String name) {
+    public MeterIdPrefix(String name) {
         this(name, ImmutableList.of());
     }
 
@@ -54,7 +54,7 @@ public final class MeterId {
      * @param name the {@link Meter} name
      * @param tags the keys and values of the {@link Tag}s
      */
-    public MeterId(String name, String... tags) {
+    public MeterIdPrefix(String name, String... tags) {
         this(name, sort(Tags.zip(requireNonNull(tags, "tags"))));
     }
 
@@ -64,11 +64,11 @@ public final class MeterId {
      * @param name the {@link Meter} name
      * @param tags the {@link Tag}s of the {@link Meter}
      */
-    public MeterId(String name, Iterable<Tag> tags) {
+    public MeterIdPrefix(String name, Iterable<Tag> tags) {
         this(name, copyAndSort(requireNonNull(tags, "tags")));
     }
 
-    private MeterId(String name, ImmutableList<Tag> tags) {
+    private MeterIdPrefix(String name, ImmutableList<Tag> tags) {
         this.name = requireNonNull(name, "name");
         this.tags = tags;
     }
@@ -134,38 +134,38 @@ public final class MeterId {
     /**
      * Returns a newly-created instance whose name is concatenated by the specified {@code suffix}.
      */
-    public MeterId append(String suffix) {
-        return new MeterId(name(suffix), tags);
+    public MeterIdPrefix append(String suffix) {
+        return new MeterIdPrefix(name(suffix), tags);
     }
 
     /**
      * Returns a newly-created instance whose name is concatenated by the specified {@code suffix} and
      * {@code tags}.
      */
-    public MeterId appendWithTags(String suffix, String... tags) {
-        return new MeterId(name(suffix), tags(tags));
+    public MeterIdPrefix appendWithTags(String suffix, String... tags) {
+        return new MeterIdPrefix(name(suffix), tags(tags));
     }
 
     /**
      * Returns a newly-created instance whose name is concatenated by the specified {@code suffix} and
      * {@code tags}.
      */
-    public MeterId appendWithTags(String suffix, Iterable<Tag> tags) {
-        return new MeterId(name(suffix), tags(tags));
+    public MeterIdPrefix appendWithTags(String suffix, Iterable<Tag> tags) {
+        return new MeterIdPrefix(name(suffix), tags(tags));
     }
 
     /**
      * Returns a newly-created instance whose name is concatenated by the specified {@code tags}.
      */
-    public MeterId withTags(String... tags) {
-        return new MeterId(name, tags(tags));
+    public MeterIdPrefix withTags(String... tags) {
+        return new MeterIdPrefix(name, tags(tags));
     }
 
     /**
      * Returns a newly-created instance whose name is concatenated by the specified {@code tags}.
      */
-    public MeterId withTags(Iterable<Tag> tags) {
-        return new MeterId(name, tags(tags));
+    public MeterIdPrefix withTags(Iterable<Tag> tags) {
+        return new MeterIdPrefix(name, tags(tags));
     }
 
     @Override
@@ -182,11 +182,11 @@ public final class MeterId {
             return true;
         }
 
-        if (!(obj instanceof MeterId)) {
+        if (!(obj instanceof MeterIdPrefix)) {
             return false;
         }
 
-        final MeterId that = (MeterId) obj;
+        final MeterIdPrefix that = (MeterIdPrefix) obj;
         return name.equals(that.name) && tags.equals(that.tags);
     }
 

@@ -37,17 +37,15 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.spring.ArmeriaMeterBindersTest.TestConfiguration;
+import com.linecorp.armeria.spring.ArmeriaMeterBindersConfigurationTest.TestConfiguration;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.spring.export.prometheus.EnablePrometheusMetrics;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-@EnablePrometheusMetrics
-public class ArmeriaMeterBindersTest {
+public class ArmeriaMeterBindersConfigurationTest {
 
     @SpringBootApplication
     public static class TestConfiguration {
@@ -74,11 +72,13 @@ public class ArmeriaMeterBindersTest {
     @Test
     public void testDefaultMetrics() throws Exception {
         assertThat(MoreMeters.measureAll(registry)).containsKeys(
-                "classes.loaded#value",
-                "cpu.total#value",
                 "jvm.buffer.count#value{id=direct}",
-                "jvm.memory.max#value{id=Code Cache}",
+                "jvm.classes.loaded#value",
+                "jvm.memory.max#value{area=nonheap,id=Code Cache}",
+                "jvm.threads.daemon#value",
                 "logback.events#count{level=debug}",
-                "threads.daemon#value");
+                "process.open.fds#value",
+                "process.uptime#value",
+                "system.cpu.count#value");
     }
 }

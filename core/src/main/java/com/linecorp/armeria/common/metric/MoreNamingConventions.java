@@ -22,8 +22,8 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Splitter;
 
 import io.micrometer.core.instrument.Meter.Type;
-import io.micrometer.core.instrument.NamingConvention;
-import io.micrometer.core.instrument.prometheus.PrometheusNamingConvention;
+import io.micrometer.core.instrument.config.NamingConvention;
+import io.micrometer.prometheus.PrometheusNamingConvention;
 
 /**
  * Provides commonly-used {@link NamingConvention}s.

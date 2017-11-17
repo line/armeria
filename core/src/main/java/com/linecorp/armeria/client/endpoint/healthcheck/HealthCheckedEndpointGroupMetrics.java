@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
@@ -36,22 +36,22 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 class HealthCheckedEndpointGroupMetrics implements MeterBinder {
 
     private final HealthCheckedEndpointGroup endpointGroup;
-    private final MeterId id;
+    private final MeterIdPrefix idPrefix;
 
-    HealthCheckedEndpointGroupMetrics(HealthCheckedEndpointGroup endpointGroup, MeterId id) {
+    HealthCheckedEndpointGroupMetrics(HealthCheckedEndpointGroup endpointGroup, MeterIdPrefix idPrefix) {
         this.endpointGroup = requireNonNull(endpointGroup, "endpointGroup");
-        this.id = requireNonNull(id, "id");
+        this.idPrefix = requireNonNull(idPrefix, "idPrefix");
     }
 
     @Override
     public void bindTo(MeterRegistry registry) {
-        final String count = id.name("count");
-        registry.gauge(count, id.tags("state", "healthy"), endpointGroup,
+        final String count = idPrefix.name("count");
+        registry.gauge(count, idPrefix.tags("state", "healthy"), endpointGroup,
                        unused -> endpointGroup.endpoints().size());
-        registry.gauge(count, id.tags("state", "unhealthy"), endpointGroup,
+        registry.gauge(count, idPrefix.tags("state", "unhealthy"), endpointGroup,
                        unused -> endpointGroup.allServers.size() - endpointGroup.endpoints().size());
 
-        final ListenerImpl listener = new ListenerImpl(registry, id.append("healthy"));
+        final ListenerImpl listener = new ListenerImpl(registry, idPrefix.append("healthy"));
         listener.accept(endpointGroup.endpoints());
         endpointGroup.addListener(listener);
     }
@@ -59,12 +59,12 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
     private final class ListenerImpl implements Consumer<List<Endpoint>> {
 
         private final MeterRegistry registry;
-        private final MeterId id;
+        private final MeterIdPrefix idPrefix;
         private final ConcurrentMap<String, Boolean> healthMap = new ConcurrentHashMap<>();
 
-        ListenerImpl(MeterRegistry registry, MeterId id) {
+        ListenerImpl(MeterRegistry registry, MeterIdPrefix idPrefix) {
             this.registry = registry;
-            this.id = id;
+            this.idPrefix = idPrefix;
         }
 
         @Override
@@ -86,7 +86,7 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
             // Process the newly appeared endpoints.
             endpointsToUpdate.forEach((authority, healthy) -> {
                 healthMap.put(authority, healthy);
-                registry.gauge(id.name(), id.tags("authority", authority),
+                registry.gauge(idPrefix.name(), idPrefix.tags("authority", authority),
                                this, unused -> healthMap.get(authority) ? 1 : 0);
             });
         }

@@ -16,31 +16,30 @@
 
 package com.linecorp.armeria.common.metric;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.ToDoubleFunction;
 
-import io.micrometer.core.instrument.AbstractMeterRegistry;
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.LongTaskTimer;
 import io.micrometer.core.instrument.Measurement;
+import io.micrometer.core.instrument.Meter.Id;
 import io.micrometer.core.instrument.Meter.Type;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.histogram.HistogramConfig;
 import io.micrometer.core.instrument.noop.NoopCounter;
 import io.micrometer.core.instrument.noop.NoopDistributionSummary;
 import io.micrometer.core.instrument.noop.NoopGauge;
 import io.micrometer.core.instrument.noop.NoopLongTaskTimer;
 import io.micrometer.core.instrument.noop.NoopTimer;
-import io.micrometer.core.instrument.stats.hist.Histogram;
-import io.micrometer.core.instrument.stats.quantile.Quantiles;
 
 /**
  * A {@link MeterRegistry} which does not record any values.
  */
-public final class NoopMeterRegistry extends AbstractMeterRegistry {
+public final class NoopMeterRegistry extends MeterRegistry {
 
     private static final NoopMeterRegistry INSTANCE = new NoopMeterRegistry();
 
@@ -57,33 +56,35 @@ public final class NoopMeterRegistry extends AbstractMeterRegistry {
     }
 
     @Override
-    protected DistributionSummary newDistributionSummary(String name, Iterable<Tag> tags, String description,
-                                                         Quantiles quantiles, Histogram<?> histogram) {
-        return NoopDistributionSummary.INSTANCE;
+    protected <T> Gauge newGauge(Id id, T obj, ToDoubleFunction<T> f) {
+        return new NoopGauge(id);
     }
 
     @Override
-    protected <T> Gauge newGauge(String name, Iterable<Tag> tags, String description, ToDoubleFunction<T> f,
-                                 T obj) {
-        return NoopGauge.INSTANCE;
+    protected Counter newCounter(Id id) {
+        return new NoopCounter(id);
     }
 
     @Override
-    protected Counter newCounter(String name, Iterable<Tag> tags, String description) {
-        return NoopCounter.INSTANCE;
+    protected LongTaskTimer newLongTaskTimer(Id id) {
+        return new NoopLongTaskTimer(id);
     }
 
     @Override
-    protected LongTaskTimer newLongTaskTimer(String name, Iterable<Tag> tags, String description) {
-        return NoopLongTaskTimer.INSTANCE;
+    protected Timer newTimer(Id id, HistogramConfig histogramConfig) {
+        return new NoopTimer(id);
     }
 
     @Override
-    protected Timer newTimer(String name, Iterable<Tag> tags, String description, Histogram<?> histogram,
-                             Quantiles quantiles) {
-        return NoopTimer.INSTANCE;
+    protected DistributionSummary newDistributionSummary(Id id, HistogramConfig histogramConfig) {
+        return new NoopDistributionSummary(id);
     }
 
     @Override
-    protected void newMeter(String name, Iterable<Tag> tags, Type type, Iterable<Measurement> measurements) {}
+    protected void newMeter(Id id, Type type, Iterable<Measurement> measurements) {}
+
+    @Override
+    protected TimeUnit getBaseTimeUnit() {
+        return TimeUnit.NANOSECONDS;
+    }
 }

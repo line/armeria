@@ -22,31 +22,32 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-public class MeterIdFunctionTest {
+public class MeterIdPrefixFunctionTest {
 
     @Test
     public void testWithTags() {
-        final MeterIdFunction f =
-                (registry, log) -> new MeterId("requests_total", "region", "us-west");
+        final MeterIdPrefixFunction f =
+                (registry, log) -> new MeterIdPrefix("requests_total", "region", "us-west");
 
         assertThat(f.withTags("zone", "1a", "host", "foo").apply(null, null))
-                .isEqualTo(new MeterId("requests_total", "region", "us-west", "zone", "1a", "host", "foo"));
+                .isEqualTo(new MeterIdPrefix("requests_total",
+                                             "region", "us-west", "zone", "1a", "host", "foo"));
     }
 
     @Test
     public void testWithUnzippedTags() {
-        final MeterIdFunction f =
-                (registry, log) -> new MeterId("requests_total", "region", "us-east");
+        final MeterIdPrefixFunction f =
+                (registry, log) -> new MeterIdPrefix("requests_total", "region", "us-east");
 
         assertThat(f.withTags("host", "bar").apply(null, null))
-                .isEqualTo(new MeterId("requests_total", "region", "us-east", "host", "bar"));
+                .isEqualTo(new MeterIdPrefix("requests_total", "region", "us-east", "host", "bar"));
     }
 
     @Test
     public void testAndThen() {
-        final MeterIdFunction f = (registry, log) -> new MeterId("foo", ImmutableList.of());
-        final MeterIdFunction f2 = f.andThen((registry, id) -> id.append("bar"));
+        final MeterIdPrefixFunction f = (registry, log) -> new MeterIdPrefix("foo", ImmutableList.of());
+        final MeterIdPrefixFunction f2 = f.andThen((registry, id) -> id.append("bar"));
         assertThat(f2.apply(PrometheusMeterRegistries.newRegistry(), null))
-                .isEqualTo(new MeterId("foo.bar", ImmutableList.of()));
+                .isEqualTo(new MeterIdPrefix("foo.bar", ImmutableList.of()));
     }
 }

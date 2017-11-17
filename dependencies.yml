@@ -70,11 +70,11 @@ io.grpc:
   grpc-testing: { version: *GRPC_VERSION }
 
 io.micrometer:
-  micrometer-core: { version: &MICROMETER_VERSION '0.10.0.RELEASE' }
+  micrometer-core: { version: &MICROMETER_VERSION '1.0.0-rc.4' }
+  micrometer-registry-prometheus: { version: *MICROMETER_VERSION }
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     exclusions:
-    - org.springframework.boot:spring-boot-actuator
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
 
@@ -175,9 +175,6 @@ org.eclipse.jetty.http2:
 org.hamcrest:
   hamcrest-library: { version: '1.3' }
 
-org.hdrhistogram:
-  HdrHistogram: { version: '2.1.10' }
-
 org.hibernate.validator:
   hibernate-validator: { version: '6.0.3.Final' }
 
@@ -209,8 +206,5 @@ org.slf4j:
   slf4j-api: { version: *SLF4J_VERSION }
 
 org.springframework.boot:
-  spring-boot: { version: &SPRING_BOOT_VERSION '1.5.8.RELEASE' }
-  spring-boot-autoconfigure: { version: *SPRING_BOOT_VERSION }
-  spring-boot-starter-logging: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter: { version: &SPRING_BOOT_VERSION '1.5.8.RELEASE' }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
-  spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }

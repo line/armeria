@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
-import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -69,7 +69,7 @@ public class DropwizardMetricsIntegrationTest {
                                       RequestLogAvailability.COMPLETE);
                 return delegate.serve(ctx, req);
             }).decorate(MetricCollectingService.newDecorator(
-                    MeterIdFunction.ofDefault("armeria.server.HelloService"))));
+                    MeterIdPrefixFunction.ofDefault("armeria.server.HelloService"))));
         }
     };
 
@@ -153,7 +153,7 @@ public class DropwizardMetricsIntegrationTest {
                            })
                 .decorator(RpcRequest.class, RpcResponse.class,
                            MetricCollectingClient.newDecorator(
-                                   MeterIdFunction.ofDefault("armeria.client.HelloService")))
+                                   MeterIdPrefixFunction.ofDefault("armeria.client.HelloService")))
                 .build(Iface.class);
         try {
             client.hello(name);

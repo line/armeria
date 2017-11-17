@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 
 import io.micrometer.core.instrument.Meter;
@@ -92,7 +92,9 @@ public final class MetricCollectingCircuitBreakerListener implements CircuitBrea
     }
 
     private CircuitBreakerMetrics metricsOf(CircuitBreaker circuitBreaker) {
-        final MeterId id = new MeterId(name, Tags.zip("name", circuitBreaker.name()));
-        return MicrometerUtil.register(registry, id, CircuitBreakerMetrics.class, CircuitBreakerMetrics::new);
+        final MeterIdPrefix idPrefix = new MeterIdPrefix(name, Tags.zip("name", circuitBreaker.name()));
+        return MicrometerUtil.register(registry, idPrefix,
+                                       CircuitBreakerMetrics.class,
+                                       CircuitBreakerMetrics::new);
     }
 }

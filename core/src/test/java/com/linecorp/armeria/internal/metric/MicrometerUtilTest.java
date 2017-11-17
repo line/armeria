@@ -21,26 +21,26 @@ import static org.assertj.core.api.Java6Assertions.assertThat;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
 public class MicrometerUtilTest {
 
-    private static final MeterId ID_A = new MeterId("a");
+    private static final MeterIdPrefix ID_PREFIX_A = new MeterIdPrefix("a");
     private static final MeterRegistry metrics = PrometheusMeterRegistries.newRegistry();
 
     @Test
     public void getOrCreateGroup() {
-        final Integer a = MicrometerUtil.register(metrics, ID_A, Integer.class,
-                                                 (parent, id) -> 42);
+        final Integer a = MicrometerUtil.register(metrics, ID_PREFIX_A, Integer.class,
+                                                  (parent, id) -> 42);
 
-        assertThat(MicrometerUtil.register(metrics, ID_A, Integer.class,
+        assertThat(MicrometerUtil.register(metrics, ID_PREFIX_A, Integer.class,
                                            (parent, id) -> 0)).isSameAs(a);
 
         // Type mismatches.
-        assertThatThrownBy(() -> MicrometerUtil.register(metrics, ID_A, String.class,
+        assertThatThrownBy(() -> MicrometerUtil.register(metrics, ID_PREFIX_A, String.class,
                                                          (parent, id) -> "foo"))
                 .isInstanceOf(IllegalStateException.class);
     }
