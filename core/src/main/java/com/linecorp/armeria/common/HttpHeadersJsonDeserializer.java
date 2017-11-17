@@ -49,7 +49,7 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
             throws IOException {
         final JsonNode tree = p.getCodec().readTree(p);
         if (!tree.isObject()) {
-            ctx.reportMappingException("HTTP headers must be an object.");
+            ctx.reportInputMismatch(HttpHeaders.class, "HTTP headers must be an object.");
             return null;
         }
 
@@ -78,8 +78,9 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
     private static void addHeader(DeserializationContext ctx, HttpHeaders headers,
                                   AsciiString name, JsonNode valueNode) throws JsonMappingException {
         if (!valueNode.isTextual()) {
-            ctx.reportMappingException("HTTP header '%s' contains %s (%s); only strings are allowed.",
-                                       name, valueNode.getNodeType(), valueNode);
+            ctx.reportInputMismatch(HttpHeaders.class,
+                                    "HTTP header '%s' contains %s (%s); only strings are allowed.",
+                                    name, valueNode.getNodeType(), valueNode);
         }
 
         headers.add(name, valueNode.asText());
