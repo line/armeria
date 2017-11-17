@@ -784,6 +784,10 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         int addAndRemoveIfRequested(Object o) {
             requireNonNull(o);
+            if (elements == null) {
+                // Stream already closed.
+                return 0;
+            }
             int removedLength = 0;
             if (headOffset < lastRemovalRequestedOffset) {
                 removedLength = removeElements();
