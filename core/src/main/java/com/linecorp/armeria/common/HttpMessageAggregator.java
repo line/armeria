@@ -116,8 +116,11 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiConsum
             content = HttpData.of(merged);
         }
 
-        final AggregatedHttpMessage aggregated = onSuccess(content);
-        future.complete(aggregated);
+        try {
+            future.complete(onSuccess(content));
+        } catch (Throwable e) {
+            future.completeExceptionally(e);
+        }
     }
 
     private void fail(Throwable cause) {

@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.util.List;
@@ -34,13 +33,17 @@ import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -50,6 +53,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.Types;
 import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
@@ -71,11 +75,15 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     private final List<Parameter> parameters;
     private final boolean isAsynchronous;
     private final AggregationStrategy aggregationStrategy;
+    private final List<ExceptionHandlerFunction> exceptionHandlers;
 
-    AnnotatedHttpServiceMethod(Object object, Method method, PathMapping pathMapping) {
+    AnnotatedHttpServiceMethod(Object object, Method method, PathMapping pathMapping,
+                               List<ExceptionHandlerFunction> exceptionHandlers) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         requireNonNull(pathMapping, "pathMapping");
+        this.exceptionHandlers = ImmutableList.copyOf(
+                requireNonNull(exceptionHandlers, "exceptionHandlers"));
 
         parameters = parameters(method, pathMapping.paramNames());
         final Class<?> returnType = method.getReturnType();
@@ -118,7 +126,8 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         return CompletableFuture.supplyAsync(() -> invoke(ctx, req, null), ctx.blockingTaskExecutor());
     }
 
-    BiFunction<ServiceRequestContext, HttpRequest, Object> withConverter(ResponseConverter converter) {
+    BiFunction<ServiceRequestContext, HttpRequest,
+            CompletionStage<HttpResponse>> withConverter(ResponseConverter converter) {
         return (ctx, req) ->
                 executeSyncOrAsync(ctx, req).thenApply(obj -> {
                     try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
@@ -127,9 +136,8 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
                 });
     }
 
-    BiFunction<ServiceRequestContext, HttpRequest, Object> withConverters(
-            Map<Class<?>, ResponseConverter> converters) {
-
+    BiFunction<ServiceRequestContext, HttpRequest,
+            CompletionStage<HttpResponse>> withConverters(Map<Class<?>, ResponseConverter> converters) {
         return (ctx, req) ->
                 executeSyncOrAsync(ctx, req).thenApply(obj -> {
                     try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
@@ -140,22 +148,55 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
 
     private CompletionStage<?> executeSyncOrAsync(ServiceRequestContext ctx, HttpRequest req) {
         final Object ret = apply(ctx, req);
-        return ret instanceof CompletionStage ?
-               (CompletionStage<?>) ret : CompletableFuture.completedFuture(ret);
+        if (ret instanceof CompletionStage) {
+            return ((CompletionStage<?>) ret).handle((obj, cause) -> {
+                if (cause == null) {
+                    return obj;
+                }
+                final HttpResponse response = getResponseForCause(ctx, req, cause);
+                if (response != null) {
+                    return response;
+                } else {
+                    return Exceptions.throwUnsafely(cause);
+                }
+            });
+        }
+        if (ret instanceof HttpResponse) {
+            return CompletableFuture.completedFuture(
+                    new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) ret));
+        }
+        return CompletableFuture.completedFuture(ret);
     }
 
     private Object invoke(ServiceRequestContext ctx, HttpRequest req, @Nullable AggregatedHttpMessage message) {
         try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
             return method.invoke(object, parameterValues(ctx, req, parameters, message));
-        } catch (Exception e) {
-            if (e instanceof InvocationTargetException) {
-                final Throwable cause = e.getCause();
-                if (cause != null) {
-                    return Exceptions.throwUnsafely(cause);
+        } catch (Throwable cause) {
+            final HttpResponse response = getResponseForCause(ctx, req, cause);
+            if (response != null) {
+                return response;
+            }
+            return Exceptions.throwUnsafely(cause);
+        }
+    }
+
+    /**
+     * Returns a {@link HttpResponse} which is created by {@link ExceptionHandlerFunction}.
+     */
+    private HttpResponse getResponseForCause(ServiceRequestContext ctx, HttpRequest req,
+                                             Throwable cause) {
+        final Throwable rootCause = Throwables.getRootCause(cause);
+        for (ExceptionHandlerFunction func : exceptionHandlers) {
+            if (func.accept(rootCause)) {
+                try {
+                    return func.handle(ctx, req, rootCause);
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception from an exception handler {}:",
+                                func.getClass().getName(), e);
                 }
             }
-            return Exceptions.throwUnsafely(e);
         }
+        return ExceptionHandlerFunction.DEFAULT.handle(ctx, req, rootCause);
     }
 
     /**
@@ -229,7 +270,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
             type = parameterInfo.getType();
         }
 
-        return new Parameter(paramType, (!isOptionalType && aDefault == null), isOptionalType,
+        return new Parameter(paramType, !isOptionalType && aDefault == null, isOptionalType,
                              validateAndNormalizeSupportedType(type), paramValue, defaultValue);
     }
 
@@ -507,6 +548,36 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
 
         // No appropriate converter found: raise runtime exception.
         throw new IllegalArgumentException("Converter not available for: " + type.getSimpleName());
+    }
+
+    /**
+     * Intercepts a {@link Throwable} raised from {@link HttpResponse} and then rewrites it as an
+     * {@link HttpResponseException} by {@link ExceptionHandlerFunction}.
+     */
+    private class ExceptionFilteredHttpResponse extends FilteredHttpResponse {
+
+        private final ServiceRequestContext ctx;
+        private final HttpRequest req;
+
+        ExceptionFilteredHttpResponse(ServiceRequestContext ctx, HttpRequest req,
+                                      HttpResponse delegate) {
+            super(delegate);
+            this.ctx = ctx;
+            this.req = req;
+        }
+
+        @Override
+        protected HttpObject filter(HttpObject obj) {
+            return obj;
+        }
+
+        @Override
+        protected Throwable beforeError(Subscriber<? super HttpObject> subscriber,
+                                        Throwable cause) {
+            final HttpResponse response = getResponseForCause(ctx, req, cause);
+            return response != null ? HttpResponseException.of(response)
+                                    : cause;
+        }
     }
 
     /**

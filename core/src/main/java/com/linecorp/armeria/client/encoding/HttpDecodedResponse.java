@@ -91,10 +91,10 @@ class HttpDecodedResponse extends FilteredHttpResponse {
     }
 
     @Override
-    protected void beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        if (responseDecoder == null) {
-            return;
+    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        if (responseDecoder != null) {
+            responseDecoder.finish();
         }
-        responseDecoder.finish();
+        return cause;
     }
 }

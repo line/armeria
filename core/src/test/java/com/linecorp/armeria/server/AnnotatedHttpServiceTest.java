@@ -121,7 +121,7 @@ public class AnnotatedHttpServiceTest {
                                 LoggingService.newDecorator());
 
             sb.annotatedService("/11", new MyAnnotatedService11(),
-                                      LoggingService.newDecorator());
+                                LoggingService.newDecorator());
         }
     };
 
@@ -513,18 +513,18 @@ public class AnnotatedHttpServiceTest {
 
         @Get("/syncThrow401")
         public String sync401() {
-            throw new HttpResponseException(HttpStatus.UNAUTHORIZED);
+            throw HttpStatusException.of(HttpStatus.UNAUTHORIZED);
         }
 
         @Get("/asyncThrow401")
         public CompletableFuture<String> async401() {
-            throw new HttpResponseException(HttpStatus.UNAUTHORIZED);
+            throw HttpStatusException.of(HttpStatus.UNAUTHORIZED);
         }
 
         @Get("/asyncThrowWrapped401")
         public CompletableFuture<String> asyncThrowWrapped401() {
             return CompletableFuture.supplyAsync(() -> {
-                throw new HttpResponseException(HttpStatus.UNAUTHORIZED);
+                throw HttpStatusException.of(HttpStatus.UNAUTHORIZED);
             });
         }
     }
@@ -558,10 +558,10 @@ public class AnnotatedHttpServiceTest {
 
         @Get("/headerWithParam")
         public String headerWithParam(RequestContext ctx,
-                                    @Header("username") @Default("hello") String username,
-                                    @Header("password") @Default("world") Optional<String> password,
-                                    @Param("extra") Optional<String> extra,
-                                    @Param("number") int number) {
+                                      @Header("username") @Default("hello") String username,
+                                      @Header("password") @Default("world") Optional<String> password,
+                                      @Param("extra") Optional<String> extra,
+                                      @Param("number") int number) {
             validateContext(ctx);
             return username + "/" + password.get() + "/" + extra.orElse("(null)") + "/" + number;
         }
@@ -569,8 +569,8 @@ public class AnnotatedHttpServiceTest {
         @Get
         @Path("/headerWithoutValue")
         public String headerWithoutValue(RequestContext ctx,
-                                    @Param("username") @Default("hello") String username,
-                                    @Param("password") String password) {
+                                         @Header("username") @Default("hello") String username,
+                                         @Header("password") String password) {
             validateContext(ctx);
             return username + "/" + password;
         }

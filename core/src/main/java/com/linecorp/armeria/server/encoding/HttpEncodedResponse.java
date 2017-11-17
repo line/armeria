@@ -131,8 +131,9 @@ class HttpEncodedResponse extends FilteredHttpResponse {
     }
 
     @Override
-    protected void beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
         closeEncoder();
+        return cause;
     }
 
     private void closeEncoder() {

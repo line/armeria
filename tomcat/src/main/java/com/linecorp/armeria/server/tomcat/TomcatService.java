@@ -61,12 +61,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceUnavailableException;
 
 import io.netty.util.AsciiString;
 
@@ -353,7 +353,7 @@ public final class TomcatService implements HttpService {
         final Adapter coyoteAdapter = connector().getProtocolHandler().getAdapter();
         if (coyoteAdapter == null) {
             // Tomcat is not configured / stopped.
-            throw ServiceUnavailableException.get();
+            throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
 
         final DefaultHttpResponse res = new DefaultHttpResponse();

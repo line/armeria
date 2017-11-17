@@ -48,14 +48,18 @@ import com.google.common.collect.Sets;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Converter;
 import com.linecorp.armeria.server.annotation.Converter.Unspecified;
-import com.linecorp.armeria.server.annotation.Decorate;
+import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.ExceptionHandler;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.Options;
@@ -76,12 +80,25 @@ final class AnnotatedHttpServices {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServices.class);
 
     /**
-     * A {@link DecoratingServiceFunction} map for reusing.
+     * A {@link DecoratingServiceFunction} map for reusing decorators.
      */
     private static final ConcurrentMap<
             Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>>,
             DecoratingServiceFunction<HttpRequest, HttpResponse>>
             decoratingServiceFunctions = new ConcurrentHashMap<>();
+
+    /**
+     * An {@link ExceptionHandlerFunction} map for reusing exception handlers.
+     */
+    private static final ConcurrentMap<
+            Class<? extends ExceptionHandlerFunction>, ExceptionHandlerFunction>
+            exceptionHandlerFunctions = new ConcurrentHashMap<>();
+
+    /**
+     * A default {@link ExceptionHandlerFunction} list.
+     */
+    private static final List<ExceptionHandlerFunction> defaultExceptionHandlers =
+            ImmutableList.of(new DefaultExceptionHandler());
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -306,7 +323,7 @@ final class AnnotatedHttpServices {
                 throw new IllegalArgumentException(
                         "@Converter annotation can't be marked on a method with a target specified.");
             }
-            return newInstance(converter.value());
+            return newInstance(converter.value(), Converter.class);
         }
 
         throw new IllegalArgumentException("@Converter annotation can't be repeated on a method.");
@@ -326,32 +343,28 @@ final class AnnotatedHttpServices {
                 throw new IllegalArgumentException(
                         "@Converter annotation must have a target type specified.");
             }
-            builder.put(target, newInstance(converter.value()));
+            builder.put(target, newInstance(converter.value(), Converter.class));
         }
         return builder.build();
     }
 
     /**
-     * Returns a decorator chain which is specified by {@link Decorate} annotations.
+     * Returns a decorator chain which is specified by {@link Decorator} annotations.
      */
     private static Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> decorator(Method method) {
 
-        final Decorate decorate = method.getAnnotation(Decorate.class);
-        if (decorate == null) {
-            return Function.identity();
-        }
-
-        final Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>>[] c = decorate.value();
-        if (c.length == 0) {
+        final Decorator[] decorators = method.getAnnotationsByType(Decorator.class);
+        if (decorators.length == 0) {
             return Function.identity();
         }
 
         // Respect the order of decorators which is specified by a user. The first one is first applied.
         Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> decorator = newDecorator(c[c.length - 1]);
-        for (int i = c.length - 2; i >= 0; i--) {
-            decorator = decorator.andThen(newDecorator(c[i]));
+                ? extends Service<HttpRequest, HttpResponse>>
+                decorator = newDecorator(decorators[decorators.length - 1].value());
+        for (int i = decorators.length - 2; i >= 0; i--) {
+            decorator = decorator.andThen(newDecorator(decorators[i].value()));
         }
         return decorator;
     }
@@ -364,20 +377,38 @@ final class AnnotatedHttpServices {
             ? extends Service<HttpRequest, HttpResponse>> newDecorator(
             Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>> clazz) {
         return service -> new FunctionalDecoratingService<>(
-                service, decoratingServiceFunctions.computeIfAbsent(clazz, AnnotatedHttpServices::newInstance));
+                service, decoratingServiceFunctions.computeIfAbsent(clazz, type ->
+                newInstance(type, Decorator.class)));
+    }
+
+    /**
+     * Returns an exception handler list which is specified by {@link ExceptionHandler} annotations.
+     */
+    private static List<ExceptionHandlerFunction> exceptionHandlers(Class<?> clazz, Method method) {
+        ExceptionHandler[] handlers = method.getAnnotationsByType(ExceptionHandler.class);
+        if (handlers.length == 0) {
+            handlers = clazz.getAnnotationsByType(ExceptionHandler.class);
+        }
+        if (handlers.length == 0) {
+            return defaultExceptionHandlers;
+        }
+        return Arrays.stream(handlers)
+                     .map(h -> exceptionHandlerFunctions.computeIfAbsent(h.value(), type ->
+                             newInstance(type, ExceptionHandler.class)))
+                     .collect(toImmutableList());
     }
 
     /**
      * Returns a new instance of the specified {@link Class}.
      */
-    private static <T> T newInstance(Class<? extends T> clazz) {
+    private static <T> T newInstance(Class<? extends T> clazz,
+                                     Class<? extends Annotation> annotation) {
         try {
             final Constructor<? extends T> constructor = clazz.getDeclaredConstructor();
             constructor.setAccessible(true);
             return constructor.newInstance();
         } catch (Exception e) {
-            throw new IllegalStateException("A decorator function class specified in @" +
-                                            Decorate.class.getSimpleName() +
+            throw new IllegalStateException("A class specified in @" + annotation.getSimpleName() +
                                             " annotation must have an accessible default constructor: " +
                                             clazz.getName(), e);
         }
@@ -404,9 +435,8 @@ final class AnnotatedHttpServices {
         final HttpHeaderPathMapping pathMapping =
                 new HttpHeaderPathMapping(pathStringMapping(pathPrefix, method, methodAnnotations),
                                           methods, consumeTypes(method, clazz), produceTypes(method, clazz));
-
-        final AnnotatedHttpServiceMethod function = new AnnotatedHttpServiceMethod(object, method, pathMapping);
-
+        final AnnotatedHttpServiceMethod function =
+                new AnnotatedHttpServiceMethod(object, method, pathMapping, exceptionHandlers(clazz, method));
         final Set<String> parameterNames = function.pathParamNames();
         final Set<String> expectedParamNames = pathMapping.paramNames();
         if (!expectedParamNames.containsAll(parameterNames)) {
@@ -518,6 +548,29 @@ final class AnnotatedHttpServices {
         @Override
         public String toString() {
             return '[' + PrefixPathMapping.PREFIX + pathPrefix + ", " + mapping + ']';
+        }
+    }
+
+    /**
+     * A default exception handler is used when a user does not specify exception handlers
+     * by {@link ExceptionHandler} annotation.
+     */
+    private static class DefaultExceptionHandler implements ExceptionHandlerFunction {
+        @Override
+        public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
+            if (cause instanceof IllegalArgumentException) {
+                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+            }
+
+            if (cause instanceof HttpStatusException) {
+                return HttpResponse.of(((HttpStatusException) cause).httpStatus());
+            }
+
+            if (cause instanceof HttpResponseException) {
+                return ((HttpResponseException) cause).httpResponse();
+            }
+
+            return ExceptionHandlerFunction.DEFAULT.handle(ctx, req, cause);
         }
     }
 }
