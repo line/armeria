@@ -18,7 +18,7 @@ package com.linecorp.armeria.server;
 
 import java.io.OutputStream;
 
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -40,7 +40,7 @@ public interface Router<V> {
      *
      * @return whether the stats of this {@link Router} has been registered
      */
-    default boolean registerMetrics(MeterRegistry registry, MeterId id) {
+    default boolean registerMetrics(MeterRegistry registry, MeterIdPrefix idPrefix) {
         return false;
     }
 

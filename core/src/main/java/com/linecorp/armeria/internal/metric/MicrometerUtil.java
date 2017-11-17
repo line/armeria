@@ -26,45 +26,45 @@ import java.util.function.BiFunction;
 
 import com.google.common.collect.MapMaker;
 
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
- * A utility that prevents double instantiation of an object for a certain {@link MeterId}. This can be useful
- * when you need to make sure you do not register the same {@link Meter} more than once.
+ * A utility that prevents double instantiation of an object for a certain {@link MeterIdPrefix}. This can be
+ * useful when you need to make sure you do not register the same {@link Meter} more than once.
  *
  * @see RequestMetricSupport
  * @see CaffeineMetricSupport
  */
 public final class MicrometerUtil {
 
-    private static final ConcurrentMap<MeterRegistry, ConcurrentMap<MeterId, Object>> map =
+    private static final ConcurrentMap<MeterRegistry, ConcurrentMap<MeterIdPrefix, Object>> map =
             new MapMaker().weakKeys().makeMap();
     private static final ThreadLocal<RegistrationState> registrationState =
             ThreadLocal.withInitial(RegistrationState::new);
 
     /**
-     * Associates a newly-created object with the specified {@link MeterId} or returns an existing one if
+     * Associates a newly-created object with the specified {@link MeterIdPrefix} or returns an existing one if
      * exists already.
      *
-     * @param id the {@link MeterId} of the object
+     * @param idPrefix the {@link MeterIdPrefix} of the object
      * @param type the type of the object created by {@code factory}
-     * @param factory a factory that creates an object of {@code type}, to be associated with {@code id}
+     * @param factory a factory that creates an object of {@code type}, to be associated with {@code idPrefix}
      *
      * @return the object of {@code type}, which may or may not be created by {@code factory}
      * @throws IllegalStateException if there is already an object of different class associated
-     *                               for the same {@link MeterId}
+     *                               for the same {@link MeterIdPrefix}
      */
-    public static <T> T register(MeterRegistry registry, MeterId id, Class<T> type,
-                                 BiFunction<MeterRegistry, MeterId, T> factory) {
+    public static <T> T register(MeterRegistry registry, MeterIdPrefix idPrefix, Class<T> type,
+                                 BiFunction<MeterRegistry, MeterIdPrefix, T> factory) {
         requireNonNull(registry, "registry");
-        requireNonNull(id, "id");
+        requireNonNull(idPrefix, "idPrefix");
         requireNonNull(type, "type");
         requireNonNull(factory, "factory");
 
-        final ConcurrentMap<MeterId, Object> objects =
+        final ConcurrentMap<MeterIdPrefix, Object> objects =
                 map.computeIfAbsent(registry, unused -> new ConcurrentHashMap<>());
 
         // Prevent calling computeIfAbsent inside computeIfAbsent.
@@ -74,7 +74,7 @@ public final class MicrometerUtil {
             throw new IllegalStateException("nested registration prohibited");
         }
 
-        final Object object = register(objects, registrationState, registry, id, type, factory);
+        final Object object = register(objects, registrationState, registry, idPrefix, type, factory);
 
         // Handle the registerLater() calls, if any were made by the factory.
         handlePendingRegistrations(objects, registrationState);
@@ -84,11 +84,12 @@ public final class MicrometerUtil {
         return cast;
     }
 
-    private static <T> Object register(ConcurrentMap<MeterId, Object> map, RegistrationState registrationState,
-                                       MeterRegistry registry, MeterId id, Class<T> type,
-                                       BiFunction<MeterRegistry, MeterId, T> factory) {
+    private static <T> Object register(ConcurrentMap<MeterIdPrefix, Object> map,
+                                       RegistrationState registrationState,
+                                       MeterRegistry registry, MeterIdPrefix idPrefix, Class<T> type,
+                                       BiFunction<MeterRegistry, MeterIdPrefix, T> factory) {
 
-        final Object object = map.computeIfAbsent(id, i -> {
+        final Object object = map.computeIfAbsent(idPrefix, i -> {
             registrationState.isRegistering = true;
             try {
                 return factory.apply(registry, i);
@@ -99,14 +100,14 @@ public final class MicrometerUtil {
 
         if (!type.isInstance(object)) {
             throw new IllegalStateException(
-                    "An object of different type has been registered already for id: " + id +
+                    "An object of different type has been registered already for idPrefix: " + idPrefix +
                     " (expected: " + type.getName() +
                     ", actual: " + (object != null ? object.getClass().getName() : "null") + ')');
         }
         return object;
     }
 
-    private static void handlePendingRegistrations(ConcurrentMap<MeterId, Object> map,
+    private static void handlePendingRegistrations(ConcurrentMap<MeterIdPrefix, Object> map,
                                                    RegistrationState registrationState) {
         for (;;) {
             @SuppressWarnings("unchecked")
@@ -117,39 +118,39 @@ public final class MicrometerUtil {
                 break;
             }
 
-            register(map, registrationState, pendingRegistration.registry, pendingRegistration.id,
+            register(map, registrationState, pendingRegistration.registry, pendingRegistration.idPrefix,
                      pendingRegistration.type, pendingRegistration.factory
             );
         }
     }
 
     /**
-     * Similar to {@link #register(MeterRegistry, MeterId, Class, BiFunction)}, but used when a registration
-     * has to be nested, because otherwise the registration may enter an infinite loop, as described
-     * <a href="https://bugs.openjdk.java.net/browse/JDK-8062841">here</a>. For example:
+     * Similar to {@link #register(MeterRegistry, MeterIdPrefix, Class, BiFunction)}, but used when
+     * a registration has to be nested, because otherwise the registration may enter an infinite loop,
+     * as described <a href="https://bugs.openjdk.java.net/browse/JDK-8062841">here</a>. For example:
      * <pre>{@code
      * // OK
-     * register(registry, id, type, (r, i) -> {
-     *     registerLater(registry, anotherId, anotherType, ...);
+     * register(registry, idPrefix, type, (r, i) -> {
+     *     registerLater(registry, anotherIdPrefix, anotherType, ...);
      *     return ...;
      * });
      *
      * // Not OK
-     * register(registry, id, type, (r, i) -> {
-     *     register(registry, anotherId, anotherType, ...);
+     * register(registry, idPrefix, type, (r, i) -> {
+     *     register(registry, anotherIdPrefix, anotherType, ...);
      *     return ...;
      * });
      * }</pre>
      */
-    public static <T> void registerLater(MeterRegistry registry, MeterId id, Class<T> type,
-                                         BiFunction<MeterRegistry, MeterId, T> factory) {
+    public static <T> void registerLater(MeterRegistry registry, MeterIdPrefix idPrefix, Class<T> type,
+                                         BiFunction<MeterRegistry, MeterIdPrefix, T> factory) {
 
         final RegistrationState registrationState = MicrometerUtil.registrationState.get();
         if (!registrationState.isRegistering) {
-            register(registry, id, type, factory);
+            register(registry, idPrefix, type, factory);
         } else {
             registrationState.pendingRegistrations.add(
-                    new PendingRegistration<>(registry, id, type, factory));
+                    new PendingRegistration<>(registry, idPrefix, type, factory));
         }
     }
 
@@ -162,14 +163,14 @@ public final class MicrometerUtil {
 
     private static final class PendingRegistration<T> {
         final MeterRegistry registry;
-        final MeterId id;
+        final MeterIdPrefix idPrefix;
         final Class<T> type;
-        final BiFunction<MeterRegistry, MeterId, T> factory;
+        final BiFunction<MeterRegistry, MeterIdPrefix, T> factory;
 
-        PendingRegistration(MeterRegistry registry, MeterId id, Class<T> type,
-                            BiFunction<MeterRegistry, MeterId, T> factory) {
+        PendingRegistration(MeterRegistry registry, MeterIdPrefix idPrefix, Class<T> type,
+                            BiFunction<MeterRegistry, MeterIdPrefix, T> factory) {
             this.registry = registry;
-            this.id = id;
+            this.idPrefix = idPrefix;
             this.type = type;
             this.factory = factory;
         }

@@ -26,8 +26,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.metric.MeterId;
-import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
@@ -45,7 +45,7 @@ public final class RequestMetricSupport {
 
     private static final RequestMetrics PLACEHOLDER = new RequestMetricsPlaceholder();
 
-    public static void setup(RequestContext ctx, MeterIdFunction meterIdFunction) {
+    public static void setup(RequestContext ctx, MeterIdPrefixFunction meterIdPrefixFunction) {
         if (ctx.hasAttr(ATTR_REQUEST_METRICS)) {
             return;
         }
@@ -54,7 +54,7 @@ public final class RequestMetricSupport {
         // The attribute will be set to the real one later in onRequestStart()
         ctx.attr(ATTR_REQUEST_METRICS).set(PLACEHOLDER);
 
-        ctx.log().addListener(log -> onRequestStart(log, meterIdFunction),
+        ctx.log().addListener(log -> onRequestStart(log, meterIdPrefixFunction),
                               RequestLogAvailability.REQUEST_HEADERS,
                               RequestLogAvailability.REQUEST_CONTENT);
         ctx.log().addListener(RequestMetricSupport::onRequestEnd,
@@ -63,12 +63,12 @@ public final class RequestMetricSupport {
                               RequestLogAvailability.COMPLETE);
     }
 
-    private static void onRequestStart(RequestLog log, MeterIdFunction meterIdFunction) {
+    private static void onRequestStart(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
-        final MeterId id = meterIdFunction.apply(registry, log);
+        final MeterIdPrefix idPrefix = meterIdPrefixFunction.apply(registry, log);
         final RequestMetrics requestMetrics =  MicrometerUtil.register(
-                registry, id, RequestMetrics.class, DefaultRequestMetrics::new);
+                registry, idPrefix, RequestMetrics.class, DefaultRequestMetrics::new);
 
         ctx.attr(ATTR_REQUEST_METRICS).set(requestMetrics);
         requestMetrics.active().incrementAndGet();
@@ -156,18 +156,23 @@ public final class RequestMetricSupport {
         private final DistributionSummary responseLength;
         private final Timer totalDuration;
 
-        DefaultRequestMetrics(MeterRegistry parent, MeterId id) {
-            active = parent.gauge(id.name("activeRequests"), id.tags(),
+        DefaultRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
+            active = parent.gauge(idPrefix.name("activeRequests"), idPrefix.tags(),
                                   new AtomicInteger(), AtomicInteger::get);
-            final String requests = id.name("requests");
-            success = parent.counter(requests, id.tags("result", "success"));
-            failure = parent.counter(requests, id.tags("result", "failure"));
+            final String requests = idPrefix.name("requests");
+            success = parent.counter(requests, idPrefix.tags("result", "success"));
+            failure = parent.counter(requests, idPrefix.tags("result", "failure"));
 
-            requestDuration = timerWithDefaultQuantiles(parent, id.append("requestDuration"));
-            requestLength = summaryWithDefaultQuantiles(parent, id.append("requestLength"));
-            responseDuration = timerWithDefaultQuantiles(parent, id.append("responseDuration"));
-            responseLength = summaryWithDefaultQuantiles(parent, id.append("responseLength"));
-            totalDuration = timerWithDefaultQuantiles(parent, id.append("totalDuration"));
+            requestDuration = timerWithDefaultQuantiles(
+                    parent, idPrefix.name("requestDuration"), idPrefix.tags());
+            requestLength = summaryWithDefaultQuantiles(
+                    parent, idPrefix.name("requestLength"), idPrefix.tags());
+            responseDuration = timerWithDefaultQuantiles(
+                    parent, idPrefix.name("responseDuration"), idPrefix.tags());
+            responseLength = summaryWithDefaultQuantiles(
+                    parent, idPrefix.name("responseLength"), idPrefix.tags());
+            totalDuration = timerWithDefaultQuantiles(
+                    parent, idPrefix.name("totalDuration"), idPrefix.tags());
         }
 
         @Override

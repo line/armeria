@@ -17,23 +17,23 @@ package com.linecorp.armeria.spring;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.metric.MeterIdFunction;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 /**
- * Produces a {@link MeterIdFunction} from a service name.
+ * Produces a {@link MeterIdPrefixFunction} from a service name.
  */
 @FunctionalInterface
-public interface MeterIdFunctionFactory {
+public interface MeterIdPrefixFunctionFactory {
 
     /**
-     * The default {@link MeterIdFunctionFactory} instance.
+     * The default {@link MeterIdPrefixFunctionFactory} instance.
      */
-    MeterIdFunctionFactory DEFAULT = (type, serviceName) ->
-            MeterIdFunction.ofDefault("armeria." + requireNonNull(type, "type"))
-                           .withTags("service", requireNonNull(serviceName, "serviceName"));
+    MeterIdPrefixFunctionFactory DEFAULT = (type, serviceName) ->
+            MeterIdPrefixFunction.ofDefault("armeria." + requireNonNull(type, "type"))
+                                 .withTags("service", requireNonNull(serviceName, "serviceName"));
 
     /**
-     * Returns the {@link MeterIdFunction} for the specified service name.
+     * Returns the {@link MeterIdPrefixFunction} for the specified service name.
      */
-    MeterIdFunction get(String type, String serviceName);
+    MeterIdPrefixFunction get(String type, String serviceName);
 }

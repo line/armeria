@@ -19,13 +19,9 @@ package com.linecorp.armeria.common.metric;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Iterator;
-
-import com.google.common.collect.Streams;
-
 import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.NamingConvention;
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.config.NamingConvention;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.core.instrument.util.HierarchicalNameMapper;
 
@@ -35,9 +31,9 @@ import io.micrometer.core.instrument.util.HierarchicalNameMapper;
  */
 public final class DropwizardMeterRegistries {
 
-    private static final HierarchicalNameMapper DEFAULT_NAME_MAPPER = (name, tags) -> {
-        final Iterator<Tag> i = tags.iterator();
-        if (!i.hasNext()) {
+    private static final HierarchicalNameMapper DEFAULT_NAME_MAPPER = (id, convention) -> {
+        final String name = id.getConventionName(convention);
+        if (!id.getTags().iterator().hasNext()) {
             return name;
         }
 
@@ -45,10 +41,12 @@ public final class DropwizardMeterRegistries {
         // e.g. armeria.server.requests.method:greet.service:HelloService
         final StringBuilder buf = new StringBuilder();
         buf.append(name);
-        Streams.stream(i).sorted(comparing(Tag::getKey)).forEach(tag -> {
-            buf.append('.').append(tag.getKey());
-            buf.append(':').append(tag.getValue());
-        });
+        id.getConventionTags(convention).stream()
+          .sorted(comparing(Tag::getKey))
+          .forEach(tag -> {
+              buf.append('.').append(tag.getKey());
+              buf.append(':').append(tag.getValue());
+          });
 
         return buf.toString();
     };

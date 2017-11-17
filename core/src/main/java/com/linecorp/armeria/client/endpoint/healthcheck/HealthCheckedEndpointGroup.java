@@ -34,7 +34,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
 
@@ -134,15 +134,15 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * {@link HealthCheckedEndpointGroup} with the default meter names.
      */
     public MeterBinder newMeterBinder(String groupName) {
-        return newMeterBinder(new MeterId("armeria.client.endpointGroup", "name", groupName));
+        return newMeterBinder(new MeterIdPrefix("armeria.client.endpointGroup", "name", groupName));
     }
 
     /**
      * Returns a newly-created {@link MeterBinder} which binds the stats about this
      * {@link HealthCheckedEndpointGroup}.
      */
-    public MeterBinder newMeterBinder(MeterId id) {
-        return new HealthCheckedEndpointGroupMetrics(this, id);
+    public MeterBinder newMeterBinder(MeterIdPrefix idPrefix) {
+        return new HealthCheckedEndpointGroupMetrics(this, idPrefix);
     }
 
     @Override

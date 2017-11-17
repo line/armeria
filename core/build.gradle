@@ -18,6 +18,7 @@ managedDependencies {
 
     // Micrometer
     compile 'io.micrometer:micrometer-core'
+    compile 'io.micrometer:micrometer-registry-prometheus'
 
     // Netty
     [ 'netty-transport', 'netty-codec-http2', 'netty-resolver-dns' ].each {
@@ -107,7 +108,6 @@ task trimShadedJar(type: ProGuardTask,
     keepattributes 'Signature, InnerClasses, Annotation'
     keep "class !${shadedPackage}.**,com.linecorp.armeria.** { *; }"
     keep "class ${shadedPackage}.caffeine.** { *; }" // To make the unsafe field access work.
-    keep "class ${shadedPackage}.hdrhistogram.** { *; }" // To make the reflective access work.
 }
 
 tasks.assemble.dependsOn tasks.trimShadedJar

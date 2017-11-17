@@ -47,7 +47,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -135,8 +135,8 @@ public class ServerTest {
     public static void checkMetrics() {
         final MeterRegistry registry = server.server().meterRegistry();
         assertThat(MicrometerUtil.register(registry,
-                                           new MeterId("armeria.server.router.virtualHostCache",
-                                                       "hostnamePattern", "*"),
+                                           new MeterIdPrefix("armeria.server.router.virtualHostCache",
+                                                             "hostnamePattern", "*"),
                                            Object.class, (r, i) -> null)).isNotNull();
     }
 

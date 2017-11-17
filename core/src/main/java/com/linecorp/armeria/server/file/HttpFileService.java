@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.metric.MeterId;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -124,10 +124,10 @@ public final class HttpFileService extends AbstractHttpService {
         if (cache != null) {
             CaffeineMetricSupport.setup(
                     registry,
-                    new MeterId("armeria.server.file.vfsCache",
-                                "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                "pathMapping", cfg.pathMapping().meterTag(),
-                                "rootDir", config.vfs().toString()),
+                    new MeterIdPrefix("armeria.server.file.vfsCache",
+                                      "hostnamePattern", cfg.virtualHost().hostnamePattern(),
+                                      "pathMapping", cfg.pathMapping().meterTag(),
+                                      "rootDir", config.vfs().toString()),
                     cache);
         }
     }

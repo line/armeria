@@ -37,20 +37,20 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 
 /**
- * Creates a {@link MeterId} from a {@link RequestLog}.
+ * Creates a {@link MeterIdPrefix} from a {@link RequestLog}.
  *
  * @see MetricCollectingClient
  * @see MetricCollectingService
  */
 @FunctionalInterface
-public interface MeterIdFunction {
+public interface MeterIdPrefixFunction {
 
     /**
-     * Returns the default function that creates a {@link MeterId} with the specified name and the {@link Tag}s
-     * derived from the current {@link PathMapping} (if available) and HTTP (or RPC) method name.
-     * e.g. {@code my_service_name{pathMapping="exact:/service/path",method="POST"}}
+     * Returns the default function that creates a {@link MeterIdPrefix} with the specified name and
+     * the {@link Tag}s derived from the current {@link PathMapping} (if available) and HTTP (or RPC)
+     * method name. e.g. {@code my_service_name{pathMapping="exact:/service/path",method="POST"}}
      */
-    static MeterIdFunction ofDefault(String name) {
+    static MeterIdPrefixFunction ofDefault(String name) {
         requireNonNull(name, "name");
         return (registry, log) -> {
             final RequestContext ctx = log.context();
@@ -75,44 +75,44 @@ public interface MeterIdFunction {
 
             if (ctx instanceof ServiceRequestContext) {
                 final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                return new MeterId(name,
-                                   "hostnamePattern", sCtx.virtualHost().hostnamePattern(),
-                                   "pathMapping", sCtx.pathMapping().meterTag(),
-                                   "method", methodName);
+                return new MeterIdPrefix(name,
+                                         "hostnamePattern", sCtx.virtualHost().hostnamePattern(),
+                                         "pathMapping", sCtx.pathMapping().meterTag(),
+                                         "method", methodName);
             } else {
-                return new MeterId(name, "method", methodName);
+                return new MeterIdPrefix(name, "method", methodName);
             }
         };
     }
 
     /**
-     * Creates a {@link MeterId} from the specified {@link RequestLog}.
+     * Creates a {@link MeterIdPrefix} from the specified {@link RequestLog}.
      */
-    MeterId apply(MeterRegistry registry, RequestLog log);
+    MeterIdPrefix apply(MeterRegistry registry, RequestLog log);
 
     /**
-     * Returns a {@link MeterIdFunction} that returns a newly created {@link MeterId} which has
+     * Returns a {@link MeterIdPrefixFunction} that returns a newly created {@link MeterIdPrefix} which has
      * the specified label added.
      */
-    default MeterIdFunction withTags(String... keyValues) {
+    default MeterIdPrefixFunction withTags(String... keyValues) {
         requireNonNull(keyValues, "keyValues");
         return withTags(Tags.zip(keyValues));
     }
 
     /**
-     * Returns a {@link MeterIdFunction} that returns a newly created {@link MeterId} which has
+     * Returns a {@link MeterIdPrefixFunction} that returns a newly created {@link MeterIdPrefix} which has
      * the specified labels added.
      */
-    default MeterIdFunction withTags(Iterable<Tag> tags) {
+    default MeterIdPrefixFunction withTags(Iterable<Tag> tags) {
         requireNonNull(tags, "tags");
         return andThen((registry, id) -> id.withTags(tags));
     }
 
     /**
-     * Returns a {@link MeterIdFunction} that applies transformation on the {@link MeterId} returned by
-     * this function.
+     * Returns a {@link MeterIdPrefixFunction} that applies transformation on the {@link MeterIdPrefix}
+     * returned by this function.
      */
-    default MeterIdFunction andThen(BiFunction<MeterRegistry, MeterId, MeterId> function) {
+    default MeterIdPrefixFunction andThen(BiFunction<MeterRegistry, MeterIdPrefix, MeterIdPrefix> function) {
         return (registry, log) -> function.apply(registry, apply(registry, log));
     }
 }
