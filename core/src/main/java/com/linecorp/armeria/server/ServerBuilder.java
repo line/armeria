@@ -17,9 +17,9 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxInitialLineLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
+import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -105,9 +105,9 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
     private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
-    private int defaultMaxInitialLineLength = Flags.defaultMaxInitialLineLength();
-    private int defaultMaxHeaderSize = Flags.defaultMaxHeaderSize();
-    private int defaultMaxChunkSize = Flags.defaultMaxChunkSize();
+    private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
+    private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
+    private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
@@ -246,26 +246,29 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the default maximum length of the initial line.
+     * Sets the maximum length of an HTTP/1 response initial line.
      */
-    public ServerBuilder defaultMaxInitialLineLength(int defaultMaxInitialLineLength) {
-        this.defaultMaxInitialLineLength = validateDefaultMaxInitialLineLength(defaultMaxInitialLineLength);
+    public ServerBuilder maxHttp1InitialLineLength(int maxHttp1InitialLineLength) {
+        this.maxHttp1InitialLineLength = validateNonNegative(
+                maxHttp1InitialLineLength, "maxHttp1InitialLineLength");
         return this;
     }
 
     /**
-     * Sets the default maximum length of all headers.
+     * Sets the maximum length of all headers in an HTTP/1 response.
      */
-    public ServerBuilder defaultMaxHeaderSize(int defaultMaxHeaderSize) {
-        this.defaultMaxHeaderSize = ServerConfig.validateDefaultMaxHeaderSize(defaultMaxHeaderSize);
+    public ServerBuilder maxHttp1HeaderSize(int maxHttp1HeaderSize) {
+        this.maxHttp1HeaderSize = validateNonNegative(maxHttp1HeaderSize, "maxHttp1HeaderSize");
         return this;
     }
 
     /**
-     * Sets the default maximum length of the content or each chunk.
+     * Sets the maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceeds it.
      */
-    public ServerBuilder defaultMaxChunkSize(int defaultMaxChunkSize) {
-        this.defaultMaxChunkSize = ServerConfig.validateDefaultMaxChunkSize(defaultMaxChunkSize);
+    public ServerBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
+        this.maxHttp1ChunkSize = validateNonNegative(maxHttp1ChunkSize, "maxHttp1ChunkSize");
         return this;
     }
 
@@ -301,8 +304,8 @@ public final class ServerBuilder {
     public ServerBuilder gracefulShutdownTimeout(Duration quietPeriod, Duration timeout) {
         requireNonNull(quietPeriod, "quietPeriod");
         requireNonNull(timeout, "timeout");
-        gracefulShutdownQuietPeriod = ServerConfig.validateNonNegative(quietPeriod, "quietPeriod");
-        gracefulShutdownTimeout = ServerConfig.validateNonNegative(timeout, "timeout");
+        gracefulShutdownQuietPeriod = validateNonNegative(quietPeriod, "quietPeriod");
+        gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
         ServerConfig.validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
                                                 gracefulShutdownQuietPeriod, "timeout");
         return this;
@@ -685,7 +688,7 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
-                defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize,
+                maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
                 meterRegistry, serviceLoggerPrefix));
         serverListeners.forEach(server::addListener);
@@ -697,7 +700,7 @@ public final class ServerBuilder {
         return ServerConfig.toString(
                 getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
-                defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize,
+                maxHttp1InitialLineLength, maxHttp1HeaderSize, maxHttp1ChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, meterRegistry, serviceLoggerPrefix);
     }

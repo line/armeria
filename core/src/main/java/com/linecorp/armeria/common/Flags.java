@@ -112,23 +112,23 @@ public final class Flags {
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
-    private static final int DEFAULT_DEFAULT_MAX_INITIAL_LINE_LENGTH =
-            4096; // from Netty default maxInitialLineLength
-    private static final int DEFAULT_MAX_INITIAL_LINE_LENGTH =
-            getInt("defaultMaxInitialLineLength",
-                    DEFAULT_DEFAULT_MAX_INITIAL_LINE_LENGTH,
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
+            4096; // from Netty default maxHttp1InitialLineLength
+    private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
+            getInt("defaultMaxHttp1InitialLineLength",
+                    DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH,
                     value -> value >= 0);
 
-    private static final int DEFAULT_DEFAULT_MAX_HEADER_SIZE = 8192; // from Netty default maxHeaderSize
-    private static final int DEFAULT_MAX_HEADER_SIZE =
-            getInt("defaultMaxHeaderSize",
-                    DEFAULT_DEFAULT_MAX_HEADER_SIZE,
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE = 8192; // from Netty default maxHeaderSize
+    private static final int DEFAULT_MAX_HTTP1_HEADER_SIZE =
+            getInt("defaultMaxHttp1HeaderSize",
+                    DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE,
                     value -> value >= 0);
 
-    private static final int DEFAULT_DEFAULT_MAX_CHUNK_SIZE = 8192; // from Netty default maxChunkSize
-    private static final int DEFAULT_MAX_CHUNK_SIZE =
-            getInt("defaultMaxChunkSize",
-                    DEFAULT_DEFAULT_MAX_CHUNK_SIZE,
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE = 8192; // from Netty default maxChunkSize
+    private static final int DEFAULT_MAX_HTTP1_CHUNK_SIZE =
+            getInt("defaultMaxHttp1ChunkSize",
+                    DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE,
                     value -> value >= 0);
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
@@ -317,36 +317,41 @@ public final class Flags {
     }
 
     /**
-     * Returns the default maximum length of the initial line.
+     * Returns the default maximum length of an HTTP/1 response initial line.
      * Note that this value has effect only if a user did not specify it.
      *
-     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_INITIAL_LINE_LENGTH}. Specify the
-     * {@code -Dcom.linecorp.armeria.maxInitialLineLength=<integer>} JVM option to override the default value.
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxHttp1InitialLineLength=<integer>} JVM option
+     * to override the default value.
      */
-    public static int defaultMaxInitialLineLength() {
-        return DEFAULT_MAX_INITIAL_LINE_LENGTH;
+    public static int defaultMaxHttp1InitialLineLength() {
+        return DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH;
     }
 
     /**
-     * Returns the default maximum length of all headers.
+     * Returns the default maximum length of all headers in an HTTP/1 response.
      * Note that this value has effect only if a user did not specify it.
      *
-     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HEADER_SIZE}. Specify the
-     * {@code -Dcom.linecorp.armeria.maxHeaderSize=<integer>} JVM option to override the default value.
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxHttp1HeaderSize=<integer>} JVM option
+     * to override the default value.
      */
-    public static int defaultMaxHeaderSize() {
-        return DEFAULT_MAX_HEADER_SIZE;
+    public static int defaultMaxHttp1HeaderSize() {
+        return DEFAULT_MAX_HTTP1_HEADER_SIZE;
     }
 
     /**
-     * Returns the default maximum length of the content or each chunk.
+     * Returns the default maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceeds it.
      * Note that this value has effect only if a user did not specify it.
      *
-     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_CHUNK_SIZE}. Specify the
-     * {@code -Dcom.linecorp.armeria.maxChunkSize=<integer>} JVM option to override the default value.
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE}.
+     * Specify theb {@code -Dcom.linecorp.armeria.defaultMaxHttp1ChunkSize=<integer>} JVM option
+     * to override the default value.
      */
-    public static int defaultMaxChunkSize() {
-        return DEFAULT_MAX_CHUNK_SIZE;
+    public static int defaultMaxHttp1ChunkSize() {
+        return DEFAULT_MAX_HTTP1_CHUNK_SIZE;
     }
 
     /**

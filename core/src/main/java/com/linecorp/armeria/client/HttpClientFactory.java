@@ -78,9 +78,9 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final int initialHttp2ConnectionWindowSize;
     private final int initialHttp2StreamWindowSize;
     private final int http2MaxFrameSize;
-    private final int defaultMaxInitialLineLength;
-    private final int defaultMaxHeaderSize;
-    private final int defaultMaxChunkSize;
+    private final int maxHttp1InitialLineLength;
+    private final int maxHttp1HeaderSize;
+    private final int maxHttp1ChunkSize;
     private final long idleTimeoutMillis;
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
@@ -102,7 +102,7 @@ final class HttpClientFactory extends AbstractClientFactory {
             Function<? super EventLoopGroup,
                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
             int initialHttp2ConnectionWindowSize, int initialHttp2StreamWindowSize, int http2MaxFrameSize,
-            int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize,
+            int maxHttp1InitialLineLength, int maxHttp1HeaderSize, int maxHttp1ChunkSize,
             long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
             KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener, MeterRegistry meterRegistry) {
 
@@ -123,9 +123,9 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.initialHttp2ConnectionWindowSize = initialHttp2ConnectionWindowSize;
         this.initialHttp2StreamWindowSize = initialHttp2StreamWindowSize;
         this.http2MaxFrameSize = http2MaxFrameSize;
-        this.defaultMaxInitialLineLength = defaultMaxInitialLineLength;
-        this.defaultMaxHeaderSize = defaultMaxHeaderSize;
-        this.defaultMaxChunkSize = defaultMaxChunkSize;
+        this.maxHttp1InitialLineLength = maxHttp1InitialLineLength;
+        this.maxHttp1HeaderSize = maxHttp1HeaderSize;
+        this.maxHttp1ChunkSize = maxHttp1ChunkSize;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.useHttp2Preface = useHttp2Preface;
         this.useHttp1Pipelining = useHttp1Pipelining;
@@ -160,16 +160,16 @@ final class HttpClientFactory extends AbstractClientFactory {
         return http2MaxFrameSize;
     }
 
-    int defaultMaxInitialLineLength() {
-        return defaultMaxInitialLineLength;
+    int maxHttp1InitialLineLength() {
+        return maxHttp1InitialLineLength;
     }
 
-    int defaultMaxHeaderSize() {
-        return defaultMaxHeaderSize;
+    int maxHttp1HeaderSize() {
+        return maxHttp1HeaderSize;
     }
 
-    int defaultMaxChunkSize() {
-        return defaultMaxChunkSize;
+    int maxHttp1ChunkSize() {
+        return maxHttp1ChunkSize;
     }
 
     long idleTimeoutMillis() {

@@ -59,9 +59,9 @@ public final class ServerConfig {
     private final long defaultRequestTimeoutMillis;
     private final long idleTimeoutMillis;
     private final long defaultMaxRequestLength;
-    private final int defaultMaxInitialLineLength;
-    private final int defaultMaxHeaderSize;
-    private final int defaultMaxChunkSize;
+    private final int defaultMaxHttp1InitialLineLength;
+    private final int defaultMaxHttp1HeaderSize;
+    private final int defaultMaxHttp1ChunkSize;
 
     private final Duration gracefulShutdownQuietPeriod;
     private final Duration gracefulShutdownTimeout;
@@ -80,7 +80,7 @@ public final class ServerConfig {
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
             int maxNumConnections, long idleTimeoutMillis,
             long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
-            int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize,
+            int defaultMaxHttp1InitialLineLength, int defaultMaxHttp1HeaderSize, int defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
 
@@ -95,9 +95,12 @@ public final class ServerConfig {
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
         this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
-        this.defaultMaxInitialLineLength = validateDefaultMaxInitialLineLength(defaultMaxInitialLineLength);
-        this.defaultMaxHeaderSize = validateDefaultMaxHeaderSize(defaultMaxHeaderSize);
-        this.defaultMaxChunkSize = validateDefaultMaxChunkSize(defaultMaxChunkSize);
+        this.defaultMaxHttp1InitialLineLength = validateNonNegative(
+                defaultMaxHttp1InitialLineLength, "defaultMaxHttp1InitialLineLength");
+        this.defaultMaxHttp1HeaderSize = validateNonNegative(
+                defaultMaxHttp1HeaderSize, "defaultMaxHttp1HeaderSize");
+        this.defaultMaxHttp1ChunkSize = validateNonNegative(
+                defaultMaxHttp1ChunkSize, "defaultMaxHttp1ChunkSize");
         this.gracefulShutdownQuietPeriod = validateNonNegative(requireNonNull(
                 gracefulShutdownQuietPeriod), "gracefulShutdownQuietPeriod");
         this.gracefulShutdownTimeout = validateNonNegative(requireNonNull(
@@ -191,28 +194,11 @@ public final class ServerConfig {
         return defaultMaxRequestLength;
     }
 
-    static int validateDefaultMaxInitialLineLength(int defaultMaxInitialLineLength) {
-        if (defaultMaxInitialLineLength < 0) {
-            throw new IllegalArgumentException(
-                    "defaultMaxInitialLineLength: " + defaultMaxInitialLineLength + " (expected: >= 0)");
+    static int validateNonNegative(int value, String fieldName) {
+        if (value < 0) {
+            throw new IllegalArgumentException(fieldName + ": " + value + " (expected: >= 0)");
         }
-        return defaultMaxInitialLineLength;
-    }
-
-    static int validateDefaultMaxHeaderSize(int defaultMaxHeaderSize) {
-        if (defaultMaxHeaderSize < 0) {
-            throw new IllegalArgumentException(
-                    "defaultMaxHeaderSize: " + defaultMaxHeaderSize + " (expected: >= 0)");
-        }
-        return defaultMaxHeaderSize;
-    }
-
-    static int validateDefaultMaxChunkSize(int defaultMaxChunkSize) {
-        if (defaultMaxChunkSize < 0) {
-            throw new IllegalArgumentException(
-                    "defaultMaxChunkSize: " + defaultMaxChunkSize + " (expected: >= 0)");
-        }
-        return defaultMaxChunkSize;
+        return value;
     }
 
     static Duration validateNonNegative(Duration duration, String fieldName) {
@@ -383,24 +369,26 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the default maximum length of the initial line.
+     * Returns the default maximum length of an HTTP/1 response initial line.
      */
-    public int defaultMaxInitialLineLength() {
-        return defaultMaxInitialLineLength;
+    public int defaultMaxHttp1InitialLineLength() {
+        return defaultMaxHttp1InitialLineLength;
     }
 
     /**
-     * Returns the default maximum length of all headers.
+     * Returns the default maximum length of all headers in an HTTP/1 response.
      */
-    public int defaultMaxHeaderSize() {
-        return defaultMaxHeaderSize;
+    public int defaultMaxHttp1HeaderSize() {
+        return defaultMaxHttp1HeaderSize;
     }
 
     /**
-     * Returns the default maximum length of the content or each chunk.
+     * Returns the default maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceeds it.
      */
-    public int defaultMaxChunkSize() {
-        return defaultMaxChunkSize;
+    public int defaultMaxHttp1ChunkSize() {
+        return defaultMaxHttp1ChunkSize;
     }
 
     /**
@@ -452,7 +440,7 @@ public final class ServerConfig {
                     workerGroup(), shutdownWorkerGroupOnStop(),
                     maxNumConnections(), idleTimeoutMillis(),
                     defaultRequestTimeoutMillis(), defaultMaxRequestLength(),
-                    defaultMaxInitialLineLength(), defaultMaxHeaderSize(), defaultMaxChunkSize(),
+                    defaultMaxHttp1InitialLineLength(), defaultMaxHttp1HeaderSize(), defaultMaxHttp1ChunkSize(),
                     gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
                     blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix());
         }
@@ -464,9 +452,9 @@ public final class ServerConfig {
             Class<?> type,
             Iterable<ServerPort> ports, VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
-            int maxNumConnections, long idleTimeoutMillis,
-            long defaultRequestTimeoutMillis, long defaultMaxRequestLength,
-            long defaultMaxInitialLineLength, long defaultMaxHeaderSize, long defaultMaxChunkSize,
+            int maxNumConnections, long idleTimeoutMillis, long defaultRequestTimeoutMillis,
+            long defaultMaxRequestLength, long defaultMaxHttp1InitialLineLength,
+            long defaultMaxHttp1HeaderSize, long defaultMaxHttp1ChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix) {
 
@@ -524,12 +512,12 @@ public final class ServerConfig {
         buf.append(defaultRequestTimeoutMillis);
         buf.append("ms, defaultMaxRequestLength: ");
         buf.append(defaultMaxRequestLength);
-        buf.append("B, defaultMaxInitialLineLength: ");
-        buf.append(defaultMaxInitialLineLength);
-        buf.append("B, defaultMaxHeaderSize: ");
-        buf.append(defaultMaxHeaderSize);
-        buf.append("B, defaultMaxChunkSize: ");
-        buf.append(defaultMaxChunkSize);
+        buf.append("B, defaultMaxHttp1InitialLineLength: ");
+        buf.append(defaultMaxHttp1InitialLineLength);
+        buf.append("B, defaultMaxHttp1HeaderSize: ");
+        buf.append(defaultMaxHttp1HeaderSize);
+        buf.append("B, defaultMaxHttp1ChunkSize: ");
+        buf.append(defaultMaxHttp1ChunkSize);
         buf.append("B, gracefulShutdownQuietPeriod: ");
         buf.append(gracefulShutdownQuietPeriod);
         buf.append(", gracefulShutdownTimeout: ");

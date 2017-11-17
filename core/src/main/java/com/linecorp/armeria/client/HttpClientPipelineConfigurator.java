@@ -239,9 +239,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     }
 
                     addBeforeSessionHandler(p, newHttp1Codec(
-                            clientFactory.defaultMaxInitialLineLength(),
-                            clientFactory.defaultMaxHeaderSize(),
-                            clientFactory.defaultMaxChunkSize()));
+                            clientFactory.maxHttp1InitialLineLength(),
+                            clientFactory.maxHttp1HeaderSize(),
+                            clientFactory.maxHttp1ChunkSize()));
                     protocol = H1;
                 }
                 finishSuccessfully(p, protocol);
@@ -284,9 +284,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 pipeline.addLast(http2Handler);
             } else {
                 Http1ClientCodec http1Codec = newHttp1Codec(
-                        clientFactory.defaultMaxInitialLineLength(),
-                        clientFactory.defaultMaxHeaderSize(),
-                        clientFactory.defaultMaxChunkSize());
+                        clientFactory.maxHttp1InitialLineLength(),
+                        clientFactory.maxHttp1HeaderSize(),
+                        clientFactory.maxHttp1ChunkSize());
                 Http2ClientUpgradeCodec http2ClientUpgradeCodec =
                         new Http2ClientUpgradeCodec(http2Handler);
                 HttpClientUpgradeHandler http2UpgradeHandler =
@@ -301,9 +301,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         } else {
             pipeline.addLast(newHttp1Codec(
-                    clientFactory.defaultMaxInitialLineLength(),
-                    clientFactory.defaultMaxHeaderSize(),
-                    clientFactory.defaultMaxChunkSize()));
+                    clientFactory.maxHttp1InitialLineLength(),
+                    clientFactory.maxHttp1HeaderSize(),
+                    clientFactory.maxHttp1ChunkSize()));
 
             // NB: We do not call finishSuccessfully() immediately here
             //     because it assumes HttpSessionHandler to be in the pipeline,
