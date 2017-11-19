@@ -217,6 +217,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private void pushSignal(Object obj) {
+            if (state == State.CLOSED) {
+                return;
+            }
             if (!(obj instanceof CloseEvent)) {
                 final int dataLength = signalLengthGetter.length(obj);
                 if (dataLength > 0) {
@@ -784,10 +787,6 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         int addAndRemoveIfRequested(Object o) {
             requireNonNull(o);
-            if (elements == null) {
-                // Stream already closed.
-                return 0;
-            }
             int removedLength = 0;
             if (headOffset < lastRemovalRequestedOffset) {
                 removedLength = removeElements();
