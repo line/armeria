@@ -132,6 +132,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
     private volatile boolean wroteAny;
 
+    private boolean inOnNext;
+
     /**
      * Creates a new instance with a new {@link ConcurrentLinkedQueue}.
      */
@@ -302,12 +304,29 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     }
 
     private void notifySubscriber(SubscriptionImpl subscription, Queue<Object> queue) {
-        if (state == State.CLEANUP) {
-            cleanup();
+        if (inOnNext) {
+            // Do not let Subscriber.onNext() reenter, because it can lead to weird-looking event ordering
+            // for a Subscriber implemented like the following:
+            //
+            //   public void onNext(Object e) {
+            //       subscription.request(1);
+            //       ... Handle 'e' ...
+            //   }
+            //
+            // Note that we do not call this method again, because we are already in the notification loop
+            // and it will consume the element we've just added in pushObject() from the queue as expected.
+            //
+            // We do not need to worry about synchronizing the access to 'inOnNext' because the subscriber
+            // methods must be on the same thread, or synchronized, according to Reactive Streams spec.
             return;
         }
 
         for (;;) {
+            if (state == State.CLEANUP) {
+                cleanup();
+                return;
+            }
+
             final Object o = queue.peek();
             if (o == null) {
                 break;
@@ -356,7 +375,9 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                     }
                 }
 
+                inOnNext = true;
                 subscriber.onNext(o);
+                inOnNext = false;
                 return true;
             }
         }

@@ -217,6 +217,9 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private void pushSignal(Object obj) {
+            if (state == State.CLOSED) {
+                return;
+            }
             if (!(obj instanceof CloseEvent)) {
                 final int dataLength = signalLengthGetter.length(obj);
                 if (dataLength > 0) {
