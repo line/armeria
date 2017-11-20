@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -36,10 +38,24 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
+import io.netty.channel.DefaultEventLoop;
+import io.netty.channel.EventLoop;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 
 public class DefaultStreamMessageTest {
+
+    private static EventLoop eventLoop;
+
+    @BeforeClass
+    public static void startEventLoop() {
+        eventLoop = new DefaultEventLoop();
+    }
+
+    @AfterClass
+    public static void stopEventLoop() {
+        eventLoop.shutdownGracefully().syncUninterruptibly();
+    }
 
     @Test
     public void full_writeFirst() throws Exception {
@@ -132,6 +148,40 @@ public class DefaultStreamMessageTest {
             public void onComplete() {
             }
         });
+        assertThat(result).containsExactlyElementsOf(input);
+    }
+
+    @Test
+    public void flowControlled_writeThenDemandThenProcess_eventLoop() throws Exception {
+        List<Integer> result = new ArrayList<>();
+        DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        List<Integer> input = IntStream.range(0, 10).boxed().collect(toImmutableList());
+        input.forEach(stream::write);
+        eventLoop.submit(() ->
+            stream.subscribe(new Subscriber<Integer>() {
+
+                private Subscription subscription;
+
+                @Override
+                public void onSubscribe(Subscription s) {
+                    subscription = s;
+                    subscription.request(1);
+                }
+
+                @Override
+                public void onNext(Integer value) {
+                    subscription.request(1);
+                    result.add(value);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                }
+
+                @Override
+                public void onComplete() {
+                }
+            }, eventLoop)).syncUninterruptibly();
         assertThat(result).containsExactlyElementsOf(input);
     }
 

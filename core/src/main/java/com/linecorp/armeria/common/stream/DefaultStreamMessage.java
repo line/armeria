@@ -40,6 +40,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.EventLoop;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 
@@ -193,7 +195,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             return;
         }
 
-        if (executor != null) {
+        if (shouldRunInExecutor(executor)) {
             // NB: We did not use subscriber.onSubscribe() because that will increase the memory footprint
             //     of the anonymous class by referring to 2 variables in the lambda expression.
             executor.execute(() -> subscription.subscriber().onSubscribe(subscription));
@@ -211,7 +213,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             cause = new IllegalStateException("subscribed by other subscriber already");
         }
 
-        if (executor != null) {
+        if (shouldRunInExecutor(executor)) {
             executor.execute(() -> {
                 lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
                 lateSubscriber.onError(cause);
@@ -296,7 +298,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         }
 
         final Executor executor = subscription.executor();
-        if (executor != null) {
+        if (shouldRunInExecutor(executor)) {
             executor.execute(() -> notifySubscriber(subscription, queue));
         } else {
             notifySubscriber(subscription, queue);
@@ -492,6 +494,13 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         }
     }
 
+    // We directly run callbacks for event loops if we're already on the loop, which applies to the vast
+    // majority of cases.
+    private static boolean shouldRunInExecutor(@Nullable Executor executor) {
+        return executor != null &&
+               (!(executor instanceof SingleThreadEventLoop) || !((EventLoop) executor).inEventLoop());
+    }
+
     private static final class SubscriptionImpl implements Subscription {
 
         private final DefaultStreamMessage<?> publisher;
@@ -592,6 +601,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                     // but we need to ensure the closeFuture is notified and any pending objects are removed.
                     if (publisher.setState(State.CLOSED, State.CLEANUP)) {
                         final Executor executor = executor();
+                        // TODO(anuraag): Consider pushing a cleanup event instead of serializing the activity
+                        // through the event loop.
                         if (executor != null) {
                             executor.execute(publisher::cleanup);
                         } else {
@@ -610,7 +621,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         }
 
         private void invokeOnError(Throwable cause) {
-            if (executor != null) {
+            if (shouldRunInExecutor(executor)) {
                 executor.execute(() -> subscriber.onError(cause));
             } else {
                 subscriber.onError(cause);
