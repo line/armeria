@@ -17,10 +17,8 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -59,14 +57,15 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        public CompletableFuture<Endpoint> select(ClientRequestContext ctx) {
+        public Endpoint select(ClientRequestContext ctx) {
+
             List<Endpoint> endpoints = endpointGroup.endpoints();
             int currentSequence = sequence.getAndIncrement();
 
             if (endpoints.isEmpty()) {
                 throw new EndpointGroupException(endpointGroup + " is empty");
             }
-            return completedFuture(endpoints.get(Math.abs(currentSequence % endpoints.size())));
+            return endpoints.get(Math.abs(currentSequence % endpoints.size()));
         }
     }
 }
