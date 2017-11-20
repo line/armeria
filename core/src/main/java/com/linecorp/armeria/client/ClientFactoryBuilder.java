@@ -238,8 +238,8 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder maxHttp1InitialLineLength(int maxHttp1InitialLineLength) {
         checkArgument(maxHttp1InitialLineLength >= 0,
-                "maxHttp1InitialLineLength: %s (expected: >= 0)",
-                maxHttp1InitialLineLength);
+                      "maxHttp1InitialLineLength: %s (expected: >= 0)",
+                      maxHttp1InitialLineLength);
         this.maxHttp1InitialLineLength = maxHttp1InitialLineLength;
         return this;
     }
@@ -249,8 +249,8 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder maxHttp1HeaderSize(int maxHttp1HeaderSize) {
         checkArgument(maxHttp1HeaderSize >= 0,
-                "maxHttp1HeaderSize: %s (expected: >= 0)",
-                maxHttp1HeaderSize);
+                      "maxHttp1HeaderSize: %s (expected: >= 0)",
+                      maxHttp1HeaderSize);
         this.maxHttp1HeaderSize = maxHttp1HeaderSize;
         return this;
     }
@@ -262,8 +262,8 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
         checkArgument(maxHttp1ChunkSize >= 0,
-                "maxHttp1ChunkSize: %s (expected: >= 0)",
-                maxHttp1ChunkSize);
+                      "maxHttp1ChunkSize: %s (expected: >= 0)",
+                      maxHttp1ChunkSize);
         this.maxHttp1ChunkSize = maxHttp1ChunkSize;
         return this;
     }

@@ -116,20 +116,20 @@ public final class Flags {
             4096; // from Netty default maxHttp1InitialLineLength
     private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
             getInt("defaultMaxHttp1InitialLineLength",
-                    DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH,
-                    value -> value >= 0);
+                   DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH,
+                   value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE = 8192; // from Netty default maxHeaderSize
     private static final int DEFAULT_MAX_HTTP1_HEADER_SIZE =
             getInt("defaultMaxHttp1HeaderSize",
-                    DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE,
-                    value -> value >= 0);
+                   DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE,
+                   value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE = 8192; // from Netty default maxChunkSize
     private static final int DEFAULT_MAX_HTTP1_CHUNK_SIZE =
             getInt("defaultMaxHttp1ChunkSize",
-                    DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE,
-                    value -> value >= 0);
+                   DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE,
+                   value -> value >= 0);
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", true);
