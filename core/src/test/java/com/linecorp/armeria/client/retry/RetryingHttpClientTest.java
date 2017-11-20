@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -232,6 +233,23 @@ public class RetryingHttpClientTest {
                     } else {
                         res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
+                }
+            });
+
+            sb.service("/post-ping-pong", new AbstractHttpService() {
+                final AtomicInteger reqPostCount = new AtomicInteger();
+
+                @Override
+                protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                        throws Exception {
+                    req.aggregate().handle(voidFunction((message, thrown) -> {
+                        if (reqPostCount.getAndIncrement() < 1) {
+                            res.respond(HttpStatus.SERVICE_UNAVAILABLE);
+                        } else {
+                            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                                        message.content().toStringUtf8());
+                        }
+                    }));
                 }
             });
         }
@@ -490,5 +508,20 @@ public class RetryingHttpClientTest {
                 }
             }
         };
+    }
+
+    @Test
+    public void retryWithRequestBody() {
+        final Backoff backoffOnServerError = Backoff.fixed(10);
+        final RetryStrategy<HttpRequest, HttpResponse> strategy =
+                RetryStrategy.onServerErrorStatus(backoffOnServerError);
+        final HttpClient client =
+                new HttpClientBuilder(server.uri("/"))
+                        .factory(clientFactory)
+                        .decorator(RetryingHttpClient.newDecorator(strategy))
+                        .build();
+
+        final AggregatedHttpMessage res = client.post("/post-ping-pong", "bar").aggregate().join();
+        assertThat(res.content().toStringUtf8()).isEqualTo("bar");
     }
 }
