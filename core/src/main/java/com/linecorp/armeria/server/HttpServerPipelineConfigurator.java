@@ -172,7 +172,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            p.addLast(new HttpServerCodec());
+            p.addLast(new HttpServerCodec(
+                    config.defaultMaxHttp1InitialLineLength(),
+                    config.defaultMaxHttp1HeaderSize(),
+                    config.defaultMaxHttp1ChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTPS));
             configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, SessionProtocol.H1));
@@ -208,7 +211,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            final HttpServerCodec http1codec = new HttpServerCodec();
+            final HttpServerCodec http1codec = new HttpServerCodec(
+                    config.defaultMaxHttp1InitialLineLength(),
+                    config.defaultMaxHttp1HeaderSize(),
+                    config.defaultMaxHttp1ChunkSize());
 
             String baseName = name;
             baseName = addAfter(p, baseName, http1codec);
