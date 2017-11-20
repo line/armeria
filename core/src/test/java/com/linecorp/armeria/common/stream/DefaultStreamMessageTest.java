@@ -16,9 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.IntStream;
 
 import org.junit.Test;
 import org.reactivestreams.Subscriber;
@@ -35,6 +40,133 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCounted;
 
 public class DefaultStreamMessageTest {
+
+    @Test
+    public void full_writeFirst() throws Exception {
+        List<Integer> result = new ArrayList<>();
+        DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        List<Integer> input = IntStream.range(0, 10).boxed().collect(toImmutableList());
+        input.forEach(stream::write);
+        stream.subscribe(new Subscriber<Integer>() {
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(Integer value) {
+                result.add(value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+        assertThat(result).containsExactlyElementsOf(input);
+    }
+
+    @Test
+    public void full_writeAfter() throws Exception {
+        List<Integer> result = new ArrayList<>();
+        DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        List<Integer> input = IntStream.range(0, 10).boxed().collect(toImmutableList());
+        stream.subscribe(new Subscriber<Integer>() {
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(Integer value) {
+                result.add(value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+        input.forEach(stream::write);
+        assertThat(result).containsExactlyElementsOf(input);
+    }
+
+    // Verifies that re-entrancy into onNext, e.g. calling onNext -> request -> onNext, is not allowed, as per
+    // reactive streams spec 3.03. If it were allowed, the order of processing would be incorrect and the test
+    // would fail.
+    @Test
+    public void flowControlled_writeThenDemandThenProcess() throws Exception {
+        List<Integer> result = new ArrayList<>();
+        DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        List<Integer> input = IntStream.range(0, 10).boxed().collect(toImmutableList());
+        input.forEach(stream::write);
+        stream.subscribe(new Subscriber<Integer>() {
+
+            private Subscription subscription;
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                subscription = s;
+                subscription.request(1);
+            }
+
+            @Override
+            public void onNext(Integer value) {
+                subscription.request(1);
+                result.add(value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+        assertThat(result).containsExactlyElementsOf(input);
+    }
+
+    @Test
+    public void flowControlled_writeThenProcessThenDemand() throws Exception {
+        List<Integer> result = new ArrayList<>();
+        DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        List<Integer> input = IntStream.range(0, 10).boxed().collect(toImmutableList());
+        input.forEach(stream::write);
+        stream.subscribe(new Subscriber<Integer>() {
+
+            private Subscription subscription;
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                subscription = s;
+                subscription.request(1);
+            }
+
+            @Override
+            public void onNext(Integer value) {
+                result.add(value);
+                subscription.request(1);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+        assertThat(result).containsExactlyElementsOf(input);
+    }
 
     @Test
     public void releaseOnConsumption_ByteBuf() throws Exception {
