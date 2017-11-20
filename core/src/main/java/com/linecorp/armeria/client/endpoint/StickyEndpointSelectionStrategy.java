@@ -16,10 +16,8 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.ToLongFunction;
 
 import com.google.common.hash.Hashing;
@@ -93,7 +91,7 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
         }
 
         @Override
-        public CompletableFuture<Endpoint> select(ClientRequestContext ctx) {
+        public Endpoint select(ClientRequestContext ctx) {
 
             final List<Endpoint> endpoints = endpointGroup.endpoints();
             if (endpoints.isEmpty()) {
@@ -102,7 +100,7 @@ public final class StickyEndpointSelectionStrategy implements EndpointSelectionS
 
             long key = requestContextHasher.applyAsLong(ctx);
             int nearest = Hashing.consistentHash(key, endpoints.size());
-            return completedFuture(endpoints.get(nearest));
+            return endpoints.get(nearest);
         }
     }
 }
