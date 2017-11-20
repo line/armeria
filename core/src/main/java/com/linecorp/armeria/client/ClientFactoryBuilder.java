@@ -100,6 +100,9 @@ public final class ClientFactoryBuilder {
     private int initialHttp2ConnectionWindowSize = DEFAULT_WINDOW_SIZE;
     private int initialHttp2StreamWindowSize = DEFAULT_WINDOW_SIZE;
     private int http2MaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private int maxHttp1InitialLineLength = Flags.defaultMaxHttp1InitialLineLength();
+    private int maxHttp1HeaderSize = Flags.defaultMaxHttp1HeaderSize();
+    private int maxHttp1ChunkSize = Flags.defaultMaxHttp1ChunkSize();
 
     // Armeria-related properties:
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
@@ -231,6 +234,41 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the maximum length of an HTTP/1 response initial line.
+     */
+    public ClientFactoryBuilder maxHttp1InitialLineLength(int maxHttp1InitialLineLength) {
+        checkArgument(maxHttp1InitialLineLength >= 0,
+                      "maxHttp1InitialLineLength: %s (expected: >= 0)",
+                      maxHttp1InitialLineLength);
+        this.maxHttp1InitialLineLength = maxHttp1InitialLineLength;
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of all headers in an HTTP/1 response.
+     */
+    public ClientFactoryBuilder maxHttp1HeaderSize(int maxHttp1HeaderSize) {
+        checkArgument(maxHttp1HeaderSize >= 0,
+                      "maxHttp1HeaderSize: %s (expected: >= 0)",
+                      maxHttp1HeaderSize);
+        this.maxHttp1HeaderSize = maxHttp1HeaderSize;
+        return this;
+    }
+
+    /**
+     * Sets the maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceed it.
+     */
+    public ClientFactoryBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
+        checkArgument(maxHttp1ChunkSize >= 0,
+                      "maxHttp1ChunkSize: %s (expected: >= 0)",
+                      maxHttp1ChunkSize);
+        this.maxHttp1ChunkSize = maxHttp1ChunkSize;
+        return this;
+    }
+
+    /**
      * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
      * progress for this amount of time.
      */
@@ -292,7 +330,8 @@ public final class ClientFactoryBuilder {
         return new DefaultClientFactory(new HttpClientFactory(
                 workerGroup, shutdownWorkerGroupOnClose, socketOptions, sslContextCustomizer,
                 addressResolverGroupFactory, initialHttp2ConnectionWindowSize, initialHttp2StreamWindowSize,
-                http2MaxFrameSize, idleTimeoutMillis, useHttp2Preface,
+                http2MaxFrameSize, maxHttp1InitialLineLength, maxHttp1HeaderSize,
+                maxHttp1ChunkSize, idleTimeoutMillis, useHttp2Preface,
                 useHttp1Pipelining, connectionPoolListener, meterRegistry));
     }
 
@@ -300,7 +339,8 @@ public final class ClientFactoryBuilder {
     public String toString() {
         return toString(this, workerGroup, shutdownWorkerGroupOnClose, socketOptions,
                         sslContextCustomizer, addressResolverGroupFactory, initialHttp2ConnectionWindowSize,
-                        initialHttp2StreamWindowSize, http2MaxFrameSize, idleTimeoutMillis,
+                        initialHttp2StreamWindowSize, http2MaxFrameSize, maxHttp1InitialLineLength,
+                        maxHttp1HeaderSize, maxHttp1ChunkSize, idleTimeoutMillis,
                         useHttp2Preface, useHttp1Pipelining, connectionPoolListener, meterRegistry);
     }
 
@@ -312,6 +352,7 @@ public final class ClientFactoryBuilder {
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
             int initialHttp2ConnectionWindowSize, int initialHttp2StreamWindowSize, int http2MaxFrameSize,
+            int maxHttp1InitialLineLength, int maxHttp1HeaderSize, int maxHttp1ChunkSize,
             long idleTimeoutMillis, boolean useHttp2Preface,
             boolean useHttp1Pipelining, KeyedChannelPoolHandler<? super PoolKey> connectionPoolListener,
             MeterRegistry meterRegistry) {
@@ -322,6 +363,9 @@ public final class ClientFactoryBuilder {
               .add("initialHttp2ConnectionWindowSize", initialHttp2ConnectionWindowSize)
               .add("initialHttp2StreamWindowSize", initialHttp2StreamWindowSize)
               .add("http2MaxFrameSize", http2MaxFrameSize)
+              .add("maxHttp1InitialLineLength", maxHttp1InitialLineLength)
+              .add("maxHttp1HeaderSize", maxHttp1HeaderSize)
+              .add("maxHttp1ChunkSize", maxHttp1ChunkSize)
               .add("idleTimeoutMillis", idleTimeoutMillis)
               .add("useHttp2Preface", useHttp2Preface)
               .add("useHttp1Pipelining", useHttp1Pipelining);

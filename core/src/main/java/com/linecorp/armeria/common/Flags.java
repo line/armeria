@@ -112,6 +112,25 @@ public final class Flags {
                     DEFAULT_DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS,
                     value -> value >= 0);
 
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
+            4096; // from Netty default maxHttp1InitialLineLength
+    private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
+            getInt("defaultMaxHttp1InitialLineLength",
+                   DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH,
+                   value -> value >= 0);
+
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE = 8192; // from Netty default maxHeaderSize
+    private static final int DEFAULT_MAX_HTTP1_HEADER_SIZE =
+            getInt("defaultMaxHttp1HeaderSize",
+                   DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE,
+                   value -> value >= 0);
+
+    private static final int DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE = 8192; // from Netty default maxChunkSize
+    private static final int DEFAULT_MAX_HTTP1_CHUNK_SIZE =
+            getInt("defaultMaxHttp1ChunkSize",
+                   DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE,
+                   value -> value >= 0);
+
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", true);
 
@@ -295,6 +314,44 @@ public final class Flags {
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default maximum length of an HTTP/1 response initial line.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxHttp1InitialLineLength=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultMaxHttp1InitialLineLength() {
+        return DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH;
+    }
+
+    /**
+     * Returns the default maximum length of all headers in an HTTP/1 response.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_HEADER_SIZE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxHttp1HeaderSize=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultMaxHttp1HeaderSize() {
+        return DEFAULT_MAX_HTTP1_HEADER_SIZE;
+    }
+
+    /**
+     * Returns the default maximum length of each chunk in an HTTP/1 response content.
+     * The content or a chunk longer than this value will be split into smaller chunks
+     * so that their lengths never exceed it.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE}.
+     * Specify theb {@code -Dcom.linecorp.armeria.defaultMaxHttp1ChunkSize=<integer>} JVM option
+     * to override the default value.
+     */
+    public static int defaultMaxHttp1ChunkSize() {
+        return DEFAULT_MAX_HTTP1_CHUNK_SIZE;
     }
 
     /**
