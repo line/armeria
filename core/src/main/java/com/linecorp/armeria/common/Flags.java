@@ -343,7 +343,7 @@ public final class Flags {
     /**
      * Returns the default maximum length of each chunk in an HTTP/1 response content.
      * The content or a chunk longer than this value will be split into smaller chunks
-     * so that their lengths never exceeds it.
+     * so that their lengths never exceed it.
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>This default value of this flag is {@value #DEFAULT_DEFAULT_MAX_HTTP1_CHUNK_SIZE}.

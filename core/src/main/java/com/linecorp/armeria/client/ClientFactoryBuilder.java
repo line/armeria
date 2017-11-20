@@ -237,7 +237,7 @@ public final class ClientFactoryBuilder {
      * Sets the maximum length of an HTTP/1 response initial line.
      */
     public ClientFactoryBuilder maxHttp1InitialLineLength(int maxHttp1InitialLineLength) {
-        checkArgument(maxHttp1InitialLineLength < 0,
+        checkArgument(maxHttp1InitialLineLength >= 0,
                 "maxHttp1InitialLineLength: %s (expected: >= 0)",
                 maxHttp1InitialLineLength);
         this.maxHttp1InitialLineLength = maxHttp1InitialLineLength;
@@ -248,7 +248,7 @@ public final class ClientFactoryBuilder {
      * Sets the maximum length of all headers in an HTTP/1 response.
      */
     public ClientFactoryBuilder maxHttp1HeaderSize(int maxHttp1HeaderSize) {
-        checkArgument(maxHttp1HeaderSize < 0,
+        checkArgument(maxHttp1HeaderSize >= 0,
                 "maxHttp1HeaderSize: %s (expected: >= 0)",
                 maxHttp1HeaderSize);
         this.maxHttp1HeaderSize = maxHttp1HeaderSize;
@@ -258,10 +258,10 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the maximum length of each chunk in an HTTP/1 response content.
      * The content or a chunk longer than this value will be split into smaller chunks
-     * so that their lengths never exceeds it.
+     * so that their lengths never exceed it.
      */
     public ClientFactoryBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
-        checkArgument(maxHttp1ChunkSize < 0,
+        checkArgument(maxHttp1ChunkSize >= 0,
                 "maxHttp1ChunkSize: %s (expected: >= 0)",
                 maxHttp1ChunkSize);
         this.maxHttp1ChunkSize = maxHttp1ChunkSize;

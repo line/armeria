@@ -265,7 +265,7 @@ public final class ServerBuilder {
     /**
      * Sets the maximum length of each chunk in an HTTP/1 response content.
      * The content or a chunk longer than this value will be split into smaller chunks
-     * so that their lengths never exceeds it.
+     * so that their lengths never exceed it.
      */
     public ServerBuilder maxHttp1ChunkSize(int maxHttp1ChunkSize) {
         this.maxHttp1ChunkSize = validateNonNegative(maxHttp1ChunkSize, "maxHttp1ChunkSize");
