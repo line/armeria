@@ -385,7 +385,7 @@ public final class ServerConfig {
     /**
      * Returns the default maximum length of each chunk in an HTTP/1 response content.
      * The content or a chunk longer than this value will be split into smaller chunks
-     * so that their lengths never exceeds it.
+     * so that their lengths never exceed it.
      */
     public int defaultMaxHttp1ChunkSize() {
         return defaultMaxHttp1ChunkSize;
