@@ -388,8 +388,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 return false;
             }
 
-            final DownstreamSubscription<T> subscription = this.subscription;
-            return subscription != null && !subscription.publishedAny;
+            return processor.upstream().isEmpty();
         }
 
         @Override
@@ -521,7 +520,6 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         private volatile int offset;
         private long cumulativeDemand;
-        private boolean publishedAny;
 
         DownstreamSubscription(ChildStreamMessage<T> streamMessage,
                                Subscriber<? super T> subscriber, StreamMessageProcessor<T> processor,
@@ -683,7 +681,6 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                         }
                     }
 
-                    publishedAny = true;
                     subscriber.onNext(obj);
                     return true;
                 }
