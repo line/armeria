@@ -66,7 +66,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         final HttpResponseWrapper resWrapper =
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
-        resWrapper.closeFuture().whenCompleteAsync((unused, cause) -> {
+        resWrapper.completionFuture().whenCompleteAsync((unused, cause) -> {
             // Ensure that the scheduled timeout is not executed.
             resWrapper.cancelTimeout();
             if (cause != null) {

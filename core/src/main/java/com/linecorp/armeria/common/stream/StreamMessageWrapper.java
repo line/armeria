@@ -59,8 +59,8 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<Void> closeFuture() {
-        return delegate().closeFuture();
+    public CompletableFuture<Void> completionFuture() {
+        return delegate().completionFuture();
     }
 
     @Override

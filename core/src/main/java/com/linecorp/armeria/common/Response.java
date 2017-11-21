@@ -29,12 +29,24 @@ public interface Response {
 
     /**
      * Returns a {@link CompletableFuture} which completes when
-     * 1) the response stream has been closed (the {@link StreamMessage} has been closed) or
+     * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or
+     * 2) the result value is set (the {@link CompletionStage} has completed.)
+     *
+     * @deprecated Use {@link #completionFuture()} instead.
+     */
+    @Deprecated
+    default CompletableFuture<?> closeFuture() {
+        return completionFuture();
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which completes when
+     * 1) the response stream has been closed (the {@link StreamMessage} has been completed) or
      * 2) the result value is set (the {@link CompletionStage} has completed.)
      */
-    default CompletableFuture<?> closeFuture() {
+    default CompletableFuture<?> completionFuture() {
         if (this instanceof StreamMessage) {
-            return ((StreamMessage<?>) this).closeFuture();
+            return ((StreamMessage<?>) this).completionFuture();
         }
 
         if (this instanceof CompletionStage) {

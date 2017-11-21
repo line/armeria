@@ -281,12 +281,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final Subscriber<? super T> subscriber = subscription.subscriber();
             subscription.clearSubscriber();
 
-            final CompletableFuture<Void> closeFuture = subscription.closeFuture();
+            final CompletableFuture<Void> completionFuture = subscription.completionFuture();
             if (cause == null) {
                 try {
                     subscriber.onComplete();
                 } finally {
-                    closeFuture.complete(null);
+                    completionFuture.complete(null);
                     cleanupIfLastSubscription();
                 }
                 return;
@@ -297,7 +297,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                     subscriber.onError(cause);
                 }
             } finally {
-                closeFuture.completeExceptionally(cause);
+                completionFuture.completeExceptionally(cause);
                 cleanupIfLastSubscription();
             }
         }
@@ -345,13 +345,14 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         private void cleanup() {
-            final List<CompletableFuture<Void>> closeFutures = new ArrayList<>(downstreamSubscriptions.size());
+            final List<CompletableFuture<Void>> completionFutures =
+                    new ArrayList<>(downstreamSubscriptions.size());
             downstreamSubscriptions.forEach(s -> {
-                final CompletableFuture<Void> future = s.closeFuture();
-                closeFutures.add(future);
+                final CompletableFuture<Void> future = s.completionFuture();
+                completionFutures.add(future);
             });
-            final CompletableFuture<Void> allDoneFuture =
-                    CompletableFuture.allOf(closeFutures.toArray(new CompletableFuture[closeFutures.size()]));
+            final CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(
+                    completionFutures.toArray(new CompletableFuture[completionFutures.size()]));
             allDoneFuture.whenComplete((unused1, unused2) -> signals.clear());
         }
     }
@@ -370,7 +371,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
 
-        private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+        private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
         ChildStreamMessage(StreamMessageProcessor<T> processor, boolean lastStream) {
             this.processor = processor;
@@ -379,7 +380,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public boolean isOpen() {
-            return processor.upstream().isOpen() && !closeFuture.isDone();
+            return processor.upstream().isOpen() && !completionFuture.isDone();
         }
 
         @Override
@@ -392,8 +393,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         @Override
-        public CompletableFuture<Void> closeFuture() {
-            return closeFuture;
+        public CompletableFuture<Void> completionFuture() {
+            return completionFuture;
         }
 
         @Override
@@ -467,7 +468,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
                     this, AbortingSubscriber.get(), processor, null, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
-                newSubscription.closeFuture().completeExceptionally(AbortedStreamException.get());
+                newSubscription.completionFuture().completeExceptionally(AbortedStreamException.get());
             } else {
                 subscription.abort();
             }
@@ -532,8 +533,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             this.lastSubscription = lastSubscription;
         }
 
-        CompletableFuture<Void> closeFuture() {
-            return streamMessage.closeFuture();
+        CompletableFuture<Void> completionFuture() {
+            return streamMessage.completionFuture();
         }
 
         Subscriber<? super T> subscriber() {

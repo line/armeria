@@ -34,13 +34,13 @@ import io.netty.util.ReferenceCounted;
  * <ul>
  *   <li>{@link #isOpen()}</li>
  *   <li>{@link #isEmpty()}</li>
- *   <li>{@link #closeFuture()}</li>
+ *   <li>{@link #completionFuture()}</li>
  *   <li>{@link #abort()}</li>
  * </ul>
  *
- * <h3>When is a {@link StreamMessage} open?</h3>
+ * <h3>When is a {@link StreamMessage} fully consumed?</h3>
  *
- * <p>A {@link StreamMessage} is open since its instantiation until:
+ * <p>A {@link StreamMessage} is <em>complete</em> (or 'fully consumed') when:
  * <ul>
  *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
  *   <li>an error occurred and {@link Subscriber#onError(Throwable)} is invoked,</li>
@@ -48,12 +48,9 @@ import io.netty.util.ReferenceCounted;
  *   <li>{@link #abort()} has been requested.</li>
  * </ul>
  *
- * <h3>Getting notified when a {@link StreamMessage} is closed</h3>
- *
- * <p>{@link Subscriber#onComplete()} and {@link Subscriber#onError(Throwable)} will not be invoked when its
- * {@link Subscription} has been {@linkplain Subscription#cancel() cancelled} or {@linkplain #abort() aborted}.
- * Use {@link #closeFuture()} if you need to get notified when a {@link StreamMessage} is closed regardless of
- * whether it's been cancelled, aborted or closed.
+ * <p>When fully consumed, the {@link CompletableFuture} returned by {@link StreamMessage#completionFuture()}
+ * will complete, which you may find useful because {@link Subscriber} does not notify you when a stream is
+ * {@linkplain Subscription#cancel() cancelled}.
  *
  * <h3>Publication and Consumption of {@link ReferenceCounted} objects</h3>
  *
@@ -76,7 +73,9 @@ import io.netty.util.ReferenceCounted;
  */
 public interface StreamMessage<T> extends Publisher<T> {
     /**
-     * Returns {@code true} if this publisher is not closed yet.
+     * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
+     * {@linkplain #completionFuture() complete} even if it's closed; a stream is complete when it's fully
+     * consumed by a {@link Subscriber}.
      */
     boolean isOpen();
 
@@ -88,10 +87,46 @@ public interface StreamMessage<T> extends Publisher<T> {
     boolean isEmpty();
 
     /**
-     * Returns a {@link CompletableFuture} that completes when this publisher is complete,
-     * either successfully or exceptionally, including cancellation and abortion.
+     * Returns {@code true} if this stream is complete, either successfully or exceptionally,
+     * including cancellation and abortion.
+     *
+     * <p>A {@link StreamMessage} is <em>complete</em> (or 'fully consumed') when:
+     * <ul>
+     *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
+     *   <li>an error occurred and {@link Subscriber#onError(Throwable)} is invoked,</li>
+     *   <li>the {@link Subscription} has been cancelled or</li>
+     *   <li>{@link #abort()} has been requested.</li>
+     * </ul>
      */
-    CompletableFuture<Void> closeFuture();
+    default boolean isComplete() {
+        return completionFuture().isDone();
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} that completes when this stream is complete,
+     * either successfully or exceptionally, including cancellation and abortion.
+     *
+     * <p>A {@link StreamMessage} is <em>complete</em>
+     * (or 'fully consumed') when:
+     * <ul>
+     *   <li>the {@link Subscriber} consumes all elements and {@link Subscriber#onComplete()} is invoked,</li>
+     *   <li>an error occurred and {@link Subscriber#onError(Throwable)} is invoked,</li>
+     *   <li>the {@link Subscription} has been cancelled or</li>
+     *   <li>{@link #abort()} has been requested.</li>
+     * </ul>
+     */
+    CompletableFuture<Void> completionFuture();
+
+    /**
+     * Returns a {@link CompletableFuture} that completes when this stream is complete,
+     * either successfully or exceptionally, including cancellation and abortion.
+     *
+     * @deprecated Use {@link #completionFuture()} instead.
+     */
+    @Deprecated
+    default CompletableFuture<Void> closeFuture() {
+        return completionFuture();
+    }
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -146,7 +181,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     void subscribe(Subscriber<? super T> s, Executor executor, boolean withPooledObjects);
 
     /**
-     * Closes this publisher with {@link AbortedStreamException} and prevents further subscription.
+     * Closes this stream with {@link AbortedStreamException} and prevents further subscription.
      * A {@link Subscriber} that attempts to subscribe to an aborted stream will be notified with
      * an {@link AbortedStreamException} via {@link Subscriber#onError(Throwable)}. Calling this method
      * on a closed or aborted stream has no effect.

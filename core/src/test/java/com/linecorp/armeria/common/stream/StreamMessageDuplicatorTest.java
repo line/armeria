@@ -60,7 +60,7 @@ public class StreamMessageDuplicatorTest {
     public void subscribeTwice() {
         @SuppressWarnings("unchecked")
         final StreamMessage<String> publisher = mock(StreamMessage.class);
-        when(publisher.closeFuture()).thenReturn(new CompletableFuture<>());
+        when(publisher.completionFuture()).thenReturn(new CompletableFuture<>());
 
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
@@ -123,7 +123,7 @@ public class StreamMessageDuplicatorTest {
     private static CompletableFuture<String> subscribe(StreamMessage<String> streamMessage, long demand) {
         final CompletableFuture<String> future = new CompletableFuture<>();
         final StringSubscriber subscriber = new StringSubscriber(future, demand);
-        streamMessage.closeFuture().whenComplete(subscriber);
+        streamMessage.completionFuture().whenComplete(subscriber);
         streamMessage.subscribe(subscriber);
         return future;
     }
@@ -171,7 +171,7 @@ public class StreamMessageDuplicatorTest {
         final CompletableFuture<String> future1 = new CompletableFuture<>();
         final StringSubscriber subscriber = new StringSubscriber(future1, 2);
         final StreamMessage<String> sm = duplicator.duplicateStream();
-        sm.closeFuture().whenComplete(subscriber);
+        sm.completionFuture().whenComplete(subscriber);
         sm.subscribe(subscriber);
 
         final CompletableFuture<String> future2 = subscribe(duplicator.duplicateStream(), 3);
@@ -384,7 +384,7 @@ public class StreamMessageDuplicatorTest {
 
         @Override
         public void accept(Void aVoid, Throwable cause) {
-            logger.debug("{}: closeFuture({})", this, String.valueOf(cause), cause);
+            logger.debug("{}: completionFuture({})", this, String.valueOf(cause), cause);
             if (cause != null) {
                 future.completeExceptionally(cause);
             } else {

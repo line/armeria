@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A {@link RuntimeException} that is raised to notify {@link StreamMessage#closeFuture()} when a
+ * A {@link RuntimeException} that is raised to notify {@link StreamMessage#completionFuture()} when a
  * {@link Subscriber} has cancelled its {@link Subscription}.
  */
 public final class CancelledSubscriptionException extends RuntimeException {
