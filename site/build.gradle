@@ -50,7 +50,7 @@ task xref(group: 'Documentation',
         return srcDirs
     }
 
-    inputs.dir sourceDirs
+    inputs.files sourceDirs
     outputs.dir outputDir
 
     doLast {
