@@ -22,11 +22,10 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -41,7 +40,6 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.EventLoop;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 
@@ -169,7 +167,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     @Override
     public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
-        subscribe0(new SubscriptionImpl(this, subscriber, null, withPooledObjects));
+        subscribe(new SubscriptionImpl(this, subscriber, null, withPooledObjects));
     }
 
     @Override
@@ -183,29 +181,27 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        subscribe0(new SubscriptionImpl(this, subscriber, executor, withPooledObjects));
+        subscribe(new SubscriptionImpl(this, subscriber, executor, withPooledObjects));
     }
 
-    private void subscribe0(SubscriptionImpl subscription) {
+    private void subscribe(SubscriptionImpl subscription) {
         final Subscriber<Object> subscriber = subscription.subscriber();
         final Executor executor = subscription.executor();
 
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
-            failLateSubscriber(executor, subscriber, this.subscription.subscriber());
+            failLateSubscriber(this.subscription, subscriber);
             return;
         }
 
-        if (shouldRunInExecutor(executor)) {
-            // NB: We did not use subscriber.onSubscribe() because that will increase the memory footprint
-            //     of the anonymous class by referring to 2 variables in the lambda expression.
-            executor.execute(() -> subscription.subscriber().onSubscribe(subscription));
+        if (subscription.needsDirectInvocation()) {
+            subscription.invokeOnSubscribe();
         } else {
-            subscriber.onSubscribe(subscription);
+            executor.execute(subscription::invokeOnSubscribe);
         }
     }
 
-    private static void failLateSubscriber(@Nullable Executor executor,
-                                           Subscriber<?> lateSubscriber, Subscriber<?> oldSubscriber) {
+    private static void failLateSubscriber(SubscriptionImpl subscription, Subscriber<?> lateSubscriber) {
+        final Subscriber<?> oldSubscriber = subscription.subscriber;
         final Throwable cause;
         if (oldSubscriber instanceof AbortingSubscriber) {
             cause = AbortedStreamException.get();
@@ -213,14 +209,14 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             cause = new IllegalStateException("subscribed by other subscriber already");
         }
 
-        if (shouldRunInExecutor(executor)) {
-            executor.execute(() -> {
+        if (subscription.needsDirectInvocation()) {
+            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+            lateSubscriber.onError(cause);
+        } else {
+            subscription.executor().execute(() -> {
                 lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
                 lateSubscriber.onError(cause);
             });
-        } else {
-            lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
-            lateSubscriber.onError(cause);
         }
     }
 
@@ -235,6 +231,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
                 this, AbortingSubscriber.get(), null, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
+            // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
+            newSubscription.invokedOnSubscribe = true;
             newSubscription.abort();
         } else {
             subscription.abort();
@@ -292,20 +290,18 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             return;
         }
 
-        final Queue<Object> queue = this.queue;
         if (queue.isEmpty()) {
             return;
         }
 
-        final Executor executor = subscription.executor();
-        if (shouldRunInExecutor(executor)) {
-            executor.execute(() -> notifySubscriber(subscription, queue));
+        if (subscription.needsDirectInvocation()) {
+            notifySubscriber0();
         } else {
-            notifySubscriber(subscription, queue);
+            subscription.executor().execute(this::notifySubscriber0);
         }
     }
 
-    private void notifySubscriber(SubscriptionImpl subscription, Queue<Object> queue) {
+    private void notifySubscriber0() {
         if (inOnNext) {
             // Do not let Subscriber.onNext() reenter, because it can lead to weird-looking event ordering
             // for a Subscriber implemented like the following:
@@ -320,6 +316,25 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             //
             // We do not need to worry about synchronizing the access to 'inOnNext' because the subscriber
             // methods must be on the same thread, or synchronized, according to Reactive Streams spec.
+            return;
+        }
+
+        final SubscriptionImpl subscription = this.subscription;
+        if (!subscription.invokedOnSubscribe) {
+            Executor executor = subscription.executor();
+            if (executor == null) {
+                executor = ForkJoinPool.commonPool();
+            }
+
+            // Subscriber.onSubscribe() was not invoked yet.
+            // Reschedule the notification so that onSubscribe() is invoked before other events.
+            //
+            // Note:
+            // The rescheduling will occur at most once because the invocation of onSubscribe() must have been
+            // scheduled already by subscribe(), given that this.subscription is not null at this point and
+            // subscribe() is the only place that sets this.subscription.
+
+            executor.execute(this::notifySubscriber0);
             return;
         }
 
@@ -340,7 +355,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             }
 
             if (o instanceof AwaitDemandFuture) {
-                if (notifyAwaitDemandFuture(queue)) {
+                if (notifyAwaitDemandFuture()) {
                     // Notified successfully.
                     continue;
                 } else {
@@ -349,14 +364,14 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 }
             }
 
-            if (!notifySubscriberWithElements(subscription, queue)) {
+            if (!notifySubscriberWithElements(subscription)) {
                 // Not enough demand.
                 break;
             }
         }
     }
 
-    private boolean notifySubscriberWithElements(SubscriptionImpl subscription, Queue<Object> queue) {
+    private boolean notifySubscriberWithElements(SubscriptionImpl subscription) {
         final Subscriber<Object> subscriber = subscription.subscriber();
         for (;;) {
             final long demand = this.demand;
@@ -408,7 +423,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         }
     }
 
-    private boolean notifyAwaitDemandFuture(Queue<Object> queue) {
+    private boolean notifyAwaitDemandFuture() {
         if (demand == 0) {
             return false;
         }
@@ -494,19 +509,13 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         }
     }
 
-    // We directly run callbacks for event loops if we're already on the loop, which applies to the vast
-    // majority of cases.
-    private static boolean shouldRunInExecutor(@Nullable Executor executor) {
-        return executor != null &&
-               (!(executor instanceof SingleThreadEventLoop) || !((EventLoop) executor).inEventLoop());
-    }
-
     private static final class SubscriptionImpl implements Subscription {
 
         private final DefaultStreamMessage<?> publisher;
         private Subscriber<Object> subscriber;
         private final Executor executor;
         private final boolean withPooledObjects;
+        private boolean invokedOnSubscribe;
         private volatile boolean cancelRequested;
 
         @SuppressWarnings("unchecked")
@@ -542,6 +551,11 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
         boolean cancelRequested() {
             return cancelRequested;
+        }
+
+        void invokeOnSubscribe() {
+            invokedOnSubscribe = true;
+            subscriber().onSubscribe(this);
         }
 
         @Override
@@ -622,11 +636,18 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         }
 
         private void invokeOnError(Throwable cause) {
-            if (shouldRunInExecutor(executor)) {
-                executor.execute(() -> subscriber.onError(cause));
-            } else {
+            if (needsDirectInvocation()) {
                 subscriber.onError(cause);
+            } else {
+                executor.execute(() -> subscriber.onError(cause));
             }
+        }
+
+        // We directly run callbacks for event loops if we're already on the loop, which applies to the vast
+        // majority of cases.
+        boolean needsDirectInvocation() {
+            return executor == null ||
+                   executor instanceof EventLoop && ((EventLoop) executor).inEventLoop();
         }
 
         @Override
