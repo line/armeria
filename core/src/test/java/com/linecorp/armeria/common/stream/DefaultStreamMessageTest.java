@@ -23,6 +23,10 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import org.junit.AfterClass;
@@ -218,6 +222,46 @@ public class DefaultStreamMessageTest {
         assertThat(result).containsExactlyElementsOf(input);
     }
 
+    /**
+     * Makes sure {@link Subscriber#onComplete()} is always invoked after
+     * {@link Subscriber#onSubscribe(Subscription)} even if
+     * {@link StreamMessage#subscribe(Subscriber, Executor)} is called from non-{@link EventLoop}.
+     */
+    @Test
+    public void onSubscribeBeforeOnComplete() throws Exception {
+        final BlockingQueue<String> queue = new LinkedTransferQueue<>();
+        // Repeat to increase the chance of reproduction.
+        for (int i = 0; i < 8192; i++) {
+            final DefaultStreamMessage<Object> m = new DefaultStreamMessage<>();
+            eventLoop.execute(m::close);
+            m.subscribe(new Subscriber<Object>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    queue.add("onSubscribe");
+                    s.request(Long.MAX_VALUE);
+                }
+
+                @Override
+                public void onNext(Object o) {
+                    queue.add("onNext");
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    queue.add("onError");
+                }
+
+                @Override
+                public void onComplete() {
+                    queue.add("onComplete");
+                }
+            }, eventLoop);
+
+            assertThat(queue.poll(5, TimeUnit.SECONDS)).isEqualTo("onSubscribe");
+            assertThat(queue.poll(5, TimeUnit.SECONDS)).isEqualTo("onComplete");
+        }
+    }
+
     @Test
     public void releaseOnConsumption_ByteBuf() throws Exception {
         final DefaultStreamMessage<ByteBuf> m = new DefaultStreamMessage<>();
@@ -357,7 +401,6 @@ public class DefaultStreamMessageTest {
         m.close();
 
         m.subscribe(new Subscriber<Object>() {
-            private Subscription subscription;
             @Override
             public void onSubscribe(Subscription subscription) {
                 // Cancel the subscription when the demand is 0.

@@ -30,6 +30,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.benchmarks.shared.EventLoopJmhExecutor;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
@@ -40,6 +42,8 @@ import io.netty.channel.EventLoop;
 @Fork(jvmArgsAppend = { EventLoopJmhExecutor.JVM_ARG_1, EventLoopJmhExecutor.JVM_ARG_2 })
 @State(Scope.Benchmark)
 public class StreamMessageBenchmark {
+
+    private static final Logger logger = LoggerFactory.getLogger(StreamMessageBenchmark.class);
 
     private static final EventLoop ANOTHER_EVENT_LOOP = new DefaultEventLoop();
 
@@ -134,10 +138,12 @@ public class StreamMessageBenchmark {
 
         private long sum() {
             if (!complete) {
+                logger.warn("Stream not completed");
                 return -1;
             }
             if (error != null) {
-                return -1;
+                logger.warn("Stream failed", error);
+                return -2;
             }
             return sum;
         }
