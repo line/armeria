@@ -48,7 +48,7 @@ final class HttpStatusBasedRetryStrategy implements RetryStrategy<HttpRequest, H
     public CompletableFuture<Optional<Backoff>> shouldRetry(HttpRequest request, HttpResponse response) {
         final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
-        response.closeFuture().whenComplete(subscriber);
+        response.completionFuture().whenComplete(subscriber);
         response.subscribe(subscriber);
 
         return future.handle((headers, unused) -> {

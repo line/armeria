@@ -133,8 +133,8 @@ abstract class HttpResponseDecoder {
             this.maxContentLength = maxContentLength;
         }
 
-        CompletableFuture<Void> closeFuture() {
-            return delegate.closeFuture();
+        CompletableFuture<Void> completionFuture() {
+            return delegate.completionFuture();
         }
 
         void scheduleTimeout(ChannelHandlerContext ctx) {

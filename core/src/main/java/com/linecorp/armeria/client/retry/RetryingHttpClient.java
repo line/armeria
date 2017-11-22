@@ -200,7 +200,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     private static HttpHeaders getHttpHeaders(HttpResponse res) {
         final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
         final HttpHeaderSubscriber subscriber = new HttpHeaderSubscriber(future);
-        res.closeFuture().whenComplete(subscriber);
+        res.completionFuture().whenComplete(subscriber);
         res.subscribe(subscriber);
         // Neither blocks here nor throws an exception because it already has headers.
         return future.join();

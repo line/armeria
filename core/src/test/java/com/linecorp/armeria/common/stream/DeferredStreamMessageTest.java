@@ -41,7 +41,7 @@ public class DeferredStreamMessageTest {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         assertThat(m.isOpen()).isTrue();
         assertThat(m.isEmpty()).isFalse();
-        assertThat(m.closeFuture()).isNotDone();
+        assertThat(m.completionFuture()).isNotDone();
     }
 
     @Test
@@ -136,8 +136,8 @@ public class DeferredStreamMessageTest {
     private static void assertAborted(StreamMessage<?> m) {
         assertThat(m.isOpen()).isFalse();
         assertThat(m.isEmpty()).isTrue();
-        assertThat(m.closeFuture()).isCompletedExceptionally();
-        assertThatThrownBy(() -> m.closeFuture().get())
+        assertThat(m.completionFuture()).isCompletedExceptionally();
+        assertThatThrownBy(() -> m.completionFuture().get())
                 .hasCauseInstanceOf(AbortedStreamException.class);
     }
 
@@ -200,10 +200,10 @@ public class DeferredStreamMessageTest {
 
         assertThat(m.isOpen()).isFalse();
         assertThat(m.isEmpty()).isFalse();
-        assertThat(m.closeFuture()).isCompletedWithValue(null);
+        assertThat(m.completionFuture()).isCompletedWithValue(null);
 
         assertThat(d.isOpen()).isFalse();
         assertThat(d.isEmpty()).isFalse();
-        assertThat(d.closeFuture()).isCompletedWithValue(null);
+        assertThat(d.completionFuture()).isCompletedWithValue(null);
     }
 }

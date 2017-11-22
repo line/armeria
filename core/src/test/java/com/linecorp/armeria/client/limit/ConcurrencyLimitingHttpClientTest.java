@@ -150,13 +150,14 @@ public class ConcurrencyLimitingHttpClientTest {
         Thread.sleep(1000);
         res2.subscribe(NoopSubscriber.get());
         assertThat(res2.isOpen()).isFalse();
-        assertThat(res2.closeFuture()).isCompletedExceptionally();
-        assertThatThrownBy(() -> res2.closeFuture().get()).hasCauseInstanceOf(ResponseTimeoutException.class);
+        assertThat(res2.completionFuture()).isCompletedExceptionally();
+        assertThatThrownBy(() -> res2.completionFuture().get())
+                .hasCauseInstanceOf(ResponseTimeoutException.class);
 
         // req1 should not time out because it's been delegated already.
         res1.subscribe(NoopSubscriber.get());
         assertThat(res1.isOpen()).isTrue();
-        assertThat(res1.closeFuture()).isNotDone();
+        assertThat(res1.completionFuture()).isNotDone();
 
         // Close req1 and make sure req2 does not affect numActiveRequests.
         actualRes1.close();
@@ -187,8 +188,8 @@ public class ConcurrencyLimitingHttpClientTest {
 
         assertThat(res).isInstanceOf(DeferredHttpResponse.class);
         assertThat(res.isOpen()).isFalse();
-        assertThat(res.closeFuture()).isCompletedExceptionally();
-        assertThatThrownBy(() -> res.closeFuture().get()).hasCauseInstanceOf(Exception.class);
+        assertThat(res.completionFuture()).isCompletedExceptionally();
+        assertThatThrownBy(() -> res.completionFuture().get()).hasCauseInstanceOf(Exception.class);
         assertThat(client.numActiveRequests()).isZero();
     }
 

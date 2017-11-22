@@ -79,8 +79,8 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
-    public CompletableFuture<Void> closeFuture() {
-        return delegate.closeFuture();
+    public CompletableFuture<Void> completionFuture() {
+        return delegate.completionFuture();
     }
 
     @Override

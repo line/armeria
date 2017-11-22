@@ -121,7 +121,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
 
     private final Queue<Object> queue;
-    private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     @SuppressWarnings("unused")
     private volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
@@ -423,7 +423,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     private void notifySubscriberWithCloseEvent(SubscriptionImpl subscription, CloseEvent o) {
         setState(State.OPEN, State.CLEANUP);
         try {
-            o.notifySubscriber(subscription, closeFuture);
+            o.notifySubscriber(subscription, completionFuture);
         } finally {
             cleanup();
         }
@@ -438,8 +438,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     protected void onRemoval(T obj) {}
 
     @Override
-    public CompletableFuture<Void> closeFuture() {
-        return closeFuture;
+    public final CompletableFuture<Void> completionFuture() {
+        return completionFuture;
     }
 
     @Override
@@ -476,7 +476,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
             try {
                 if (e instanceof CloseEvent) {
-                    ((CloseEvent) e).notifySubscriber(subscription, closeFuture);
+                    ((CloseEvent) e).notifySubscriber(subscription, completionFuture);
                     subscription.clearSubscriber();
                     continue;
                 }
@@ -598,7 +598,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             switch (publisher.state) {
                 case CLOSED:
                     // close() has been called before cancel(). There's no need to push a CloseEvent,
-                    // but we need to ensure the closeFuture is notified and any pending objects are removed.
+                    // but we need to ensure the completionFuture is notified and any pending objects
+                    // are removed.
                     if (publisher.setState(State.CLOSED, State.CLEANUP)) {
                         final Executor executor = executor();
                         // TODO(anuraag): Consider pushing a cleanup event instead of serializing the activity
@@ -646,8 +647,8 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
             this.cause = cause;
         }
 
-        void notifySubscriber(SubscriptionImpl subscription, CompletableFuture<?> closeFuture) {
-            if (closeFuture.isDone()) {
+        void notifySubscriber(SubscriptionImpl subscription, CompletableFuture<?> completionFuture) {
+            if (completionFuture.isDone()) {
                 // Notified already
                 return;
             }
@@ -662,7 +663,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                 try {
                     subscriber.onComplete();
                 } finally {
-                    closeFuture.complete(null);
+                    completionFuture.complete(null);
                 }
             } else {
                 try {
@@ -670,7 +671,7 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
                         subscriber.onError(cause);
                     }
                 } finally {
-                    closeFuture.completeExceptionally(cause);
+                    completionFuture.completeExceptionally(cause);
                 }
             }
         }

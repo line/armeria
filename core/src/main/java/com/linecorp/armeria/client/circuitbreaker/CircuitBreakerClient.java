@@ -126,7 +126,7 @@ public final class CircuitBreakerClient<I extends Request, O extends Response>
                 throw cause;
             }
 
-            response.closeFuture().handle(voidFunction((res, cause) -> {
+            response.completionFuture().handle(voidFunction((res, cause) -> {
                 // Report whether the invocation has succeeded or failed.
                 if (cause == null) {
                     circuitBreaker.onSuccess();

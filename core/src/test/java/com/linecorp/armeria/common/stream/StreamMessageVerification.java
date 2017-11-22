@@ -57,7 +57,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     public abstract StreamMessage<T> createAbortedPublisher(long elements);
 
     @Test
-    public void required_closeFutureMustCompleteOnTermination0() throws Throwable {
+    public void required_completionFutureMustCompleteOnTermination0() throws Throwable {
         activePublisherTest(0, true, pub -> {
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
@@ -69,46 +69,46 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
                 assertThat(stream.isEmpty()).isTrue();
             }
 
-            assertThat(stream.closeFuture()).isNotDone();
+            assertThat(stream.completionFuture()).isNotDone();
             sub.requestEndOfStream();
 
             assertThat(stream.isOpen()).isFalse();
             assertThat(stream.isEmpty()).isTrue();
-            assertThat(stream.closeFuture()).isCompleted();
+            assertThat(stream.completionFuture()).isCompleted();
             sub.expectNone();
         });
     }
 
     @Test
-    public void required_closeFutureMustCompleteOnTermination1() throws Throwable {
+    public void required_completionFutureMustCompleteOnTermination1() throws Throwable {
         activePublisherTest(1, true, pub -> {
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
             assertThat(stream.isOpen()).isTrue();
             assertThat(stream.isEmpty()).isFalse();
 
-            assertThat(stream.closeFuture()).isNotDone();
+            assertThat(stream.completionFuture()).isNotDone();
             sub.requestNextElement();
             sub.requestEndOfStream();
-            assertThat(stream.closeFuture()).isCompleted();
+            assertThat(stream.completionFuture()).isCompleted();
             sub.expectNone();
         });
     }
 
     @Test
-    public void required_closeFutureMustCompleteOnCancellation() throws Throwable {
+    public void required_completionFutureMustCompleteOnCancellation() throws Throwable {
         activePublisherTest(10, true, pub -> {
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
 
-            assertThat(stream.closeFuture()).isNotDone();
+            assertThat(stream.completionFuture()).isNotDone();
             sub.requestNextElement();
-            assertThat(stream.closeFuture()).isNotDone();
+            assertThat(stream.completionFuture()).isNotDone();
             sub.cancel();
             sub.expectNone();
 
-            assertThat(stream.closeFuture()).isCompletedExceptionally();
-            assertThatThrownBy(() -> stream.closeFuture().join())
+            assertThat(stream.completionFuture()).isCompletedExceptionally();
+            assertThatThrownBy(() -> stream.completionFuture().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(CancelledSubscriptionException.class);
         });
@@ -122,7 +122,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         final StreamMessage<T> pub = createAbortedPublisher(0);
         assumeAbortedPublisherAvailable(pub);
         assertThat(pub.isOpen()).isFalse();
-        assertThatThrownBy(() -> pub.closeFuture().join())
+        assertThatThrownBy(() -> pub.completionFuture().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(AbortedStreamException.class);
 
@@ -167,7 +167,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         sub.expectError(AbortedStreamException.class);
 
         env.verifyNoAsyncErrorsNoDelay();
-        assertThatThrownBy(() -> pub.closeFuture().join())
+        assertThatThrownBy(() -> pub.completionFuture().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(AbortedStreamException.class);
     }
