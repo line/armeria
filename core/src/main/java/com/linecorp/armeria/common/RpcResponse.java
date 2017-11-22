@@ -96,7 +96,7 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
      * Returns a {@link CompletableFuture} which completes when this {@link RpcResponse} completes.
      */
     @Override
-    default CompletableFuture<?> closeFuture() {
+    default CompletableFuture<?> completionFuture() {
         return toCompletableFuture();
     }
 }

@@ -48,7 +48,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
             pendingSubscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DeferredStreamMessage.class, PendingSubscription.class, "pendingSubscription");
 
-    private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     @SuppressWarnings("unused") // Updated only via delegateUpdater
     private volatile StreamMessage<T> delegate;
@@ -73,12 +73,12 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
             delegate.abort();
         }
 
-        if (!closeFuture.isDone()) {
-            delegate.closeFuture().handle((unused, cause) -> {
+        if (!completionFuture.isDone()) {
+            delegate.completionFuture().handle((unused, cause) -> {
                 if (cause == null) {
-                    closeFuture.complete(null);
+                    completionFuture.complete(null);
                 } else {
-                    closeFuture.completeExceptionally(cause);
+                    completionFuture.completeExceptionally(cause);
                 }
                 return null;
             }).exceptionally(CompletionActions::log);
@@ -119,7 +119,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
             return delegate.isOpen();
         }
 
-        return !closeFuture.isDone();
+        return !completionFuture.isDone();
     }
 
     @Override
@@ -133,8 +133,8 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public CompletableFuture<Void> closeFuture() {
-        return closeFuture;
+    public CompletableFuture<Void> completionFuture() {
+        return completionFuture;
     }
 
     @Override
@@ -234,7 +234,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         if (delegate != null) {
             delegate.abort();
         } else {
-            closeFuture.completeExceptionally(AbortedStreamException.get());
+            completionFuture.completeExceptionally(AbortedStreamException.get());
         }
     }
 

@@ -184,7 +184,12 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     @Override
-    CompletableFuture<Void> closeFuture();
+    default CompletableFuture<Void> closeFuture() {
+        return completionFuture();
+    }
+
+    @Override
+    CompletableFuture<Void> completionFuture();
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
@@ -193,7 +198,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future);
-        closeFuture().whenComplete(aggregator);
+        completionFuture().whenComplete(aggregator);
         subscribe(aggregator);
         return future;
     }
@@ -205,7 +210,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate(Executor executor) {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future);
-        closeFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().whenCompleteAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
     }

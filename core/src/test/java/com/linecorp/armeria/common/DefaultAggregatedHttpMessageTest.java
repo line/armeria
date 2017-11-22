@@ -180,7 +180,7 @@ public class DefaultAggregatedHttpMessageTest {
             public void onComplete() {}
         });
 
-        req.closeFuture().get(10, TimeUnit.SECONDS);
+        req.completionFuture().get(10, TimeUnit.SECONDS);
         return unaggregated;
     }
 }

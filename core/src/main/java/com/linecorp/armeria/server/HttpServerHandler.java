@@ -310,7 +310,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             gracefulShutdownSupport.inc();
             unfinishedRequests++;
 
-            req.closeFuture().handle(voidFunction((ret, cause) -> {
+            req.completionFuture().handle(voidFunction((ret, cause) -> {
                 if (cause == null) {
                     logBuilder.endRequest();
                 } else {
@@ -318,7 +318,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
             })).exceptionally(CompletionActions::log);
 
-            res.closeFuture().handle(voidFunction((ret, cause) -> {
+            res.completionFuture().handle(voidFunction((ret, cause) -> {
                 req.abort();
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
                 eventLoop.execute(() -> {

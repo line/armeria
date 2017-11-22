@@ -300,7 +300,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate() {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future);
-        closeFuture().whenComplete(aggregator);
+        completionFuture().whenComplete(aggregator);
         subscribe(aggregator);
         return future;
     }
@@ -312,7 +312,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpMessage> aggregate(Executor executor) {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future);
-        closeFuture().whenCompleteAsync(aggregator, executor);
+        completionFuture().whenCompleteAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
     }

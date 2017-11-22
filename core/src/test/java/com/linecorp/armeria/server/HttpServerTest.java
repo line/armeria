@@ -778,7 +778,7 @@ public class HttpServerTest {
 
         res.subscribe(consumer);
 
-        res.closeFuture().get();
+        res.completionFuture().get();
         assertThat(status.get(), is(HttpStatus.OK));
         assertThat(consumer.numReceivedBytes(), is(STREAMING_CONTENT_LENGTH));
     }

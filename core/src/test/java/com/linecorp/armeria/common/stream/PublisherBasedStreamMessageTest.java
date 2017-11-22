@@ -121,9 +121,9 @@ public class PublisherBasedStreamMessageTest {
             // Ensure subscription.cancel() has been invoked.
             Mockito.verify(subscription).cancel();
 
-            // Ensure closeFuture is complete exceptionally.
-            assertThat(publisher.closeFuture()).isCompletedExceptionally();
-            assertThatThrownBy(() -> publisher.closeFuture().get())
+            // Ensure completionFuture is complete exceptionally.
+            assertThat(publisher.completionFuture()).isCompletedExceptionally();
+            assertThatThrownBy(() -> publisher.completionFuture().get())
                     .hasCauseExactlyInstanceOf(AbortedStreamException.class);
         }
     }
