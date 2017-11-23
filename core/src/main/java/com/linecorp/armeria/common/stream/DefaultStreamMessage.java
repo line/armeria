@@ -118,6 +118,10 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, State> stateUpdater =
             AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, Thread> currentThreadUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, Thread.class, "currentThread");
+
     private final Queue<Object> queue;
     private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
@@ -129,6 +133,9 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
 
     @SuppressWarnings("FieldMayBeFinal")
     private volatile State state = State.OPEN;
+
+    @SuppressWarnings("unused")
+    private volatile Thread currentThread;
 
     private volatile boolean wroteAny;
 
@@ -339,36 +346,58 @@ public class DefaultStreamMessage<T> implements StreamMessage<T>, StreamWriter<T
         }
 
         for (;;) {
-            if (state == State.CLEANUP) {
-                cleanup();
+            if (!beginNotification()) {
                 return;
             }
 
-            final Object o = queue.peek();
-            if (o == null) {
-                break;
-            }
+            for (;;) {
+                if (state == State.CLEANUP) {
+                    cleanup();
+                    return;
+                }
 
-            if (o instanceof CloseEvent) {
-                notifySubscriberWithCloseEvent(subscription, (CloseEvent) o);
-                break;
-            }
+                final Object o = queue.peek();
+                if (o == null) {
+                    break;
+                }
 
-            if (o instanceof AwaitDemandFuture) {
-                if (notifyAwaitDemandFuture()) {
-                    // Notified successfully.
-                    continue;
-                } else {
+                if (o instanceof CloseEvent) {
+                    notifySubscriberWithCloseEvent(subscription, (CloseEvent) o);
+                    break;
+                }
+
+                if (o instanceof AwaitDemandFuture) {
+                    if (notifyAwaitDemandFuture()) {
+                        // Notified successfully.
+                        continue;
+                    } else {
+                        // Not enough demand.
+                        break;
+                    }
+                }
+
+                if (!notifySubscriberWithElements(subscription)) {
                     // Not enough demand.
                     break;
                 }
             }
 
-            if (!notifySubscriberWithElements(subscription)) {
-                // Not enough demand.
-                break;
+            currentThread = null;
+            if (queue.isEmpty() || demand == 0) {
+                return;
             }
         }
+    }
+
+    private boolean beginNotification() {
+        if (currentThread == null) {
+            return currentThreadUpdater.compareAndSet(this, null, Thread.currentThread());
+        }
+
+        if (currentThread == Thread.currentThread()) {
+            return true;
+        }
+        return false;
     }
 
     private boolean notifySubscriberWithElements(SubscriptionImpl subscription) {
