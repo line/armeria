@@ -52,11 +52,7 @@ import io.netty.channel.EventLoop;
 // NB: Methods in this class prefixed with 'do' must be run on the stream's event loop.
 public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
-    private enum MarkedStackTrace {
-        SINGLETON
-    }
-
-    private static final ConcurrentHashMap<List<StackTraceElement>, MarkedStackTrace>
+    private static final ConcurrentHashMap<List<StackTraceElement>, Boolean>
             UNEXPECTED_EVENT_LOOP_STACK_TRACES = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
@@ -97,7 +93,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, (unused) -> {
                 logger.debug("Creating EventLoopStreamMessage without specifying EventLoop. " +
                              "This will be very slow if writer or subscriber run in a different EventLoop.", t);
-                return MarkedStackTrace.SINGLETON;
+                return true;
             });
             return CommonPools.workerGroup().next();
         }));
