@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.channel.EventLoop;
 
@@ -79,8 +80,11 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
      * happen on the same {@link EventLoop} as this stream's.
      */
     public EventLoopStreamMessage() {
-        this(CommonPools.workerGroup().next());
-        logger.debug("Creating EventLoopStreamMessage without specifying EventLoop. This will be very slow.");
+        this(RequestContext.mapCurrent(RequestContext::eventLoop, () -> {
+            logger.debug(
+                    "Creating EventLoopStreamMessage without specifying EventLoop. This will be very slow.");
+            return CommonPools.workerGroup().next();
+        }));
     }
 
     /**
