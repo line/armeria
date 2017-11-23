@@ -43,9 +43,8 @@ import io.netty.channel.EventLoop;
  * <p>Note that when {@link Subscription#cancel()} or {@link #abort()} are called from a different thread, the
  * stream will continue to signal objects until demand is satisfied, rather than stopping in the middle. If this
  * is an issue, it is recommended to use {@link DefaultStreamMessage}.
- *
- * <p>Methods in this class prefixed with 'do' must be run on the stream's event loop.
  */
+// NB: Methods in this class prefixed with 'do' must be run on the stream's event loop.
 public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @SuppressWarnings("rawtypes")
@@ -147,9 +146,16 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             isOpen = false;
 
             if (subscribedUpdater.compareAndSet(this, 0, 1)) {
-                subscription = new SubscriptionImpl(this, AbortingSubscriber.get(), null, false);
-                // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
-                invokedOnSubscribe = true;
+                if (eventLoop.inEventLoop()) {
+                    doSetAbortedSubscription();
+                    doCancelOrAbort(false);
+                } else {
+                    eventLoop.execute(() -> {
+                        doSetAbortedSubscription();
+                        doCancelOrAbort(false);
+                    });
+                }
+                return;
             }
 
             cancelOrAbort(false);
@@ -242,7 +248,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
         if (queue.isEmpty() && demand > 0 && !inOnNext) {
             // Nothing in the queue and the subscriber is ready for an object, so send it directly.
             demand--;
-            notifySubscriberOfObject(subscription, obj);
+            doNotifySubscriberOfObject(subscription, obj);
             return;
         }
 
@@ -325,11 +331,11 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
 
             @SuppressWarnings("unchecked")
             T obj = (T) queue.remove();
-            notifySubscriberOfObject(subscription, obj);
+            doNotifySubscriberOfObject(subscription, obj);
         }
     }
 
-    private void notifySubscriberOfObject(SubscriptionImpl subscription, T obj) {
+    private void doNotifySubscriberOfObject(SubscriptionImpl subscription, T obj) {
         final Subscriber<Object> subscriber = subscription.subscriber();
         obj = prepareObjectForNotification(subscription, obj);
 
@@ -394,6 +400,12 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             default: // OPEN: should never reach here.
                 throw new Error();
         }
+    }
+
+    private void doSetAbortedSubscription() {
+        subscription = new SubscriptionImpl(this, AbortingSubscriber.get(), null, false);
+        // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
+        invokedOnSubscribe = true;
     }
 
     private void cleanup() {
