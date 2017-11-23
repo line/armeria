@@ -96,7 +96,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             List<StackTraceElement> stackTrace = ImmutableList.copyOf(t.getStackTrace());
             UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, (unused) -> {
                 logger.debug("Creating EventLoopStreamMessage without specifying EventLoop. " +
-                             "This will be very slow.", t);
+                             "This will be very slow if writer or subscriber run in a different EventLoop.", t);
                 return MarkedStackTrace.SINGLETON;
             });
             return CommonPools.workerGroup().next();
