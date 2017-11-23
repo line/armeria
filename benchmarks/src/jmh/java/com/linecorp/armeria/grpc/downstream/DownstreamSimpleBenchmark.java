@@ -14,18 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.benchmarks.grpc.downstream;
+package com.linecorp.armeria.grpc.downstream;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
-import com.linecorp.armeria.benchmarks.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
-import com.linecorp.armeria.benchmarks.grpc.GithubServiceGrpc.GithubServiceFutureStub;
-import com.linecorp.armeria.benchmarks.grpc.shared.GithubApiService;
-import com.linecorp.armeria.benchmarks.grpc.shared.SimpleBenchmarkBase;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
+import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceFutureStub;
+import com.linecorp.armeria.grpc.shared.GithubApiService;
+import com.linecorp.armeria.grpc.shared.SimpleBenchmarkBase;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;

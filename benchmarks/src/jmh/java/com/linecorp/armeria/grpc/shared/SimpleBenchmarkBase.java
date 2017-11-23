@@ -14,9 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.benchmarks.grpc.shared;
+package com.linecorp.armeria.grpc.shared;
 
-import static com.linecorp.armeria.benchmarks.grpc.shared.GithubApiService.SEARCH_RESPONSE;
+import static com.linecorp.armeria.grpc.shared.GithubApiService.SEARCH_RESPONSE;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
@@ -38,10 +38,10 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.Empty;
 
-import com.linecorp.armeria.benchmarks.grpc.GithubApi.SearchResponse;
-import com.linecorp.armeria.benchmarks.grpc.GithubServiceGrpc;
-import com.linecorp.armeria.benchmarks.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
-import com.linecorp.armeria.benchmarks.grpc.GithubServiceGrpc.GithubServiceFutureStub;
+import com.linecorp.armeria.grpc.GithubApi.SearchResponse;
+import com.linecorp.armeria.grpc.GithubServiceGrpc;
+import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
+import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceFutureStub;
 
 import io.grpc.ManagedChannel;
 import io.grpc.okhttp.OkHttpChannelBuilder;

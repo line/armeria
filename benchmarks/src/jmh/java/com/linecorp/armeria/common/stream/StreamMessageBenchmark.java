@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.benchmarks.core;
+package com.linecorp.armeria.common.stream;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -32,11 +32,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.benchmarks.shared.EventLoopJmhExecutor;
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
-import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
-import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
-import com.linecorp.armeria.common.stream.StreamWriter;
+import com.linecorp.armeria.shared.EventLoopJmhExecutor;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;

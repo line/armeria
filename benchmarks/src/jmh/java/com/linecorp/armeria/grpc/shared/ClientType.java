@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.benchmarks.grpc.shared;
+package com.linecorp.armeria.grpc.shared;
 
 public enum ClientType {
     // The official client for the benchmark (armeria for downstream, grpc-netty for upstream).

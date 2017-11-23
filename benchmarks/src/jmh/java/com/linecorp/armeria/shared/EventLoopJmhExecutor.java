@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.benchmarks.shared;
+package com.linecorp.armeria.shared;
 
 import java.util.concurrent.Executor;
 
