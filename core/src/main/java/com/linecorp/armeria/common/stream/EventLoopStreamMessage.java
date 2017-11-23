@@ -357,10 +357,20 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             return;
         }
         doSetState(State.CLEANUP);
-        try {
-            event.notifySubscriber(subscription, completionFuture());
-        } finally {
-            cleanup();
+        if (subscription.needsDirectInvocation()) {
+            try {
+                event.notifySubscriber(subscription, completionFuture());
+            } finally {
+                cleanup();
+            }
+        } else {
+            subscription.executor().execute(() -> {
+                try {
+                    event.notifySubscriber(subscription, completionFuture());
+                } finally {
+                    eventLoop.execute(this::cleanup);
+                }
+            });
         }
     }
 
