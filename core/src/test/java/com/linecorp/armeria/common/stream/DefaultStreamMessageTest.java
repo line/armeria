@@ -19,11 +19,13 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
@@ -425,6 +427,49 @@ public class DefaultStreamMessageTest {
 
         assertThat(m.isOpen()).isFalse();
         assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    public void writeFromMultipleThreads() {
+        List<Integer> result = new ArrayList<>();
+        DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        stream.subscribe(new Subscriber<Integer>() {
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(Integer value) {
+                result.add(value);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        for (int i = 0; i < 100; i++) {
+            final Integer signal = i;
+            new Thread(() -> {
+                try {
+                    latch.await();
+                } catch (InterruptedException ignored) {
+                    // ignore
+                }
+                stream.write(signal);
+            }).start();
+        }
+        latch.countDown();
+        await().untilAsserted(() -> assertThat(result).containsAll(
+                IntStream.range(0, 100).boxed().collect(toImmutableList())));
+        assertThat(result.size()).isEqualTo(100);
     }
 
     private static ByteBuf newPooledBuffer() {
