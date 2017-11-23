@@ -88,11 +88,11 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
      */
     public EventLoopStreamMessage() {
         this(RequestContext.mapCurrent(RequestContext::eventLoop, () -> {
-            Throwable t = new Throwable();
-            List<StackTraceElement> stackTrace = ImmutableList.copyOf(t.getStackTrace());
+            UnexpectedEventLoopException e = new UnexpectedEventLoopException();
+            List<StackTraceElement> stackTrace = ImmutableList.copyOf(e.getStackTrace());
             UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, (unused) -> {
-                logger.debug("Creating EventLoopStreamMessage without specifying EventLoop. " +
-                             "This will be very slow if writer or subscriber run in a different EventLoop.", t);
+                logger.warn("Creating EventLoopStreamMessage without specifying EventLoop. " +
+                            "This will be very slow if writer or subscriber run in a different EventLoop.", e);
                 return true;
             });
             return CommonPools.workerGroup().next();
@@ -437,4 +437,10 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     private void cleanup() {
         cleanupQueue(subscription, queue);
     }
+
+    /**
+     * Indicates an invocation of {@link #EventLoopStreamMessage()} with no available event loop, likely causing
+     * significant performance issues.
+     */
+    private static class UnexpectedEventLoopException extends RuntimeException {}
 }
