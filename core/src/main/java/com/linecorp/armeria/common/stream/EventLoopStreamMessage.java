@@ -19,7 +19,9 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -28,6 +30,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -47,6 +51,13 @@ import io.netty.channel.EventLoop;
  */
 // NB: Methods in this class prefixed with 'do' must be run on the stream's event loop.
 public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
+
+    private enum MarkedStackTrace {
+        SINGLETON
+    }
+
+    private static final ConcurrentHashMap<List<StackTraceElement>, MarkedStackTrace>
+            UNEXPECTED_EVENT_LOOP_STACK_TRACES = new ConcurrentHashMap<>();
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<EventLoopStreamMessage> abortedUpdater =
@@ -81,8 +92,13 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
      */
     public EventLoopStreamMessage() {
         this(RequestContext.mapCurrent(RequestContext::eventLoop, () -> {
-            logger.debug(
-                    "Creating EventLoopStreamMessage without specifying EventLoop. This will be very slow.");
+            Throwable t = new Throwable();
+            List<StackTraceElement> stackTrace = ImmutableList.copyOf(t.getStackTrace());
+            UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, (unused) -> {
+                logger.debug("Creating EventLoopStreamMessage without specifying EventLoop. " +
+                             "This will be very slow.", t);
+                return MarkedStackTrace.SINGLETON;
+            });
             return CommonPools.workerGroup().next();
         }));
     }
