@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   https://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -16,12 +16,9 @@
 
 package com.linecorp.armeria.common.stream;
 
-import java.util.List;
-
-public class DefaultStreamMessageTest extends AbstractStreamMessageTest {
-
-    @Override
-    <T> StreamMessageAndWriter<T> newStream(List<T> unused) {
-        return new DefaultStreamMessage<>();
-    }
+/**
+ * A type which is both a {@link StreamMessage} and a {@link StreamWriter}. This type is mainly used by tests
+ * which need to exercise both functionality.
+ */
+public interface StreamMessageAndWriter<T> extends StreamMessage<T>, StreamWriter<T> {
 }

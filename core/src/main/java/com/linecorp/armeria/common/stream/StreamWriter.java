@@ -51,7 +51,9 @@ public interface StreamWriter<T> {
      * @return {@code true} if the specified object has been scheduled for publication. {@code false} if the
      *         stream has been closed already.
      */
-    boolean write(Supplier<? extends T> o);
+    default boolean write(Supplier<? extends T> o) {
+        return write(o.get());
+    }
 
     /**
      * Performs the specified {@code task} when there's enough demans from the {@link Subscriber}.
