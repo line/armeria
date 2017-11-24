@@ -439,8 +439,8 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     }
 
     /**
-     * Indicates an invocation of {@link #EventLoopStreamMessage()} with no available event loop, likely causing
-     * significant performance issues.
+     * Indicates an invocation of {@link EventLoopStreamMessage#EventLoopStreamMessage()} with no available
+     * event loop, likely causing significant performance issues.
      */
     private static class UnexpectedEventLoopException extends RuntimeException {}
 }
