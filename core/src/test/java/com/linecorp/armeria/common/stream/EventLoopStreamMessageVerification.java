@@ -97,9 +97,9 @@ public class EventLoopStreamMessageVerification extends StreamMessageVerificatio
 
     // createStreamMessage creates a publisher that relies on onDemand for triggering writes - unfortunately
     // means that it is not possible to have reads and writes to the stream happening synchronously in the same
-    // call tree, so this test passes regardless of whether DefaultStreamMessage actually correctly handles
+    // call tree, so this test passes regardless of whether the stream message actually correctly handles
     // recursion. We disable it here to prevent a false sense of security and verify the behavior in
-    // DefaultStreamMessageTest.flowControlled_writeThenDemandThenProcess.
+    // AbstractStreamMessageTest.flowControlled_writeThenDemandThenProcess.
     @Override
     @Test(enabled = false)
     public void required_spec303_mustNotAllowUnboundedRecursion() throws Throwable {

@@ -90,12 +90,12 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
     }
 
     /**
-     * Add an object to publish to the stream.
+     * Adds an object to publish to the stream.
      */
     abstract void addObject(T obj);
 
     /**
-     * Add an object to publish (of type {@code T} or an event (e.g., {@link CloseEvent},
+     * Adds an object to publish (of type {@code T} or an event (e.g., {@link CloseEvent},
      * {@link AwaitDemandFuture}) to the stream.
      */
     abstract void addObjectOrEvent(Object obj);
