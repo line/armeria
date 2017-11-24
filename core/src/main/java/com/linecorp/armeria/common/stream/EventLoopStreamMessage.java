@@ -88,8 +88,8 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
      */
     public EventLoopStreamMessage() {
         this(RequestContext.mapCurrent(RequestContext::eventLoop, () -> {
-            UnexpectedEventLoopException e = new UnexpectedEventLoopException();
-            List<StackTraceElement> stackTrace = ImmutableList.copyOf(e.getStackTrace());
+            final UnexpectedEventLoopException e = new UnexpectedEventLoopException();
+            final List<StackTraceElement> stackTrace = ImmutableList.copyOf(e.getStackTrace());
             UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, (unused) -> {
                 logger.warn("Creating EventLoopStreamMessage without specifying EventLoop. " +
                             "This will be very slow if writer or subscriber run in a different EventLoop.", e);
@@ -245,7 +245,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     }
 
     private void doRequest(long n) {
-        long oldDemand = demand;
+        final long oldDemand = demand;
         final long newDemand;
         if (oldDemand >= Long.MAX_VALUE - n) {
             newDemand = Long.MAX_VALUE;
@@ -260,8 +260,8 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     }
 
     private void doAddObject(T obj) {
-        SubscriptionImpl subscription = this.subscription;
         if (queue.isEmpty() && demand > 0 && !inOnNext) {
+            SubscriptionImpl subscription = this.subscription;
             // Nothing in the queue and the subscriber is ready for an object, so send it directly.
             demand--;
             doNotifySubscriberOfObject(subscription, obj);
@@ -338,7 +338,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             }
 
             if (o instanceof AwaitDemandFuture) {
-                AwaitDemandFuture f = (AwaitDemandFuture) queue.remove();
+                final AwaitDemandFuture f = (AwaitDemandFuture) queue.remove();
                 f.complete(null);
                 continue;
             }
