@@ -14,14 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.grpc.shared;
 
-import java.util.List;
-
-public class DefaultStreamMessageTest extends AbstractStreamMessageTest {
-
-    @Override
-    <T> StreamMessageAndWriter<T> newStream(List<T> unused) {
-        return new DefaultStreamMessage<>();
-    }
+public enum ClientType {
+    // The official client for the benchmark (armeria for downstream, grpc-netty for upstream).
+    NORMAL,
+    // The grpc-okhttp client.
+    OKHTTP;
 }

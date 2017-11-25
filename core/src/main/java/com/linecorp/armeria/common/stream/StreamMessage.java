@@ -137,7 +137,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * </ul>
      */
     @Override
-    void subscribe(Subscriber<? super T> s);
+    void subscribe(Subscriber<? super T> subscriber);
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -152,7 +152,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *                          {@link StreamMessage#subscribe(Subscriber)}.
      * @throws IllegalStateException if there is a {@link Subscriber} who subscribed to this stream already
      */
-    void subscribe(Subscriber<? super T> s, boolean withPooledObjects);
+    void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects);
 
     /**
      * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
@@ -163,7 +163,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
      * </ul>
      */
-    void subscribe(Subscriber<? super T> s, Executor executor);
+    void subscribe(Subscriber<? super T> subscriber, Executor executor);
 
     /**
      * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
@@ -178,7 +178,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *                          as is, without making a copy. If you don't know what this means, use
      *                          {@link StreamMessage#subscribe(Subscriber)}.
      */
-    void subscribe(Subscriber<? super T> s, Executor executor, boolean withPooledObjects);
+    void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects);
 
     /**
      * Closes this stream with {@link AbortedStreamException} and prevents further subscription.

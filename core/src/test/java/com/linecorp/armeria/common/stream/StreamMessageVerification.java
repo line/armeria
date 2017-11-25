@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -74,7 +75,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
 
             assertThat(stream.isOpen()).isFalse();
             assertThat(stream.isEmpty()).isTrue();
-            assertThat(stream.completionFuture()).isCompleted();
+            await().untilAsserted(() -> assertThat(stream.completionFuture()).isCompleted());
             sub.expectNone();
         });
     }
@@ -87,7 +88,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             assertThat(stream.isOpen()).isTrue();
             assertThat(stream.isEmpty()).isFalse();
 
-            assertThat(stream.completionFuture()).isNotDone();
+            await().untilAsserted(() -> assertThat(stream.completionFuture()).isNotDone());
             sub.requestNextElement();
             sub.requestEndOfStream();
             assertThat(stream.completionFuture()).isCompleted();
@@ -107,7 +108,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             sub.cancel();
             sub.expectNone();
 
-            assertThat(stream.completionFuture()).isCompletedExceptionally();
+            await().untilAsserted(() -> assertThat(stream.completionFuture()).isCompletedExceptionally());
             assertThatThrownBy(() -> stream.completionFuture().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(CancelledSubscriptionException.class);
