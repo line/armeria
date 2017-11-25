@@ -43,11 +43,14 @@ import io.netty.channel.EventLoop;
  * A {@link StreamMessage} optimized for when writes and reads all happen on the provided {@link EventLoop},
  * removing the need for most synchronization from the hot path. This should satisfy standard cases when using
  * Armeria. It is not required for writes or reads to use the provided {@link EventLoop} but in such a case, it
- * will be significantly faster to use {@link DefaultStreamMessage}.
+ * will be significantly faster to use {@link ConcurrentStreamMessage}.
  *
  * <p>Note that when {@link Subscription#cancel()} or {@link #abort()} are called from a different thread, the
  * stream will continue to signal objects until demand is satisfied, rather than stopping in the middle. If this
- * is an issue, it is recommended to use {@link DefaultStreamMessage}.
+ * is an issue, it is recommended to use {@link ConcurrentStreamMessage}.
+ *
+ * <p>It is highly recommended to specify the {@link EventLoop} which will perform write operations
+ * in the constructor for higher performance.
  */
 // NB: Methods in this class prefixed with 'do' must be run on the stream's event loop.
 public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
@@ -82,15 +85,15 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     private volatile boolean wroteAny;
 
     /**
-     * Creates a new {@link EventLoopStreamMessage} which executes all writes on an arbitrary {@link EventLoop}.
-     * It is highly recommended to use {@link #EventLoopStreamMessage(EventLoop)} instead to allow writes to
-     * happen on the same {@link EventLoop} as this stream's.
+     * Creates a new {@link EventLoopStreamMessage} which executes all writes on the {@link EventLoop} of the
+     * current {@link RequestContext}. If there is no {@link RequestContext} bound to the current thread,
+     * it will choose an arbitrary {@link EventLoop} from {@link CommonPools#workerGroup()}.
      */
     public EventLoopStreamMessage() {
         this(RequestContext.mapCurrent(RequestContext::eventLoop, () -> {
             final UnexpectedEventLoopException e = new UnexpectedEventLoopException();
             final List<StackTraceElement> stackTrace = ImmutableList.copyOf(e.getStackTrace());
-            UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, (unused) -> {
+            UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, unused -> {
                 logger.warn("Creating EventLoopStreamMessage without specifying EventLoop. " +
                             "This will be very slow if writer or subscriber run in a different EventLoop.", e);
                 return true;
@@ -100,7 +103,8 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     }
 
     /**
-     * Creates a new {@link EventLoopStreamMessage} which executes all writes on the provided {@link EventLoop}.
+     * Creates a new {@link EventLoopStreamMessage} which executes all writes on the specified
+     * {@link EventLoop}.
      */
     public EventLoopStreamMessage(EventLoop eventLoop) {
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
@@ -115,6 +119,16 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     @Override
     public boolean isEmpty() {
         return !isOpen() && !wroteAny;
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber) {
+        subscribe(subscriber, eventLoop);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
+        subscribe(subscriber, eventLoop, withPooledObjects);
     }
 
     @Override

@@ -55,8 +55,11 @@ public class DefaultHttpRequestTest {
         });
 
         req.abort();
+
+        future.join();
         assertThat(future).isCompletedExceptionally();
-        assertThat(callbackThread.get()).isSameAs(mainThread);
+        // Notification will take place from an EventLoop.
+        assertThat(callbackThread.get()).isNotSameAs(mainThread);
     }
 
     /**

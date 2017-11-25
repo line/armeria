@@ -18,10 +18,10 @@ package com.linecorp.armeria.common.stream;
 
 import java.util.List;
 
-public class DefaultStreamMessageTest extends AbstractStreamMessageTest {
+public class ConcurrentStreamMessageTest extends AbstractStreamMessageTest {
 
     @Override
     <T> StreamMessageAndWriter<T> newStream(List<T> unused) {
-        return new DefaultStreamMessage<>();
+        return new ConcurrentStreamMessage<>();
     }
 }

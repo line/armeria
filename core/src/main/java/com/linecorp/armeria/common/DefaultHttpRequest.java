@@ -20,13 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
 
 /**
  * Default {@link HttpRequest} implementation.
  */
 public class DefaultHttpRequest
-        extends DefaultStreamMessage<HttpObject> implements HttpRequest, HttpRequestWriter {
+        extends EventLoopStreamMessage<HttpObject> implements HttpRequest, HttpRequestWriter {
 
     private final HttpHeaders headers;
     private final boolean keepAlive;

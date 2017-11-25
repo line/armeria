@@ -60,20 +60,20 @@ import com.linecorp.armeria.common.Flags;
  *
  * @param <T> the type of element signaled
  */
-public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
+public class ConcurrentStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, SubscriptionImpl>
+    private static final AtomicReferenceFieldUpdater<ConcurrentStreamMessage, SubscriptionImpl>
             subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                    DefaultStreamMessage.class, SubscriptionImpl.class, "subscription");
+            ConcurrentStreamMessage.class, SubscriptionImpl.class, "subscription");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicLongFieldUpdater<DefaultStreamMessage> demandUpdater =
-            AtomicLongFieldUpdater.newUpdater(DefaultStreamMessage.class, "demand");
+    private static final AtomicLongFieldUpdater<ConcurrentStreamMessage> demandUpdater =
+            AtomicLongFieldUpdater.newUpdater(ConcurrentStreamMessage.class, "demand");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, State> stateUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
+    private static final AtomicReferenceFieldUpdater<ConcurrentStreamMessage, State> stateUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(ConcurrentStreamMessage.class, State.class, "state");
 
     private final Queue<Object> queue;
 
@@ -94,14 +94,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     /**
      * Creates a new instance with a new {@link ConcurrentLinkedQueue}.
      */
-    public DefaultStreamMessage() {
+    public ConcurrentStreamMessage() {
         this(new ConcurrentLinkedQueue<>());
     }
 
     /**
      * Creates a new instance with the specified {@link Queue}.
      */
-    public DefaultStreamMessage(Queue<Object> queue) {
+    public ConcurrentStreamMessage(Queue<Object> queue) {
         this.queue = requireNonNull(queue, "queue");
     }
 

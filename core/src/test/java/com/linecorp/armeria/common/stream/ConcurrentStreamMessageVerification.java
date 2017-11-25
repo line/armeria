@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.testng.annotations.Test;
 
-public class DefaultStreamMessageVerification extends StreamMessageVerification<Long> {
+public class ConcurrentStreamMessageVerification extends StreamMessageVerification<Long> {
 
     @Override
     public StreamMessage<Long> createPublisher(long elements) {
@@ -28,7 +28,7 @@ public class DefaultStreamMessageVerification extends StreamMessageVerification<
     }
 
     static StreamMessage<Long> createStreamMessage(long elements, boolean abort) {
-        final DefaultStreamMessage<Long> stream = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<Long> stream = new ConcurrentStreamMessage<>();
         if (elements == 0) {
             if (abort) {
                 stream.abort();
@@ -44,7 +44,7 @@ public class DefaultStreamMessageVerification extends StreamMessageVerification<
     }
 
     private static void stream(long elements, boolean abort,
-                               AtomicLong remaining, DefaultStreamMessage<Long> stream) {
+                               AtomicLong remaining, ConcurrentStreamMessage<Long> stream) {
         stream.onDemand(() -> {
             for (;;) {
                 final long r = remaining.decrementAndGet();
@@ -68,7 +68,7 @@ public class DefaultStreamMessageVerification extends StreamMessageVerification<
 
     @Override
     public StreamMessage<Long> createFailedPublisher() {
-        DefaultStreamMessage<Long> stream = new DefaultStreamMessage<>();
+        ConcurrentStreamMessage<Long> stream = new ConcurrentStreamMessage<>();
         stream.subscribe(new NoopSubscriber<>());
         return stream;
     }
@@ -80,9 +80,9 @@ public class DefaultStreamMessageVerification extends StreamMessageVerification<
 
     // createStreamMessage creates a publisher that relies on onDemand for triggering writes - unfortunately
     // means that it is not possible to have reads and writes to the stream happening synchronously in the same
-    // call tree, so this test passes regardless of whether DefaultStreamMessage actually correctly handles
+    // call tree, so this test passes regardless of whether ConcurrentStreamMessage actually correctly handles
     // recursion. We disable it here to prevent a false sense of security and verify the behavior in
-    // DefaultStreamMessageTest.flowControlled_writeThenDemandThenProcess.
+    // ConcurrentStreamMessageTest.flowControlled_writeThenDemandThenProcess.
     @Override
     @Test(enabled = false)
     public void required_spec303_mustNotAllowUnboundedRecursion() throws Throwable {

@@ -96,7 +96,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void closePublisherNormally() throws Exception {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<String> publisher = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
         final CompletableFuture<String> future1 = subscribe(duplicator.duplicateStream());
@@ -110,7 +110,7 @@ public class StreamMessageDuplicatorTest {
         duplicator.close();
     }
 
-    private static void writeData(DefaultStreamMessage<String> publisher) {
+    private static void writeData(ConcurrentStreamMessage<String> publisher) {
         publisher.write("Armeria ");
         publisher.write("is ");
         publisher.write("awesome.");
@@ -130,7 +130,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void closePublisherExceptionally() throws Exception {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<String> publisher = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
         final CompletableFuture<String> future1 = subscribe(duplicator.duplicateStream());
@@ -148,7 +148,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void subscribeAfterPublisherClosed() throws Exception {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<String> publisher = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
         final CompletableFuture<String> future1 = subscribe(duplicator.duplicateStream());
@@ -165,7 +165,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void childStreamIsNotClosedWhenDemandIsNotEnough() throws Exception {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<String> publisher = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
         final CompletableFuture<String> future1 = new CompletableFuture<>();
@@ -189,7 +189,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void abortPublisherWithSubscribers() {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<String> publisher = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
         final CompletableFuture<String> future = subscribe(duplicator.duplicateStream());
@@ -202,7 +202,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void abortPublisherWithoutSubscriber() {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<String> publisher = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
         publisher.abort();
 
@@ -215,7 +215,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void abortChildStream() {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<String> publisher = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
         final StreamMessage<String> sm1 = duplicator.duplicateStream();
@@ -238,7 +238,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void closeMulticastStreamFactory() {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<String> publisher = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
         duplicator.close();
@@ -305,7 +305,7 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void lastDuplicateStream() {
-        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<ByteBuf> publisher = new ConcurrentStreamMessage<>();
         final ByteBufDuplicator duplicator = new ByteBufDuplicator(publisher);
 
         duplicator.duplicateStream().subscribe(new ByteBufSubscriber());

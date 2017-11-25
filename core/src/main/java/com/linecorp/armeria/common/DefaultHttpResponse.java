@@ -18,13 +18,13 @@ package com.linecorp.armeria.common;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
 
 /**
  * Default {@link HttpResponse} instance.
  */
 public class DefaultHttpResponse
-        extends DefaultStreamMessage<HttpObject> implements HttpResponse, HttpResponseWriter {
+        extends EventLoopStreamMessage<HttpObject> implements HttpResponse, HttpResponseWriter {
 
     @Override
     public String toString() {

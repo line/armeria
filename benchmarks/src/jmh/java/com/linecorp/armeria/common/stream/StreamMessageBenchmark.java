@@ -54,8 +54,8 @@ public class StreamMessageBenchmark {
     public static class StreamObjects {
 
         public enum StreamType {
-            DEFAULT_STREAM_MESSAGE,
-            EVENT_LOOP_MESSAGE,
+            CONCURRENT,
+            EVENT_LOOP,
         }
 
         @Param
@@ -156,10 +156,10 @@ public class StreamMessageBenchmark {
 
     private StreamMessageAndWriter<Integer> newStream(StreamObjects streamObjects) {
         switch (streamObjects.streamType) {
-            case EVENT_LOOP_MESSAGE:
+            case EVENT_LOOP:
                 return new EventLoopStreamMessage<>(EventLoopJmhExecutor.currentEventLoop());
-            case DEFAULT_STREAM_MESSAGE:
-                return new DefaultStreamMessage<>();
+            case CONCURRENT:
+                return new ConcurrentStreamMessage<>();
             default:
                 throw new Error();
         }
@@ -256,10 +256,10 @@ public class StreamMessageBenchmark {
 
         private StreamMessageAndWriter<Integer> newStream(StreamObjects streamObjects) {
             switch (streamObjects.streamType) {
-                case EVENT_LOOP_MESSAGE:
+                case EVENT_LOOP:
                     return new EventLoopStreamMessage<>(EVENT_LOOP1);
-                case DEFAULT_STREAM_MESSAGE:
-                    return new DefaultStreamMessage<>();
+                case CONCURRENT:
+                    return new ConcurrentStreamMessage<>();
                 default:
                     throw new Error();
             }

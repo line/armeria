@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.DefaultStreamMessageVerification.createStreamMessage;
+import static com.linecorp.armeria.common.stream.ConcurrentStreamMessageVerification.createStreamMessage;
 
 import java.util.concurrent.atomic.AtomicReference;
 
