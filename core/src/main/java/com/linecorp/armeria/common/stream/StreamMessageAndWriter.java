@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,11 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.benchmarks.grpc.shared;
+package com.linecorp.armeria.common.stream;
 
-public enum ClientType {
-    // The official client for the benchmark (armeria for downstream, grpc-netty for upstream).
-    NORMAL,
-    // The grpc-okhttp client.
-    OKHTTP;
+/**
+ * A type which is both a {@link StreamMessage} and a {@link StreamWriter}. This type is mainly used by tests
+ * which need to exercise both functionality.
+ */
+interface StreamMessageAndWriter<T> extends StreamMessage<T>, StreamWriter<T> {
 }
