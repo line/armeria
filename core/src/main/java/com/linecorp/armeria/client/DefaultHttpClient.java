@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 
 import javax.annotation.Nullable;
 
@@ -26,6 +25,7 @@ import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -46,13 +46,13 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         final String concatPaths = concatPaths(uri().getRawPath(), req.path());
         req.path(concatPaths);
 
-        final String[] pathAndQuery = splitPathAndQuery(concatPaths);
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(concatPaths);
         if (pathAndQuery == null) {
             req.abort();
             return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + concatPaths));
         }
 
-        return execute(eventLoop, req.method(), pathAndQuery[0], pathAndQuery[1], null, req, cause -> {
+        return execute(eventLoop, req.method(), pathAndQuery.path(), pathAndQuery.query(), null, req, cause -> {
             final DefaultHttpResponse res = new DefaultHttpResponse();
             res.close(cause);
             return res;
