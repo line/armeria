@@ -21,11 +21,12 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceUnavailableException;
 
 /**
  * Decorates a RPC {@link Service} to throttle incoming requests.
@@ -52,11 +53,11 @@ public class ThrottlingRpcService extends ThrottlingService<RpcRequest, RpcRespo
 
     /**
      * Invoked when {@code req} is throttled. By default, this method responds with a
-     * {@link ServiceUnavailableException}.
+     * {@link HttpStatusException} with {@code 503 Service Unavailable}.
      */
     @Override
     protected RpcResponse onFailure(ServiceRequestContext ctx, RpcRequest req, @Nullable Throwable cause)
             throws Exception {
-        return RpcResponse.ofFailure(ServiceUnavailableException.get());
+        return RpcResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE));
     }
 }

@@ -21,21 +21,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.DecoratingServiceFunction;
-
 /**
- * Specifies {@link DecoratingServiceFunction} classes which handle a {@link HttpRequest} before invoking
- * an annotated service method.
+ * The containing annotation type for {@link Decorator}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface Decorate {
-
+public @interface Decorators {
     /**
-     * An array of the {@link DecoratingServiceFunction} classes. Each class specified in the {@code value}
-     * must have an accessible default constructor.
+     * An array of {@link Decorator}s.
      */
-    Class<? extends DecoratingServiceFunction<HttpRequest, HttpResponse>>[] value();
+    Decorator[] value();
 }

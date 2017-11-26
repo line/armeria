@@ -25,15 +25,16 @@ import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.PathMapped;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.PathMappingContext;
-import com.linecorp.armeria.server.ResourceNotFoundException;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.Routers;
 import com.linecorp.armeria.server.Server;
@@ -138,7 +139,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         final PathMappingContext mappingCtx = ctx.pathMappingContext();
         final PathMapped<Service<I, O>> mapped = findService(mappingCtx.overridePath(ctx.mappedPath()));
         if (!mapped.isPresent()) {
-            throw ResourceNotFoundException.get();
+            throw HttpStatusException.of(HttpStatus.NOT_FOUND);
         }
 
         final Optional<String> childPrefix = mapped.mapping().prefix();

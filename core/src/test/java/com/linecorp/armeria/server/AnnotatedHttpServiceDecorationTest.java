@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
 import com.linecorp.armeria.server.annotation.Converter;
-import com.linecorp.armeria.server.annotation.Decorate;
+import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -66,21 +66,22 @@ public class AnnotatedHttpServiceDecorationTest {
     public static class MyDecorationService1 {
 
         @Get("/tooManyRequests")
-        @Decorate(AlwaysTooManyRequestsDecorator.class)
+        @Decorator(AlwaysTooManyRequestsDecorator.class)
         public String tooManyRequests(ServiceRequestContext ctx, HttpRequest req) {
             validateContextAndRequest(ctx, req);
             return "OK";
         }
 
         @Get("/locked")
-        @Decorate({ FallThroughDecorator.class, AlwaysLockedDecorator.class })
+        @Decorator(FallThroughDecorator.class)
+        @Decorator(AlwaysLockedDecorator.class)
         public String locked(ServiceRequestContext ctx, HttpRequest req) {
             validateContextAndRequest(ctx, req);
             return "OK";
         }
 
         @Get("/ok")
-        @Decorate(FallThroughDecorator.class)
+        @Decorator(FallThroughDecorator.class)
         public String ok(ServiceRequestContext ctx, HttpRequest req) {
             validateContextAndRequest(ctx, req);
             return "OK";
@@ -92,14 +93,14 @@ public class AnnotatedHttpServiceDecorationTest {
 
         @Override
         @Get("/override")
-        @Decorate(AlwaysTooManyRequestsDecorator.class)
+        @Decorator(AlwaysTooManyRequestsDecorator.class)
         public String ok(ServiceRequestContext ctx, HttpRequest req) {
             validateContextAndRequest(ctx, req);
             return "OK";
         }
 
         @Get("/added")
-        @Decorate(FallThroughDecorator.class)
+        @Decorator(FallThroughDecorator.class)
         public String added(ServiceRequestContext ctx, HttpRequest req) {
             validateContextAndRequest(ctx, req);
             return "OK";
@@ -116,7 +117,7 @@ public class AnnotatedHttpServiceDecorationTest {
                                   ServiceRequestContext ctx,
                                   HttpRequest req) throws Exception {
             validateContextAndRequest(ctx, req);
-            throw new HttpResponseException(HttpStatus.TOO_MANY_REQUESTS);
+            throw HttpStatusException.of(HttpStatus.TOO_MANY_REQUESTS);
         }
     }
 

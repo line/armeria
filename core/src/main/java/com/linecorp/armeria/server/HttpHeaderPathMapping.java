@@ -85,7 +85,7 @@ final class HttpHeaderPathMapping implements PathMapping {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (!mappingCtx.delayedThrowable().isPresent()) {
-                mappingCtx.delayThrowable(HttpResponseException.of(HttpStatus.METHOD_NOT_ALLOWED));
+                mappingCtx.delayThrowable(HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
             }
             return PathMappingResult.empty();
         }
@@ -102,7 +102,7 @@ final class HttpHeaderPathMapping implements PathMapping {
                 }
             }
             if (!found) {
-                mappingCtx.delayThrowable(HttpResponseException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
+                mappingCtx.delayThrowable(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
                 return PathMappingResult.empty();
             }
         }
@@ -132,7 +132,7 @@ final class HttpHeaderPathMapping implements PathMapping {
             }
         }
 
-        mappingCtx.delayThrowable(HttpResponseException.of(HttpStatus.NOT_ACCEPTABLE));
+        mappingCtx.delayThrowable(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
         return PathMappingResult.empty();
     }
 
