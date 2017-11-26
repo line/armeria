@@ -23,6 +23,8 @@ import java.util.concurrent.Executor;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link StreamMessage} that filters objects as they are published. The filtering
@@ -30,6 +32,8 @@ import org.reactivestreams.Subscription;
  * order that the {@code delegate} processes the objects in.
  */
 public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
+
+    private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 
     private final StreamMessage<T> delegate;
 
@@ -64,9 +68,12 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     /**
      * A callback executed just before calling {@link Subscriber#onError(Throwable)} on {@code subscriber}.
      * Override this method to execute any cleanup logic that may be needed before failing the
-     * subscription.
+     * subscription. This method may rewrite the {@code cause} and then return a new one so that the new
+     * {@link Throwable} would be passed to {@link Subscriber#onError(Throwable)}.
      */
-    protected void beforeError(Subscriber<? super U> subscriber, Throwable cause) {}
+    protected Throwable beforeError(Subscriber<? super U> subscriber, Throwable cause) {
+        return cause;
+    }
 
     @Override
     public boolean isOpen() {
@@ -136,8 +143,14 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onError(Throwable t) {
-            beforeError(delegate, t);
-            delegate.onError(t);
+            final Throwable filteredCause = beforeError(delegate, t);
+            if (filteredCause != null) {
+                delegate.onError(filteredCause);
+            } else {
+                logger.warn("{}#beforeError() returned null. Using the original exception:",
+                            FilteredStreamMessage.this.getClass().getName(), t.toString());
+                delegate.onError(t);
+            }
         }
 
         @Override

@@ -16,26 +16,29 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.DefaultHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 
 public class HttpResponseExceptionTest {
     @Test
-    public void httpStatus() throws Exception {
-        HttpResponseException exception = new HttpResponseException(HttpStatus.INTERNAL_SERVER_ERROR) {
-            private static final long serialVersionUID = -1132103140930994783L;
-        };
-        assertThat(exception.httpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    public void testHttpResponse() throws Exception {
+        final DefaultHttpResponse response = new DefaultHttpResponse();
+        final HttpResponseException exception = HttpResponseException.of(response);
+        response.write(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR)
+                                  .add(HttpHeaderNames.CONTENT_TYPE,
+                                       MediaType.PLAIN_TEXT_UTF_8.toString()));
+        response.close();
 
-    @Test
-    public void onlyAcceptErrorHttpStatus() throws Exception {
-        assertThatThrownBy(() -> new HttpResponseException(HttpStatus.ACCEPTED) {
-            private static final long serialVersionUID = -1132103140930994783L;
-        }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("(expected: a status that's neither informational, success nor redirection)");
+        final AggregatedHttpMessage message = exception.httpResponse().aggregate().join();
+        assertThat(message.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(message.headers().get(HttpHeaderNames.CONTENT_TYPE))
+                .isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
     }
 }

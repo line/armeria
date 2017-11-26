@@ -23,12 +23,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Throwables;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * {@link PathMapping} and their corresponding {@link BiFunction}.
@@ -43,7 +40,8 @@ final class AnnotatedHttpService implements HttpService {
     /**
      * The {@link BiFunction} that will handle the request actually.
      */
-    private final BiFunction<ServiceRequestContext, HttpRequest, Object> function;
+    private final BiFunction<ServiceRequestContext, HttpRequest,
+            CompletionStage<HttpResponse>> function;
 
     /**
      * A decorator of this service.
@@ -55,7 +53,8 @@ final class AnnotatedHttpService implements HttpService {
      * Creates a new instance.
      */
     AnnotatedHttpService(HttpHeaderPathMapping pathMapping,
-                         BiFunction<ServiceRequestContext, HttpRequest, Object> function,
+                         BiFunction<ServiceRequestContext, HttpRequest,
+                                 CompletionStage<HttpResponse>> function,
                          Function<Service<HttpRequest, HttpResponse>,
                                  ? extends Service<HttpRequest, HttpResponse>> decorator) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
@@ -90,36 +89,15 @@ final class AnnotatedHttpService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-
-        final Object ret;
-        try {
-            ret = function.apply(ctx, req);
-        } catch (IllegalArgumentException ignore) {
-            throw new HttpResponseException(HttpStatus.BAD_REQUEST);
-        }
-
-        if (!(ret instanceof CompletionStage)) {
-            return HttpResponse.ofFailure(new IllegalStateException(
-                    "illegal return type: " + ret.getClass().getSimpleName()));
-        }
-
-        @SuppressWarnings("unchecked")
-        CompletionStage<HttpResponse> castStage = (CompletionStage<HttpResponse>) ret;
-        return HttpResponse.from(castStage.handle((httpResponse, throwable) -> {
-            if (throwable != null) {
-                if (Throwables.getRootCause(throwable) instanceof IllegalArgumentException) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST);
-                }
-                return Exceptions.throwUnsafely(throwable);
-            }
-            return httpResponse;
-        }));
+        return HttpResponse.from(function.apply(ctx, req));
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("pathMapping", pathMapping)
-                          .add("function", function).toString();
+                          .add("function", function)
+                          .add("decorator", decorator)
+                          .toString();
     }
 }

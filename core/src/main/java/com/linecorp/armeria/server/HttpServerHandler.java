@@ -261,7 +261,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final PathMapped<ServiceConfig> mapped;
         try {
             mapped = host.findServiceConfig(mappingCtx);
-        } catch (HttpResponseException cause) {
+        } catch (HttpStatusException cause) {
+            // We do not need to handle HttpResponseException here because we do not use it internally.
             respond(ctx, req, cause.httpStatus());
             return;
         } catch (Throwable cause) {
@@ -287,15 +288,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         try (SafeCloseable ignored = RequestContext.push(reqCtx)) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-            final HttpResponse res;
+            HttpResponse res;
             try {
                 req.init(reqCtx);
                 res = service.serve(reqCtx, req);
+            } catch (HttpResponseException cause) {
+                res = cause.httpResponse();
             } catch (Throwable cause) {
                 logBuilder.endRequest(cause);
                 logBuilder.endResponse(cause);
-                if (cause instanceof HttpResponseException) {
-                    respond(ctx, req, ((HttpResponseException) cause).httpStatus());
+                if (cause instanceof HttpStatusException) {
+                    respond(ctx, req, ((HttpStatusException) cause).httpStatus());
                 } else {
                     logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
                     respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR);
