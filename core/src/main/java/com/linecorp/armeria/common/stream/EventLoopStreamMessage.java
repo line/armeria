@@ -329,7 +329,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             }
 
             if (o instanceof CloseEvent) {
-                doNotifySubscriberWithCloseEvent(subscription, (CloseEvent) o);
+                doNotifySubscriberWithCloseEvent(subscription, (CloseEvent) queue.remove());
                 break;
             }
 

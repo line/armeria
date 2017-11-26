@@ -302,7 +302,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             }
 
             if (o instanceof CloseEvent) {
-                notifySubscriberWithCloseEvent(subscription, (CloseEvent) o);
+                notifySubscriberWithCloseEvent(subscription, (CloseEvent) queue.remove());
                 break;
             }
 

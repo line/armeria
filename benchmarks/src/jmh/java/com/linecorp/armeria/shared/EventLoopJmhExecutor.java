@@ -43,7 +43,7 @@ public class EventLoopJmhExecutor extends MultithreadEventLoopGroup {
 
     public static final String JVM_ARG_1 = "-Djmh.executor=CUSTOM";
     public static final String JVM_ARG_2 =
-            "-Djmh.executor.class=com.linecorp.armeria.benchmarks.shared.EventLoopJmhExecutor";
+            "-Djmh.executor.class=com.linecorp.armeria.shared.EventLoopJmhExecutor";
 
     private static final FastThreadLocal<EventLoop> CURRENT_EVENT_LOOP = new FastThreadLocal<>();
 

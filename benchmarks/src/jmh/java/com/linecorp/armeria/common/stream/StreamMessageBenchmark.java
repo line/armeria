@@ -32,6 +32,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.stream.StreamMessageBenchmark.StreamMessageThreadingBenchmark.EventLoopType;
+import com.linecorp.armeria.common.stream.StreamMessageBenchmark.StreamObjects.StreamType;
 import com.linecorp.armeria.shared.EventLoopJmhExecutor;
 
 import io.netty.channel.DefaultEventLoop;
@@ -273,9 +275,9 @@ public class StreamMessageBenchmark {
 
         private Subscription subscription;
 
-        private long sum;
-        private boolean complete;
-        private Throwable error;
+        private volatile long sum;
+        private volatile boolean complete;
+        private volatile Throwable error;
 
         private SummingSubscriber(CountDownLatch completedLatch, boolean flowControl) {
             this.completedLatch = completedLatch;
