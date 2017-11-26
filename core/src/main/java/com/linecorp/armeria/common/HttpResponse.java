@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
@@ -44,9 +47,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
      */
     static HttpResponse of(int statusCode) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(statusCode);
-        return res;
+        return of(HttpStatus.valueOf(statusCode));
     }
 
     /**
@@ -54,9 +55,16 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
      */
     static HttpResponse of(HttpStatus status) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(status);
-        return res;
+        requireNonNull(status, "status");
+        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+            DefaultHttpResponse res = new DefaultHttpResponse();
+            res.write(HttpHeaders.of(status));
+            return res;
+        } else if (isContentAlwaysEmpty(status)) {
+            return FixedHttpResponse.of(HttpHeaders.of(status));
+        } else {
+            return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
+        }
     }
 
     /**
@@ -66,9 +74,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String content) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(status, mediaType, content);
-        return res;
+        return of(status, mediaType, content.getBytes(mediaType.charset().orElse(StandardCharsets.UTF_8)));
     }
 
     /**
@@ -81,9 +87,10 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param args the arguments referenced by the format specifiers in the format string
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String format, Object... args) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(status, mediaType, format, args);
-        return res;
+        return of(status,
+                  mediaType,
+                  String.format(Locale.ENGLISH, format, args).getBytes(
+                          mediaType.charset().orElse(StandardCharsets.UTF_8)));
     }
 
     /**
@@ -93,9 +100,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(status, mediaType, content);
-        return res;
+        return of(status, mediaType, HttpData.of(content));
     }
 
     /**
@@ -107,9 +112,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param length the length of {@code content}
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(status, mediaType, content, offset, length);
-        return res;
+        return of(status, mediaType, HttpData.of(content, offset, length));
     }
 
     /**
@@ -119,9 +122,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(status, mediaType, content);
-        return res;
+        return of(status, mediaType, content, HttpHeaders.EMPTY_HEADERS);
     }
 
     /**
@@ -133,9 +134,49 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
                            HttpHeaders trailingHeaders) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(status, mediaType, content, trailingHeaders);
-        return res;
+        requireNonNull(status, "status");
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
+
+        final HttpHeaders headers =
+                HttpHeaders.of(status)
+                           .setObject(HttpHeaderNames.CONTENT_TYPE, mediaType)
+                           .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+        return of(headers, status, content, trailingHeaders);
+    }
+
+    /**
+     * Creates the specified HTTP response and closes the stream.
+     */
+    static HttpResponse of(AggregatedHttpMessage res) {
+        requireNonNull(res, "res");
+        return res.toHttpResponse();
+    }
+
+    /**
+     * Creates a new HTTP response of the specified objects and closes the stream.
+     */
+    static HttpResponse of(
+            HttpHeaders headers, HttpStatus status, HttpData content, HttpHeaders trailingHeaders) {
+        requireNonNull(headers, "headers");
+        requireNonNull(status, "status");
+        requireNonNull(content, "content");
+        requireNonNull(trailingHeaders, "trailingHeaders");
+
+        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+            return FixedHttpResponse.of(headers);
+        } else if (!content.isEmpty()) {
+            if (trailingHeaders.isEmpty()) {
+                return FixedHttpResponse.of(headers, content);
+            } else {
+                return FixedHttpResponse.of(headers, content, trailingHeaders);
+            }
+        } else if (!trailingHeaders.isEmpty()) {
+            return FixedHttpResponse.of(headers, trailingHeaders);
+        } else {
+            return FixedHttpResponse.of(headers);
+        }
     }
 
     /**

@@ -28,8 +28,6 @@ import io.netty.util.ReferenceCounted;
 abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T>
         implements StreamMessageAndWriter<T> {
 
-    static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
-
     enum State {
         /**
          * The initial state. Will enter {@link #CLOSED} or {@link #CLEANUP}.

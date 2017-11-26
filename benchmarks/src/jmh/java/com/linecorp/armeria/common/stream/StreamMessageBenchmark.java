@@ -56,6 +56,7 @@ public class StreamMessageBenchmark {
         public enum StreamType {
             DEFAULT_STREAM_MESSAGE,
             EVENT_LOOP_MESSAGE,
+            FIXED_STREAM_MESSAGE,
         }
 
         @Param
@@ -103,11 +104,14 @@ public class StreamMessageBenchmark {
             return computedSum;
         }
 
-        private void writeAllValues(StreamWriter<Integer> stream) {
-            for (Integer i : values) {
-                stream.write(i);
+        private void writeAllValues(StreamMessage<Integer> stream) {
+            if (stream instanceof StreamWriter) {
+                StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
+                for (Integer i : values) {
+                    writer.write(i);
+                }
+                writer.close();
             }
-            stream.close();
             wroteLatch.countDown();
         }
 
@@ -121,10 +125,9 @@ public class StreamMessageBenchmark {
 
     @Benchmark
     public long noExecutor(StreamObjects streamObjects) {
-        StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
+        StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber);
         streamObjects.writeAllValues(stream);
-        stream.close();
         // No executor, so sum will be updated inline.
         return streamObjects.computedSum();
     }
@@ -133,10 +136,9 @@ public class StreamMessageBenchmark {
     // deadlock.
     @Benchmark
     public long jmhEventLoop(StreamObjects streamObjects) {
-        StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
+        StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber, EventLoopJmhExecutor.currentEventLoop());
         streamObjects.writeAllValues(stream);
-        stream.close();
         return streamObjects.computedSum();
     }
 
@@ -145,21 +147,22 @@ public class StreamMessageBenchmark {
     @Benchmark
     public long notJmhEventLoop(StreamObjects streamObjects) throws Exception {
         ANOTHER_EVENT_LOOP.execute(() -> {
-            StreamMessageAndWriter<Integer> stream = newStream(streamObjects);
+            StreamMessage<Integer> stream = newStream(streamObjects);
             stream.subscribe(streamObjects.subscriber, ANOTHER_EVENT_LOOP);
             streamObjects.writeAllValues(stream);
-            stream.close();
         });
         streamObjects.completedLatch.await(10, TimeUnit.SECONDS);
         return streamObjects.computedSum();
     }
 
-    private StreamMessageAndWriter<Integer> newStream(StreamObjects streamObjects) {
+    private StreamMessage<Integer> newStream(StreamObjects streamObjects) {
         switch (streamObjects.streamType) {
             case EVENT_LOOP_MESSAGE:
                 return new EventLoopStreamMessage<>(EventLoopJmhExecutor.currentEventLoop());
             case DEFAULT_STREAM_MESSAGE:
                 return new DefaultStreamMessage<>();
+            case FIXED_STREAM_MESSAGE:
+                return new FixedStreamMessage<>(streamObjects.values);
             default:
                 throw new Error();
         }
