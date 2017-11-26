@@ -198,6 +198,27 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     }
 
     @Override
+    void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
+        if (subscription.needsDirectInvocation()) {
+            try {
+                event.notifySubscriber(subscription, completionFuture());
+            } finally {
+                subscription.clearSubscriber();
+                cleanup();
+            }
+        } else {
+            subscription.executor().execute(() -> {
+                try {
+                    event.notifySubscriber(subscription, completionFuture());
+                } finally {
+                    subscription.clearSubscriber();
+                    eventLoop.execute(this::cleanup);
+                }
+            });
+        }
+    }
+
+    @Override
     void addObject(T obj) {
         wroteAny = true;
         if (eventLoop.inEventLoop()) {
@@ -329,7 +350,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
             }
 
             if (o instanceof CloseEvent) {
-                doNotifySubscriberWithCloseEvent(subscription, (CloseEvent) queue.remove());
+                doHandleCloseEvent(subscription, (CloseEvent) queue.remove());
                 break;
             }
 
@@ -365,29 +386,15 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
         }
     }
 
-    private void doNotifySubscriberWithCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
+    private void doHandleCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
         if (!invokedOnSubscribe) {
             // Subscriber.onSubscribe() was not invoked yet.
             // Reschedule the notification so that onSubscribe() is invoked before event.
-            eventLoop.execute(() -> doNotifySubscriberWithCloseEvent(subscription, event));
+            eventLoop.execute(() -> doHandleCloseEvent(subscription, event));
             return;
         }
         doSetState(State.CLEANUP);
-        if (subscription.needsDirectInvocation()) {
-            try {
-                event.notifySubscriber(subscription, completionFuture());
-            } finally {
-                cleanup();
-            }
-        } else {
-            subscription.executor().execute(() -> {
-                try {
-                    event.notifySubscriber(subscription, completionFuture());
-                } finally {
-                    eventLoop.execute(this::cleanup);
-                }
-            });
-        }
+        notifySubscriberOfCloseEvent(subscription, event);
     }
 
     private void cancelOrAbort(boolean cancel) {
