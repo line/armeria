@@ -18,6 +18,10 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.Executor;
+
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator;
@@ -68,12 +72,22 @@ public class HttpResponseDuplicator
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
     public HttpResponseDuplicator(HttpResponse res, long maxSignalLength) {
+        this(res, maxSignalLength, null);
+    }
+
+    /**
+     * Creates a new instance wrapping a {@link HttpResponse} and publishing to multiple subscribers.
+     * @param res the response that will publish data to subscribers
+     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
+     * @param executor the executor to use for upstream signals.
+     */
+    public HttpResponseDuplicator(HttpResponse res, long maxSignalLength, @Nullable Executor executor) {
         super(requireNonNull(res, "res"), obj -> {
             if (obj instanceof HttpData) {
                 return ((HttpData) obj).length();
             }
             return 0;
-        }, maxSignalLength);
+        }, null, maxSignalLength);
     }
 
     @Override

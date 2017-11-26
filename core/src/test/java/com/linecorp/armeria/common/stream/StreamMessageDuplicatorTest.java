@@ -338,7 +338,7 @@ public class StreamMessageDuplicatorTest {
     private static class StreamMessageDuplicator
             extends AbstractStreamMessageDuplicator<String, StreamMessage<String>> {
         StreamMessageDuplicator(StreamMessage<String> publisher) {
-            super(publisher, String::length, 0);
+            super(publisher, String::length, null, 0);
         }
 
         @Override
@@ -405,7 +405,7 @@ public class StreamMessageDuplicatorTest {
     private static class ByteBufDuplicator
             extends AbstractStreamMessageDuplicator<ByteBuf, StreamMessage<ByteBuf>> {
         ByteBufDuplicator(StreamMessage<ByteBuf> publisher) {
-            super(publisher, ByteBuf::capacity, 0);
+            super(publisher, ByteBuf::capacity, null, 0);
         }
 
         @Override
