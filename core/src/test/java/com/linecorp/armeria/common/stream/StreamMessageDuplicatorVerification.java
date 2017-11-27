@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.DefaultStreamMessageVerification.createStreamMessage;
+import static com.linecorp.armeria.common.stream.ConcurrentStreamMessageVerification.createStreamMessage;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -33,7 +33,7 @@ public class StreamMessageDuplicatorVerification extends StreamMessageVerificati
 
     @Override
     public StreamMessage<Long> createFailedPublisher() {
-        final StreamMessage<Long> source = new DefaultStreamMessage<>();
+        final StreamMessage<Long> source = new ConcurrentStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(source);
         final StreamMessage<Long> duplicate = duplicator.duplicateStream();
         duplicate.subscribe(new NoopSubscriber<>());

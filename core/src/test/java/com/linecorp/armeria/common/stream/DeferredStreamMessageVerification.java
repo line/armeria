@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.DefaultStreamMessageVerification.createStreamMessage;
+import static com.linecorp.armeria.common.stream.ConcurrentStreamMessageVerification.createStreamMessage;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -33,7 +33,7 @@ public class DeferredStreamMessageVerification extends StreamMessageVerification
     @Override
     public StreamMessage<Long> createFailedPublisher() {
         final DeferredStreamMessage<Long> stream = new DeferredStreamMessage<>();
-        DefaultStreamMessage<Long> delegate = new DefaultStreamMessage<>();
+        ConcurrentStreamMessage<Long> delegate = new ConcurrentStreamMessage<>();
         delegate.subscribe(new NoopSubscriber<>());
         stream.delegate(delegate);
         return stream;

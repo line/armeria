@@ -48,7 +48,7 @@ import io.netty.util.ReferenceCountUtil;
 /**
  * Allows subscribing to a {@link StreamMessage} multiple times by duplicating the stream.
  * <p>
- * Only one subscriber can subscribe other stream messages such as {@link DefaultStreamMessage},
+ * Only one subscriber can subscribe other stream messages such as {@link ConcurrentStreamMessage},
  * {@link DeferredStreamMessage}, etc.
  * This factory is wrapping one of those {@link StreamMessage}s and spawns duplicated stream messages
  * which are created using {@link AbstractStreamMessageDuplicator#duplicateStream()} and subscribed

@@ -47,8 +47,8 @@ public class DeferredStreamMessageTest {
     @Test
     public void testSetDelegate() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        m.delegate(new DefaultStreamMessage<>());
-        assertThatThrownBy(() -> m.delegate(new DefaultStreamMessage<>()))
+        m.delegate(new ConcurrentStreamMessage<>());
+        assertThatThrownBy(() -> m.delegate(new ConcurrentStreamMessage<>()))
                 .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> m.delegate(null)).isInstanceOf(NullPointerException.class);
     }
@@ -68,7 +68,7 @@ public class DeferredStreamMessageTest {
         m.abort();
         assertAborted(m);
 
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<Object> d = new ConcurrentStreamMessage<>();
         m.delegate(d);
         assertAborted(d);
     }
@@ -76,7 +76,7 @@ public class DeferredStreamMessageTest {
     @Test
     public void testLateAbort() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<Object> d = new ConcurrentStreamMessage<>();
 
         m.delegate(d);
         m.abort();
@@ -88,7 +88,7 @@ public class DeferredStreamMessageTest {
     @Test
     public void testLateAbortWithSubscriber() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<Object> d = new ConcurrentStreamMessage<>();
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
@@ -106,7 +106,7 @@ public class DeferredStreamMessageTest {
     @Test
     public void testEarlySubscription() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<Object> d = new ConcurrentStreamMessage<>();
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
 
@@ -120,7 +120,7 @@ public class DeferredStreamMessageTest {
     @Test
     public void testLateSubscription() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<Object> d = new ConcurrentStreamMessage<>();
 
         m.delegate(d);
 
@@ -160,7 +160,7 @@ public class DeferredStreamMessageTest {
 
     private void testStreaming(boolean useExecutor) {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<Object> d = new ConcurrentStreamMessage<>();
         m.delegate(d);
 
         final List<Object> streamed = new ArrayList<>();

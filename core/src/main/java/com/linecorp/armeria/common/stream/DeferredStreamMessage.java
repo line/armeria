@@ -94,7 +94,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     public void close() {
-        final DefaultStreamMessage<T> m = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<T> m = new ConcurrentStreamMessage<>();
         m.close();
         delegate(m);
     }
@@ -107,7 +107,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
      */
     public void close(Throwable cause) {
         requireNonNull(cause, "cause");
-        final DefaultStreamMessage<T> m = new DefaultStreamMessage<>();
+        final ConcurrentStreamMessage<T> m = new ConcurrentStreamMessage<>();
         m.close(cause);
         delegate(m);
     }
