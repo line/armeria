@@ -75,15 +75,17 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * Creates a new instance wrapping a {@code publisher} and publishing to multiple subscribers.
      * @param publisher the publisher who will publish data to subscribers
      * @param signalLengthGetter the signal length getter that produces the length of signals
+     * @param executor the executor to use for upstream signals
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
     protected AbstractStreamMessageDuplicator(
-            U publisher, SignalLengthGetter<? super T> signalLengthGetter, long maxSignalLength) {
+            U publisher, SignalLengthGetter<? super T> signalLengthGetter,
+            @Nullable Executor executor, long maxSignalLength) {
         requireNonNull(publisher, "publisher");
         requireNonNull(signalLengthGetter, "signalLengthGetter");
         checkArgument(maxSignalLength >= 0,
                       "maxSignalLength: %s (expected: >= 0)", maxSignalLength);
-        processor = new StreamMessageProcessor<>(publisher, signalLengthGetter, maxSignalLength);
+        processor = new StreamMessageProcessor<>(publisher, signalLengthGetter, executor, maxSignalLength);
     }
 
     /**
@@ -172,7 +174,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @SuppressWarnings("unchecked")
         StreamMessageProcessor(StreamMessage<T> upstream, SignalLengthGetter<?> signalLengthGetter,
-                               long maxSignalLength) {
+                               @Nullable Executor executor, long maxSignalLength) {
             this.upstream = upstream;
             this.signalLengthGetter = (SignalLengthGetter<Object>) signalLengthGetter;
             if (maxSignalLength == 0 || maxSignalLength > Integer.MAX_VALUE) {
@@ -181,7 +183,11 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 this.maxSignalLength = (int) maxSignalLength;
             }
             signals = new SignalQueue(this.signalLengthGetter);
-            upstream.subscribe(this, true);
+            if (executor != null) {
+                upstream.subscribe(this, executor, true);
+            } else {
+                upstream.subscribe(this, true);
+            }
         }
 
         StreamMessage<T> upstream() {
