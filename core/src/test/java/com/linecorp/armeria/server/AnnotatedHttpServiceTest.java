@@ -220,6 +220,7 @@ public class AnnotatedHttpServiceTest {
 
     @Converter(target = Number.class, value = TypedNumberConverter.class)
     @Converter(target = String.class, value = TypedStringConverter.class)
+    @Converter(target = Object.class, value = UnformattedStringConverter.class)
     public static class MyAnnotatedService2 {
         // Case 4: returns Integer type and handled by class-default Number -> HttpResponse converter.
         @Get
@@ -247,6 +248,16 @@ public class AnnotatedHttpServiceTest {
         @Path("/boolean/{var}")
         public String returnBoolean(@Param("var") boolean var) {
             return Boolean.toString(var);
+        }
+
+        @Get("/null1")
+        public Object returnNull1() {
+            return null;
+        }
+
+        @Get("/null2")
+        public CompletionStage<Object> returnNull2() {
+            return CompletableFuture.completedFuture(null);
         }
     }
 
@@ -612,6 +623,9 @@ public class AnnotatedHttpServiceTest {
             testStatusCode(hc, post("/2/long/"), 404);
             // Not-mapped HTTP method (Post).
             testStatusCode(hc, post("/2/string/blah"), 405);
+
+            testBody(hc, get("/2/null1"), "(null)");
+            testBody(hc, get("/2/null2"), "(null)");
 
             // Test the case where multiple annotated services are bound under the same path prefix.
             testBody(hc, get("/3/int/42"), "Number[42]");
