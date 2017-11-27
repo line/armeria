@@ -27,6 +27,10 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A parser of the raw path and query components of an HTTP path. Performs validation and allows caching of
@@ -50,6 +54,12 @@ public final class PathAndQuery {
 
     private static Cache<String, PathAndQuery> buildCache(String spec) {
         return Caffeine.from(spec).build();
+    }
+
+    public static void registerMetrics(MeterRegistry registry, MeterIdPrefix idPrefix) {
+        if (CACHE != null && CACHE.policy().isRecordingStats()) {
+            CaffeineMetricSupport.setup(registry, idPrefix, CACHE);
+        }
     }
 
     /**
