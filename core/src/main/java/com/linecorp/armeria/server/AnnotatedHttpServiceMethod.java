@@ -371,7 +371,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
      */
     @Nullable
     private static String httpParameterValue(HttpParameters httpParameters, Parameter entry) {
-        String value = httpParameters.get(entry.name());
+        final String value = httpParameters.get(entry.name());
         if (value != null) {
             // The first decoded value.
             return value;
@@ -485,7 +485,8 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         } else if (object instanceof AggregatedHttpMessage) {
             return ((AggregatedHttpMessage) object).toHttpResponse();
         } else {
-            ResponseConverter converter = findResponseConverter(object.getClass(), converters);
+            final Class<?> clazz = object != null ? object.getClass() : Object.class;
+            final ResponseConverter converter = findResponseConverter(clazz, converters);
             try {
                 return converter.convert(object);
             } catch (Exception e) {
@@ -524,20 +525,21 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
             Class<?> type, Map<Class<?>, ResponseConverter> converters) {
 
         // Search for the converter mapped to itself or one of its superclasses, except Object.class.
-        Class<?> current = type;
-        while (current != Object.class) {
-            ResponseConverter converter = converters.get(current);
-            if (converter != null) {
-                return converter;
-            }
-            current = current.getSuperclass();
-        }
+        if (type != Object.class) {
+            Class<?> current = type;
+            do {
+                final ResponseConverter converter = converters.get(current);
+                if (converter != null) {
+                    return converter;
+                }
+            } while ((current = current.getSuperclass()) != Object.class);
 
-        // Search for the converter mapped to one of its interface.
-        for (Class<?> iface : Types.getAllInterfaces(type)) {
-            ResponseConverter converter = converters.get(iface);
-            if (converter != null) {
-                return converter;
+            // Search for the converter mapped to one of its interface.
+            for (Class<?> iface : Types.getAllInterfaces(type)) {
+                final ResponseConverter converter = converters.get(iface);
+                if (converter != null) {
+                    return converter;
+                }
             }
         }
 

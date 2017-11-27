@@ -66,7 +66,8 @@ final class TestConverters {
     public static class UnformattedStringConverter implements ResponseConverter {
         @Override
         public HttpResponse convert(Object resObj) throws Exception {
-            return httpResponse(HttpData.ofUtf8(resObj.toString()));
+            return httpResponse(HttpData.ofUtf8(resObj != null ? resObj.toString()
+                                                               : "(null)"));
         }
     }
 
