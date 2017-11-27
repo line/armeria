@@ -427,7 +427,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public Throwable responseCause() {
         ensureAvailability(RESPONSE_END);
-        return responseCause;
+        if (responseCause != null) {
+            return responseCause;
+        }
+        if (responseContent instanceof RpcResponse) {
+            return ((RpcResponse) responseContent).cause();
+        }
+        return null;
     }
 
     @Override
