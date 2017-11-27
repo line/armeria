@@ -43,11 +43,11 @@ public class PublisherBasedStreamMessageTest {
         final AbortTest test = new AbortTest();
         test.prepare();
         test.invokeOnSubscribe();
-        test.abort();
+        test.abortAndAwait();
         test.verify();
 
         // Try to abort again, which should do nothing.
-        test.abort();
+        test.abortAndAwait();
         test.verify();
     }
 
@@ -62,6 +62,7 @@ public class PublisherBasedStreamMessageTest {
         test.prepare();
         test.abort();
         test.invokeOnSubscribe();
+        test.awaitAbort();
         test.verify();
     }
 
@@ -115,6 +116,16 @@ public class PublisherBasedStreamMessageTest {
 
         void abort() {
             publisher.abort();
+        }
+
+        void abortAndAwait() {
+            abort();
+            awaitAbort();
+        }
+
+        void awaitAbort() {
+            assertThatThrownBy(() -> publisher.completionFuture().join())
+                    .hasCauseInstanceOf(AbortedStreamException.class);
         }
 
         void verify() {

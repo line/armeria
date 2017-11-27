@@ -19,12 +19,13 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link StreamMessage} that filters objects as they are published. The filtering
@@ -103,14 +104,15 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, Executor executor) {
+    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         delegate.subscribe(new FilteringSubscriber(subscriber), executor);
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, Executor executor, boolean withPooledObjects) {
+    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
+                          boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         delegate.subscribe(new FilteringSubscriber(subscriber), executor, withPooledObjects);

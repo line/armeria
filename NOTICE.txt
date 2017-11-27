@@ -132,6 +132,11 @@ This product depends on FastUtil, distributed by Sebastiano Vigna:
   * License: licenses/LICENSE.fastutil.al20.txt (Apache License v2.0)
   * Homepage: http://fastutil.di.unimi.it/
 
+This product depends on JCTools, distributed by Nitsan Wakart and contributors:
+
+  * License: licenses/LICENSE.jctools.al20.txt (Apache License v2.0)
+  * Homepage: http://jctools.github.io/JCTools/
+
 This product depends on FindBugs-JSR305, distributed by
 
   * License: licenses/LICENSE.jsr305.al20.txt (Apache License v2.0)

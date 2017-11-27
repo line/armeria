@@ -24,12 +24,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A streamed HTTP/2 {@link Request}.
@@ -309,7 +310,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the request is received fully.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregate(Executor executor) {
+    default CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
         final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future);
         completionFuture().whenCompleteAsync(aggregator, executor);
