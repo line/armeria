@@ -87,7 +87,7 @@ public class HttpResponseDuplicator
                 return ((HttpData) obj).length();
             }
             return 0;
-        }, null, maxSignalLength);
+        }, executor, maxSignalLength);
     }
 
     @Override
