@@ -38,6 +38,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * A {@link StreamMessage} optimized for when writes and reads all happen on the provided {@link EventLoop},
@@ -115,6 +117,11 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     @Override
     public boolean isEmpty() {
         return !isOpen() && !wroteAny;
+    }
+
+    @Override
+    protected EventExecutor defaultSubscriberExecutor() {
+        return eventLoop;
     }
 
     @Override
@@ -436,7 +443,8 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
     }
 
     private void doSetAbortedSubscription() {
-        subscription = new SubscriptionImpl(this, AbortingSubscriber.get(), null, false);
+        subscription = new SubscriptionImpl(this, AbortingSubscriber.get(),
+                                            ImmediateEventExecutor.INSTANCE, false);
         // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
         invokedOnSubscribe = true;
     }

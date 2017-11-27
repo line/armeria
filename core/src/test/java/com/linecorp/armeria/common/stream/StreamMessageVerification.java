@@ -73,9 +73,9 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             assertThat(stream.completionFuture()).isNotDone();
             sub.requestEndOfStream();
 
+            await().untilAsserted(() -> assertThat(stream.completionFuture()).isCompleted());
             assertThat(stream.isOpen()).isFalse();
             assertThat(stream.isEmpty()).isTrue();
-            await().untilAsserted(() -> assertThat(stream.completionFuture()).isCompleted());
             sub.expectNone();
         });
     }
@@ -87,11 +87,12 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
             assertThat(stream.isOpen()).isTrue();
             assertThat(stream.isEmpty()).isFalse();
+            assertThat(stream.completionFuture()).isNotDone();
 
-            await().untilAsserted(() -> assertThat(stream.completionFuture()).isNotDone());
             sub.requestNextElement();
             sub.requestEndOfStream();
-            assertThat(stream.completionFuture()).isCompleted();
+
+            stream.completionFuture().join();
             sub.expectNone();
         });
     }
@@ -177,5 +178,38 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         if (pub == null) {
             throw new SkipException("Skipping because no aborted StreamMessage provided.");
         }
+    }
+
+    @Override
+    public void optional_spec111_maySupportMultiSubscribe() throws Throwable {
+        multiSubscribeUnsupported();
+    }
+
+    @Override
+    public void optional_spec111_registeredSubscribersMustReceiveOnNextOrOnCompleteSignals() throws Throwable {
+        multiSubscribeUnsupported();
+    }
+
+    @Override
+    @SuppressWarnings("checkstyle:LineLength")
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne() throws Throwable {
+        multiSubscribeUnsupported();
+    }
+
+    @Override
+    @SuppressWarnings("checkstyle:LineLength")
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfront() throws Throwable {
+        multiSubscribeUnsupported();
+    }
+
+    @Override
+    @SuppressWarnings("checkstyle:LineLength")
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfrontAndCompleteAsExpected() throws Throwable {
+        multiSubscribeUnsupported();
+    }
+
+    private static void multiSubscribeUnsupported() {
+        throw new SkipException(StreamMessage.class.getSimpleName() +
+                                " does not support multiple subscribers.");
     }
 }

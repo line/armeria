@@ -19,13 +19,14 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.CompletionActions;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link StreamMessage} whose stream is published later by another {@link StreamMessage}. It is useful when
@@ -150,20 +151,22 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         subscribe0(subscriber, executor, false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         subscribe0(subscriber, executor, withPooledObjects);
     }
 
-    private void subscribe0(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
+    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
+                            boolean withPooledObjects) {
         if (abortPending) {
             failLateSubscriber(subscriber, executor, AbortedStreamException.get());
             return;
@@ -181,7 +184,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         safeOnSubscribeToDelegate();
     }
 
-    private void failLateSubscriber(Subscriber<? super T> subscriber, Executor executor, Throwable cause) {
+    private void failLateSubscriber(Subscriber<? super T> subscriber, EventExecutor executor, Throwable cause) {
         if (executor == null) {
             try {
                 subscriber.onSubscribe(NoopSubscription.INSTANCE);
@@ -218,7 +221,7 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
         }
 
         final Subscriber<? super T> subscriber = subscription.subscriber;
-        final Executor executor = subscription.executor;
+        final EventExecutor executor = subscription.executor;
         final boolean withPooledObjects = subscription.withPooledObjects;
         if (executor == null) {
             delegate.subscribe(subscriber, withPooledObjects);
@@ -239,14 +242,14 @@ public class DeferredStreamMessage<T> implements StreamMessage<T> {
     }
 
     /**
-     * {@link Subscriber} and {@link Executor}.
+     * {@link Subscriber} and {@link EventExecutor}.
      */
     private static final class PendingSubscription<T> {
         final Subscriber<T> subscriber;
-        final Executor executor;
+        final EventExecutor executor;
         final boolean withPooledObjects;
 
-        PendingSubscription(Subscriber<T> subscriber, Executor executor, boolean withPooledObjects) {
+        PendingSubscription(Subscriber<T> subscriber, EventExecutor executor, boolean withPooledObjects) {
             this.subscriber = subscriber;
             this.executor = executor;
             this.withPooledObjects = withPooledObjects;
