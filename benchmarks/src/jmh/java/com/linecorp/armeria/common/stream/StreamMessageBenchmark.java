@@ -282,7 +282,7 @@ public class StreamMessageBenchmark {
             this.flowControl = flowControl;
         }
 
-        private long sum() {
+        private synchronized long sum() {
             if (!complete) {
                 logger.warn("Stream not completed");
                 return -1;

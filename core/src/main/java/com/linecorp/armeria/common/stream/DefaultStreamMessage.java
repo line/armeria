@@ -189,6 +189,17 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         cancelOrAbort(true);
     }
 
+    @Override
+    void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
+        // Always called from the subscriber thread.
+        try {
+            event.notifySubscriber(subscription, completionFuture());
+        } finally {
+            subscription.clearSubscriber();
+            cleanup();
+        }
+    }
+
     private void cancelOrAbort(boolean cancel) {
         if (setState(State.OPEN, State.CLEANUP)) {
             final CloseEvent closeEvent;
@@ -302,7 +313,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             }
 
             if (o instanceof CloseEvent) {
-                notifySubscriberWithCloseEvent(subscription, (CloseEvent) o);
+                handleCloseEvent(subscription, (CloseEvent) queue.remove());
                 break;
             }
 
@@ -357,13 +368,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         return true;
     }
 
-    private void notifySubscriberWithCloseEvent(SubscriptionImpl subscription, CloseEvent o) {
+    private void handleCloseEvent(SubscriptionImpl subscription, CloseEvent o) {
         setState(State.OPEN, State.CLEANUP);
-        try {
-            o.notifySubscriber(subscription, completionFuture());
-        } finally {
-            cleanup();
-        }
+        notifySubscriberOfCloseEvent(subscription, o);
     }
 
     @Override

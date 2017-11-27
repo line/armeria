@@ -33,6 +33,14 @@ jmh {
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
     jmhVersion = rootProject.ext.dependencyManagement['org.openjdk.jmh']['jmh-core'].version
 
+    if (rootProject.hasProperty('jmh.params')) {
+        benchmarkParameters = [:]
+        rootProject.findProperty('jmh.params').split(',').each {
+            def parts = it.split('=')
+            benchmarkParameters[parts[0]] = [parts[1]]
+        }
+    }
+
     if (rootProject.hasProperty('jmh.fork')) {
         fork = Integer.parseInt(String.valueOf(rootProject.findProperty('jmh.fork')))
     } else {
