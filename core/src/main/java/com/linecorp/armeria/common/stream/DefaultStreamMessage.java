@@ -20,15 +20,17 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.Flags;
+
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * A {@link StreamMessage} which buffers the elements to be signaled into a {@link Queue}.
@@ -92,17 +94,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private boolean invokedOnSubscribe;
 
     /**
-     * Creates a new instance with a new {@link ConcurrentLinkedQueue}.
+     * Creates a new instance.
      */
     public DefaultStreamMessage() {
-        this(new ConcurrentLinkedQueue<>());
-    }
-
-    /**
-     * Creates a new instance with the specified {@link Queue}.
-     */
-    public DefaultStreamMessage(Queue<Object> queue) {
-        this.queue = requireNonNull(queue, "queue");
+        queue = new MpscChunkedArrayQueue<>(16, 1 << 30);
     }
 
     @Override
@@ -145,7 +140,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(), null, false);
+                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
             // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
             invokedOnSubscribe = true;
@@ -223,11 +218,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     final Executor executor = subscription.executor();
                     // TODO(anuraag): Consider pushing a cleanup event instead of serializing the activity
                     // through the event loop.
-                    if (executor != null) {
-                        executor.execute(this::cleanup);
-                    } else {
-                        cleanup();
-                    }
+                    executor.execute(this::cleanup);
                 } else {
                     // Other thread set the state to CLEANUP already and will call cleanup().
                 }

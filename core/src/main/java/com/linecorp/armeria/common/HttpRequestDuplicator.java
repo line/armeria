@@ -18,8 +18,6 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.Executor;
-
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
@@ -27,6 +25,8 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessageWrapper;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Allows subscribing to a {@link HttpRequest} multiple times by duplicating the stream.
@@ -82,7 +82,7 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      * @param executor the executor to use for upstream signals.
      */
-    public HttpRequestDuplicator(HttpRequest req, long maxSignalLength, @Nullable Executor executor) {
+    public HttpRequestDuplicator(HttpRequest req, long maxSignalLength, @Nullable EventExecutor executor) {
         super(requireNonNull(req, "req"), obj -> {
             if (obj instanceof HttpData) {
                 return ((HttpData) obj).length();

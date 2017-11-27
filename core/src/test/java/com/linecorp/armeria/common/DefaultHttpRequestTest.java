@@ -17,12 +17,10 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -31,60 +29,56 @@ import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
+@RunWith(Parameterized.class)
 public class DefaultHttpRequestTest {
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
+    @Parameters(name = "{index}: executorSpecified={0}")
+    public static Collection<Boolean> parameters() {
+        return ImmutableList.of(true, false);
+    }
+
+    private final boolean executorSpecified;
+
+    public DefaultHttpRequestTest(boolean executorSpecified) {
+        this.executorSpecified = executorSpecified;
+    }
+
     /**
      * The aggregation future must be completed even if the request being aggregated has been aborted.
      */
     @Test
-    public void abortedAggregationWithoutExecutor() {
+    public void abortedAggregation() {
         final Thread mainThread = Thread.currentThread();
         final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/foo"));
-        final CompletableFuture<AggregatedHttpMessage> future = req.aggregate();
+        final CompletableFuture<AggregatedHttpMessage> future;
+
+        // Practically same execution, but we need to test the both case due to code duplication.
+        if (executorSpecified) {
+            future = req.aggregate(CommonPools.workerGroup().next());
+        } else {
+            future = req.aggregate();
+        }
+
         final AtomicReference<Thread> callbackThread = new AtomicReference<>();
 
-        future.whenComplete((unused, cause) -> {
-            callbackThread.set(Thread.currentThread());
-            assertThat(cause).isInstanceOf(AbortedStreamException.class);
-        });
-
-        req.abort();
-        assertThat(future).isCompletedExceptionally();
-        assertThat(callbackThread.get()).isSameAs(mainThread);
-    }
-
-    /**
-     * Same with {@link #abortedAggregationWithoutExecutor()} but with an {@link Executor}.
-     */
-    @Test
-    public void abortedAggregationWithExecutor() {
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
-        final Thread mainThread = Thread.currentThread();
-        try {
-            final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/foo"));
-            final CompletableFuture<AggregatedHttpMessage> future = req.aggregate(executor);
-            final AtomicReference<Thread> callbackThread = new AtomicReference<>();
-            final AtomicReference<Throwable> callbackCause = new AtomicReference<>();
-
-            future.whenComplete((unused, cause) -> {
-                callbackCause.set(cause);
-                callbackThread.set(Thread.currentThread());
-            });
-
+        assertThatThrownBy(() -> {
+            final CompletableFuture<AggregatedHttpMessage> f =
+                    future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
             req.abort();
-            await().until(() -> callbackThread.get() != null);
+            f.join();
+        }).hasCauseInstanceOf(AbortedStreamException.class);
 
-            assertThat(callbackThread.get()).isNotSameAs(mainThread);
-            assertThat(callbackCause.get()).isInstanceOf(AbortedStreamException.class);
-            assertThat(future).isCompletedExceptionally();
-        } finally {
-            executor.shutdownNow();
-        }
+        assertThat(callbackThread.get()).isNotSameAs(mainThread);
     }
 }

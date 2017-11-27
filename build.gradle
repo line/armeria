@@ -57,6 +57,7 @@ ext {
             ['com.google.guava:guava', 'com.google.thirdparty.publicsuffix', "${shadedPackage}.publicsuffix"],
             ['com.spotify:completable-futures', 'com.spotify.futures', "${shadedPackage}.futures"],
             ['it.unimi.dsi:fastutil', 'it.unimi.dsi.fastutil', "${shadedPackage}.fastutil"],
+            ['org.jctools:jctools-core', 'org.jctools', "${shadedPackage}.jctools"],
             ['org.reflections:reflections', 'org.reflections', "${shadedPackage}.reflections"]
     ]
 
@@ -216,6 +217,9 @@ configure(javaProjects) {
 
         // JSR305 (Can't use compileOnly due to Javadoc errors)
         compile 'com.google.code.findbugs:jsr305'
+
+        // JCTools
+        compile 'org.jctools:jctools-core'
 
         // Jetty ALPN support
         compileOnly 'org.eclipse.jetty.alpn:alpn-api'
@@ -382,6 +386,9 @@ configure(javaProjects) {
 
         // Use larger heap when test coverage is enabled.
         maxHeapSize = jacocoEnabled ? '384m' : '128m'
+
+        // Use verbose exception reporting for easier debugging.
+        systemProperties 'com.linecorp.armeria.verboseExceptions': 'true'
 
         // Enable leak detection when '-Pleak' option is specified.
         if (project.hasProperty('leak')) {

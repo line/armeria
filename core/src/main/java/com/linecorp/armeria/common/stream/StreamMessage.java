@@ -26,6 +26,7 @@ import org.reactivestreams.Subscription;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A variant of <a href="http://www.reactive-streams.org/">Reactive Streams</a> {@link Publisher}, which allows
@@ -65,7 +66,7 @@ import io.netty.util.ReferenceCounted;
  * leaks.
  *
  * <p>If a {@link Subscriber} does not want a {@link StreamMessage} to make a copy of a {@link ByteBufHolder},
- * use {@link #subscribe(Subscriber, boolean)} or {@link #subscribe(Subscriber, Executor, boolean)} and
+ * use {@link #subscribe(Subscriber, boolean)} or {@link #subscribe(Subscriber, EventExecutor, boolean)} and
  * specify {@code true} for {@code withPooledObjects}. Note that the {@link Subscriber} is responsible for
  * releasing the objects given with {@link Subscriber#onNext(Object)}.
  *
@@ -163,7 +164,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
      * </ul>
      */
-    void subscribe(Subscriber<? super T> subscriber, Executor executor);
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
 
     /**
      * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
@@ -178,7 +179,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *                          as is, without making a copy. If you don't know what this means, use
      *                          {@link StreamMessage#subscribe(Subscriber)}.
      */
-    void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects);
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects);
 
     /**
      * Closes this stream with {@link AbortedStreamException} and prevents further subscription.

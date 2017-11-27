@@ -27,14 +27,16 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.EventLoop;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
@@ -46,26 +48,23 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        requireNonNull(subscriber, "subscriber");
-        subscribe(subscriber, false);
+    public final void subscribe(Subscriber<? super T> subscriber) {
+        subscribe(subscriber, defaultSubscriberExecutor(), false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        requireNonNull(subscriber, "subscriber");
-        subscribe(new SubscriptionImpl(this, subscriber, null, withPooledObjects));
+    public final void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
+        subscribe(subscriber, defaultSubscriberExecutor(), withPooledObjects);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, Executor executor) {
-        requireNonNull(subscriber, "subscriber");
-        requireNonNull(executor, "executor");
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
         subscribe(subscriber, executor, false);
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, Executor executor, boolean withPooledObjects) {
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                                boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         subscribe(new SubscriptionImpl(this, subscriber, executor, withPooledObjects));
@@ -75,6 +74,14 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      * Sets the current subscription for the stream.
      */
     abstract void subscribe(SubscriptionImpl subscription);
+
+    /**
+     * Returns the default {@link EventExecutor} which will be used when a user subscribes using
+     * {@link #subscribe(Subscriber)} or {@link #subscribe(Subscriber, boolean)}.
+     */
+    protected EventExecutor defaultSubscriberExecutor() {
+        return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
+    }
 
     @Override
     public final CompletableFuture<Void> completionFuture() {
@@ -198,14 +205,14 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
         private final AbstractStreamMessage<?> publisher;
         private Subscriber<Object> subscriber;
-        private final Executor executor;
+        private final EventExecutor executor;
         private final boolean withPooledObjects;
 
         private volatile boolean cancelRequested;
 
         @SuppressWarnings("unchecked")
-        SubscriptionImpl(AbstractStreamMessage<?> publisher, Subscriber<?> subscriber, Executor executor,
-                         boolean withPooledObjects) {
+        SubscriptionImpl(AbstractStreamMessage<?> publisher, Subscriber<?> subscriber,
+                         EventExecutor executor, boolean withPooledObjects) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
@@ -266,8 +273,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         // We directly run callbacks for event loops if we're already on the loop, which applies to the vast
         // majority of cases.
         boolean needsDirectInvocation() {
-            return executor == null ||
-                   executor instanceof EventLoop && ((EventLoop) executor).inEventLoop();
+            return executor.inEventLoop();
         }
 
         @Override

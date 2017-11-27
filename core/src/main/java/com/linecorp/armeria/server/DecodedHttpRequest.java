@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import org.reactivestreams.Subscriber;
-
 import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -78,8 +76,8 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber) {
-        subscribe(subscriber, eventLoop);
+    protected EventLoop defaultSubscriberExecutor() {
+        return eventLoop;
     }
 
     @Override

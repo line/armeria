@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,6 +52,7 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
 
     @Override
     protected AggregatedHttpMessage onSuccess(HttpData content) {
+        checkState(headers != null, "An aggregated message does not have headers.");
         return AggregatedHttpMessage.of(firstNonNull(informationals, Collections.emptyList()),
                                         headers, content, trailingHeaders);
     }
