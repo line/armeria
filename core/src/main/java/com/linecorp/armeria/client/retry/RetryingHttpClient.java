@@ -112,7 +112,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final DeferredHttpResponse deferredRes = new DeferredHttpResponse();
-        final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req, 0);
+        final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req, 0, ctx.eventLoop());
         doExecute0(ctx, reqDuplicator, deferredRes);
         return deferredRes;
     }
@@ -126,7 +126,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         HttpResponse response = executeDelegate(ctx, rootReqDuplicator.duplicateStream());
 
         final HttpResponseDuplicator resDuplicator =
-                new HttpResponseDuplicator(response, maxSignalLength(ctx.maxResponseLength()));
+                new HttpResponseDuplicator(response, maxSignalLength(ctx.maxResponseLength()), ctx.eventLoop());
         final ContentPreviewResponse contentPreviewResponse =
                 new ContentPreviewResponse(resDuplicator.duplicateStream(), contentPreviewLength);
         retryStrategy().shouldRetry(rootReqDuplicator.duplicateStream(), contentPreviewResponse)

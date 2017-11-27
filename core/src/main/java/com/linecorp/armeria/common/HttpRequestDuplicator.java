@@ -18,6 +18,10 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.Executor;
+
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.stream.AbstractStreamMessageDuplicator;
@@ -69,12 +73,22 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
     public HttpRequestDuplicator(HttpRequest req, long maxSignalLength) {
+        this(req, maxSignalLength, null);
+    }
+
+    /**
+     * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
+     * @param req the request that will publish data to subscribers
+     * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
+     * @param executor the executor to use for upstream signals.
+     */
+    public HttpRequestDuplicator(HttpRequest req, long maxSignalLength, @Nullable Executor executor) {
         super(requireNonNull(req, "req"), obj -> {
             if (obj instanceof HttpData) {
                 return ((HttpData) obj).length();
             }
             return 0;
-        }, maxSignalLength);
+        }, executor, maxSignalLength);
         headers = req.headers();
         keepAlive = req.isKeepAlive();
     }
