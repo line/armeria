@@ -16,14 +16,15 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.server.AbstractPathMapping.ensureAbsolutePath;
+import static java.util.Objects.requireNonNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,6 +53,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.DefaultValues;
+import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.ConsumeTypes;
 import com.linecorp.armeria.server.annotation.Converter;
@@ -62,6 +64,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
+import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
@@ -70,7 +73,10 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.annotation.ProduceTypes;
 import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.RequestConverter;
+import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Trace;
 
 /**
@@ -99,6 +105,21 @@ final class AnnotatedHttpServices {
      */
     private static final List<ExceptionHandlerFunction> defaultExceptionHandlers =
             ImmutableList.of(new DefaultExceptionHandler());
+
+    /**
+     * A {@link RequestConverterFunction} map for reusing request converters.
+     */
+    private static final ConcurrentMap<
+            Class<? extends RequestConverterFunction>, RequestConverterFunction>
+            requestConverterFunctions = new ConcurrentHashMap<>();
+
+    /**
+     * A default {@link RequestConverterFunction} list.
+     */
+    private static final List<RequestConverterFunction> defaultRequestConverters =
+            ImmutableList.of(new JacksonRequestConverterFunction(),
+                             new StringRequestConverterFunction(),
+                             new ByteArrayRequestConverterFunction());
 
     /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
@@ -286,19 +307,13 @@ final class AnnotatedHttpServices {
             pattern = method.getAnnotation(Path.class).value();
         }
         for (Annotation a : methodAnnotations) {
-            try {
-                final String p = (String) a.getClass().getMethod("value").invoke(a);
-                if (DefaultValues.isUnspecified(p)) {
-                    continue;
-                }
-                if (pattern != null) {
-                    throw new IllegalArgumentException(
-                            "Only one path can be specified. (" + pattern + ", " + p + ')');
-                }
-                pattern = p;
-            } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                logger.debug("Invoking annotation 'value' method failed: {}", e);
+            final String p = (String) invokeValueMethod(a);
+            if (DefaultValues.isUnspecified(p)) {
+                continue;
             }
+            checkArgument(pattern == null,
+                          "Only one path can be specified. (" + pattern + ", " + p + ')');
+            pattern = p;
         }
         if (pattern == null || pattern.isEmpty()) {
             throw new IllegalArgumentException(
@@ -384,18 +399,58 @@ final class AnnotatedHttpServices {
     /**
      * Returns an exception handler list which is specified by {@link ExceptionHandler} annotations.
      */
-    private static List<ExceptionHandlerFunction> exceptionHandlers(Class<?> clazz, Method method) {
-        ExceptionHandler[] handlers = method.getAnnotationsByType(ExceptionHandler.class);
+    private static List<ExceptionHandlerFunction> exceptionHandlers(Method targetMethod,
+                                                                    Class<?> targetClass) {
+        return annotationValues(ExceptionHandler.class, targetMethod, targetClass,
+                                exceptionHandlerFunctions, defaultExceptionHandlers);
+    }
+
+    /**
+     * Returns a request converter list which is specified by {@link RequestConverter} annotations.
+     */
+    private static List<RequestConverterFunction> requestConverters(Method targetMethod,
+                                                                    Class<?> targetClass) {
+        return annotationValues(RequestConverter.class, targetMethod, targetClass,
+                                requestConverterFunctions, defaultRequestConverters);
+    }
+
+    /**
+     * Returns a list of objects which are specified as the {@code value} of annotation {@code T}.
+     */
+    @SuppressWarnings("unchecked")
+    private static <T extends Annotation, R> List<R> annotationValues(
+            Class<T> annotationClass, Method targetMethod, Class<?> targetClass,
+            ConcurrentMap<Class<? extends R>, R> objectCacheMap, List<R> defaultValue) {
+
+        requireNonNull(annotationClass, "annotationClass");
+        requireNonNull(targetMethod, "targetMethod");
+        requireNonNull(targetClass, "targetClass");
+        requireNonNull(objectCacheMap, "objectCacheMap");
+        requireNonNull(defaultValue, "defaultValue");
+
+        T[] handlers = targetMethod.getAnnotationsByType(annotationClass);
         if (handlers.length == 0) {
-            handlers = clazz.getAnnotationsByType(ExceptionHandler.class);
+            handlers = targetClass.getAnnotationsByType(annotationClass);
         }
         if (handlers.length == 0) {
-            return defaultExceptionHandlers;
+            return defaultValue;
         }
         return Arrays.stream(handlers)
-                     .map(h -> exceptionHandlerFunctions.computeIfAbsent(h.value(), type ->
-                             newInstance(type, ExceptionHandler.class)))
+                     .map(h -> objectCacheMap.computeIfAbsent((Class<R>) invokeValueMethod(h),
+                                                              type -> newInstance(type, annotationClass)))
                      .collect(toImmutableList());
+    }
+
+    /**
+     * Returns an object which is returned by {@code value()} method of the specified object {@code a}.
+     */
+    private static Object invokeValueMethod(Annotation a) {
+        try {
+            return a.getClass().getMethod("value").invoke(a);
+        } catch (Exception e) {
+            throw new IllegalStateException("An annotation @" + a.getClass().getSimpleName() +
+                                            " must have a 'value' method", e);
+        }
     }
 
     /**
@@ -436,7 +491,9 @@ final class AnnotatedHttpServices {
                 new HttpHeaderPathMapping(pathStringMapping(pathPrefix, method, methodAnnotations),
                                           methods, consumeTypes(method, clazz), produceTypes(method, clazz));
         final AnnotatedHttpServiceMethod function =
-                new AnnotatedHttpServiceMethod(object, method, pathMapping, exceptionHandlers(clazz, method));
+                new AnnotatedHttpServiceMethod(object, method, pathMapping,
+                                               exceptionHandlers(method, clazz),
+                                               requestConverters(method, clazz));
         final Set<String> parameterNames = function.pathParamNames();
         final Set<String> expectedParamNames = pathMapping.paramNames();
         if (!expectedParamNames.containsAll(parameterNames)) {

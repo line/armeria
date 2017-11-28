@@ -364,6 +364,7 @@ public final class MediaType {
     public static final MediaType JAVASCRIPT_UTF_8 =
             createConstantUtf8(APPLICATION_TYPE, "javascript");
     public static final MediaType JSON_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "json");
+    public static final MediaType JSON = createConstant(APPLICATION_TYPE, "json");
     /**
      * Media type for the <a href="https://www.w3.org/TR/appmanifest/">Manifest for a web
      * application</a>.
