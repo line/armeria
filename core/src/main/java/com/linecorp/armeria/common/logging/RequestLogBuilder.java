@@ -141,7 +141,9 @@ public interface RequestLogBuilder {
     boolean isResponseContentDeferred();
 
     /**
-     * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information.
+     * Sets {@link RequestLog#responseDurationNanos()} and finishes the collection of the information. If a
+     * {@link Throwable} cause has been set with {@link #responseContent(Object, Object)}, it will be treated
+     * as the {@code responseCause} for this log.
      */
     void endResponse();
 
