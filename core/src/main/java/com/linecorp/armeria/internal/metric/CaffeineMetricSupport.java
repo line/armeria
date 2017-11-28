@@ -58,6 +58,9 @@ public final class CaffeineMetricSupport {
     }
 
     public static void setup(MeterRegistry registry, MeterIdPrefix idPrefix, Cache<?, ?> cache, Ticker ticker) {
+        if (!cache.policy().isRecordingStats()) {
+            return;
+        }
         final CaffeineMetrics metrics = MicrometerUtil.register(
                 registry, idPrefix, CaffeineMetrics.class, CaffeineMetrics::new);
         metrics.add(cache, ticker);

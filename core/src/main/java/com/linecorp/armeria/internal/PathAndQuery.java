@@ -57,7 +57,7 @@ public final class PathAndQuery {
     }
 
     public static void registerMetrics(MeterRegistry registry, MeterIdPrefix idPrefix) {
-        if (CACHE != null && CACHE.policy().isRecordingStats()) {
+        if (CACHE != null) {
             CaffeineMetricSupport.setup(registry, idPrefix, CACHE);
         }
     }
