@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -233,7 +232,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             }
         }
 
-        Executor executor() {
+        EventExecutor executor() {
             return executor;
         }
 

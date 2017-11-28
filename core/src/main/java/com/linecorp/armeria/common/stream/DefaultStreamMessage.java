@@ -22,7 +22,6 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.jctools.queues.MpscChunkedArrayQueue;
@@ -70,10 +69,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     DefaultStreamMessage.class, SubscriptionImpl.class, "subscription");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicLongFieldUpdater<DefaultStreamMessage> demandUpdater =
-            AtomicLongFieldUpdater.newUpdater(DefaultStreamMessage.class, "demand");
-
-    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, State> stateUpdater =
             AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
 
@@ -82,8 +77,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     @SuppressWarnings("unused")
     private volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
 
-    @SuppressWarnings("unused")
-    private volatile long demand; // set only via demandUpdater
+    private long demand; // set only when in the subscriber thread
 
     @SuppressWarnings("FieldMayBeFinal")
     private volatile State state = State.OPEN;
@@ -97,7 +91,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      * Creates a new instance.
      */
     public DefaultStreamMessage() {
-        queue = new MpscChunkedArrayQueue<>(16, 1 << 30);
+        queue = new MpscChunkedArrayQueue<>(32, 1 << 30);
     }
 
     @Override
@@ -161,21 +155,27 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @Override
     void request(long n) {
-        for (;;) {
-            final long oldDemand = demand;
-            final long newDemand;
-            if (oldDemand >= Long.MAX_VALUE - n) {
-                newDemand = Long.MAX_VALUE;
-            } else {
-                newDemand = oldDemand + n;
-            }
+        final SubscriptionImpl subscription = this.subscription;
+        // A user cannot access subscription without subscribing.
+        assert subscription != null;
 
-            if (demandUpdater.compareAndSet(this, oldDemand, newDemand)) {
-                if (oldDemand == 0) {
-                    notifySubscriber();
-                }
-                break;
-            }
+        if (subscription.needsDirectInvocation()) {
+            doRequest(n);
+        } else {
+            subscription.executor().execute(() -> doRequest(n));
+        }
+    }
+
+    private void doRequest(long n) {
+        final long oldDemand = demand;
+        if (oldDemand >= Long.MAX_VALUE - n) {
+            demand = Long.MAX_VALUE;
+        } else {
+            demand = oldDemand + n;
+        }
+
+        if (oldDemand == 0 && !queue.isEmpty()) {
+            notifySubscriber0();
         }
     }
 
@@ -215,10 +215,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 // but we need to ensure the completionFuture is notified and any pending objects
                 // are removed.
                 if (setState(State.CLOSED, State.CLEANUP)) {
-                    final Executor executor = subscription.executor();
                     // TODO(anuraag): Consider pushing a cleanup event instead of serializing the activity
                     // through the event loop.
-                    executor.execute(this::cleanup);
+                    subscription.executor().execute(this::cleanup);
                 } else {
                     // Other thread set the state to CLEANUP already and will call cleanup().
                 }
@@ -327,24 +326,24 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private boolean notifySubscriberWithElements(SubscriptionImpl subscription) {
         final Subscriber<Object> subscriber = subscription.subscriber();
-        for (;;) {
-            final long demand = this.demand;
-            if (demand == 0) {
-                break;
-            }
-
-            if (demand == Long.MAX_VALUE || demandUpdater.compareAndSet(this, demand, demand - 1)) {
-                @SuppressWarnings("unchecked")
-                T o = (T) queue.remove();
-                inOnNext = true;
-                o = prepareObjectForNotification(subscription, o);
-                subscriber.onNext(o);
-                inOnNext = false;
-                return true;
-            }
+        if (demand == 0) {
+            return false;
         }
 
-        return false;
+        if (demand != Long.MAX_VALUE) {
+            demand--;
+        }
+
+        @SuppressWarnings("unchecked")
+        T o = (T) queue.remove();
+        inOnNext = true;
+        try {
+            o = prepareObjectForNotification(subscription, o);
+            subscriber.onNext(o);
+        } finally {
+            inOnNext = false;
+        }
+        return true;
     }
 
     private boolean notifyAwaitDemandFuture() {
