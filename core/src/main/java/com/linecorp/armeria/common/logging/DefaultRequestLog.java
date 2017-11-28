@@ -521,7 +521,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void endResponse() {
-        endResponse0(null);
+        endResponse0(responseContent instanceof RpcResponse ? ((RpcResponse) responseContent).cause() : null);
     }
 
     @Override
