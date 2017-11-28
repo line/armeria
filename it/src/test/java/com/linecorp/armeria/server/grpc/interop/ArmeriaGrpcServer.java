@@ -19,7 +19,11 @@ package com.linecorp.armeria.server.grpc.interop;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+
+import com.google.common.util.concurrent.Futures;
 
 import com.linecorp.armeria.server.Server;
 
@@ -28,6 +32,7 @@ import io.grpc.internal.InternalServer;
 import io.grpc.internal.LogId;
 import io.grpc.internal.ServerListener;
 import io.grpc.internal.ServerTransport;
+import io.grpc.internal.TransportTracer.Stats;
 
 /**
  * Wraps an armeria server so gRPC interop tests can operate it.
@@ -36,6 +41,7 @@ public class ArmeriaGrpcServer implements InternalServer {
 
     private final Server armeriaServer;
 
+    private ScheduledExecutorService scheduler;
     private CompletableFuture<Void> shutdownFuture;
 
     public ArmeriaGrpcServer(Server armeriaServer) {
@@ -49,6 +55,7 @@ public class ArmeriaGrpcServer implements InternalServer {
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
+        scheduler = Executors.newSingleThreadScheduledExecutor();
         listener.transportCreated(new ServerTransport() {
             @Override
             public void shutdown() {
@@ -62,7 +69,12 @@ public class ArmeriaGrpcServer implements InternalServer {
 
             @Override
             public ScheduledExecutorService getScheduledExecutorService() {
-                return null;
+                return scheduler;
+            }
+
+            @Override
+            public Future<Stats> getTransportStats() {
+                return Futures.immediateFuture(null);
             }
 
             @Override
@@ -80,5 +92,6 @@ public class ArmeriaGrpcServer implements InternalServer {
     @Override
     public void shutdown() {
         armeriaServer.stop();
+        scheduler.shutdown();
     }
 }

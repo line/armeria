@@ -25,8 +25,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
-import com.google.instrumentation.stats.StatsContextFactory;
-
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -65,11 +63,6 @@ public class ArmeriaGrpcServerBuilder extends AbstractServerImplBuilder<ArmeriaG
             throw new IllegalArgumentException(e);
         }
         return this;
-    }
-
-    @Override
-    protected ArmeriaGrpcServerBuilder statsContextFactory(StatsContextFactory statsFactory) {
-        return super.statsContextFactory(NoopStatsContextFactory.INSTANCE);
     }
 
     @Override

@@ -126,6 +126,11 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         return false;
     }
 
+    @Override
+    protected boolean serverInProcess() {
+        return false;
+    }
+
     @Ignore
     @Override
     public void exchangeMetadataUnaryCall() throws Exception {
