@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -177,7 +177,7 @@ public class ArmeriaCallFactoryTest {
                       req.aggregate().handle(voidFunction((aReq, cause) -> {
                           Map<String, List<String>> params = new QueryStringDecoder(aReq.path())
                                   .parameters();
-                          String fullPath = ArmeriaHttpUtil.splitPathAndQuery(req.path())[0];
+                          String fullPath = PathAndQuery.parse(req.path()).path();
                           res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
                                       "{\"name\":\"" + fullPath.replace("/pathWithName/", "") + "\", " +
                                       "\"age\":" + params.get("age").get(0) + '}');

@@ -21,14 +21,12 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.util.Functions.voidFunction;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
@@ -47,6 +45,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -57,6 +56,7 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -241,22 +241,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         // Validate and split path and query.
-        final String[] pathAndQuery = splitPathAndQuery(originalPath);
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(originalPath);
         if (pathAndQuery == null) {
             // Reject requests without a valid path.
             respond(ctx, req, HttpStatus.NOT_FOUND);
             return;
         }
 
-        final String path = pathAndQuery[0];
-        @Nullable
-        final String query = pathAndQuery[1];
         final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
-        final PathMappingContext mappingCtx = DefaultPathMappingContext.of(host, hostname,
-                                                                           path, query, headers,
-                                                                           host.producibleMediaTypes());
+        final PathMappingContext mappingCtx = DefaultPathMappingContext.of(
+                host, hostname, pathAndQuery.path(), pathAndQuery.query(), headers,
+                host.producibleMediaTypes());
         // Find the service that matches the path.
         final PathMapped<ServiceConfig> mapped;
         try {
@@ -312,6 +309,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // clean up the request stream when response stream ends.
             gracefulShutdownSupport.inc();
             unfinishedRequests++;
+
+            if (pathAndQuery.query() == null && mapped.mapping().paramNames().isEmpty()) {
+                reqCtx.log().addListener(log -> {
+                    HttpStatus status = log.responseHeaders().status();
+                    if (status != null && status.code() >= 200 && status.code() < 400) {
+                        pathAndQuery.storeInCache(originalPath);
+                    }
+                }, RequestLogAvailability.COMPLETE);
+            }
 
             req.completionFuture().handle(voidFunction((ret, cause) -> {
                 if (cause == null) {

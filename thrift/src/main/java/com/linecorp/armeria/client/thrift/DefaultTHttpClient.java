@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.thrift;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.splitPathAndQuery;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
@@ -31,6 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -57,12 +57,15 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
             String path, Class<?> serviceType, @Nullable String serviceName, String method, Object[] args) {
 
         path = concatPaths(uri().getRawPath(), path);
-        final String[] pathAndQuery = splitPathAndQuery(path);
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
         if (pathAndQuery == null) {
             return RpcResponse.ofFailure(new IllegalArgumentException("invalid path: " + path));
         }
 
+        // A thrift path is always good to cache as it cannot have non-fixed parameters.
+        pathAndQuery.storeInCache(path);
+
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
-        return execute(HttpMethod.POST, pathAndQuery[0], null, serviceName, call, DefaultRpcResponse::new);
+        return execute(HttpMethod.POST, pathAndQuery.path(), null, serviceName, call, DefaultRpcResponse::new);
     }
 }

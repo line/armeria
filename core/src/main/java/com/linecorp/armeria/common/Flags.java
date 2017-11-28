@@ -155,6 +155,10 @@ public final class Flags {
     private static final Optional<String> COMPOSITE_SERVICE_CACHE_SPEC =
             caffeineSpec("compositeServiceCache", DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC);
 
+    private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
+    private static final Optional<String> PARSED_PATH_CACHE_SPEC =
+            caffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
+
     static {
         if (!Epoll.isAvailable()) {
             final Throwable cause = filterCause(Epoll.unavailabilityCause());
@@ -400,6 +404,19 @@ public final class Flags {
      */
     public static Optional<String> routeCacheSpec() {
         return ROUTE_CACHE_SPEC;
+    }
+
+    /**
+     * Returns the value of the {@code parsedPathCache} parameter. It would be used to create a Caffeine
+     * {@link Cache} instance using {@link Caffeine#from(String)} mapping raw HTTP paths to parsed pair of
+     * path and query, after validation.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_PARSED_PATH_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.parsedPathCache=<spec>} JVM option to override the default value.
+     * Also, specify {@code -Dcom.linecorp.armeria.parsedPathCache=off} JVM option to disable it.
+     */
+    public static Optional<String> parsedPathCacheSpec() {
+        return PARSED_PATH_CACHE_SPEC;
     }
 
     /**

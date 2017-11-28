@@ -47,10 +47,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
+import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -132,6 +134,10 @@ public final class Server implements AutoCloseable {
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
 
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
+
+        // Server-wide cache metrics.
+        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsedPathCache");
+        PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
     }
 
     /**
