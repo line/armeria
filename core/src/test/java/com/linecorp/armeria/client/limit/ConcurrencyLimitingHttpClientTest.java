@@ -75,7 +75,7 @@ public class ConcurrencyLimitingHttpClientTest {
         closeAndDrain(actualRes, res);
 
         assertThat(res.isOpen()).isFalse();
-        assertThat(client.numActiveRequests()).isZero();
+        await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
     /**
@@ -188,7 +188,7 @@ public class ConcurrencyLimitingHttpClientTest {
         assertThat(res).isInstanceOf(DeferredHttpResponse.class);
         assertThat(res.isOpen()).isFalse();
         assertThatThrownBy(() -> res.completionFuture().get()).hasCauseInstanceOf(Exception.class);
-        assertThat(client.numActiveRequests()).isZero();
+        await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
     @Test
@@ -213,7 +213,7 @@ public class ConcurrencyLimitingHttpClientTest {
 
         // Complete the response, leaving no active requests.
         closeAndDrain(actualRes, res);
-        assertThat(client.numActiveRequests()).isZero();
+        await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
     @Test
@@ -233,7 +233,7 @@ public class ConcurrencyLimitingHttpClientTest {
         verify(delegate).execute(ctx, req);
 
         // The number of active requests should increase and then immediately decrease. i.e. stay back at 0.
-        assertThat(client.numActiveRequests()).isZero();
+        await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
     private static ClientRequestContext newContext() {
