@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.metric;
 
 import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.UPDATE_INTERVAL_NANOS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 import java.lang.ref.WeakReference;
 import java.util.Map;
@@ -28,7 +29,12 @@ import java.util.function.Function;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -43,12 +49,24 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 public class CaffeineMetricSupportTest {
 
+    @Rule
+    public MockitoRule mocks = MockitoJUnit.rule();
+
+    @Mock
+    private Policy<Object, Object> policy;
+
+    @Before
+    public void setUp() {
+        when(policy.isRecordingStats()).thenReturn(true);
+    }
+
     @Test
     public void test() {
         final MockLoadingCache cache = new MockLoadingCache(1, 2, 3, 4, 5, 6, 7, 8);
         final AtomicLong ticker = new AtomicLong();
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         CaffeineMetricSupport.setup(registry, new MeterIdPrefix("foo"), cache, ticker::get);
+        assertThat(registry.getMeters()).isNotEmpty();
 
         assertThat(cache.statsCalls()).isOne();
         assertThat(cache.estimatedSizeCalls()).isOne();
@@ -194,8 +212,18 @@ public class CaffeineMetricSupportTest {
                 .containsEntry("baz.estimatedSize#value", 5.0);
     }
 
+    @Test
+    public void notRecording() {
+        when(policy.isRecordingStats()).thenReturn(false);
+        final MockLoadingCache cache = new MockLoadingCache(1, 2, 3, 4, 5, 6, 7, 8);
+        final AtomicLong ticker = new AtomicLong();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        CaffeineMetricSupport.setup(registry, new MeterIdPrefix("foo"), cache, ticker::get);
+        assertThat(registry.getMeters()).isEmpty();
+    }
+
     // Not using mocking framework because we need tight control over the life cycle of the mock object.
-    private static class MockCache implements Cache<Object, Object> {
+    private class MockCache implements Cache<Object, Object> {
 
         private CacheStats stats;
         private long estimatedSize;
@@ -302,15 +330,15 @@ public class CaffeineMetricSupportTest {
         @Nonnull
         @Override
         public Policy<Object, Object> policy() {
-            return reject();
+            return policy;
         }
 
-        protected static <T> T reject() {
+        protected <T> T reject() {
             throw new UnsupportedOperationException();
         }
     }
 
-    private static final class MockLoadingCache extends MockCache implements LoadingCache<Object, Object> {
+    private final class MockLoadingCache extends MockCache implements LoadingCache<Object, Object> {
 
         MockLoadingCache(long hitCount, long missCount, long loadSuccessCount, long loadFailureCount,
                          long totalLoadTime, long evictionCount, long evictionWeight, long estimatedSize) {
