@@ -49,7 +49,7 @@ io.dropwizard.metrics:
 
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.7.0'
+    version: &GRPC_VERSION '1.8.0'
     exclusions:
     - com.google.code.findbugs:jsr305
     - com.google.errorprone:error_prone_annotations
