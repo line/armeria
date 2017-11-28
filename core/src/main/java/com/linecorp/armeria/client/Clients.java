@@ -307,7 +307,7 @@ public final class Clients {
      * try (SafeCloseable ignored = withHttpHeaders(headers -> {
      *     headers.set(HttpHeaders.AUTHORIZATION, myCredential)
      *            .set(HttpHeaders.USER_AGENT, myAgent);
-     * }) {
+     * })) {
      *     client.executeSomething(..);
      * }
      * }</pre>
@@ -316,9 +316,9 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeaders(h -> h.set(USER_AGENT, myAgent)) {
+     * try (SafeCloseable ignored = withHttpHeaders(h -> h.set(USER_AGENT, myAgent))) {
      *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeaders(h -> h.set(AUTHORIZATION, secret)) {
+     *         try (SafeCloseable ignored2 = withHttpHeaders(h -> h.set(AUTHORIZATION, secret))) {
      *             // Both USER_AGENT and AUTHORIZATION will be set.
      *             client.executeSomething(..);
      *         }
@@ -346,16 +346,16 @@ public final class Clients {
      * try (SafeCloseable ignored = withContextCustomizer(ctx -> {
      *     ctx.attr(USER_ID).set(userId);
      *     ctx.attr(USER_SECRET).set(secret);
-     * }) {
+     * })) {
      *     client.executeSomething(..);
      * }
      * }</pre>
      * You can also nest the request context customization:
      * <pre>{@code
-     * try (SafeCloseable ignored = withContextCustomizer(ctx -> ctx.attr(USER_ID).set(userId)) {
+     * try (SafeCloseable ignored = withContextCustomizer(ctx -> ctx.attr(USER_ID).set(userId))) {
      *     String secret = client.getSecret();
      *     try (SafeCloseable ignored2 = withContextCustomizer(ctx -> ctx.attr(USER_SECRET)
-     *                                                                   .set(secret)) {
+     *                                                                   .set(secret))) {
      *         // Both USER_ID and USER_SECRET will be set.
      *         client.executeSomething(..);
      *     }
