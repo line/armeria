@@ -92,7 +92,7 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
         this(RequestContext.mapCurrent(RequestContext::eventLoop, () -> {
             final UnexpectedEventLoopException e = new UnexpectedEventLoopException();
             final List<StackTraceElement> stackTrace = ImmutableList.copyOf(e.getStackTrace());
-            UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, (unused) -> {
+            UNEXPECTED_EVENT_LOOP_STACK_TRACES.computeIfAbsent(stackTrace, unused -> {
                 logger.warn("Creating EventLoopStreamMessage without specifying EventLoop. " +
                             "This will be very slow if writer or subscriber run in a different EventLoop.", e);
                 return true;
@@ -274,13 +274,11 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
 
     private void doRequest(long n) {
         final long oldDemand = demand;
-        final long newDemand;
         if (oldDemand >= Long.MAX_VALUE - n) {
-            newDemand = Long.MAX_VALUE;
+            demand = Long.MAX_VALUE;
         } else {
-            newDemand = oldDemand + n;
+            demand = oldDemand + n;
         }
-        demand = newDemand;
 
         if (oldDemand == 0) {
             doNotifySubscriberIfNotEmpty();
@@ -385,8 +383,11 @@ public class EventLoopStreamMessage<T> extends AbstractStreamMessageAndWriter<T>
 
         if (subscription.needsDirectInvocation()) {
             inOnNext = true;
-            subscriber.onNext(obj);
-            inOnNext = false;
+            try {
+                subscriber.onNext(obj);
+            } finally {
+                inOnNext = false;
+            }
         } else {
             final T published = obj;
             subscription.executor().execute(() -> subscriber.onNext(published));
