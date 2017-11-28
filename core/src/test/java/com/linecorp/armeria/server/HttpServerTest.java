@@ -129,7 +129,8 @@ public class HttpServerTest {
 
     @Parameters(name = "{index}: {0}")
     public static Collection<SessionProtocol> parameters() {
-        return ImmutableList.of(H1C, H1, H2C, H2);
+        return ImmutableList.of(H2C);
+        //return ImmutableList.of(H1C, H1, H2C, H2);
     }
 
     private static final AtomicInteger pendingRequestLogs = new AtomicInteger();
@@ -521,6 +522,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTooLargeContent() throws Exception {
         clientWriteTimeoutMillis = 0L;
+
         final DefaultHttpRequest req = new DefaultHttpRequest(HttpMethod.POST, "/count");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
@@ -529,7 +531,8 @@ public class HttpServerTest {
         final AggregatedHttpMessage res = f.get();
 
         assertThat(res.status(), is(HttpStatus.REQUEST_ENTITY_TOO_LARGE));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE),
+                   is(MediaType.PLAIN_TEXT_UTF_8.toString()));
         assertThat(res.content().toStringUtf8(), is("413 Request Entity Too Large"));
     }
 
@@ -818,7 +821,7 @@ public class HttpServerTest {
         }
 
         final long remaining = size - chunkSize;
-        logger.info("{} bytes remaining", remaining);
+        //logger.info("{} bytes remaining", remaining);
 
         if (remaining == 0) {
             writer.close();

@@ -36,7 +36,7 @@ install:
   - true
 
 script:
-  - ./gradlew --no-daemon --stacktrace -Pcoverage checkstyle test build
+  - ./gradlew --no-daemon --stacktrace -Pcoverage -xcheckstyle -xtestNg -xjacocoTestReport core:test --tests '*HttpServerTest*'
 
 before_cache:
   - find $HOME/.gradle/caches -name '*.lock' -delete
