@@ -47,8 +47,6 @@ import org.junit.Test;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -60,13 +58,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.TestConverters.NaiveIntConverter;
-import com.linecorp.armeria.server.TestConverters.NaiveStringConverter;
-import com.linecorp.armeria.server.TestConverters.TypedNumberConverter;
-import com.linecorp.armeria.server.TestConverters.TypedStringConverter;
-import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
+import com.linecorp.armeria.server.TestConverters.NaiveIntConverterFunction;
+import com.linecorp.armeria.server.TestConverters.NaiveStringConverterFunction;
+import com.linecorp.armeria.server.TestConverters.TypedNumberConverterFunction;
+import com.linecorp.armeria.server.TestConverters.TypedStringConverterFunction;
+import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumeType;
-import com.linecorp.armeria.server.annotation.Converter;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
@@ -75,6 +72,7 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -87,8 +85,8 @@ public class AnnotatedHttpServiceTest {
         protected void configure(ServerBuilder sb) throws Exception {
             // Case 1, 2, and 3, with a converter map
             sb.annotatedService("/1", new MyAnnotatedService1(),
-                                ImmutableMap.of(Integer.class, new NaiveIntConverter()),
-                                LoggingService.newDecorator());
+                                LoggingService.newDecorator(),
+                                new TypedNumberConverterFunction());
 
             // Case 4, 5, and 6
             sb.annotatedService("/2", new MyAnnotatedService2(),
@@ -133,8 +131,8 @@ public class AnnotatedHttpServiceTest {
         }
     };
 
-    @Converter(target = Number.class, value = TypedNumberConverter.class)
-    @Converter(target = String.class, value = TypedStringConverter.class)
+    @ResponseConverter(NaiveIntConverterFunction.class)
+    @ResponseConverter(TypedStringConverterFunction.class)
     public static class MyAnnotatedService1 {
         // Case 1: returns Integer type and handled by builder-default Integer -> HttpResponse converter.
         @Get
@@ -153,7 +151,7 @@ public class AnnotatedHttpServiceTest {
         // Case 3: returns String type and handled by custom String -> HttpResponse converter.
         @Get
         @Path("/string/:var")
-        @Converter(NaiveStringConverter.class)
+        @ResponseConverter(NaiveStringConverterFunction.class)
         public CompletionStage<String> returnString(@Param("var") String var) {
             return CompletableFuture.supplyAsync(() -> var);
         }
@@ -224,9 +222,9 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = Number.class, value = TypedNumberConverter.class)
-    @Converter(target = String.class, value = TypedStringConverter.class)
-    @Converter(target = Object.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(TypedNumberConverterFunction.class)
+    @ResponseConverter(TypedStringConverterFunction.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService2 {
         // Case 4: returns Integer type and handled by class-default Number -> HttpResponse converter.
         @Get
@@ -245,7 +243,7 @@ public class AnnotatedHttpServiceTest {
         // Case 6: returns String type and handled by custom String -> HttpResponse converter.
         @Get
         @Path("/string/{var}")
-        @Converter(NaiveStringConverter.class)
+        @ResponseConverter(NaiveStringConverterFunction.class)
         public String returnString(@Param("var") String var) {
             return var;
         }
@@ -267,7 +265,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = Number.class, value = TypedNumberConverter.class)
+    @ResponseConverter(TypedNumberConverterFunction.class)
     public static class MyAnnotatedService3 {
         @Get
         @Path("/int/{var}")
@@ -276,7 +274,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = String.class, value = TypedStringConverter.class)
+    @ResponseConverter(TypedStringConverterFunction.class)
     public static class MyAnnotatedService4 {
         @Get
         @Path("/string/{var}")
@@ -292,7 +290,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     // Aggregation Test
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService5 {
         @Post
         @Path("/a/string")
@@ -340,7 +338,7 @@ public class AnnotatedHttpServiceTest {
     /**
      * An annotated service that's used for testing non-default path mappings.
      */
-    @Converter(target = String.class, value = TypedStringConverter.class)
+    @ResponseConverter(TypedStringConverterFunction.class)
     public static class MyAnnotatedService6 {
 
         @Get
@@ -378,7 +376,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService7 {
 
         @Get("/param/get")
@@ -443,7 +441,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService8 {
 
         @Get("/same/path")
@@ -492,7 +490,7 @@ public class AnnotatedHttpServiceTest {
 
     @ProduceType("application/xml")
     @ProduceType("application/json")
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService9 {
 
         @Get("/same/path")
@@ -508,7 +506,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService10 {
 
         @Get("/syncThrow")
@@ -546,7 +544,7 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyAnnotatedService11 {
 
         @Get("/aHeader")

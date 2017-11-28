@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -38,10 +37,9 @@ final class AnnotatedHttpService implements HttpService {
     private final HttpHeaderPathMapping pathMapping;
 
     /**
-     * The {@link BiFunction} that will handle the request actually.
+     * The {@link AnnotatedHttpServiceMethod} that will handle the request actually.
      */
-    private final BiFunction<ServiceRequestContext, HttpRequest,
-            CompletionStage<HttpResponse>> function;
+    private final AnnotatedHttpServiceMethod delegate;
 
     /**
      * A decorator of this service.
@@ -53,12 +51,11 @@ final class AnnotatedHttpService implements HttpService {
      * Creates a new instance.
      */
     AnnotatedHttpService(HttpHeaderPathMapping pathMapping,
-                         BiFunction<ServiceRequestContext, HttpRequest,
-                                 CompletionStage<HttpResponse>> function,
+                         AnnotatedHttpServiceMethod delegate,
                          Function<Service<HttpRequest, HttpResponse>,
                                  ? extends Service<HttpRequest, HttpResponse>> decorator) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
-        this.function = requireNonNull(function, "function");
+        this.delegate = requireNonNull(delegate, "delegate");
         this.decorator = requireNonNull(decorator, "decorator");
     }
 
@@ -89,14 +86,14 @@ final class AnnotatedHttpService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(function.apply(ctx, req));
+        return HttpResponse.from(delegate.serve(ctx, req));
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("pathMapping", pathMapping)
-                          .add("function", function)
+                          .add("delegate", delegate)
                           .add("decorator", decorator)
                           .toString();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,13 +22,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * The containing annotation type for {@link Converter}.
+ * The containing annotation type for {@link ResponseConverter}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-public @interface Converters {
+public @interface ResponseConverters {
     /**
-     * An array of {@link Converter}s.
+     * An array of {@link ResponseConverter}s.
      */
-    Converter[] value();
+    ResponseConverter[] value();
 }

@@ -23,11 +23,18 @@ import java.util.Optional;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 public class AnnotatedHttpServiceBuilderTest {
 
@@ -93,6 +100,24 @@ public class AnnotatedHttpServiceBuilderTest {
                 return null;
             }
         });
+
+        new ServerBuilder().annotatedService(new Object() {
+                                                 @Get("/")
+                                                 public Object root(@Param("a") byte a) {
+                                                     return null;
+                                                 }
+                                             },
+                                             new JacksonRequestConverterFunction(),
+                                             new ByteArrayRequestConverterFunction(),
+                                             new DummyExceptionHandler());
+
+        new ServerBuilder().annotatedService(new Object() {
+                                                 @Get("/")
+                                                 public Object root(@Param("a") byte a) {
+                                                     return null;
+                                                 }
+                                             },
+                                             LoggingService.newDecorator());
     }
 
     @Test
@@ -168,5 +193,12 @@ public class AnnotatedHttpServiceBuilderTest {
                 return null;
             }
         })).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static class DummyExceptionHandler implements ExceptionHandlerFunction {
+        @Override
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+            return null;
+        }
     }
 }

@@ -16,28 +16,27 @@
 
 package com.linecorp.armeria.server.annotation;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * Converts an {@link AggregatedHttpMessage} to an object. The class implementing this interface would
- * be specified as a value of a {@link RequestConverter} annotation.
+ * Converts a {@code result} object to {@link HttpResponse}. The class implementing this interface would
+ * be specified as {@link ResponseConverter} annotation.
  *
- * @see RequestConverter
- * @see RequestObject
+ * @see ResponseConverter
  */
 @FunctionalInterface
-public interface RequestConverterFunction {
+public interface ResponseConverterFunction {
 
     /**
-     * Returns whether this converter is able to convert the specified {@code request} to
-     * {@code expectedResultType}.
+     * Returns whether this converter is able to convert the specified {@code result} to
+     * {@link HttpResponse}.
      */
-    default boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
+    default boolean canConvertResponse(Object result) {
         return true;
     }
 
     /**
-     * Converts the specified {@code request} to an object of {@code expectedResultType}.
+     * Returns {@link HttpResponse} instance corresponds to the given {@code result}.
      */
-    Object convertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception;
+    HttpResponse convertResponse(Object result) throws Exception;
 }
