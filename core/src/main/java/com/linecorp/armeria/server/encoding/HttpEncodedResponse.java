@@ -37,6 +37,8 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 
+import io.netty.util.ReferenceCountUtil;
+
 /**
  * A {@link FilteredStreamMessage} that applies HTTP encoding to {@link HttpObject}s as they are published.
  */
@@ -108,7 +110,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             return obj;
         }
 
-        HttpData data = (HttpData) obj;
+        final HttpData data = (HttpData) obj;
         try {
             encodingStream.write(data.array(), data.offset(), data.length());
             encodingStream.flush();
@@ -119,6 +121,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
                     e);
         } finally {
             encodedStream.reset();
+            ReferenceCountUtil.safeRelease(data);
         }
     }
 

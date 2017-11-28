@@ -25,6 +25,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * A {@link StreamDecoder} that user zlib ('gzip' or 'deflate'). Netty implementation used to allow
@@ -40,9 +41,13 @@ class ZlibStreamDecoder implements StreamDecoder {
 
     @Override
     public HttpData decode(HttpData obj) {
-        ByteBuf compressed = Unpooled.wrappedBuffer(obj.array(), obj.offset(), obj.length());
-        decoder.writeInbound(compressed);
-        return HttpData.of(fetchDecoderOutput());
+        try {
+            ByteBuf compressed = Unpooled.wrappedBuffer(obj.array(), obj.offset(), obj.length());
+            decoder.writeInbound(compressed);
+            return HttpData.of(fetchDecoderOutput());
+        } finally {
+            ReferenceCountUtil.safeRelease(obj);
+        }
     }
 
     @Override
