@@ -116,6 +116,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Validate the 'content-length' header.
                     final String contentLengthStr = nettyHeaders.get(HttpHeaderNames.CONTENT_LENGTH);
+                    final boolean contentEmpty;
                     if (contentLengthStr != null) {
                         final long contentLength;
                         try {
@@ -128,6 +129,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             fail(ctx, HttpResponseStatus.BAD_REQUEST);
                             return;
                         }
+
+                        contentEmpty = contentLength == 0;
+                    } else {
+                        contentEmpty = true;
                     }
 
                     nettyHeaders.set(ExtensionHeaderNames.SCHEME.text(), scheme);
@@ -139,6 +144,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             HttpUtil.isKeepAlive(nettyReq),
                             inboundTrafficController,
                             cfg.defaultMaxRequestLength());
+
+                    // Close the request early when it is sure that there will be
+                    // neither content nor trailing headers.
+                    if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
+                        req.close();
+                    }
 
                     ctx.fireChannelRead(req);
                 } else {

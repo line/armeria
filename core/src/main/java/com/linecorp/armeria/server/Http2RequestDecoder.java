@@ -84,17 +84,27 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             // Validate the 'content-length' header if exists.
+            final boolean contentEmpty;
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1L);
                 if (contentLength < 0) {
                     writeErrorResponse(ctx, streamId, HttpResponseStatus.BAD_REQUEST);
                     return;
                 }
+                contentEmpty = contentLength == 0;
+            } else {
+                contentEmpty = true;
             }
 
             req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId,
                                          ArmeriaHttpUtil.toArmeria(headers), true,
                                          inboundTrafficController, cfg.defaultMaxRequestLength());
+
+            // Close the request early when it is sure that there will be
+            // neither content nor trailing headers.
+            if (contentEmpty && endOfStream) {
+                req.close();
+            }
 
             requests.put(streamId, req);
             ctx.fireChannelRead(req);
