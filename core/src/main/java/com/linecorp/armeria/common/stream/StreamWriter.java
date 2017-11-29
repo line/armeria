@@ -56,7 +56,7 @@ public interface StreamWriter<T> {
     }
 
     /**
-     * Performs the specified {@code task} when there's enough demans from the {@link Subscriber}.
+     * Performs the specified {@code task} when there are enough demands from the {@link Subscriber}.
      *
      * @return the future that completes successfully when the {@code task} finishes or
      *         exceptionally when the {@link StreamMessage} is closed unexpectedly.

@@ -170,13 +170,13 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void run() {
-            if (request != null) {
-                request.abort();
-            }
-
             final ResponseTimeoutException cause = ResponseTimeoutException.get();
             delegate.close(cause);
             logBuilder.endResponse(cause);
+
+            if (request != null) {
+                request.abort();
+            }
         }
 
         @Override
@@ -213,22 +213,18 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void close() {
-            if (request != null) {
-                request.abort();
-            }
-
             if (cancelTimeout()) {
                 delegate.close();
                 logBuilder.endResponse();
+            }
+
+            if (request != null) {
+                request.abort();
             }
         }
 
         @Override
         public void close(Throwable cause) {
-            if (request != null) {
-                request.abort();
-            }
-
             if (cancelTimeout()) {
                 delegate.close(cause);
                 logBuilder.endResponse(cause);
@@ -236,6 +232,10 @@ abstract class HttpResponseDecoder {
                 if (!Exceptions.isExpected(cause)) {
                     logger.warn("Unexpected exception:", cause);
                 }
+            }
+
+            if (request != null) {
+                request.abort();
             }
         }
 
