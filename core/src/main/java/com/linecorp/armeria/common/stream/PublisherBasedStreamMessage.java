@@ -172,12 +172,17 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void request(long n) {
+            final Subscription subscription = this.subscription;
             assert subscription != null;
             subscription.request(n);
         }
 
         @Override
         public void cancel() {
+            // 'subscription' can never be null here because 'subscriber.onSubscriber()' is invoked
+            // only after 'subscription' is set. See onSubscribe0().
+            assert subscription != null;
+
             // Don't cancel but just abort if abort is pending.
             cancelOrAbort(!abortPending);
         }
@@ -190,7 +195,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void cancelOrAbort(boolean cancel) {
-            assert subscription != null;
             if (executor.inEventLoop()) {
                 cancelOrAbort0(cancel);
             } else {
@@ -226,21 +230,21 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         @Override
-        public void onSubscribe(Subscription s) {
-            subscription = s;
+        public void onSubscribe(Subscription subscription) {
             if (executor.inEventLoop()) {
-                onSubscribe0();
+                onSubscribe0(subscription);
             } else {
-                executor.execute(this::onSubscribe0);
+                executor.execute(() -> onSubscribe0(subscription));
             }
         }
 
-        private void onSubscribe0() {
+        private void onSubscribe0(Subscription subscription) {
             try {
+                this.subscription = subscription;
                 subscriber.onSubscribe(this);
             } finally {
                 if (abortPending) {
-                    cancelOrAbort(false);
+                    cancelOrAbort0(false);
                 }
             }
         }

@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.Objects;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,7 +41,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     private final TestEnvironment env;
 
     protected StreamMessageVerification() {
-        this(new TestEnvironment(200));
+        this(new TestEnvironment(1000, 200));
     }
 
     protected StreamMessageVerification(TestEnvironment env) {
@@ -163,10 +164,32 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         assertThat(pub.isOpen()).isTrue();
 
         final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
-        sub.request(1); // First element
-        assertThat(sub.nextElement()).isNotNull();
-        sub.request(1); // Abortion
-        sub.expectError(AbortedStreamException.class);
+        sub.request(1); // An element or abortion
+
+        boolean confirmedAbortion = false;
+        Object element = null;
+        try {
+            element = sub.nextElement();
+        } catch (AssertionError e) {
+            // Case 1: Abortion occurred before the element is signaled.
+            sub.expectError(AbortedStreamException.class);
+
+            // Make sure the next error is 'e'. We did not do identity check here because
+            // the TCK rebuilds the exception internally. See TestEnvironment.flopAndFail().
+            final AssertionError e2 = sub.expectError(AssertionError.class);
+            if (!Objects.equals(e2.getMessage(), e.getMessage())) {
+                throw e2;
+            }
+
+            confirmedAbortion = true;
+        }
+
+        if (!confirmedAbortion) {
+            // Case 2: The element was received before the abortion.
+            assertThat(element).isNotNull();
+            sub.request(1); // Abortion
+            sub.expectError(AbortedStreamException.class);
+        }
 
         env.verifyNoAsyncErrorsNoDelay();
         assertThatThrownBy(() -> pub.completionFuture().join())
