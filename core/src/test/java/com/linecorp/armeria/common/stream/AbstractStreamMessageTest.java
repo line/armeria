@@ -362,7 +362,7 @@ public abstract class AbstractStreamMessageTest {
         }, true);
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
-        assertThat(data.refCnt()).isZero();
+        await().untilAsserted(() -> assertThat(data.refCnt()).isZero());
     }
 
     @Test
@@ -396,7 +396,7 @@ public abstract class AbstractStreamMessageTest {
         }, true);
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
-        assertThat(data.refCnt()).isZero();
+        await().untilAsserted(() -> assertThat(data.refCnt()).isZero());
     }
 
     private void assertSuccess() {
