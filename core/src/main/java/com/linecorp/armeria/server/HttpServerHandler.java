@@ -443,7 +443,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                    DecodedHttpRequest req, AggregatedHttpMessage res) {
 
         // No need to consume further since the response is ready.
-        req.abort();
+        req.close();
 
         final boolean trailingHeadersEmpty = res.trailingHeaders().isEmpty();
         final boolean contentAndTrailingHeadersEmpty = res.content().isEmpty() && trailingHeadersEmpty;
