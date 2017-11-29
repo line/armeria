@@ -26,6 +26,7 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.Flags;
 
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * A {@link StreamMessage} used when all the objects that will be published are known at construction time.
@@ -95,7 +96,7 @@ public class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(), null, false);
+                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
             // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
             invokedOnSubscribe = true;

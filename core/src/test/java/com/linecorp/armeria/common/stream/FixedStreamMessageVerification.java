@@ -26,8 +26,7 @@ public class FixedStreamMessageVerification extends StreamMessageVerification<Lo
         return FixedStreamMessage.of(LongStream.range(0, elements).boxed().toArray(Long[]::new));
     }
 
-    // A fixed stream cannot fail. It can be aborted, but verification does not support abortion on a closed
-    // stream, while fixed streams are always closed.
+    // A fixed stream cannot fail.
 
     @Override
     public StreamMessage<Long> createFailedPublisher() {
@@ -36,7 +35,17 @@ public class FixedStreamMessageVerification extends StreamMessageVerification<Lo
 
     @Override
     public StreamMessage<Long> createAbortedPublisher(long elements) {
-        return null;
+        StreamMessage<Long> stream = createPublisher(elements);
+        stream.abort();
+        return stream;
+    }
+
+    @Override
+    @Test(enabled = false)
+    public void required_abortMustNotifySubscriber() throws Throwable {
+        // Fixed streams are closed from the start and there isn't a good way to abort after onSubscribe in this
+        // test (fixed streams do not have an onDemand method).
+        notVerified();
     }
 
     @Override
