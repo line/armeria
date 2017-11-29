@@ -29,11 +29,8 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.PooledObjects;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -140,11 +137,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         ReferenceCountUtil.touch(o);
         onRemoval(o);
         if (!subscription.withPooledObjects()) {
-            if (o instanceof ByteBufHolder) {
-                o = copyAndRelease((ByteBufHolder) o);
-            } else if (o instanceof ByteBuf) {
-                o = copyAndRelease((ByteBuf) o);
-            }
+            o = PooledObjects.toUnpooled(o);
         }
         return o;
     }
@@ -176,27 +169,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             } finally {
                 ReferenceCountUtil.safeRelease(e);
             }
-        }
-    }
-
-    private T copyAndRelease(ByteBufHolder o) {
-        try {
-            final ByteBuf content = Unpooled.wrappedBuffer(ByteBufUtil.getBytes(o.content()));
-            @SuppressWarnings("unchecked")
-            final T copy = (T) o.replace(content);
-            return copy;
-        } finally {
-            ReferenceCountUtil.safeRelease(o);
-        }
-    }
-
-    private T copyAndRelease(ByteBuf o) {
-        try {
-            @SuppressWarnings("unchecked")
-            final T copy = (T) Unpooled.copiedBuffer(o);
-            return copy;
-        } finally {
-            ReferenceCountUtil.safeRelease(o);
         }
     }
 
