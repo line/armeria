@@ -72,6 +72,7 @@ import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.logging.LoggingServiceBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.CallOptions;
@@ -107,6 +108,7 @@ public class GrpcClientTest {
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .build()
+                    .decorate(new LoggingServiceBuilder().newDecorator())
                     .decorate(TestServiceImpl.EchoRequestHeadersInTrailers::new)
                     .decorate((client, ctx, req) -> {
                         CLIENT_HEADERS_CAPTURE.set(req.headers());

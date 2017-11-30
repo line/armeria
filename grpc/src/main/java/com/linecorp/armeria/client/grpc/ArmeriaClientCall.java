@@ -175,14 +175,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (cause != null) {
             status = status.withCause(cause);
         }
-        responseReader.cancel();
         req.close(status.asException());
-        if (listener != null) {
-            try (SafeCloseable ignored = RequestContext.push(ctx)) {
-                listener.onClose(status, EMPTY_METADATA);
-            }
-            notifyExecutor();
-        }
+        close(status);
     }
 
     @Override
@@ -236,12 +230,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void transportReportStatus(Status status) {
-        responseReader.cancel();
-        try (SafeCloseable ignored = RequestContext.push(ctx)) {
-            listener.onClose(status, EMPTY_METADATA);
-        }
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status), null);
-        notifyExecutor();
+        close(status);
     }
 
     private void prepareHeaders(HttpHeaders headers, Compressor compressor) {
@@ -255,6 +244,15 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         headers.add(GrpcHeaderNames.GRPC_TIMEOUT,
                     TimeoutHeaderUtil.toHeaderValue(
                             TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis())));
+    }
+
+    private void close(Status status) {
+        responseReader.cancel();
+        try (SafeCloseable ignored = RequestContext.push(ctx)) {
+            listener.onClose(status, EMPTY_METADATA);
+        }
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status), null);
+        notifyExecutor();
     }
 
     /**
