@@ -141,9 +141,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         try {
             res = httpClient.execute(ctx, req);
         } catch (Exception e) {
-            try (SafeCloseable ignored = RequestContext.push(ctx)) {
-                listener.onClose(Status.fromThrowable(e), EMPTY_METADATA);
-            }
+            close(Status.fromThrowable(e));
             return;
         }
         res.subscribe(responseReader);
@@ -175,8 +173,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (cause != null) {
             status = status.withCause(cause);
         }
-        req.close(status.asException());
         close(status);
+        req.abort();
     }
 
     @Override
