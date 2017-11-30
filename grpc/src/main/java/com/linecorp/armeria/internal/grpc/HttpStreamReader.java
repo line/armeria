@@ -53,6 +53,8 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
 
     private int deferredInitialMessageRequest;
 
+    private volatile boolean cancelled;
+
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
                             ArmeriaMessageDeframer deframer,
                             TransportStatusListener transportStatusListener) {
@@ -75,6 +77,10 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
     @Override
     public void onSubscribe(Subscription subscription) {
         this.subscription = subscription;
+        if (cancelled) {
+            subscription.cancel();
+            return;
+        }
         if (deferredInitialMessageRequest > 0) {
             request(deferredInitialMessageRequest);
         }
@@ -82,6 +88,9 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
 
     @Override
     public void onNext(HttpObject obj) {
+        if (cancelled) {
+            return;
+        }
         if (obj instanceof HttpHeaders) {
             // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
             // and client though as everything else is identical.
@@ -131,15 +140,22 @@ public class HttpStreamReader implements Subscriber<HttpObject> {
 
     @Override
     public void onError(Throwable cause) {
+        if (cancelled) {
+            return;
+        }
         transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
     }
 
     @Override
     public void onComplete() {
+        if (cancelled) {
+            return;
+        }
         closeDeframer();
     }
 
     public void cancel() {
+        cancelled = true;
         if (subscription != null) {
             subscription.cancel();
         }
