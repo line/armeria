@@ -26,6 +26,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -115,6 +116,8 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
         }
     }
 
+    // FIXME(trustin): https://github.com/line/armeria/issues/882
+    @Ignore
     @Test(timeout = 10000)
     public void testConnectionRecovery() throws Exception {
         ZooKeeperRegistration zkConnector = zkConnectors.get(0);
