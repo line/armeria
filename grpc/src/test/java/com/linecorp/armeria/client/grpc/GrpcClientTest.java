@@ -103,6 +103,7 @@ public class GrpcClientTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.port(0, HTTP);
             sb.defaultMaxRequestLength(MAX_MESSAGE_SIZE);
+            sb.idleTimeoutMillis(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
