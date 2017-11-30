@@ -44,12 +44,14 @@ import org.mockito.ArgumentCaptor;
 import com.google.common.base.Throwables;
 import com.google.protobuf.ByteString;
 
-import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.logging.LoggingClientBuilder;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
@@ -72,7 +74,6 @@ import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
-import com.linecorp.armeria.server.logging.LoggingServiceBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
 
 import io.grpc.CallOptions;
@@ -108,7 +109,6 @@ public class GrpcClientTest {
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .build()
-                    .decorate(new LoggingServiceBuilder().newDecorator())
                     .decorate(TestServiceImpl.EchoRequestHeadersInTrailers::new)
                     .decorate((client, ctx, req) -> {
                         CLIENT_HEADERS_CAPTURE.set(req.headers());
@@ -138,12 +138,13 @@ public class GrpcClientTest {
 
     @Before
     public void setUp() {
-        blockingStub = ClientFactory.DEFAULT
-                .newClient("gproto+" + server.httpUri("/"), TestServiceBlockingStub.class,
-                           ClientOption.DEFAULT_MAX_RESPONSE_LENGTH.newValue((long) MAX_MESSAGE_SIZE));
-        asyncStub = ClientFactory.DEFAULT
-                .newClient("gproto+" + server.httpUri("/"),
-                           TestServiceStub.class);
+        blockingStub = new ClientBuilder("gproto+" + server.httpUri("/"))
+                .defaultMaxResponseLength((long) MAX_MESSAGE_SIZE)
+                .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
+                .build(TestServiceBlockingStub.class);
+        asyncStub = new ClientBuilder("gproto+" + server.httpUri("/"))
+                .decorator(HttpRequest.class, HttpResponse.class, new LoggingClientBuilder().newDecorator())
+                .build(TestServiceStub.class);
     }
 
     @After
