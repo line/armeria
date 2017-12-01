@@ -57,6 +57,7 @@ public class StreamMessageBenchmark {
             DEFAULT_STREAM_MESSAGE,
             EVENT_LOOP_MESSAGE,
             FIXED_STREAM_MESSAGE,
+            DEFERRED_FIXED_STREAM_MESSAGE,
         }
 
         @Param
@@ -163,6 +164,10 @@ public class StreamMessageBenchmark {
                 return new DefaultStreamMessage<>();
             case FIXED_STREAM_MESSAGE:
                 return new FixedStreamMessage<>(streamObjects.values);
+            case DEFERRED_FIXED_STREAM_MESSAGE:
+                DeferredStreamMessage<Integer> stream = new DeferredStreamMessage<>();
+                stream.delegate(new FixedStreamMessage<>(streamObjects.values));
+                return stream;
             default:
                 throw new Error();
         }
