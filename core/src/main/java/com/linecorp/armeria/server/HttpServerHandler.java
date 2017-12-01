@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -25,8 +26,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
@@ -43,10 +46,14 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -57,7 +64,9 @@ import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.logging.LoggingUtil;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -145,6 +154,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private boolean isReading;
     private boolean handledLastRequest;
 
+    private final Consumer<RequestLog> accessLogWriter;
+
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
                       SessionProtocol protocol) {
@@ -158,6 +169,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (protocol == H1 || protocol == H1C) {
             responseEncoder = new Http1ObjectEncoder(true, protocol.isTls());
         }
+
+        accessLogWriter = config.accessLogWriter();
     }
 
     @Override
@@ -225,7 +238,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final HttpHeaders headers = req.headers();
         if (!ALLOWED_METHODS.contains(headers.method())) {
-            respond(ctx, req, HttpStatus.METHOD_NOT_ALLOWED);
+            respond(ctx, req, HttpStatus.METHOD_NOT_ALLOWED,
+                    new IllegalArgumentException("Request method is not allowed: " +
+                                                 headers.method().name()));
             return;
         }
 
@@ -235,7 +250,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
                 handleOptions(ctx, req);
             } else {
-                respond(ctx, req, HttpStatus.BAD_REQUEST);
+                respond(ctx, req, HttpStatus.BAD_REQUEST,
+                        new IllegalArgumentException("Request path is invalid: " + originalPath));
             }
             return;
         }
@@ -244,7 +260,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final PathAndQuery pathAndQuery = PathAndQuery.parse(originalPath);
         if (pathAndQuery == null) {
             // Reject requests without a valid path.
-            respond(ctx, req, HttpStatus.NOT_FOUND);
+            respond(ctx, req, HttpStatus.NOT_FOUND,
+                    new IllegalArgumentException("Request path is invalid: " + originalPath));
             return;
         }
 
@@ -260,16 +277,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             mapped = host.findServiceConfig(mappingCtx);
         } catch (HttpStatusException cause) {
             // We do not need to handle HttpResponseException here because we do not use it internally.
-            respond(ctx, req, cause.httpStatus());
+            respond(ctx, req, pathAndQuery, cause.httpStatus(), cause);
             return;
         } catch (Throwable cause) {
             logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
-            respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR);
+            respond(ctx, req, pathAndQuery, HttpStatus.INTERNAL_SERVER_ERROR, cause);
             return;
         }
         if (!mapped.isPresent()) {
             // No services matched the path.
-            handleNonExistentMapping(ctx, req, host, mappingCtx);
+            handleNonExistentMapping(ctx, req, host, pathAndQuery, mappingCtx);
             return;
         }
 
@@ -292,13 +309,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } catch (HttpResponseException cause) {
                 res = cause.httpResponse();
             } catch (Throwable cause) {
-                logBuilder.endRequest(cause);
-                logBuilder.endResponse(cause);
-                if (cause instanceof HttpStatusException) {
-                    respond(ctx, req, ((HttpStatusException) cause).httpStatus());
-                } else {
-                    logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
-                    respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR);
+                try {
+                    if (cause instanceof HttpStatusException) {
+                        respond(ctx, req, ((HttpStatusException) cause).httpStatus(), reqCtx, cause);
+                    } else {
+                        logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
+                        respond(ctx, req, HttpStatus.INTERNAL_SERVER_ERROR, reqCtx, cause);
+                    }
+                } finally {
+                    logBuilder.endRequest(cause);
+                    logBuilder.endResponse(cause);
                 }
                 return;
             }
@@ -339,7 +359,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             })).exceptionally(CompletionActions::log);
 
             final HttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, accessLogWriter);
             reqCtx.setRequestTimeoutChangeListener(resSubscriber);
             res.subscribe(resSubscriber, eventLoop, true);
         }
@@ -349,11 +369,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         respond(ctx, req,
                 AggregatedHttpMessage.of(
                         HttpHeaders.of(HttpStatus.OK)
-                                   .set(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING)));
+                                   .set(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING)),
+                newEarlyRespondingRequestContext(ctx, req, req.path(), null), null);
     }
 
     private void handleNonExistentMapping(ChannelHandlerContext ctx, DecodedHttpRequest req,
-                                          VirtualHost host, PathMappingContext mappingCtx) {
+                                          VirtualHost host, PathAndQuery pathAndQuery,
+                                          PathMappingContext mappingCtx) {
 
         String path = mappingCtx.path();
         if (path.charAt(path.length() - 1) != '/') {
@@ -367,12 +389,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 } else {
                     location = pathWithSlash + originalPath.substring(path.length());
                 }
-                redirect(ctx, req, location);
+                redirect(ctx, req, pathAndQuery, location);
                 return;
             }
         }
 
-        respond(ctx, req, HttpStatus.NOT_FOUND);
+        respond(ctx, req, HttpStatus.NOT_FOUND, null);
     }
 
     private String hostname(ChannelHandlerContext ctx, HttpHeaders headers) {
@@ -394,17 +416,33 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return hostname.substring(0, hostnameColonIdx);
     }
 
-    private void redirect(ChannelHandlerContext ctx, DecodedHttpRequest req, String location) {
+    private void redirect(ChannelHandlerContext ctx, DecodedHttpRequest req,
+                          PathAndQuery pathAndQuery, String location) {
         respond(ctx, req,
                 AggregatedHttpMessage.of(
                         HttpHeaders.of(HttpStatus.TEMPORARY_REDIRECT)
-                                   .set(HttpHeaderNames.LOCATION, location)));
+                                   .set(HttpHeaderNames.LOCATION, location)),
+                newEarlyRespondingRequestContext(ctx, req, pathAndQuery.path(), pathAndQuery.query()),
+                null);
     }
 
-    private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, HttpStatus status) {
+    private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req,
+                         HttpStatus status, @Nullable Throwable cause) {
+        respond(ctx, req, status,
+                newEarlyRespondingRequestContext(ctx, req, req.path(), null), cause);
+    }
+
+    private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, PathAndQuery pathAndQuery,
+                         HttpStatus status, @Nullable Throwable cause) {
+        respond(ctx, req, status,
+                newEarlyRespondingRequestContext(ctx, req, pathAndQuery.path(), pathAndQuery.query()), cause);
+    }
+
+    private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, HttpStatus status,
+                         RequestContext reqCtx, @Nullable Throwable cause) {
 
         if (status.code() < 400) {
-            respond(ctx, req, AggregatedHttpMessage.of(HttpHeaders.of(status)));
+            respond(ctx, req, AggregatedHttpMessage.of(HttpHeaders.of(status)), reqCtx, cause);
             return;
         }
 
@@ -419,19 +457,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 AggregatedHttpMessage.of(
                         HttpHeaders.of(status)
                                    .contentType(ERROR_CONTENT_TYPE),
-                        content));
+                        content), reqCtx, cause);
     }
 
-    private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, AggregatedHttpMessage res) {
+    private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, AggregatedHttpMessage res,
+                         RequestContext reqCtx, @Nullable Throwable cause) {
         if (!handledLastRequest) {
             addKeepAliveHeaders(req, res);
-            respond0(ctx, req, res).addListener(CLOSE_ON_FAILURE);
+            respond0(ctx, req, res, reqCtx, cause).addListener(CLOSE_ON_FAILURE);
         } else {
             // Note that it is perfectly fine not to set the 'content-length' header to the last response
             // of an HTTP/1 connection. We set it anyway to work around overly strict HTTP clients that always
             // require a 'content-length' header for non-chunked responses.
             setContentLength(req, res);
-            respond0(ctx, req, res).addListener(CLOSE);
+            respond0(ctx, req, res, reqCtx, cause).addListener(CLOSE);
         }
 
         if (!isReading) {
@@ -440,23 +479,40 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private ChannelFuture respond0(ChannelHandlerContext ctx,
-                                   DecodedHttpRequest req, AggregatedHttpMessage res) {
+                                   DecodedHttpRequest req, AggregatedHttpMessage res,
+                                   RequestContext reqCtx, @Nullable Throwable cause) {
 
         // No need to consume further since the response is ready.
         req.close();
 
         final boolean trailingHeadersEmpty = res.trailingHeaders().isEmpty();
         final boolean contentAndTrailingHeadersEmpty = res.content().isEmpty() && trailingHeadersEmpty;
+
+        final RequestLogBuilder logBuilder = reqCtx.logBuilder();
+
+        logBuilder.startResponse();
         ChannelFuture future = responseEncoder.writeHeaders(
                 ctx, req.id(), req.streamId(), res.headers(), contentAndTrailingHeadersEmpty);
+        logBuilder.responseHeaders(res.headers());
         if (!contentAndTrailingHeadersEmpty) {
             future = responseEncoder.writeData(
                     ctx, req.id(), req.streamId(), res.content(), trailingHeadersEmpty);
+            logBuilder.increaseResponseLength(res.content().length());
             if (!trailingHeadersEmpty) {
                 future = responseEncoder.writeHeaders(
                         ctx, req.id(), req.streamId(), res.trailingHeaders(), true);
             }
         }
+
+        future.addListener(f -> {
+            if (cause == null && f.isSuccess()) {
+                logBuilder.endResponse();
+            } else {
+                // Respect the first specified cause.
+                logBuilder.endResponse(firstNonNull(cause, f.cause()));
+            }
+            accessLogWriter.accept(reqCtx.log());
+        });
         return future;
     }
 
@@ -515,6 +571,65 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         Exceptions.logIfUnexpected(logger, ctx.channel(), protocol, cause);
         if (ctx.channel().isActive()) {
             ctx.close();
+        }
+    }
+
+    private EarlyRespondingRequestContext newEarlyRespondingRequestContext(ChannelHandlerContext ctx,
+                                                                           DecodedHttpRequest req,
+                                                                           String path,
+                                                                           @Nullable String query) {
+        final Channel channel = ctx.channel();
+        final EarlyRespondingRequestContext reqCtx =
+                new EarlyRespondingRequestContext(channel, NoopMeterRegistry.get(), protocol(),
+                                                  req.method(), path, query, req);
+        final String host = LoggingUtil.remoteHost(req.headers(), ctx.channel());
+
+        final RequestLogBuilder logBuilder = reqCtx.logBuilder();
+        logBuilder.startRequest(channel, protocol(), host);
+        logBuilder.requestHeaders(req.headers());
+
+        return reqCtx;
+    }
+
+    private static final class EarlyRespondingRequestContext extends NonWrappingRequestContext {
+
+        private final Channel channel;
+        private final DefaultRequestLog requestLog;
+
+        EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
+                                      SessionProtocol sessionProtocol, HttpMethod method, String path,
+                                      @Nullable String query, Object request) {
+            super(meterRegistry, sessionProtocol, method, path, query, request);
+            this.channel = requireNonNull(channel, "channel");
+            requestLog = new DefaultRequestLog(this);
+        }
+
+        @Override
+        public RequestContext newDerivedContext() {
+            // There are no attributes which should be copied to a new instance.
+            return new EarlyRespondingRequestContext(channel(), meterRegistry(), sessionProtocol(),
+                                                     method(), path(), query(), request());
+        }
+
+        @Nullable
+        @Override
+        protected Channel channel() {
+            return channel;
+        }
+
+        @Override
+        public RequestLog log() {
+            return requestLog;
+        }
+
+        @Override
+        public RequestLogBuilder logBuilder() {
+            return requestLog;
+        }
+
+        @Override
+        public EventLoop eventLoop() {
+            return channel.eventLoop();
         }
     }
 }

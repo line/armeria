@@ -16,11 +16,9 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.HttpResponseSubscriber.State.DONE;
-import static com.linecorp.armeria.server.HttpResponseSubscriber.State.NEEDS_DATA_OR_TRAILING_HEADERS;
-
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -34,18 +32,17 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener,
-                                              ChannelFutureListener {
+final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
@@ -64,18 +61,22 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final HttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
+    private final Consumer<RequestLog> accessLogWriter;
     private final long startTimeNanos;
 
     private Subscription subscription;
     private ScheduledFuture<?> timeoutFuture;
     private State state = State.NEEDS_HEADERS;
+    private boolean isComplete;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
-                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                           Consumer<RequestLog> accessLogWriter) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
+        this.accessLogWriter = accessLogWriter;
         startTimeNanos = System.nanoTime();
     }
 
@@ -85,19 +86,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private RequestLogBuilder logBuilder() {
         return reqCtx.logBuilder();
-    }
-
-    @Override
-    public void operationComplete(ChannelFuture future) throws Exception {
-        if (future.isSuccess()) {
-            if (state != State.DONE) {
-                subscription.request(1);
-            }
-            return;
-        }
-
-        fail(future.cause());
-        HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(future);
     }
 
     @Override
@@ -194,7 +182,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                         endOfStream = true;
                         break;
                     default:
-                        state = NEEDS_DATA_OR_TRAILING_HEADERS;
+                        state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
                 }
                 break;
             }
@@ -293,24 +281,37 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             throw new Error();
         }
 
-        if (endOfStream) {
-            logBuilder().endResponse();
-        }
+        future.addListener((ChannelFuture f) -> {
+            // Write an access log if:
+            // - every message has been sent successfully.
+            // - any write operation is failed with a cause.
+            if (f.isSuccess()) {
+                if (endOfStream && tryComplete()) {
+                    logBuilder().endResponse();
+                    accessLogWriter.accept(reqCtx.log());
+                }
+                if (state != State.DONE) {
+                    subscription.request(1);
+                }
+                return;
+            }
 
-        future.addListener(this);
+            if (tryComplete()) {
+                setDone();
+                logBuilder().endResponse(f.cause());
+                subscription.cancel();
+                accessLogWriter.accept(reqCtx.log());
+            }
+            HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
+        });
+
         if (flush) {
             ctx.flush();
         }
 
-        if (state == DONE) {
+        if (state == State.DONE) {
             subscription.cancel();
         }
-    }
-
-    private void fail(Throwable cause) {
-        setDone();
-        logBuilder().endResponse(cause);
-        subscription.cancel();
     }
 
     private void setDone() {
@@ -323,26 +324,47 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         final HttpData content = message.content();
 
         logBuilder().responseHeaders(headers);
+        logBuilder().increaseResponseLength(content.length());
 
         final State state = this.state; // Keep the state before calling fail() because it updates state.
-        fail(cause);
+        setDone();
+        subscription.cancel();
 
         final int id = req.id();
         final int streamId = req.streamId();
 
+        final ChannelFuture future;
         if (wroteNothing(state)) {
             // Did not write anything yet; we can send an error response instead of resetting the stream.
             if (content.isEmpty()) {
-                responseEncoder.writeHeaders(ctx, id, streamId, headers, true);
+                future = responseEncoder.writeHeaders(ctx, id, streamId, headers, true);
             } else {
                 responseEncoder.writeHeaders(ctx, id, streamId, headers, false);
-                responseEncoder.writeData(ctx, id, streamId, content, true);
+                future = responseEncoder.writeData(ctx, id, streamId, content, true);
             }
         } else {
             // Wrote something already; we have to reset/cancel the stream.
-            responseEncoder.writeReset(ctx, id, streamId, error);
+            future = responseEncoder.writeReset(ctx, id, streamId, error);
+        }
+
+        if (state != State.DONE) {
+            future.addListener(unused -> {
+                // Write an access log always with a cause. Respect the first specified cause.
+                if (tryComplete()) {
+                    logBuilder().endResponse(cause);
+                    accessLogWriter.accept(reqCtx.log());
+                }
+            });
         }
         ctx.flush();
+    }
+
+    private boolean tryComplete() {
+        if (isComplete) {
+            return false;
+        }
+        isComplete = true;
+        return true;
     }
 
     private static boolean wroteNothing(State state) {
