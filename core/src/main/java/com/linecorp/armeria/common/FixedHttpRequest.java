@@ -22,7 +22,7 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.common.stream.FixedStreamMessage;
 
 /**
- * A {@link HttpResponse} optimized for when all the {@link HttpObject} that will be published are known at
+ * An {@link HttpResponse} optimized for when all the {@link HttpObject}s that will be published are known at
  * construction time.
  */
 public final class FixedHttpRequest extends FixedStreamMessage<HttpObject> implements HttpRequest {
