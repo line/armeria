@@ -86,7 +86,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         activePublisherTest(1, true, pub -> {
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
-            assertThat(stream.isOpen()).isTrue();
+            if (!(pub instanceof FixedStreamMessage)) {
+                // Fixed streams are never open.
+                assertThat(stream.isOpen()).isTrue();
+            }
             assertThat(stream.isEmpty()).isFalse();
             assertThat(stream.completionFuture()).isNotDone();
 
@@ -123,6 +126,9 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     @Test
     public void required_subscribeOnAbortedStreamMustFail() throws Throwable {
         final StreamMessage<T> pub = createAbortedPublisher(0);
+        if (pub == null) {
+            notVerified();
+        }
         assumeAbortedPublisherAvailable(pub);
         assertThat(pub.isOpen()).isFalse();
         assertThatThrownBy(() -> pub.completionFuture().join())
@@ -160,8 +166,14 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     @Test
     public void required_abortMustNotifySubscriber() throws Throwable {
         final StreamMessage<T> pub = createAbortedPublisher(1);
+        if (pub == null) {
+            notVerified();
+        }
         assumeAbortedPublisherAvailable(pub);
-        assertThat(pub.isOpen()).isTrue();
+        if (!(pub instanceof FixedStreamMessage)) {
+            // A fixed stream is never open.
+            assertThat(pub.isOpen()).isTrue();
+        }
 
         final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
         sub.request(1); // An element or abortion

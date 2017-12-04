@@ -446,19 +446,19 @@ public interface AggregatedHttpMessage {
             throw new IllegalStateException("not a request (missing :path)");
         }
 
-        final DefaultHttpRequest req = new DefaultHttpRequest(headers);
         final HttpData content = content();
-        if (!content.isEmpty()) {
-            req.write(content);
-        }
-
         final HttpHeaders trailingHeaders = trailingHeaders();
-        if (!trailingHeaders.isEmpty()) {
-            req.write(trailingHeaders);
+        final int numObjects = (!content.isEmpty() ? 1 : 0) +
+                               (!trailingHeaders.isEmpty() ? 1 : 0);
+        final HttpObject[] objs = new HttpObject[numObjects];
+        int writerIndex = 0;
+        if (!content.isEmpty()) {
+            objs[writerIndex++] = content;
         }
-
-        req.close();
-        return req;
+        if (!trailingHeaders.isEmpty()) {
+            objs[writerIndex] = trailingHeaders;
+        }
+        return FixedHttpRequest.ofHeadersWritten(headers, objs);
     }
 
     /**
@@ -468,7 +468,6 @@ public interface AggregatedHttpMessage {
      * @throws IllegalStateException if this message is not a response.
      */
     default HttpResponse toHttpResponse() {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
         final List<HttpHeaders> informationals = informationals();
         final HttpHeaders headers = headers();
 
@@ -480,22 +479,24 @@ public interface AggregatedHttpMessage {
             throw new IllegalStateException("not a response (missing :status)");
         }
 
-        if (!informationals.isEmpty()) {
-            informationals.forEach(res::write);
-        }
-
-        res.write(headers);
-
         final HttpData content = content();
-        if (!content.isEmpty()) {
-            res.write(content);
-        }
-
         final HttpHeaders trailingHeaders = trailingHeaders();
-        if (!trailingHeaders.isEmpty()) {
-            res.write(trailingHeaders);
+        final int numObjects = informationals.size() +
+                               1 /* headers */ +
+                               (!content.isEmpty() ? 1 : 0) +
+                               (!trailingHeaders.isEmpty() ? 1 : 0);
+        final HttpObject[] objs = new HttpObject[numObjects];
+        int writerIndex = 0;
+        for (HttpHeaders informational : informationals()) {
+            objs[writerIndex++] = informational;
         }
-        res.close();
-        return res;
+        objs[writerIndex++] = headers;
+        if (!content.isEmpty()) {
+            objs[writerIndex++] = content;
+        }
+        if (!trailingHeaders.isEmpty()) {
+            objs[writerIndex] = trailingHeaders;
+        }
+        return FixedHttpResponse.of(objs);
     }
 }

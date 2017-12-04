@@ -18,10 +18,11 @@ package com.linecorp.armeria.common.stream;
 
 import java.util.List;
 
-public class DefaultStreamMessageTest extends AbstractStreamMessageAndWriterTest {
+public class FixedStreamMessageTest extends AbstractStreamMessageTest {
 
+    @SuppressWarnings("unchecked")
     @Override
-    <T> StreamMessageAndWriter<T> newStreamWriter(List<T> unused) {
-        return new DefaultStreamMessage<>();
+    <T> StreamMessage<T> newStream(List<T> inputs) {
+        return new FixedStreamMessage<>((T[]) inputs.toArray());
     }
 }

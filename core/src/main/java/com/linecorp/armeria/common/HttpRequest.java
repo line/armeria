@@ -197,15 +197,17 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
             headers.setInt(CONTENT_LENGTH, content.length());
         }
 
-        final DefaultHttpRequest req = new DefaultHttpRequest(headers);
         if (!content.isEmpty()) {
-            req.write(content);
+            if (trailingHeaders.isEmpty()) {
+                return FixedHttpRequest.of(headers, content);
+            } else {
+                return FixedHttpRequest.of(headers, content, trailingHeaders);
+            }
+        } else if (!trailingHeaders.isEmpty()) {
+            return FixedHttpRequest.of(headers, trailingHeaders);
+        } else {
+            return FixedHttpRequest.of(headers);
         }
-        if (!trailingHeaders.isEmpty()) {
-            req.write(trailingHeaders);
-        }
-        req.close();
-        return req;
     }
 
     /**
