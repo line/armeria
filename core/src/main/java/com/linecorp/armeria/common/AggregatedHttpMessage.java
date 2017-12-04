@@ -458,7 +458,7 @@ public interface AggregatedHttpMessage {
         if (!trailingHeaders.isEmpty()) {
             objs[writerIndex] = trailingHeaders;
         }
-        return FixedHttpRequest.ofHeadersWritten(headers, objs);
+        return FixedHttpRequest.ofWrittenHeaders(headers, objs);
     }
 
     /**

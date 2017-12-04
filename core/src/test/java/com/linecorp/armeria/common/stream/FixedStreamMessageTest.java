@@ -16,13 +16,40 @@
 
 package com.linecorp.armeria.common.stream;
 
-import java.util.List;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.IntStream;
+
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+
+import com.google.common.collect.ImmutableList;
+
+@RunWith(Parameterized.class)
 public class FixedStreamMessageTest extends AbstractStreamMessageTest {
+
+    @Parameters(name = "{index}: num={0}")
+    public static Collection<Integer> parameters() {
+        return ImmutableList.of(0, 1, 2, 10);
+    }
+
+    private final int num;
+
+    public FixedStreamMessageTest(int num) {
+        this.num = num;
+    }
 
     @SuppressWarnings("unchecked")
     @Override
     <T> StreamMessage<T> newStream(List<T> inputs) {
-        return new FixedStreamMessage<>((T[]) inputs.toArray());
+        return FixedStreamMessage.of((T[]) inputs.toArray());
+    }
+
+    @Override
+    List<Integer> streamValues() {
+        return IntStream.range(0, num).boxed().collect(toImmutableList());
     }
 }

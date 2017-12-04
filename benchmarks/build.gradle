@@ -29,15 +29,22 @@ jmh {
     if (jmhInclude) {
         include = jmhInclude
     }
-    forceGC = true
+
+    if (rootProject.hasProperty('jmh.forceGC')) {
+        forceGC = 'true'.equals(rootProject.findProperty('jmh.forceGC'))
+    } else {
+        forceGC = true
+    }
+
+
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
     jmhVersion = rootProject.ext.dependencyManagement['org.openjdk.jmh']['jmh-core'].version
 
     if (rootProject.hasProperty('jmh.params')) {
         benchmarkParameters = [:]
-        rootProject.findProperty('jmh.params').split(',').each {
+        rootProject.findProperty('jmh.params').split(';').each {
             def parts = it.split('=')
-            benchmarkParameters[parts[0]] = [parts[1]]
+            benchmarkParameters[parts[0]] = parts[1].tokenize(',')
         }
     }
 
