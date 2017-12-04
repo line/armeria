@@ -36,6 +36,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
+    static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
     static final CloseEvent CANCELLED_CLOSE = new CloseEvent(
             Exceptions.clearTrace(CancelledSubscriptionException.get()));
     static final CloseEvent ABORTED_CLOSE = new CloseEvent(
