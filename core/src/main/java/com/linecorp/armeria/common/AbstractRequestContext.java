@@ -153,10 +153,18 @@ public abstract class AbstractRequestContext implements RequestContext {
 
     /**
      * Marks this {@link RequestContext} as having been timed out. Any callbacks created with
-     * {code makeContextAware} that are run after this will be failed with {@link CancellationException}.
+     * {@code makeContextAware} that are run after this will be failed with {@link CancellationException}.
      */
     public void setTimedOut() {
         timedOut = true;
+    }
+
+    /**
+     * Resets the timed out value. This should be used with the mechanism that restores this context
+     * to the initial state.
+     */
+    public void resetTimedOut() {
+        timedOut = false;
     }
 
     private <T extends Future<?>> void invokeOperationComplete(

@@ -31,9 +31,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -43,14 +41,13 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
 
 /**
  * Default {@link RequestLog} implementation.
  */
-public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
+public class DefaultRequestLog extends AbstractRequestLog implements RequestLogBuilder {
 
     private static final AtomicIntegerFieldUpdater<DefaultRequestLog> flagsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "flags");
@@ -59,10 +56,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             REQUEST_END.setterFlags() & ~REQUEST_CONTENT.setterFlags();
     private static final int FLAGS_RESPONSE_END_WITHOUT_CONTENT =
             RESPONSE_END.setterFlags() & ~RESPONSE_CONTENT.setterFlags();
-
-    private static final int STRING_BUILDER_CAPACITY = 512;
-
-    private final RequestContext ctx;
 
     /**
      * Updated by {@link #flagsUpdater}.
@@ -97,111 +90,36 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private Object responseContent;
     private Object rawResponseContent;
 
-    private volatile int requestStrFlags = -1;
-    private volatile int responseStrFlags = -1;
-    private String requestStr;
-    private String responseStr;
-
     /**
      * Creates a new instance.
      */
     public DefaultRequestLog(RequestContext ctx) {
-        this.ctx = requireNonNull(ctx, "ctx");
+        super(ctx);
     }
 
     @Override
-    public Set<RequestLogAvailability> availabilities() {
-        return RequestLogAvailabilitySet.of(flags);
+    public int flags() {
+        return flags;
     }
 
-    @Override
-    public boolean isAvailable(RequestLogAvailability availability) {
-        return isAvailable(availability.getterFlags());
-    }
-
-    @Override
-    public boolean isAvailable(RequestLogAvailability... availabilities) {
-        return isAvailable(getterFlags(availabilities));
-    }
-
-    @Override
-    public boolean isAvailable(Iterable<RequestLogAvailability> availabilities) {
-        return isAvailable(getterFlags(availabilities));
-    }
-
-    private boolean isAvailable(int interestedFlags) {
-        return (flags & interestedFlags) == interestedFlags;
-    }
-
-    private static boolean isAvailable(int flags, RequestLogAvailability availability) {
-        final int interestedFlags = availability.getterFlags();
-        return (flags & interestedFlags) == interestedFlags;
-    }
-
-    private boolean isAvailabilityAlreadyUpdated(RequestLogAvailability availability) {
-        return isAvailable(availability.setterFlags());
-    }
-
-    @Override
-    public void addListener(RequestLogListener listener, RequestLogAvailability availability) {
-        requireNonNull(listener, "listener");
-        requireNonNull(availability, "availability");
-        addListener(listener, availability.getterFlags());
-    }
-
-    @Override
-    public void addListener(RequestLogListener listener, RequestLogAvailability... availabilities) {
-        requireNonNull(listener, "listener");
-        requireNonNull(availabilities, "availabilities");
-        addListener(listener, getterFlags(availabilities));
-    }
-
-    @Override
-    public void addListener(RequestLogListener listener, Iterable<RequestLogAvailability> availabilities) {
-        requireNonNull(listener, "listener");
-        requireNonNull(availabilities, "availabilities");
-        addListener(listener, getterFlags(availabilities));
-    }
-
-    private void addListener(RequestLogListener listener, int interestedFlags) {
-        if (interestedFlags == 0) {
+    void addListener(ListenerEntry entry) {
+        requireNonNull(entry, "entry");
+        if (entry.interestedFlags() == 0) {
             throw new IllegalArgumentException("no availability specified");
         }
 
-        if (isAvailable(interestedFlags)) {
+        if (isAvailable(entry.interestedFlags())) {
             // No need to add to 'listeners'.
-            RequestLogListenerInvoker.invokeOnRequestLog(listener, this);
+            RequestLogListenerInvoker.invokeOnRequestLog(entry.listener(), this);
             return;
         }
 
-        final ListenerEntry e = new ListenerEntry(listener, interestedFlags);
         final RequestLogListener[] satisfiedListeners;
         synchronized (listeners) {
-            listeners.add(e);
+            listeners.add(entry);
             satisfiedListeners = removeSatisfiedListeners();
         }
         notifyListeners(satisfiedListeners);
-    }
-
-    private static int getterFlags(RequestLogAvailability[] availabilities) {
-        int flags = 0;
-        for (RequestLogAvailability a : availabilities) {
-            flags |= a.getterFlags();
-        }
-        return flags;
-    }
-
-    private static int getterFlags(Iterable<RequestLogAvailability> availabilities) {
-        int flags = 0;
-        for (RequestLogAvailability a : availabilities) {
-            flags |= a.getterFlags();
-        }
-        return flags;
-    }
-
-    @Override
-    public RequestContext context() {
-        return ctx;
     }
 
     @Override
@@ -228,6 +146,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (updateAvailability) {
             updateAvailability(REQUEST_START);
         }
+    }
+
+    private boolean isAvailabilityAlreadyUpdated(RequestLogAvailability availability) {
+        return isAvailable(availability.setterFlags());
     }
 
     @Override
@@ -582,13 +504,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         do {
             final ListenerEntry e = i.next();
-            final int interestedFlags = e.interestedFlags;
+            final int interestedFlags = e.interestedFlags();
             if ((flags & interestedFlags) == interestedFlags) {
                 i.remove();
                 if (satisfied == null) {
                     satisfied = new RequestLogListener[maxNumListeners];
                 }
-                satisfied[numSatisfied++] = e.listener;
+                satisfied[numSatisfied++] = e.listener();
             }
         } while (i.hasNext());
 
@@ -605,135 +527,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 break;
             }
             RequestLogListenerInvoker.invokeOnRequestLog(l, this);
-        }
-    }
-
-    @Override
-    public String toString() {
-        final String req = toStringRequestOnly();
-        final String res = toStringResponseOnly();
-        final StringBuilder buf = new StringBuilder(5 + req.length() + 6 + res.length() + 1);
-        return buf.append("{req=")  // 5 chars
-                  .append(req)
-                  .append(", res=") // 6 chars
-                  .append(res)
-                  .append('}')      // 1 char
-                  .toString();
-    }
-
-    @Override
-    public String toStringRequestOnly() {
-        return toStringRequestOnly(Function.identity(), Function.identity());
-    }
-
-    @Override
-    public String toStringRequestOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                      Function<Object, Object> contentSanitizer) {
-        final int flags = this.flags & 0xFFFF; // Only interested in the bits related with request.
-        if (requestStrFlags == flags) {
-            return requestStr;
-        }
-
-        final StringBuilder buf = new StringBuilder(STRING_BUILDER_CAPACITY);
-        buf.append('{');
-        if (isAvailable(flags, REQUEST_START)) {
-            buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, requestStartTimeMillis);
-
-            if (isAvailable(flags, REQUEST_END)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, requestLength);
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, requestDurationNanos());
-                if (requestCause != null) {
-                    buf.append(", cause=").append(requestCause);
-                }
-            }
-
-            buf.append(", scheme=");
-            if (isAvailable(flags, SCHEME)) {
-                buf.append(scheme().uriText());
-            } else {
-                buf.append(SerializationFormat.UNKNOWN.uriText())
-                   .append('+')
-                   .append(sessionProtocol.uriText());
-            }
-
-            buf.append(", host=").append(host);
-
-            if (isAvailable(flags, REQUEST_HEADERS) && requestHeaders != null) {
-                buf.append(", headers=").append(headersSanitizer.apply(requestHeaders));
-            }
-
-            if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
-                buf.append(", content=").append(contentSanitizer.apply(requestContent));
-            }
-        }
-        buf.append('}');
-
-        requestStr = buf.toString();
-        requestStrFlags = flags;
-
-        return requestStr;
-    }
-
-    @Override
-    public String toStringResponseOnly() {
-        return toStringResponseOnly(Function.identity(), Function.identity());
-    }
-
-    @Override
-    public String toStringResponseOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                       Function<Object, Object> contentSanitizer) {
-
-        final int flags = this.flags & 0xFFFF0000; // Only interested in the bits related with response.
-        if (responseStrFlags == flags) {
-            return responseStr;
-        }
-
-        final StringBuilder buf = new StringBuilder(STRING_BUILDER_CAPACITY);
-        buf.append('{');
-        if (isAvailable(flags, RESPONSE_START)) {
-            buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, responseStartTimeMillis);
-
-            if (isAvailable(flags, RESPONSE_END)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, responseLength);
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, responseDurationNanos());
-                if (isAvailable(flags, REQUEST_START)) {
-                    buf.append(", totalDuration=");
-                    TextFormatter.appendElapsed(buf, totalDurationNanos());
-                }
-                if (responseCause != null) {
-                    buf.append(", cause=").append(responseCause);
-                }
-            }
-
-            if (isAvailable(flags, RESPONSE_HEADERS) && responseHeaders != null) {
-                buf.append(", headers=").append(headersSanitizer.apply(responseHeaders));
-            }
-
-            if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
-                buf.append(", content=").append(contentSanitizer.apply(responseContent));
-            }
-        }
-        buf.append('}');
-
-        responseStr = buf.toString();
-        responseStrFlags = flags;
-
-        return responseStr;
-    }
-
-    private static final class ListenerEntry {
-        final RequestLogListener listener;
-        final int interestedFlags;
-
-        ListenerEntry(RequestLogListener listener, int interestedFlags) {
-            this.listener = listener;
-            this.interestedFlags = interestedFlags;
         }
     }
 }

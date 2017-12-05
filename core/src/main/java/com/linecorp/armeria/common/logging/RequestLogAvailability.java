@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import java.util.stream.Stream;
+
 /**
  * Tells which properties are available in a {@link RequestLog}.
  */
@@ -94,7 +98,32 @@ public enum RequestLogAvailability {
         return getterFlags;
     }
 
+    /**
+     * Returns the unified integer value of getter flags from the specified {@code availabilities}.
+     */
+    public static int getterFlags(RequestLogAvailability... availabilities) {
+        return getterFlags(Stream.of(availabilities).collect(toImmutableList()));
+    }
+
+    /**
+     * Returns the unified integer value of getter flags from the specified {@code availabilities}.
+     */
+    public static int getterFlags(Iterable<RequestLogAvailability> availabilities) {
+        int flags = 0;
+        for (RequestLogAvailability a : availabilities) {
+            flags |= a.getterFlags();
+        }
+        return flags;
+    }
+
     int setterFlags() {
         return setterFlags;
+    }
+
+    /**
+     * Returns whether the specified {@code flags} contains only the availabilities related with the request.
+     */
+    public static boolean isRequestAvailabilityOnly(int flags) {
+        return (RESPONSE_END.getterFlags() & flags) == 0;
     }
 }
