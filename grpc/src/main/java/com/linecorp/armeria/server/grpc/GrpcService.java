@@ -161,7 +161,7 @@ public final class GrpcService extends AbstractHttpService
             ctx.setRequestTimeoutHandler(() -> {
                 call.close(Status.DEADLINE_EXCEEDED, EMPTY_METADATA);
             });
-            req.subscribe(call.messageReader());
+            req.subscribe(call.messageReader(), ctx.eventLoop(), true);
         }
     }
 

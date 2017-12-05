@@ -67,6 +67,7 @@ import io.grpc.Decompressor;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.CompositeByteBuf;
 
@@ -234,8 +235,13 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         startedDeframing = true;
 
         if (!data.isEmpty()) {
-            ByteBuf buf = alloc.buffer(data.length());
-            buf.writeBytes(data.array(), data.offset(), data.length());
+            final ByteBuf buf;
+            if (data instanceof ByteBufHolder) {
+                buf = ((ByteBufHolder) data).content();
+            } else {
+                buf = alloc.buffer(data.length());
+                buf.writeBytes(data.array(), data.offset(), data.length());
+            }
             unprocessed.addComponent(true, buf);
         }
 
