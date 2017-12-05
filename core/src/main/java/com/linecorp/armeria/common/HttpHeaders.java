@@ -175,6 +175,18 @@ public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, Ht
     HttpHeaders status(HttpStatus status);
 
     /**
+     * Returns the value of the {@code 'content-type'} header.
+     * @return the valid header value if present. {@code null} otherwise.
+     */
+    @Nullable
+    MediaType contentType();
+
+    /**
+     * Sets the {@link HttpHeaderNames#CONTENT_TYPE} header.
+     */
+    HttpHeaders contentType(MediaType mediaType);
+
+    /**
      * Returns the immutable view of this headers.
      */
     default HttpHeaders asImmutable() {

@@ -42,7 +42,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.FilteredHttpResponse;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
@@ -61,7 +60,6 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.netty.handler.codec.http.HttpConstants;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.AsciiString;
 
@@ -708,10 +706,9 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
          * Whether the request is available to be aggregated.
          */
         static boolean aggregationAvailable(HttpRequest req) {
-            final String contentType = req.headers().get(HttpHeaderNames.CONTENT_TYPE);
+            final MediaType contentType = req.headers().contentType();
             // We aggregate request stream messages for the media type of form data currently.
-            return contentType != null &&
-                   MediaType.FORM_DATA.toString().equals(HttpUtil.getMimeType(contentType));
+            return contentType != null && MediaType.FORM_DATA.type().equals(contentType.type());
         }
 
         /**

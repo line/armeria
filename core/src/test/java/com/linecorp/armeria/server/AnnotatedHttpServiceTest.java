@@ -843,7 +843,7 @@ public class AnnotatedHttpServiceTest {
 
         final org.apache.http.Header header = res.getFirstHeader(org.apache.http.HttpHeaders.CONTENT_TYPE);
         if (contentType != null) {
-            assertThat(header.getValue(), is(contentType));
+            assertThat(MediaType.parse(header.getValue()), is(MediaType.parse(contentType)));
         } else if (statusCode >= 400) {
             assertThat(header.getValue(), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
         } else {

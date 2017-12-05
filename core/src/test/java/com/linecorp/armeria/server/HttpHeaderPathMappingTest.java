@@ -141,13 +141,13 @@ public class HttpHeaderPathMappingTest {
     }
 
     private static PathMappingContext method(HttpMethod method) {
-        return DefaultPathMappingContext.of(virtualHost(),"example.com",
+        return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, HttpHeaders.of(method, PATH), null);
     }
 
     private static PathMappingContext consumeType(HttpMethod method, MediaType contentType) {
         HttpHeaders headers = HttpHeaders.of(method, PATH);
-        headers.add(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+        headers.contentType(contentType);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, headers, null);
     }

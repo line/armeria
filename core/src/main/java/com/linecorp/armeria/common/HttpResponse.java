@@ -144,7 +144,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
         final HttpHeaders headers =
                 HttpHeaders.of(status)
-                           .setObject(HttpHeaderNames.CONTENT_TYPE, mediaType)
+                           .contentType(mediaType)
                            .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
         return of(headers, content, trailingHeaders);
     }

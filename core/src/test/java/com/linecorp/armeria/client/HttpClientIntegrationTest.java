@@ -188,7 +188,7 @@ public class HttpClientIntegrationTest {
                 }
 
                 private void doGetOrPost(HttpRequest req, HttpResponseWriter res) {
-                    final CharSequence contentType = req.headers().get(HttpHeaderNames.CONTENT_TYPE);
+                    final MediaType contentType = req.headers().contentType();
                     if (contentType != null) {
                         throw new IllegalArgumentException(
                                 "Serialization format is none, so content type should not be set: " +

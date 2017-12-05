@@ -193,7 +193,7 @@ public final class HttpFileService extends AbstractHttpService {
                                          .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
                                          .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis);
         if (entry.mediaType() != null) {
-            headers.set(HttpHeaderNames.CONTENT_TYPE, entry.mediaType().toString());
+            headers.contentType(entry.mediaType());
         }
         if (entry.contentEncoding() != null) {
             headers.set(HttpHeaderNames.CONTENT_ENCODING, entry.contentEncoding());

@@ -75,7 +75,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServerHandler.class);
 
-    private static final String ERROR_CONTENT_TYPE = MediaType.PLAIN_TEXT_UTF_8.toString();
+    private static final MediaType ERROR_CONTENT_TYPE = MediaType.PLAIN_TEXT_UTF_8;
 
     private static final Set<HttpMethod> ALLOWED_METHODS =
             Sets.immutableEnumSet(HttpMethod.DELETE, HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS,
@@ -418,7 +418,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         respond(ctx, req,
                 AggregatedHttpMessage.of(
                         HttpHeaders.of(status)
-                                   .set(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE),
+                                   .contentType(ERROR_CONTENT_TYPE),
                         content));
     }
 

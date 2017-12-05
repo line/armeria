@@ -107,7 +107,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     // Only set once.
     private ServerCall.Listener<I> listener;
 
-    @Nullable private final String clientAcceptEncoding;
+    @Nullable
+    private final String clientAcceptEncoding;
 
     private Compressor compressor;
     private boolean messageCompression;
@@ -167,7 +168,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
 
-        headers.setObject(HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType());
+        headers.contentType(serializationFormat.mediaType());
 
         if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
             compressor = Codec.Identity.NONE;
@@ -264,7 +265,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void setCompression(String compressorName) {
         checkState(!sendHeadersCalled, "sendHeaders has been called");
-        compressor =  compressorRegistry.lookupCompressor(compressorName);
+        compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
         messageFramer.setCompressor(compressor);
     }
