@@ -440,8 +440,15 @@ final class AnnotatedHttpServices {
         final Set<String> parameterNames = function.pathParamNames();
         final Set<String> expectedParamNames = pathMapping.paramNames();
         if (!expectedParamNames.containsAll(parameterNames)) {
-            Set<String> missing = Sets.difference(parameterNames, expectedParamNames);
+            final Set<String> missing = Sets.difference(parameterNames, expectedParamNames);
             throw new IllegalArgumentException("Missing @Param exists: " + missing);
+        }
+        if (!parameterNames.containsAll(expectedParamNames)) {
+            final Set<String> missing = Sets.difference(expectedParamNames, parameterNames);
+            logger.warn("Some path variables of the method '" + method.getName() +
+                        "' of the class '" + clazz.getName() +
+                        "' do not have their corresponding parameters annotated with @Param. " +
+                        "They would not be automatically injected: " + missing);
         }
 
         final ResponseConverter converter = converter(method);

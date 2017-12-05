@@ -216,6 +216,12 @@ public class AnnotatedHttpServiceTest {
             future.completeExceptionally(new AnticipatedException("bad var!"));
             return future;
         }
+
+        // Log warning.
+        @Get("/warn/:var")
+        public String warn() {
+            return "warn";
+        }
     }
 
     @Converter(target = Number.class, value = TypedNumberConverter.class)
