@@ -127,7 +127,7 @@ public final class HttpFileService extends AbstractHttpService {
                     new MeterIdPrefix("armeria.server.file.vfsCache",
                                       "hostnamePattern", cfg.virtualHost().hostnamePattern(),
                                       "pathMapping", cfg.pathMapping().meterTag(),
-                                      "rootDir", config.vfs().toString()),
+                                      "vfs", config.vfs().meterTag()),
                     cache);
         }
     }
