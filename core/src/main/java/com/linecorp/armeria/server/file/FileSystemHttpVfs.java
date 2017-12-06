@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 
-final class FileSystemHttpVfs implements HttpVfs {
+final class FileSystemHttpVfs extends AbstractHttpVfs {
 
     private static final boolean FILE_SEPARATOR_IS_NOT_SLASH = File.separatorChar != '/';
 
@@ -58,7 +58,7 @@ final class FileSystemHttpVfs implements HttpVfs {
     }
 
     @Override
-    public String toString() {
+    public String meterTag() {
         return "file:" + rootDir;
     }
 

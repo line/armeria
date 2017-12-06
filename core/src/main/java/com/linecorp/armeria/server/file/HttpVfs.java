@@ -30,10 +30,12 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.Tag;
+
 /**
  * A virtual file system that provides the files requested by {@link HttpFileService}.
  */
-@FunctionalInterface
 public interface HttpVfs {
 
     /**
@@ -75,6 +77,11 @@ public interface HttpVfs {
      *         {@link Entry#NONE} if not found.
      */
     Entry get(String path, @Nullable String contentEncoding);
+
+    /**
+     * Returns the value of the {@code "vfs"} {@link Tag} in a {@link Meter}.
+     */
+    String meterTag();
 
     /**
      * A file entry in an {@link HttpVfs}.

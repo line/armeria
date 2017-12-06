@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 
-final class ClassPathHttpVfs implements HttpVfs {
+final class ClassPathHttpVfs extends AbstractHttpVfs {
 
     private final ClassLoader classLoader;
     private final String rootDir;
@@ -78,7 +78,7 @@ final class ClassPathHttpVfs implements HttpVfs {
     }
 
     @Override
-    public String toString() {
+    public String meterTag() {
         return "classpath:" + rootDir;
     }
 

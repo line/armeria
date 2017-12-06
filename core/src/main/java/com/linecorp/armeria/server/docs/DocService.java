@@ -50,8 +50,8 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.composition.AbstractCompositeService;
+import com.linecorp.armeria.server.file.AbstractHttpVfs;
 import com.linecorp.armeria.server.file.HttpFileService;
-import com.linecorp.armeria.server.file.HttpVfs;
 
 /**
  * An {@link HttpService} that provides information about the {@link Service}s running in a
@@ -296,13 +296,18 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
         return supportedServiceTypes.stream().anyMatch(type -> serviceCfg.service().as(type).isPresent());
     }
 
-    static final class DocServiceVfs implements HttpVfs {
+    static final class DocServiceVfs extends AbstractHttpVfs {
 
         private volatile Entry entry = Entry.NONE;
 
         @Override
         public Entry get(String path, @Nullable String contentEncoding) {
             return entry;
+        }
+
+        @Override
+        public String meterTag() {
+            return DocService.class.getSimpleName();
         }
 
         void setSpecification(byte[] content) {
