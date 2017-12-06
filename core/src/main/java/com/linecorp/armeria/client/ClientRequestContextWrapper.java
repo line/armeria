@@ -35,6 +35,11 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public ClientRequestContext newDerivedContext() {
+        return delegate().newDerivedContext();
+    }
+
+    @Override
     public Endpoint endpoint() {
         return delegate().endpoint();
     }

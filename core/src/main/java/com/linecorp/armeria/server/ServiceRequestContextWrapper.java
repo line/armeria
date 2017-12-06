@@ -43,6 +43,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public ServiceRequestContext newDerivedContext() {
+        return delegate().newDerivedContext();
+    }
+
+    @Override
     public Server server() {
         return delegate().server();
     }

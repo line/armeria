@@ -93,7 +93,14 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
             responseFuture.completeExceptionally(ResponseTimeoutException.get());
             return;
         }
-        final RpcResponse response = executeDelegate(ctx, req);
+
+        final RpcResponse response;
+        try {
+            response = executeDelegate(ctx, req);
+        } catch (Exception e) {
+            responseFuture.completeExceptionally(e);
+            return;
+        }
 
         retryStrategy().shouldRetry(req, response).handle(voidFunction((backoffOpt, unused) -> {
             if (backoffOpt.isPresent()) {
@@ -124,13 +131,5 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 }));
             }
         }));
-    }
-
-    private RpcResponse executeDelegate(ClientRequestContext ctx, RpcRequest req) {
-        try {
-            return delegate().execute(ctx, req);
-        } catch (Exception e) {
-            return new DefaultRpcResponse(e);
-        }
     }
 }
