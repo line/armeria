@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.logging.RetryingRequestLog;
 
 import io.netty.channel.EventLoop;
 
@@ -38,6 +39,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries RPC requests.
      *
      * @param retryStrategy the retry strategy
+     *
+     * @see RetryingRequestLog
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy) {
@@ -49,6 +52,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      *
      * @param retryStrategy the retry strategy
      * @param defaultMaxAttempts the default number of max attempts for retry
+     *
+     * @see RetryingRequestLog
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy, int defaultMaxAttempts) {
@@ -63,6 +68,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      * @param defaultMaxAttempts the default number of max attempts for retry
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
+     *
+     * @see RetryingRequestLog
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategy<RpcRequest, RpcResponse> retryStrategy,
@@ -90,10 +97,17 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req, DefaultRpcResponse responseFuture) {
         if (!setResponseTimeout(ctx)) {
-            responseFuture.completeExceptionally(ResponseTimeoutException.get());
+            completeOnException(ctx, responseFuture, ResponseTimeoutException.get());
             return;
         }
-        final RpcResponse response = executeDelegate(ctx, req);
+
+        final RpcResponse response;
+        try {
+             response = executeDelegate(ctx, req);
+        } catch (Exception e) {
+            completeOnException(ctx, responseFuture, e);
+            return;
+        }
 
         retryStrategy().shouldRetry(req, response).handle(voidFunction((backoffOpt, unused) -> {
             if (backoffOpt.isPresent()) {
@@ -101,7 +115,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 try {
                     nextDelay = getNextDelay(ctx, backoffOpt.get());
                 } catch (Exception e) {
-                    responseFuture.completeExceptionally(e);
+                    completeOnException(ctx, responseFuture, e);
                     return;
                 }
 
@@ -116,21 +130,20 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 response.handle(voidFunction((result, thrown) -> {
                     if (thrown == null) {
                         // normal response
+                        beforeComplete(ctx);
                         responseFuture.complete(result);
                     } else {
                         // failed
-                        responseFuture.completeExceptionally(thrown);
+                        completeOnException(ctx, responseFuture, thrown);
                     }
                 }));
             }
         }));
     }
 
-    private RpcResponse executeDelegate(ClientRequestContext ctx, RpcRequest req) {
-        try {
-            return delegate().execute(ctx, req);
-        } catch (Exception e) {
-            return new DefaultRpcResponse(e);
-        }
+    private void completeOnException(ClientRequestContext ctx,
+                                     DefaultRpcResponse responseFuture, Throwable cause) {
+        beforeComplete(ctx);
+        responseFuture.completeExceptionally(cause);
     }
 }

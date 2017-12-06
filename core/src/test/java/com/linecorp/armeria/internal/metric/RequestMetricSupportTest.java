@@ -46,7 +46,7 @@ public class RequestMetricSupportTest {
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), registry, SessionProtocol.H2C,
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/foo"));
+                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/foo"), false);
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
 
@@ -117,7 +117,7 @@ public class RequestMetricSupportTest {
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), registry, SessionProtocol.H2C,
                 Endpoint.of("example.com", 8080), HttpMethod.POST, "/bar", null, null,
-                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/bar"));
+                ClientOptions.DEFAULT, HttpRequest.of(HttpMethod.POST, "/bar"), false);
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
 

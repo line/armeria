@@ -156,7 +156,7 @@ public class HttpTracingClientTest {
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 new DefaultEventLoop(), NoopMeterRegistry.get(), H2C, Endpoint.of("localhost", 8080),
-                HttpMethod.POST, "/hello/armeria", null, null, ClientOptions.DEFAULT, req);
+                HttpMethod.POST, "/hello/armeria", null, null, ClientOptions.DEFAULT, req, false);
 
         ctx.logBuilder().startRequest(mock(Channel.class), H2C, "localhost");
         ctx.logBuilder().requestContent(rpcReq, req);

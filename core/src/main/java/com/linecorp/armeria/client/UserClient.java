@@ -17,10 +17,12 @@
 package com.linecorp.armeria.client;
 
 import java.net.URI;
+import java.util.Optional;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -143,17 +145,18 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
     protected final O execute(@Nullable EventLoop eventLoop,
                               HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, Function<Throwable, O> fallback) {
-
+        final Optional<RetryingClient> retryingClient = delegate().as(RetryingClient.class);
         final ClientRequestContext ctx;
         if (eventLoop == null) {
             final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
             ctx = new DefaultClientRequestContext(
                     releasableEventLoop.get(), meterRegistry, sessionProtocol, endpoint,
-                    method, path, query, fragment, options(), req);
+                    method, path, query, fragment, options(), req, retryingClient.isPresent());
             ctx.log().addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
         } else {
             ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol, endpoint,
-                                                  method, path, query, fragment, options(), req);
+                                                  method, path, query, fragment, options(), req,
+                                                  retryingClient.isPresent());
         }
 
         try (SafeCloseable ignored = RequestContext.push(ctx)) {

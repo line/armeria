@@ -63,13 +63,13 @@ public class CircuitBreakerClientTest {
             new DefaultEventLoop(), NoopMeterRegistry.get(), H2C,
             Endpoint.of("dummyhost", 8080),
             HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT,
-            RpcRequest.of(Object.class, "methodA", "a", "b"));
+            RpcRequest.of(Object.class, "methodA", "a", "b"), false);
 
     private static final ClientRequestContext ctxB = new DefaultClientRequestContext(
             new DefaultEventLoop(), NoopMeterRegistry.get(), H2C,
             Endpoint.of("dummyhost", 8080),
             HttpMethod.POST, "/", null, null, ClientOptions.DEFAULT,
-            RpcRequest.of(Object.class, "methodB", "c", "d"));
+            RpcRequest.of(Object.class, "methodB", "c", "d"), false);
 
     private static final RpcRequest req = ctx.request();
     private static final RpcRequest reqB = ctxB.request();

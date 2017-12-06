@@ -28,10 +28,12 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.AbstractRequestLog;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RetryingRequestLog;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -51,7 +53,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private final Endpoint endpoint;
     private final String fragment;
 
-    private final DefaultRequestLog log;
+    private final AbstractRequestLog log;
 
     private long writeTimeoutMillis;
     private long responseTimeoutMillis;
@@ -69,7 +71,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             EventLoop eventLoop, MeterRegistry meterRegistry,
             SessionProtocol sessionProtocol, Endpoint endpoint,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-            ClientOptions options, Object request) {
+            ClientOptions options, Object request, boolean withRetryingClient) {
 
         super(meterRegistry, sessionProtocol, method, path, query, request);
 
@@ -78,7 +80,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         this.endpoint = requireNonNull(endpoint, "endpoint");
         this.fragment = fragment;
 
-        log = new DefaultRequestLog(this);
+        if (withRetryingClient) {
+            log = new RetryingRequestLog(this);
+        } else {
+            log = new DefaultRequestLog(this);
+        }
 
         writeTimeoutMillis = options.defaultWriteTimeoutMillis();
         responseTimeoutMillis = options.defaultResponseTimeoutMillis();

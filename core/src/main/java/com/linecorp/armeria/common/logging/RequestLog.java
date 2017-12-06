@@ -53,6 +53,12 @@ import io.netty.channel.Channel;
 public interface RequestLog {
 
     /**
+     * Returns the unified integer value of flags that represents {@link RequestLogAvailability}s.
+     * You can restore the {@link RequestLogAvailability}s using {@link RequestLogAvailabilitySet#of(int)}.
+     */
+    int flags();
+
+    /**
      * Returns the set of satisfied {@link RequestLogAvailability}s.
      */
     Set<RequestLogAvailability> availabilities();

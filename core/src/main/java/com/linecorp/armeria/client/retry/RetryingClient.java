@@ -18,15 +18,22 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.common.AbstractRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RetryingRequestLog;
 
+import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
@@ -48,8 +55,8 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected RetryingClient(Client<I, O> delegate, RetryStrategy<I, O> retryStrategy,
-                             int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt) {
+    RetryingClient(Client<I, O> delegate, RetryStrategy<I, O> retryStrategy,
+                   int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt) {
         super(delegate);
         this.retryStrategy = requireNonNull(retryStrategy, "retryStrategy");
         checkArgument(defaultMaxAttempts > 0, "defaultMaxAttempts: %s (expected: > 0)", defaultMaxAttempts);
@@ -63,19 +70,76 @@ public abstract class RetryingClient<I extends Request, O extends Response>
 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
-        final State state =
-                new State(defaultMaxAttempts, responseTimeoutMillisForEachAttempt, ctx.responseTimeoutMillis());
+        final Set<Attribute<?>> originalAttrs = getAttrs(ctx);
+        final State state = new State(defaultMaxAttempts, responseTimeoutMillisForEachAttempt,
+                                      ctx.responseTimeoutMillis(), originalAttrs);
         ctx.attr(STATE).set(state);
+
+        final RequestLog log = ctx.log();
+        if (log instanceof RetryingRequestLog) {
+            // Mark inRetrying so that listeners which are added from this time are
+            // executed right away when it meets the RequestLogAvailability.
+            ((RetryingRequestLog) log).inRetrying();
+        }
         return doExecute(ctx, req);
+    }
+
+    private static Set<Attribute<?>> getAttrs(ClientRequestContext ctx) {
+        final Set<Attribute<?>> attrs = new HashSet<>();
+        final Iterator<Attribute<?>> iterator = ctx.attrs();
+        while (iterator.hasNext()) {
+            final Attribute<?> attr = iterator.next();
+            if (attr.get() != null) {
+                attrs.add(attr);
+            }
+        }
+        return attrs;
     }
 
     /**
      * Invoked by {@link #execute(ClientRequestContext, Request)}
      * after the deadline for response timeout is set.
      */
-    protected abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
+    abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
 
-    protected RetryStrategy<I, O> retryStrategy() {
+    O executeDelegate(ClientRequestContext ctx, I req) throws Exception {
+        final State state = ctx.attr(STATE).get();
+        if (state.totalAttemptNo() != 1) {
+            resetContext(ctx, state);
+        }
+
+        return delegate().execute(ctx, req);
+    }
+
+    private static void resetContext(ClientRequestContext ctx, State state) {
+        final RequestLog log = ctx.log();
+        if (log instanceof RetryingRequestLog) {
+            ((RetryingRequestLog) log).newCurrentLog();
+        }
+        resetAttrs(ctx, state);
+        if (ctx instanceof AbstractRequestContext) {
+            ((AbstractRequestContext) ctx).resetTimedOut();
+        }
+    }
+
+    private static void resetAttrs(ClientRequestContext ctx, State state) {
+        final Iterator<Attribute<?>> iterator = ctx.attrs();
+        while (iterator.hasNext()) {
+            final Attribute<?> attr = iterator.next();
+            if (attr.key() != STATE && !state.originalAttrs().contains(attr)) {
+                attr.set(null);
+            }
+        }
+    }
+
+    static void beforeComplete(ClientRequestContext ctx) {
+        final RequestLog log = ctx.log();
+        if (log instanceof RetryingRequestLog) {
+            ((RetryingRequestLog) log).endRetrying();
+        }
+    }
+
+    final RetryStrategy<I, O> retryStrategy() {
         return retryStrategy;
     }
 
@@ -84,7 +148,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      *
      * @return {@code true} if the response timeout is set, {@code false} if it can't be set due to the timeout
      */
-    protected final boolean setResponseTimeout(ClientRequestContext ctx) {
+    final boolean setResponseTimeout(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
         final long responseTimeoutMillis = ctx.attr(STATE).get().responseTimeoutMillis();
         if (responseTimeoutMillis < 0) {
@@ -103,7 +167,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * @throws RetryGiveUpException if current attempt number is greater than {@code defaultMaxAttempts}
      * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
      */
-    protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff) {
+    final long getNextDelay(ClientRequestContext ctx, Backoff backoff) {
         return getNextDelay(ctx, backoff, -1);
     }
 
@@ -117,7 +181,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * @throws RetryGiveUpException if current attempt number is greater than {@code defaultMaxAttempts}
      * @throws ResponseTimeoutException if the remaining response timeout is equal to or less than 0
      */
-    protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
+    final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(backoff, "backoff");
         final State state = ctx.attr(STATE).get();
@@ -149,16 +213,20 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         private final int defaultMaxAttempts;
         private final long responseTimeoutMillisForEachAttempt;
         private final long responseTimeoutMillis;
+        private final Set<Attribute<?>> originalAttrs;
         private final long deadlineNanos;
 
         private Backoff lastBackoff;
         private int currentAttemptNoWithLastBackoff;
         private int totalAttemptNo;
 
-        State(int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis) {
+        State(int defaultMaxAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis,
+              Set<Attribute<?>> originalAttrs) {
             this.defaultMaxAttempts = defaultMaxAttempts;
             this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
             this.responseTimeoutMillis = responseTimeoutMillis;
+            this.originalAttrs = originalAttrs;
+
             if (responseTimeoutMillis > 0) {
                 deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
             } else {
@@ -211,6 +279,14 @@ public abstract class RetryingClient<I extends Request, O extends Response>
                 currentAttemptNoWithLastBackoff = 1;
             }
             return currentAttemptNoWithLastBackoff++;
+        }
+
+        Set<Attribute<?>> originalAttrs() {
+            return originalAttrs;
+        }
+
+        int totalAttemptNo() {
+            return totalAttemptNo;
         }
     }
 }

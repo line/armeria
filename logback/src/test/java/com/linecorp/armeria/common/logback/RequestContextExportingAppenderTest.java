@@ -535,7 +535,7 @@ public class RequestContextExportingAppenderTest {
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2,
                 Endpoint.of("server.com", 8080), req.method(), path, query, null,
-                ClientOptions.DEFAULT, req) {
+                ClientOptions.DEFAULT, req, false) {
 
             @Nullable
             @Override

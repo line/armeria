@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.grpc;
 
 import java.net.URI;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -30,6 +31,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -146,6 +148,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
 
     private ClientRequestContext newContext(HttpMethod method, HttpRequest req) {
         final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint);
+        final Optional<RetryingClient> retryingClient = httpClient.as(RetryingClient.class);
         final ClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop.get(),
                 meterRegistry,
@@ -156,7 +159,8 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                 uri().getRawQuery(),
                 null,
                 options(),
-                req);
+                req,
+                retryingClient.isPresent());
         ctx.log().addListener(log -> eventLoop.release(), RequestLogAvailability.COMPLETE);
         return ctx;
     }
