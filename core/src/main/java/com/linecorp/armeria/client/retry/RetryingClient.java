@@ -25,7 +25,9 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.AttributeKey;
 
@@ -74,6 +76,16 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * after the deadline for response timeout is set.
      */
     protected abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
+
+    /**
+     * Executes the delegate with a new derived {@link ClientRequestContext}.
+     */
+    protected final O executeDelegate(ClientRequestContext ctx, I req) throws Exception {
+        final ClientRequestContext derivedContext = ctx.newDerivedContext();
+        try (SafeCloseable ignore = RequestContext.push(derivedContext, false)) {
+            return delegate().execute(derivedContext, req);
+        }
+    }
 
     protected RetryStrategy<I, O> retryStrategy() {
         return retryStrategy;

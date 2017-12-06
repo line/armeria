@@ -34,6 +34,9 @@ import io.netty.util.AttributeKey;
  */
 public interface ClientRequestContext extends RequestContext {
 
+    @Override
+    ClientRequestContext newDerivedContext();
+
     /**
      * The {@link AttributeKey} of the {@link HttpHeaders} to include when a {@link Client} sends an
      * {@link HttpRequest}. This {@link Attribute} is initially populated from

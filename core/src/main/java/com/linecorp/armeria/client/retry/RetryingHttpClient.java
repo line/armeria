@@ -123,7 +123,14 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             closeOnException(deferredRes, rootReqDuplicator, ResponseTimeoutException.get());
             return;
         }
-        HttpResponse response = executeDelegate(ctx, rootReqDuplicator.duplicateStream());
+
+        final HttpResponse response;
+        try {
+            response = executeDelegate(ctx, rootReqDuplicator.duplicateStream());
+        } catch (Exception e) {
+            closeOnException(deferredRes, rootReqDuplicator, e);
+            return;
+        }
 
         final HttpResponseDuplicator resDuplicator =
                 new HttpResponseDuplicator(response, maxSignalLength(ctx.maxResponseLength()), ctx.eventLoop());
@@ -158,14 +165,6 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                rootReqDuplicator.close();
                            }
                        }));
-    }
-
-    private HttpResponse executeDelegate(ClientRequestContext ctx, HttpRequest req) {
-        try {
-            return delegate().execute(ctx, req);
-        } catch (Exception e) {
-            return HttpResponse.ofFailure(e);
-        }
     }
 
     private static int maxSignalLength(long maxResponseLength) {
