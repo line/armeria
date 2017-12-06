@@ -39,6 +39,9 @@ import com.linecorp.armeria.common.RequestContext;
  */
 public interface ServiceRequestContext extends RequestContext {
 
+    @Override
+    ServiceRequestContext newDerivedContext();
+
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.
      */

@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -38,6 +39,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.util.Attribute;
 
 /**
  * Default {@link ClientRequestContext} implementation.
@@ -98,6 +100,38 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         if (customizer != null) {
             customizer.accept(this);
         }
+    }
+
+    private DefaultClientRequestContext(DefaultClientRequestContext ctx) {
+        super(ctx.meterRegistry(), ctx.sessionProtocol(),
+              ctx.method(), ctx.path(), ctx.query(), ctx.request());
+
+        this.eventLoop = ctx.eventLoop();
+        this.options = ctx.options();
+        this.endpoint = ctx.endpoint();
+        this.fragment = ctx.fragment();
+
+        log = new DefaultRequestLog(this);
+
+        writeTimeoutMillis = ctx.writeTimeoutMillis();
+        responseTimeoutMillis = ctx.responseTimeoutMillis();
+        maxResponseLength = ctx.maxResponseLength();
+
+        for (Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
+            addAttr(i.next());
+        }
+        runThreadLocalContextCustomizer();
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void addAttr(Attribute<?> attribute) {
+        final Attribute<T> a = (Attribute<T>) attribute;
+        attr(a.key()).set(a.get());
+    }
+
+    @Override
+    public ClientRequestContext newDerivedContext() {
+        return new DefaultClientRequestContext(this);
     }
 
     @Override

@@ -65,6 +65,13 @@ import io.netty.util.concurrent.Promise;
 public interface RequestContext extends AttributeMap {
 
     /**
+     * Creates a new derived {@link RequestContext} which only the {@link RequestLog}
+     * is different from the deriving context. Note that the references of {@link Attribute}s
+     * in the {@link #attrs()} are copied as well.
+     */
+    RequestContext newDerivedContext();
+
+    /**
      * Returns the context of the {@link Request} that is being handled in the current thread.
      *
      * @throws IllegalStateException if the context is unavailable in the current thread
