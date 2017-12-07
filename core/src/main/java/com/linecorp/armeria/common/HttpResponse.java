@@ -184,6 +184,13 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response of the specified objects and closes the stream.
+     */
+    static HttpResponse of(HttpObject... objs) {
+        return new RegularFixedHttpResponse(objs);
+    }
+
+    /**
      * Converts the {@link AggregatedHttpMessage} into a new complete {@link HttpResponse}.
      */
     static HttpResponse of(AggregatedHttpMessage res) {
