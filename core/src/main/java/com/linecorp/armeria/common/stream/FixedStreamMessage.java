@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -62,9 +63,7 @@ public final class FixedStreamMessage {
     }
 
     /**
-     * Creates a new {@link StreamMessage} that will publish the given {@code objs}. {@code objs} is not
-     * copied so must not be mutated after this method call (it is generally meant to be used with a varargs
-     * invocation).
+     * Creates a new {@link StreamMessage} that will publish the given {@code objs}.
      */
     @SafeVarargs
     public static <T> StreamMessage<T> of(T... objs) {
@@ -399,7 +398,7 @@ public final class FixedStreamMessage {
         private boolean inOnNext;
 
         protected RegularFixedStreamMessage(T[] objs) {
-            this.objs = objs;
+            this.objs = Arrays.copyOf(objs, objs.length);
         }
 
         @Override

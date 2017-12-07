@@ -65,6 +65,6 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
-        return execute(eventLoop, aggregatedReq.toHttpRequest());
+        return execute(eventLoop, HttpRequest.of(aggregatedReq));
     }
 }

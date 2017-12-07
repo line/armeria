@@ -42,7 +42,7 @@ public class DefaultAggregatedHttpMessageTest {
     public void toHttpRequest() throws Exception {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
                 HttpMethod.POST, "/foo", PLAIN_TEXT_UTF_8, "bar");
-        final HttpRequest req = aReq.toHttpRequest();
+        final HttpRequest req = HttpRequest.of(aReq);
         final List<HttpObject> unaggregated = unaggregate(req);
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.POST, "/foo")
@@ -54,7 +54,7 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpRequestWithoutContent() throws Exception {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(HttpMethod.GET, "/bar");
-        final HttpRequest req = aReq.toHttpRequest();
+        final HttpRequest req = HttpRequest.of(aReq);
         final List<HttpObject> unaggregated = unaggregate(req);
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.GET, "/bar"));
@@ -66,7 +66,7 @@ public class DefaultAggregatedHttpMessageTest {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
                 HttpMethod.PUT, "/baz", PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bar"),
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
-        final HttpRequest req = aReq.toHttpRequest();
+        final HttpRequest req = HttpRequest.of(aReq);
         final List<HttpObject> unaggregated = unaggregate(req);
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.PUT, "/baz")
@@ -80,19 +80,19 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpRequestAgainstResponse() {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(200);
-        assertThatThrownBy(aRes::toHttpRequest).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> HttpRequest.of(aRes)).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     public void toHttpRequestWithoutPath() {
         // Method only
-        assertThatThrownBy(() -> AggregatedHttpMessage.of(HttpHeaders.of(HttpHeaderNames.METHOD, "GET"))
-                                                      .toHttpRequest())
+        assertThatThrownBy(() -> HttpRequest.of(
+                AggregatedHttpMessage.of(HttpHeaders.of(HttpHeaderNames.METHOD, "GET"))))
                 .isInstanceOf(IllegalStateException.class);
 
         // Path only
-        assertThatThrownBy(() -> AggregatedHttpMessage.of(HttpHeaders.of(HttpHeaderNames.PATH, "/charlie"))
-                                                      .toHttpRequest())
+        assertThatThrownBy(() -> HttpRequest.of(
+                AggregatedHttpMessage.of(HttpHeaders.of(HttpHeaderNames.PATH, "/charlie"))))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -100,7 +100,7 @@ public class DefaultAggregatedHttpMessageTest {
     public void toHttpResponse() throws Exception {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, "alice");
-        final HttpResponse res = aRes.toHttpResponse();
+        final HttpResponse res = HttpResponse.of(aRes);
         final List<HttpObject> unaggregated = unaggregate(res);
 
         assertThat(unaggregated).containsExactly(
@@ -114,7 +114,7 @@ public class DefaultAggregatedHttpMessageTest {
     public void toHttpResponseWithoutContent() throws Exception {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(HttpStatus.OK, PLAIN_TEXT_UTF_8,
                                                                     HttpData.EMPTY_DATA);
-        final HttpResponse res = aRes.toHttpResponse();
+        final HttpResponse res = HttpResponse.of(aRes);
         final List<HttpObject> unaggregated = unaggregate(res);
 
         assertThat(unaggregated).containsExactly(
@@ -128,7 +128,7 @@ public class DefaultAggregatedHttpMessageTest {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        final HttpResponse res = aRes.toHttpResponse();
+        final HttpResponse res = HttpResponse.of(aRes);
         final List<HttpObject> unaggregated = unaggregate(res);
 
         assertThat(unaggregated).containsExactly(
@@ -145,7 +145,7 @@ public class DefaultAggregatedHttpMessageTest {
                 ImmutableList.of(HttpHeaders.of(HttpStatus.CONTINUE)),
                 HttpHeaders.of(HttpStatus.OK), HttpData.EMPTY_DATA, HttpHeaders.EMPTY_HEADERS);
 
-        final HttpResponse res = aRes.toHttpResponse();
+        final HttpResponse res = HttpResponse.of(aRes);
         final List<HttpObject> unaggregated = unaggregate(res);
 
         assertThat(unaggregated).containsExactly(
@@ -157,7 +157,7 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpResponseAgainstRequest() {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(HttpMethod.GET, "/qux");
-        assertThatThrownBy(aReq::toHttpResponse).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> HttpResponse.of(aReq)).isInstanceOf(IllegalStateException.class);
     }
 
     private static List<HttpObject> unaggregate(StreamMessage<HttpObject> req) throws Exception {
