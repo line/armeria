@@ -141,7 +141,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
 
         final HttpHeaders headers =
                 HttpHeaders.of(status)

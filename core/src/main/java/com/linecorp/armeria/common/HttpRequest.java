@@ -69,8 +69,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
         return of(method, path,
@@ -90,9 +88,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String format, Object... args) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(format, "format");
-        requireNonNull(args, "args");
         return of(method,
                   path,
                   mediaType,
@@ -109,9 +104,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, byte[] content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(method, path, mediaType, HttpData.of(content));
     }
@@ -128,9 +120,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     static HttpRequest of(
             HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(method, path, mediaType, HttpData.of(content, offset, length));
     }
@@ -144,10 +133,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
         return of(method, path, mediaType, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -165,9 +150,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
-
         return of(HttpHeaders.of(method, path).setObject(CONTENT_TYPE, mediaType), content, trailingHeaders);
     }
 
@@ -175,7 +157,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} with empty content and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers) {
-        requireNonNull(headers, "headers");
         return of(headers, HttpData.EMPTY_DATA);
     }
 
@@ -183,8 +164,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers, HttpData content) {
-        requireNonNull(headers, "headers");
-        requireNonNull(content, "content");
         return of(headers, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -192,9 +171,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
-        requireNonNull(headers, "headers");
-        requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
         return of(headers, content, trailingHeaders, true);
     }
 
