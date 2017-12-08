@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +29,10 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
+import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
+import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
+import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -64,8 +69,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
         return of(method, path,
@@ -85,9 +88,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, String format, Object... args) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(format, "format");
-        requireNonNull(args, "args");
         return of(method,
                   path,
                   mediaType,
@@ -104,9 +104,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, byte[] content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(method, path, mediaType, HttpData.of(content));
     }
@@ -123,9 +120,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     static HttpRequest of(
             HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         return of(method, path, mediaType, HttpData.of(content, offset, length));
     }
@@ -139,10 +133,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
         return of(method, path, mediaType, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -160,9 +150,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
-
         return of(HttpHeaders.of(method, path).setObject(CONTENT_TYPE, mediaType), content, trailingHeaders);
     }
 
@@ -170,7 +157,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} with empty content and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers) {
-        requireNonNull(headers, "headers");
         return of(headers, HttpData.EMPTY_DATA);
     }
 
@@ -178,8 +164,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers, HttpData content) {
-        requireNonNull(headers, "headers");
-        requireNonNull(content, "content");
         return of(headers, content, HttpHeaders.EMPTY_HEADERS);
     }
 
@@ -187,9 +171,30 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Creates a new {@link HttpRequest} and closes the stream.
      */
     static HttpRequest of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+        return of(headers, content, trailingHeaders, true);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} with the provided {@code keepAlive} and closes the stream.
+     *
+     * @throws IllegalStateException if the headers are malformed.
+     */
+    static HttpRequest of(
+            HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders, boolean keepAlive) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
+
+        // From the section 8.1.2.3 of RFC 7540:
+        //// All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme, and :path
+        //// pseudo-header fields, unless it is a CONNECT request (Section 8.3)
+        // NB: ':scheme' will be filled when a request is written.
+        if (headers.method() == null) {
+            throw new IllegalStateException("not a request (missing :method)");
+        }
+        if (headers.path() == null) {
+            throw new IllegalStateException("not a request (missing :path)");
+        }
 
         if (content.isEmpty()) {
             headers.remove(CONTENT_LENGTH);
@@ -199,15 +204,55 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
         if (!content.isEmpty()) {
             if (trailingHeaders.isEmpty()) {
-                return FixedHttpRequest.of(headers, content);
+                return new OneElementFixedHttpRequest(headers, keepAlive, content);
             } else {
-                return FixedHttpRequest.of(headers, content, trailingHeaders);
+                return new TwoElementFixedHttpRequest(headers, keepAlive, content, trailingHeaders);
             }
         } else if (!trailingHeaders.isEmpty()) {
-            return FixedHttpRequest.of(headers, trailingHeaders);
+            return new OneElementFixedHttpRequest(headers, keepAlive, trailingHeaders);
         } else {
-            return FixedHttpRequest.of(headers);
+            return new EmptyFixedHttpRequest(headers, keepAlive);
         }
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} that publishes the given {@link HttpObject}s and closes the stream.
+     * {@code objs} must not contain {@link HttpHeaders}.
+     */
+    static HttpRequest of(HttpHeaders headers, HttpObject... objs) {
+        return of(headers, true, objs);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} with the provided {@code keepAlive} that publishes the given
+     * {@link HttpObject}s and closes the stream. {@code objs} must not contain {@link HttpHeaders}.
+     */
+    static HttpRequest of(HttpHeaders headers, boolean keepAlive, HttpObject... objs) {
+        if (Arrays.stream(objs).anyMatch(obj -> obj instanceof HttpHeaders)) {
+            throw new IllegalArgumentException("objs contains HttpHeaders, which is not allowed.");
+        }
+        switch (objs.length) {
+            case 0:
+                return new EmptyFixedHttpRequest(headers, keepAlive);
+            case 1:
+                return new OneElementFixedHttpRequest(headers, keepAlive, objs[0]);
+            case 2:
+                return new TwoElementFixedHttpRequest(headers, keepAlive, objs[0], objs[1]);
+            default:
+                for (int i = 0; i < objs.length; i++) {
+                    if (objs[i] == null) {
+                        throw new NullPointerException("objs[" + i + "] is null");
+                    }
+                }
+                return new RegularFixedHttpRequest(headers, keepAlive, objs);
+        }
+    }
+
+    /**
+     * Converts the {@link AggregatedHttpMessage} into a new {@link HttpRequest} and closes the stream.
+     */
+    static HttpRequest of(AggregatedHttpMessage message) {
+        return of(message.headers(), message.content(), message.trailingHeaders());
     }
 
     /**

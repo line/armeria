@@ -16,67 +16,108 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
-import com.linecorp.armeria.common.stream.FixedStreamMessage;
+import com.linecorp.armeria.common.stream.EmptyFixedStreamMessage;
+import com.linecorp.armeria.common.stream.OneElementFixedStreamMessage;
+import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
 
 /**
- * An {@link HttpResponse} optimized for when all the {@link HttpObject}s that will be published are known at
+ * An {@link HttpRequest} optimized for when all the {@link HttpObject}s that will be published are known at
  * construction time.
  */
-public final class FixedHttpRequest extends FixedStreamMessage<HttpObject> implements HttpRequest {
+final class FixedHttpRequest {
 
-    /**
-     * Creates a new {@link FixedHttpRequest} that will publish the given {@code objs}. {@code objs} is not
-     * copied so must not be mutated after this method call (it is generally meant to be used with a varargs
-     * invocation). The first element of {@code objs} must be of type {@link HttpHeaders}.
-     */
-    public static FixedHttpRequest of(HttpObject... objs) {
-        return of(true, objs);
+    static final class EmptyFixedHttpRequest
+            extends EmptyFixedStreamMessage<HttpObject> implements HttpRequest {
+
+        private final HttpHeaders headers;
+        private final boolean keepAlive;
+
+        EmptyFixedHttpRequest(HttpHeaders headers, boolean keepAlive) {
+            this.headers = headers;
+            this.keepAlive = keepAlive;
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            return headers;
+        }
+
+        @Override
+        public boolean isKeepAlive() {
+            return keepAlive;
+        }
     }
 
-    /**
-     * Creates a new {@link FixedHttpRequest} that will publish the given {@code objs}. {@code objs} is not
-     * copied so must not be mutated after this method call (it is generally meant to be used with a varargs
-     * invocation). The first element of {@code objs} must be of type {@link HttpHeaders}.
-     *
-     * @param keepAlive whether to keep the connection alive after this request is handled
-     */
-    public static FixedHttpRequest of(boolean keepAlive, HttpObject... objs) {
-        requireNonNull(objs, "objs");
-        checkArgument(objs.length > 0, "At least one HttpObject must be published.");
-        checkArgument(objs[0] instanceof HttpHeaders, "First published object must be headers.");
-        return new FixedHttpRequest((HttpHeaders) objs[0], objs, keepAlive);
+    static final class OneElementFixedHttpRequest
+            extends OneElementFixedStreamMessage<HttpObject> implements HttpRequest {
+
+        private final HttpHeaders headers;
+        private final boolean keepAlive;
+
+        OneElementFixedHttpRequest(HttpHeaders headers, boolean keepAlive, HttpObject obj) {
+            super(obj);
+            this.headers = headers;
+            this.keepAlive = keepAlive;
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            return headers;
+        }
+
+        @Override
+        public boolean isKeepAlive() {
+            return keepAlive;
+        }
     }
 
-    /**
-     * Creates a new {@link FixedHttpRequest} that will publish the given {@code objs}. {@code objs} is not
-     * copied so must not be mutated after this method call (it is generally meant to be used with a varargs
-     * invocation). {@code writtenHeaders} should have already been separately written to the recipient.
-     */
-    public static FixedHttpRequest ofHeadersWritten(HttpHeaders writtenHeaders, HttpObject... objs) {
-        requireNonNull(writtenHeaders, "writtenHeaders");
-        requireNonNull(objs, "objs");
-        return new FixedHttpRequest(writtenHeaders, objs, true);
+    static final class TwoElementFixedHttpRequest
+            extends TwoElementFixedStreamMessage<HttpObject> implements HttpRequest {
+
+        private final HttpHeaders headers;
+        private final boolean keepAlive;
+
+        TwoElementFixedHttpRequest(
+                HttpHeaders headers, boolean keepAlive, HttpObject obj1, HttpObject obj2) {
+            super(obj1, obj2);
+            this.headers = headers;
+            this.keepAlive = keepAlive;
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            return headers;
+        }
+
+        @Override
+        public boolean isKeepAlive() {
+            return keepAlive;
+        }
     }
 
-    private final HttpHeaders headers;
-    private final boolean keepAlive;
+    static final class RegularFixedHttpRequest
+            extends RegularFixedStreamMessage<HttpObject> implements HttpRequest {
 
-    private FixedHttpRequest(HttpHeaders headers, HttpObject[] objs, boolean keepAlive) {
-        super(objs);
-        this.headers = headers;
-        this.keepAlive = keepAlive;
+        private final HttpHeaders headers;
+        private final boolean keepAlive;
+
+        RegularFixedHttpRequest(HttpHeaders headers, boolean keepAlive, HttpObject... objs) {
+            super(objs);
+            this.headers = headers;
+            this.keepAlive = keepAlive;
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            return headers;
+        }
+
+        @Override
+        public boolean isKeepAlive() {
+            return keepAlive;
+        }
     }
 
-    @Override
-    public HttpHeaders headers() {
-        return headers;
-    }
-
-    @Override
-    public boolean isKeepAlive() {
-        return keepAlive;
-    }
+    private FixedHttpRequest() {}
 }

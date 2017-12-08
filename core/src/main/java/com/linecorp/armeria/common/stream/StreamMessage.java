@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -73,6 +75,53 @@ import io.netty.util.concurrent.EventExecutor;
  * @param <T> the type of element signaled
  */
 public interface StreamMessage<T> extends Publisher<T> {
+    /**
+     * Creates a new {@link StreamMessage} that will publish no objects, just a close event.
+     */
+    static <T> StreamMessage<T> of() {
+        return new EmptyFixedStreamMessage<>();
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that will publish the single {@code obj}.
+     */
+    static <T> StreamMessage<T> of(T obj) {
+        requireNonNull(obj, "obj");
+        return new OneElementFixedStreamMessage<>(obj);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that will publish the two {@code obj1} and {@code obj2}.
+     */
+    static <T> StreamMessage<T> of(T obj1, T obj2) {
+        requireNonNull(obj1, "obj1");
+        requireNonNull(obj2, "obj2");
+        return new TwoElementFixedStreamMessage<>(obj1, obj2);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that will publish the given {@code objs}.
+     */
+    @SafeVarargs
+    static <T> StreamMessage<T> of(T... objs) {
+        requireNonNull(objs, "objs");
+        switch (objs.length) {
+            case 0:
+                return of();
+            case 1:
+                return of(objs[0]);
+            case 2:
+                return of(objs[0], objs[1]);
+            default:
+                for (int i = 0; i < objs.length; i++) {
+                    if (objs[i] == null) {
+                        throw new NullPointerException("objs[" + i + "] is null");
+                    }
+                }
+                return new RegularFixedStreamMessage<>(objs);
+        }
+    }
+
     /**
      * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
      * {@linkplain #completionFuture() complete} even if it's closed; a stream is complete when it's fully

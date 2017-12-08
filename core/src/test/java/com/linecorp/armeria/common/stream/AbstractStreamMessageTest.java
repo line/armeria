@@ -67,6 +67,10 @@ public abstract class AbstractStreamMessageTest {
 
     abstract <T> StreamMessage<T> newStream(List<T> inputs);
 
+    List<Integer> streamValues() {
+        return TEN_INTEGERS;
+    }
+
     private List<Integer> result;
     private volatile boolean completed;
     private volatile Throwable error;
@@ -79,7 +83,7 @@ public abstract class AbstractStreamMessageTest {
 
     @Test
     public void full_writeFirst() throws Exception {
-        StreamMessage<Integer> stream = newStream(TEN_INTEGERS);
+        StreamMessage<Integer> stream = newStream(streamValues());
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
             @Override
@@ -92,7 +96,7 @@ public abstract class AbstractStreamMessageTest {
 
     @Test
     public void full_writeAfter() throws Exception {
-        StreamMessage<Integer> stream = newStream(TEN_INTEGERS);
+        StreamMessage<Integer> stream = newStream(streamValues());
         stream.subscribe(new ResultCollectingSubscriber() {
             @Override
             public void onSubscribe(Subscription s) {
@@ -108,7 +112,7 @@ public abstract class AbstractStreamMessageTest {
     // would fail.
     @Test
     public void flowControlled_writeThenDemandThenProcess() throws Exception {
-        StreamMessage<Integer> stream = newStream(TEN_INTEGERS);
+        StreamMessage<Integer> stream = newStream(streamValues());
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
             private Subscription subscription;
@@ -130,7 +134,7 @@ public abstract class AbstractStreamMessageTest {
 
     @Test
     public void flowControlled_writeThenDemandThenProcess_eventLoop() throws Exception {
-        StreamMessage<Integer> stream = newStream(TEN_INTEGERS);
+        StreamMessage<Integer> stream = newStream(streamValues());
         writeTenIntegers(stream);
         eventLoop().submit(
                 () ->
@@ -154,7 +158,7 @@ public abstract class AbstractStreamMessageTest {
 
     @Test
     public void flowControlled_writeThenProcessThenDemand() throws Exception {
-        StreamMessage<Integer> stream = newStream(TEN_INTEGERS);
+        StreamMessage<Integer> stream = newStream(streamValues());
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
             private Subscription subscription;
@@ -324,7 +328,7 @@ public abstract class AbstractStreamMessageTest {
     private void assertSuccess() {
         await().untilAsserted(() -> assertThat(completed).isTrue());
         assertThat(error).isNull();
-        assertThat(result).containsExactlyElementsOf(TEN_INTEGERS);
+        assertThat(result).containsExactlyElementsOf(streamValues());
     }
 
     private abstract class ResultCollectingSubscriber implements Subscriber<Integer> {
@@ -349,10 +353,10 @@ public abstract class AbstractStreamMessageTest {
         return PooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
     }
 
-    private static void writeTenIntegers(StreamMessage<Integer> stream) {
+    private void writeTenIntegers(StreamMessage<Integer> stream) {
         if (stream instanceof StreamWriter) {
             StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
-            TEN_INTEGERS.forEach(writer::write);
+            streamValues().forEach(writer::write);
             writer.close();
         }
     }

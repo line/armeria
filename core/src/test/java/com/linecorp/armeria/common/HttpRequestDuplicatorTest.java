@@ -34,7 +34,7 @@ public class HttpRequestDuplicatorTest {
                 HttpMethod.PUT, "/foo", PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bar"),
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
 
-        final HttpRequest publisher = aReq.toHttpRequest();
+        final HttpRequest publisher = HttpRequest.of(aReq);
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(publisher);
 
         final AggregatedHttpMessage req1 = reqDuplicator.duplicateStream().aggregate().join();
