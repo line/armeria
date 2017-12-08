@@ -18,11 +18,10 @@ package com.linecorp.armeria.core;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.time.Duration;
 
-import org.openjdk.jmh.annotations.AuxCounters;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -33,48 +32,52 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
+import com.linecorp.armeria.shared.AsyncCounters;
 
 @State(Scope.Benchmark)
 public class HttpServerBenchmark {
 
-    @AuxCounters
-    @State(Scope.Thread)
-    public static class Counters {
-        AtomicLong numRequests = new AtomicLong();
-        AtomicLong numFailures = new AtomicLong();
+    // JMH bug prevents it from using enums that override toString() (it should use name() instead...).
+    public enum Protocol {
+        H2C(SessionProtocol.H2C),
+        H1C(SessionProtocol.H1C);
 
-        public long numRequests() {
-            return numRequests.get();
+        private final SessionProtocol sessionProtocol;
+
+        Protocol(SessionProtocol sessionProtocol) {
+            this.sessionProtocol = sessionProtocol;
         }
 
-        public long numFailures() {
-            return this.numFailures.get();
-        }
-
-        @Setup(Level.Iteration)
-        public void reset() {
-            numRequests.set(0);
-            numFailures.set(0);
+        String uriText() {
+            return sessionProtocol.uriText();
         }
     }
 
     private Server server;
     private HttpClient httpClient;
 
+    @Param
+    private Protocol protocol;
+
     @Setup
     public void startServer() throws Exception {
         server = new ServerBuilder()
                 .port(0, HTTP)
                 .service("/empty", ((ctx, req) -> HttpResponse.of(HttpStatus.OK)))
+                .defaultRequestTimeout(Duration.ZERO)
+                .meterRegistry(NoopMeterRegistry.get())
                 .build();
         server.start().join();
         ServerPort httpPort = server.activePorts().values().stream()
                                     .filter(p1 -> p1.protocol() == HTTP).findAny()
                                     .get();
-        httpClient = Clients.newClient("none+http://127.0.0.1:" + httpPort.localAddress().getPort() + "/",
+        httpClient = Clients.newClient("none+" + protocol.uriText() + "://127.0.0.1:" +
+                                       httpPort.localAddress().getPort() + "/",
                                        HttpClient.class);
     }
 
@@ -84,14 +87,17 @@ public class HttpServerBenchmark {
     }
 
     @Benchmark
-    public void empty(Blackhole bh, Counters counters) throws Exception {
+    public void empty(Blackhole bh, AsyncCounters counters) throws Exception {
+        counters.incrementCurrentRequests();
         bh.consume(
                 httpClient.get("/empty")
                           .aggregate()
                           .whenComplete((msg, t) -> {
-                              counters.numRequests.incrementAndGet();
+                              counters.decrementCurrentRequests();
                               if (t != null) {
-                                  counters.numFailures.incrementAndGet();
+                                  counters.incrementNumFailures();
+                              } else {
+                                  counters.incrementNumSuccesses();
                               }
                           }));
     }

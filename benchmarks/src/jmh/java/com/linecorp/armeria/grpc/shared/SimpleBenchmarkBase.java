@@ -17,16 +17,12 @@
 package com.linecorp.armeria.grpc.shared;
 
 import static com.linecorp.armeria.grpc.shared.GithubApiService.SEARCH_RESPONSE;
-import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
 
-import org.openjdk.jmh.annotations.AuxCounters;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -42,48 +38,13 @@ import com.linecorp.armeria.grpc.GithubApi.SearchResponse;
 import com.linecorp.armeria.grpc.GithubServiceGrpc;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceBlockingStub;
 import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceFutureStub;
+import com.linecorp.armeria.shared.AsyncCounters;
 
 import io.grpc.ManagedChannel;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 
 @State(Scope.Benchmark)
 public abstract class SimpleBenchmarkBase {
-
-    @AuxCounters
-    @State(Scope.Thread)
-    public static class Counters {
-        private AtomicLong numRequests = new AtomicLong();
-        private AtomicLong numFailures = new AtomicLong();
-        private AtomicLong currentRequests = new AtomicLong();
-
-        private volatile boolean waiting;
-
-        public long numRequests() {
-            return numRequests.get();
-        }
-
-        public long numFailures() {
-            return numFailures.get();
-        }
-
-        public long currentRequests() {
-            return currentRequests.get();
-        }
-
-        @Setup(Level.Iteration)
-        public void reset() {
-            waiting = false;
-            numRequests.set(0);
-            numFailures.set(0);
-            currentRequests.set(0);
-        }
-
-        @TearDown(Level.Iteration)
-        public void waitForCurrentRequests() {
-            waiting = true;
-            await().forever().until(() -> currentRequests.get() == 0);
-        }
-    }
 
     /**
      * The port the benchmark's server is listening on.
@@ -142,8 +103,8 @@ public abstract class SimpleBenchmarkBase {
     }
 
     @Benchmark
-    public void simpleNonBlocking(Counters counters) throws Exception {
-        counters.currentRequests.incrementAndGet();
+    public void simpleNonBlocking(AsyncCounters counters) throws Exception {
+        counters.incrementCurrentRequests();
         Futures.addCallback(
                 futureStub().simple(SEARCH_RESPONSE),
                 counterIncrementingFutureCallback(counters),
@@ -156,8 +117,8 @@ public abstract class SimpleBenchmarkBase {
     }
 
     @Benchmark
-    public void emptyNonBlocking(Counters counters) throws Exception {
-        counters.currentRequests.incrementAndGet();
+    public void emptyNonBlocking(AsyncCounters counters) throws Exception {
+        counters.incrementCurrentRequests();
         Futures.addCallback(
                 futureStub().empty(Empty.getDefaultInstance()),
                 counterIncrementingFutureCallback(counters),
@@ -172,23 +133,18 @@ public abstract class SimpleBenchmarkBase {
         return clientType == ClientType.NORMAL ? normalFutureClient() : githubApiOkhttpFutureClient;
     }
 
-    private static <T> FutureCallback<T> counterIncrementingFutureCallback(Counters counters) {
+    private static <T> FutureCallback<T> counterIncrementingFutureCallback(AsyncCounters counters) {
         return new FutureCallback<T>() {
             @Override
             public void onSuccess(@Nullable T result) {
-                counters.currentRequests.decrementAndGet();
-                if (!counters.waiting) {
-                    counters.numRequests.incrementAndGet();
-                }
+                counters.decrementCurrentRequests();
+                counters.incrementNumSuccesses();
             }
 
             @Override
             public void onFailure(Throwable t) {
-                counters.currentRequests.decrementAndGet();
-                if (!counters.waiting) {
-                    counters.numRequests.incrementAndGet();
-                    counters.numFailures.incrementAndGet();
-                }
+                counters.decrementCurrentRequests();
+                counters.incrementNumFailures();
             }
         };
     }
