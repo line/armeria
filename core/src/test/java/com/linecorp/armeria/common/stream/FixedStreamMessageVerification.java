@@ -23,7 +23,7 @@ import org.testng.annotations.Test;
 public class FixedStreamMessageVerification extends StreamMessageVerification<Long> {
     @Override
     public StreamMessage<Long> createPublisher(long elements) {
-        return FixedStreamMessage.of(LongStream.range(0, elements).boxed().toArray(Long[]::new));
+        return StreamMessage.of(LongStream.range(0, elements).boxed().toArray(Long[]::new));
     }
 
     // A fixed stream cannot fail.

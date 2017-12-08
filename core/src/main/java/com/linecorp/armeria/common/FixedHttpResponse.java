@@ -16,30 +16,37 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
-
-import com.linecorp.armeria.common.stream.FixedStreamMessage;
+import com.linecorp.armeria.common.stream.OneElementFixedStreamMessage;
+import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
 
 /**
  * An {@link HttpResponse} optimized for when all the {@link HttpObject}s that will be published are known at
  * construction time.
  */
-public final class FixedHttpResponse extends FixedStreamMessage<HttpObject> implements HttpResponse {
+final class FixedHttpResponse {
 
-    /**
-     * Creates a new {@link FixedHttpResponse} that will publish the given {@code objs}. {@code objs} is not
-     * copied so must not be mutated after this method call (it is generally meant to be used with a varargs
-     * invocation). The first element of {@code objs} must be of type {@link HttpHeaders}.
-     */
-    public static FixedHttpResponse of(HttpObject... objs) {
-        requireNonNull(objs, "objs");
-        checkArgument(objs.length > 0, "At least one HttpObject must be published.");
-        checkArgument(objs[0] instanceof HttpHeaders, "First published object must be headers.");
-        return new FixedHttpResponse(objs);
+    static final class OneElementFixedHttpResponse
+            extends OneElementFixedStreamMessage<HttpObject> implements HttpResponse {
+        OneElementFixedHttpResponse(HttpObject obj) {
+            super(obj);
+        }
     }
 
-    private FixedHttpResponse(HttpObject[] objs) {
-        super(objs);
+    static final class TwoElementFixedHttpResponse
+            extends TwoElementFixedStreamMessage<HttpObject> implements HttpResponse {
+        TwoElementFixedHttpResponse(HttpObject obj1, HttpObject obj2) {
+            super(obj1, obj2);
+        }
     }
+
+    static final class RegularFixedHttpResponse
+            extends RegularFixedStreamMessage<HttpObject> implements HttpResponse {
+        RegularFixedHttpResponse(HttpObject... objs) {
+            super(objs);
+        }
+    }
+
+    private FixedHttpResponse() {}
 }
+

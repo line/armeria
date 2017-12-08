@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -30,6 +31,9 @@ import org.reactivestreams.Publisher;
 
 import com.google.common.base.Throwables;
 
+import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse;
+import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
+import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -61,7 +65,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             res.write(HttpHeaders.of(status));
             return res;
         } else if (isContentAlwaysEmpty(status)) {
-            return FixedHttpResponse.of(HttpHeaders.of(status));
+            return new OneElementFixedHttpResponse(HttpHeaders.of(status));
         } else {
             return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
         }
@@ -137,46 +141,92 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
 
         final HttpHeaders headers =
                 HttpHeaders.of(status)
                            .setObject(HttpHeaderNames.CONTENT_TYPE, mediaType)
                            .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
-        return of(headers, status, content, trailingHeaders);
-    }
-
-    /**
-     * Creates the specified HTTP response and closes the stream.
-     */
-    static HttpResponse of(AggregatedHttpMessage res) {
-        requireNonNull(res, "res");
-        return res.toHttpResponse();
+        return of(headers, content, trailingHeaders);
     }
 
     /**
      * Creates a new HTTP response of the specified objects and closes the stream.
      */
-    static HttpResponse of(
-            HttpHeaders headers, HttpStatus status, HttpData content, HttpHeaders trailingHeaders) {
+    static HttpResponse of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
-        requireNonNull(status, "status");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
 
+        final HttpStatus status = headers.status();
+
+        // From the section 8.1.2.4 of RFC 7540:
+        //// For HTTP/2 responses, a single :status pseudo-header field is defined that carries the HTTP status
+        //// code field (see [RFC7231], Section 6). This pseudo-header field MUST be included in all responses;
+        //// otherwise, the response is malformed (Section 8.1.2.6).
+        if (status == null) {
+            throw new IllegalStateException("not a response (missing :status)");
+        }
+
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
-            return FixedHttpResponse.of(headers);
+            return new OneElementFixedHttpResponse(headers);
         } else if (!content.isEmpty()) {
             if (trailingHeaders.isEmpty()) {
-                return FixedHttpResponse.of(headers, content);
+                return new TwoElementFixedHttpResponse(headers, content);
             } else {
-                return FixedHttpResponse.of(headers, content, trailingHeaders);
+                return new RegularFixedHttpResponse(headers, content, trailingHeaders);
             }
         } else if (!trailingHeaders.isEmpty()) {
-            return FixedHttpResponse.of(headers, trailingHeaders);
+            return new TwoElementFixedHttpResponse(headers, trailingHeaders);
         } else {
-            return FixedHttpResponse.of(headers);
+            return new OneElementFixedHttpResponse(headers);
         }
+    }
+
+    /**
+     * Creates a new HTTP response of the specified objects and closes the stream.
+     */
+    static HttpResponse of(HttpObject... objs) {
+        requireNonNull(objs, "objs");
+        for (int i = 0; i < objs.length; i++) {
+            if (objs[i] == null) {
+                throw new NullPointerException("objs[" + i + "] is null");
+            }
+        }
+        return new RegularFixedHttpResponse(objs);
+    }
+
+    /**
+     * Converts the {@link AggregatedHttpMessage} into a new complete {@link HttpResponse}.
+     */
+    static HttpResponse of(AggregatedHttpMessage res) {
+        requireNonNull(res, "res");
+
+        final List<HttpHeaders> informationals = res.informationals();
+        final HttpHeaders headers = res.headers();
+        final HttpData content = res.content();
+        final HttpHeaders trailingHeaders = res.trailingHeaders();
+
+        if (informationals.isEmpty()) {
+            return of(headers, content, trailingHeaders);
+        }
+
+        final int numObjects = informationals.size() +
+                               1 /* headers */ +
+                               (!content.isEmpty() ? 1 : 0) +
+                               (!trailingHeaders.isEmpty() ? 1 : 0);
+        final HttpObject[] objs = new HttpObject[numObjects];
+        int writerIndex = 0;
+        for (HttpHeaders informational : informationals) {
+            objs[writerIndex++] = informational;
+        }
+        objs[writerIndex++] = headers;
+        if (!content.isEmpty()) {
+            objs[writerIndex++] = content;
+        }
+        if (!trailingHeaders.isEmpty()) {
+            objs[writerIndex] = trailingHeaders;
+        }
+        return new RegularFixedHttpResponse(objs);
     }
 
     /**

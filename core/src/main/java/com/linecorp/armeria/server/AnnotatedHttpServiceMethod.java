@@ -483,7 +483,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         if (object instanceof HttpResponse) {
             return (HttpResponse) object;
         } else if (object instanceof AggregatedHttpMessage) {
-            return ((AggregatedHttpMessage) object).toHttpResponse();
+            return HttpResponse.of(((AggregatedHttpMessage) object));
         } else {
             final Class<?> clazz = object != null ? object.getClass() : Object.class;
             final ResponseConverter converter = findResponseConverter(clazz, converters);
@@ -504,7 +504,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         if (object instanceof HttpResponse) {
             return (HttpResponse) object;
         } else if (object instanceof AggregatedHttpMessage) {
-            return ((AggregatedHttpMessage) object).toHttpResponse();
+            return HttpResponse.of(((AggregatedHttpMessage) object));
         } else {
             try {
                 return converter.convert(object);

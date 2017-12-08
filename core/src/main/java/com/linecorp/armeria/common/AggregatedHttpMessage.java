@@ -429,74 +429,20 @@ public interface AggregatedHttpMessage {
     /**
      * Converts this message into a new complete {@link HttpRequest}.
      *
-     * @return the converted {@link HttpRequest} whose stream is complete
-     * @throws IllegalStateException if this message is not a request
+     * @deprecated Use {@link HttpRequest#of(AggregatedHttpMessage)}.
      */
+    @Deprecated
     default HttpRequest toHttpRequest() {
-        final HttpHeaders headers = headers();
-
-        // From the section 8.1.2.3 of RFC 7540:
-        //// All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme, and :path
-        //// pseudo-header fields, unless it is a CONNECT request (Section 8.3)
-        // NB: ':scheme' will be filled when a request is written.
-        if (headers.method() == null) {
-            throw new IllegalStateException("not a request (missing :method)");
-        }
-        if (headers.path() == null) {
-            throw new IllegalStateException("not a request (missing :path)");
-        }
-
-        final HttpData content = content();
-        final HttpHeaders trailingHeaders = trailingHeaders();
-        final int numObjects = (!content.isEmpty() ? 1 : 0) +
-                               (!trailingHeaders.isEmpty() ? 1 : 0);
-        final HttpObject[] objs = new HttpObject[numObjects];
-        int writerIndex = 0;
-        if (!content.isEmpty()) {
-            objs[writerIndex++] = content;
-        }
-        if (!trailingHeaders.isEmpty()) {
-            objs[writerIndex] = trailingHeaders;
-        }
-        return FixedHttpRequest.ofHeadersWritten(headers, objs);
+        return HttpRequest.of(this);
     }
 
     /**
      * Converts this message into a new complete {@link HttpResponse}.
      *
-     * @return the converted {@link HttpResponse} whose stream is complete
-     * @throws IllegalStateException if this message is not a response.
+     * @deprecated Use {@link HttpResponse#of(AggregatedHttpMessage)}.
      */
+    @Deprecated
     default HttpResponse toHttpResponse() {
-        final List<HttpHeaders> informationals = informationals();
-        final HttpHeaders headers = headers();
-
-        // From the section 8.1.2.4 of RFC 7540:
-        //// For HTTP/2 responses, a single :status pseudo-header field is defined that carries the HTTP status
-        //// code field (see [RFC7231], Section 6). This pseudo-header field MUST be included in all responses;
-        //// otherwise, the response is malformed (Section 8.1.2.6).
-        if (headers.status() == null) {
-            throw new IllegalStateException("not a response (missing :status)");
-        }
-
-        final HttpData content = content();
-        final HttpHeaders trailingHeaders = trailingHeaders();
-        final int numObjects = informationals.size() +
-                               1 /* headers */ +
-                               (!content.isEmpty() ? 1 : 0) +
-                               (!trailingHeaders.isEmpty() ? 1 : 0);
-        final HttpObject[] objs = new HttpObject[numObjects];
-        int writerIndex = 0;
-        for (HttpHeaders informational : informationals()) {
-            objs[writerIndex++] = informational;
-        }
-        objs[writerIndex++] = headers;
-        if (!content.isEmpty()) {
-            objs[writerIndex++] = content;
-        }
-        if (!trailingHeaders.isEmpty()) {
-            objs[writerIndex] = trailingHeaders;
-        }
-        return FixedHttpResponse.of(objs);
+        return HttpResponse.of(this);
     }
 }

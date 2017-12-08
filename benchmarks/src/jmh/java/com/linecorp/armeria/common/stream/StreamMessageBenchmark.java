@@ -63,7 +63,7 @@ public class StreamMessageBenchmark {
         @Param
         private StreamType streamType;
 
-        @Param({ "3", "5", "20", "100", "1000" })
+        @Param({ "0", "1", "2", "3", "5", "20", "100", "1000" })
         private int num;
 
         @Param({ "false", "true" })
@@ -163,10 +163,19 @@ public class StreamMessageBenchmark {
             case DEFAULT_STREAM_MESSAGE:
                 return new DefaultStreamMessage<>();
             case FIXED_STREAM_MESSAGE:
-                return new FixedStreamMessage<>(streamObjects.values);
+                switch (streamObjects.num) {
+                    case 0:
+                        return StreamMessage.of();
+                    case 1:
+                        return StreamMessage.of(streamObjects.values[0]);
+                    case 2:
+                        return StreamMessage.of(streamObjects.values[0], streamObjects.values[1]);
+                    default:
+                        return StreamMessage.of(streamObjects.values);
+                }
             case DEFERRED_FIXED_STREAM_MESSAGE:
                 DeferredStreamMessage<Integer> stream = new DeferredStreamMessage<>();
-                stream.delegate(new FixedStreamMessage<>(streamObjects.values));
+                stream.delegate(StreamMessage.of(streamObjects.values));
                 return stream;
             default:
                 throw new Error();
