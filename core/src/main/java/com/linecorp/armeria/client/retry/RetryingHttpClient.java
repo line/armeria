@@ -120,16 +120,15 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     private void doExecute0(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
                             DeferredHttpResponse deferredRes) {
         if (!setResponseTimeout(ctx)) {
-            closeOnException(deferredRes, rootReqDuplicator, ResponseTimeoutException.get());
+            closeOnException(ctx, deferredRes, rootReqDuplicator, ResponseTimeoutException.get());
             return;
         }
 
-        final HttpResponse response;
+        HttpResponse response;
         try {
             response = executeDelegate(ctx, rootReqDuplicator.duplicateStream());
         } catch (Exception e) {
-            closeOnException(deferredRes, rootReqDuplicator, e);
-            return;
+            response = HttpResponse.ofFailure(e);
         }
 
         final HttpResponseDuplicator resDuplicator =
@@ -148,7 +147,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                try {
                                    nextDelay = getNextDelay(ctx, backoffOpt.get(), millisAfter);
                                } catch (Exception e) {
-                                   closeOnException(deferredRes, rootReqDuplicator, e);
+                                   closeOnException(ctx, deferredRes, rootReqDuplicator, e);
                                    return;
                                }
 
@@ -161,6 +160,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                            nextDelay, TimeUnit.MILLISECONDS);
                                }
                            } else {
+                               onRetryingComplete(ctx);
                                deferredRes.delegate(resDuplicator.duplicateStream(true));
                                rootReqDuplicator.close();
                            }
@@ -205,8 +205,10 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         return future.join();
     }
 
-    private static void closeOnException(DeferredHttpResponse deferredRes,
+    private static void closeOnException(ClientRequestContext ctx,
+                                         DeferredHttpResponse deferredRes,
                                          HttpRequestDuplicator rootReqDuplicator, Throwable cause) {
+        onRetryingComplete(ctx);
         deferredRes.close(cause);
         rootReqDuplicator.close();
     }

@@ -25,6 +25,12 @@ import io.netty.channel.Channel;
 final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override
+    public void addChild(RequestLog child) {}
+
+    @Override
+    public void endResponseWithLastChild() {}
+
+    @Override
     public void startRequest(Channel ch, SessionProtocol sessionProtocol, String host) {}
 
     @Override

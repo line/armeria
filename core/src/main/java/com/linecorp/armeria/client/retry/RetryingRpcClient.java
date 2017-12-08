@@ -90,17 +90,11 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req, DefaultRpcResponse responseFuture) {
         if (!setResponseTimeout(ctx)) {
-            responseFuture.completeExceptionally(ResponseTimeoutException.get());
+            completeOnException(ctx, responseFuture, ResponseTimeoutException.get());
             return;
         }
 
-        final RpcResponse response;
-        try {
-            response = executeDelegate(ctx, req);
-        } catch (Exception e) {
-            responseFuture.completeExceptionally(e);
-            return;
-        }
+        final RpcResponse response = getResponse(ctx, req);
 
         retryStrategy().shouldRetry(req, response).handle(voidFunction((backoffOpt, unused) -> {
             if (backoffOpt.isPresent()) {
@@ -108,7 +102,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 try {
                     nextDelay = getNextDelay(ctx, backoffOpt.get());
                 } catch (Exception e) {
-                    responseFuture.completeExceptionally(e);
+                    completeOnException(ctx, responseFuture, e);
                     return;
                 }
 
@@ -121,15 +115,28 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 }
             } else {
                 response.handle(voidFunction((result, thrown) -> {
-                    if (thrown == null) {
-                        // normal response
-                        responseFuture.complete(result);
+                    if (thrown != null) {
+                        completeOnException(ctx, responseFuture, thrown);
                     } else {
-                        // failed
-                        responseFuture.completeExceptionally(thrown);
+                        onRetryingComplete(ctx);
+                        responseFuture.complete(result);
                     }
                 }));
             }
         }));
+    }
+
+    private void completeOnException(ClientRequestContext ctx, DefaultRpcResponse responseFuture,
+                                     Throwable thrown) {
+        onRetryingComplete(ctx);
+        responseFuture.completeExceptionally(thrown);
+    }
+
+    private RpcResponse getResponse(ClientRequestContext ctx, RpcRequest req) {
+        try {
+            return executeDelegate(ctx, req);
+        } catch (Exception e) {
+            return new DefaultRpcResponse(e);
+        }
     }
 }
