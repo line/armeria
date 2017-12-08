@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.Flags;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
- * A {@link AbstractStreamMessage} which only publishes a fixed number of objects known at construction time.
+ * An {@link AbstractStreamMessage} which only publishes a fixed number of objects known at construction time.
  */
 abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
