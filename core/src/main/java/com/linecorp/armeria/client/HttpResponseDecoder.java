@@ -29,11 +29,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
@@ -71,7 +70,7 @@ abstract class HttpResponseDecoder {
 
         final HttpResponseWrapper newRes =
                 new HttpResponseWrapper(req, res, logBuilder, responseTimeoutMillis, maxContentLength);
-        final HttpResponseWriter oldRes = responses.put(id, newRes);
+        final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
@@ -116,7 +115,7 @@ abstract class HttpResponseDecoder {
         return disconnectWhenFinished && !hasUnfinishedResponses();
     }
 
-    static final class HttpResponseWrapper implements HttpResponseWriter, Runnable {
+    static final class HttpResponseWrapper implements StreamWriter<HttpObject>, Runnable {
         private final HttpRequest request;
         private final DecodedHttpResponse delegate;
         private final RequestLogBuilder logBuilder;
@@ -237,35 +236,6 @@ abstract class HttpResponseDecoder {
             if (request != null) {
                 request.abort();
             }
-        }
-
-        @Override
-        public void respond(HttpStatus status) {
-            delegate.respond(status);
-        }
-
-        @Override
-        public void respond(HttpStatus status,
-                            MediaType mediaType, String content) {
-            delegate.respond(status, mediaType, content);
-        }
-
-        @Override
-        public void respond(HttpStatus status,
-                            MediaType mediaType, String format, Object... args) {
-            delegate.respond(status, mediaType, format, args);
-        }
-
-        @Override
-        public void respond(HttpStatus status,
-                            MediaType mediaType, byte[] content) {
-            delegate.respond(status, mediaType, content);
-        }
-
-        @Override
-        public void respond(HttpStatus status,
-                            MediaType mediaType, byte[] content, int offset, int length) {
-            delegate.respond(status, mediaType, content, offset, length);
         }
 
         @Override

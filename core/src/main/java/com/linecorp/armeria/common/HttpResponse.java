@@ -43,8 +43,36 @@ import io.netty.util.concurrent.EventExecutor;
  */
 public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
-    // Note: Ensure we provide the same set of `of()` methods with the `of()` and `respond()` methods of
-    //       HttpResponseWriter and AggregatedHttpMessage for consistency.
+    // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
+    //       AggregatedHttpMessage for consistency.
+
+    /**
+     * Creates a new HTTP response that can stream an arbitrary number of {@link HttpObject} to the client.
+     * The first object written must be of type {@link HttpHeaders}.
+     */
+    static HttpResponseWriter streaming() {
+        return new DefaultHttpResponse();
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
+     * closed with the same cause as well.
+     */
+    static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
+        requireNonNull(stage, "stage");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        stage.whenComplete((delegate, thrown) -> {
+            if (thrown != null) {
+                res.close(Throwables.getRootCause(thrown));
+            } else if (delegate == null) {
+                res.close(new NullPointerException("delegate stage produced a null response: " + stage));
+            } else {
+                res.delegate(delegate);
+            }
+        });
+        return res;
+    }
 
     /**
      * Creates a new HTTP response of the specified {@code statusCode} and closes the stream if the
@@ -61,7 +89,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-            DefaultHttpResponse res = new DefaultHttpResponse();
+            HttpResponseWriter res = streaming();
             res.write(HttpHeaders.of(status));
             return res;
         } else if (isContentAlwaysEmpty(status)) {
@@ -254,7 +282,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new failed HTTP response.
      */
     static HttpResponse ofFailure(Throwable cause) {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final HttpResponseWriter res = streaming();
         res.close(cause);
         return res;
     }
@@ -267,26 +295,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     @Deprecated
     static HttpResponse ofFailed(Throwable cause) {
         return ofFailure(cause);
-    }
-
-    /**
-     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
-     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
-     * closed with the same cause as well.
-     */
-    static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
-        requireNonNull(stage, "stage");
-        final DeferredHttpResponse res = new DeferredHttpResponse();
-        stage.whenComplete((delegate, thrown) -> {
-            if (thrown != null) {
-                res.close(Throwables.getRootCause(thrown));
-            } else if (delegate == null) {
-                res.close(new NullPointerException("delegate stage produced a null response: " + stage));
-            } else {
-                res.delegate(delegate);
-            }
-        });
-        return res;
     }
 
     @Override
@@ -319,5 +327,12 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         completionFuture().whenCompleteAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
+    }
+
+    /**
+     * Whether this is a deferred {@link HttpResponse}, created by {@link #from(CompletionStage)}.
+     */
+    default boolean isDeferred() {
+        return false;
     }
 }

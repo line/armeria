@@ -26,7 +26,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
@@ -52,7 +55,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
@@ -402,31 +405,39 @@ public final class THttpService extends AbstractHttpService {
     }
 
     @Override
-    protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+    protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
 
-        final SerializationFormat serializationFormat =
-                validateRequestAndDetermineSerializationFormat(req, res);
-
+        final SerializationFormat serializationFormat = determineSerializationFormat(req);
         if (serializationFormat == null) {
-            return;
+            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   MediaType.PLAIN_TEXT_UTF_8, PROTOCOL_NOT_SUPPORTED);
         }
 
+        if (!validateAcceptHeaders(req, serializationFormat)) {
+            return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE,
+                                   MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
+        }
+
+        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
         req.aggregate().handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
-                res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
-                            MediaType.PLAIN_TEXT_UTF_8, Throwables.getStackTraceAsString(cause));
+                responseFuture.complete(
+                        HttpResponse.of(
+                                HttpStatus.INTERNAL_SERVER_ERROR,
+                                MediaType.PLAIN_TEXT_UTF_8, Throwables.getStackTraceAsString(cause)));
                 return;
             }
 
-            decodeAndInvoke(ctx, aReq, serializationFormat, res);
+            decodeAndInvoke(ctx, aReq, serializationFormat, responseFuture);
         })).exceptionally(CompletionActions::log);
+        return res;
     }
 
-    private SerializationFormat validateRequestAndDetermineSerializationFormat(
-            HttpRequest req, HttpResponseWriter res) {
-
+    @Nullable
+    private SerializationFormat determineSerializationFormat(HttpRequest req) {
         final HttpHeaders headers = req.headers();
         final MediaType contentType = headers.contentType();
 
@@ -434,25 +445,23 @@ public final class THttpService extends AbstractHttpService {
         if (contentType != null) {
             serializationFormat = findSerializationFormat(contentType);
             if (serializationFormat == null) {
-                res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                            MediaType.PLAIN_TEXT_UTF_8, PROTOCOL_NOT_SUPPORTED);
                 return null;
             }
         } else {
             serializationFormat = defaultSerializationFormat();
         }
+        return serializationFormat;
+    }
 
+    private boolean validateAcceptHeaders(HttpRequest req, SerializationFormat serializationFormat) {
         // If accept header is present, make sure it is sane. Currently, we do not support accept
         // headers with a different format than the content type header.
-        final List<String> acceptHeaders = headers.getAll(HttpHeaderNames.ACCEPT);
+        final List<String> acceptHeaders = req.headers().getAll(HttpHeaderNames.ACCEPT);
         if (!acceptHeaders.isEmpty() &&
             !serializationFormat.mediaTypes().matchHeaders(acceptHeaders).isPresent()) {
-            res.respond(HttpStatus.NOT_ACCEPTABLE,
-                        MediaType.PLAIN_TEXT_UTF_8, ACCEPT_THRIFT_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
-            return null;
+            return false;
         }
-
-        return serializationFormat;
+        return true;
     }
 
     private SerializationFormat findSerializationFormat(MediaType contentType) {
@@ -468,7 +477,7 @@ public final class THttpService extends AbstractHttpService {
 
     private void decodeAndInvoke(
             ServiceRequestContext ctx, AggregatedHttpMessage req,
-            SerializationFormat serializationFormat, HttpResponseWriter res) {
+            SerializationFormat serializationFormat, CompletableFuture<HttpResponse> httpRes) {
 
         final TProtocol inProto = FORMAT_TO_THREAD_LOCAL_INPUT_PROTOCOL.get(serializationFormat).get();
         inProto.reset();
@@ -488,9 +497,11 @@ public final class THttpService extends AbstractHttpService {
                 header = inProto.readMessageBegin();
             } catch (Exception e) {
                 logger.debug("{} Failed to decode Thrift header:", ctx, e);
-                res.respond(HttpStatus.BAD_REQUEST,
-                            MediaType.PLAIN_TEXT_UTF_8,
-                            "Failed to decode Thrift header: " + Throwables.getStackTraceAsString(e));
+                httpRes.complete(
+                        HttpResponse.of(
+                                HttpStatus.BAD_REQUEST,
+                                MediaType.PLAIN_TEXT_UTF_8,
+                                "Failed to decode Thrift header: " + Throwables.getStackTraceAsString(e)));
                 return;
             }
 
@@ -514,7 +525,7 @@ public final class THttpService extends AbstractHttpService {
                         TApplicationException.INVALID_MESSAGE_TYPE,
                         "unexpected TMessageType: " + typeString(typeValue));
 
-                handlePreDecodeException(ctx, res, cause, serializationFormat, seqId, methodName);
+                handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
 
@@ -525,7 +536,7 @@ public final class THttpService extends AbstractHttpService {
                 final TApplicationException cause = new TApplicationException(
                         TApplicationException.UNKNOWN_METHOD, "unknown method: " + header.name);
 
-                handlePreDecodeException(ctx, res, cause, serializationFormat, seqId, methodName);
+                handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
 
@@ -544,7 +555,7 @@ public final class THttpService extends AbstractHttpService {
                 final TApplicationException cause = new TApplicationException(
                         TApplicationException.PROTOCOL_ERROR, "failed to decode arguments: " + e);
 
-                handlePreDecodeException(ctx, res, cause, serializationFormat, seqId, methodName);
+                handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
         } finally {
@@ -552,7 +563,7 @@ public final class THttpService extends AbstractHttpService {
             ctx.logBuilder().requestContent(null, null);
         }
 
-        invoke(ctx, serializationFormat, seqId, f, decodedReq, res);
+        invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
     }
 
     private static String typeString(byte typeValue) {
@@ -572,7 +583,7 @@ public final class THttpService extends AbstractHttpService {
 
     private void invoke(
             ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId,
-            ThriftFunction func, RpcRequest call, HttpResponseWriter res) {
+            ThriftFunction func, RpcRequest call, CompletableFuture<HttpResponse> res) {
 
         final RpcResponse reply;
 
@@ -630,7 +641,7 @@ public final class THttpService extends AbstractHttpService {
     }
 
     private static void handleSuccess(
-            ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
+            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Object returnValue) {
 
         final TBase<?, ?> wrappedResult = func.newResult();
@@ -641,14 +652,14 @@ public final class THttpService extends AbstractHttpService {
     }
 
     private static void handleOneWaySuccess(
-            ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
+            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat) {
         ctx.logBuilder().responseContent(rpcRes, null);
         respond(serializationFormat, HttpData.EMPTY_DATA, httpRes);
     }
 
     private static void handleException(
-            ServiceRequestContext ctx, RpcResponse rpcRes, HttpResponseWriter httpRes,
+            ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
 
         final TBase<?, ?> result = func.newResult();
@@ -663,7 +674,7 @@ public final class THttpService extends AbstractHttpService {
     }
 
     private static void handlePreDecodeException(
-            ServiceRequestContext ctx, HttpResponseWriter httpRes, Throwable cause,
+            ServiceRequestContext ctx, CompletableFuture<HttpResponse> httpRes, Throwable cause,
             SerializationFormat serializationFormat, int seqId, String methodName) {
 
         final HttpData content = encodeException(
@@ -672,9 +683,8 @@ public final class THttpService extends AbstractHttpService {
     }
 
     private static void respond(SerializationFormat serializationFormat,
-                                HttpData content, HttpResponseWriter res) {
-
-        res.respond(HttpStatus.OK, serializationFormat.mediaType(), content);
+                                HttpData content, CompletableFuture<HttpResponse> res) {
+        res.complete(HttpResponse.of(HttpStatus.OK, serializationFormat.mediaType(), content));
     }
 
     private static HttpData encodeSuccess(ServiceRequestContext ctx,

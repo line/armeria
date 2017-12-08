@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,9 +22,12 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 
 /**
  * Default {@link HttpResponse} instance.
+ *
+ * @deprecated Use {@link HttpResponse#streaming()}.
  */
+@Deprecated
 public class DefaultHttpResponse
-        extends DefaultStreamMessage<HttpObject> implements HttpResponse, HttpResponseWriter {
+        extends DefaultStreamMessage<HttpObject> implements HttpResponseWriter {
 
     @Override
     public String toString() {

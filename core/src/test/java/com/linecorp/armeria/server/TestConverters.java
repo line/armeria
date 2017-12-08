@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
@@ -83,7 +83,7 @@ final class TestConverters {
 
     private static HttpResponse httpResponse(HttpData data) {
         assert RequestContext.current() != null;
-        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final HttpResponseWriter res = HttpResponse.streaming();
         final long current = System.currentTimeMillis();
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
                                          .setInt(HttpHeaderNames.CONTENT_LENGTH,

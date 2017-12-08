@@ -24,10 +24,10 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import java.nio.charset.StandardCharsets;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -215,7 +215,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-        final DefaultHttpRequest req = requests.get(streamId);
+        final HttpRequestWriter req = requests.get(streamId);
         if (req == null) {
             throw connectionError(PROTOCOL_ERROR,
                                   "received a RST_STREAM frame for an unknown stream: %d", streamId);

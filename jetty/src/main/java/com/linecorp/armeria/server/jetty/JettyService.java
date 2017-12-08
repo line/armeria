@@ -51,7 +51,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -233,12 +232,12 @@ public final class JettyService implements HttpService {
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final ArmeriaConnector connector = this.connector;
 
-        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final HttpResponseWriter res = HttpResponse.streaming();
 
         req.aggregate().handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
+                res.respond(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
                 return;
             }
 

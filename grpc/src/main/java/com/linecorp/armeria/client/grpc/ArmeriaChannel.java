@@ -30,10 +30,10 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -91,7 +91,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     @Override
     public <I, O> ClientCall<I, O> newCall(
             MethodDescriptor<I, O> method, CallOptions callOptions) {
-        DefaultHttpRequest req = new DefaultHttpRequest(
+        HttpRequestWriter req = HttpRequest.streaming(
                 HttpHeaders
                         .of(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
                         .contentType(serializationFormat.mediaType()));

@@ -29,7 +29,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.metric.MoreMeters;
@@ -56,9 +56,8 @@ public class ArmeriaMeterBindersConfigurationTest {
                     .setServiceName("okService")
                     .setService(new AbstractHttpService() {
                         @Override
-                        protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                             HttpResponseWriter res) throws Exception {
-                            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
+                        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
                         }
                     })
                     .setPathMapping(PathMapping.ofExact("/ok"))

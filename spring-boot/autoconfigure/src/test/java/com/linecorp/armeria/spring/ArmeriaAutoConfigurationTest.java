@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -104,9 +103,8 @@ public class ArmeriaAutoConfigurationTest {
 
     public static class OkService extends AbstractHttpService {
         @Override
-        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
-                throws Exception {
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
         }
     }
 

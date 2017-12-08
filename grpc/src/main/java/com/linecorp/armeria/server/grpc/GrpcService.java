@@ -111,34 +111,30 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Override
-    protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) throws Exception {
+    protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         MediaType contentType = req.headers().contentType();
         SerializationFormat serializationFormat = findSerializationFormat(contentType);
         if (serializationFormat == null) {
-            res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        "Missing or invalid Content-Type header.");
-            return;
+            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   MediaType.PLAIN_TEXT_UTF_8,
+                                   "Missing or invalid Content-Type header.");
         }
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
         String methodName = GrpcRequestUtil.determineMethod(ctx);
         if (methodName == null) {
-            res.respond(HttpStatus.BAD_REQUEST,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        "Invalid path.");
-            return;
+            return HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                   MediaType.PLAIN_TEXT_UTF_8,
+                                   "Invalid path.");
         }
 
         ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
         if (method == null) {
-            res.write(
+            return HttpResponse.of(
                     ArmeriaServerCall.statusToTrailers(
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
                             false));
-            res.close();
-            return;
         }
 
         ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method.getMethodDescriptor()), null);
@@ -149,11 +145,11 @@ public final class GrpcService extends AbstractHttpService
                 long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
                 ctx.setRequestTimeout(Duration.ofNanos(timeout));
             } catch (IllegalArgumentException e) {
-                res.write(ArmeriaServerCall.statusToTrailers(Status.fromThrowable(e), false));
-                res.close();
+                return HttpResponse.of(ArmeriaServerCall.statusToTrailers(Status.fromThrowable(e), false));
             }
         }
 
+        HttpResponseWriter res = HttpResponse.streaming();
         ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
@@ -162,6 +158,7 @@ public final class GrpcService extends AbstractHttpService
             });
             req.subscribe(call.messageReader(), ctx.eventLoop(), true);
         }
+        return res;
     }
 
     @Nullable

@@ -20,15 +20,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 
 public class HttpResponseExceptionTest {
     @Test
     public void testHttpResponse() throws Exception {
-        final DefaultHttpResponse response = new DefaultHttpResponse();
+        final HttpResponseWriter response = HttpResponse.streaming();
         final HttpResponseException exception = HttpResponseException.of(response);
         response.write(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR)
                                   .contentType(MediaType.PLAIN_TEXT_UTF_8));

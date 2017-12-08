@@ -21,12 +21,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.DefaultHttpRequest;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -47,7 +47,7 @@ public class ClientDecorationBuilderTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> cdb.add(RpcRequest.class, HttpResponse.class, identity()))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> cdb.add(DefaultHttpRequest.class, DefaultHttpResponse.class, identity()))
+        assertThatThrownBy(() -> cdb.add(HttpRequestWriter.class, HttpResponseWriter.class, identity()))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> cdb.add(DefaultRpcRequest.class, DefaultRpcResponse.class, identity()))
                 .isInstanceOf(IllegalArgumentException.class);

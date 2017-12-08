@@ -36,7 +36,6 @@ import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -58,12 +57,12 @@ public class RetryingClientWithLoggingTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() < 2) {
-                        res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
+                        return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                     } else {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "hello");
+                        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "hello");
                     }
                 }
             });

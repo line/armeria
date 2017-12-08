@@ -50,12 +50,12 @@ import org.junit.runner.Description;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
@@ -312,7 +312,7 @@ public class AnnotatedHttpServiceTest {
         @Path("/a/string-async2")
         public HttpResponse postStringAsync2(AggregatedHttpMessage message, RequestContext ctx) {
             validateContext(ctx);
-            DefaultHttpResponse response = new DefaultHttpResponse();
+            HttpResponseWriter response = HttpResponse.streaming();
             response.write(HttpHeaders.of(HttpStatus.OK));
             response.write(message.content());
             response.close();

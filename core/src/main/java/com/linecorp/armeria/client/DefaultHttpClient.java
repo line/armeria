@@ -21,9 +21,9 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.PathAndQuery;
 
@@ -53,7 +53,7 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         }
 
         return execute(eventLoop, req.method(), pathAndQuery.path(), pathAndQuery.query(), null, req, cause -> {
-            final DefaultHttpResponse res = new DefaultHttpResponse();
+            final HttpResponseWriter res = HttpResponse.streaming();
             res.close(cause);
             return res;
         });

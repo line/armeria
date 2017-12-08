@@ -30,7 +30,6 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -145,9 +144,9 @@ public class CompositeServiceTest {
         }
 
         @Override
-        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
-                        "%s:%s:%s", name, ctx.path(), ctx.mappedPath());
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                                   "%s:%s:%s", name, ctx.path(), ctx.mappedPath());
         }
     }
 }

@@ -21,24 +21,22 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Formatter;
 import java.util.Locale;
 
 import com.linecorp.armeria.common.stream.StreamWriter;
 
 /**
- * A {@link StreamWriter} of an {@link HttpResponse}.
+ * An {@link HttpResponse} that can have {@link HttpObject}s written to it.
  */
-public interface HttpResponseWriter extends StreamWriter<HttpObject> {
-    // TODO(trustin): Add lots of convenience methods for easier response construction.
-
-    // Note: Ensure we provide the same set of `respond()` methods with the `of()` methods of
-    //       HttpResponse and AggregatedHttpMessage for consistency.
+public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObject> {
 
     /**
      * Writes the HTTP response of the specified {@code statusCode} and closes the stream if the
      * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @deprecated Use {@link HttpResponse#of(int)}.
      */
+    @Deprecated
     default void respond(int statusCode) {
         respond(HttpStatus.valueOf(statusCode));
     }
@@ -46,7 +44,10 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
     /**
      * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream if the
      * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     *
+     * @deprecated Use {@link HttpResponse#of(HttpStatus)}.
      */
+    @Deprecated
     default void respond(HttpStatus status) {
         requireNonNull(status, "status");
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
@@ -64,7 +65,10 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
+     *
+     * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, String)}.
      */
+    @Deprecated
     default void respond(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
@@ -79,9 +83,12 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
      * {@linkplain Locale#ENGLISH English locale}.
      *
      * @param mediaType the {@link MediaType} of the response content
-     * @param format {@linkplain Formatter the format string} of the response content
+     * @param format {@linkplain java.util.Formatter the format string} of the response content
      * @param args the arguments referenced by the format specifiers in the format string
+     *
+     * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, String, Object...)}.
      */
+    @Deprecated
     default void respond(HttpStatus status, MediaType mediaType, String format, Object... args) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
@@ -98,7 +105,10 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
+     *
+     * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, byte[])}.
      */
+    @Deprecated
     default void respond(HttpStatus status, MediaType mediaType, byte[] content) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
@@ -113,7 +123,10 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
      * @param content the content of the response
      * @param offset the start offset of {@code content}
      * @param length the length of {@code content}
+     *
+     * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, byte[], int, int)}.
      */
+    @Deprecated
     default void respond(HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
@@ -126,7 +139,10 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
+     *
+     * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, HttpData)}.
      */
+    @Deprecated
     default void respond(HttpStatus status, MediaType mediaType, HttpData content) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
@@ -140,7 +156,10 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
      * @param trailingHeaders the trailing HTTP headers
+     *
+     * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, HttpData, HttpHeaders)}.
      */
+    @Deprecated
     default void respond(HttpStatus status, MediaType mediaType, HttpData content,
                          HttpHeaders trailingHeaders) {
         requireNonNull(status, "status");
@@ -173,7 +192,10 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
 
     /**
      * Writes the specified HTTP response and closes the stream.
+     *
+     * @deprecated Use {@link HttpResponse#of(AggregatedHttpMessage)}.
      */
+    @Deprecated
     default void respond(AggregatedHttpMessage res) {
         requireNonNull(res, "res");
 
@@ -197,6 +219,14 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
             write(trailingHeaders);
         }
 
+        close();
+    }
+
+    /**
+     * Write the given {@link HttpObject} and close the stream.
+     */
+    default void respond(HttpObject obj) {
+        write(obj);
         close();
     }
 }

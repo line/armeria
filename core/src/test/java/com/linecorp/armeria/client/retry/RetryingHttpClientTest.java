@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.linecorp.armeria.common.util.Functions.voidFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -48,7 +47,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -86,12 +84,14 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() < 2) {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Need to retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Need to retry");
                     } else {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
                 }
             });
@@ -100,12 +100,13 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
-                        res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
+                        return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                     } else {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
                 }
             });
@@ -114,12 +115,13 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
-                        res.respond(HttpStatus.SERVICE_UNAVAILABLE);
+                        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                     } else {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
                 }
             });
@@ -128,14 +130,15 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
-                        res.write(HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                             .setInt(HttpHeaderNames.RETRY_AFTER, oneSecForRetryAfter));
-                        res.close();
+                        return HttpResponse.of(
+                                HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
+                                           .setInt(HttpHeaderNames.RETRY_AFTER, oneSecForRetryAfter));
                     } else {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
                 }
             });
@@ -144,16 +147,17 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
-                        res.write(HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                             .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
-                                                            Duration.ofSeconds(3).toMillis() +
-                                                            System.currentTimeMillis()));
-                        res.close();
+                        return HttpResponse.of(
+                                HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
+                                           .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
+                                                          Duration.ofSeconds(3).toMillis() +
+                                                          System.currentTimeMillis()));
                     } else {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
                 }
             });
@@ -161,13 +165,13 @@ public class RetryingHttpClientTest {
             sb.service("/retry-after-one-year", new AbstractHttpService() {
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    res.write(HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                         .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
-                                                        Duration.ofDays(365).toMillis() +
-                                                        System.currentTimeMillis()));
-                    res.close();
+                    return HttpResponse.of(
+                            HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
+                                       .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
+                                                      Duration.ofDays(365).toMillis() +
+                                                      System.currentTimeMillis()));
                 }
             });
 
@@ -175,12 +179,13 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() % 2 == 0) {
-                        res.respond(HttpStatus.SERVICE_UNAVAILABLE);
+                        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                     } else {
                         TimeUnit.MILLISECONDS.sleep(1500);
+                        return HttpResponse.of(HttpStatus.OK);
                     }
                 }
             });
@@ -188,9 +193,9 @@ public class RetryingHttpClientTest {
             sb.service("/service-unavailable", new AbstractHttpService() {
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    res.respond(HttpStatus.SERVICE_UNAVAILABLE);
+                    return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                 }
             });
 
@@ -199,24 +204,26 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqPostCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqGetCount.getAndIncrement() < 1) {
-                        res.respond(HttpStatus.SERVICE_UNAVAILABLE);
+                        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                     } else {
                         TimeUnit.MILLISECONDS.sleep(1000);
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
                 }
 
                 @Override
-                protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqPostCount.getAndIncrement() < 1) {
-                        res.respond(HttpStatus.SERVICE_UNAVAILABLE);
+                        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                     } else {
                         TimeUnit.MILLISECONDS.sleep(1000);
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
                 }
             });
@@ -225,13 +232,14 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqCount = new AtomicInteger();
 
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
                         TimeUnit.MILLISECONDS.sleep(1000);
-                        res.respond(HttpStatus.SERVICE_UNAVAILABLE);
+                        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                     } else {
-                        res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
+                        return HttpResponse.of(
+                                HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
                     }
                 }
             });
@@ -240,14 +248,14 @@ public class RetryingHttpClientTest {
                 final AtomicInteger reqPostCount = new AtomicInteger();
 
                 @Override
-                protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    req.aggregate().handle(voidFunction((message, thrown) -> {
+                    return HttpResponse.from(req.aggregate().handle((message, thrown) -> {
                         if (reqPostCount.getAndIncrement() < 1) {
-                            res.respond(HttpStatus.SERVICE_UNAVAILABLE);
+                            return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                         } else {
-                            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
-                                        message.content().toStringUtf8());
+                            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
+                                                   message.content().toStringUtf8());
                         }
                     }));
                 }
