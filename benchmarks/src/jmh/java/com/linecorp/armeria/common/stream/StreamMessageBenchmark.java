@@ -165,17 +165,17 @@ public class StreamMessageBenchmark {
             case FIXED_STREAM_MESSAGE:
                 switch (streamObjects.num) {
                     case 0:
-                        return FixedStreamMessage.of();
+                        return StreamMessage.of();
                     case 1:
-                        return FixedStreamMessage.of(streamObjects.values[0]);
+                        return StreamMessage.of(streamObjects.values[0]);
                     case 2:
-                        return FixedStreamMessage.of(streamObjects.values[0], streamObjects.values[1]);
+                        return StreamMessage.of(streamObjects.values[0], streamObjects.values[1]);
                     default:
-                        return FixedStreamMessage.of(streamObjects.values);
+                        return StreamMessage.of(streamObjects.values);
                 }
             case DEFERRED_FIXED_STREAM_MESSAGE:
                 DeferredStreamMessage<Integer> stream = new DeferredStreamMessage<>();
-                stream.delegate(FixedStreamMessage.of(streamObjects.values));
+                stream.delegate(StreamMessage.of(streamObjects.values));
                 return stream;
             default:
                 throw new Error();

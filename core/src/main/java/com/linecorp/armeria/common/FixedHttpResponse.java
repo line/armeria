@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.stream.FixedStreamMessage.OneElementFixedStreamMessage;
-import com.linecorp.armeria.common.stream.FixedStreamMessage.RegularFixedStreamMessage;
-import com.linecorp.armeria.common.stream.FixedStreamMessage.TwoElementFixedStreamMessage;
+import com.linecorp.armeria.common.stream.OneElementFixedStreamMessage;
+import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
 
 /**
  * An {@link HttpResponse} optimized for when all the {@link HttpObject}s that will be published are known at

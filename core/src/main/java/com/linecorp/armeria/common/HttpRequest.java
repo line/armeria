@@ -239,6 +239,11 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
             case 2:
                 return new TwoElementFixedHttpRequest(headers, keepAlive, objs[0], objs[1]);
             default:
+                for (int i = 0; i < objs.length; i++) {
+                    if (objs[i] == null) {
+                        throw new NullPointerException("objs[" + i + "] is null");
+                    }
+                }
                 return new RegularFixedHttpRequest(headers, keepAlive, objs);
         }
     }

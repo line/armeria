@@ -429,7 +429,7 @@ public interface AggregatedHttpMessage {
     /**
      * Converts this message into a new complete {@link HttpRequest}.
      *
-     * @deprecated use {@link HttpRequest#of(AggregatedHttpMessage)}.
+     * @deprecated Use {@link HttpRequest#of(AggregatedHttpMessage)}.
      */
     @Deprecated
     default HttpRequest toHttpRequest() {
@@ -439,7 +439,7 @@ public interface AggregatedHttpMessage {
     /**
      * Converts this message into a new complete {@link HttpResponse}.
      *
-     * @deprecated use {@link HttpResponse#of(AggregatedHttpMessage)}.
+     * @deprecated Use {@link HttpResponse#of(AggregatedHttpMessage)}.
      */
     @Deprecated
     default HttpResponse toHttpResponse() {

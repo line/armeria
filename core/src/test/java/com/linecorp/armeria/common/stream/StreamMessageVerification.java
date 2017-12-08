@@ -36,8 +36,6 @@ import org.reactivestreams.tck.TestEnvironment.TestSubscriber;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
-import com.linecorp.armeria.common.stream.FixedStreamMessage.AbstractFixedStreamMessage;
-
 public abstract class StreamMessageVerification<T> extends PublisherVerification<T> {
 
     private final TestEnvironment env;
@@ -88,7 +86,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         activePublisherTest(1, true, pub -> {
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
-            if (!(pub instanceof AbstractFixedStreamMessage)) {
+            if (!(pub instanceof FixedStreamMessage)) {
                 // Fixed streams are never open.
                 assertThat(stream.isOpen()).isTrue();
             }
@@ -172,7 +170,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             notVerified();
         }
         assumeAbortedPublisherAvailable(pub);
-        if (!(pub instanceof AbstractFixedStreamMessage)) {
+        if (!(pub instanceof FixedStreamMessage)) {
             // A fixed stream is never open.
             assertThat(pub.isOpen()).isTrue();
         }

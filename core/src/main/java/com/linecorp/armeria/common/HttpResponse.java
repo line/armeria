@@ -186,6 +186,12 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new HTTP response of the specified objects and closes the stream.
      */
     static HttpResponse of(HttpObject... objs) {
+        requireNonNull(objs, "objs");
+        for (int i = 0; i < objs.length; i++) {
+            if (objs[i] == null) {
+                throw new NullPointerException("objs[" + i + "] is null");
+            }
+        }
         return new RegularFixedHttpResponse(objs);
     }
 
