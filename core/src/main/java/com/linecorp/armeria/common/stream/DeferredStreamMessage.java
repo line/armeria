@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
@@ -48,6 +49,12 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             AtomicReferenceFieldUpdater.newUpdater(
                     DeferredStreamMessage.class, StreamMessage.class, "delegate");
 
+    @SuppressWarnings({ "AtomicFieldUpdaterIssues", "rawtypes" })
+    private static final AtomicIntegerFieldUpdater<DeferredStreamMessage>
+            subscribedToDelegateUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(
+                    DeferredStreamMessage.class, "subscribedToDelegate");
+
     @SuppressWarnings("unused") // Updated only via delegateUpdater
     private volatile StreamMessage<T> delegate;
 
@@ -56,6 +63,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @SuppressWarnings("unused") // Updated only via subscriptionUpdater
     private volatile SubscriptionImpl subscription;
+
+    @SuppressWarnings("unused") // Updated only via subscribedToDelegateUpdater
+    private volatile int subscribedToDelegate;
 
     // Only accessed from subscription's executor.
     private long pendingDemand;
@@ -198,6 +208,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private void safeOnSubscribeToDelegate() {
         if (delegate == null || subscription == null) {
+            return;
+        }
+
+        if (!subscribedToDelegateUpdater.compareAndSet(this, 0, 1)) {
             return;
         }
 
