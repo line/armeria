@@ -101,7 +101,6 @@ public class DefaultRequestLogTest {
         final DefaultRequestLog child = new DefaultRequestLog(ctx);
         log.addChild(child);
         child.startRequest(channel, SessionProtocol.H2C, "/example.com");
-        final long childStartTime = child.requestStartTimeMillis();
         assertThat(log.requestStartTimeMillis()).isEqualTo(child.requestStartTimeMillis());
         assertThat(log.channel()).isSameAs(channel);
         assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);

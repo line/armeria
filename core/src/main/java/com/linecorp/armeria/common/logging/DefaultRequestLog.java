@@ -127,16 +127,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void propagateRequestSideLog(RequestLog child) {
         child.addListener(log -> {
-            final long requestStartTimeNanos;
-            final long requestStartTimeMillis;
-            if (log instanceof DefaultRequestLog) {
-                requestStartTimeNanos = ((DefaultRequestLog) log).requestStartTimeNanos;
-                requestStartTimeMillis = log.requestStartTimeMillis();
-            } else {
-                requestStartTimeNanos = System.nanoTime();
-                requestStartTimeMillis = System.currentTimeMillis();
-            }
-            startRequest0(requestStartTimeNanos, requestStartTimeMillis, log.channel(),
+            startRequest0(log.requestStartTimeNanos(), log.requestStartTimeMillis(), log.channel(),
                           log.sessionProtocol(), log.host(), true);
         }, REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
@@ -144,17 +135,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         child.addListener(log -> requestContent(log.requestContent(), log.rawRequestContent()),
                           REQUEST_CONTENT);
         child.addListener(log -> {
-            final long requestEndTimeNanos;
-            if (log instanceof DefaultRequestLog) {
-                requestEndTimeNanos = ((DefaultRequestLog) log).requestEndTimeNanos;
-            } else {
-                requestEndTimeNanos = System.nanoTime();
-            }
-
             if (log.requestCause() != null) {
-                endRequest0(requestEndTimeNanos, log.requestCause());
+                endRequest0(log.requestEndTimeNanos(), log.requestCause());
             } else {
-                endRequest0(requestEndTimeNanos, null);
+                endRequest0(log.requestEndTimeNanos(), null);
             }
         }, REQUEST_END);
     }
@@ -170,61 +154,35 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void propagateResponseSideLog(RequestLog lastChild) {
         // update the available logs if the lastChild already has them
-        if (lastChild.isAvailable(RequestLogAvailability.RESPONSE_START)) {
-            startResponseFrom(lastChild);
+        if (lastChild.isAvailable(RESPONSE_START)) {
+            startResponse0(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMillis(), true);
         }
 
-        if (lastChild.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            responseHeadersFrom(lastChild);
+        if (lastChild.isAvailable(RESPONSE_HEADERS)) {
+            responseHeaders(lastChild.responseHeaders());
         }
 
-        if (lastChild.isAvailable(RequestLogAvailability.RESPONSE_CONTENT)) {
-            responseContentFrom(lastChild);
+        if (lastChild.isAvailable(RESPONSE_CONTENT)) {
+            responseContent(lastChild.responseContent(), lastChild.rawResponseContent());
         }
 
-        if (lastChild.isAvailable(RequestLogAvailability.RESPONSE_END)) {
+        if (lastChild.isAvailable(RESPONSE_END)) {
             endResponseFrom(lastChild);
         }
 
-        lastChild.addListener(this::startResponseFrom, RESPONSE_START);
-        lastChild.addListener(this::responseHeadersFrom, RESPONSE_HEADERS);
-        lastChild.addListener(this::responseContentFrom, RESPONSE_CONTENT);
+        lastChild.addListener(log -> startResponse0(
+                log.responseStartTimeNanos(), log.responseStartTimeMillis(), true), RESPONSE_START);
+        lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
+        lastChild.addListener(log -> responseContent(
+                log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
         lastChild.addListener(this::endResponseFrom, RESPONSE_END);
     }
 
-    private void startResponseFrom(RequestLog log) {
-        if (log instanceof DefaultRequestLog) {
-            startResponse0(((DefaultRequestLog) log).responseStartTimeNanos,
-                           log.responseStartTimeMillis(), true);
-        } else {
-            startResponse();
-        }
-    }
-
-    private void responseHeadersFrom(RequestLog log) {
-        if (log.responseHeaders() != HttpHeaders.EMPTY_HEADERS) {
-            responseHeaders(log.responseHeaders());
-        }
-    }
-
-    private void responseContentFrom(RequestLog log) {
-        if (log.responseContent() != null) {
-            responseContent(log.responseContent(), log.rawResponseContent());
-        }
-    }
-
     private void endResponseFrom(RequestLog log) {
-        final long responseEndTimeNanos;
-        if (log instanceof DefaultRequestLog) {
-            responseEndTimeNanos = ((DefaultRequestLog) log).responseEndTimeNanos;
-        } else {
-            responseEndTimeNanos = System.nanoTime();
-        }
-
         if (log.responseCause() != null) {
-            endResponse0(responseEndTimeNanos, log.responseCause());
+            endResponse0(log.responseEndTimeNanos(), log.responseCause());
         } else {
-            endResponse0(responseEndTimeNanos, null);
+            endResponse0(log.responseEndTimeNanos(), null);
         }
     }
 
@@ -358,6 +316,18 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public long requestStartTimeMillis() {
         ensureAvailability(REQUEST_START);
         return requestStartTimeMillis;
+    }
+
+    @Override
+    public long requestStartTimeNanos() {
+        ensureAvailability(REQUEST_START);
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestEndTimeNanos() {
+        ensureAvailability(REQUEST_END);
+        return requestEndTimeNanos;
     }
 
     @Override
@@ -553,6 +523,18 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public long responseStartTimeMillis() {
         ensureAvailability(RESPONSE_START);
         return responseStartTimeMillis;
+    }
+
+    @Override
+    public long responseStartTimeNanos() {
+        ensureAvailability(RESPONSE_START);
+        return responseStartTimeNanos;
+    }
+
+    @Override
+    public long responseEndTimeNanos() {
+        ensureAvailability(RESPONSE_END);
+        return responseEndTimeNanos;
     }
 
     @Override
@@ -764,7 +746,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
            .append(req)
            .append(", res=") // 6 chars
            .append(res)
-           .append('}');      // 1 char
+           .append('}');     // 1 char
         if (children != null && children.size() > 1) {
             buf.append(", {totalAttempts=");
             buf.append(children.size());
