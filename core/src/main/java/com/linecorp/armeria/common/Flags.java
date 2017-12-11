@@ -132,7 +132,7 @@ public final class Flags {
                    value -> value >= 0);
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE = getBoolean("defaultUseHttp2Preface", false);
-    private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", true);
+    private static final boolean DEFAULT_USE_HTTP1_PIPELINING = getBoolean("defaultUseHttp1Pipelining", false);
 
     private static final String DEFAULT_DEFAULT_BACKOFF_SPEC =
             "exponential=200:10000,jitter=0.2,maxAttempts=10";
@@ -373,8 +373,8 @@ public final class Flags {
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp1Pipelining(boolean)} option.
      * Note that this value has effect only if a user did not specify it.
      *
-     * <p>This flag is enabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=false} JVM option to disable it.
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=true} JVM option to enable it.
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
