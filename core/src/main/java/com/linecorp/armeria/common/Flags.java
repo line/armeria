@@ -374,7 +374,7 @@ public final class Flags {
      * Note that this value has effect only if a user did not specify it.
      *
      * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=false} JVM option to disable it.
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp1Pipelining=true} JVM option to enable it.
      */
     public static boolean defaultUseHttp1Pipelining() {
         return DEFAULT_USE_HTTP1_PIPELINING;
