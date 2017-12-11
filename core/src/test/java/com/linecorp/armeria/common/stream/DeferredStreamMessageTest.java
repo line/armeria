@@ -65,7 +65,7 @@ public class DeferredStreamMessageTest {
     @Test
     public void testEarlyAbortWithSubscriber() throws Exception {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
-        m.subscribe(mock(Subscriber.class));
+        m.subscribe(mock(Subscriber.class), ImmediateEventExecutor.INSTANCE);
         m.abort();
         assertAborted(m);
 
