@@ -21,6 +21,8 @@ import static com.linecorp.armeria.common.stream.DefaultStreamMessageVerificatio
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import io.netty.util.concurrent.EventExecutor;
+
 public class DeferredStreamMessageVerification extends StreamMessageVerification<Long> {
 
     @Override
@@ -48,7 +50,8 @@ public class DeferredStreamMessageVerification extends StreamMessageVerification
 
         stream.delegate(new StreamMessageWrapper<Long>(createStreamMessage(elements + 1, false)) {
             @Override
-            public void subscribe(Subscriber<? super Long> subscriber, boolean withPooledObjects) {
+            public void subscribe(
+                    Subscriber<? super Long> subscriber, EventExecutor executor, boolean withPooledObjects) {
                 super.subscribe(new Subscriber<Long>() {
                     @Override
                     public void onSubscribe(Subscription s) {
@@ -72,7 +75,7 @@ public class DeferredStreamMessageVerification extends StreamMessageVerification
                     public void onComplete() {
                         subscriber.onComplete();
                     }
-                }, withPooledObjects);
+                }, executor, withPooledObjects);
             }
         });
 
