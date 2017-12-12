@@ -71,6 +71,16 @@ final class TestConverters {
         }
     }
 
+    public static class ByteArrayConverter implements ResponseConverter {
+        @Override
+        public HttpResponse convert(Object resObj) throws Exception {
+            if (resObj instanceof byte[]) {
+                return httpResponse(HttpData.of((byte[]) resObj));
+            }
+            throw new IllegalArgumentException("Cannot convert " + resObj.getClass().getName());
+        }
+    }
+
     private static HttpResponse httpResponse(HttpData data) {
         assert RequestContext.current() != null;
         final DefaultHttpResponse res = new DefaultHttpResponse();

@@ -56,6 +56,8 @@ import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.RequestConverterFunction;
+import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 
 import io.netty.handler.codec.http.HttpConstants;
@@ -76,16 +78,20 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     private final boolean isAsynchronous;
     private final AggregationStrategy aggregationStrategy;
     private final List<ExceptionHandlerFunction> exceptionHandlers;
+    private final List<RequestConverterFunction> requestConverters;
 
     AnnotatedHttpServiceMethod(Object object, Method method, PathMapping pathMapping,
-                               List<ExceptionHandlerFunction> exceptionHandlers) {
+                               List<ExceptionHandlerFunction> exceptionHandlers,
+                               List<RequestConverterFunction> requestConverters) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         requireNonNull(pathMapping, "pathMapping");
         this.exceptionHandlers = ImmutableList.copyOf(
                 requireNonNull(exceptionHandlers, "exceptionHandlers"));
+        this.requestConverters = ImmutableList.copyOf(
+                requireNonNull(requestConverters, "requestConverters"));
 
-        parameters = parameters(method, pathMapping.paramNames());
+        parameters = parameters(method, pathMapping.paramNames(), !requestConverters.isEmpty());
         final Class<?> returnType = method.getReturnType();
         isAsynchronous = HttpResponse.class.isAssignableFrom(returnType) ||
                          CompletionStage.class.isAssignableFrom(returnType);
@@ -170,7 +176,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
 
     private Object invoke(ServiceRequestContext ctx, HttpRequest req, @Nullable AggregatedHttpMessage message) {
         try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
-            return method.invoke(object, parameterValues(ctx, req, parameters, message));
+            return method.invoke(object, parameterValues(ctx, req, parameters, message, requestConverters));
         } catch (Throwable cause) {
             final HttpResponse response = getResponseForCause(ctx, req, cause);
             if (response != null) {
@@ -202,7 +208,8 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     /**
      * Returns the array of {@link Parameter}, which holds the type and {@link Param} value.
      */
-    private static List<Parameter> parameters(Method method, final Set<String> pathParams) {
+    private static List<Parameter> parameters(Method method, Set<String> pathParams,
+                                              boolean hasRequestConverters) {
         requireNonNull(pathParams, "pathParams");
         boolean hasRequestMessage = false;
         final ImmutableList.Builder<Parameter> entries = ImmutableList.builder();
@@ -227,6 +234,14 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
             final Header header = parameterInfo.getAnnotation(Header.class);
             if (header != null) {
                 entries.add(createOptionalSupportedParam(parameterInfo, ParameterType.HEADER, header.value()));
+                continue;
+            }
+
+            if (parameterInfo.isAnnotationPresent(RequestObject.class)) {
+                if (!hasRequestConverters) {
+                    throw new IllegalArgumentException("No request converter for method: " + method.getName());
+                }
+                entries.add(Parameter.ofRequestObject(parameterInfo.getType()));
                 continue;
             }
 
@@ -279,7 +294,8 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
      */
     private static Object[] parameterValues(ServiceRequestContext ctx, HttpRequest req,
                                             List<Parameter> parameters,
-                                            @Nullable AggregatedHttpMessage message) {
+                                            @Nullable AggregatedHttpMessage message,
+                                            List<RequestConverterFunction> requestConverters) {
         HttpParameters httpParameters = null;
         Object[] values = new Object[parameters.size()];
         for (int i = 0; i < parameters.size(); ++i) {
@@ -314,6 +330,25 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
                             httpParameters = httpParametersOf(ctx, req, message);
                         }
                         values[i] = httpParameters;
+                    }
+                    break;
+                case REQUEST_OBJECT:
+                    for (final RequestConverterFunction func : requestConverters) {
+                        if (func.accept(message, entry.type())) {
+                            try {
+                                values[i] = func.convert(message, entry.type());
+                                break;
+                            } catch (Exception e) {
+                                // Go to the next request converter if the conversion is failed.
+                                logger.warn("Request converter {} cannot convert a request to {}",
+                                            func.getClass().getName(), entry.type().getName(), e);
+                            }
+                        }
+                    }
+                    if (values[i] == null) {
+                        throw new IllegalArgumentException(
+                                "No suitable request converter found for a @" +
+                                RequestObject.class.getSimpleName() + " '" + entry.name() + '\'');
                     }
                     break;
             }
@@ -595,6 +630,10 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
             return new Parameter(ParameterType.PREDEFINED_TYPE, true, false, type, null, null);
         }
 
+        static Parameter ofRequestObject(Class<?> type) {
+            return new Parameter(ParameterType.REQUEST_OBJECT, true, false, type, null, null);
+        }
+
         private final ParameterType parameterType;
         private final boolean isRequired;
         private final boolean isOptionalWrapped;
@@ -645,7 +684,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     }
 
     private enum ParameterType {
-        PATH_PARAM, PARAM, HEADER, PREDEFINED_TYPE
+        PATH_PARAM, PARAM, HEADER, PREDEFINED_TYPE, REQUEST_OBJECT
     }
 
     private enum AggregationStrategy {
@@ -682,7 +721,8 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         static AggregationStrategy resolve(List<Parameter> parameters) {
             AggregationStrategy strategy = NONE;
             for (Parameter p : parameters) {
-                if (p.type().isAssignableFrom(AggregatedHttpMessage.class)) {
+                if (p.parameterType() == ParameterType.REQUEST_OBJECT ||
+                    p.type().isAssignableFrom(AggregatedHttpMessage.class)) {
                     return ALWAYS;
                 }
                 if (p.parameterType() == ParameterType.PARAM ||
