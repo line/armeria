@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.CompletionActions;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -76,7 +75,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private boolean cancelPending;
 
     /**
-     * Sets the delegate {@link HttpResponse} which will publish the stream actually.
+     * Sets the delegate {@link StreamMessage} which will actually publish the stream.
      *
      * @throws IllegalStateException if the delegate has been set already or
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
@@ -158,9 +157,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     void request(long n) {
-        Subscription subscription = delegateSubscription;
-        if (subscription != null) {
-            subscription.request(n);
+        final Subscription delegateSubscription = this.delegateSubscription;
+        if (delegateSubscription != null) {
+            assert pendingDemand == 0;
+            delegateSubscription.request(n);
         } else {
             pendingDemand += n;
         }
@@ -168,12 +168,12 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     void cancel() {
-        Subscription delegateSubscription = this.delegateSubscription;
+        final Subscription delegateSubscription = this.delegateSubscription;
         if (delegateSubscription != null) {
             try {
                 delegateSubscription.cancel();
             } finally {
-                this.subscription.clearSubscriber();
+                subscription.clearSubscriber();
             }
         } else {
             cancelPending = true;
