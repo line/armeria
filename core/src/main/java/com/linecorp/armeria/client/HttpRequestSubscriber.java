@@ -247,6 +247,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (flush) {
             ctx.flush();
         }
+
+        if (state == State.DONE) {
+            subscription.cancel();
+        }
     }
 
     private int streamId() {
@@ -256,12 +260,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private void fail(Throwable cause) {
         setDone();
         logBuilder.endRequest(cause);
+        subscription.cancel();
     }
 
     private void setDone() {
         cancelTimeout();
         state = State.DONE;
-        subscription.cancel();
     }
 
     private void failAndRespond(Throwable cause) {

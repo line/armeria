@@ -38,6 +38,9 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
@@ -104,6 +107,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.AsciiString;
+import io.netty.util.NetUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -372,6 +376,8 @@ public class HttpServerTest {
                     res.close();
                 }
             });
+
+            sb.service("/head-headers-only", ((ctx, req) -> HttpResponse.of(HttpHeaders.of(HttpStatus.OK))));
 
             final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
                     s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
@@ -678,6 +684,22 @@ public class HttpServerTest {
         final AggregatedHttpMessage res = f.get();
 
         assertThat(res.status(), is(HttpStatus.OK));
+    }
+
+    @Test
+    public void testHeadHeadersOnly() throws Exception {
+        final int port = server.httpPort();
+        try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
+            s.setSoTimeout(10000);
+            final InputStream in = s.getInputStream();
+            final OutputStream out = s.getOutputStream();
+            out.write("HEAD /head-headers-only HTTP/1.0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+
+            // Should neither be chunked nor have content.
+            assertThat(new String(ByteStreams.toByteArray(in)), is(
+                    "HTTP/1.1 200 OK\r\n" +
+                    "content-length: 0\r\n\r\n"));
+        }
     }
 
     private void runStreamingRequestTest(String path) throws InterruptedException, ExecutionException {
