@@ -279,8 +279,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             if (cancelPending) {
                 delegateSubscription.cancel();
             } else if (pendingDemand > 0) {
-                delegateSubscription.request(pendingDemand);
+                long demand = pendingDemand;
                 pendingDemand = 0;
+                delegateSubscription.request(demand);
             }
         }
 
