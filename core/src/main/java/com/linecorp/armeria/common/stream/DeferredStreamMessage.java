@@ -157,6 +157,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     void request(long n) {
+        // A user cannot access subscription without subscribing.
+        assert subscription != null;
+
+        if (subscription.needsDirectInvocation()) {
+            doRequest(n);
+        } else {
+            subscription.executor().execute(() -> doRequest(n));
+        }
+    }
+
+    private void doRequest(long n) {
         final Subscription delegateSubscription = this.delegateSubscription;
         if (delegateSubscription != null) {
             assert pendingDemand == 0;
@@ -168,6 +179,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     void cancel() {
+        // A user cannot access subscription without subscribing.
+        assert subscription != null;
+
+        if (subscription.needsDirectInvocation()) {
+            doCancel();
+        } else {
+            subscription.executor().execute(this::doCancel);
+        }
+    }
+
+    private void doCancel() {
         final Subscription delegateSubscription = this.delegateSubscription;
         if (delegateSubscription != null) {
             try {
