@@ -170,7 +170,6 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private void doRequest(long n) {
         final Subscription delegateSubscription = this.delegateSubscription;
         if (delegateSubscription != null) {
-            assert pendingDemand == 0;
             delegateSubscription.request(n);
         } else {
             pendingDemand += n;
@@ -279,9 +278,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             if (cancelPending) {
                 delegateSubscription.cancel();
             } else if (pendingDemand > 0) {
-                long demand = pendingDemand;
+                delegateSubscription.request(pendingDemand);
                 pendingDemand = 0;
-                delegateSubscription.request(demand);
             }
         }
 
