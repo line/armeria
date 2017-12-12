@@ -82,9 +82,17 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      */
     protected final O executeDelegate(ClientRequestContext ctx, I req) throws Exception {
         final ClientRequestContext derivedContext = ctx.newDerivedContext();
+        ctx.logBuilder().addChild(derivedContext.log());
         try (SafeCloseable ignore = RequestContext.push(derivedContext, false)) {
             return delegate().execute(derivedContext, req);
         }
+    }
+
+    /**
+     * This should be called when retrying is finished.
+     */
+    protected static void onRetryingComplete(ClientRequestContext ctx) {
+        ctx.logBuilder().endResponseWithLastChild();
     }
 
     protected RetryStrategy<I, O> retryStrategy() {
