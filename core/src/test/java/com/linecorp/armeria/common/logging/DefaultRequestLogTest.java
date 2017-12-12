@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -25,8 +26,15 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.testing.internal.AnticipatedException;
+
+import io.netty.channel.Channel;
+import io.netty.util.AsciiString;
 
 public class DefaultRequestLogTest {
 
@@ -36,6 +44,9 @@ public class DefaultRequestLogTest {
     @Mock
     private RequestContext ctx;
 
+    @Mock
+    private Channel channel;
+
     private DefaultRequestLog log;
 
     @Before
@@ -44,8 +55,16 @@ public class DefaultRequestLogTest {
     }
 
     @Test
+    public void endRequestSuccess() {
+        log.endRequest();
+        assertThat(log.requestDurationNanos()).isZero();
+        assertThat(log.requestCause()).isNull();
+    }
+
+    @Test
     public void endResponseSuccess() {
         log.endResponse();
+        assertThat(log.responseDurationNanos()).isZero();
         assertThat(log.responseCause()).isNull();
     }
 
@@ -53,6 +72,7 @@ public class DefaultRequestLogTest {
     public void endResponseFailure() {
         Throwable error = new Throwable("response failed");
         log.endResponse(error);
+        assertThat(log.responseDurationNanos()).isZero();
         assertThat(log.responseCause()).isSameAs(error);
     }
 
@@ -62,6 +82,7 @@ public class DefaultRequestLogTest {
         log.responseContent(RpcResponse.ofFailure(error), null);
         // If user code doesn't call endResponse, the framework automatically does with no cause.
         log.endResponse();
+        assertThat(log.responseDurationNanos()).isZero();
         assertThat(log.responseCause()).isSameAs(error);
     }
 
@@ -71,6 +92,59 @@ public class DefaultRequestLogTest {
         Throwable error2 = new Throwable("response failed a different way?");
         log.responseContent(RpcResponse.ofFailure(error), null);
         log.endResponse(error2);
+        assertThat(log.responseDurationNanos()).isZero();
         assertThat(log.responseCause()).isSameAs(error2);
+    }
+
+    @Test
+    public void addChild() {
+        final DefaultRequestLog child = new DefaultRequestLog(ctx);
+        log.addChild(child);
+        child.startRequest(channel, SessionProtocol.H2C, "/example.com");
+        assertThat(log.requestStartTimeMillis()).isEqualTo(child.requestStartTimeMillis());
+        assertThat(log.channel()).isSameAs(channel);
+        assertThat(log.sessionProtocol()).isSameAs(SessionProtocol.H2C);
+        assertThat(log.host()).isEqualTo("/example.com");
+
+        child.serializationFormat(SerializationFormat.NONE);
+        assertThat(log.serializationFormat()).isSameAs(SerializationFormat.NONE);
+
+        final HttpHeaders foo = HttpHeaders.of(AsciiString.of("foo"), "foo");
+        child.requestHeaders(foo);
+        assertThat(log.requestHeaders()).isSameAs(foo);
+
+        final String requestContent = "baz";
+        final String rawRequestContent = "bax";
+
+        child.requestContent(requestContent, rawRequestContent);
+        assertThat(log.requestContent()).isSameAs(requestContent);
+        assertThat(log.rawRequestContent()).isSameAs(rawRequestContent);
+
+        child.endRequest();
+        assertThat(log.requestDurationNanos()).isEqualTo(child.requestDurationNanos());
+
+        // response-side log are propagated when RequestLogBuilder.endResponseWithLastChild() is invoked
+        child.startResponse();
+        assertThatThrownBy(() -> log.responseStartTimeMillis())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+
+        final HttpHeaders bar = HttpHeaders.of(AsciiString.of("bar"), "bar");
+        child.responseHeaders(bar);
+        assertThatThrownBy(() -> log.responseHeaders())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+
+        log.endResponseWithLastChild();
+        assertThat(log.responseStartTimeMillis()).isEqualTo(child.responseStartTimeMillis());
+        assertThat(log.responseHeaders()).isSameAs(bar);
+
+        final String responseContent = "baz1";
+        final String rawResponseContent = "bax1";
+        child.responseContent(responseContent, rawResponseContent);
+        assertThat(log.responseContent()).isSameAs(responseContent);
+        assertThat(log.rawResponseContent()).isSameAs(rawResponseContent);
+
+        child.endResponse(new AnticipatedException("Oops!"));
+        assertThat(log.responseDurationNanos()).isEqualTo(child.responseDurationNanos());
+        assertThat(log.totalDurationNanos()).isEqualTo(child.totalDurationNanos());
     }
 }

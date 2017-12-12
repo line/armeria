@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.COMPLETE;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_CONTENT;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_END;
@@ -64,6 +65,9 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private final RequestContext ctx;
 
+    private List<RequestLog> children;
+    private boolean hasLastChild;
+
     /**
      * Updated by {@link #flagsUpdater}.
      */
@@ -107,6 +111,79 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      */
     public DefaultRequestLog(RequestContext ctx) {
         this.ctx = requireNonNull(ctx, "ctx");
+    }
+
+    @Override
+    public void addChild(RequestLog child) {
+        checkState(!hasLastChild, "last child is already added");
+        requireNonNull(child, "child");
+        if (children == null) {
+            // first child's all request-side logging events are propagated immediately to the parent
+            children = new ArrayList<>();
+            propagateRequestSideLog(child);
+        }
+        children.add(child);
+    }
+
+    private void propagateRequestSideLog(RequestLog child) {
+        child.addListener(log -> {
+            startRequest0(log.requestStartTimeNanos(), log.requestStartTimeMillis(), log.channel(),
+                          log.sessionProtocol(), log.host(), true);
+        }, REQUEST_START);
+        child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
+        child.addListener(log -> requestHeaders(log.requestHeaders()), REQUEST_HEADERS);
+        child.addListener(log -> requestContent(log.requestContent(), log.rawRequestContent()),
+                          REQUEST_CONTENT);
+        child.addListener(log -> {
+            if (log.requestCause() != null) {
+                endRequest0(log.requestEndTimeNanos(), log.requestCause());
+            } else {
+                endRequest0(log.requestEndTimeNanos(), null);
+            }
+        }, REQUEST_END);
+    }
+
+    @Override
+    public void endResponseWithLastChild() {
+        checkState(!hasLastChild, "last child is already added");
+        checkState(!children.isEmpty(), "at least one child should be already added");
+        hasLastChild = true;
+        final RequestLog lastChild = children.get(children.size() - 1);
+        propagateResponseSideLog(lastChild);
+    }
+
+    private void propagateResponseSideLog(RequestLog lastChild) {
+        // update the available logs if the lastChild already has them
+        if (lastChild.isAvailable(RESPONSE_START)) {
+            startResponse0(lastChild.responseStartTimeNanos(), lastChild.responseStartTimeMillis(), true);
+        }
+
+        if (lastChild.isAvailable(RESPONSE_HEADERS)) {
+            responseHeaders(lastChild.responseHeaders());
+        }
+
+        if (lastChild.isAvailable(RESPONSE_CONTENT)) {
+            responseContent(lastChild.responseContent(), lastChild.rawResponseContent());
+        }
+
+        if (lastChild.isAvailable(RESPONSE_END)) {
+            endResponseFrom(lastChild);
+        }
+
+        lastChild.addListener(log -> startResponse0(
+                log.responseStartTimeNanos(), log.responseStartTimeMillis(), true), RESPONSE_START);
+        lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
+        lastChild.addListener(log -> responseContent(
+                log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
+        lastChild.addListener(this::endResponseFrom, RESPONSE_END);
+    }
+
+    private void endResponseFrom(RequestLog log) {
+        if (log.responseCause() != null) {
+            endResponse0(log.responseEndTimeNanos(), log.responseCause());
+        } else {
+            endResponse0(log.responseEndTimeNanos(), null);
+        }
     }
 
     @Override
@@ -214,13 +291,18 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void startRequest0(Channel channel, SessionProtocol sessionProtocol,
                                String host, boolean updateAvailability) {
+        startRequest0(System.nanoTime(), System.currentTimeMillis(), channel, sessionProtocol, host,
+                      updateAvailability);
+    }
 
+    private void startRequest0(long requestStartTimeNanos, long requestStartTimeMillis, Channel channel,
+                               SessionProtocol sessionProtocol, String host, boolean updateAvailability) {
         if (isAvailabilityAlreadyUpdated(REQUEST_START)) {
             return;
         }
 
-        requestStartTimeNanos = System.nanoTime();
-        requestStartTimeMillis = System.currentTimeMillis();
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMillis = requestStartTimeMillis;
         this.channel = channel;
         this.sessionProtocol = sessionProtocol;
         this.host = host;
@@ -234,6 +316,18 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public long requestStartTimeMillis() {
         ensureAvailability(REQUEST_START);
         return requestStartTimeMillis;
+    }
+
+    @Override
+    public long requestStartTimeNanos() {
+        ensureAvailability(REQUEST_START);
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestEndTimeNanos() {
+        ensureAvailability(REQUEST_END);
+        return requestEndTimeNanos;
     }
 
     @Override
@@ -383,14 +477,22 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void endRequest0(Throwable requestCause) {
+        endRequest0(System.nanoTime(), requestCause);
+    }
+
+    private void endRequest0(long requestEndTimeNanos, Throwable requestCause) {
         final int flags = requestCause == null && requestContentDeferred ? FLAGS_REQUEST_END_WITHOUT_CONTENT
                                                                          : REQUEST_END.setterFlags();
         if (isAvailable(flags)) {
             return;
         }
 
-        startRequest0(null, context().sessionProtocol(), null, false);
-        requestEndTimeNanos = System.nanoTime();
+        // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
+        // totalRequestDuration will be 0
+        startRequest0(requestEndTimeNanos, System.currentTimeMillis(), null,
+                      context().sessionProtocol(), null, false);
+
+        this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
         updateAvailability(flags);
     }
@@ -401,12 +503,17 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void startResponse0(boolean updateAvailability) {
+        startResponse0(System.nanoTime(), System.currentTimeMillis(), updateAvailability);
+    }
+
+    private void startResponse0(long responseStartTimeNanos, long responseStartTimeMillis,
+                                boolean updateAvailability) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_START)) {
             return;
         }
 
-        responseStartTimeNanos = System.nanoTime();
-        responseStartTimeMillis = System.currentTimeMillis();
+        this.responseStartTimeNanos = responseStartTimeNanos;
+        this.responseStartTimeMillis = responseStartTimeMillis;
         if (updateAvailability) {
             updateAvailability(RESPONSE_START);
         }
@@ -416,6 +523,18 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public long responseStartTimeMillis() {
         ensureAvailability(RESPONSE_START);
         return responseStartTimeMillis;
+    }
+
+    @Override
+    public long responseStartTimeNanos() {
+        ensureAvailability(RESPONSE_START);
+        return responseStartTimeNanos;
+    }
+
+    @Override
+    public long responseEndTimeNanos() {
+        ensureAvailability(RESPONSE_END);
+        return responseEndTimeNanos;
     }
 
     @Override
@@ -530,14 +649,21 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void endResponse0(Throwable responseCause) {
+        endResponse0(System.nanoTime(), responseCause);
+    }
+
+    private void endResponse0(long responseEndTimeNanos, Throwable responseCause) {
         final int flags = responseCause == null && responseContentDeferred ? FLAGS_RESPONSE_END_WITHOUT_CONTENT
                                                                            : RESPONSE_END.setterFlags();
         if (isAvailable(flags)) {
             return;
         }
 
-        startResponse0(false);
-        responseEndTimeNanos = System.nanoTime();
+        // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
+        // totalResponseDuration will be 0
+        startResponse0(responseEndTimeNanos, System.currentTimeMillis(), false);
+
+        this.responseEndTimeNanos = responseEndTimeNanos;
         this.responseCause = responseCause;
         updateAvailability(flags);
     }
@@ -612,13 +738,28 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     public String toString() {
         final String req = toStringRequestOnly();
         final String res = toStringResponseOnly();
+
+        // Create a StringBuilder with the initial capacity not considering the children's log length.
+        // The children will be empty in most of the cases, so it is OK.
         final StringBuilder buf = new StringBuilder(5 + req.length() + 6 + res.length() + 1);
-        return buf.append("{req=")  // 5 chars
-                  .append(req)
-                  .append(", res=") // 6 chars
-                  .append(res)
-                  .append('}')      // 1 char
-                  .toString();
+        buf.append("{req=")  // 5 chars
+           .append(req)
+           .append(", res=") // 6 chars
+           .append(res)
+           .append('}');     // 1 char
+        if (children != null && children.size() > 1) {
+            buf.append(", {totalAttempts=");
+            buf.append(children.size());
+            buf.append("}[");
+            for (int i = 0; i < children.size(); i++) {
+                buf.append(children.get(i));
+                if (i != children.size() - 1) {
+                    buf.append(", ");
+                }
+            }
+            buf.append(']');
+        }
+        return buf.toString();
     }
 
     @Override

@@ -180,6 +180,22 @@ public interface RequestLog {
     long requestStartTimeMillis();
 
     /**
+     * Returns the time when the processing of the request started, in nanoseconds. This value can only be
+     * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long requestStartTimeNanos();
+
+    /**
+     * Returns the time when the processing of the request finished, in nanoseconds. This value can only be
+     * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long requestEndTimeNanos();
+
+    /**
      * Returns the duration that was taken to consume or produce the request completely, in nanoseconds.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
@@ -208,6 +224,22 @@ public interface RequestLog {
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     long responseStartTimeMillis();
+
+    /**
+     * Returns the time when the processing of the response started, in nanoseconds. This value can only be
+     * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long responseStartTimeNanos();
+
+    /**
+     * Returns the time when the processing of the response finished, in nanoseconds. This value can only be
+     * used to measure elapsed time and is not related to any other notion of system or wall-clock time.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    long responseEndTimeNanos();
 
     /**
      * Returns the duration that was taken to consume or produce the response completely, in nanoseconds.
