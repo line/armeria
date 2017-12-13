@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.HttpResponseSubscriber.State.DONE;
 import static com.linecorp.armeria.server.HttpResponseSubscriber.State.NEEDS_DATA_OR_TRAILING_HEADERS;
 
 import java.util.concurrent.ScheduledFuture;
@@ -300,17 +301,21 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         if (flush) {
             ctx.flush();
         }
+
+        if (state == DONE) {
+            subscription.cancel();
+        }
     }
 
     private void fail(Throwable cause) {
         setDone();
         logBuilder().endResponse(cause);
+        subscription.cancel();
     }
 
     private void setDone() {
         cancelTimeout();
         state = State.DONE;
-        subscription.cancel();
     }
 
     private void failAndRespond(Throwable cause, AggregatedHttpMessage message, Http2Error error) {
