@@ -29,7 +29,6 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -113,7 +112,7 @@ public final class GrpcService extends AbstractHttpService
 
     @Override
     protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) throws Exception {
-        String contentType = req.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        MediaType contentType = req.headers().contentType();
         SerializationFormat serializationFormat = findSerializationFormat(contentType);
         if (serializationFormat == null) {
             res.respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
@@ -221,33 +220,13 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Nullable
-    private SerializationFormat findSerializationFormat(@Nullable String contentType) {
+    private SerializationFormat findSerializationFormat(@Nullable MediaType contentType) {
         if (contentType == null) {
             return null;
         }
 
         for (SerializationFormat format : supportedSerializationFormats) {
-            for (MediaType formatType : format.mediaTypes()) {
-                if (contentType.equals(formatType.toString())) {
-                    return format;
-                }
-            }
-        }
-
-        // It's very unlikely that gRPC content types will be introduced that do not statically match our known
-        // content types, so we only bother properly parsing it if we couldn't find a match. In practice, this
-        // should never happen.
-
-        final MediaType mediaType;
-        try {
-            mediaType = MediaType.parse(contentType);
-        } catch (IllegalArgumentException e) {
-            logger.debug("Failed to parse the 'content-type' header: {}", contentType, e);
-            return null;
-        }
-
-        for (SerializationFormat format : supportedSerializationFormats) {
-            if (format.isAccepted(mediaType)) {
+            if (format.isAccepted(contentType)) {
                 return format;
             }
         }

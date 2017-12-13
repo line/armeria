@@ -47,12 +47,12 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -72,7 +72,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
     private final Client<HttpRequest, HttpResponse> httpClient;
     private final SerializationFormat serializationFormat;
     private final TProtocolFactory protocolFactory;
-    private final String mediaType;
+    private final MediaType mediaType;
     private final Map<Class<?>, ThriftServiceMetadata> metadataMap = new ConcurrentHashMap<>();
 
     THttpClientDelegate(Client<HttpRequest, HttpResponse> httpClient,
@@ -80,7 +80,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         this.httpClient = httpClient;
         this.serializationFormat = serializationFormat;
         protocolFactory = ThriftProtocolFactories.get(serializationFormat);
-        mediaType = serializationFormat.mediaType().toString();
+        mediaType = serializationFormat.mediaType();
     }
 
     @Override
@@ -118,7 +118,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
             final DefaultHttpRequest httpReq = new DefaultHttpRequest(
                     HttpHeaders.of(HttpMethod.POST, ctx.path())
-                               .set(HttpHeaderNames.CONTENT_TYPE, mediaType), true);
+                               .contentType(mediaType), true);
             httpReq.write(HttpData.of(outTransport.getArray(), 0, outTransport.length()));
             httpReq.close();
 

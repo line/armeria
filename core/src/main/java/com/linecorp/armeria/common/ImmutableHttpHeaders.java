@@ -96,7 +96,7 @@ final class ImmutableHttpHeaders implements HttpHeaders {
 
     @Override
     public HttpHeaders contentType(MediaType mediaType) {
-        return delegate.contentType(mediaType);
+        return unsupported();
     }
 
     @Override
