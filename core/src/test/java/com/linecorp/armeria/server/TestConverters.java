@@ -93,7 +93,7 @@ final class TestConverters {
         final MediaType contentType =
                 ((ServiceRequestContext) RequestContext.current()).negotiatedProduceType();
         if (contentType != null) {
-            headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+            headers.contentType(contentType);
         }
 
         res.write(headers);

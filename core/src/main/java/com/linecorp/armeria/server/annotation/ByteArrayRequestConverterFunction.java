@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.annotation;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 
 /**
@@ -40,13 +39,9 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
             return false;
         }
 
-        final String contentType = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            return true;
-        }
-
-        final MediaType mediaType = MediaType.parse(contentType);
-        return mediaType.is(MediaType.OCTET_STREAM) ||
+        final MediaType mediaType = request.headers().contentType();
+        return mediaType == null ||
+               mediaType.is(MediaType.OCTET_STREAM) ||
                mediaType.is(MediaType.APPLICATION_BINARY);
     }
 

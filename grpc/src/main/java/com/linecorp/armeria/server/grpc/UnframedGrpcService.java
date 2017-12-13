@@ -89,16 +89,15 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final HttpHeaders clientHeaders = req.headers();
-        final String contentType = clientHeaders.get(HttpHeaderNames.CONTENT_TYPE);
+        final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
             // the delegate return its usual error message.
             return delegate().serve(ctx, req);
         }
 
-        MediaType mediaType = MediaType.parse(contentType);
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
-            if (format.isAccepted(mediaType)) {
+            if (format.isAccepted(contentType)) {
                 // Framed request, so just delegate.
                 return delegate().serve(ctx, req);
             }
@@ -120,16 +119,16 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         HttpHeaders grpcHeaders = HttpHeaders.copyOf(clientHeaders);
 
         final MediaType framedContentType;
-        if (mediaType.is(MediaType.PROTOBUF)) {
+        if (contentType.is(MediaType.PROTOBUF)) {
             framedContentType = GrpcSerializationFormats.PROTO.mediaType();
-        } else if (mediaType.is(MediaType.JSON_UTF_8)) {
+        } else if (contentType.is(MediaType.JSON_UTF_8)) {
             framedContentType = GrpcSerializationFormats.JSON.mediaType();
         } else {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
                                    "Unsupported media type. Only application/protobuf is supported.");
         }
-        grpcHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, framedContentType);
+        grpcHeaders.contentType(framedContentType);
 
         if (grpcHeaders.get(GrpcHeaderNames.GRPC_ENCODING) != null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
@@ -218,13 +217,12 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             return;
         }
 
-        MediaType grpcMediaType = MediaType.parse(
-                grpcResponse.headers().get(HttpHeaderNames.CONTENT_TYPE));
+        MediaType grpcMediaType = grpcResponse.headers().contentType();
         HttpHeaders unframedHeaders = HttpHeaders.copyOf(grpcResponse.headers());
         if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
-            unframedHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF);
+            unframedHeaders.contentType(MediaType.PROTOBUF);
         } else if (grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
-            unframedHeaders.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8);
+            unframedHeaders.contentType(MediaType.JSON_UTF_8);
         }
 
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(

@@ -324,7 +324,7 @@ public class HttpServerTest {
             sb.service("/strings", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain"));
+                    res.write(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8));
 
                     res.write(HttpData.ofUtf8("Armeria "));
                     res.write(HttpData.ofUtf8("is "));
@@ -336,7 +336,7 @@ public class HttpServerTest {
             sb.service("/images", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "image/png"));
+                    res.write(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PNG));
 
                     res.write(HttpData.ofUtf8("Armeria "));
                     res.write(HttpData.ofUtf8("is "));
@@ -350,7 +350,7 @@ public class HttpServerTest {
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     String response = Strings.repeat("a", 1023);
                     res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                                         .contentType(MediaType.PLAIN_TEXT_UTF_8)
                                          .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
                     res.write(HttpData.ofUtf8(response));
                     res.close();
@@ -362,7 +362,7 @@ public class HttpServerTest {
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
                     String response = Strings.repeat("a", 1024);
                     res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                                         .contentType(MediaType.PLAIN_TEXT_UTF_8)
                                          .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()));
                     res.write(HttpData.ofUtf8(response));
                     res.close();
@@ -384,7 +384,7 @@ public class HttpServerTest {
             sb.service("/headers", new AbstractHttpService() {
                 @Override
                 protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.write(HttpHeaders.of(HttpStatus.OK).set(HttpHeaderNames.CONTENT_TYPE, "text/plain")
+                    res.write(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8)
                                          .add(AsciiString.of("x-custom-header1"), "custom1")
                                          .add(AsciiString.of("X-Custom-Header2"), "custom2"));
 
@@ -486,7 +486,7 @@ public class HttpServerTest {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay/2000").aggregate().get();
         assertThat(res.headers().status(), is(HttpStatus.SERVICE_UNAVAILABLE));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
         assertThat(requestLogs.take().statusCode(), is(503));
     }
@@ -496,7 +496,7 @@ public class HttpServerTest {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay-deferred/2000").aggregate().get();
         assertThat(res.headers().status(), is(HttpStatus.SERVICE_UNAVAILABLE));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
         assertThat(requestLogs.take().statusCode(), is(503));
     }
@@ -506,7 +506,7 @@ public class HttpServerTest {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay-custom/2000").aggregate().get();
         assertThat(res.headers().status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("timed out"));
         assertThat(requestLogs.take().statusCode(), is(200));
     }
@@ -516,7 +516,7 @@ public class HttpServerTest {
         serverRequestTimeoutMillis = 100L;
         final AggregatedHttpMessage res = client().get("/delay-custom-deferred/2000").aggregate().get();
         assertThat(res.headers().status(), is(HttpStatus.OK));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("timed out"));
         assertThat(requestLogs.take().statusCode(), is(200));
     }
@@ -532,7 +532,7 @@ public class HttpServerTest {
         });
 
         assertThat(res.headers().status(), is(HttpStatus.SERVICE_UNAVAILABLE));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("503 Service Unavailable"));
         assertThat(requestLogs.take().statusCode(), is(503));
     }
@@ -582,7 +582,7 @@ public class HttpServerTest {
         final AggregatedHttpMessage res = f.get();
 
         assertThat(res.status(), is(HttpStatus.REQUEST_ENTITY_TOO_LARGE));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE), is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+        assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
         assertThat(res.content().toStringUtf8(), is("413 Request Entity Too Large"));
     }
 
@@ -769,8 +769,7 @@ public class HttpServerTest {
             final AggregatedHttpMessage res = f.get();
 
             assertThat(res.status(), is(HttpStatus.OK));
-            assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE),
-                       is(MediaType.PLAIN_TEXT_UTF_8.toString()));
+            assertThat(res.headers().contentType(), is(MediaType.PLAIN_TEXT_UTF_8));
             assertThat(res.content().toStringUtf8(), is(String.valueOf(expectedContentLength)));
         } finally {
             // Make sure the stream is closed even when this test fails due to timeout.

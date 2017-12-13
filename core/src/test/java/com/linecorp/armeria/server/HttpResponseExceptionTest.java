@@ -21,7 +21,6 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultHttpResponse;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -32,13 +31,11 @@ public class HttpResponseExceptionTest {
         final DefaultHttpResponse response = new DefaultHttpResponse();
         final HttpResponseException exception = HttpResponseException.of(response);
         response.write(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR)
-                                  .add(HttpHeaderNames.CONTENT_TYPE,
-                                       MediaType.PLAIN_TEXT_UTF_8.toString()));
+                                  .contentType(MediaType.PLAIN_TEXT_UTF_8));
         response.close();
 
         final AggregatedHttpMessage message = exception.httpResponse().aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(message.headers().get(HttpHeaderNames.CONTENT_TYPE))
-                .isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
+        assertThat(message.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }
 }

@@ -155,13 +155,9 @@ final class DefaultPathMappingContext implements PathMappingContext {
 
     @VisibleForTesting
     static MediaType resolveConsumeType(HttpHeaders headers) {
-        final String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
+        final MediaType contentType = headers.contentType();
         if (contentType != null) {
-            try {
-                return MediaType.parse(contentType);
-            } catch (IllegalArgumentException e) {
-                logger.debug("Failed to parse the 'content-type' header: {}", contentType, e);
-            }
+            return contentType;
         }
         return null;
     }

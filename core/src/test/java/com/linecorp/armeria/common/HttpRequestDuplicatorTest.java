@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_MD5;
-import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,7 +41,7 @@ public class HttpRequestDuplicatorTest {
 
         assertThat(req1.headers()).isEqualTo(
                 HttpHeaders.of(HttpMethod.PUT, "/foo")
-                           .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                           .contentType(PLAIN_TEXT_UTF_8)
                            .setInt(CONTENT_LENGTH, 3));
         assertThat(req1.content()).isEqualTo(HttpData.of(StandardCharsets.UTF_8, "bar"));
         assertThat(req1.trailingHeaders()).isEqualTo(
@@ -50,7 +49,7 @@ public class HttpRequestDuplicatorTest {
 
         assertThat(req2.headers()).isEqualTo(
                 HttpHeaders.of(HttpMethod.PUT, "/foo")
-                           .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                           .contentType(PLAIN_TEXT_UTF_8)
                            .setInt(CONTENT_LENGTH, 3));
         assertThat(req2.content()).isEqualTo(HttpData.of(StandardCharsets.UTF_8, "bar"));
         assertThat(req2.trailingHeaders()).isEqualTo(
