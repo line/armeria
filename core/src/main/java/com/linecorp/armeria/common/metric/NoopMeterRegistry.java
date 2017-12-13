@@ -18,13 +18,17 @@ package com.linecorp.armeria.common.metric;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.ToDoubleFunction;
+import java.util.function.ToLongFunction;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.FunctionCounter;
+import io.micrometer.core.instrument.FunctionTimer;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.LongTaskTimer;
 import io.micrometer.core.instrument.Measurement;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Meter.Id;
 import io.micrometer.core.instrument.Meter.Type;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -32,8 +36,11 @@ import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.histogram.HistogramConfig;
 import io.micrometer.core.instrument.noop.NoopCounter;
 import io.micrometer.core.instrument.noop.NoopDistributionSummary;
+import io.micrometer.core.instrument.noop.NoopFunctionCounter;
+import io.micrometer.core.instrument.noop.NoopFunctionTimer;
 import io.micrometer.core.instrument.noop.NoopGauge;
 import io.micrometer.core.instrument.noop.NoopLongTaskTimer;
+import io.micrometer.core.instrument.noop.NoopMeter;
 import io.micrometer.core.instrument.noop.NoopTimer;
 
 /**
@@ -81,7 +88,20 @@ public final class NoopMeterRegistry extends MeterRegistry {
     }
 
     @Override
-    protected void newMeter(Id id, Type type, Iterable<Measurement> measurements) {}
+    protected Meter newMeter(Id id, Type type, Iterable<Measurement> iterable) {
+        return new NoopMeter(id);
+    }
+
+    @Override
+    protected <T> FunctionTimer newFunctionTimer(Id id, T t, ToLongFunction<T> toLongFunction,
+                                                 ToDoubleFunction<T> toDoubleFunction, TimeUnit timeUnit) {
+        return new NoopFunctionTimer(id);
+    }
+
+    @Override
+    protected <T> FunctionCounter newFunctionCounter(Id id, T t, ToDoubleFunction<T> toDoubleFunction) {
+        return new NoopFunctionCounter(id);
+    }
 
     @Override
     protected TimeUnit getBaseTimeUnit() {
