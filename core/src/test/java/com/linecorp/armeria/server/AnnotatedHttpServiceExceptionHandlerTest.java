@@ -103,6 +103,20 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         public String sync(ServiceRequestContext ctx, HttpRequest req) {
             throw new IllegalArgumentException("Oops!");
         }
+
+        @Get("/async")
+        public CompletionStage<String> async(ServiceRequestContext ctx,
+                                             HttpRequest req) {
+            // Throw an exception immediately if this method is invoked.
+            throw new IllegalArgumentException("Oops!");
+        }
+
+        @Get("/async/aggregation")
+        public CompletionStage<String> async(ServiceRequestContext ctx,
+                                             AggregatedHttpMessage req) {
+            // Aggregate the request then throw an exception.
+            throw new IllegalArgumentException("Oops!");
+        }
     }
 
     @Converter(target = String.class, value = UnformattedStringConverter.class)
@@ -235,11 +249,20 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
 
         assertThat(NoExceptionHandler.counter.get()).isEqualTo(4);
 
-        // By default exception handler
+        // By default exception handler.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/sync")).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-        // Timeout because of bad exception handler
+        // The method returns CompletionStage<?>. It throws an exception immediately if it is called.
+        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/async")).aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // The method returns CompletionStage<?>. It throws an exception after the request is aggregated.
+        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/async/aggregation"))
+                         .aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // Timeout because of bad exception handler.
         response = client.execute(HttpHeaders.of(HttpMethod.GET, "/3/bad1")).aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
 

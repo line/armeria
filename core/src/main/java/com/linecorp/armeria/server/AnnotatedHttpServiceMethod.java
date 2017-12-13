@@ -115,7 +115,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
             final CompletableFuture<AggregatedHttpMessage> aggregationFuture = req.aggregate();
             if (CompletionStage.class.isAssignableFrom(method.getReturnType())) {
-                return aggregationFuture.thenCompose(msg -> (CompletionStage<?>) invoke(ctx, req, msg));
+                return aggregationFuture.thenCompose(msg -> toCompletionStage(ctx, req, msg));
             }
 
             if (isAsynchronous) {
@@ -130,6 +130,15 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         }
 
         return CompletableFuture.supplyAsync(() -> invoke(ctx, req, null), ctx.blockingTaskExecutor());
+    }
+
+    private CompletionStage<?> toCompletionStage(ServiceRequestContext ctx, HttpRequest req,
+                                                 AggregatedHttpMessage message) {
+        final Object ret = invoke(ctx, req, message);
+        if (ret instanceof CompletionStage) {
+            return (CompletionStage<?>) ret;
+        }
+        return CompletableFuture.completedFuture(ret);
     }
 
     BiFunction<ServiceRequestContext, HttpRequest,
