@@ -150,6 +150,20 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response of the specified headers.
+     */
+    static HttpResponse of(HttpHeaders headers) {
+        return of(headers, HttpData.EMPTY_DATA);
+    }
+
+    /**
+     * Creates a new HTTP response of the specified headers and content.
+     */
+    static HttpResponse of(HttpHeaders headers, HttpData content) {
+        return of(headers, content, HttpHeaders.EMPTY_HEADERS);
+    }
+
+    /**
      * Creates a new HTTP response of the specified objects and closes the stream.
      */
     static HttpResponse of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
