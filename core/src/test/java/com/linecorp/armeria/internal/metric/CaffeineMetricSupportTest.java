@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.metric.CaffeineMetricSupport.UPDATE_
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -154,15 +155,14 @@ public class CaffeineMetricSupportTest {
     @Test
     public void aggregationAfterGC() throws Exception {
         final MockCache cache1 = new MockCache(1, 2, 3, 4, 5);
-        final WeakReference<MockLoadingCache> cache2 =
-                new WeakReference<>(new MockLoadingCache(6, 7, 8, 9, 10, 11, 12, 13));
+        Object cache2 = new MockLoadingCache(6, 7, 8, 9, 10, 11, 12, 13);
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final AtomicLong ticker = new AtomicLong();
         final MeterIdPrefix idPrefix = new MeterIdPrefix("baz");
 
         // Register two caches at the same meter ID.
         CaffeineMetricSupport.setup(registry, idPrefix, cache1, ticker::get);
-        CaffeineMetricSupport.setup(registry, idPrefix, cache2.get(), ticker::get);
+        CaffeineMetricSupport.setup(registry, idPrefix, (Cache<?, ?>) cache2, ticker::get);
 
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry("baz.requests#count{result=hit}", 7.0)
@@ -177,9 +177,10 @@ public class CaffeineMetricSupportTest {
         ticker.addAndGet(UPDATE_INTERVAL_NANOS);
 
         // Ensure the weak reference which held the cache is cleaned up.
+        cache2 = new WeakReference<>(cache2);
         System.gc();
         Thread.sleep(1000);
-        assertThat(cache2.get()).isNull();
+        assertThat(((Reference<?>) cache2).get()).isNull();
 
         // Check if the counters are not decreased after the second cache is GC'd.
         assertThat(MoreMeters.measureAll(registry))
