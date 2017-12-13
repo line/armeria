@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_MD5;
-import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,7 +45,7 @@ public class DefaultAggregatedHttpMessageTest {
         final List<HttpObject> unaggregated = unaggregate(req);
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.POST, "/foo")
-                                                       .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                                                       .contentType(PLAIN_TEXT_UTF_8)
                                                        .setInt(CONTENT_LENGTH, 3));
         assertThat(unaggregated).containsExactly(HttpData.of(StandardCharsets.UTF_8, "bar"));
     }
@@ -70,7 +69,7 @@ public class DefaultAggregatedHttpMessageTest {
         final List<HttpObject> unaggregated = unaggregate(req);
 
         assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.PUT, "/baz")
-                                                       .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                                                       .contentType(PLAIN_TEXT_UTF_8)
                                                        .setInt(CONTENT_LENGTH, 3));
         assertThat(unaggregated).containsExactly(
                 HttpData.of(StandardCharsets.UTF_8, "bar"),
@@ -105,7 +104,7 @@ public class DefaultAggregatedHttpMessageTest {
 
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
-                           .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                           .contentType(PLAIN_TEXT_UTF_8)
                            .setInt(CONTENT_LENGTH, 5),
                 HttpData.of(StandardCharsets.UTF_8, "alice"));
     }
@@ -119,7 +118,7 @@ public class DefaultAggregatedHttpMessageTest {
 
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
-                           .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                           .contentType(PLAIN_TEXT_UTF_8)
                            .setInt(CONTENT_LENGTH, 0));
     }
 
@@ -133,7 +132,7 @@ public class DefaultAggregatedHttpMessageTest {
 
         assertThat(unaggregated).containsExactly(
                 HttpHeaders.of(HttpStatus.OK)
-                           .setObject(CONTENT_TYPE, PLAIN_TEXT_UTF_8)
+                           .contentType(PLAIN_TEXT_UTF_8)
                            .setInt(CONTENT_LENGTH, 3),
                 HttpData.of(StandardCharsets.UTF_8, "bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));

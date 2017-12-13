@@ -20,7 +20,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 
 /**
@@ -38,12 +37,8 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
             return false;
         }
 
-        final String contentType = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
-        if (contentType == null) {
-            return false;
-        }
-
-        return MediaType.parse(contentType).is(MediaType.ANY_TEXT_TYPE);
+        final MediaType contentType = request.headers().contentType();
+        return contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE);
     }
 
     /**
@@ -53,11 +48,11 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
     public Object convert(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception {
         assert expectedResultType.isAssignableFrom(String.class);
 
-        final String contentType = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        final MediaType contentType = request.headers().contentType();
         assert contentType != null;
         // See https://tools.ietf.org/html/rfc2616#section-3.7.1
-        final Charset charset = MediaType.parse(contentType).charset()
-                                         .orElse(StandardCharsets.ISO_8859_1);
+        final Charset charset = contentType.charset()
+                                           .orElse(StandardCharsets.ISO_8859_1);
         return request.content().toString(charset);
     }
 }

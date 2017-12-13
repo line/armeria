@@ -63,10 +63,9 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
      */
     @Override
     public boolean accept(AggregatedHttpMessage request, Class<?> expectedResultType) {
-        final String contentType = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        final MediaType contentType = request.headers().contentType();
         // TODO(hyangtack) Do benchmark tests to decide whether we add a cache to MediaType#parse.
-        if (contentType != null &&
-            MediaType.parse(contentType).is(MediaType.JSON)) {
+        if (contentType != null && contentType.is(MediaType.JSON)) {
             try {
                 return readers.computeIfAbsent(expectedResultType, mapper::readerFor) != null;
             } catch (Throwable cause) {

@@ -31,7 +31,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.DefaultHttpRequest;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -95,7 +94,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
         DefaultHttpRequest req = new DefaultHttpRequest(
                 HttpHeaders
                         .of(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
-                        .set(HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType().toString()));
+                        .contentType(serializationFormat.mediaType()));
         ClientRequestContext ctx = newContext(HttpMethod.POST, req);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);

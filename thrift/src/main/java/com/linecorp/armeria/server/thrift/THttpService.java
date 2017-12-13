@@ -428,7 +428,7 @@ public final class THttpService extends AbstractHttpService {
             HttpRequest req, HttpResponseWriter res) {
 
         final HttpHeaders headers = req.headers();
-        final String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
+        final MediaType contentType = headers.contentType();
 
         SerializationFormat serializationFormat;
         if (contentType != null) {
@@ -455,17 +455,10 @@ public final class THttpService extends AbstractHttpService {
         return serializationFormat;
     }
 
-    private SerializationFormat findSerializationFormat(String contentType) {
-        final MediaType mediaType;
-        try {
-            mediaType = MediaType.parse(contentType);
-        } catch (IllegalArgumentException e) {
-            logger.debug("Failed to parse the 'content-type' header: {}", contentType, e);
-            return null;
-        }
+    private SerializationFormat findSerializationFormat(MediaType contentType) {
 
         for (SerializationFormat format : allowedSerializationFormatArray) {
-            if (format.isAccepted(mediaType)) {
+            if (format.isAccepted(contentType)) {
                 return format;
             }
         }

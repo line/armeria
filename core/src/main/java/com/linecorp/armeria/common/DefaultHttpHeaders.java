@@ -38,6 +38,7 @@ public final class DefaultHttpHeaders
 
     private HttpMethod method;
     private HttpStatus status;
+    private MediaType contentType;
 
     /**
      * Creates a new instance.
@@ -172,6 +173,33 @@ public final class DefaultHttpHeaders
     public HttpHeaders status(HttpStatus status) {
         requireNonNull(status, "status");
         return status(status.code());
+    }
+
+    @Override
+    public MediaType contentType() {
+        final MediaType contentType = this.contentType;
+        if (contentType != null) {
+            return contentType;
+        }
+
+        final String contentTypeString = get(HttpHeaderNames.CONTENT_TYPE);
+        if (contentTypeString == null) {
+            return null;
+        }
+
+        try {
+            this.contentType = MediaType.parse(contentTypeString);
+            return this.contentType;
+        } catch (IllegalArgumentException unused) {
+            return null;
+        }
+    }
+
+    @Override
+    public HttpHeaders contentType(MediaType contentType) {
+        requireNonNull(contentType, "contentType");
+        this.contentType = contentType;
+        return set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
     }
 
     @Override

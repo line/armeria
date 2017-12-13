@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
-import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -150,7 +149,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
-        return of(HttpHeaders.of(method, path).setObject(CONTENT_TYPE, mediaType), content, trailingHeaders);
+        return of(HttpHeaders.of(method, path).contentType(mediaType), content, trailingHeaders);
     }
 
     /**

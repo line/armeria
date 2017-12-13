@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.PathMapping;
@@ -72,7 +73,7 @@ public class GrpcServiceTest {
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                           .set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8"),
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
 
@@ -81,11 +82,11 @@ public class GrpcServiceTest {
         grpcService.doPost(
                 ctx,
                 HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/json")),
+                                          .contentType(MediaType.JSON_UTF_8)),
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                           .set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8"),
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
 
@@ -99,7 +100,7 @@ public class GrpcServiceTest {
                 response);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
                 HttpHeaders.of(HttpStatus.BAD_REQUEST)
-                           .set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8"),
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
                 HttpData.ofUtf8("Invalid path.")));
     }
 

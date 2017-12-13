@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
-import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
 import static java.util.Objects.requireNonNull;
@@ -160,7 +159,7 @@ public interface AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
-        return of(HttpHeaders.of(method, path).setObject(CONTENT_TYPE, mediaType), content, trailingHeaders);
+        return of(HttpHeaders.of(method, path).contentType(mediaType), content, trailingHeaders);
     }
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` and `respond()` methods of
@@ -281,7 +280,7 @@ public interface AggregatedHttpMessage {
 
         final HttpHeaders headers =
                 HttpHeaders.of(status)
-                           .setObject(CONTENT_TYPE, mediaType)
+                           .contentType(mediaType)
                            .setInt(CONTENT_LENGTH, content.length());
 
         return of(headers, content, trailingHeaders);

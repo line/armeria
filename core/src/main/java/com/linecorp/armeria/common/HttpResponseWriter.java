@@ -150,7 +150,7 @@ public interface HttpResponseWriter extends StreamWriter<HttpObject> {
 
         final HttpHeaders headers =
                 HttpHeaders.of(status)
-                           .setObject(HttpHeaderNames.CONTENT_TYPE, mediaType)
+                           .contentType(mediaType)
                            .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
 
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
