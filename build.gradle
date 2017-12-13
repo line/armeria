@@ -94,6 +94,7 @@ allprojects {
     // Define common repositories.
     repositories {
         mavenCentral()
+        maven { url 'https://repo.spring.io/libs-snapshot' }
     }
 }
 
@@ -193,6 +194,14 @@ configure(javaProjects) {
     // Common dependencies
     configurations {
         javaAgent
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force 'io.micrometer:micrometer-core:1.0.0-20171212.201633-82'
+            force 'io.micrometer:micrometer-spring-legacy:1.0.0-20171212.201734-82'
+            force 'io.micrometer:micrometer-registry-prometheus:1.0.0-20171212.201717-82'
+        }
     }
 
     dependencies {
