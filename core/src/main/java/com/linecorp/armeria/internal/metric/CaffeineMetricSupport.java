@@ -58,6 +58,7 @@ public final class CaffeineMetricSupport {
     }
 
     public static void setup(MeterRegistry registry, MeterIdPrefix idPrefix, Cache<?, ?> cache, Ticker ticker) {
+        requireNonNull(cache, "cache");
         if (!cache.policy().isRecordingStats()) {
             return;
         }
