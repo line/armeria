@@ -68,7 +68,6 @@ public class ConcurrencyLimitingHttpClientTest {
         assertThat(client.numActiveRequests()).isZero();
 
         final HttpResponse res = client.execute(ctx, req);
-        assertThat(res.isDeferred()).isTrue();
         assertThat(res.isOpen()).isTrue();
         assertThat(client.numActiveRequests()).isEqualTo(1);
 
@@ -101,13 +100,11 @@ public class ConcurrencyLimitingHttpClientTest {
         // The first request should be delegated immediately.
         final HttpResponse res1 = client.execute(ctx1, req1);
         verify(delegate).execute(ctx1, req1);
-        assertThat(res1.isDeferred()).isTrue();
         assertThat(res1.isOpen()).isTrue();
 
         // The second request should never be delegated until the first response is closed.
         final HttpResponse res2 = client.execute(ctx2, req2);
         verify(delegate, never()).execute(ctx2, req2);
-        assertThat(res2.isDeferred()).isTrue();
         assertThat(res2.isOpen()).isTrue();
         assertThat(client.numActiveRequests()).isEqualTo(1); // Only req1 is active.
 
@@ -185,7 +182,6 @@ public class ConcurrencyLimitingHttpClientTest {
         // Consume everything from the returned response so its close future is completed.
         res.subscribe(NoopSubscriber.get());
 
-        assertThat(res.isDeferred()).isTrue();
         assertThat(res.isOpen()).isFalse();
         assertThatThrownBy(() -> res.completionFuture().get()).hasCauseInstanceOf(Exception.class);
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
@@ -207,7 +203,6 @@ public class ConcurrencyLimitingHttpClientTest {
         // A request should be delegated immediately, creating no deferred response.
         final HttpResponse res = client.execute(ctx, req);
         verify(delegate).execute(ctx, req);
-        assertThat(res.isDeferred()).isFalse();
         assertThat(res.isOpen()).isTrue();
         assertThat(client.numActiveRequests()).isEqualTo(1);
 

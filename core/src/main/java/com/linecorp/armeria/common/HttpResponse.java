@@ -328,11 +328,4 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         subscribe(aggregator, executor);
         return future;
     }
-
-    /**
-     * Whether this is a deferred {@link HttpResponse}, created by {@link #from(CompletionStage)}.
-     */
-    default boolean isDeferred() {
-        return false;
-    }
 }

@@ -38,9 +38,4 @@ public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> impl
     public void delegate(HttpResponse delegate) {
         super.delegate(delegate);
     }
-
-    @Override
-    public boolean isDeferred() {
-        return true;
-    }
 }
