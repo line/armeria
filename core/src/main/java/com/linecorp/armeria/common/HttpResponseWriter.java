@@ -192,10 +192,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
 
     /**
      * Writes the specified HTTP response and closes the stream.
-     *
-     * @deprecated Use {@link HttpResponse#of(AggregatedHttpMessage)}.
      */
-    @Deprecated
     default void respond(AggregatedHttpMessage res) {
         requireNonNull(res, "res");
 
@@ -219,14 +216,6 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
             write(trailingHeaders);
         }
 
-        close();
-    }
-
-    /**
-     * Write the given {@link HttpObject} and close the stream.
-     */
-    default void respond(HttpObject obj) {
-        write(obj);
         close();
     }
 }

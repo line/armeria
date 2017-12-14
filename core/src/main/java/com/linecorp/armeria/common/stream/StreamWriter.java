@@ -74,4 +74,12 @@ public interface StreamWriter<T> {
      * signal that the {@link Subscriber} did not consume the stream completely.
      */
     void close(Throwable cause);
+
+    /**
+     * Writes the given object and closes the stream successfully.
+     */
+    default void close(T obj) {
+        write(obj);
+        close();
+    }
 }

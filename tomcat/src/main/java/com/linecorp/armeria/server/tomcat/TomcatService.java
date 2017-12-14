@@ -360,14 +360,14 @@ public final class TomcatService implements HttpService {
         req.aggregate().handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                res.respond(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
                 return;
             }
 
             try {
                 final Request coyoteReq = convertRequest(ctx, aReq);
                 if (coyoteReq == null) {
-                    res.respond(HttpHeaders.of(HttpStatus.BAD_REQUEST));
+                    res.close(HttpHeaders.of(HttpStatus.BAD_REQUEST));
                     return;
                 }
                 final Response coyoteRes = new Response();
