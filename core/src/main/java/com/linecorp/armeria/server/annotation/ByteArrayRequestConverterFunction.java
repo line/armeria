@@ -33,7 +33,7 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
      * {@code Content-Type: application/octet-stream} or {@code Content-Type: application/binary}.
      */
     @Override
-    public boolean accept(AggregatedHttpMessage request, Class<?> expectedResultType) {
+    public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
         if (!expectedResultType.isAssignableFrom(byte[].class) &&
             !expectedResultType.isAssignableFrom(HttpData.class)) {
             return false;
@@ -49,7 +49,7 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
      * Converts the specified {@link AggregatedHttpMessage} to an object of {@code expectedResultType}.
      */
     @Override
-    public Object convert(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception {
+    public Object convertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception {
         if (expectedResultType.isAssignableFrom(byte[].class)) {
             return request.content().array();
         }

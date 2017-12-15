@@ -29,7 +29,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
@@ -50,14 +49,13 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.Types;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
-import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -67,7 +65,7 @@ import io.netty.util.AsciiString;
  * Invokes an individual method of an annotated service. An annotated service method whose return type is not
  * {@link CompletionStage} or {@link HttpResponse} will be run in the blocking task executor.
  */
-final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestContext, HttpRequest, Object> {
+final class AnnotatedHttpServiceMethod {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedHttpServiceMethod.class);
 
     private final Object object;
@@ -77,10 +75,12 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     private final AggregationStrategy aggregationStrategy;
     private final List<ExceptionHandlerFunction> exceptionHandlers;
     private final List<RequestConverterFunction> requestConverters;
+    private final List<ResponseConverterFunction> responseConverters;
 
     AnnotatedHttpServiceMethod(Object object, Method method, PathMapping pathMapping,
                                List<ExceptionHandlerFunction> exceptionHandlers,
-                               List<RequestConverterFunction> requestConverters) {
+                               List<RequestConverterFunction> requestConverters,
+                               List<ResponseConverterFunction> responseConverters) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         requireNonNull(pathMapping, "pathMapping");
@@ -88,6 +88,8 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
                 requireNonNull(exceptionHandlers, "exceptionHandlers"));
         this.requestConverters = ImmutableList.copyOf(
                 requireNonNull(requestConverters, "requestConverters"));
+        this.responseConverters = ImmutableList.copyOf(
+                requireNonNull(responseConverters, "responseConverters"));
 
         parameters = parameters(method, pathMapping.paramNames(), !requestConverters.isEmpty());
         final Class<?> returnType = method.getReturnType();
@@ -108,12 +110,40 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
                          .collect(toImmutableSet());
     }
 
-    @Override
-    public Object apply(ServiceRequestContext ctx, HttpRequest req) {
+    /**
+     * Returns the result of the execution.
+     */
+    public CompletionStage<HttpResponse> serve(ServiceRequestContext ctx, HttpRequest req) {
+        final Object ret = executeServiceMethod(ctx, req);
+        if (ret instanceof CompletionStage) {
+            return ((CompletionStage<?>) ret).handle((result, cause) -> {
+                if (cause == null) {
+                    return convertResponse(ctx, result);
+                }
+                final HttpResponse response = convertException(ctx, req, cause);
+                if (response != null) {
+                    return response;
+                } else {
+                    return Exceptions.throwUnsafely(cause);
+                }
+            });
+        }
+        if (ret instanceof HttpResponse) {
+            return CompletableFuture.completedFuture(
+                    new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) ret));
+        }
+        return CompletableFuture.completedFuture(convertResponse(ctx, ret));
+    }
+
+    /**
+     * Executes the service method in different ways regarding its return type and whether the request is
+     * required to be aggregated.
+     */
+    private Object executeServiceMethod(ServiceRequestContext ctx, HttpRequest req) {
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
             final CompletableFuture<AggregatedHttpMessage> aggregationFuture = req.aggregate();
             if (CompletionStage.class.isAssignableFrom(method.getReturnType())) {
-                return aggregationFuture.thenCompose(msg -> toCompletionStage(ctx, req, msg));
+                return aggregationFuture.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)));
             }
 
             if (isAsynchronous) {
@@ -130,62 +160,25 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         return CompletableFuture.supplyAsync(() -> invoke(ctx, req, null), ctx.blockingTaskExecutor());
     }
 
-    private CompletionStage<?> toCompletionStage(ServiceRequestContext ctx, HttpRequest req,
-                                                 AggregatedHttpMessage message) {
-        final Object ret = invoke(ctx, req, message);
-        if (ret instanceof CompletionStage) {
-            return (CompletionStage<?>) ret;
+    /**
+     * Wraps the specified {@code obj} with {@link CompletableFuture} if it is not an instance of
+     * {@link CompletionStage}.
+     */
+    private static CompletionStage<?> toCompletionStage(Object obj) {
+        if (obj instanceof CompletionStage) {
+            return (CompletionStage<?>) obj;
         }
-        return CompletableFuture.completedFuture(ret);
+        return CompletableFuture.completedFuture(obj);
     }
 
-    BiFunction<ServiceRequestContext, HttpRequest,
-            CompletionStage<HttpResponse>> withConverter(ResponseConverter converter) {
-        return (ctx, req) ->
-                executeSyncOrAsync(ctx, req).thenApply(obj -> {
-                    try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
-                        return convertResponse(obj, converter);
-                    }
-                });
-    }
-
-    BiFunction<ServiceRequestContext, HttpRequest,
-            CompletionStage<HttpResponse>> withConverters(Map<Class<?>, ResponseConverter> converters) {
-        return (ctx, req) ->
-                executeSyncOrAsync(ctx, req).thenApply(obj -> {
-                    try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
-                        return convertResponse(obj, converters);
-                    }
-                });
-    }
-
-    private CompletionStage<?> executeSyncOrAsync(ServiceRequestContext ctx, HttpRequest req) {
-        final Object ret = apply(ctx, req);
-        if (ret instanceof CompletionStage) {
-            return ((CompletionStage<?>) ret).handle((obj, cause) -> {
-                if (cause == null) {
-                    return obj;
-                }
-                final HttpResponse response = getResponseForCause(ctx, req, cause);
-                if (response != null) {
-                    return response;
-                } else {
-                    return Exceptions.throwUnsafely(cause);
-                }
-            });
-        }
-        if (ret instanceof HttpResponse) {
-            return CompletableFuture.completedFuture(
-                    new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) ret));
-        }
-        return CompletableFuture.completedFuture(ret);
-    }
-
+    /**
+     * Invokes the service method with arguments.
+     */
     private Object invoke(ServiceRequestContext ctx, HttpRequest req, @Nullable AggregatedHttpMessage message) {
         try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
             return method.invoke(object, parameterValues(ctx, req, parameters, message, requestConverters));
         } catch (Throwable cause) {
-            final HttpResponse response = getResponseForCause(ctx, req, cause);
+            final HttpResponse response = convertException(ctx, req, cause);
             if (response != null) {
                 return response;
             }
@@ -194,22 +187,49 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     }
 
     /**
+     * Converts the specified {@code result} to {@link HttpResponse}.
+     */
+    private HttpResponse convertResponse(ServiceRequestContext ctx, Object result) {
+        if (result instanceof HttpResponse) {
+            return (HttpResponse) result;
+        }
+        if (result instanceof AggregatedHttpMessage) {
+            return HttpResponse.of((AggregatedHttpMessage) result);
+        }
+
+        for (final ResponseConverterFunction func : responseConverters) {
+            if (func.canConvertResponse(result)) {
+                try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
+                    return func.convertResponse(result);
+                } catch (Exception e) {
+                    throw new IllegalStateException(
+                            "Response converter " + func.getClass().getName() +
+                            " cannot convert a result to HttpResponse: " + result, e);
+                }
+            }
+        }
+        throw new IllegalStateException(
+                "No response converter exists for a result: " +
+                result != null ? result.getClass().getSimpleName() : "(null)");
+    }
+
+    /**
      * Returns a {@link HttpResponse} which is created by {@link ExceptionHandlerFunction}.
      */
-    private HttpResponse getResponseForCause(ServiceRequestContext ctx, HttpRequest req,
-                                             Throwable cause) {
+    private HttpResponse convertException(ServiceRequestContext ctx, HttpRequest req,
+                                          Throwable cause) {
         final Throwable rootCause = Throwables.getRootCause(cause);
         for (ExceptionHandlerFunction func : exceptionHandlers) {
-            if (func.accept(rootCause)) {
+            if (func.canHandleException(rootCause)) {
                 try {
-                    return func.handle(ctx, req, rootCause);
+                    return func.handleException(ctx, req, rootCause);
                 } catch (Exception e) {
                     logger.warn("Unexpected exception from an exception handler {}:",
                                 func.getClass().getName(), e);
                 }
             }
         }
-        return ExceptionHandlerFunction.DEFAULT.handle(ctx, req, rootCause);
+        return ExceptionHandlerFunction.DEFAULT.handleException(ctx, req, rootCause);
     }
 
     /**
@@ -273,6 +293,10 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         return entries.build();
     }
 
+    /**
+     * Creates a {@link Parameter} instance which describes a parameter of the annotated method. If the
+     * parameter type is {@link Optional}, its actual argument's type is used.
+     */
     private static Parameter createOptionalSupportedParam(java.lang.reflect.Parameter parameterInfo,
                                                           ParameterType paramType, String paramValue) {
         final Default aDefault = parameterInfo.getAnnotation(Default.class);
@@ -341,9 +365,9 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
                     break;
                 case REQUEST_OBJECT:
                     for (final RequestConverterFunction func : requestConverters) {
-                        if (func.accept(message, entry.type())) {
+                        if (func.canConvertRequest(message, entry.type())) {
                             try {
-                                values[i] = func.convert(message, entry.type());
+                                values[i] = func.convertRequest(message, entry.type());
                                 break;
                             } catch (Exception e) {
                                 // Go to the next request converter if the conversion is failed.
@@ -517,84 +541,6 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
     }
 
     /**
-     * Converts {@code object} into {@link HttpResponse}, using one of the given {@code converters}.
-     *
-     * @throws IllegalStateException if an {@link Exception} thrown during conversion
-     */
-    private static HttpResponse convertResponse(Object object, Map<Class<?>, ResponseConverter> converters) {
-        if (object instanceof HttpResponse) {
-            return (HttpResponse) object;
-        } else if (object instanceof AggregatedHttpMessage) {
-            return HttpResponse.of(((AggregatedHttpMessage) object));
-        } else {
-            final Class<?> clazz = object != null ? object.getClass() : Object.class;
-            final ResponseConverter converter = findResponseConverter(clazz, converters);
-            try {
-                return converter.convert(object);
-            } catch (Exception e) {
-                throw new IllegalStateException("Exception occurred during ResponseConverter#convert", e);
-            }
-        }
-    }
-
-    /**
-     * Converts {@code object} into {@link HttpResponse}, using the given {@code converter}.
-     *
-     * @throws IllegalStateException if an {@link Exception} thrown during conversion
-     */
-    private static HttpResponse convertResponse(Object object, ResponseConverter converter) {
-        if (object instanceof HttpResponse) {
-            return (HttpResponse) object;
-        } else if (object instanceof AggregatedHttpMessage) {
-            return HttpResponse.of(((AggregatedHttpMessage) object));
-        } else {
-            try {
-                return converter.convert(object);
-            } catch (Exception e) {
-                throw new IllegalStateException("Exception occurred during ResponseConverter#convert", e);
-            }
-        }
-    }
-
-    /**
-     * Returns {@link ResponseConverter} instance which can convert the given {@code type} object into
-     * {@link HttpResponse}, from the configured converters.
-     *
-     * @throws IllegalArgumentException if no appropriate {@link ResponseConverter} exists for given
-     * {@code type}
-     */
-    private static ResponseConverter findResponseConverter(
-            Class<?> type, Map<Class<?>, ResponseConverter> converters) {
-
-        // Search for the converter mapped to itself or one of its superclasses, except Object.class.
-        if (type != Object.class) {
-            Class<?> current = type;
-            do {
-                final ResponseConverter converter = converters.get(current);
-                if (converter != null) {
-                    return converter;
-                }
-            } while ((current = current.getSuperclass()) != Object.class);
-
-            // Search for the converter mapped to one of its interface.
-            for (Class<?> iface : Types.getAllInterfaces(type)) {
-                final ResponseConverter converter = converters.get(iface);
-                if (converter != null) {
-                    return converter;
-                }
-            }
-        }
-
-        // Search for the converter mapped to Object.class.
-        if (converters.containsKey(Object.class)) {
-            return converters.get(Object.class);
-        }
-
-        // No appropriate converter found: raise runtime exception.
-        throw new IllegalArgumentException("Converter not available for: " + type.getSimpleName());
-    }
-
-    /**
      * Intercepts a {@link Throwable} raised from {@link HttpResponse} and then rewrites it as an
      * {@link HttpResponseException} by {@link ExceptionHandlerFunction}.
      */
@@ -618,7 +564,7 @@ final class AnnotatedHttpServiceMethod implements BiFunction<ServiceRequestConte
         @Override
         protected Throwable beforeError(Subscriber<? super HttpObject> subscriber,
                                         Throwable cause) {
-            final HttpResponse response = getResponseForCause(ctx, req, cause);
+            final HttpResponse response = convertException(ctx, req, cause);
             return response != null ? HttpResponseException.of(response)
                                     : cause;
         }

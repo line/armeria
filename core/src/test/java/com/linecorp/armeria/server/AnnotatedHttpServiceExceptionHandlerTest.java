@@ -36,11 +36,11 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
-import com.linecorp.armeria.server.annotation.Converter;
+import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -67,7 +67,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         }
     };
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     @ExceptionHandler(NoExceptionHandler.class)
     @ExceptionHandler(AnticipatedExceptionHandler1.class)
     public static class MyService1 {
@@ -96,7 +96,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
     }
 
     // No exception handler is specified.
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyService2 {
 
         @Get("/sync")
@@ -119,7 +119,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     @ExceptionHandler(BadExceptionHandler1.class)
     public static class MyService3 {
 
@@ -162,42 +162,42 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         static final AtomicInteger counter = new AtomicInteger();
 
         @Override
-        public boolean accept(Throwable cause) {
+        public boolean canHandleException(Throwable cause) {
             // Not accept any exception. But should be called this method.
             counter.incrementAndGet();
             return false;
         }
 
         @Override
-        public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             return null;
         }
     }
 
     static class AnticipatedExceptionHandler1 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "handler1");
         }
     }
 
     static class AnticipatedExceptionHandler2 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "handler2");
         }
     }
 
     static class AnticipatedExceptionHandler3 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "handler3");
         }
     }
 
     static class BadExceptionHandler1 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             final HttpResponseWriter response = HttpResponse.streaming();
             response.write(HttpHeaders.of(HttpStatus.OK));
             // Timeout may occur before responding.
@@ -208,7 +208,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
 
     static class BadExceptionHandler2 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
             final HttpResponseWriter response = HttpResponse.streaming();
             // Make invalid response.
             response.write(HttpStatus.OK.toHttpData());

@@ -33,10 +33,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
-import com.linecorp.armeria.server.annotation.Converter;
+import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -62,7 +62,7 @@ public class AnnotatedHttpServiceDecorationTest {
         }
     };
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyDecorationService1 {
 
         @Get("/tooManyRequests")
@@ -88,7 +88,7 @@ public class AnnotatedHttpServiceDecorationTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyDecorationService2 extends MyDecorationService1 {
 
         @Override

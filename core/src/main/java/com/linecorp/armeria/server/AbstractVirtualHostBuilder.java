@@ -27,7 +27,6 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 import javax.net.ssl.SSLException;
@@ -35,7 +34,7 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,7 +42,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+import com.linecorp.armeria.server.annotation.RequestConverterFunction;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
@@ -283,75 +284,89 @@ abstract class AbstractVirtualHostBuilder<B extends AbstractVirtualHostBuilder> 
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
     public B annotatedService(Object service) {
-        return annotatedService("/", service);
+        return annotatedService("/", service, Function.identity(), ImmutableList.of());
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
+     *
+     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
-    public B annotatedService(
-            Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        return annotatedService("/", service, decorator);
+    public B annotatedService(Object service, Object... exceptionHandlersAndConverters) {
+        return annotatedService("/", service, Function.identity(),
+                                ImmutableList.copyOf(exceptionHandlersAndConverters));
     }
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
+     *
+     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
-    public B annotatedService(Object service, Map<Class<?>, ResponseConverter> converters) {
-        return annotatedService("/", service, converters);
-    }
-
-    /**
-     * Binds the specified annotated service object under the path prefix {@code "/"}.
-     */
-    public B annotatedService(
-            Object service, Map<Class<?>, ResponseConverter> converters,
-            Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        return annotatedService("/", service, converters, decorator);
+    public B annotatedService(Object service,
+                              Function<Service<HttpRequest, HttpResponse>,
+                                      ? extends Service<HttpRequest, HttpResponse>> decorator,
+                              Object... exceptionHandlersAndConverters) {
+        return annotatedService("/", service, decorator, exceptionHandlersAndConverters);
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
     public B annotatedService(String pathPrefix, Object service) {
-        return annotatedService(pathPrefix, service, ImmutableMap.of(), Function.identity());
+        return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
-    public B annotatedService(
-            String pathPrefix, Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        return annotatedService(pathPrefix, service, ImmutableMap.of(), decorator);
+    public B annotatedService(String pathPrefix, Object service,
+                              Object... exceptionHandlersAndConverters) {
+        return annotatedService(pathPrefix, service, Function.identity(),
+                                ImmutableList.copyOf(exceptionHandlersAndConverters));
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
-    public B annotatedService(String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters) {
-        return annotatedService(pathPrefix, service, converters, Function.identity());
+    public B annotatedService(String pathPrefix, Object service,
+                              Function<Service<HttpRequest, HttpResponse>,
+                                      ? extends Service<HttpRequest, HttpResponse>> decorator,
+                              Object... exceptionHandlersAndConverters) {
+        return annotatedService(pathPrefix, service, decorator,
+                                ImmutableList.copyOf(exceptionHandlersAndConverters));
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlersAndConverters an iterable object of {@link ExceptionHandlerFunction},
+     *                                       {@link RequestConverterFunction} and/or
+     *                                       {@link ResponseConverterFunction}
      */
-    public B annotatedService(
-            String pathPrefix, Object service, Map<Class<?>, ResponseConverter> converters,
-            Function<Service<HttpRequest, HttpResponse>,
-                     ? extends Service<HttpRequest, HttpResponse>> decorator) {
+    public B annotatedService(String pathPrefix, Object service,
+                              Function<Service<HttpRequest, HttpResponse>,
+                                      ? extends Service<HttpRequest, HttpResponse>> decorator,
+                              Iterable<?> exceptionHandlersAndConverters) {
 
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
-        requireNonNull(converters, "converters");
         requireNonNull(decorator, "decorator");
+        requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
 
         final List<AnnotatedHttpService> entries =
-                AnnotatedHttpServices.build(pathPrefix, service, converters);
+                AnnotatedHttpServices.build(pathPrefix, service, exceptionHandlersAndConverters);
         entries.forEach(e -> service(e.pathMapping(), decorator.apply(e.decorator().apply(e))));
         return self();
     }
