@@ -24,60 +24,91 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.annotation.ResponseConverter;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 final class TestConverters {
 
-    public static class NaiveIntConverter implements ResponseConverter {
+    public static class NaiveIntConverterFunction implements ResponseConverterFunction {
+
         @Override
-        public HttpResponse convert(Object resObj) throws Exception {
-            return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", resObj)));
+        public boolean canConvertResponse(Object result) {
+            return result instanceof Integer;
+        }
+
+        @Override
+        public HttpResponse convertResponse(Object result) throws Exception {
+            return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", result)));
         }
     }
 
-    public static class NaiveNumberConverter implements ResponseConverter {
+    public static class NaiveStringConverterFunction implements ResponseConverterFunction {
+
         @Override
-        public HttpResponse convert(Object resObj) throws Exception {
-            return httpResponse(HttpData.ofUtf8(String.format("Number: %d", resObj)));
+        public boolean canConvertResponse(Object result) {
+            return result instanceof String;
+        }
+
+        @Override
+        public HttpResponse convertResponse(Object result) throws Exception {
+            return httpResponse(HttpData.ofUtf8(String.format("String: %s", result)));
         }
     }
 
-    public static class NaiveStringConverter implements ResponseConverter {
+    public static class TypedNumberConverterFunction implements ResponseConverterFunction {
+
         @Override
-        public HttpResponse convert(Object resObj) throws Exception {
-            return httpResponse(HttpData.ofUtf8(String.format("String: %s", resObj)));
+        public boolean canConvertResponse(Object result) {
+            return result instanceof Number;
+        }
+
+        @Override
+        public HttpResponse convertResponse(Object result) throws Exception {
+            return httpResponse(HttpData.ofUtf8(String.format("Number[%d]", result)));
         }
     }
 
-    public static class TypedNumberConverter implements ResponseConverter {
+    public static class TypedStringConverterFunction implements ResponseConverterFunction {
+
         @Override
-        public HttpResponse convert(Object resObj) throws Exception {
-            return httpResponse(HttpData.ofUtf8(String.format("Number[%d]", resObj)));
+        public boolean canConvertResponse(Object result) {
+            return result instanceof String;
+        }
+
+        @Override
+        public HttpResponse convertResponse(Object result) throws Exception {
+            return httpResponse(HttpData.ofUtf8(String.format("String[%s]", result)));
         }
     }
 
-    public static class TypedStringConverter implements ResponseConverter {
+    public static class ByteArrayConverterFunction implements ResponseConverterFunction {
+
         @Override
-        public HttpResponse convert(Object resObj) throws Exception {
-            return httpResponse(HttpData.ofUtf8(String.format("String[%s]", resObj)));
+        public boolean canConvertResponse(Object result) {
+            return result instanceof byte[];
+        }
+
+        @Override
+        public HttpResponse convertResponse(Object resObj) throws Exception {
+            return httpResponse(HttpData.of((byte[]) resObj));
         }
     }
 
-    public static class UnformattedStringConverter implements ResponseConverter {
+    public static class ByteArrayConverter implements ResponseConverterFunction {
         @Override
-        public HttpResponse convert(Object resObj) throws Exception {
-            return httpResponse(HttpData.ofUtf8(resObj != null ? resObj.toString()
-                                                               : "(null)"));
-        }
-    }
-
-    public static class ByteArrayConverter implements ResponseConverter {
-        @Override
-        public HttpResponse convert(Object resObj) throws Exception {
+        public HttpResponse convertResponse(Object resObj) throws Exception {
             if (resObj instanceof byte[]) {
                 return httpResponse(HttpData.of((byte[]) resObj));
             }
             throw new IllegalArgumentException("Cannot convert " + resObj.getClass().getName());
+        }
+    }
+
+    // Accepts everything.
+    public static class UnformattedStringConverterFunction implements ResponseConverterFunction {
+        @Override
+        public HttpResponse convertResponse(Object result) throws Exception {
+            return httpResponse(HttpData.ofUtf8(result != null ? result.toString()
+                                                               : "(null)"));
         }
     }
 

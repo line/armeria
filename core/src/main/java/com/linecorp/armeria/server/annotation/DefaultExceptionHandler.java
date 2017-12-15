@@ -16,33 +16,26 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 
 /**
- * An interface for exception handler.
- *
- * @see ExceptionHandler
+ * A default exception handler function. It returns an {@link HttpResponse} with
+ * {@code 500 Internal Server Error} status code.
  */
-@FunctionalInterface
-public interface ExceptionHandlerFunction {
+final class DefaultExceptionHandler implements ExceptionHandlerFunction {
+    private static Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
 
-    /**
-     * A default exception handler function. It returns an {@link HttpResponse} with
-     * {@code 500 Internal Server Error} status code.
-     */
-    ExceptionHandlerFunction DEFAULT = new DefaultExceptionHandler();
-
-    /**
-     * Returns whether the specified {@code cause} is acceptable.
-     */
-    default boolean canHandleException(Throwable cause) {
-        return true;
+    @Override
+    public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        logger.warn("No exception handler exists for the cause. " +
+                    DefaultExceptionHandler.class.getName() + " is handling it.",
+                    cause);
+        return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
-    /**
-     * Returns an {@link HttpResponse} which would be sent back to the client who sent the {@code req}.
-     */
-    HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause);
 }

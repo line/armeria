@@ -35,13 +35,13 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.TestConverters.ByteArrayConverter;
-import com.linecorp.armeria.server.TestConverters.UnformattedStringConverter;
-import com.linecorp.armeria.server.annotation.Converter;
+import com.linecorp.armeria.server.TestConverters.ByteArrayConverterFunction;
+import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.server.ServerRule;
 
@@ -58,7 +58,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
     };
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     @RequestConverter(TestRequestConverter1.class)
     public static class MyDecorationService1 {
 
@@ -88,8 +88,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
         }
     }
 
-    @Converter(target = String.class, value = UnformattedStringConverter.class)
-    @Converter(target = byte[].class, value = ByteArrayConverter.class)
+    @ResponseConverter(ByteArrayConverterFunction.class)
+    @ResponseConverter(UnformattedStringConverterFunction.class)
     public static class MyDecorationService2 {
         @Post("/default/json")
         public String defaultJson(@RequestObject RequestObj1 obj1,
@@ -163,13 +163,13 @@ public class AnnotatedHttpServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public boolean accept(AggregatedHttpMessage request, Class<?> expectedResultType) {
+        public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
             return expectedResultType.isAssignableFrom(RequestObj1.class);
         }
 
         @Override
-        public RequestObj1 convert(AggregatedHttpMessage request,
-                                   Class<?> expectedResultType) throws Exception {
+        public RequestObj1 convertRequest(AggregatedHttpMessage request,
+                                          Class<?> expectedResultType) throws Exception {
             return mapper.readValue(request.content().toStringUtf8(), RequestObj1.class);
         }
     }
@@ -179,13 +179,13 @@ public class AnnotatedHttpServiceRequestConverterTest {
         private final ObjectMapper mapper = new ObjectMapper();
 
         @Override
-        public boolean accept(AggregatedHttpMessage request, Class<?> expectedResultType) {
+        public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
             return expectedResultType.isAssignableFrom(RequestObj1.class);
         }
 
         @Override
-        public RequestObj1 convert(AggregatedHttpMessage request,
-                                   Class<?> expectedResultType) throws Exception {
+        public RequestObj1 convertRequest(AggregatedHttpMessage request,
+                                          Class<?> expectedResultType) throws Exception {
             final RequestObj1 obj1 = mapper.readValue(request.content().toStringUtf8(),
                                                       RequestObj1.class);
             return new RequestObj1(obj1.intVal() + 1, obj1.strVal() + 'a');
@@ -194,13 +194,13 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     public static class TestRequestConverter2 implements RequestConverterFunction {
         @Override
-        public boolean accept(AggregatedHttpMessage request, Class<?> expectedResultType) {
+        public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
             return expectedResultType.isAssignableFrom(RequestObj2.class);
         }
 
         @Override
-        public RequestObj2 convert(AggregatedHttpMessage request,
-                                   Class<?> expectedResultType) throws Exception {
+        public RequestObj2 convertRequest(AggregatedHttpMessage request,
+                                          Class<?> expectedResultType) throws Exception {
             return new RequestObj2(request.headers().method().name());
         }
     }

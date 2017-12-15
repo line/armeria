@@ -32,7 +32,7 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
      * Returns whether the specified {@link AggregatedHttpMessage} is able to be converted to a {@link String}.
      */
     @Override
-    public boolean accept(AggregatedHttpMessage request, Class<?> expectedResultType) {
+    public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
         if (!expectedResultType.isAssignableFrom(String.class)) {
             return false;
         }
@@ -45,7 +45,7 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
      * Converts the specified {@link AggregatedHttpMessage} to a {@link String}.
      */
     @Override
-    public Object convert(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception {
+    public Object convertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception {
         assert expectedResultType.isAssignableFrom(String.class);
 
         final MediaType contentType = request.headers().contentType();
