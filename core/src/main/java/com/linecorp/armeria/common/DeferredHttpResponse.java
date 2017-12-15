@@ -16,29 +16,19 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.concurrent.CompletionStage;
+
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
 
 /**
- * An {@link HttpResponse} whose stream is published later by another {@link HttpResponse}. It is useful when
- * your {@link HttpResponse} will not be instantiated early. For example:
- * <pre>{@code
- * public class DelayService extends DecoratingService<HttpRequest, HttpResponse> {
- *     public DelayService(Service<HttpRequest, HttpResponse> delegate) {
- *         super(delegate);
- *     }
+ * An {@link HttpResponse} whose stream is published later by another {@link HttpResponse}. It is used when
+ * an {@link HttpResponse} will not be instantiated early.
  *
- *     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
- *         // Delay all requests by 3 seconds.
- *         DeferredHttpResponse res = new DeferredHttpResponse();
- *         ctx.eventLoop().schedule(() -> {
- *             res.delegate(delegate().serve(ctx, req));
- *         }, 3, TimeUnit.SECONDS);
- *         return res;
- *     }
- * }
- * }</pre>
+ * @deprecated Use {@link HttpResponse#from(CompletionStage)}.
  */
+@Deprecated
 public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
+
     /**
      * Sets the delegate {@link HttpResponse} which will publish the stream actually.
      *

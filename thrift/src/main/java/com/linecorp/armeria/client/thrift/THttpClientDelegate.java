@@ -44,7 +44,6 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.InvalidResponseException;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -116,11 +115,10 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
             ctx.logBuilder().requestContent(call, new ThriftCall(header, tArgs));
 
-            final DefaultHttpRequest httpReq = new DefaultHttpRequest(
+            final HttpRequest httpReq = HttpRequest.of(
                     HttpHeaders.of(HttpMethod.POST, ctx.path())
-                               .contentType(mediaType), true);
-            httpReq.write(HttpData.of(outTransport.getArray(), 0, outTransport.length()));
-            httpReq.close();
+                               .contentType(mediaType),
+                    HttpData.of(outTransport.getArray(), 0, outTransport.length()));
 
             ctx.logBuilder().deferResponseContent();
 

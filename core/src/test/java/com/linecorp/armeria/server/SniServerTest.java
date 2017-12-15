@@ -36,7 +36,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;
@@ -143,11 +143,10 @@ public class SniServerTest {
         }
 
         @Override
-        protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                             HttpResponseWriter res) {
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
             final X509Certificate c = (X509Certificate) ctx.sslSession().getLocalCertificates()[0];
             final String name = c.getSubjectX500Principal().getName();
-            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, domainName + ": " + name);
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, domainName + ": " + name);
         }
     }
 }

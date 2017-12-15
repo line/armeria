@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
@@ -188,7 +187,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         if (msg instanceof LastHttpContent) {
-                            final HttpResponseWriter res = removeResponse(resId++);
+                            final HttpResponseWrapper res = removeResponse(resId++);
                             assert this.res == res;
                             this.res = null;
 
@@ -225,7 +224,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
         state = State.DISCARD;
 
-        final HttpResponseWriter res = this.res;
+        final HttpResponseWrapper res = this.res;
         this.res = null;
 
         if (res != null) {

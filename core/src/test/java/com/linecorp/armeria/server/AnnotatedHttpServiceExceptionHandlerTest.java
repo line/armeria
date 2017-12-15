@@ -28,11 +28,11 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
@@ -198,7 +198,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
     static class BadExceptionHandler1 implements ExceptionHandlerFunction {
         @Override
         public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
-            final DefaultHttpResponse response = new DefaultHttpResponse();
+            final HttpResponseWriter response = HttpResponse.streaming();
             response.write(HttpHeaders.of(HttpStatus.OK));
             // Timeout may occur before responding.
             ctx.eventLoop().schedule((Runnable) response::close, 10, TimeUnit.SECONDS);
@@ -209,7 +209,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
     static class BadExceptionHandler2 implements ExceptionHandlerFunction {
         @Override
         public HttpResponse handle(RequestContext ctx, HttpRequest req, Throwable cause) {
-            final DefaultHttpResponse response = new DefaultHttpResponse();
+            final HttpResponseWriter response = HttpResponse.streaming();
             // Make invalid response.
             response.write(HttpStatus.OK.toHttpData());
             response.close();

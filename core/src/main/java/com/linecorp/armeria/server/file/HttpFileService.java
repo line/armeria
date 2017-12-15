@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -140,13 +139,12 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     @Override
-    protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
+    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
         final Entry entry = getEntry(ctx, req);
         final long lastModifiedMillis = entry.lastModifiedMillis();
 
         if (lastModifiedMillis == 0) {
-            res.respond(HttpStatus.NOT_FOUND);
-            return;
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
 
         long ifModifiedSinceMillis = Long.MIN_VALUE;
@@ -169,23 +167,20 @@ public final class HttpFileService extends AbstractHttpService {
         }
 
         if (lastModifiedMillis < ifModifiedSinceMillis) {
-            res.write(HttpHeaders.of(HttpStatus.NOT_MODIFIED)
-                                 .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
-                                 .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis));
-            res.close();
-            return;
+            return HttpResponse.of(
+                    HttpHeaders.of(HttpStatus.NOT_MODIFIED)
+                               .setTimeMillis(HttpHeaderNames.DATE, config().clock().millis())
+                               .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, lastModifiedMillis));
         }
 
         final HttpData data;
         try {
             data = entry.readContent();
         } catch (FileNotFoundException ignored) {
-            res.respond(HttpStatus.NOT_FOUND);
-            return;
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             logger.warn("{} Unexpected exception reading a file:", ctx, e);
-            res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
-            return;
+            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
@@ -198,9 +193,8 @@ public final class HttpFileService extends AbstractHttpService {
         if (entry.contentEncoding() != null) {
             headers.set(HttpHeaderNames.CONTENT_ENCODING, entry.contentEncoding());
         }
-        res.write(headers);
-        res.write(data);
-        res.close();
+
+        return HttpResponse.of(headers, data);
     }
 
     private Entry getEntry(ServiceRequestContext ctx, HttpRequest req) {

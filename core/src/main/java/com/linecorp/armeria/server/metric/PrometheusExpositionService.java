@@ -22,7 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -52,18 +52,16 @@ public class PrometheusExpositionService extends AbstractHttpService {
     }
 
     @Override
-    protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                         HttpResponseWriter res) throws Exception {
+    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try (OutputStreamWriter writer = new OutputStreamWriter(stream)) {
             TextFormat.write004(writer, collectorRegistry.metricFamilySamples());
         }
-        res.respond(HttpStatus.OK, CONTENT_TYPE_004, stream.toByteArray());
+        return HttpResponse.of(HttpStatus.OK, CONTENT_TYPE_004, stream.toByteArray());
     }
 
     @Override
-    protected void doPost(ServiceRequestContext ctx, HttpRequest req,
-                          HttpResponseWriter res) throws Exception {
-        doGet(ctx, req, res);
+    protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        return doGet(ctx, req);
     }
 }

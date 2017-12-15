@@ -48,6 +48,57 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     //       AggregatedHttpMessage for consistency.
 
     /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with empty headers and keep-alive enabled.
+     */
+    static HttpRequestWriter streaming() {
+        return streaming(true);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with empty headers and specified {@code keepAlive}.
+     */
+    static HttpRequestWriter streaming(boolean keepAlive) {
+        return streaming(HttpHeaders.EMPTY_HEADERS, keepAlive);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with the specified {@link HttpMethod} and {@code path} with keep-alive enabled.
+     */
+    static HttpRequestWriter streaming(HttpMethod method, String path) {
+        return streaming(method, path, true);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with the specified {@link HttpMethod}, {@code path}, and {@code keepAlive}.
+     */
+    static HttpRequestWriter streaming(HttpMethod method, String path, boolean keepAlive) {
+        requireNonNull(method, "method");
+        requireNonNull(path, "path");
+        return streaming(HttpHeaders.of(method, path), keepAlive);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with the specified headers and keep-alive enabled.
+     */
+    static HttpRequestWriter streaming(HttpHeaders headers) {
+        return streaming(headers, true);
+    }
+
+    /**
+     * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject} to a
+     * server with the specified headers and {@code keepAlive}.
+     */
+    static HttpRequestWriter streaming(HttpHeaders headers, boolean keepAlive) {
+        requireNonNull(headers, "headers");
+        return new DefaultHttpRequest(headers, keepAlive);
+    }
+
+    /**
      * Creates a new HTTP request with empty content and closes the stream.
      *
      * @param method the HTTP method of the request

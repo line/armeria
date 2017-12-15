@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,8 +19,8 @@ package com.linecorp.armeria.common;
 import com.linecorp.armeria.common.stream.StreamWriter;
 
 /**
- * A {@link StreamWriter} of an {@link HttpRequest}.
+ * An {@link HttpRequest} that can have {@link HttpObject}s written to it. Use {@link HttpRequest#streaming()}
+ * to construct.
  */
-public interface HttpRequestWriter extends StreamWriter<HttpObject> {
-    // TODO(trustin): Add lots of convenience methods for easier response construction.
+public interface HttpRequestWriter extends HttpRequest, StreamWriter<HttpObject> {
 }

@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -126,7 +125,6 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
      * @param req the decoded HTTP request
      */
     private HttpResponse handleCorsPreflight(HttpRequest req) {
-        DefaultHttpResponse res = new DefaultHttpResponse();
         HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
         if (setCorsOrigin(req, headers)) {
             setCorsAllowMethods(headers);
@@ -136,9 +134,7 @@ public final class CorsService extends SimpleDecoratingService<HttpRequest, Http
             setPreflightHeaders(headers);
         }
 
-        res.write(headers);
-        res.close();
-        return res;
+        return HttpResponse.of(headers);
     }
 
     /**

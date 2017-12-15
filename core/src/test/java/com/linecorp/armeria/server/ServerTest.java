@@ -26,6 +26,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -44,7 +45,6 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -60,6 +60,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
 
 public class ServerTest {
 
@@ -81,29 +82,32 @@ public class ServerTest {
 
             final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
                 @Override
-                protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+                protected HttpResponse echo(AggregatedHttpMessage aReq) {
                     try {
                         Thread.sleep(processDelayMillis);
-                        super.echo(aReq, res);
+                        return super.echo(aReq);
                     } catch (InterruptedException e) {
-                        res.close(e);
+                        return HttpResponse.ofFailure(e);
                     }
                 }
             }.decorate(LoggingService.newDecorator());
 
             final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
                 @Override
-                protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
+                protected HttpResponse echo(AggregatedHttpMessage aReq) {
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    HttpResponse res = HttpResponse.from(responseFuture);
                     asyncExecutorGroup.schedule(
-                            () -> super.echo(aReq, res), processDelayMillis, TimeUnit.MILLISECONDS);
+                            () -> super.echo(aReq), processDelayMillis, TimeUnit.MILLISECONDS)
+                                      .addListener((Future<HttpResponse> future) ->
+                                                           responseFuture.complete(future.getNow()));
+                    return res;
                 }
             }.decorate(LoggingService.newDecorator());
 
             final Service<HttpRequest, HttpResponse> buggy = new AbstractHttpService() {
                 @Override
-                protected void doPost(ServiceRequestContext ctx,
-                                      HttpRequest req, HttpResponseWriter res) throws Exception {
-
+                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
                     throw Exceptions.clearTrace(new AnticipatedException("bug!"));
                 }
             }.decorate(LoggingService.newDecorator());
@@ -337,16 +341,16 @@ public class ServerTest {
 
     private static class EchoService extends AbstractHttpService {
         @Override
-        protected final void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-            req.aggregate()
-               .thenAccept(aReq -> echo(aReq, res))
-               .exceptionally(CompletionActions::log);
+        protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.from(req.aggregate()
+                                        .thenApply(this::echo)
+                                        .exceptionally(CompletionActions::log));
         }
 
-        protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
-            res.write(HttpHeaders.of(HttpStatus.OK));
-            res.write(aReq.content());
-            res.close();
+        protected HttpResponse echo(AggregatedHttpMessage aReq) {
+            return HttpResponse.of(
+                    HttpHeaders.of(HttpStatus.OK),
+                    aReq.content());
         }
     }
 }

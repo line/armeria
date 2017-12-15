@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -36,9 +36,9 @@ public class ThrottlingServiceTest {
 
     static final HttpService SERVICE = new AbstractHttpService() {
         @Override
-        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                 throws Exception {
-            res.respond(HttpStatus.OK);
+            return HttpResponse.of(HttpStatus.OK);
         }
     };
 

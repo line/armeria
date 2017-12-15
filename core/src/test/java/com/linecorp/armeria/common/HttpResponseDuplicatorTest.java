@@ -25,7 +25,7 @@ public class HttpResponseDuplicatorTest {
 
     @Test
     public void aggregateTwice() {
-        final DefaultHttpResponse publisher = new DefaultHttpResponse();
+        final HttpResponseWriter publisher = HttpResponse.streaming();
         final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(publisher);
 
         publisher.write(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8));

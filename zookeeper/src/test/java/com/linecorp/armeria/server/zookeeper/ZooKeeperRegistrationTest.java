@@ -34,7 +34,7 @@ import com.linecorp.armeria.client.zookeeper.TestBase;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -179,16 +179,16 @@ public class ZooKeeperRegistrationTest extends TestBase implements ZooKeeperAsse
 
     private static class EchoService extends AbstractHttpService {
         @Override
-        protected final void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-            req.aggregate()
-               .thenAccept(aReq -> echo(aReq, res))
-               .exceptionally(CompletionActions::log);
+        protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.from(req.aggregate()
+               .thenApply(this::echo)
+               .exceptionally(CompletionActions::log));
         }
 
-        protected void echo(AggregatedHttpMessage aReq, HttpResponseWriter res) {
-            res.write(HttpHeaders.of(HttpStatus.OK));
-            res.write(aReq.content());
-            res.close();
+        protected HttpResponse echo(AggregatedHttpMessage aReq) {
+            return HttpResponse.of(
+                    HttpHeaders.of(HttpStatus.OK),
+                    aReq.content());
         }
     }
 }
