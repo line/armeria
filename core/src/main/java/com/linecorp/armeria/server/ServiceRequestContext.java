@@ -133,14 +133,15 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
-     * e.g., by calling {@link HttpResponseWriter#respond(int)}. If not set, the response will be closed with
+     * e.g., by calling {@link HttpResponseWriter#close()}. If not set, the response will be closed with
      * {@link HttpStatus#SERVICE_UNAVAILABLE}.
      *
      * <p>For example,
      * <pre>{@code
-     *   DefaultHttpResponse res = new DefaultHttpResponse();
+     *   HttpResponseWriter res = HttpResponse.streaming();
      *   ctx.setRequestTimeoutHandler(() -> {
-     *      res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Request timed out.");
+     *      res.write(HttpHeaders.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Request timed out."));
+     *      res.close();
      *   });
      *   ...
      * }</pre>

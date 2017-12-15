@@ -21,7 +21,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -58,8 +57,6 @@ public class ThrottlingHttpService extends ThrottlingService<HttpRequest, HttpRe
     @Override
     protected HttpResponse onFailure(ServiceRequestContext ctx, HttpRequest req, @Nullable Throwable cause)
             throws Exception {
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(HttpStatus.SERVICE_UNAVAILABLE);
-        return res;
+        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
     }
 }

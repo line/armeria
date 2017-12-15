@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.limit;
 
+import static com.linecorp.armeria.client.limit.ConcurrencyLimitingHttpClient.newDecorator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -32,10 +33,9 @@ import org.junit.Test;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.common.DefaultHttpResponse;
-import com.linecorp.armeria.common.DeferredHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 
 import io.netty.channel.DefaultEventLoop;
@@ -57,18 +57,17 @@ public class ConcurrencyLimitingHttpClientTest {
     public void testOrdinaryRequest() throws Exception {
         final ClientRequestContext ctx = newContext();
         final HttpRequest req = mock(HttpRequest.class);
-        final DefaultHttpResponse actualRes = new DefaultHttpResponse();
+        final HttpResponseWriter actualRes = HttpResponse.streaming();
 
         @SuppressWarnings("unchecked")
         final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx, req)).thenReturn(actualRes);
 
         final ConcurrencyLimitingHttpClient client =
-                ConcurrencyLimitingHttpClient.newDecorator(1).apply(delegate);
+                newDecorator(1).apply(delegate);
         assertThat(client.numActiveRequests()).isZero();
 
         final HttpResponse res = client.execute(ctx, req);
-        assertThat(res).isInstanceOf(DeferredHttpResponse.class);
         assertThat(res.isOpen()).isTrue();
         assertThat(client.numActiveRequests()).isEqualTo(1);
 
@@ -87,8 +86,8 @@ public class ConcurrencyLimitingHttpClientTest {
         final ClientRequestContext ctx2 = newContext();
         final HttpRequest req1 = mock(HttpRequest.class);
         final HttpRequest req2 = mock(HttpRequest.class);
-        final DefaultHttpResponse actualRes1 = new DefaultHttpResponse();
-        final DefaultHttpResponse actualRes2 = new DefaultHttpResponse();
+        final HttpResponseWriter actualRes1 = HttpResponse.streaming();
+        final HttpResponseWriter actualRes2 = HttpResponse.streaming();
 
         @SuppressWarnings("unchecked")
         final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
@@ -96,18 +95,16 @@ public class ConcurrencyLimitingHttpClientTest {
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
         final ConcurrencyLimitingHttpClient client =
-                ConcurrencyLimitingHttpClient.newDecorator(1).apply(delegate);
+                newDecorator(1).apply(delegate);
 
         // The first request should be delegated immediately.
         final HttpResponse res1 = client.execute(ctx1, req1);
         verify(delegate).execute(ctx1, req1);
-        assertThat(res1).isInstanceOf(DeferredHttpResponse.class);
         assertThat(res1.isOpen()).isTrue();
 
         // The second request should never be delegated until the first response is closed.
         final HttpResponse res2 = client.execute(ctx2, req2);
         verify(delegate, never()).execute(ctx2, req2);
-        assertThat(res2).isInstanceOf(DeferredHttpResponse.class);
         assertThat(res2.isOpen()).isTrue();
         assertThat(client.numActiveRequests()).isEqualTo(1); // Only req1 is active.
 
@@ -132,8 +129,8 @@ public class ConcurrencyLimitingHttpClientTest {
         final ClientRequestContext ctx2 = newContext();
         final HttpRequest req1 = mock(HttpRequest.class);
         final HttpRequest req2 = mock(HttpRequest.class);
-        final DefaultHttpResponse actualRes1 = new DefaultHttpResponse();
-        final DefaultHttpResponse actualRes2 = new DefaultHttpResponse();
+        final HttpResponseWriter actualRes1 = HttpResponse.streaming();
+        final HttpResponseWriter actualRes2 = HttpResponse.streaming();
 
         @SuppressWarnings("unchecked")
         final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
@@ -141,7 +138,7 @@ public class ConcurrencyLimitingHttpClientTest {
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
         final ConcurrencyLimitingHttpClient client =
-                ConcurrencyLimitingHttpClient.newDecorator(1, 500, TimeUnit.MILLISECONDS).apply(delegate);
+                newDecorator(1, 500, TimeUnit.MILLISECONDS).apply(delegate);
 
         // Send two requests, where only the first one is delegated.
         final HttpResponse res1 = client.execute(ctx1, req1);
@@ -185,7 +182,6 @@ public class ConcurrencyLimitingHttpClientTest {
         // Consume everything from the returned response so its close future is completed.
         res.subscribe(NoopSubscriber.get());
 
-        assertThat(res).isInstanceOf(DeferredHttpResponse.class);
         assertThat(res.isOpen()).isFalse();
         assertThatThrownBy(() -> res.completionFuture().get()).hasCauseInstanceOf(Exception.class);
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
@@ -195,19 +191,18 @@ public class ConcurrencyLimitingHttpClientTest {
     public void testUnlimitedRequest() throws Exception {
         final ClientRequestContext ctx = newContext();
         final HttpRequest req = mock(HttpRequest.class);
-        final DefaultHttpResponse actualRes = new DefaultHttpResponse();
+        final HttpResponseWriter actualRes = HttpResponse.streaming();
 
         @SuppressWarnings("unchecked")
         final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx, req)).thenReturn(actualRes);
 
         final ConcurrencyLimitingHttpClient client =
-                ConcurrencyLimitingHttpClient.newDecorator(0).apply(delegate);
+                newDecorator(0).apply(delegate);
 
         // A request should be delegated immediately, creating no deferred response.
         final HttpResponse res = client.execute(ctx, req);
         verify(delegate).execute(ctx, req);
-        assertThat(res).isNotInstanceOf(DeferredHttpResponse.class);
         assertThat(res.isOpen()).isTrue();
         assertThat(client.numActiveRequests()).isEqualTo(1);
 
@@ -246,7 +241,7 @@ public class ConcurrencyLimitingHttpClientTest {
      * Closes the response returned by the delegate and consumes everything from it, so that its close future
      * is completed.
      */
-    private static void closeAndDrain(DefaultHttpResponse actualRes, HttpResponse deferredRes) {
+    private static void closeAndDrain(HttpResponseWriter actualRes, HttpResponse deferredRes) {
         actualRes.close();
         deferredRes.subscribe(NoopSubscriber.get());
         deferredRes.completionFuture().join();

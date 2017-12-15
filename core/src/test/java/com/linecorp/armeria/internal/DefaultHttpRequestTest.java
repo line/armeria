@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,6 +35,11 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.DefaultHttpRequest;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 @RunWith(Parameterized.class)
@@ -60,7 +65,7 @@ public class DefaultHttpRequestTest {
     @Test
     public void abortedAggregation() {
         final Thread mainThread = Thread.currentThread();
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/foo"));
+        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/foo"), true);
         final CompletableFuture<AggregatedHttpMessage> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.

@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.common.DeferredHttpResponse;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -111,16 +110,17 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final DeferredHttpResponse deferredRes = new DeferredHttpResponse();
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final HttpResponse res = HttpResponse.from(responseFuture);
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req, 0, ctx.eventLoop());
-        doExecute0(ctx, reqDuplicator, deferredRes);
-        return deferredRes;
+        doExecute0(ctx, reqDuplicator, responseFuture);
+        return res;
     }
 
     private void doExecute0(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
-                            DeferredHttpResponse deferredRes) {
+                            CompletableFuture<HttpResponse> res) {
         if (!setResponseTimeout(ctx)) {
-            closeOnException(ctx, deferredRes, rootReqDuplicator, ResponseTimeoutException.get());
+            closeOnException(ctx, res, rootReqDuplicator, ResponseTimeoutException.get());
             return;
         }
 
@@ -147,21 +147,21 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                try {
                                    nextDelay = getNextDelay(ctx, backoffOpt.get(), millisAfter);
                                } catch (Exception e) {
-                                   closeOnException(ctx, deferredRes, rootReqDuplicator, e);
+                                   closeOnException(ctx, res, rootReqDuplicator, e);
                                    return;
                                }
 
                                final EventLoop eventLoop = ctx.contextAwareEventLoop();
                                if (nextDelay <= 0) {
-                                   eventLoop.execute(() -> doExecute0(ctx, rootReqDuplicator, deferredRes));
+                                   eventLoop.execute(() -> doExecute0(ctx, rootReqDuplicator, res));
                                } else {
                                    eventLoop.schedule(
-                                           () -> doExecute0(ctx, rootReqDuplicator, deferredRes),
+                                           () -> doExecute0(ctx, rootReqDuplicator, res),
                                            nextDelay, TimeUnit.MILLISECONDS);
                                }
                            } else {
                                onRetryingComplete(ctx);
-                               deferredRes.delegate(resDuplicator.duplicateStream(true));
+                               res.complete(resDuplicator.duplicateStream(true));
                                rootReqDuplicator.close();
                            }
                        }));
@@ -206,10 +206,10 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     private static void closeOnException(ClientRequestContext ctx,
-                                         DeferredHttpResponse deferredRes,
+                                         CompletableFuture<HttpResponse> res,
                                          HttpRequestDuplicator rootReqDuplicator, Throwable cause) {
         onRetryingComplete(ctx);
-        deferredRes.close(cause);
+        res.completeExceptionally(cause);
         rootReqDuplicator.close();
     }
 

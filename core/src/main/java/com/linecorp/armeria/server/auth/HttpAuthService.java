@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -99,9 +98,7 @@ public abstract class HttpAuthService extends SimpleDecoratingService<HttpReques
         if (cause != null) {
             logger.warn("Unexpected exception during authorization.", cause);
         }
-        final DefaultHttpResponse res = new DefaultHttpResponse();
-        res.respond(HttpStatus.UNAUTHORIZED);
-        return res;
+        return HttpResponse.of(HttpStatus.UNAUTHORIZED);
     }
 
     @Override

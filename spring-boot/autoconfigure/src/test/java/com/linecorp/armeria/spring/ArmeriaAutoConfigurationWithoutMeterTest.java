@@ -31,7 +31,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -58,9 +57,9 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
                     .setServiceName("okService")
                     .setService(new AbstractHttpService() {
                         @Override
-                        protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                                 throws Exception {
-                            res.respond(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
+                            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
                         }
                     })
                     .setPathMapping(PathMapping.ofExact("/ok"))

@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.DefaultHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -75,7 +75,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private final ClientRequestContext ctx;
     private final Client<HttpRequest, HttpResponse> httpClient;
-    private final DefaultHttpRequest req;
+    private final HttpRequestWriter req;
     private final CallOptions callOptions;
     private final ArmeriaMessageFramer messageFramer;
     private final GrpcMessageMarshaller<I, O> marshaller;
@@ -93,7 +93,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     ArmeriaClientCall(
             ClientRequestContext ctx,
             Client<HttpRequest, HttpResponse> httpClient,
-            DefaultHttpRequest req,
+            HttpRequestWriter req,
             MethodDescriptor<I, O> method,
             int maxOutboundMessageSizeBytes,
             int maxInboundMessageSizeBytes,

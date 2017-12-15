@@ -28,7 +28,8 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.DefaultHttpRequest;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
 import io.netty.util.AsciiString;
@@ -99,9 +100,8 @@ public class StickyEndpointSelectionStrategyTest {
 
     private static ClientRequestContext contextWithHeader(String k, String v) {
         ClientRequestContext ctx = mock(ClientRequestContext.class);
-        HttpRequest testReq = new DefaultHttpRequest();
-        testReq.headers().set(AsciiString.of(k), v);
-        when(ctx.request()).thenReturn(testReq);
+        when(ctx.request()).thenReturn(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
+                                                                 .set(AsciiString.of(k), v)));
         return ctx;
     }
 }

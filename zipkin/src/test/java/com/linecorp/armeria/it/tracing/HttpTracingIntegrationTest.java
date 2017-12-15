@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -50,7 +51,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.tracing.HelloService;
@@ -100,7 +100,7 @@ public class HttpTracingIntegrationTest {
 
             sb.service("/pool", decorate("service/pool", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res)
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
                             Executors.newFixedThreadPool(2));
@@ -119,6 +119,8 @@ public class HttpTracingIntegrationTest {
                                         }
                                     }))).collect(toImmutableList()));
 
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    HttpResponse res = HttpResponse.from(responseFuture);
                     transformAsync(spanAware,
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
                                            i -> executorService.submit(() -> {
@@ -131,8 +133,9 @@ public class HttpTracingIntegrationTest {
                                            })).collect(toImmutableList())),
                                    RequestContext.current().eventLoop())
                             .addListener(() -> {
-                                res.respond(OK, MediaType.PLAIN_TEXT_UTF_8, "Lee");
+                                responseFuture.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "Lee"));
                             }, RequestContext.current().eventLoop());
+                    return res;
                 }
             }));
         }

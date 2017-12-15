@@ -28,10 +28,10 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -72,7 +72,7 @@ public class PooledResponseBufferBenchmark {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             HttpResponse res = delegate().serve(ctx, req);
-            DefaultHttpResponse decorated = new DefaultHttpResponse();
+            HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {
@@ -108,7 +108,7 @@ public class PooledResponseBufferBenchmark {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             HttpResponse res = delegate().serve(ctx, req);
-            DefaultHttpResponse decorated = new DefaultHttpResponse();
+            HttpResponseWriter decorated = HttpResponse.streaming();
             res.subscribe(new Subscriber<HttpObject>() {
                 @Override
                 public void onSubscribe(Subscription s) {

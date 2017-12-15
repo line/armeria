@@ -30,7 +30,7 @@ import org.junit.Test;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.server.ServerRule;
@@ -46,15 +46,15 @@ public class HttpServerPathTest {
             sb.port(0, SessionProtocol.HTTP);
             sb.service("/service/foo", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK);
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
                 }
             });
 
             sb.serviceUnder("/", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK);
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
                 }
             });
         }

@@ -17,13 +17,12 @@
 package com.linecorp.armeria.server.grpc;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpRequest;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -140,17 +139,17 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
 
-        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final HttpResponse res = HttpResponse.from(responseFuture);
         req.aggregate().whenCompleteAsync(
                 (clientRequest, t) -> {
                     if (t != null) {
-                        res.close(t);
+                        responseFuture.completeExceptionally(t);
                     } else {
-                        frameAndServe(ctx, grpcHeaders, clientRequest, res);
+                        frameAndServe(ctx, grpcHeaders, clientRequest, responseFuture);
                     }
                 },
                 ctx.eventLoop());
-
         return res;
     }
 
@@ -158,8 +157,8 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             ServiceRequestContext ctx,
             HttpHeaders grpcHeaders,
             AggregatedHttpMessage clientRequest,
-            DefaultHttpResponse res) {
-        final DefaultHttpRequest grpcRequest = new DefaultHttpRequest(grpcHeaders);
+            CompletableFuture<HttpResponse> res) {
+        final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
             HttpData content = clientRequest.content();
@@ -175,22 +174,21 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                     message.release();
                 }
             }
-            grpcRequest.write(frame);
-            grpcRequest.close();
+            grpcRequest = HttpRequest.of(grpcHeaders, frame);
         }
 
         final HttpResponse grpcResponse;
         try {
             grpcResponse = delegate().serve(ctx, grpcRequest);
         } catch (Exception e) {
-            res.close(e);
+            res.completeExceptionally(e);
             return;
         }
 
         grpcResponse.aggregate().whenCompleteAsync(
                 (framedResponse, t) -> {
                     if (t != null) {
-                        res.close(t);
+                        res.completeExceptionally(t);
                     } else {
                         deframeAndRespond(ctx, framedResponse, res);
                     }
@@ -199,7 +197,9 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
     }
 
     private void deframeAndRespond(
-            ServiceRequestContext ctx, AggregatedHttpMessage grpcResponse, DefaultHttpResponse res) {
+            ServiceRequestContext ctx,
+            AggregatedHttpMessage grpcResponse,
+            CompletableFuture<HttpResponse> res) {
         HttpHeaders trailers = !grpcResponse.trailingHeaders().isEmpty() ?
                                grpcResponse.trailingHeaders() : grpcResponse.headers();
         String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -211,9 +211,10 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             if (grpcMessage != null) {
                 message.append(", ").append(grpcMessage);
             }
-            res.respond(HttpStatus.INTERNAL_SERVER_ERROR,
-                        MediaType.PLAIN_TEXT_UTF_8,
-                        message.toString());
+            res.complete(HttpResponse.of(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    MediaType.PLAIN_TEXT_UTF_8,
+                    message.toString()));
             return;
         }
 
@@ -233,9 +234,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                         // We also know that we don't support compression, so this is always a ByteBuffer.
                         HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
-                        res.write(unframedHeaders);
-                        res.write(unframedContent);
-                        res.close();
+                        res.complete(HttpResponse.of(unframedHeaders, unframedContent));
                     }
 
                     @Override

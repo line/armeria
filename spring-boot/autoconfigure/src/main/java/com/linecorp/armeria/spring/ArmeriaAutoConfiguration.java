@@ -51,7 +51,6 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -204,10 +203,10 @@ public class ArmeriaAutoConfiguration {
                         armeriaSettings.getMetricsPath(),
                         new AbstractHttpService() {
                             @Override
-                            protected void doGet(ServiceRequestContext ctx, HttpRequest req,
-                                                 HttpResponseWriter res) throws Exception {
-                                res.respond(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                            objectMapper.writeValueAsBytes(dropwizardRegistry));
+                            protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                                    throws Exception {
+                                return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                                       objectMapper.writeValueAsBytes(dropwizardRegistry));
                             }
                         });
             }

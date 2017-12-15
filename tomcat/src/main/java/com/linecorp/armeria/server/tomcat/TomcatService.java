@@ -51,13 +51,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.server.HttpService;
@@ -356,18 +356,18 @@ public final class TomcatService implements HttpService {
             throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
 
-        final DefaultHttpResponse res = new DefaultHttpResponse();
+        final HttpResponseWriter res = HttpResponse.streaming();
         req.aggregate().handle(voidFunction((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                res.respond(HttpStatus.INTERNAL_SERVER_ERROR);
+                res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
                 return;
             }
 
             try {
                 final Request coyoteReq = convertRequest(ctx, aReq);
                 if (coyoteReq == null) {
-                    res.respond(HttpStatus.BAD_REQUEST);
+                    res.close(HttpHeaders.of(HttpStatus.BAD_REQUEST));
                     return;
                 }
                 final Response coyoteRes = new Response();

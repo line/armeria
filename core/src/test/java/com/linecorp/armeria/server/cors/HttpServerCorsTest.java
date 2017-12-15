@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -47,23 +47,23 @@ public class HttpServerCorsTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/cors", new AbstractHttpService() {
                 @Override
-                protected void doGet(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK);
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
                 }
 
                 @Override
-                protected void doPost(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK);
+                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
                 }
 
                 @Override
-                protected void doHead(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK);
+                protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
                 }
 
                 @Override
-                protected void doOptions(ServiceRequestContext ctx, HttpRequest req, HttpResponseWriter res) {
-                    res.respond(HttpStatus.OK);
+                protected HttpResponse doOptions(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
                 }
             }.decorate(CorsServiceBuilder.forOrigin("http://example.com")
                                          .allowRequestMethods(HttpMethod.POST)
