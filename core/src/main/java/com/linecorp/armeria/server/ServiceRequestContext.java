@@ -151,6 +151,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the maximum length of the current {@link Request}.
      * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     * If 0, there is no limit on the request size.
      *
      * @see ContentTooLargeException
      */
@@ -159,6 +160,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Sets the maximum length of the current {@link Request}.
      * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     * If 0, there is no limit on the request size.
      *
      * @see ContentTooLargeException
      */
