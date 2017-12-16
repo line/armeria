@@ -23,11 +23,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.buffer.ByteBuf;
@@ -179,7 +179,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     if (req.isOpen()) {
-                        req.write(HttpData.of(data));
+                        req.write(new ByteBufHttpData(data.retain(), false));
                     }
                 }
 
