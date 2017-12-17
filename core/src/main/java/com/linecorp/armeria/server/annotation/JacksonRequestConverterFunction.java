@@ -41,6 +41,8 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
 
     private static final Logger logger = LoggerFactory.getLogger(JacksonRequestConverterFunction.class);
 
+    private static final ObjectMapper DEFAULT_MAPPER = new ObjectMapper();
+
     private final ObjectMapper mapper;
     private final ConcurrentMap<Class<?>, ObjectReader> readers = new ConcurrentHashMap<>();
 
@@ -48,7 +50,7 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
      * Creates an instance with the default {@link ObjectMapper}.
      */
     public JacksonRequestConverterFunction() {
-        this(new ObjectMapper());
+        this(DEFAULT_MAPPER);
     }
 
     /**
@@ -64,7 +66,8 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
     @Override
     public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
         final MediaType contentType = request.headers().contentType();
-        if (contentType != null && contentType.is(MediaType.JSON)) {
+        if (contentType != null && (contentType.is(MediaType.JSON) ||
+                                    contentType.subtype().contains("+json"))) {
             try {
                 return readers.computeIfAbsent(expectedResultType, mapper::readerFor) != null;
             } catch (Throwable cause) {
