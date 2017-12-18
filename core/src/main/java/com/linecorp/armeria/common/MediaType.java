@@ -366,6 +366,12 @@ public final class MediaType {
     public static final MediaType JSON_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "json");
     public static final MediaType JSON = createConstant(APPLICATION_TYPE, "json");
     /**
+     * As described in <a href="https://www.ietf.org/rfc/rfc6902.txt">RFC 6902</a>, this constant
+     * ({@code application/json-patch+json}) is used for expressing a sequence of operations to apply
+     * to a JavaScript Object Notation(JSON) document.
+     */
+    public static final MediaType JSON_PATCH = createConstant(APPLICATION_TYPE, "json-patch+json");
+    /**
      * Media type for the <a href="https://www.w3.org/TR/appmanifest/">Manifest for a web
      * application</a>.
      */
