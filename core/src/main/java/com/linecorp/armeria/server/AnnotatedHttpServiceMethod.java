@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.common.HttpParameters.EMPTY_PARAMETERS;
 import static com.linecorp.armeria.internal.DefaultValues.getSpecifiedValue;
@@ -326,7 +327,7 @@ final class AnnotatedHttpServiceMethod {
     private static Object[] parameterValues(ServiceRequestContext ctx, HttpRequest req,
                                             List<Parameter> parameters,
                                             @Nullable AggregatedHttpMessage message,
-                                            List<RequestConverterFunction> requestConverters) {
+                                            List<RequestConverterFunction> requestConverters) throws Exception {
         HttpParameters httpParameters = null;
         Object[] values = new Object[parameters.size()];
         for (int i = 0; i < parameters.size(); ++i) {
@@ -366,21 +367,18 @@ final class AnnotatedHttpServiceMethod {
                 case REQUEST_OBJECT:
                     for (final RequestConverterFunction func : requestConverters) {
                         if (func.canConvertRequest(message, entry.type())) {
-                            try {
-                                values[i] = func.convertRequest(message, entry.type());
-                                break;
-                            } catch (Exception e) {
-                                // Go to the next request converter if the conversion is failed.
-                                logger.warn("Request converter {} cannot convert a request to {}",
-                                            func.getClass().getName(), entry.type().getName(), e);
-                            }
+                            values[i] = func.convertRequest(message, entry.type());
+                            checkArgument(values[i] != null,
+                                          "'null' is returned from the converter '" +
+                                          func.getClass().getName() +
+                                          "' for a @" + RequestObject.class.getSimpleName() +
+                                          " '" + entry.name() + '\'');
+                            break;
                         }
                     }
-                    if (values[i] == null) {
-                        throw new IllegalArgumentException(
-                                "No suitable request converter found for a @" +
-                                RequestObject.class.getSimpleName() + " '" + entry.name() + '\'');
-                    }
+                    checkArgument(values[i] != null,
+                                  "No suitable request converter found for a @" +
+                                  RequestObject.class.getSimpleName() + " '" + entry.name() + '\'');
                     break;
             }
         }
