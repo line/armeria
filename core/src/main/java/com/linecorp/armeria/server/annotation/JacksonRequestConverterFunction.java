@@ -67,7 +67,7 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
     public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
         final MediaType contentType = request.headers().contentType();
         if (contentType != null && (contentType.is(MediaType.JSON) ||
-                                    contentType.subtype().contains("+json"))) {
+                                    contentType.subtype().endsWith("+json"))) {
             try {
                 return readers.computeIfAbsent(expectedResultType, mapper::readerFor) != null;
             } catch (Throwable cause) {
