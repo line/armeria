@@ -241,8 +241,26 @@ public class AnnotatedHttpServiceRequestConverterTest {
         final RequestObj1 obj1 = new RequestObj1(1, "abc");
         final String content1 = mapper.writeValueAsString(obj1);
 
+        // MediaType.JSON_UTF_8
         response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/json",
                                                            MediaType.JSON_UTF_8, content1))
+                         .aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().toStringUtf8()).isEqualTo("abc");
+
+        // MediaType.JSON_PATCH
+        // obj1 is not a json-patch+json format, but just check if it's converted by
+        // DefaultRequestConverter when it is valid JSON format
+        response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/json",
+                                                           MediaType.JSON_PATCH, content1))
+                         .aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content().toStringUtf8()).isEqualTo("abc");
+
+        // "application/vnd.api+json"
+        response = client.execute(AggregatedHttpMessage.of(HttpMethod.POST, "/2/default/json",
+                                                           MediaType.create("application", "vnd.api+json"),
+                                                           content1))
                          .aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.content().toStringUtf8()).isEqualTo("abc");
