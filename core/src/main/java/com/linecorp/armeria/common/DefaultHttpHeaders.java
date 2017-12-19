@@ -202,6 +202,7 @@ public final class DefaultHttpHeaders
 
         contentType = KNOWN_CONTENT_TYPES.get(contentTypeString);
         if (contentType != null) {
+            this.contentType = contentType;
             return contentType;
         }
 
