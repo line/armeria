@@ -24,12 +24,12 @@ import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import java.nio.charset.StandardCharsets;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.ByteBufHttpData;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.buffer.ByteBuf;
@@ -173,7 +173,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
         } else if (req.isOpen()) {
             try {
-                req.write(HttpData.of(data));
+                req.write(new ByteBufHttpData(data.retain(), endOfStream));
             } catch (Throwable t) {
                 req.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");
