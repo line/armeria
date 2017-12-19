@@ -16,9 +16,13 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
@@ -33,6 +37,15 @@ public final class DefaultHttpHeaders
 
     private static final NameValidator<AsciiString> HTTP2_NAME_VALIDATOR =
             name -> checkArgument(name != null && !name.isEmpty(), "empty headers are not allowed: %s", name);
+
+    private static final Map<String, MediaType> KNOWN_CONTENT_TYPES =
+            Stream.concat(
+                    SerializationFormat.values()
+                                       .stream()
+                                       .flatMap(f -> f.mediaTypes().stream()),
+                    MediaType.knownTypes().stream())
+                  .distinct()
+                  .collect(toImmutableMap(MediaType::toString, Function.identity(), (a, b) -> a));
 
     private final boolean endOfStream;
 
@@ -177,7 +190,7 @@ public final class DefaultHttpHeaders
 
     @Override
     public MediaType contentType() {
-        final MediaType contentType = this.contentType;
+        MediaType contentType = this.contentType;
         if (contentType != null) {
             return contentType;
         }
@@ -185,6 +198,11 @@ public final class DefaultHttpHeaders
         final String contentTypeString = get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeString == null) {
             return null;
+        }
+
+        contentType = KNOWN_CONTENT_TYPES.get(contentTypeString);
+        if (contentType != null) {
+            return contentType;
         }
 
         try {

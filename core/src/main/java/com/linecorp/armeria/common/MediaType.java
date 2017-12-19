@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -478,6 +479,10 @@ public final class MediaType {
      */
     public static final MediaType XRD_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "xrd+xml");
     public static final MediaType ZIP = createConstant(APPLICATION_TYPE, "zip");
+
+    public static Set<MediaType> knownTypes() {
+        return KNOWN_TYPES.keySet();
+    }
 
     private final String type;
     private final String subtype;
