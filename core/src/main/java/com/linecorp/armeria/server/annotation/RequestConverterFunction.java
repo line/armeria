@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server.annotation;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Converts an {@link AggregatedHttpMessage} to an object. The class implementing this interface would
@@ -29,15 +31,19 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 public interface RequestConverterFunction {
 
     /**
-     * Returns whether this converter is able to convert the specified {@code request} to
-     * {@code expectedResultType}.
+     * Converts the specified {@code request} to an object of {@code expectedResultType}.
+     * Calls {@link RequestConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
+     * this converter cannot convert the {@code request} to an object.
      */
-    default boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
-        return true;
-    }
+    Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+                          Class<?> expectedResultType) throws Exception;
 
     /**
-     * Converts the specified {@code request} to an object of {@code expectedResultType}.
+     * Throws a {@link FallthroughException} in order to try to convert the {@code request} to
+     * an object by the next converter.
      */
-    Object convertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception;
+    static <T> T fallthrough() {
+        // Always throw the exception quietly.
+        throw FallthroughException.get();
+    }
 }

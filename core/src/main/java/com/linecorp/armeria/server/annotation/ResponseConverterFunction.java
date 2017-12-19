@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server.annotation;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Converts a {@code result} object to {@link HttpResponse}. The class implementing this interface would
@@ -28,15 +30,18 @@ import com.linecorp.armeria.common.HttpResponse;
 public interface ResponseConverterFunction {
 
     /**
-     * Returns whether this converter is able to convert the specified {@code result} to
-     * {@link HttpResponse}.
+     * Returns {@link HttpResponse} instance corresponds to the given {@code result}.
+     * Calls {@link ResponseConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
+     * this converter cannot convert the {@code result} to the {@link HttpResponse}.
      */
-    default boolean canConvertResponse(Object result) {
-        return true;
-    }
+    HttpResponse convertResponse(ServiceRequestContext ctx, Object result) throws Exception;
 
     /**
-     * Returns {@link HttpResponse} instance corresponds to the given {@code result}.
+     * Throws a {@link FallthroughException} in order to try to convert {@code result} to
+     * {@link HttpResponse} by the next converter.
      */
-    HttpResponse convertResponse(Object result) throws Exception;
+    static <T> T fallthrough() {
+        // Always throw the exception quietly.
+        throw FallthroughException.get();
+    }
 }
