@@ -29,4 +29,11 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
-public @interface RequestObject {}
+public @interface RequestObject {
+
+    /**
+     * {@link RequestConverterFunction} implementation type which is used for converting the annotated
+     * parameter. The specified class must have an accessible default constructor.
+     */
+    Class<? extends RequestConverterFunction> value() default RequestConverterFunction.class;
+}

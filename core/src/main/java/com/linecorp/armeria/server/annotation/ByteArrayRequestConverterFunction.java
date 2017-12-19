@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.annotation;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A default implementation of a {@link RequestConverterFunction} which converts a binary body of
@@ -27,34 +28,26 @@ import com.linecorp.armeria.common.MediaType;
 public class ByteArrayRequestConverterFunction implements RequestConverterFunction {
 
     /**
-     * Returns whether the specified {@link AggregatedHttpMessage} is able to be consumed. This converter
-     * allows only {@code byte[]} and {@link HttpData} as its return type, and {@link AggregatedHttpMessage}
-     * would be consumed only if it does not have a {@code Content-Type} header or if it has
-     * {@code Content-Type: application/octet-stream} or {@code Content-Type: application/binary}.
-     */
-    @Override
-    public boolean canConvertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) {
-        if (!expectedResultType.isAssignableFrom(byte[].class) &&
-            !expectedResultType.isAssignableFrom(HttpData.class)) {
-            return false;
-        }
-
-        final MediaType mediaType = request.headers().contentType();
-        return mediaType == null ||
-               mediaType.is(MediaType.OCTET_STREAM) ||
-               mediaType.is(MediaType.APPLICATION_BINARY);
-    }
-
-    /**
      * Converts the specified {@link AggregatedHttpMessage} to an object of {@code expectedResultType}.
+     * This converter allows only {@code byte[]} and {@link HttpData} as its return type, and
+     * {@link AggregatedHttpMessage} would be consumed only if it does not have a {@code Content-Type} header
+     * or if it has {@code Content-Type: application/octet-stream} or {@code Content-Type: application/binary}.
      */
     @Override
-    public Object convertRequest(AggregatedHttpMessage request, Class<?> expectedResultType) throws Exception {
-        if (expectedResultType.isAssignableFrom(byte[].class)) {
-            return request.content().array();
-        }
+    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+                                 Class<?> expectedResultType) throws Exception {
+        final MediaType mediaType = request.headers().contentType();
+        if (mediaType == null ||
+            mediaType.is(MediaType.OCTET_STREAM) ||
+            mediaType.is(MediaType.APPLICATION_BINARY)) {
 
-        assert expectedResultType.isAssignableFrom(HttpData.class);
-        return request.content();
+            if (expectedResultType.isAssignableFrom(byte[].class)) {
+                return request.content().array();
+            }
+            if (expectedResultType.isAssignableFrom(HttpData.class)) {
+                return request.content();
+            }
+        }
+        return RequestConverterFunction.fallthrough();
     }
 }

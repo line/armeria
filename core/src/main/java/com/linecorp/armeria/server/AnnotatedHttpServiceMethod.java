@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Header;
@@ -198,10 +199,12 @@ final class AnnotatedHttpServiceMethod {
             return HttpResponse.of((AggregatedHttpMessage) result);
         }
 
-        for (final ResponseConverterFunction func : responseConverters) {
-            if (func.canConvertResponse(result)) {
-                try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
-                    return func.convertResponse(result);
+        try (SafeCloseable ignored = RequestContext.push(ctx, false)) {
+            for (final ResponseConverterFunction func : responseConverters) {
+                try {
+                    return func.convertResponse(ctx, result);
+                } catch (FallthroughException ignore) {
+                    // Do nothing.
                 } catch (Exception e) {
                     throw new IllegalStateException(
                             "Response converter " + func.getClass().getName() +
@@ -220,14 +223,14 @@ final class AnnotatedHttpServiceMethod {
     private HttpResponse convertException(ServiceRequestContext ctx, HttpRequest req,
                                           Throwable cause) {
         final Throwable rootCause = Throwables.getRootCause(cause);
-        for (ExceptionHandlerFunction func : exceptionHandlers) {
-            if (func.canHandleException(rootCause)) {
-                try {
-                    return func.handleException(ctx, req, rootCause);
-                } catch (Exception e) {
-                    logger.warn("Unexpected exception from an exception handler {}:",
-                                func.getClass().getName(), e);
-                }
+        for (final ExceptionHandlerFunction func : exceptionHandlers) {
+            try {
+                return func.handleException(ctx, req, rootCause);
+            } catch (FallthroughException ignore) {
+                // Do nothing.
+            } catch (Exception e) {
+                logger.warn("Unexpected exception from an exception handler {}:",
+                            func.getClass().getName(), e);
             }
         }
         return ExceptionHandlerFunction.DEFAULT.handleException(ctx, req, rootCause);
@@ -265,11 +268,18 @@ final class AnnotatedHttpServiceMethod {
                 continue;
             }
 
-            if (parameterInfo.isAnnotationPresent(RequestObject.class)) {
-                if (!hasRequestConverters) {
-                    throw new IllegalArgumentException("No request converter for method: " + method.getName());
+            final RequestObject requestObject = parameterInfo.getAnnotation(RequestObject.class);
+            if (requestObject != null) {
+                // There is a converter which is specified by a user.
+                if (requestObject.value() != RequestConverterFunction.class) {
+                    final RequestConverterFunction requestConverterFunction =
+                            AnnotatedHttpServices.getInstance(requestObject, RequestConverterFunction.class);
+                    entries.add(Parameter.ofRequestObject(parameterInfo.getType(), requestConverterFunction));
+                } else {
+                    checkArgument(hasRequestConverters,
+                                  "No request converter for method: " + method.getName());
+                    entries.add(Parameter.ofRequestObject(parameterInfo.getType(), null));
                 }
-                entries.add(Parameter.ofRequestObject(parameterInfo.getType()));
                 continue;
             }
 
@@ -318,7 +328,7 @@ final class AnnotatedHttpServiceMethod {
         }
 
         return new Parameter(paramType, !isOptionalType && aDefault == null, isOptionalType,
-                             validateAndNormalizeSupportedType(type), paramValue, defaultValue);
+                             validateAndNormalizeSupportedType(type), paramValue, defaultValue, null);
     }
 
     /**
@@ -365,15 +375,22 @@ final class AnnotatedHttpServiceMethod {
                     }
                     break;
                 case REQUEST_OBJECT:
-                    for (final RequestConverterFunction func : requestConverters) {
-                        if (func.canConvertRequest(message, entry.type())) {
-                            values[i] = func.convertRequest(message, entry.type());
-                            checkArgument(values[i] != null,
-                                          "'null' is returned from the converter '" +
-                                          func.getClass().getName() +
-                                          "' for a @" + RequestObject.class.getSimpleName() +
-                                          " '" + entry.name() + '\'');
-                            break;
+                    final RequestConverterFunction converter = entry.requestConverterFunction();
+                    if (converter != null) {
+                        try {
+                            values[i] = convertRequest(converter, ctx, message, entry);
+                        } catch (FallthroughException ignore) {
+                            // Do nothing.
+                        }
+                    }
+                    if (values[i] == null) {
+                        for (final RequestConverterFunction func : requestConverters) {
+                            try {
+                                values[i] = convertRequest(func, ctx, message, entry);
+                                break;
+                            } catch (FallthroughException ignore) {
+                                // Do nothing.
+                            }
                         }
                     }
                     checkArgument(values[i] != null,
@@ -383,6 +400,20 @@ final class AnnotatedHttpServiceMethod {
             }
         }
         return values;
+    }
+
+    /**
+     * Converts the {@code request} to an object by {@link RequestConverterFunction}.
+     */
+    private static Object convertRequest(RequestConverterFunction converter,
+                                         ServiceRequestContext ctx, AggregatedHttpMessage request,
+                                         Parameter entry) throws Exception {
+        final Object obj = converter.convertRequest(ctx, request, entry.type());
+        checkArgument(obj != null,
+                      "'null' is returned from " + converter.getClass().getName() +
+                      " while converting a @" + RequestObject.class.getSimpleName() +
+                      " '" + entry.name() + '\'');
+        return obj;
     }
 
     /**
@@ -574,15 +605,19 @@ final class AnnotatedHttpServiceMethod {
     private static final class Parameter {
 
         static Parameter ofPathParam(Class<?> type, String name) {
-            return new Parameter(ParameterType.PATH_PARAM, true, false, type, name, null);
+            return new Parameter(ParameterType.PATH_PARAM, true, false, type,
+                                 name, null, null);
         }
 
         static Parameter ofPredefinedType(Class<?> type) {
-            return new Parameter(ParameterType.PREDEFINED_TYPE, true, false, type, null, null);
+            return new Parameter(ParameterType.PREDEFINED_TYPE, true, false, type,
+                                 null, null, null);
         }
 
-        static Parameter ofRequestObject(Class<?> type) {
-            return new Parameter(ParameterType.REQUEST_OBJECT, true, false, type, null, null);
+        static Parameter ofRequestObject(Class<?> type,
+                                         @Nullable RequestConverterFunction requestConverterFunction) {
+            return new Parameter(ParameterType.REQUEST_OBJECT, true, false, type,
+                                 null, null, requestConverterFunction);
         }
 
         private final ParameterType parameterType;
@@ -591,16 +626,19 @@ final class AnnotatedHttpServiceMethod {
         private final Class<?> type;
         private final String name;
         private final String defaultValue;
+        private final RequestConverterFunction requestConverterFunction;
 
         Parameter(ParameterType parameterType,
                   boolean isRequired, boolean isOptionalWrapped, Class<?> type,
-                  @Nullable String name, @Nullable String defaultValue) {
+                  @Nullable String name, @Nullable String defaultValue,
+                  @Nullable RequestConverterFunction requestConverterFunction) {
             this.parameterType = parameterType;
             this.isRequired = isRequired;
             this.isOptionalWrapped = isOptionalWrapped;
             this.type = requireNonNull(type, "type");
             this.name = name;
             this.defaultValue = defaultValue;
+            this.requestConverterFunction = requestConverterFunction;
         }
 
         ParameterType parameterType() {
@@ -631,6 +669,11 @@ final class AnnotatedHttpServiceMethod {
 
         boolean isPathParam() {
             return parameterType() == ParameterType.PATH_PARAM;
+        }
+
+        @Nullable
+        RequestConverterFunction requestConverterFunction() {
+            return requestConverterFunction;
         }
     }
 
